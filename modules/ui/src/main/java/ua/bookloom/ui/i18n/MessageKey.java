@@ -69,10 +69,18 @@ public enum MessageKey {
     SHELL_ABOUT_TIP("shell.about.tip"),
     /** Name of a translation run as model work that rules out other model work. */
     ACTIVITY_TRANSLATION("activity.translation"),
-    /** Name of the glossary's model scan as running model work. */
+    /** Name of the glossary's name scan as running model work. */
     ACTIVITY_GLOSSARY_SCAN("activity.glossaryScan"),
-    /** Name of the glossary's model review as running model work. */
+    /** Name of the glossary's name review as running model work. */
     ACTIVITY_GLOSSARY_REVIEW("activity.glossaryReview"),
+    /** Name of the glossary's translate-only action as running model work. */
+    ACTIVITY_GLOSSARY_TRANSLATE("activity.glossaryTranslate"),
+    /** Name of the recurring terms' scan (text first, then the model) as running model work. */
+    ACTIVITY_TERM_SCAN("activity.termScan"),
+    /** Name of the recurring terms' review as running model work. */
+    ACTIVITY_TERM_REVIEW("activity.termReview"),
+    /** Name of the recurring terms' rendering suggestion as running model work. */
+    ACTIVITY_TERM_TRANSLATE("activity.termTranslate"),
     /** Name of a review-panel segment retry as running model work. */
     ACTIVITY_REVIEW_RETRY("activity.reviewRetry"),
     /** Name of the file name proposal as running model work. */
@@ -985,18 +993,22 @@ public enum MessageKey {
     NAMES_STYLE_ADD("namesStyle.add"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ADD}. */
     NAMES_STYLE_ADD_TIP("namesStyle.add.tip"),
-    /** Button that runs the model name scan. */
+    /** Button of the glossary card's model action bar: scan for more names. */
     NAMES_STYLE_MODEL_SCAN("namesStyle.modelScan"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_MODEL_SCAN}. */
-    NAMES_STYLE_MODEL_SCAN_TIP("namesStyle.modelScan.tip"),
-    /** Button that runs the model review of the glossary. */
+    /** Button of the glossary card's model action bar: review the rows. */
     NAMES_STYLE_REVIEW("namesStyle.review"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REVIEW}. */
+    /** Button of the glossary card's model action bar: suggest a target for each row that has none. */
+    NAMES_STYLE_TRANSLATE("namesStyle.translate"),
+    /** Button of the shared model action bar of both cards: stop the action under way. */
+    BAR_STOP("namesStyle.bar.stop"),
+    /** Hover explanation of the control labelled by {@link #BAR_STOP}. */
+    BAR_STOP_TIP("namesStyle.bar.stop.tip"),
+    /** Hover explanation of the glossary card's {@link #NAMES_STYLE_MODEL_SCAN} button. */
+    NAMES_STYLE_MODEL_SCAN_TIP("namesStyle.modelScan.tip"),
+    /** Hover explanation of the glossary card's {@link #NAMES_STYLE_REVIEW} button. */
     NAMES_STYLE_REVIEW_TIP("namesStyle.review.tip"),
-    /** Button that stops the model scan or review under way. */
-    NAMES_STYLE_MODEL_STOP("namesStyle.modelStop"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_MODEL_STOP}. */
-    NAMES_STYLE_MODEL_STOP_TIP("namesStyle.modelStop.tip"),
+    /** Hover explanation of the glossary card's {@link #NAMES_STYLE_TRANSLATE} button. */
+    NAMES_STYLE_TRANSLATE_TIP("namesStyle.translate.tip"),
     /** Prompt of the field that filters the glossary rows. */
     NAMES_STYLE_SEARCH("namesStyle.search"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_SEARCH}. */
@@ -1057,21 +1069,17 @@ public enum MessageKey {
     RECURRING_TITLE("namesStyle.recurring.title"),
     /** Line under the heading that says what the card is for. */
     RECURRING_NOTE("namesStyle.recurring.note"),
-    /** Button that runs the deterministic scan for recurring terms. */
-    RECURRING_FIND("namesStyle.recurring.find"),
-    /** Hover explanation of the control labelled by {@link #RECURRING_FIND}. */
-    RECURRING_FIND_TIP("namesStyle.recurring.find.tip"),
-    /** Button that asks the model to choose recurring terms among the book's frequent words. */
-    RECURRING_MODEL_SCAN("namesStyle.recurring.modelScan"),
     /** Line shown when a model scan or review of recurring terms is asked for and no model is chosen. */
     RECURRING_NO_MODEL_TERMS("namesStyle.recurring.noModelTerms"),
+    /** Button of the recurring-terms card's model action bar: scan the text, then the model. */
+    RECURRING_MODEL_SCAN("namesStyle.recurring.modelScan"),
     /** Hover explanation of the control labelled by {@link #RECURRING_MODEL_SCAN}. */
     RECURRING_MODEL_SCAN_TIP("namesStyle.recurring.modelScan.tip"),
-    /** Button that asks the model which recurring terms to keep. */
+    /** Button of the recurring-terms card's model action bar: review the terms. */
     RECURRING_MODEL_REVIEW("namesStyle.recurring.modelReview"),
     /** Hover explanation of the control labelled by {@link #RECURRING_MODEL_REVIEW}. */
     RECURRING_MODEL_REVIEW_TIP("namesStyle.recurring.modelReview.tip"),
-    /** Button that asks the model for a rendering of each term that has none. */
+    /** Button of the recurring-terms card's model action bar: suggest a rendering for each term that has none. */
     RECURRING_SUGGEST("namesStyle.recurring.suggest"),
     /** Hover explanation of the control labelled by {@link #RECURRING_SUGGEST}. */
     RECURRING_SUGGEST_TIP("namesStyle.recurring.suggest.tip"),
@@ -1129,6 +1137,10 @@ public enum MessageKey {
     NAMES_STYLE_NO_MODEL("namesStyle.noModel"),
     /** Why the model review did not start. */
     NAMES_STYLE_NO_MODEL_REVIEW("namesStyle.noModelReview"),
+    /** Why the translate-only action did not start. */
+    NAMES_STYLE_NO_MODEL_TRANSLATE("namesStyle.noModelTranslate"),
+    /** Line after the glossary's translate-only action; argument 0 is how many names took a suggested target. */
+    NAMES_STYLE_TRANSLATED("namesStyle.translated"),
     /**
      * The line shown while a model scan or review waits; argument 0 is the request number, 1 the attempt and 2 the
      * attempts allowed, each passed as an Integer.
@@ -2015,6 +2027,8 @@ public enum MessageKey {
     RESULTS_OP_NAME_SCAN("results.op.nameScan"),
     /** Name of the glossary's review with the model in the results dialog. */
     RESULTS_OP_NAME_REVIEW("results.op.nameReview"),
+    /** Name of the glossary's translate-only action in the results dialog. */
+    RESULTS_OP_NAME_TRANSLATE("results.op.nameTranslate"),
     /** Name of the recurring terms' scan in the results dialog. */
     RESULTS_OP_TERM_SCAN("results.op.termScan"),
     /** Name of the recurring terms' review in the results dialog. */
@@ -2025,6 +2039,10 @@ public enum MessageKey {
     RESULTS_SUMMARY("results.summary"),
     /** Heading of the rows an operation added, with their count. */
     RESULTS_ADDED("results.added"),
+    /** Heading of the added rows a scan found in the book's text without a model, with their count. */
+    RESULTS_FOUND_IN_TEXT("results.foundInText"),
+    /** Heading of the added rows the model chose when other added rows came from the text, with their count. */
+    RESULTS_ADDED_BY_MODEL("results.addedByModel"),
     /** Heading of the rows an operation removed, with their count. */
     RESULTS_REMOVED("results.removed"),
     /** Heading of the rows an operation changed, with their count. */

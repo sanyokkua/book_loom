@@ -42,15 +42,6 @@ record LexiconActions(
         calls.run("lexicon load", () -> loadOrScan(project), answer -> whileCurrent.accept(() -> setAll(answer)));
     }
 
-    /** Adds the terms the scan finds to the rows. */
-    void scan(final String project, final Consumer<Runnable> whileCurrent) {
-        log.debug("scanning for recurring terms in project {}", project);
-        calls.run(
-                "lexicon scan",
-                () -> lexicon.scan(project).flatMap(done -> lexicon.entries(project)),
-                answer -> whileCurrent.accept(() -> setAll(answer)));
-    }
-
     /** Adds a typed term, refusing a blank or a duplicate before the service is asked. */
     void add(final String project, final String typed, final Consumer<Runnable> whileCurrent) {
         final String term = typed.strip();

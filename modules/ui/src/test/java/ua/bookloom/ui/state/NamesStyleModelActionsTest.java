@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.Gender;
@@ -104,6 +105,52 @@ class NamesStyleModelActionsTest extends FxTestBase {
         assertThat(onFx(() -> vm.notice().get().text()))
                 .isEqualTo("Model review done: 1 row removed, 1 row updated, 2 targets suggested.");
         assertThat(onFx(() -> vm.busy().get())).isFalse();
+    }
+
+    // IF Translate reused Review's report, THEN a target suggestion would be sold as a verdict on the names.
+    @Test
+    void translate_modelSuggestsATarget_publishesTheChangedRowAndShowsItInTheTable() {
+        final NamesStyleViewModel vm = viewModel(new DirectExecutor());
+        interact(() -> settings.model().set("gemma3:12b"));
+        final GlossaryEntry translated =
+                new GlossaryEntry("e1", PROJECT, "Well", "Колодязь", TermType.OTHER, Gender.UNKNOWN, false);
+        glossary.willAnswer(Result.ok(new EntryChanges<>(
+                List.of(), List.of(), List.of(new EntryChanges.Change<>(well(), translated, null)))));
+
+        run(vm::translate);
+
+        final ChangeResults shown = onFx(() -> vm.results().get());
+        assertThat(glossary.calls()).contains("translate(p1)");
+        assertThat(shown.operation()).isEqualTo(ChangeOperation.NAME_TRANSLATE);
+        assertThat(shown.rows())
+                .extracting(ChangeRow::kind, ChangeRow::term, ChangeRow::after)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(ChangeKind.CHANGED, "Well", "Колодязь · other"));
+        assertThat(onFx(() -> List.copyOf(vm.rows()))).contains(translated);
+        assertThat(onFx(() -> vm.marks().glossary().isMarked("e1"))).isTrue();
+    }
+
+    // IF a translate were not an activity of its own, THEN the title bar would call it a "scan".
+    @Test
+    void translate_whileItWaits_registersTranslatingNames() {
+        final NamesStyleViewModel vm = viewModel(new HeldExecutor());
+        interact(() -> settings.model().set("gemma3:12b"));
+
+        run(vm::translate);
+
+        assertThat(onFx(() -> activities.running().stream().map(Activity::kind).toList()))
+                .containsExactly(ActivityKind.GLOSSARY_TRANSLATE);
+    }
+
+    // IF Translate ran with no model chosen, THEN it would fail on a request nobody can name.
+    @Test
+    void translate_noModelChosen_saysSoAndAsksNothing() {
+        final NamesStyleViewModel vm = viewModel(new DirectExecutor());
+
+        run(vm::translate);
+
+        assertThat(onFx(() -> vm.notice().get().text()))
+                .isEqualTo("Choose a model in the provider settings to translate the names.");
+        assertThat(glossary.calls()).containsExactly("entries(p1)");
     }
 
     // IF the review ran with no model chosen, THEN it would fail on a request nobody can name.

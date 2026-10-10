@@ -129,7 +129,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("results-close").fire());
         glossary.willAnswer(Result.ok(List.of()));
 
-        onFx(() -> button("names-style-model-scan").fire());
+        onFx(() -> button("names-style-scan").fire());
         awaitFx(this::isCardShown);
 
         assertThat(textsUnder(required("results-card"))).contains("Nothing changed.");
@@ -145,7 +145,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         showScreen();
         lexicon.modelWillFind(LexiconEntry.of("p1", "pentacle"));
 
-        onFx(() -> button("recurring-model-scan").fire());
+        onFx(() -> button("recurring-scan").fire());
         awaitFx(this::isCardShown);
 
         assertThat(textsUnder(required("results-card"))).contains("Term scan — results", "Added (1)", "pentacle");

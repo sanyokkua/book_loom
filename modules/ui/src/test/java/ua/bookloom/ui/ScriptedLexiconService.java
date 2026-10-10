@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.EntryChanges;
@@ -29,6 +30,7 @@ public final class ScriptedLexiconService implements LexiconService {
     private final List<LexiconEntry> suggestions = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> modelFinds = new CopyOnWriteArrayList<>();
     private final List<String> reviewDrops = new CopyOnWriteArrayList<>();
+    private volatile @Nullable AppError modelScanFailure;
 
     /** Puts entries in the list the service holds. */
     public void holds(final LexiconEntry... entries) {
@@ -48,6 +50,11 @@ public final class ScriptedLexiconService implements LexiconService {
     /** Names what the next model scan adds. */
     public void modelWillFind(final LexiconEntry... entries) {
         modelFinds.addAll(List.of(entries));
+    }
+
+    /** Makes the next model scan fail with this error after the deterministic scan has already stored its finds. */
+    public void modelScanWillFail(final AppError failure) {
+        modelScanFailure = failure;
     }
 
     /** Names the terms the next model review drops. */
@@ -84,6 +91,11 @@ public final class ScriptedLexiconService implements LexiconService {
     public Result<EntryChanges<LexiconEntry>> scanWithModel(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         calls.add("scanWithModel(" + projectId + ")");
+        final AppError failure = modelScanFailure;
+        if (failure != null) {
+            modelScanFailure = null;
+            return Result.err(failure);
+        }
         final List<LexiconEntry> before = List.copyOf(held);
         held.addAll(modelFinds);
         modelFinds.clear();

@@ -104,7 +104,6 @@ class ActivityGuardsTest extends ReviewViewModelTestBase {
 
         final String text = uk.get(MessageKey.ACTIVITY_BLOCKED, uk.get(ActivityKind.GLOSSARY_SCAN.label()));
 
-        assertThat(text)
-                .isEqualTo("Недоступно, доки триває «Сканування моделлю». Дочекайтеся завершення або зупиніть.");
+        assertThat(text).isEqualTo("Недоступно, доки триває «Пошук імен». Дочекайтеся завершення або зупиніть.");
     }
 }

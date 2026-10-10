@@ -13,6 +13,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -192,32 +193,23 @@ final class NamesStyleView {
         return note;
     }
 
-    // The two model actions are not offered while one runs or other model work does; Stop is shown only while one runs.
+    // The bar's actions are not offered while one runs or other model work does; Stop is shown only while one runs.
     // Accept all is shown only while a row holds a suggestion — the toolbar must still fit one line at 1000 px — and is
     // off while a model action could replace the suggestions it would accept.
-    private List<Button> modelActions() {
-        final Button scan = action(
-                "names-style-model-scan",
-                MessageKey.NAMES_STYLE_MODEL_SCAN,
-                MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
-                glossary::modelScan);
-        final Button review = action(
-                "names-style-review",
-                MessageKey.NAMES_STYLE_REVIEW,
-                MessageKey.NAMES_STYLE_REVIEW_TIP,
-                glossary::review);
-        final Button stop = action(
-                "names-style-model-stop",
-                MessageKey.NAMES_STYLE_MODEL_STOP,
-                MessageKey.NAMES_STYLE_MODEL_STOP_TIP,
-                glossary::stopModel);
-        scan.disableProperty()
-                .bind(glossary.busy().or(glossary.modelBlockedReason().isNotEmpty()));
-        review.disableProperty()
-                .bind(glossary.busy().or(glossary.modelBlockedReason().isNotEmpty()));
-        stop.visibleProperty().bind(glossary.busy());
-        stop.managedProperty().bind(glossary.busy());
-        return List.of(scan, review, acceptAll(), stop);
+    private List<Node> modelActions() {
+        final HBox bar = ModelActionBar.build(
+                messages,
+                "names-style",
+                new ModelActionBar.Words(
+                        MessageKey.NAMES_STYLE_MODEL_SCAN,
+                        MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
+                        MessageKey.NAMES_STYLE_REVIEW,
+                        MessageKey.NAMES_STYLE_REVIEW_TIP,
+                        MessageKey.NAMES_STYLE_TRANSLATE,
+                        MessageKey.NAMES_STYLE_TRANSLATE_TIP),
+                new ModelActionBar.Actions(glossary::modelScan, glossary::review, glossary::translate),
+                glossary);
+        return List.of(bar, acceptAll());
     }
 
     private Button acceptAll() {

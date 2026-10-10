@@ -8,7 +8,9 @@ public enum ChangeOperation {
     NAME_SCAN(MessageKey.RESULTS_OP_NAME_SCAN),
     /** The glossary's review with the model. */
     NAME_REVIEW(MessageKey.RESULTS_OP_NAME_REVIEW),
-    /** The recurring terms' model scan. */
+    /** The glossary's translate-only action: a suggested target for each row that has none. */
+    NAME_TRANSLATE(MessageKey.RESULTS_OP_NAME_TRANSLATE),
+    /** The recurring terms' scan: the text first, then the model. */
     TERM_SCAN(MessageKey.RESULTS_OP_TERM_SCAN),
     /** The recurring terms' review with the model. */
     TERM_REVIEW(MessageKey.RESULTS_OP_TERM_REVIEW),

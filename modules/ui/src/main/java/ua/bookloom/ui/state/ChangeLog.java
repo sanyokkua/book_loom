@@ -72,13 +72,19 @@ final class ChangeLog {
         publish(operation, items);
     }
 
-    void terms(final ChangeOperation operation, final EntryChanges<LexiconEntry> changes) {
+    /**
+     * Publishes the changes of a recurring-terms operation.
+     *
+     * @param operation the operation
+     * @param found the terms its text step found before the model was asked, listed first; empty for the others
+     * @param changes what the model step did
+     */
+    void terms(
+            final ChangeOperation operation, final List<LexiconEntry> found, final EntryChanges<LexiconEntry> changes) {
         final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
-        changes.added().forEach(entry -> {
-            items.add(new ChangeResults.Item(rows.addedTerm(entry), reverts.removeTerm(entry)));
-            marks.terms().mark(LexiconEntry.keyOf(entry.term()));
-        });
+        found.forEach(entry -> addTerm(items, rows.addedTerm(entry, ChangeOrigin.TEXT), entry));
+        changes.added().forEach(entry -> addTerm(items, rows.addedTerm(entry, ChangeOrigin.MODEL), entry));
         changes.removed()
                 .forEach(removal -> items.add(new ChangeResults.Item(
                         rows.removedTerm(removal), reverts.restoreTerm(removal.entry(), false))));
@@ -87,6 +93,11 @@ final class ChangeLog {
             marks.terms().mark(LexiconEntry.keyOf(change.after().term()));
         });
         publish(operation, items);
+    }
+
+    private void addTerm(final List<ChangeResults.Item> items, final ChangeRow row, final LexiconEntry entry) {
+        items.add(new ChangeResults.Item(row, reverts.removeTerm(entry)));
+        marks.terms().mark(LexiconEntry.keyOf(entry.term()));
     }
 
     // The tracker keeps the calls of the last work that made any; they are this operation's only if it made some.

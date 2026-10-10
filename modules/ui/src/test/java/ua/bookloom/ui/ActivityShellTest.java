@@ -43,7 +43,7 @@ class ActivityShellTest extends ShellTestBase {
         onFx(() -> scan.requests(2));
 
         assertThat(isShown("shell-activity")).isTrue();
-        assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Model scan · 2 requests");
+        assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Name scan · 2 requests");
         assertThat(TooltipProbe.tipText(required("shell-activity-stop"))).isNotBlank();
     }
 

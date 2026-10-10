@@ -86,7 +86,7 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> table().lookupAll(".glossary-empty").stream()
                         .map(node -> ((Label) node).getText())
                         .findFirst()))
-                .hasValue("No names yet — run Model scan or add a term.");
+                .hasValue("No names yet — run Scan or add a term.");
     }
 
     // IF a search that matches nothing showed "no names yet", THEN the person would think the book has none.

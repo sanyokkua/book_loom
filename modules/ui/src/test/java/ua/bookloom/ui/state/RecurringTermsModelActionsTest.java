@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.FxTestBase;
@@ -19,7 +21,7 @@ import ua.bookloom.ui.ScriptedLexiconService;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
-/** The Recurring terms card's model scan and review: their rows, their words, and what they need to start. */
+/** The Recurring terms card's model scan (text step first) and review: their rows, their words, and what they need to start. */
 class RecurringTermsModelActionsTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
@@ -57,6 +59,10 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
+    private ChangeResults results() {
+        return onFx(() -> vm.results().get());
+    }
+
     private String notice() {
         return onFx(() -> vm.notice().get().text());
     }
@@ -67,7 +73,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         interact(() -> settings.model().set("gemma3:12b"));
         lexicon.modelWillFind(LexiconEntry.of(PROJECT, "pentacle"), LexiconEntry.of(PROJECT, "imp"));
 
-        run(() -> vm.recurring().scanWithModel());
+        run(() -> vm.recurring().scan());
 
         assertThat(onFx(() -> vm.recurring().rows()))
                 .extracting(LexiconEntry::term)
@@ -82,7 +88,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
         lexicon.reviewWillDrop("table");
 
-        run(() -> vm.recurring().reviewWithModel());
+        run(() -> vm.recurring().review());
 
         assertThat(onFx(() -> vm.recurring().rows()))
                 .extracting(LexiconEntry::term)
@@ -92,9 +98,46 @@ class RecurringTermsModelActionsTest extends FxTestBase {
 
     @Test
     void scanWithModel_noModelChosen_saysSoAndAsksNothing() {
-        run(() -> vm.recurring().scanWithModel());
+        run(() -> vm.recurring().scan());
 
         assertThat(notice()).isEqualTo("Choose a model in the provider settings to scan or review recurring terms.");
         assertThat(lexicon.calls()).doesNotContain("scanWithModel(p1)");
+    }
+
+    // IF the text step's finds were listed as the model's, THEN the person could not tell what needed no model.
+    @Test
+    void scanTerms_textFindsAndModelFinds_listsEachGroupWithItsOrigin() {
+        interact(() -> settings.model().set("gemma3:12b"));
+        lexicon.willFind(LexiconEntry.of(PROJECT, "imp"));
+        lexicon.modelWillFind(LexiconEntry.of(PROJECT, "pentacle"));
+
+        run(() -> vm.recurring().scan());
+
+        assertThat(lexicon.calls()).containsSubsequence("scan(p1)", "scanWithModel(p1)");
+        assertThat(results().operation()).isEqualTo(ChangeOperation.TERM_SCAN);
+        assertThat(results().rows())
+                .extracting(ChangeRow::term, ChangeRow::origin)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("imp", ChangeOrigin.TEXT),
+                        org.assertj.core.groups.Tuple.tuple("pentacle", ChangeOrigin.MODEL));
+        assertThat(onFx(() -> vm.recurring().rows()))
+                .extracting(LexiconEntry::term)
+                .containsExactlyInAnyOrder("imp", "pentacle");
+        assertThat(onFx(() -> vm.marks().terms().isMarked("imp"))).isTrue();
+    }
+
+    // IF the model step failed and the rows stayed stale, THEN terms already stored would be invisible until reopening.
+    @Test
+    void scanTerms_modelStepFails_stillShowsWhatTheTextStepStored() {
+        interact(() -> settings.model().set("gemma3:12b"));
+        lexicon.willFind(LexiconEntry.of(PROJECT, "imp"));
+        lexicon.modelScanWillFail(AppError.of(ErrorCode.internal, "Failed", "The model did not answer."));
+
+        run(() -> vm.recurring().scan());
+
+        assertThat(notice()).isEqualTo("The model did not answer.");
+        assertThat(onFx(() -> vm.recurring().rows()))
+                .extracting(LexiconEntry::term)
+                .containsExactly("imp");
     }
 }

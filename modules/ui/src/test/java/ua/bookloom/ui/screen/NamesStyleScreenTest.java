@@ -178,7 +178,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
                 .containsExactly("Source term", "Type", "Target", "Gender", "Locked", "Check");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
         assertThat(button("names-style-start").isDisabled()).isFalse();
-        assertThat(button("names-style-model-scan").getText()).isEqualTo("Model scan");
+        assertThat(button("names-style-scan").getText()).isEqualTo("Scan");
     }
 
     // IF a failed glossary read were silent, THEN an empty table would look like a book with no names.
@@ -202,7 +202,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("nobook-report")).isNotBlank();
         assertThat(button("nobook-open")).isNotNull();
         assertThat(optional("names-style-table")).isNull();
-        assertThat(optional("names-style-model-scan")).isNull();
+        assertThat(optional("names-style-scan")).isNull();
         assertThat(optional("names-style-start")).isNull();
     }
 

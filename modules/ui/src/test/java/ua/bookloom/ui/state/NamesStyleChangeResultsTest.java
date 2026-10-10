@@ -46,6 +46,8 @@ class NamesStyleChangeResultsTest extends FxTestBase {
     private ScriptedLexiconService lexicon;
     private SettingsViewModel settings;
     private NamesStyleViewModel vm;
+    private ActivityTracker tracker;
+    private Messages messages;
 
     @Override
     public void start(final Stage stage) {
@@ -58,14 +60,16 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         lexicon = new ScriptedLexiconService();
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         settings = injector.getInstance(SettingsViewModel.class);
+        tracker = injector.getInstance(ActivityTracker.class);
+        messages = injector.getInstance(Messages.class);
         vm = onFx(() -> new NamesStyleViewModel(
                 glossary,
                 lexicon,
                 ScriptedChatModelFactory.ok(),
                 settings,
                 new DirectExecutor(),
-                injector.getInstance(Messages.class),
-                injector.getInstance(ActivityTracker.class),
+                messages,
+                tracker,
                 () -> "new"));
         glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
         run(() -> vm.show(PROJECT));
@@ -176,16 +180,8 @@ class NamesStyleChangeResultsTest extends FxTestBase {
     }
 
     private NamesStyleViewModel viewModelOver(final HeldExecutor executor) {
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         final NamesStyleViewModel model = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                ScriptedChatModelFactory.ok(),
-                settings,
-                executor,
-                injector.getInstance(Messages.class),
-                injector.getInstance(ActivityTracker.class),
-                () -> "new"));
+                glossary, lexicon, ScriptedChatModelFactory.ok(), settings, executor, messages, tracker, () -> "new"));
         glossary.willAnswer(Result.ok(List.of(WELL)));
         run(() -> model.show(PROJECT));
         return model;
@@ -278,7 +274,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
     void scanTerms_modelFinds_listsAddedTermsAndRevertRemovesThem() {
         lexicon.modelWillFind(LexiconEntry.of(PROJECT, "pentacle"));
 
-        run(() -> vm.recurring().scanWithModel());
+        run(() -> vm.recurring().scan());
 
         assertThat(results().operation()).isEqualTo(ChangeOperation.TERM_SCAN);
         assertThat(results().rows())
@@ -298,7 +294,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
         lexicon.reviewWillDrop("table");
 
-        run(() -> vm.recurring().reviewWithModel());
+        run(() -> vm.recurring().review());
 
         assertThat(results().operation()).isEqualTo(ChangeOperation.TERM_REVIEW);
         assertThat(results().rows())
@@ -319,7 +315,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
         lexicon.willSuggest(LexiconEntry.of(PROJECT, "master").withSuggested("господар"));
 
-        run(() -> vm.recurring().suggestRenderings());
+        run(() -> vm.recurring().translate());
 
         assertThat(results().rows())
                 .extracting(ChangeRow::kind, ChangeRow::before, ChangeRow::after)

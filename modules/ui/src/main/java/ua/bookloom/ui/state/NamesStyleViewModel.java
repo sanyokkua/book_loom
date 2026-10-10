@@ -116,7 +116,7 @@ public final class NamesStyleViewModel {
                 () -> projectId,
                 this::whileCurrent,
                 new RecurringTerms.ModelActions(
-                        modelRuns::suggestRenderings, modelRuns::scanTerms, modelRuns::reviewTerms));
+                        modelRuns::scanTerms, modelRuns::reviewTerms, modelRuns::translateTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
         this.additions = new GlossaryAdditions(
@@ -165,11 +165,7 @@ public final class NamesStyleViewModel {
         return notice.getReadOnlyProperty();
     }
 
-    /**
-     * Whether a model scan or review is under way.
-     *
-     * @return a read-only property; the model buttons are not offered while it is {@code true}, the stop button is
-     */
+    /** {@return a read-only flag, true while a model scan, review or translation is under way and Stop is offered} */
     public ReadOnlyBooleanProperty busy() {
         return modelRuns.busy();
     }
@@ -211,11 +207,7 @@ public final class NamesStyleViewModel {
         return recurring;
     }
 
-    /**
-     * How many refused edits have been undone.
-     *
-     * @return a read-only counter that only ever grows
-     */
+    /** {@return a read-only count of the refused edits that have been undone, which only ever grows} */
     public ReadOnlyIntegerProperty restorations() {
         return restorations.getReadOnlyProperty();
     }
@@ -310,7 +302,12 @@ public final class NamesStyleViewModel {
         modelRuns.review();
     }
 
-    /** Stops the model scan or review under way; the glossary keeps what it had. */
+    /** Asks the chosen model for a target of each row that has none, and changes nothing else. */
+    public void translate() {
+        modelRuns.translate();
+    }
+
+    /** Stops the model scan, review or translation under way; the glossary keeps what it had. */
     public void stopModel() {
         modelRuns.stop();
     }
@@ -365,11 +362,7 @@ public final class NamesStyleViewModel {
         suggested.forEach(this::accept);
     }
 
-    /**
-     * How many rows hold a suggested target nobody confirmed.
-     *
-     * @return a read-only count that follows the rows
-     */
+    /** {@return a read-only count of the rows that hold a suggested target nobody confirmed} */
     public ReadOnlyIntegerProperty suggestedCount() {
         return suggestedCount.getReadOnlyProperty();
     }

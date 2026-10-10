@@ -24,6 +24,12 @@ class ActivityTrackerTest {
         "TRANSLATION,PROVIDER_INFERENCE_TEST,true",
         "TRANSLATION,EXPORT,true",
         "GLOSSARY_SCAN,GLOSSARY_REVIEW,true",
+        "GLOSSARY_TRANSLATE,TERM_TRANSLATE,true",
+        "TERM_SCAN,TERM_REVIEW,true",
+        "TERM_SCAN,GLOSSARY_SCAN,true",
+        "TERM_REVIEW,TRANSLATION,true",
+        "GLOSSARY_TRANSLATE,EXPORT,true",
+        "TERM_SCAN,MODEL_LISTING,false",
         "GLOSSARY_SCAN,EXPORT,true",
         "REVIEW_RETRY,PROVIDER_INFERENCE_TEST,true",
         "TRANSLATION,PROVIDER_CHECK,false",
@@ -36,6 +42,26 @@ class ActivityTrackerTest {
             final ActivityKind one, final ActivityKind other, final boolean expected) {
         assertThat(one.conflictsWith(other)).isEqualTo(expected);
         assertThat(other.conflictsWith(one)).isEqualTo(expected);
+    }
+
+    // IF a chip said "Model scan" for a term scan, THEN the person could not tell which list is being changed.
+    @ParameterizedTest
+    @CsvSource({
+        "GLOSSARY_SCAN,Name scan",
+        "GLOSSARY_REVIEW,Name review",
+        "GLOSSARY_TRANSLATE,Translating names",
+        "TERM_SCAN,Term scan",
+        "TERM_REVIEW,Term review",
+        "TERM_TRANSLATE,Translating terms"
+    })
+    void label_eachCardActivity_namesItsListAndItsAction(final ActivityKind kind, final String expected) {
+        final var messages = ua.bookloom.ui.UiTestInjector.create(java.util.Locale.ENGLISH)
+                .getInstance(ua.bookloom.ui.i18n.Messages.class);
+
+        assertThat(messages.get(kind.label())).isEqualTo(expected);
+        assertThat(kind.home()).isEqualTo(ua.bookloom.ui.ViewNames.NAMES_STYLE);
+        assertThat(kind.isBlocking()).isTrue();
+        assertThat(kind.isLeaveSensitive()).isTrue();
     }
 
     // IF a kind could run twice at once, THEN two scans or two listings would race to write the same result.

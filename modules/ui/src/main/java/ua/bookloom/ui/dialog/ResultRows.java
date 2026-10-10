@@ -18,6 +18,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeKind;
+import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 
@@ -38,8 +39,8 @@ final class ResultRows {
     private static final double SPACING = 8;
     private static final String NO_REASON = "—";
 
-    /** A heading line of the list. */
-    record Heading(ChangeKind kind, int count) {}
+    /** A heading line of the list: the key of its words, whose argument is the count. */
+    record Heading(MessageKey title, int count) {}
 
     private final Messages messages;
     private final ChangeResults results;
@@ -56,12 +57,38 @@ final class ResultRows {
         for (final ChangeKind kind : ChangeKind.values()) {
             final List<ChangeRow> ofKind =
                     results.rows().stream().filter(row -> row.kind() == kind).toList();
-            if (!ofKind.isEmpty()) {
-                items.add(new Heading(kind, ofKind.size()));
+            if (kind == ChangeKind.ADDED && hasTextOrigin(ofKind)) {
+                group(items, MessageKey.RESULTS_FOUND_IN_TEXT, ofKind, ChangeOrigin.TEXT);
+                group(items, MessageKey.RESULTS_ADDED_BY_MODEL, ofKind, ChangeOrigin.MODEL);
+            } else if (!ofKind.isEmpty()) {
+                items.add(new Heading(headingKey(kind), ofKind.size()));
                 items.addAll(ofKind);
             }
         }
         return items;
+    }
+
+    // The rows found in the text are told apart from the model's only when both groups exist.
+    private static boolean hasTextOrigin(final List<ChangeRow> added) {
+        return added.stream().anyMatch(row -> row.origin() == ChangeOrigin.TEXT);
+    }
+
+    private static void group(
+            final List<Object> items, final MessageKey title, final List<ChangeRow> added, final ChangeOrigin origin) {
+        final List<ChangeRow> ofOrigin =
+                added.stream().filter(row -> row.origin() == origin).toList();
+        if (!ofOrigin.isEmpty()) {
+            items.add(new Heading(title, ofOrigin.size()));
+            items.addAll(ofOrigin);
+        }
+    }
+
+    private static MessageKey headingKey(final ChangeKind kind) {
+        return switch (kind) {
+            case ADDED -> MessageKey.RESULTS_ADDED;
+            case REMOVED -> MessageKey.RESULTS_REMOVED;
+            case CHANGED -> MessageKey.RESULTS_CHANGED;
+        };
     }
 
     Node headings() {
@@ -139,22 +166,12 @@ final class ResultRows {
             if (empty || item == null) {
                 setGraphic(null);
             } else if (item instanceof Heading head) {
-                heading.setText(headingText(head));
+                heading.setText(messages.get(head.title(), head.count()));
                 setGraphic(heading);
             } else if (item instanceof ChangeRow shown) {
                 fill(shown);
                 setGraphic(row);
             }
-        }
-
-        private String headingText(final Heading head) {
-            return messages.get(
-                    switch (head.kind()) {
-                        case ADDED -> MessageKey.RESULTS_ADDED;
-                        case REMOVED -> MessageKey.RESULTS_REMOVED;
-                        case CHANGED -> MessageKey.RESULTS_CHANGED;
-                    },
-                    head.count());
         }
 
         private void fill(final ChangeRow shown) {

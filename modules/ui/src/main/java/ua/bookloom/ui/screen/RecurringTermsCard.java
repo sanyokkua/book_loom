@@ -17,6 +17,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
@@ -33,8 +34,8 @@ import ua.bookloom.ui.state.RecurringTerms;
 /**
  * The Recurring terms card under the glossary: common words and titles the book repeats, with the rendering later
  * requests are asked to keep, what the drafts actually used, and the actions to edit a rendering, move a term to the
- * glossary or remove it. The scan needs no model; the suggestion of renderings is one of the screen's model actions,
- * so it is offered and blocked as they are.
+ * glossary or remove it. Its Scan, Review and Translate are the screen's model actions, in the bar the glossary card
+ * carries too, so they are offered and blocked as the glossary's are.
  */
 @Slf4j
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -82,20 +83,20 @@ final class RecurringTermsCard {
 
     private static FlowPane toolbar(final Messages messages, final NamesStyleViewModel names) {
         final RecurringTerms recurring = names.recurring();
-        final Button find = action(
-                messages, "recurring-find", MessageKey.RECURRING_FIND, MessageKey.RECURRING_FIND_TIP, recurring::find);
-        final List<Button> modelActions = modelActions(messages, names);
-        final TextField typed = typedTerm(messages);
-        final Runnable add = () -> {
-            recurring.add(typed.getText());
-            typed.clear();
-        };
-        typed.setOnAction(event -> add.run());
-        final Button addButton =
-                action(messages, "recurring-add", MessageKey.RECURRING_ADD, MessageKey.RECURRING_ADD_TIP, add);
-        final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, find);
-        toolbar.getChildren().addAll(modelActions);
-        toolbar.getChildren().addAll(typed, addButton);
+        final HBox bar = ModelActionBar.build(
+                messages,
+                "recurring",
+                new ModelActionBar.Words(
+                        MessageKey.RECURRING_MODEL_SCAN,
+                        MessageKey.RECURRING_MODEL_SCAN_TIP,
+                        MessageKey.RECURRING_MODEL_REVIEW,
+                        MessageKey.RECURRING_MODEL_REVIEW_TIP,
+                        MessageKey.RECURRING_SUGGEST,
+                        MessageKey.RECURRING_SUGGEST_TIP),
+                new ModelActionBar.Actions(recurring::scan, recurring::review, recurring::translate),
+                names);
+        final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, bar);
+        toolbar.getChildren().addAll(typedTermWithAdd(messages, recurring));
         toolbar.getChildren()
                 .add(ChangedMarks.filter(
                         messages, "recurring-changed-filter", names.marks().terms()));
@@ -104,33 +105,15 @@ final class RecurringTermsCard {
         return toolbar;
     }
 
-    // The model's three actions on the recurring terms, offered and blocked as the glossary's model actions are.
-    private static List<Button> modelActions(final Messages messages, final NamesStyleViewModel names) {
-        final RecurringTerms recurring = names.recurring();
-        final Button suggest = action(
-                messages,
-                "recurring-suggest",
-                MessageKey.RECURRING_SUGGEST,
-                MessageKey.RECURRING_SUGGEST_TIP,
-                recurring::suggestRenderings);
-        final Button modelScan = action(
-                messages,
-                "recurring-model-scan",
-                MessageKey.RECURRING_MODEL_SCAN,
-                MessageKey.RECURRING_MODEL_SCAN_TIP,
-                recurring::scanWithModel);
-        final Button modelReview = action(
-                messages,
-                "recurring-model-review",
-                MessageKey.RECURRING_MODEL_REVIEW,
-                MessageKey.RECURRING_MODEL_REVIEW_TIP,
-                recurring::reviewWithModel);
-        final List<Button> actions = List.of(modelScan, modelReview, suggest);
-        for (final Button model : actions) {
-            model.disableProperty()
-                    .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
-        }
-        return actions;
+    private static List<Node> typedTermWithAdd(final Messages messages, final RecurringTerms recurring) {
+        final TextField typed = typedTerm(messages);
+        final Runnable add = () -> {
+            recurring.add(typed.getText());
+            typed.clear();
+        };
+        typed.setOnAction(event -> add.run());
+        return List.of(
+                typed, action(messages, "recurring-add", MessageKey.RECURRING_ADD, MessageKey.RECURRING_ADD_TIP, add));
     }
 
     // Escape empties the field, as it does the glossary's search.

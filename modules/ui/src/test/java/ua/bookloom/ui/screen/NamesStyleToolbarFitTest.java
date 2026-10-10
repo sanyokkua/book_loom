@@ -24,10 +24,16 @@ class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
     private static final List<String> CAPTIONS = List.of(
             "names-style-glossary-title",
             "names-style-add",
-            "names-style-model-scan",
+            "names-style-scan",
             "names-style-review",
+            "names-style-translate",
             "names-style-import",
-            "names-style-export");
+            "names-style-export",
+            "recurring-title",
+            "recurring-scan",
+            "recurring-review",
+            "recurring-translate",
+            "recurring-add");
 
     @AfterEach
     void releaseTheModel() {
@@ -81,10 +87,11 @@ class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
         glossary.holdModelCalls();
 
         onFx(() -> button("names-style-review").fire());
-        awaitFx(() -> isShown("names-style-model-stop"));
+        awaitFx(() -> isShown("names-style-stop"));
 
         final List<String> withStop = new java.util.ArrayList<>(CAPTIONS);
-        withStop.add("names-style-model-stop");
+        withStop.add("names-style-stop");
+        withStop.add("recurring-stop");
         assertThat(cutCaptions(withStop)).isEmpty();
     }
 }

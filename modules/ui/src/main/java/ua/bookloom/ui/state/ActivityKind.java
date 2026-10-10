@@ -6,8 +6,8 @@ import ua.bookloom.ui.i18n.MessageKey;
 /**
  * The kinds of work that talk to the model or to the provider, and which of them may not run beside each other.
  *
- * <p>The local model serves one request at a time, so every kind that asks it for text — the run, the glossary's scan
- * and review, a review retry, the provider's inference test and an export (whose consistency pass may ask it) — is
+ * <p>The local model serves one request at a time, so every kind that asks it for text — the run, the names' and terms' scan,
+ * review and translate, a review retry, the provider's inference test and an export (whose consistency pass may ask it) — is
  * <em>exclusive</em>: one excludes every other. The light provider checks (connection, model list) and the model
  * listing ask the server, not the model, so they may run during a run; any kind still excludes a second of its own
  * kind. The relation is symmetric by construction ({@link #conflictsWith}).
@@ -20,6 +20,14 @@ public enum ActivityKind {
     GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE, true),
     /** The glossary's model review of its rows; abandoned work if the person leaves Names &amp; style. */
     GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE, true),
+    /** The glossary's translate-only action; abandoned work if the person leaves Names &amp; style. */
+    GLOSSARY_TRANSLATE(MessageKey.ACTIVITY_GLOSSARY_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true),
+    /** The recurring terms' scan (the text first, then the model); abandoned work if the person leaves the screen. */
+    TERM_SCAN(MessageKey.ACTIVITY_TERM_SCAN, true, true, ViewNames.NAMES_STYLE, true),
+    /** The recurring terms' model review; abandoned work if the person leaves Names &amp; style. */
+    TERM_REVIEW(MessageKey.ACTIVITY_TERM_REVIEW, true, true, ViewNames.NAMES_STYLE, true),
+    /** The model's suggestion of a rendering for each recurring term; abandoned work if the person leaves the screen. */
+    TERM_TRANSLATE(MessageKey.ACTIVITY_TERM_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true),
     /** One segment re-translated from the review panel. */
     REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true),
     /** The provider test that asks the chosen model for a short answer. */

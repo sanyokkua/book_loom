@@ -135,14 +135,15 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
     }
 
     @Test
-    void find_pressed_addsTheTermsTheScanFound() throws Exception {
+    void scan_pressed_findsInTheTextFirstThenAsksTheModel() throws Exception {
         showCard();
         lexicon.willFind(IMP);
+        lexicon.modelWillFind(LexiconEntry.of("p1", "pentacle"));
 
-        onFx(() -> button("recurring-find").fire());
+        onFx(() -> button("recurring-scan").fire());
 
-        awaitFx(() -> table().getItems().size() == 1);
-        assertThat(lexicon.calls()).contains("scan(p1)");
+        awaitFx(() -> table().getItems().size() == 2);
+        assertThat(lexicon.calls()).containsSubsequence("scan(p1)", "scanWithModel(p1)");
     }
 
     @Test

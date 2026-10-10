@@ -45,8 +45,8 @@ final class ChangeRows {
                 change.reason());
     }
 
-    ChangeRow addedTerm(final LexiconEntry entry) {
-        return new ChangeRow(next++, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null);
+    ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
+        return new ChangeRow(next++, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
     }
 
     ChangeRow removedTerm(final EntryChanges.Removal<LexiconEntry> removal) {

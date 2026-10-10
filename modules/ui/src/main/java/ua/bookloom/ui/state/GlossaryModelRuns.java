@@ -24,8 +24,6 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.EntryChanges;
-import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -36,7 +34,8 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * The glossary's model actions — the name scan and the review — as the names and style screen runs them: one at a time,
+ * The model actions of both cards of the names and style screen — scan, review and translate of the names and of the
+ * recurring terms — as the screen runs them: one at a time,
  * with the chosen model, a waiting line that counts the requests and, while targets are suggested, the batches, and a stop that interrupts the request in flight. A
  * stopped action changes nothing, since the service writes only after every request has answered. Neither starts while
  * other model work runs ({@link ActivityTracker}); each registers itself while it runs, so the title bar can name and
@@ -47,9 +46,6 @@ import ua.bookloom.ui.i18n.Messages;
  */
 @Slf4j
 final class GlossaryModelRuns {
-
-    /** The recurring terms after an action, with what it did to them. */
-    private record Terms(EntryChanges<LexiconEntry> changes, List<LexiconEntry> all) {}
 
     /** One model action: given the model and the receiver of its progress, its answer. */
     @FunctionalInterface
@@ -88,6 +84,7 @@ final class GlossaryModelRuns {
 
     private final Screen screen;
     private final GlossaryCalls calls;
+    private final ModelAnswers answers;
     private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
     private final ReadOnlyStringWrapper blockedReason = new ReadOnlyStringWrapper("");
     private final ObjectBinding<@Nullable ActivityKind> blocker;
@@ -102,6 +99,7 @@ final class GlossaryModelRuns {
     GlossaryModelRuns(final Screen screen, final GlossaryCalls calls) {
         this.screen = Objects.requireNonNull(screen, "screen");
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.answers = new ModelAnswers(screen, calls);
         // A scan and a review are ruled out by the same work, so the scan's blocker speaks for both.
         this.blocker = screen.activities().blocker(ActivityKind.GLOSSARY_SCAN);
         blocker.addListener(observed -> refreshBlocked());
@@ -137,7 +135,7 @@ final class GlossaryModelRuns {
                 ChangeOperation.NAME_SCAN,
                 MessageKey.NAMES_STYLE_NO_MODEL,
                 (model, progress) -> screen.glossary().prescan(project, model, progress),
-                this::scanned);
+                changes -> answers.scanned(operation, changes));
     }
 
     void review() {
@@ -147,54 +145,58 @@ final class GlossaryModelRuns {
                 ChangeOperation.NAME_REVIEW,
                 MessageKey.NAMES_STYLE_NO_MODEL_REVIEW,
                 (model, progress) -> screen.glossary().review(project, model, progress),
-                this::reviewed);
+                report -> answers.reviewed(operation, report));
     }
 
-    void suggestRenderings() {
+    void translate() {
         final String project = screen.project().get();
         start(
-                ActivityKind.GLOSSARY_REVIEW,
-                ChangeOperation.TERM_TRANSLATE,
-                MessageKey.RECURRING_NO_MODEL,
-                (model, progress) ->
-                        screen.lexicon().suggest(project, model, progress).flatMap(done -> terms(project, done)),
-                this::renderingsSuggested);
+                ActivityKind.GLOSSARY_TRANSLATE,
+                ChangeOperation.NAME_TRANSLATE,
+                MessageKey.NAMES_STYLE_NO_MODEL_TRANSLATE,
+                (model, progress) -> screen.glossary().translate(project, model, progress),
+                changes -> answers.translated(operation, changes));
     }
 
+    void translateTerms() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.TERM_TRANSLATE,
+                ChangeOperation.TERM_TRANSLATE,
+                MessageKey.RECURRING_NO_MODEL,
+                (model, progress) -> screen.lexicon()
+                        .suggest(project, model, progress)
+                        .flatMap(done -> answers.terms(project, List.of(), done)),
+                answer -> answers.renderingsSuggested(operation, answer));
+    }
+
+    // The text step needs no model and stores what it finds before the model is asked, so it is the scan's first step.
     void scanTerms() {
         final String project = screen.project().get();
         start(
-                ActivityKind.GLOSSARY_SCAN,
+                ActivityKind.TERM_SCAN,
                 ChangeOperation.TERM_SCAN,
                 MessageKey.RECURRING_NO_MODEL_TERMS,
-                (model, progress) ->
-                        screen.lexicon().scanWithModel(project, model, progress).flatMap(done -> terms(project, done)),
-                answer -> termsChanged(answer, answer.changes().added().size(), MessageKey.RECURRING_MODEL_SCANNED));
+                (model, progress) -> screen.lexicon()
+                        .scan(project)
+                        .flatMap(found -> screen.lexicon()
+                                .scanWithModel(project, model, progress)
+                                .flatMap(done -> answers.terms(project, found.added(), done))),
+                answer -> answers.termsChanged(
+                        operation, answer, answer.changes().added().size(), MessageKey.RECURRING_MODEL_SCANNED));
     }
 
     void reviewTerms() {
         final String project = screen.project().get();
         start(
-                ActivityKind.GLOSSARY_REVIEW,
+                ActivityKind.TERM_REVIEW,
                 ChangeOperation.TERM_REVIEW,
                 MessageKey.RECURRING_NO_MODEL_TERMS,
-                (model, progress) ->
-                        screen.lexicon().review(project, model, progress).flatMap(done -> terms(project, done)),
-                answer -> termsChanged(answer, answer.changes().removed().size(), MessageKey.RECURRING_MODEL_REVIEWED));
-    }
-
-    private Result<Terms> terms(final String project, final EntryChanges<LexiconEntry> changes) {
-        return screen.lexicon().entries(project).map(all -> new Terms(changes, all));
-    }
-
-    private void termsChanged(final Terms answer, final int changed, final MessageKey line) {
-        log.info(
-                "model action on recurring terms changed {} of {}",
-                changed,
-                answer.all().size());
-        screen.lexiconRows().setAll(answer.all());
-        line(GlossaryNotice.Level.INFO, screen.messages().get(line, changed));
-        screen.changes().terms(operation, answer.changes());
+                (model, progress) -> screen.lexicon()
+                        .review(project, model, progress)
+                        .flatMap(done -> answers.terms(project, List.of(), done)),
+                answer -> answers.termsChanged(
+                        operation, answer, answer.changes().removed().size(), MessageKey.RECURRING_MODEL_REVIEWED));
     }
 
     /** Stops the action under way, if any; the glossary keeps what it had. */
@@ -212,38 +214,7 @@ final class GlossaryModelRuns {
         busy.set(false);
         line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.NAMES_STYLE_MODEL_STOPPED));
         screen.changes().stopped(operation);
-    }
-
-    private void scanned(final EntryChanges<GlossaryEntry> changes) {
-        log.info("model scan proposed {} entries", changes.added().size());
-        changes.added().stream()
-                .filter(entry -> GlossaryEdits.indexOf(screen.rows(), entry.id()) < 0)
-                .forEach(screen.rows()::add);
-        screen.changes().names(operation, changes);
-    }
-
-    private void reviewed(final GlossaryReviewReport report) {
-        log.info(
-                "model review removed {}, updated {} and suggested targets for {} entries",
-                report.removed(),
-                report.updated(),
-                report.suggested());
-        screen.rows().setAll(report.entries());
-        line(
-                GlossaryNotice.Level.INFO,
-                screen.messages()
-                        .get(MessageKey.NAMES_STYLE_REVIEWED, report.removed(), report.updated(), report.suggested()));
-        screen.changes().names(operation, report.changes());
-    }
-
-    private void renderingsSuggested(final Terms answer) {
-        final List<LexiconEntry> all = answer.all();
-        final int rendered = (int)
-                all.stream().filter(entry -> entry.established().isPresent()).count();
-        log.info("model suggested renderings: {} of {} recurring terms have one", rendered, all.size());
-        screen.lexiconRows().setAll(all);
-        line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.RECURRING_SUGGESTED, rendered));
-        screen.changes().terms(operation, answer.changes());
+        answers.reloadTerms(operation);
     }
 
     private <T> void start(
@@ -329,6 +300,7 @@ final class GlossaryModelRuns {
         if (failure != null) {
             log.warn("the model {} failed with {}", what, failure.code());
             line(GlossaryNotice.Level.ERROR, failure.message());
+            answers.reloadTerms(operation);
             return;
         }
         screen.notice().set(null);

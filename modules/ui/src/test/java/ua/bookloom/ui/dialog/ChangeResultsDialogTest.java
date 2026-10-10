@@ -19,6 +19,7 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOperation;
+import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.LiveCalls;
@@ -45,6 +46,10 @@ class ChangeResultsDialogTest extends ShellTestBase {
 
     private static ChangeRow added(final long id, final String term) {
         return new ChangeRow(id, ChangeKind.ADDED, term, "—", "Терм · character", null);
+    }
+
+    private static ChangeRow found(final long id, final String term) {
+        return new ChangeRow(id, ChangeKind.ADDED, term, "—", "—", null, ChangeOrigin.TEXT);
     }
 
     private static ChangeRow removed(final long id, final String term, final @Nullable String reason) {
@@ -80,6 +85,25 @@ class ChangeResultsDialogTest extends ShellTestBase {
                         "Hale",
                         "Well");
         assertThat(texts()).doesNotContain("Changed (0)");
+    }
+
+    // IF text finds and model additions shared one "Added" heading, THEN the person could not tell what needed no
+    // model.
+    @Test
+    void show_addedRowsOfBothOrigins_groupsThemUnderFoundInTheTextAndAddedByTheModel() {
+        show(results(false, found(0, "imp"), added(1, "pentacle"), found(2, "master")));
+
+        assertThat(texts()).contains("Found in the text (2)", "Added by the model (1)");
+        assertThat(texts()).doesNotContain("Added (3)");
+        assertThat(texts().indexOf("Found in the text (2)")).isLessThan(texts().indexOf("Added by the model (1)"));
+    }
+
+    // IF a name scan said "Added by the model" where there is no text step, THEN the heading would add noise.
+    @Test
+    void show_addedRowsOfOneOrigin_keepsThePlainAddedHeading() {
+        show(results(false, added(0, "Mid"), added(1, "Hale")));
+
+        assertThat(texts()).contains("Added (2)").doesNotContain("Added by the model (2)", "Found in the text (0)");
     }
 
     @Test
