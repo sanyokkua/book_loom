@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -24,6 +25,7 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -95,6 +97,7 @@ final class GlossaryModelRuns {
     private int requests;
     private @Nullable BatchStarted suggesting;
     private ChangeOperation operation = ChangeOperation.NAME_SCAN;
+    private Set<String> termsBefore = Set.of();
 
     GlossaryModelRuns(final Screen screen, final GlossaryCalls calls) {
         this.screen = Objects.requireNonNull(screen, "screen");
@@ -170,9 +173,12 @@ final class GlossaryModelRuns {
                 answer -> answers.renderingsSuggested(operation, answer));
     }
 
-    // The text step needs no model and stores what it finds before the model is asked, so it is the scan's first step.
+    // The text step needs no model and stores what it finds before the model is asked, so it is the scan's first step
+    // and the only one that runs when no model is chosen.
     void scanTerms() {
         final String project = screen.project().get();
+        final boolean modelless = screen.settings().selection().isEmpty();
+        termsBefore = ModelAnswers.keysOf(screen.lexiconRows());
         start(
                 ActivityKind.TERM_SCAN,
                 ChangeOperation.TERM_SCAN,
@@ -182,8 +188,10 @@ final class GlossaryModelRuns {
                         .flatMap(found -> screen.lexicon()
                                 .scanWithModel(project, model, progress)
                                 .flatMap(done -> answers.terms(project, found.added(), done))),
-                answer -> answers.termsChanged(
-                        operation, answer, answer.changes().added().size(), MessageKey.RECURRING_MODEL_SCANNED));
+                () -> screen.lexicon()
+                        .scan(project)
+                        .flatMap(found -> answers.terms(project, found.added(), EntryChanges.<LexiconEntry>none())),
+                answer -> answers.termsScanned(operation, answer, modelless));
     }
 
     void reviewTerms() {
@@ -213,8 +221,11 @@ final class GlossaryModelRuns {
         endActivity();
         busy.set(false);
         line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.NAMES_STYLE_MODEL_STOPPED));
-        screen.changes().stopped(operation);
-        answers.reloadTerms(operation);
+        if (operation == ChangeOperation.TERM_SCAN) {
+            answers.reloadTerms(operation, termsBefore, true);
+        } else {
+            screen.changes().stopped(operation);
+        }
     }
 
     private <T> void start(
@@ -223,8 +234,18 @@ final class GlossaryModelRuns {
             final MessageKey noModel,
             final Work<T> work,
             final Consumer<T> onOk) {
+        start(what, which, noModel, work, null, onOk);
+    }
+
+    private <T> void start(
+            final ActivityKind what,
+            final ChangeOperation which,
+            final MessageKey noModel,
+            final Work<T> work,
+            final @Nullable Supplier<Result<T>> textOnly,
+            final Consumer<T> onOk) {
         final Optional<ModelSelection> selection = screen.settings().selection();
-        if (selection.isEmpty()) {
+        if (selection.isEmpty() && textOnly == null) {
             log.debug("the model {} was not started: no model is chosen", what);
             line(GlossaryNotice.Level.ERROR, screen.messages().get(noModel));
             return;
@@ -237,7 +258,7 @@ final class GlossaryModelRuns {
                 "model {} of project {} started with provider {}",
                 what,
                 project,
-                selection.get().providerId());
+                selection.map(ModelSelection::providerId).orElse("none (text step only)"));
         final long mine = ++ticket;
         reset(which);
         handle = screen.activities().begin(what, this::stop);
@@ -245,11 +266,20 @@ final class GlossaryModelRuns {
         busy.set(true);
         screen.notice().set(null);
         running = calls.start(
-                what.name(),
-                () -> screen.models()
-                        .create(selection.get())
-                        .flatMap(model -> work.run(model, event -> Platform.runLater(() -> progress(mine, event)))),
-                answer -> ended(mine, what, project, answer, onOk));
+                what.name(), job(selection, work, textOnly, mine), answer -> ended(mine, what, project, answer, onOk));
+    }
+
+    private <T> Supplier<Result<T>> job(
+            final Optional<ModelSelection> selection,
+            final Work<T> work,
+            final @Nullable Supplier<Result<T>> textOnly,
+            final long mine) {
+        if (selection.isEmpty() && textOnly != null) {
+            return textOnly;
+        }
+        return () -> screen.models()
+                .create(selection.orElseThrow())
+                .flatMap(model -> work.run(model, event -> Platform.runLater(() -> progress(mine, event))));
     }
 
     private void reset(final ChangeOperation which) {
@@ -300,7 +330,7 @@ final class GlossaryModelRuns {
         if (failure != null) {
             log.warn("the model {} failed with {}", what, failure.code());
             line(GlossaryNotice.Level.ERROR, failure.message());
-            answers.reloadTerms(operation);
+            answers.reloadTerms(operation, termsBefore, false);
             return;
         }
         screen.notice().set(null);

@@ -1123,6 +1123,8 @@ public enum MessageKey {
     RECURRING_SUGGESTED("namesStyle.recurring.suggested"),
     /** Line after the model scan of recurring terms; argument 0 is how many terms were added. */
     RECURRING_MODEL_SCANNED("namesStyle.recurring.modelScanned"),
+    /** Line after a recurring-terms scan that ran its text step only because no model is chosen. */
+    RECURRING_MODEL_SKIPPED("namesStyle.recurring.modelSkipped"),
     /** Line after the model review of recurring terms; argument 0 is how many terms were removed. */
     RECURRING_MODEL_REVIEWED("namesStyle.recurring.modelReviewed"),
     /** Refusal of a term the glossary or the list already holds; argument 0 is the typed term. */

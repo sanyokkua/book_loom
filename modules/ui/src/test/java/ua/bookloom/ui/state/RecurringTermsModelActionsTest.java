@@ -97,11 +97,11 @@ class RecurringTermsModelActionsTest extends FxTestBase {
     }
 
     @Test
-    void scanWithModel_noModelChosen_saysSoAndAsksNothing() {
-        run(() -> vm.recurring().scan());
+    void reviewWithModel_noModelChosen_saysSoAndAsksNothing() {
+        run(() -> vm.recurring().review());
 
         assertThat(notice()).isEqualTo("Choose a model in the provider settings to scan or review recurring terms.");
-        assertThat(lexicon.calls()).doesNotContain("scanWithModel(p1)");
+        assertThat(lexicon.calls()).doesNotContain("review(p1)");
     }
 
     // IF the text step's finds were listed as the model's, THEN the person could not tell what needed no model.
@@ -139,5 +139,38 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         assertThat(onFx(() -> vm.recurring().rows()))
                 .extracting(LexiconEntry::term)
                 .containsExactly("imp");
+    }
+
+    // IF Scan refused to run without a model, THEN the old model-free "Find recurring terms" would be lost.
+    @Test
+    void scan_noModelChosen_runsTheTextStepShowsItsTermsAndSaysTheModelStepWasSkipped() {
+        lexicon.willFind(LexiconEntry.of(PROJECT, "imp"));
+
+        run(() -> vm.recurring().scan());
+
+        assertThat(lexicon.calls()).contains("scan(p1)").doesNotContain("review(p1)");
+        assertThat(onFx(() -> vm.recurring().rows()))
+                .extracting(LexiconEntry::term)
+                .containsExactly("imp");
+        assertThat(results().rows())
+                .extracting(ChangeRow::term, ChangeRow::origin)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("imp", ChangeOrigin.TEXT));
+        assertThat(notice())
+                .isEqualTo("Found in the text. The model step was skipped: choose a model in the provider settings"
+                        + " to run it.");
+        assertThat(onFx(() -> vm.busy().get())).isFalse();
+    }
+
+    // IF a failed model step left the dialog saying "Nothing was changed", THEN it would deny the stored terms.
+    @Test
+    void scanTerms_modelStepFails_resultsListTheTermsTheTextStepStored() {
+        interact(() -> settings.model().set("gemma3:12b"));
+        lexicon.willFind(LexiconEntry.of(PROJECT, "imp"));
+        lexicon.modelScanWillFail(AppError.of(ErrorCode.internal, "Failed", "The model did not answer."));
+
+        run(() -> vm.recurring().scan());
+
+        assertThat(results().outcome()).isEqualTo(ChangeResults.Outcome.CHANGED);
+        assertThat(results().rows()).extracting(ChangeRow::term).containsExactly("imp");
     }
 }

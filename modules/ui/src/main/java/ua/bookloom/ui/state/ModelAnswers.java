@@ -2,6 +2,8 @@ package ua.bookloom.ui.state;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.EntryChanges;
@@ -44,8 +46,31 @@ final class ModelAnswers {
         screen.changes().terms(operation, answer.found(), answer.changes());
     }
 
-    // A term scan stores what its text step found before the model answers, so a scan that ends early still shows it.
-    void reloadTerms(final ChangeOperation operation) {
+    static Set<String> keysOf(final List<LexiconEntry> rows) {
+        return rows.stream().map(row -> LexiconEntry.keyOf(row.term())).collect(Collectors.toSet());
+    }
+
+    void termsScanned(final ChangeOperation operation, final Terms answer, final boolean modelless) {
+        if (modelless) {
+            termsFound(operation, answer, MessageKey.RECURRING_MODEL_SKIPPED);
+        } else {
+            termsChanged(operation, answer, answer.changes().added().size(), MessageKey.RECURRING_MODEL_SCANNED);
+        }
+    }
+
+    /** The text step's terms alone, as a scan with no model chosen ends: the card shows them and the line says why. */
+    void termsFound(final ChangeOperation operation, final Terms answer, final MessageKey line) {
+        log.info(
+                "text scan found {} recurring terms; the model step was skipped",
+                answer.found().size());
+        screen.lexiconRows().setAll(answer.all());
+        info(screen.messages().get(line));
+        screen.changes().terms(operation, answer.found(), answer.changes());
+    }
+
+    // A term scan stores what its text step found before the model answers, so a scan that ends early lists those
+    // terms in its results; a stop that stored none is the only one the dialog calls "nothing was changed".
+    void reloadTerms(final ChangeOperation operation, final Set<String> before, final boolean stopped) {
         if (operation != ChangeOperation.TERM_SCAN) {
             return;
         }
@@ -53,8 +78,18 @@ final class ModelAnswers {
         log.debug("reloading the recurring terms of project {} after an unfinished scan", project);
         calls.run("lexicon reload", () -> screen.lexicon().entries(project), answer -> {
             final List<LexiconEntry> held = answer.data();
-            if (held != null && project.equals(screen.project().get())) {
-                screen.lexiconRows().setAll(held);
+            if (held == null || !project.equals(screen.project().get())) {
+                return;
+            }
+            screen.lexiconRows().setAll(held);
+            final List<LexiconEntry> stored = held.stream()
+                    .filter(entry -> !before.contains(LexiconEntry.keyOf(entry.term())))
+                    .toList();
+            log.debug("the unfinished scan stored {} terms; stopped by the person: {}", stored.size(), stopped);
+            if (!stored.isEmpty()) {
+                screen.changes().terms(operation, stored, EntryChanges.none());
+            } else if (stopped) {
+                screen.changes().stopped(operation);
             }
         });
     }
