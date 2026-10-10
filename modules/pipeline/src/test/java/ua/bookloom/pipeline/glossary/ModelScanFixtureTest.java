@@ -28,6 +28,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -98,10 +99,12 @@ class ModelScanFixtureTest {
                 new TermReview(new PromptTemplates(), new ObjectMapper(), glossary, SUGGEST),
                 SUGGEST);
 
-        final Result<List<GlossaryEntry>> added =
+        final Result<EntryChanges<GlossaryEntry>> added =
                 preScan.scan("p1", body("earth-gravity.md"), FRAME, POLICY, keepsAllThenJudges(Set.copyOf(NAMES)));
 
-        assertThat(added.data()).extracting(GlossaryEntry::term).containsExactlyInAnyOrderElementsOf(NAMES);
+        assertThat(Objects.requireNonNull(added.data()).added())
+                .extracting(GlossaryEntry::term)
+                .containsExactlyInAnyOrderElementsOf(NAMES);
     }
 
     // The manifest's names under each policy: Keep original leaves only the object to the model, the other two ask

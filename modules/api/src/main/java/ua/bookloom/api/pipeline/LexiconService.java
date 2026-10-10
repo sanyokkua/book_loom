@@ -26,9 +26,9 @@ public interface LexiconService {
      * Runs the deterministic scan for recurring common terms and titles over the project's book and adds each new one.
      *
      * @param projectId the non-null project id
-     * @return the lexicon as it now stands
+     * @return the entries the scan added
      */
-    Result<List<LexiconEntry>> scan(String projectId);
+    Result<EntryChanges<LexiconEntry>> scan(String projectId);
 
     /**
      * Shows the model the book's frequent words and adds the ones it says a translator must render the same way every
@@ -38,9 +38,9 @@ public interface LexiconService {
      * @param projectId the non-null project id
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish, on the calling thread
-     * @return the lexicon as it now stands
+     * @return the entries the model added
      */
-    Result<List<LexiconEntry>> scanWithModel(String projectId, ChatModel model, Consumer<JobEvent> progress);
+    Result<EntryChanges<LexiconEntry>> scanWithModel(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Asks the model whether each held term is worth keeping consistent and removes the ones it drops, never a term
@@ -49,9 +49,9 @@ public interface LexiconService {
      * @param projectId the non-null project id
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish, on the calling thread
-     * @return the lexicon as it now stands
+     * @return the entries the model dropped, as they were
      */
-    Result<List<LexiconEntry>> review(String projectId, ChatModel model, Consumer<JobEvent> progress);
+    Result<EntryChanges<LexiconEntry>> review(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Asks the model for a rendering of each term that has none yet, by the same call the glossary's suggestions use;
@@ -60,9 +60,9 @@ public interface LexiconService {
      * @param projectId the non-null project id
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish, on the calling thread
-     * @return the lexicon as it now stands
+     * @return the entries that took a suggested rendering, each as a change from its state before
      */
-    Result<List<LexiconEntry>> suggest(String projectId, ChatModel model, Consumer<JobEvent> progress);
+    Result<EntryChanges<LexiconEntry>> suggest(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Adds a term by hand.
@@ -93,6 +93,15 @@ public interface LexiconService {
      * @return the new glossary entry, or {@code validation} when no entry holds the term or the glossary has it
      */
     Result<GlossaryEntry> promote(String projectId, String term);
+
+    /**
+     * Puts an entry back as it was, replacing the one held for the same term: the undo of a removal or of a change a
+     * scan, review or suggestion made.
+     *
+     * @param entry the non-null entry to store
+     * @return the stored entry, or {@code validation} when the glossary holds the term now
+     */
+    Result<LexiconEntry> restore(LexiconEntry entry);
 
     /**
      * Removes a term from the lexicon.

@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.BookBrief;
@@ -59,36 +60,37 @@ public final class LexiconServiceImpl implements LexiconService {
     }
 
     @Override
-    public Result<List<LexiconEntry>> scan(final String projectId) {
+    public Result<EntryChanges<LexiconEntry>> scan(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
-        return guarded("scan", projectId, () -> runScan(projectId));
+        return guarded("scan", projectId, () -> changes(projectId, () -> runScan(projectId)));
     }
 
     @Override
-    public Result<List<LexiconEntry>> suggest(
+    public Result<EntryChanges<LexiconEntry>> suggest(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
-        return guarded("suggest", projectId, () -> runSuggest(projectId, model, progress));
+        return guarded("suggest", projectId, () -> changes(projectId, () -> runSuggest(projectId, model, progress)));
     }
 
     @Override
-    public Result<List<LexiconEntry>> scanWithModel(
+    public Result<EntryChanges<LexiconEntry>> scanWithModel(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
-        return guarded("model scan", projectId, () -> runModelScan(projectId, model, progress));
+        return guarded(
+                "model scan", projectId, () -> changes(projectId, () -> runModelScan(projectId, model, progress)));
     }
 
     @Override
-    public Result<List<LexiconEntry>> review(
+    public Result<EntryChanges<LexiconEntry>> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
-        return guarded("review", projectId, () -> runReview(projectId, model, progress));
+        return guarded("review", projectId, () -> changes(projectId, () -> runReview(projectId, model, progress)));
     }
 
     @Override
@@ -122,10 +124,39 @@ public final class LexiconServiceImpl implements LexiconService {
     }
 
     @Override
+    public Result<LexiconEntry> restore(final LexiconEntry entry) {
+        Objects.requireNonNull(entry, "entry");
+        return guarded("restore", entry.projectId(), () -> restoreEntry(entry));
+    }
+
+    @Override
     public Result<Boolean> remove(final String projectId, final String term) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(term, "term");
         return guarded("remove", projectId, () -> lexicon.remove(projectId, term));
+    }
+
+    private Result<LexiconEntry> restoreEntry(final LexiconEntry entry) {
+        return glossary.findByTerm(entry.projectId(), entry.term()).flatMap(inGlossary -> {
+            if (inGlossary.isPresent()) {
+                log.debug("Lexicon restore refused project={}: the glossary holds the term now", entry.projectId());
+                return Result.err(AppError.of(
+                        ErrorCode.validation,
+                        "Duplicate term",
+                        "'" + entry.term() + "' is in the glossary now, so it cannot return to the list."));
+            }
+            log.info("Lexicon term restored project={}", entry.projectId());
+            return lexicon.put(entry);
+        });
+    }
+
+    // Compares the lexicon before and after, so the answer is exactly what the action did, whatever it did.
+    private Result<EntryChanges<LexiconEntry>> changes(
+            final String projectId, final Supplier<Result<List<LexiconEntry>>> action) {
+        return lexicon.all(projectId)
+                .flatMap(before -> action.get()
+                        .map(after -> EntryChanges.between(
+                                before, after, entry -> LexiconEntry.keyOf(entry.term()), entry -> null)));
     }
 
     private Result<List<LexiconEntry>> runScan(final String projectId) {

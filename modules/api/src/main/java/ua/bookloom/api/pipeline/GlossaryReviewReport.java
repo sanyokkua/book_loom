@@ -11,8 +11,10 @@ import ua.bookloom.api.project.GlossaryEntry;
  * @param updated how many terms took the model's type or gender; never negative
  * @param suggested how many terms received a suggested target; never negative
  * @param entries the glossary as the review left it, in its stored order
+ * @param changes exactly which entries the review removed and rewrote, with the model's reason where it gave one
  */
-public record GlossaryReviewReport(int removed, int updated, int suggested, List<GlossaryEntry> entries) {
+public record GlossaryReviewReport(
+        int removed, int updated, int suggested, List<GlossaryEntry> entries, EntryChanges<GlossaryEntry> changes) {
 
     /** Validates the counts and copies the entries. */
     public GlossaryReviewReport {
@@ -20,6 +22,13 @@ public record GlossaryReviewReport(int removed, int updated, int suggested, List
             throw new IllegalArgumentException("counts must not be negative");
         }
         entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
+        Objects.requireNonNull(changes, "changes");
+    }
+
+    /** A review whose exact changes are not listed. */
+    public GlossaryReviewReport(
+            final int removed, final int updated, final int suggested, final List<GlossaryEntry> entries) {
+        this(removed, updated, suggested, entries, EntryChanges.none());
     }
 
     /** A review that suggested no target. */

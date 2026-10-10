@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -56,11 +57,11 @@ final class NameReview {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
         log.info("translate command names review started project={}", projectId);
-        final Result<List<GlossaryEntry>> scanned = glossary.scan(projectId);
+        final Result<EntryChanges<GlossaryEntry>> scanned = glossary.scan(projectId);
         if (scanned.isErr()) {
             return failed("scan", Objects.requireNonNull(scanned.error()), 0, out);
         }
-        final int added = Objects.requireNonNull(scanned.data()).size();
+        final int added = Objects.requireNonNull(scanned.data()).added().size();
         final Result<GlossaryReviewReport> reviewed = glossary.review(projectId, model, event -> {});
         if (reviewed.isErr()) {
             return failed("review", Objects.requireNonNull(reviewed.error()), added, out);

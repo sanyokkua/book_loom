@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -83,6 +84,17 @@ final class ReviewCommit {
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), "error"));
         }
+        return report(
+                glossary, projectId, tally, verdicts, suggestions, Objects.requireNonNull(current.data(), "current"));
+    }
+
+    private static Result<GlossaryReviewReport> report(
+            final GlossaryRepository glossary,
+            final String projectId,
+            final Tally tally,
+            final List<Verdict> verdicts,
+            final List<Suggestion> suggestions,
+            final List<GlossaryEntry> before) {
         final int removed = tally.removed().size();
         final int suggested = tally.suggested().size();
         final int updated = tally.updated().size();
@@ -94,7 +106,25 @@ final class ReviewCommit {
                 removed,
                 updated,
                 suggested);
-        return glossary.all(projectId).map(after -> new GlossaryReviewReport(removed, updated, suggested, after));
+        final Map<String, String> reasons = reasons(verdicts);
+        return glossary.all(projectId)
+                .map(after -> new GlossaryReviewReport(
+                        removed,
+                        updated,
+                        suggested,
+                        after,
+                        EntryChanges.between(before, after, GlossaryEntry::id, entry -> reasons.get(entry.id()))));
+    }
+
+    // The model's own words for a verdict: the phrase it quoted, which is all a reply gives as a reason.
+    private static Map<String, String> reasons(final List<Verdict> verdicts) {
+        final Map<String, String> reasons = new HashMap<>();
+        for (final Verdict verdict : verdicts) {
+            if (!verdict.evidence().isBlank()) {
+                reasons.putIfAbsent(verdict.entry().id(), verdict.evidence());
+            }
+        }
+        return reasons;
     }
 
     /** The verdicts, then the suggestions, each against the entry as the one before left it; stops at a failure. */

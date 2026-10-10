@@ -10,6 +10,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.persistence.PersistenceModule;
@@ -57,7 +58,7 @@ final class PreScanEvalRunner {
         final CallFrame frame = StageFrames.frame(brief, scanCase.source(), scanCase.target());
         final int mark = probe.mark();
         log.info("Pre-scan eval case={}", scanCase.id());
-        final Result<List<GlossaryEntry>> kept = scan.scan(
+        final Result<EntryChanges<GlossaryEntry>> kept = scan.scan(
                 PROJECT,
                 StageFrames.segments(scanCase.sentences()),
                 frame,
@@ -75,7 +76,7 @@ final class PreScanEvalRunner {
                     counts.repeated(),
                     0);
         }
-        return score(scanCase, Objects.requireNonNull(kept.data(), "kept"), counts);
+        return score(scanCase, Objects.requireNonNull(kept.data(), "kept").added(), counts);
     }
 
     private static StageRow score(

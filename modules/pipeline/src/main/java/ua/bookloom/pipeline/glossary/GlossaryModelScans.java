@@ -15,6 +15,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
@@ -47,7 +48,7 @@ public final class GlossaryModelScans {
     /** What a model action of the glossary runs on. */
     private record Book(List<Segment> segments, CallFrame frame, NamePolicy names) {}
 
-    Result<List<GlossaryEntry>> prescan(
+    Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> preScan.scan(

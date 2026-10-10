@@ -45,7 +45,10 @@ record LexiconActions(
     /** Adds the terms the scan finds to the rows. */
     void scan(final String project, final Consumer<Runnable> whileCurrent) {
         log.debug("scanning for recurring terms in project {}", project);
-        calls.run("lexicon scan", () -> lexicon.scan(project), answer -> whileCurrent.accept(() -> setAll(answer)));
+        calls.run(
+                "lexicon scan",
+                () -> lexicon.scan(project).flatMap(done -> lexicon.entries(project)),
+                answer -> whileCurrent.accept(() -> setAll(answer)));
     }
 
     /** Adds a typed term, refusing a blank or a duplicate before the service is asked. */
@@ -102,7 +105,7 @@ record LexiconActions(
             return held;
         }
         log.debug("the lexicon of project {} is empty: running the deterministic scan", project);
-        return lexicon.scan(project);
+        return lexicon.scan(project).flatMap(done -> lexicon.entries(project));
     }
 
     private boolean isHeld(final String term) {

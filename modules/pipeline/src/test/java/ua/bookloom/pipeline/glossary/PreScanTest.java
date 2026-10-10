@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -77,12 +78,12 @@ class PreScanTest {
                         reply(
                                 "{\"terms\":[{\"term\":\"hale\",\"type\":\"other\"},{\"term\":\"Milton\",\"type\":\"place\"}]}"));
 
-        final Result<List<GlossaryEntry>> result =
+        final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, POLICY, calls(model));
 
         final GlossaryEntry milton =
                 new GlossaryEntry("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
-        assertThat(result.data()).containsExactly(milton);
+        assertThat(added(result)).containsExactly(milton);
         assertThat(glossary.all(PROJECT).data()).containsExactlyInAnyOrder(held, milton);
     }
 
@@ -93,7 +94,7 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[]}"))
                 .answer(reply("{\"terms\":[]}"));
 
-        final Result<List<GlossaryEntry>> result =
+        final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, ninetyFiveNames(), FRAME, POLICY, calls(model));
 
         assertThat(result.isOk()).isTrue();
@@ -119,7 +120,7 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[{\"term\":\"Xaa\",\"type\":\"person\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<List<GlossaryEntry>> result =
+        final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, ninetyFiveNames(), FRAME, POLICY, calls(model));
 
         assertThat(result.error()).isEqualTo(failure);
@@ -130,7 +131,8 @@ class PreScanTest {
     void scan_modelThrows_returnsInternalErrorAndWritesNothing() {
         final ScriptedChatModel model = new ScriptedChatModel().throwFailure(new IllegalStateException("boom"));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
+        final Result<EntryChanges<GlossaryEntry>> result =
+                preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
         assertThat(glossary.all(PROJECT).data()).isEmpty();
@@ -183,10 +185,10 @@ class PreScanTest {
                         reply(
                                 "{\"terms\":[{\"term\":\"Chapter\",\"type\":\"term\"},{\"term\":\"Milton\",\"type\":\"place\"}]}"));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(
+        final Result<EntryChanges<GlossaryEntry>> result = preScan.scan(
                 PROJECT, book("We read Chapter today.", "We read Milton today."), FRAME, POLICY, calls(model));
 
-        assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Milton");
+        assertThat(added(result)).extracting(GlossaryEntry::term).containsExactly("Milton");
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Milton");
     }
 
@@ -229,10 +231,11 @@ class PreScanTest {
     void scan_unreadableReply_addsNothingAndReportsNoError(final String replyText) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(replyText));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
+        final Result<EntryChanges<GlossaryEntry>> result =
+                preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(result.isOk()).isTrue();
-        assertThat(result.data()).isEmpty();
+        assertThat(added(result)).isEmpty();
         assertThat(glossary.all(PROJECT).data()).isEmpty();
     }
 
@@ -240,14 +243,14 @@ class PreScanTest {
     void scan_realPseudoModel_addsOnlyTheBookNameNotTheTemplateWords() {
         final PseudoChatModel pseudo = new PseudoChatModel(new ObjectMapper());
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(
+        final Result<EntryChanges<GlossaryEntry>> result = preScan.scan(
                 PROJECT,
                 book("We saw Hale at the door.", "We saw Hale at the door.", "We saw Hale at the door."),
                 FRAME,
                 POLICY,
                 (kind, segmentId, request) -> pseudo.chat(request));
 
-        assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
+        assertThat(added(result)).extracting(GlossaryEntry::term).containsExactly("Hale");
     }
 
     @Test
@@ -275,10 +278,10 @@ class PreScanTest {
     void scan_noCandidates_makesNoCallAndAddsNothing() {
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final Result<List<GlossaryEntry>> result =
+        final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, book("We saw the door."), FRAME, POLICY, calls(model));
 
-        assertThat(result.data()).isEmpty();
+        assertThat(added(result)).isEmpty();
         assertThat(model.requests()).isEmpty();
     }
 
@@ -289,14 +292,14 @@ class PreScanTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"terms\":[{\"term\":\"Moreau\"},{\"term\":\"Acme\"},{\"term\":\"Justine\"}]}"));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(
+        final Result<EntryChanges<GlossaryEntry>> result = preScan.scan(
                 PROJECT,
                 book(NAMES_BOOK),
                 FRAME,
                 POLICY,
                 calls(model, Map.of("Acme", "not-a-name", "Justine", "none")));
 
-        assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
+        assertThat(added(result)).extracting(GlossaryEntry::term).containsExactly("Moreau");
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
     }
 
@@ -318,7 +321,7 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[{\"term\":\"Moreau\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(
+        final Result<EntryChanges<GlossaryEntry>> result = preScan.scan(
                 PROJECT, book(NAMES_BOOK), FRAME, POLICY, (kind, segmentId, request) -> model.chat(request));
 
         assertThat(result.error()).isEqualTo(failure);
@@ -389,5 +392,9 @@ class PreScanTest {
 
     private static Result<ChatResponse> reply(final String content) {
         return Result.ok(new ChatResponse(Objects.requireNonNull(content), FinishReason.STOP));
+    }
+
+    private static List<GlossaryEntry> added(final Result<EntryChanges<GlossaryEntry>> result) {
+        return Objects.requireNonNull(result.data()).added();
     }
 }

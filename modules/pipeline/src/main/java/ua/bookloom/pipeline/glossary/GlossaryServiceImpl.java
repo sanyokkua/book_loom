@@ -24,6 +24,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
@@ -31,11 +32,9 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
@@ -74,13 +73,13 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     @Override
-    public Result<List<GlossaryEntry>> scan(final String projectId) {
+    public Result<EntryChanges<GlossaryEntry>> scan(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
-        return guarded("scan", projectId, () -> runScan(projectId));
+        return guarded("scan", projectId, () -> runScan(projectId).map(EntryChanges::ofAdded));
     }
 
     @Override
-    public Result<List<GlossaryEntry>> prescan(
+    public Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
@@ -95,6 +94,18 @@ public final class GlossaryServiceImpl implements GlossaryService {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         return guarded("review", projectId, () -> modelScans.review(projectId, model, progress));
+    }
+
+    @Override
+    public Result<EntryChanges<GlossaryEntry>> translate(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
+        return guarded(
+                "translate",
+                projectId,
+                () -> GlossaryTranslation.run(glossary, modelScans, projectId, model, progress));
     }
 
     @Override
@@ -307,7 +318,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         }
         final Optional<GlossaryEntry> existing = Objects.requireNonNull(held.data(), "held");
         final Result<GlossaryEntry> stored = existing.isPresent()
-                ? updateEntry(replaced(existing.get(), row))
+                ? updateEntry(GlossaryCsv.replaced(existing.get(), row))
                 : addEntry(new GlossaryEntry(
                         GlossaryIds.of(projectId, row.term()),
                         projectId,
@@ -317,28 +328,6 @@ public final class GlossaryServiceImpl implements GlossaryService {
                         row.gender(),
                         row.locked()));
         return stored.map(entry -> Boolean.TRUE);
-    }
-
-    // A row never turns a known value into an unknown one: a rescan's file lists a character as "term, unknown"
-    // before anybody has told it who she is, and importing it must not undo what the person or a review settled.
-    private static GlossaryEntry replaced(final GlossaryEntry existing, final GlossaryCsv.Row row) {
-        final TermType type = isGeneric(row.type()) && !isGeneric(existing.type()) ? existing.type() : row.type();
-        final Gender gender = row.gender() == Gender.UNKNOWN ? existing.gender() : row.gender();
-        if (type != row.type() || gender != row.gender()) {
-            log.debug(
-                    "Glossary import keeps entry {} type={} gender={} over the row's {} / {}",
-                    existing.id(),
-                    type,
-                    gender,
-                    row.type(),
-                    row.gender());
-        }
-        return new GlossaryEntry(
-                existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked());
-    }
-
-    private static boolean isGeneric(final TermType type) {
-        return type == TermType.TERM || type == TermType.OTHER;
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {

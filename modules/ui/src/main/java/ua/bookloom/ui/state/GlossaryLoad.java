@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
 
@@ -24,7 +25,7 @@ final class GlossaryLoad {
             return held;
         }
         log.debug("glossary of project {} is empty: running the deterministic scan", project);
-        final Result<List<GlossaryEntry>> proposed = glossary.scan(project);
+        final Result<List<GlossaryEntry>> proposed = glossary.scan(project).map(EntryChanges::added);
         log.info(
                 "deterministic scan of project {} proposed {} entries",
                 project,

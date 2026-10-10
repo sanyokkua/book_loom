@@ -34,9 +34,9 @@ public interface GlossaryService {
      * Runs the deterministic frequency scan over the project's book and adds any newly proposed term.
      *
      * @param projectId the non-null project id
-     * @return the entries the scan added
+     * @return the entries the scan added; nothing when the glossary already held entries
      */
-    Result<List<GlossaryEntry>> scan(String projectId);
+    Result<EntryChanges<GlossaryEntry>> scan(String projectId);
 
     /**
      * Runs a model-assisted pre-scan over the project's book and adds any newly proposed term.
@@ -46,7 +46,7 @@ public interface GlossaryService {
      * @param progress the non-null receiver of each model call's start and finish, on the calling thread
      * @return the entries the pre-scan added; nothing is added unless every call answered
      */
-    Result<List<GlossaryEntry>> prescan(String projectId, ChatModel model, Consumer<JobEvent> progress);
+    Result<EntryChanges<GlossaryEntry>> prescan(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Asks the model whether each unlocked term with no target is a name, a term or not a name: a term judged not a
@@ -56,10 +56,23 @@ public interface GlossaryService {
      * @param projectId the non-null project id
      * @param model the non-null model to call
      * @param progress the non-null receiver of each model call's start and finish, on the calling thread
-     * @return what was removed and updated and the glossary as it now stands; nothing changes unless every call
-     *     answered
+     * @return what was removed and updated, the glossary as it now stands and the exact changes with the model's
+     *     reason; nothing changes unless every call answered
      */
     Result<GlossaryReviewReport> review(String projectId, ChatModel model, Consumer<JobEvent> progress);
+
+    /**
+     * Asks the model for a target of each unlocked term that has none or only an earlier suggestion, and nothing else:
+     * no verdict on whether a term is a name, no type or gender change. A target the person chose is never touched.
+     * The rendering follows the Book Brief's name policy.
+     *
+     * @param projectId the non-null project id
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each model call's start and finish, on the calling thread
+     * @return the entries that took a suggested target, each as a change from its state before; nothing is written
+     *     unless every call answered
+     */
+    Result<EntryChanges<GlossaryEntry>> translate(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Adds a glossary entry.

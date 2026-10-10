@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -128,7 +129,8 @@ final class GlossaryModelRuns {
         start(
                 ActivityKind.GLOSSARY_SCAN,
                 MessageKey.NAMES_STYLE_NO_MODEL,
-                (model, progress) -> screen.glossary().prescan(project, model, progress),
+                (model, progress) ->
+                        screen.glossary().prescan(project, model, progress).map(EntryChanges::added),
                 this::scanned);
     }
 
@@ -146,7 +148,9 @@ final class GlossaryModelRuns {
         start(
                 ActivityKind.GLOSSARY_REVIEW,
                 MessageKey.RECURRING_NO_MODEL,
-                (model, progress) -> screen.lexicon().suggest(project, model, progress),
+                (model, progress) -> screen.lexicon()
+                        .suggest(project, model, progress)
+                        .flatMap(done -> screen.lexicon().entries(project)),
                 this::renderingsSuggested);
     }
 
@@ -156,7 +160,9 @@ final class GlossaryModelRuns {
         start(
                 ActivityKind.GLOSSARY_SCAN,
                 MessageKey.RECURRING_NO_MODEL_TERMS,
-                (model, progress) -> screen.lexicon().scanWithModel(project, model, progress),
+                (model, progress) -> screen.lexicon()
+                        .scanWithModel(project, model, progress)
+                        .flatMap(done -> screen.lexicon().entries(project)),
                 all -> termsChanged(all, all.size() - before, MessageKey.RECURRING_MODEL_SCANNED));
     }
 
@@ -166,7 +172,9 @@ final class GlossaryModelRuns {
         start(
                 ActivityKind.GLOSSARY_REVIEW,
                 MessageKey.RECURRING_NO_MODEL_TERMS,
-                (model, progress) -> screen.lexicon().review(project, model, progress),
+                (model, progress) -> screen.lexicon()
+                        .review(project, model, progress)
+                        .flatMap(done -> screen.lexicon().entries(project)),
                 all -> termsChanged(all, before - all.size(), MessageKey.RECURRING_MODEL_REVIEWED));
     }
 

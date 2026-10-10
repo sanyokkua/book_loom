@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.Gender;
@@ -71,38 +72,55 @@ public final class ScriptedLexiconService implements LexiconService {
     }
 
     @Override
-    public Result<List<LexiconEntry>> scan(final String projectId) {
+    public Result<EntryChanges<LexiconEntry>> scan(final String projectId) {
         calls.add("scan(" + projectId + ")");
+        final List<LexiconEntry> before = List.copyOf(held);
         held.addAll(scanFinds);
         scanFinds.clear();
-        return Result.ok(List.copyOf(held));
+        return changedFrom(before);
     }
 
     @Override
-    public Result<List<LexiconEntry>> scanWithModel(
+    public Result<EntryChanges<LexiconEntry>> scanWithModel(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         calls.add("scanWithModel(" + projectId + ")");
+        final List<LexiconEntry> before = List.copyOf(held);
         held.addAll(modelFinds);
         modelFinds.clear();
-        return Result.ok(List.copyOf(held));
+        return changedFrom(before);
     }
 
     @Override
-    public Result<List<LexiconEntry>> review(
+    public Result<EntryChanges<LexiconEntry>> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         calls.add("review(" + projectId + ")");
+        final List<LexiconEntry> before = List.copyOf(held);
         held.removeIf(entry -> reviewDrops.contains(entry.term()));
         reviewDrops.clear();
-        return Result.ok(List.copyOf(held));
+        return changedFrom(before);
     }
 
     @Override
-    public Result<List<LexiconEntry>> suggest(
+    public Result<EntryChanges<LexiconEntry>> suggest(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         calls.add("suggest(" + projectId + ")");
+        final List<LexiconEntry> before = List.copyOf(held);
         held.clear();
         held.addAll(suggestions);
-        return Result.ok(List.copyOf(held));
+        return changedFrom(before);
+    }
+
+    @Override
+    public Result<LexiconEntry> restore(final LexiconEntry entry) {
+        calls.add("restore(" + entry.term() + ")");
+        held.removeIf(now -> LexiconEntry.keyOf(now.term()).equals(LexiconEntry.keyOf(entry.term())));
+        held.add(entry);
+        return Result.ok(entry);
+    }
+
+    private Result<EntryChanges<LexiconEntry>> changedFrom(final List<LexiconEntry> before) {
+        return Result.ok(EntryChanges.between(
+                before, List.copyOf(held), entry -> LexiconEntry.keyOf(entry.term()), entry -> null));
     }
 
     @Override

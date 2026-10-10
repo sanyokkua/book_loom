@@ -12,6 +12,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
@@ -79,8 +80,8 @@ public final class ScriptedGlossaryService implements GlossaryService {
     }
 
     @Override
-    public Result<List<GlossaryEntry>> scan(final String projectId) {
-        return answer("scan(" + projectId + ")");
+    public Result<EntryChanges<GlossaryEntry>> scan(final String projectId) {
+        return added(answer("scan(" + projectId + ")"));
     }
 
     /**
@@ -114,11 +115,27 @@ public final class ScriptedGlossaryService implements GlossaryService {
     }
 
     @Override
-    public Result<List<GlossaryEntry>> prescan(
+    public Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         report(progress);
         waitIfHeld();
-        return answer("prescan(" + projectId + ")");
+        return added(answer("prescan(" + projectId + ")"));
+    }
+
+    @Override
+    public Result<EntryChanges<GlossaryEntry>> translate(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        report(progress);
+        waitIfHeld();
+        return added(answer("translate(" + projectId + ")"));
+    }
+
+    // A test scripts a scan with the entries it adds; the service answers them as the changes they are.
+    @SuppressWarnings("unchecked")
+    private static Result<EntryChanges<GlossaryEntry>> added(final Result<?> scripted) {
+        return scripted.map(data -> data instanceof List<?> list
+                ? EntryChanges.ofAdded((List<GlossaryEntry>) list)
+                : (EntryChanges<GlossaryEntry>) data);
     }
 
     @Override

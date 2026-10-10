@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
@@ -69,11 +70,11 @@ public final class PreScan {
      * @param frame the run's language pair and style, for the system message
      * @param policy the Book Brief's name policy, which the suggested targets follow
      * @param calls the seam every model call goes through
-     * @return the entries added, unlocked, each with a suggested target where the model gave one — a term the glossary
+     * @return the changes: the entries added, unlocked, each with a suggested target where the model gave one — a term the glossary
      *     holds or the person removed is not among them; or the error of the first failed call or glossary access,
      *     with nothing added by the model's answers
      */
-    public Result<List<GlossaryEntry>> scan(
+    public Result<EntryChanges<GlossaryEntry>> scan(
             final String projectId,
             final List<Segment> segments,
             final CallFrame frame,
@@ -85,7 +86,7 @@ public final class PreScan {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         try {
-            return run(projectId, segments, frame, policy, calls);
+            return run(projectId, segments, frame, policy, calls).map(EntryChanges::ofAdded);
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Name scan failed", "The model name scan could not be completed.", null, cause);

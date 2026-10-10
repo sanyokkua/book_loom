@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.glossary;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -14,8 +15,10 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
@@ -87,5 +90,26 @@ final class GlossaryServiceFixtures {
                 null,
                 SegmentStatus.PENDING,
                 0.0);
+    }
+
+    static Project project(final BookBrief brief) {
+        return new Project(PROJECT, Path.of("book.txt"), BookFormat.TXT, "hash", brief);
+    }
+
+    static BookBrief withTarget(final BookBrief brief, final String target) {
+        return new BookBrief(
+                brief.sourceLanguage(),
+                target,
+                brief.genre(),
+                brief.register(),
+                brief.voiceEra(),
+                brief.audience(),
+                brief.names(),
+                brief.foreignPassages(),
+                brief.footnotes(),
+                brief.units(),
+                brief.balance(),
+                brief.alsoTranslate(),
+                brief.dial());
     }
 }

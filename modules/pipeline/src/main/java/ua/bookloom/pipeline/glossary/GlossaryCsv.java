@@ -156,4 +156,26 @@ public final class GlossaryCsv {
         }
         return '"' + field.replace("\"", "\"\"") + '"';
     }
+
+    // A row never turns a known value into an unknown one: a rescan's file lists a character as "term, unknown"
+    // before anybody has told it who she is, and importing it must not undo what the person or a review settled.
+    static GlossaryEntry replaced(final GlossaryEntry existing, final Row row) {
+        final TermType type = isGeneric(row.type()) && !isGeneric(existing.type()) ? existing.type() : row.type();
+        final Gender gender = row.gender() == Gender.UNKNOWN ? existing.gender() : row.gender();
+        if (type != row.type() || gender != row.gender()) {
+            log.debug(
+                    "Glossary import keeps entry {} type={} gender={} over the row's {} / {}",
+                    existing.id(),
+                    type,
+                    gender,
+                    row.type(),
+                    row.gender());
+        }
+        return new GlossaryEntry(
+                existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked());
+    }
+
+    private static boolean isGeneric(final TermType type) {
+        return type == TermType.TERM || type == TermType.OTHER;
+    }
 }

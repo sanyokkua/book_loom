@@ -6,17 +6,19 @@ import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.book;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.decided;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.entry;
+import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.project;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.repeated;
+import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.withTarget;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.lang.reflect.Proxy;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.DeferralRepository;
@@ -34,6 +35,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -43,7 +45,6 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
@@ -189,9 +190,11 @@ class GlossaryServiceImplTest {
     void scan_emptyGlossary_addsTheProposedNames() {
         openProjects.put(PROJECT, book(HALE_BOOK, "Title"));
 
-        final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
+        final Result<EntryChanges<GlossaryEntry>> added = service.scan(PROJECT);
 
-        assertThat(added.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
+        assertThat(Objects.requireNonNull(added.data()).added())
+                .extracting(GlossaryEntry::term)
+                .containsExactly("Hale");
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -203,10 +206,12 @@ class GlossaryServiceImplTest {
         lines.addAll(repeated("We saw HALE at the door.", 3));
         openProjects.put(PROJECT, book(lines, "Title"));
 
-        final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
+        final Result<EntryChanges<GlossaryEntry>> added = service.scan(PROJECT);
 
         assertThat(added.isOk()).isTrue();
-        assertThat(added.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
+        assertThat(Objects.requireNonNull(added.data()).added())
+                .extracting(GlossaryEntry::term)
+                .containsExactly("Hale");
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -218,9 +223,9 @@ class GlossaryServiceImplTest {
         service.add(hale);
         openProjects.put(PROJECT, book(HALE_BOOK, "Title"));
 
-        final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
+        final Result<EntryChanges<GlossaryEntry>> added = service.scan(PROJECT);
 
-        assertThat(added.data()).isEmpty();
+        assertThat(Objects.requireNonNull(added.data()).added()).isEmpty();
         assertThat(service.entries(PROJECT).data()).containsExactly(hale);
     }
 
@@ -228,12 +233,12 @@ class GlossaryServiceImplTest {
     void scan_nameOnlyInTheAuxiliaryUnit_isNotProposed() {
         openProjects.put(PROJECT, book(List.of("Then we left."), "Then Acme met Acme and Acme met Acme."));
 
-        assertThat(service.scan(PROJECT).data()).isEmpty();
+        assertThat(Objects.requireNonNull(service.scan(PROJECT).data()).added()).isEmpty();
     }
 
     @Test
     void scan_projectNotOpen_answersValidation() {
-        final Result<List<GlossaryEntry>> refused = service.scan(PROJECT);
+        final Result<EntryChanges<GlossaryEntry>> refused = service.scan(PROJECT);
 
         assertThat(refused.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
     }
@@ -244,9 +249,9 @@ class GlossaryServiceImplTest {
         service.add(entry("Chapter", null, TermType.OTHER, false));
         service.remove(PROJECT, "p1:chapter");
 
-        final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
+        final Result<EntryChanges<GlossaryEntry>> added = service.scan(PROJECT);
 
-        assertThat(added.data()).isEmpty();
+        assertThat(Objects.requireNonNull(added.data()).added()).isEmpty();
         assertThat(service.add(entry("Chapter", "Розділ", TermType.OTHER, false))
                         .isOk())
                 .isTrue();
@@ -258,7 +263,7 @@ class GlossaryServiceImplTest {
         openProjects.put(PROJECT, book(repeated("Then we met Moreau there.", 2), "Title"));
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final Result<List<GlossaryEntry>> refused = service.prescan(PROJECT, model, events::add);
+        final Result<EntryChanges<GlossaryEntry>> refused = service.prescan(PROJECT, model, events::add);
 
         assertThat(refused.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(model.requests()).isEmpty();
@@ -280,10 +285,10 @@ class GlossaryServiceImplTest {
                         "{\"suggestions\":[{\"term\":\"Moreau\",\"target\":\"Моро\",\"gender\":\"male\"}]}",
                         FinishReason.STOP)));
 
-        final Result<List<GlossaryEntry>> added = service.prescan(PROJECT, model, events::add);
+        final Result<EntryChanges<GlossaryEntry>> added = service.prescan(PROJECT, model, events::add);
 
         // The review gave no gender, so the proposal's first-sentence guess stays only as a suggestion (15h.A2).
-        assertThat(added.data())
+        assertThat(Objects.requireNonNull(added.data()).added())
                 .containsExactly(new GlossaryEntry(
                                 "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                         .withSuggestedGender(Gender.MALE)
@@ -320,7 +325,8 @@ class GlossaryServiceImplTest {
     void prescan_projectNotOpen_answersValidation() {
         injector.getInstance(ProjectRepository.class).save(project(withTarget(BookBrief.defaults("en"), "uk")));
 
-        final Result<List<GlossaryEntry>> refused = service.prescan(PROJECT, new ScriptedChatModel(), events::add);
+        final Result<EntryChanges<GlossaryEntry>> refused =
+                service.prescan(PROJECT, new ScriptedChatModel(), events::add);
 
         assertThat(refused.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
     }
@@ -343,26 +349,5 @@ class GlossaryServiceImplTest {
 
         assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
         assertThat(failed.error()).extracting(AppError::cause).isInstanceOf(IllegalStateException.class);
-    }
-
-    private static Project project(final BookBrief brief) {
-        return new Project(PROJECT, Path.of("book.txt"), BookFormat.TXT, "hash", brief);
-    }
-
-    private static BookBrief withTarget(final BookBrief brief, final String target) {
-        return new BookBrief(
-                brief.sourceLanguage(),
-                target,
-                brief.genre(),
-                brief.register(),
-                brief.voiceEra(),
-                brief.audience(),
-                brief.names(),
-                brief.foreignPassages(),
-                brief.footnotes(),
-                brief.units(),
-                brief.balance(),
-                brief.alsoTranslate(),
-                brief.dial());
     }
 }
