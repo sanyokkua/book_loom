@@ -83,7 +83,7 @@ public final class TextChecks {
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
-            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage)));
+            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), glossaryPairs));
         }
         findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));

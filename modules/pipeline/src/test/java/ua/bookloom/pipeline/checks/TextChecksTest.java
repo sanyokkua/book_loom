@@ -289,6 +289,34 @@ class TextChecksTest {
         assertThat(uk(source, target)).noneMatch(CheckFinding::blocking);
     }
 
+    // IF a name the glossary keeps in Latin counted as a left-over run, THEN Keep original could never pass.
+    @Test
+    void run_latinRunThatIsAGlossaryRendering_isNotALatinRun() {
+        final List<CheckFinding> found = TextChecks.run(
+                "Bobby Quine sat at the bar.",
+                "Bobby Quine сидів біля стійки.",
+                "en",
+                "uk",
+                List.of("Bobby Quine → Bobby Quine"));
+
+        assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
+    }
+
+    @Test
+    void run_latinRunBesideAGlossaryRendering_isStillALatinRun() {
+        final List<CheckFinding> found = TextChecks.run(
+                "Bobby Quine read the Daily Courier on the train.",
+                "Bobby Quine читав Daily Courier у нічному поїзді.",
+                "en",
+                "uk",
+                List.of("Bobby Quine → Bobby Quine"));
+
+        assertThat(found)
+                .filteredOn(finding -> finding.kind() == FindingKind.LATIN_RUN)
+                .extracting(finding -> finding.span().text())
+                .containsExactly("Daily Courier");
+    }
+
     @Test
     void run_latinRunInALatinTarget_isNotAFinding() {
         assertThat(pl("He read the Daily Courier on the train.", "Czytał Daily Courier w pociągu."))
