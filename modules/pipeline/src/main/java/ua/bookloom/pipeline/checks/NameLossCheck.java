@@ -53,7 +53,7 @@ final class NameLossCheck {
         final List<String> candidates = candidates(rendering, target, targetLanguage);
         if (candidates.size() == 1) {
             final String spelled = candidates.getFirst();
-            log.debug("Name check: \"{}\" is written another way in the target", entry.term());
+            log.debug("Name check: a glossary name is written another way in the target");
             log.trace("Name spelling {} → {} instead of {}", entry.term(), rendering, spelled);
             return new CheckFinding(
                     FindingKind.NAME_SPELLING,
@@ -63,7 +63,8 @@ final class NameLossCheck {
                             + "\", in the form the sentence needs.",
                     false);
         }
-        log.debug("Name check: \"{}\" is lost from the target", entry.term());
+        log.debug("Name check: a glossary name is lost from the target");
+        log.trace("Name check: {} is lost from the target", entry.term());
         return new CheckFinding(
                 FindingKind.NAME_MISSING,
                 new TextSpan(0, 0, ""),

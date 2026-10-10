@@ -125,7 +125,8 @@ final class TitleConsistency {
             isAnyName = true;
             at = end;
         }
-        log.debug("title composed from '{}' found={}", text, isAnyName);
+        log.debug("title composed from a {}-character text found={}", text.length(), isAnyName);
+        log.trace("title composed from '{}'", text);
         return isAnyName ? Optional.of(new Replacement(out.toString(), out.toString())) : Optional.empty();
     }
 

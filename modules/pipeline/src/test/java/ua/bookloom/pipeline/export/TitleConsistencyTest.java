@@ -2,6 +2,10 @@ package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
@@ -146,6 +151,30 @@ class TitleConsistencyTest {
 
     private void decided(final Segment segment, final String target) {
         records.add(record(segment, SegmentStatus.ACCEPTED, target));
+    }
+
+    // IF the composed heading were logged at DEBUG, THEN the book's title would reach an ordinary log file.
+    @Test
+    void apply_composedHeading_logsItsTextAtTraceOnly() {
+        final Logger logger = (Logger) LoggerFactory.getLogger("ua.bookloom");
+        final Level previous = logger.getLevel();
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        logger.setLevel(Level.TRACE);
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
+            decided(body("c1:1", SegmentKind.HEADING, "“Amber Tide”"), "інше");
+            written(Set.of());
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previous);
+        }
+
+        assertThat(appender.list)
+                .filteredOn(event -> event.getLevel().isGreaterOrEqual(Level.DEBUG))
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .noneMatch(line -> line.contains("Amber Tide") || line.contains(BRIEF_TITLE));
     }
 
     private Map<String, String> written(final Set<SegmentKind> kept) {

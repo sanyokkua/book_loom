@@ -35,7 +35,8 @@ final class ForeignWordCheck {
                 final String replacement = Character.isUpperCase(word.codePointAt(0))
                         ? listedReplacement.substring(0, 1).toUpperCase(Locale.ROOT) + listedReplacement.substring(1)
                         : listedReplacement;
-                log.debug("Foreign word \"{}\" at {} has the replacement \"{}\"", word, words.start(), replacement);
+                log.debug("Foreign word at {} has a listed replacement", words.start());
+                log.trace("Foreign word \"{}\" has the replacement \"{}\"", word, replacement);
                 findings.add(new CheckFinding(
                         FindingKind.FOREIGN_WORD,
                         new TextSpan(words.start(), words.end(), word),
