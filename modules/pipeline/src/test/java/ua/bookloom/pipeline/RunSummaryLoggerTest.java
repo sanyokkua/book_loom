@@ -96,12 +96,26 @@ class RunSummaryLoggerTest {
         final RunSummaryLogger summary = new RunSummaryLogger(clock);
 
         summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(decidedWith(List.of("ignored-edit", "meaning", "ignored-edit")));
-        summary.onEvent(decidedWith(List.of("ignored-edit")));
+        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "meaning", "ignored-edit")));
+        summary.onEvent(decidedWith("ch12.xhtml:5", List.of("ignored-edit")));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
         assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=3 ");
+    }
+
+    // IF a segment decided twice (a repair, a review-desk retry) were counted twice, THEN the count overstates.
+    @Test
+    void onEvent_segmentDecidedTwice_countsItsLatestDecisionOnly() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "ignored-edit")));
+        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit")));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=1 ");
     }
 
     @Test
@@ -195,13 +209,9 @@ class RunSummaryLoggerTest {
                 .toList();
     }
 
-    private static SegmentDecided decidedWith(final List<String> kinds) {
+    private static SegmentDecided decidedWith(final String segmentId, final List<String> kinds) {
         return new SegmentDecided(
-                "ch12.xhtml:4",
-                SegmentStatus.ACCEPTED,
-                null,
-                DECIDED,
-                new SegmentDetail(null, SegmentPath.DRAFT, kinds));
+                segmentId, SegmentStatus.ACCEPTED, null, DECIDED, new SegmentDetail(null, SegmentPath.DRAFT, kinds));
     }
 
     private static SegmentDecided decided() {

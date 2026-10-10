@@ -5,8 +5,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -66,6 +68,8 @@ final class RunSummaryLogger {
     private @Nullable JobProgress progress;
     private String locator = NONE;
     private int timeouts;
+    // By segment: a segment decided again (a repair, a retry) counts its latest decision only.
+    private final Map<String, Long> ignoredEditsBySegment = new HashMap<>();
     private long ignoredEdits;
     private long completionTokens;
     private long generationMillis;
@@ -115,15 +119,23 @@ final class RunSummaryLogger {
     }
 
     private void countIgnoredEdits(final SegmentDecided decided) {
-        if (decided.detail() == null) {
-            return;
-        }
-        final long count = decided.detail().findingKinds().stream()
-                .filter(EditOutcome.IGNORED_EDIT_KIND::equals)
-                .count();
-        if (count > 0) {
-            ignoredEdits += count;
-            log.debug("Ignored reviewer edits segment={} count={} total={}", decided.segmentId(), count, ignoredEdits);
+        final long count = decided.detail() == null
+                ? 0
+                : decided.detail().findingKinds().stream()
+                        .filter(EditOutcome.IGNORED_EDIT_KIND::equals)
+                        .count();
+        final Long before = count > 0
+                ? ignoredEditsBySegment.put(decided.segmentId(), count)
+                : ignoredEditsBySegment.remove(decided.segmentId());
+        final long earlier = before == null ? 0 : before;
+        if (count != earlier) {
+            ignoredEdits += count - earlier;
+            log.debug(
+                    "Ignored reviewer edits segment={} count={} earlier={} total={}",
+                    decided.segmentId(),
+                    count,
+                    earlier,
+                    ignoredEdits);
         }
     }
 
