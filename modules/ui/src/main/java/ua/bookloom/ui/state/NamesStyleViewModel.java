@@ -106,7 +106,8 @@ public final class NamesStyleViewModel {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.calls = new GlossaryCalls(executor);
         this.changeLog = new ChangeLog(
-                new ChangeReverts(glossary, lexicon, calls, rows, lexiconRows, marks, notice, () -> projectId),
+                new ChangeReverts(
+                        glossary, lexicon, calls, rows, lexiconRows, marks, notice, () -> projectId, messages),
                 marks,
                 messages,
                 Objects.requireNonNull(activities, "activities"));

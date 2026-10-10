@@ -2090,7 +2090,9 @@ public enum MessageKey {
     /** Hover explanation of the control labelled by {@link #CHANGED_FILTER}. */
     CHANGED_FILTER_TIP("namesStyle.changed.filter.tip"),
     /** Line shown when putting a row back failed: the term. */
-    RESULTS_REVERT_FAILED("results.revert.failed");
+    RESULTS_REVERT_FAILED("results.revert.failed"),
+    /** Line shown when a changed row was edited after the operation, so it is not put back: the term. */
+    RESULTS_REVERT_EDITED("results.revert.edited");
 
     private final String key;
 

@@ -66,7 +66,7 @@ final class ChangeLog {
                 .forEach(removal ->
                         items.add(new ChangeResults.Item(rows.removed(removal), reverts.addName(removal.entry()))));
         changes.changed().forEach(change -> {
-            items.add(new ChangeResults.Item(rows.changed(change), reverts.setNameBack(change.before())));
+            items.add(new ChangeResults.Item(rows.changed(change), reverts.setNameBack(change)));
             marks.glossary().mark(change.after().id());
         });
         publish(operation, items);
@@ -89,7 +89,7 @@ final class ChangeLog {
                 .forEach(removal -> items.add(new ChangeResults.Item(
                         rows.removedTerm(removal), reverts.restoreTerm(removal.entry(), false))));
         changes.changed().forEach(change -> {
-            items.add(new ChangeResults.Item(rows.changedTerm(change), reverts.restoreTerm(change.before(), true)));
+            items.add(new ChangeResults.Item(rows.changedTerm(change), reverts.restoreTerm(change)));
             marks.terms().mark(LexiconEntry.keyOf(change.after().term()));
         });
         publish(operation, items);

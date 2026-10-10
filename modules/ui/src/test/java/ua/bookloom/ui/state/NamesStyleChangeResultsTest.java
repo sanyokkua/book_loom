@@ -240,6 +240,24 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         assertThat(onFx(() -> vm.marks().glossary().isMarked("e1"))).isFalse();
     }
 
+    // IF Revert wrote the old entry over a later hand edit, THEN the person's edit would vanish without a word.
+    @Test
+    void revert_changedRowEditedSince_isRefusedWithAnEnglishNoticeAndWritesNothing() {
+        glossary.willAnswer(Result.ok(reviewThatRemovesHaleAndTypesWell()));
+        run(vm::review);
+        final GlossaryEntry byHand = entry("e1", "Well", TermType.CHARACTER, Gender.MALE);
+        glossary.willAnswer(Result.ok(byHand));
+        run(() -> vm.setGender("e1", Gender.MALE));
+
+        run(() -> results().revert(1));
+
+        assertThat(glossary.updated()).hasSize(1);
+        assertThat(onFx(() -> vm.rows())).extracting(GlossaryEntry::gender).containsExactly(Gender.MALE);
+        assertThat(onFx(() -> vm.notice().get().text()))
+                .isEqualTo("Well was changed again after this operation, so it was not put back.");
+        assertThat(onFx(() -> List.copyOf(results().reverted()))).isEmpty();
+    }
+
     // IF Undo all stopped at the first row or skipped one, THEN the glossary would be left half-reverted.
     @Test
     void undoAll_everyRow_revertsThemInOrderAndLeavesNothingToRevert() {

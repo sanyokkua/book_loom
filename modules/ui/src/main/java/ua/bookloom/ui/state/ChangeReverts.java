@@ -9,16 +9,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * Puts one row of an operation's results back through the same service calls the screen's own edits use: an added row
  * is removed, a removed row is added again with its entry, a changed row is set back to what it was. The screen's rows
- * and marks follow once the service has stored it; a refusal is reported in place and leaves the row as it is. FX thread
- * only.
+ * and marks follow once the service has stored it; a refusal is reported in place and leaves the row as it is. A changed
+ * row that no longer holds what the operation wrote (the person edited it since) is not put back, so a hand edit is
+ * never overwritten silently. FX thread only.
  *
  * @param glossary the port the glossary rows are written through
  * @param lexicon the port the recurring terms are written through
@@ -28,6 +32,7 @@ import ua.bookloom.api.project.LexiconEntry;
  * @param marks the rows marked as changed by the last operation
  * @param notice the line the screen reports in place
  * @param project the project the screen shows now
+ * @param messages the texts of the refusal line
  */
 @Slf4j
 record ChangeReverts(
@@ -38,7 +43,8 @@ record ChangeReverts(
         ObservableList<LexiconEntry> lexiconRows,
         ChangeMarks marks,
         ObjectProperty<@Nullable GlossaryNotice> notice,
-        Supplier<String> project) {
+        Supplier<String> project,
+        Messages messages) {
 
     ChangeResults.Reversal removeName(final GlossaryEntry added) {
         return done -> write(
@@ -65,19 +71,27 @@ record ChangeReverts(
                 done);
     }
 
-    ChangeResults.Reversal setNameBack(final GlossaryEntry before) {
-        return done -> write(
-                "revert changed name",
-                () -> glossary.update(before),
-                before.projectId(),
-                stored -> {
-                    final int at = GlossaryEdits.indexOf(rows, stored.id());
-                    if (at >= 0) {
-                        rows.set(at, stored);
-                    }
-                    marks.glossary().unmark(stored.id());
-                },
-                done);
+    ChangeResults.Reversal setNameBack(final EntryChanges.Change<GlossaryEntry> change) {
+        final GlossaryEntry before = change.before();
+        return done -> {
+            final int now = GlossaryEdits.indexOf(rows, before.id());
+            if (now >= 0 && !rows.get(now).equals(change.after())) {
+                refuseEdited(before.term(), done);
+                return;
+            }
+            write(
+                    "revert changed name",
+                    () -> glossary.update(before),
+                    before.projectId(),
+                    stored -> {
+                        final int at = GlossaryEdits.indexOf(rows, stored.id());
+                        if (at >= 0) {
+                            rows.set(at, stored);
+                        }
+                        marks.glossary().unmark(stored.id());
+                    },
+                    done);
+        };
     }
 
     ChangeResults.Reversal removeTerm(final LexiconEntry added) {
@@ -94,23 +108,47 @@ record ChangeReverts(
     }
 
     ChangeResults.Reversal restoreTerm(final LexiconEntry before, final boolean wasMarked) {
-        return done -> write(
-                "revert term",
-                () -> lexicon.restore(before),
-                before.projectId(),
-                stored -> {
-                    final String key = LexiconEntry.keyOf(stored.term());
-                    final int at = indexOfTerm(key);
-                    if (at >= 0) {
-                        lexiconRows.set(at, stored);
-                    } else {
-                        lexiconRows.add(stored);
-                    }
-                    if (wasMarked) {
-                        marks.terms().unmark(key);
-                    }
-                },
-                done);
+        return restoreTerm(before, null, wasMarked);
+    }
+
+    ChangeResults.Reversal restoreTerm(final EntryChanges.Change<LexiconEntry> change) {
+        return restoreTerm(change.before(), change.after(), true);
+    }
+
+    private ChangeResults.Reversal restoreTerm(
+            final LexiconEntry before, @Nullable final LexiconEntry after, final boolean wasMarked) {
+        return done -> {
+            final String key = LexiconEntry.keyOf(before.term());
+            final int now = indexOfTerm(key);
+            if (after != null && now >= 0 && !lexiconRows.get(now).equals(after)) {
+                refuseEdited(before.term(), done);
+                return;
+            }
+            write(
+                    "revert term",
+                    () -> lexicon.restore(before),
+                    before.projectId(),
+                    stored -> {
+                        final int at = indexOfTerm(key);
+                        if (at >= 0) {
+                            lexiconRows.set(at, stored);
+                        } else {
+                            lexiconRows.add(stored);
+                        }
+                        if (wasMarked) {
+                            marks.terms().unmark(key);
+                        }
+                    },
+                    done);
+        };
+    }
+
+    private void refuseEdited(final String term, final Consumer<Boolean> done) {
+        log.warn("revert of a changed row refused: the row was edited after the operation");
+        log.trace("revert refused for term '{}'", term);
+        notice.set(
+                new GlossaryNotice(GlossaryNotice.Level.ERROR, messages.get(MessageKey.RESULTS_REVERT_EDITED, term)));
+        done.accept(false);
     }
 
     private int indexOfTerm(final String key) {
