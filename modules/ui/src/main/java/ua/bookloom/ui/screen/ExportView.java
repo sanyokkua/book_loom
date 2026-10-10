@@ -57,6 +57,7 @@ final class ExportView {
     private final ListChangeListener<String> onStatement = change -> showStatement();
     // A stored edit of the title or author gives a file name the model suggested a reason to be suggested again.
     private final ChangeListener<Number> onTitleEdited;
+    private final WeakChangeListener<Number> weakTitleEdited;
 
     ExportView(
             final ExportViewModel viewModel,
@@ -72,6 +73,7 @@ final class ExportView {
             log.debug("the title or author was edited; the suggested file name is reconsidered");
             viewModel.nameSuggestion.afterTitleEdit();
         };
+        this.weakTitleEdited = new WeakChangeListener<>(onTitleEdited);
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -87,7 +89,9 @@ final class ExportView {
         log.debug("building the export screen for project {}", book.projectId());
         final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
         subtitle.setId("export-subtitle");
-        titleModel.edits().addListener(new WeakChangeListener<>(onTitleEdited));
+        // build() runs on every book change; the one listener is moved, not added again.
+        titleModel.edits().removeListener(weakTitleEdited);
+        titleModel.edits().addListener(weakTitleEdited);
         final VBox left = new VBox(SCREEN_SPACING, titles.node(), writeCard(book));
         HBox.setHgrow(left, Priority.ALWAYS);
         final HBox columns = new HBox(SCREEN_SPACING, left, sideFiles.build());
