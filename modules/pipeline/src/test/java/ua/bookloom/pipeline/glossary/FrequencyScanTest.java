@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
+import com.google.inject.Guice;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,6 +13,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.document.DocumentModule;
+import ua.bookloom.persistence.PersistenceModule;
 
 /** The deterministic name scan: which capitalised words and runs it proposes, and in what order. */
 class FrequencyScanTest {
@@ -163,6 +169,38 @@ class FrequencyScanTest {
                 .toList();
 
         assertThat(terms).containsExactlyInAnyOrder("Zurich", "Zurish");
+    }
+
+    // IF a name were folded into a shorter one nearly as common, THEN Andrews would take Andrew's target.
+    @ParameterizedTest(name = "{0} x{1} beside {2} x{3}")
+    @CsvSource({"Andrew,5,Andrews,4", "Han,3,Hans,4"})
+    void candidates_pluralShapedNameNotMateriallyRarer_isAnotherName(
+            final String base, final int baseCount, final String plural, final int pluralCount) {
+        final List<String> lines = new ArrayList<>(copies("We saw " + base + " at the door.", baseCount));
+        lines.addAll(copies("We saw " + plural + " at the door.", pluralCount));
+
+        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder(base, plural);
+    }
+
+    // IF the scan's fold stopped at the candidate, THEN the alias never reached the glossary entry that shares its
+    // target.
+    @Test
+    void newTerms_pluralAlias_isHeldByTheProposedEntry() {
+        final List<String> lines = new ArrayList<>(copies("We saw Chrome at the door.", 6));
+        lines.addAll(copies("We saw the Chromes at the door.", 3));
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+                .getInstance(GlossaryRepository.class);
+
+        final List<GlossaryEntry> entries = FrequencyScan.newTerms("p1", GlossaryTestSegments.of(lines), "en", glossary)
+                .data();
+
+        assertThat(entries)
+                .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
+                .containsExactly(tuple("Chrome", List.of("Chromes")));
     }
 
     private static List<String> namesAndRuns() {

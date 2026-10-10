@@ -125,7 +125,7 @@ final class SpanFinder {
     }
 
     /**
-     * Whole-word, case-sensitive matches of each locked entry that has a non-blank target, outside every kept run
+     * Whole-word, case-sensitive matches of each locked entry that has a non-blank target, its term or any alias, outside every kept run
      * and every existing token; longest term first, then by position, kept greedily without overlap.
      */
     static List<Found> lockedTerms(final String text, final List<Found> keptRuns, final List<GlossaryEntry> glossary) {
@@ -138,7 +138,7 @@ final class SpanFinder {
                     && target != null
                     && !target.isBlank()
                     && !entry.term().isBlank()) {
-                candidates.addAll(matchesOf(text, entry.term(), target));
+                entry.names().forEach(name -> candidates.addAll(matchesOf(text, name, entry.term(), target)));
             }
         }
         candidates.sort(Comparator.comparingInt((Found found) -> found.end() - found.start())
@@ -154,8 +154,9 @@ final class SpanFinder {
         return accepted;
     }
 
-    private static List<Found> matchesOf(final String text, final String term, final String target) {
-        final Matcher matcher = WholeWord.pattern(term).matcher(text);
+    // An alias is found as written and hidden as its entry, behind the entry's target.
+    private static List<Found> matchesOf(final String text, final String name, final String term, final String target) {
+        final Matcher matcher = WholeWord.pattern(name).matcher(text);
         final List<Found> matches = new ArrayList<>();
         while (matcher.find()) {
             matches.add(new Found(matcher.start(), matcher.end(), target, CheckName.LOCKED_TERM, term));

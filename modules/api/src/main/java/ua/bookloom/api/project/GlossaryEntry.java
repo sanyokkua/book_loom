@@ -1,5 +1,7 @@
 package ua.bookloom.api.project;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -24,6 +26,8 @@ import org.jspecify.annotations.Nullable;
  *     whenever the gender is {@link Gender#UNKNOWN} or the entry is locked, because a lock confirms what it holds
  * @param genderSeedTried whether the first-name list was already consulted for this entry, or the person set its
  *     gender (even back to {@link Gender#UNKNOWN}); an entry with this flag is never seeded again
+ * @param aliases the other spellings the name scan folded into the term (a plural, a one-letter misspelling), which
+ *     name the same thing and share its target; never null, empty for most entries
  */
 public record GlossaryEntry(
         String id,
@@ -35,7 +39,8 @@ public record GlossaryEntry(
         boolean locked,
         TargetOrigin origin,
         boolean genderSuggested,
-        boolean genderSeedTried) {
+        boolean genderSeedTried,
+        List<String> aliases) {
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -51,6 +56,22 @@ public record GlossaryEntry(
             origin = TargetOrigin.PERSON;
         }
         genderSuggested = genderSuggested && !locked && gender != Gender.UNKNOWN;
+        aliases = List.copyOf(Objects.requireNonNull(aliases, "aliases"));
+    }
+
+    /** An entry with no alias. */
+    public GlossaryEntry(
+            final String id,
+            final String projectId,
+            final String term,
+            @Nullable final String target,
+            final TermType type,
+            final Gender gender,
+            final boolean locked,
+            final TargetOrigin origin,
+            final boolean genderSuggested,
+            final boolean genderSeedTried) {
+        this(id, projectId, term, target, type, gender, locked, origin, genderSuggested, genderSeedTried, List.of());
     }
 
     /** An entry whose gender was never seeded or edited. */
@@ -127,7 +148,8 @@ public record GlossaryEntry(
                 locked,
                 TargetOrigin.PERSON,
                 genderSuggested,
-                genderSeedTried);
+                genderSeedTried,
+                aliases);
     }
 
     /**
@@ -148,7 +170,8 @@ public record GlossaryEntry(
                 locked,
                 TargetOrigin.SUGGESTED,
                 genderSuggested,
-                genderSeedTried);
+                genderSeedTried,
+                aliases);
     }
 
     /**
@@ -168,7 +191,8 @@ public record GlossaryEntry(
                 lock,
                 lock ? TargetOrigin.PERSON : origin,
                 genderSuggested,
-                genderSeedTried);
+                genderSeedTried,
+                aliases);
     }
 
     /**
@@ -179,7 +203,17 @@ public record GlossaryEntry(
      */
     public GlossaryEntry withType(final TermType changed) {
         return new GlossaryEntry(
-                id, projectId, term, target, changed, gender, locked, origin, genderSuggested, genderSeedTried);
+                id,
+                projectId,
+                term,
+                target,
+                changed,
+                gender,
+                locked,
+                origin,
+                genderSuggested,
+                genderSeedTried,
+                aliases);
     }
 
     /**
@@ -190,7 +224,7 @@ public record GlossaryEntry(
      * @return a copy with the gender set, confirmed and marked as tried
      */
     public GlossaryEntry withGender(final Gender changed) {
-        return new GlossaryEntry(id, projectId, term, target, type, changed, locked, origin, false, true);
+        return new GlossaryEntry(id, projectId, term, target, type, changed, locked, origin, false, true, aliases);
     }
 
     /**
@@ -205,7 +239,8 @@ public record GlossaryEntry(
         if (inferred == gender) {
             return this;
         }
-        return new GlossaryEntry(id, projectId, term, target, type, inferred, locked, origin, false, genderSeedTried);
+        return new GlossaryEntry(
+                id, projectId, term, target, type, inferred, locked, origin, false, genderSeedTried, aliases);
     }
 
     /**
@@ -217,7 +252,7 @@ public record GlossaryEntry(
      */
     public GlossaryEntry withSuggestedGender(final Gender proposed) {
         Objects.requireNonNull(proposed, "proposed");
-        return new GlossaryEntry(id, projectId, term, target, type, proposed, locked, origin, true, true);
+        return new GlossaryEntry(id, projectId, term, target, type, proposed, locked, origin, true, true, aliases);
     }
 
     /**
@@ -236,6 +271,33 @@ public record GlossaryEntry(
                 locked,
                 TargetOrigin.PERSON,
                 genderSuggested,
-                genderSeedTried);
+                genderSeedTried,
+                aliases);
+    }
+
+    /**
+     * This entry with the spellings folded into its term.
+     *
+     * @param folded the non-null other spellings of the term
+     * @return a copy holding them as its aliases
+     */
+    public GlossaryEntry withAliases(final List<String> folded) {
+        return new GlossaryEntry(
+                id, projectId, term, target, type, gender, locked, origin, genderSuggested, genderSeedTried, folded);
+    }
+
+    /**
+     * Every spelling that names this entry in the book.
+     *
+     * @return the term first, then its aliases; never null or empty
+     */
+    public List<String> names() {
+        if (aliases.isEmpty()) {
+            return List.of(term);
+        }
+        final ArrayList<String> names = new ArrayList<>(aliases.size() + 1);
+        names.add(term);
+        names.addAll(aliases);
+        return List.copyOf(names);
     }
 }

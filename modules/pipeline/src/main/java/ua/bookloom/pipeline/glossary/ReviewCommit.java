@@ -254,6 +254,7 @@ final class ReviewCommit {
                 entry.locked(),
                 entry.origin(),
                 false,
-                entry.genderSeedTried());
+                entry.genderSeedTried(),
+                entry.aliases());
     }
 }

@@ -65,7 +65,7 @@ public final class NameHygiene {
         Objects.requireNonNull(candidates, "candidates");
         final Optional<String> reason = contraction(term, languageTag)
                 .or(() -> fragment(term, candidates, languageTag, occurrences))
-                .or(() -> pluralOf(term, candidates, languageTag))
+                .or(() -> pluralOf(term, candidates, languageTag, occurrences))
                 .or(() -> commonWord(term, languageTag));
         reason.ifPresent(why -> {
             log.debug("Name candidate dropped by hygiene: {}", why);
@@ -101,8 +101,13 @@ public final class NameHygiene {
                 : Optional.empty();
     }
 
+    // With the book's counts at hand, a plural-shaped name is the alias of its base only where the base is materially
+    // commoner (the name scan's fold rule); Andrews beside a rarer or as common Andrew is a name of its own.
     private static Optional<String> pluralOf(
-            final String term, final Collection<String> candidates, @Nullable final String languageTag) {
+            final String term,
+            final Collection<String> candidates,
+            @Nullable final String languageTag,
+            @Nullable final ToIntFunction<String> occurrences) {
         final List<String> suffixes = NameAliases.suffixesOf(languageTag == null ? "en" : languageTag);
         final String key = term.strip().toLowerCase(Locale.ROOT);
         return candidates.stream()
@@ -110,6 +115,9 @@ public final class NameHygiene {
                 .filter(other -> other.strip().length() >= MIN_PLURAL_BASE
                         && key.startsWith(other.strip().toLowerCase(Locale.ROOT))
                         && suffixes.contains(key.substring(other.strip().length())))
+                .filter(other -> occurrences == null
+                        || occurrences.applyAsInt(term)
+                                <= occurrences.applyAsInt(other) * NameAliases.PLURAL_COUNT_SHARE)
                 .findFirst()
                 .map(base -> "a plural of the name \"" + base + "\", its alias");
     }

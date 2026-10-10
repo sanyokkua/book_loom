@@ -172,7 +172,8 @@ public final class GlossaryCsv {
                     row.gender());
         }
         return new GlossaryEntry(
-                existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked());
+                        existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked())
+                .withAliases(existing.aliases());
     }
 
     private static boolean isGeneric(final TermType type) {

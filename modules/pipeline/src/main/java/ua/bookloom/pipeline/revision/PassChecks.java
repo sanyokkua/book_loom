@@ -12,6 +12,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.audit.FinalAudit;
+import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
 import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RoundProgress;
@@ -141,15 +142,12 @@ final class PassChecks {
                 maskedForm,
                 inputs.frame(),
                 inputs.namePolicy(),
-                inputs.glossary().stream().map(GlossaryEntry::term).toList(),
+                GlossaryNames.terms(inputs.glossary()),
                 ProtectedSpans.mask(segment, inputs.frame(), inputs.glossary()).presentLocked(),
                 pairs(inputs.glossary()));
     }
 
     private static List<String> pairs(final List<GlossaryEntry> glossary) {
-        return glossary.stream()
-                .filter(entry -> entry.target() != null && !entry.target().isBlank())
-                .map(entry -> entry.term() + " → " + entry.target())
-                .toList();
+        return GlossaryNames.pairs(glossary);
     }
 }

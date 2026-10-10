@@ -30,7 +30,7 @@ final class InjectedTerms {
         final List<String> searchTexts = Tokens.visibleTexts(segments);
         final List<InjectedTerm> selected = new ArrayList<>();
         for (final GlossaryEntry entry : glossary) {
-            if (!occursIn(entry.term(), searchTexts)) {
+            if (entry.names().stream().noneMatch(name -> occursIn(name, searchTexts))) {
                 continue;
             }
             final SnapshotTerm term = snapshotOf(entry);

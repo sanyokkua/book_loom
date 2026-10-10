@@ -20,6 +20,7 @@ import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
 import ua.bookloom.pipeline.context.InjectedCharacters;
 import ua.bookloom.pipeline.context.LexiconFilter;
+import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -108,19 +109,16 @@ final class ChunkContext {
 
     /** The terms of the glossary entries that occur in the chunk, read by the checks' name removal. */
     List<String> terms() {
-        final List<String> terms = occurringIn(chunk.segments(), glossary).stream()
-                .map(GlossaryEntry::term)
-                .toList();
+        final List<String> terms = GlossaryNames.terms(occurringIn(chunk.segments(), glossary));
         log.debug("Read the glossary for a chunk entries={} inChunk={}", glossary.size(), terms.size());
         return terms;
     }
 
     /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines: what the reviewer holds the text to. */
     List<String> termPairs() {
-        final List<String> pairs = occurringIn(chunk.segments(), glossary).stream()
-                .filter(entry -> entry.target() != null && !entry.target().isBlank() && !entry.locked())
-                .map(entry -> entry.term() + " → " + entry.target())
-                .toList();
+        final List<String> pairs = GlossaryNames.pairs(occurringIn(chunk.segments(), glossary).stream()
+                .filter(entry -> !entry.locked())
+                .toList());
         log.debug("Reviewer glossary pairs for a chunk pairs={}", pairs.size());
         return pairs;
     }
@@ -231,7 +229,7 @@ final class ChunkContext {
     private static List<GlossaryEntry> occurringIn(final List<Segment> segments, final List<GlossaryEntry> entries) {
         final List<String> texts = textsOf(segments);
         return entries.stream()
-                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(entry.term(), text)))
+                .filter(entry -> texts.stream().anyMatch(text -> GlossaryNames.isNamedIn(entry, text)))
                 .toList();
     }
 }

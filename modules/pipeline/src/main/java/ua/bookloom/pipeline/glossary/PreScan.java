@@ -314,7 +314,14 @@ public final class PreScan {
     private static GlossaryEntry entryOf(final String projectId, final Proposal proposal) {
         final String term = proposal.candidate().term();
         return new GlossaryEntry(
-                GlossaryIds.of(projectId, term), projectId, term, null, proposal.type(), proposal.gender(), false);
+                        GlossaryIds.of(projectId, term),
+                        projectId,
+                        term,
+                        null,
+                        proposal.type(),
+                        proposal.gender(),
+                        false)
+                .withAliases(proposal.candidate().aliases());
     }
 
     private static String existingTerms(final List<GlossaryEntry> held) {

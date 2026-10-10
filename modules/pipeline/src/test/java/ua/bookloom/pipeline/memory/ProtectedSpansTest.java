@@ -43,6 +43,18 @@ class ProtectedSpansTest {
         assertThat(mask.presentLocked()).containsExactly(new LockedRendering("Hale", "Гейл"));
     }
 
+    // IF a folded spelling escaped the lock, THEN "Zurish" would reach the model while "Zurich" is locked.
+    @Test
+    void mask_aliasOfALockedTerm_isHiddenBehindTheTermsTarget() {
+        final GlossaryEntry zurich =
+                ProtectedSpansFixtures.locked("Zurich", "Цюрих").withAliases(List.of("Zurish"));
+
+        final ProtectedMask mask = mask("Zurish was cold.", zurich);
+
+        assertThat(mask.maskedText()).isEqualTo("⟦g0⟧ was cold.");
+        assertThat(mask.presentLocked()).containsExactly(new LockedRendering("Zurich", "Цюрих"));
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("textsThatStayAsWritten")
     void mask_textWithNoLockedWholeWordMatch_staysAsWritten(

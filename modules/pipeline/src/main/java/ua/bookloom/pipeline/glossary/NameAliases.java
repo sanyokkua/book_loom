@@ -13,8 +13,8 @@ import ua.bookloom.pipeline.prompt.PluralSuffixes;
 
 /**
  * Folds a name candidate that is only another spelling of a commoner one into it: the plural of a name ({@code Chromes}
- * beside {@code Chrome}, the endings from the language file's {@code pluralSuffixes}) or a name one edit away that the
- * book writes at most a fifth as often (a typo). The variant is not proposed on its own; the commoner name carries it
+ * beside {@code Chrome}, the endings from the language file's {@code pluralSuffixes}) that the book writes at most half
+ * as often, or a name one edit away that the book writes at most a fifth as often (a typo). The variant is not proposed on its own; the commoner name carries it
  * as an alias, so both spellings share one glossary entry and one target.
  */
 @Slf4j
@@ -24,6 +24,13 @@ final class NameAliases {
 
     /** A variant one edit away must occur at most this share of the commoner name's count. */
     static final double TYPO_COUNT_SHARE = 0.2;
+
+    /**
+     * A plural must occur at most this share of its base's count: the base at least twice as common. A name that only
+     * looks like a plural ({@code Andrews} beside {@code Andrew}, {@code Hans} beside {@code Han}) is about as common
+     * as the shorter one, or commoner, and stays a name of its own.
+     */
+    static final double PLURAL_COUNT_SHARE = 0.5;
 
     private static final int MIN_BASE_LENGTH = 3;
     private static final int MIN_TYPO_BASE_LENGTH = 5;
@@ -92,7 +99,9 @@ final class NameAliases {
                 && key.length() > other.length()
                 && key.startsWith(other)
                 && suffixes.contains(key.substring(other.length()))) {
-            return true;
+            final boolean rarer = count <= otherCount * PLURAL_COUNT_SHARE;
+            log.trace("Plural-shaped candidate {} x{} beside {} x{} rarer={}", key, count, other, otherCount, rarer);
+            return rarer;
         }
         return other.length() >= MIN_TYPO_BASE_LENGTH
                 && count <= otherCount * TYPO_COUNT_SHARE

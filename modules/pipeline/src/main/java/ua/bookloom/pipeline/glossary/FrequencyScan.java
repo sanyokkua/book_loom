@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,7 +100,7 @@ public final class FrequencyScan {
                 tally(read, word -> isNameLike(word, counts, stopWords)),
                 NameAliases.suffixesOf(sourceLanguage == null ? FALLBACK_LANGUAGE : sourceLanguage));
         dropJunk(tallies);
-        dropHygiene(tallies, sourceLanguage);
+        dropHygiene(tallies, sourceLanguage, read);
         final List<NameCandidate> candidates = tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
                 .filter(tally -> isNotCommonWord(tally, counts, neverAlone))
@@ -112,10 +113,17 @@ public final class FrequencyScan {
         return candidates;
     }
 
-    private static void dropHygiene(final Map<String, NameCandidate> tallies, @Nullable final String language) {
+    // The book's own counts let hygiene keep a plural-shaped name the fold kept as a name of its own.
+    private static void dropHygiene(
+            final Map<String, NameCandidate> tallies,
+            @Nullable final String language,
+            final List<Occurrences.Read> read) {
         final List<String> all = List.copyOf(tallies.keySet());
+        final ToIntFunction<String> occurrences = NameHygiene.occurrencesIn(
+                read.stream().map(Occurrences.Read::text).toList());
         tallies.keySet()
-                .removeIf(term -> NameHygiene.rejection(term, all, language).isPresent());
+                .removeIf(term ->
+                        NameHygiene.rejection(term, all, language, occurrences).isPresent());
     }
 
     private static void dropJunk(final Map<String, NameCandidate> tallies) {
@@ -261,12 +269,13 @@ public final class FrequencyScan {
 
     private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {
         return new GlossaryEntry(
-                GlossaryIds.of(projectId, candidate.term()),
-                projectId,
-                candidate.term(),
-                null,
-                TermType.OTHER,
-                Gender.UNKNOWN,
-                false);
+                        GlossaryIds.of(projectId, candidate.term()),
+                        projectId,
+                        candidate.term(),
+                        null,
+                        TermType.OTHER,
+                        Gender.UNKNOWN,
+                        false)
+                .withAliases(candidate.aliases());
     }
 }
