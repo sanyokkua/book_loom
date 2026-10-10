@@ -308,4 +308,13 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(first).contains("by its sound");
         assertThat(second).contains("exactly as written");
     }
+
+    // IF the Title and author card stayed on the Brief, THEN it would be edited before the book is translated.
+    @Test
+    void brief_shown_hasNoTitleAndAuthorCard() throws Exception {
+        openFrankensteinThenShowBrief();
+
+        assertThat(textsUnder(scene.getRoot())).doesNotContain("Title and author");
+        assertThat(optional("brief-book-card")).isNull();
+    }
 }

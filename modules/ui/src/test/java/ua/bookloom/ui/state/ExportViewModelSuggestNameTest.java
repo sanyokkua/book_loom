@@ -136,4 +136,60 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
 
         assertThat(onFx(() -> exports.nameSuggestion.authorKept().get())).isFalse();
     }
+
+    private void titleEdited() {
+        onFx(() -> {
+            exports.nameSuggestion.afterTitleEdit();
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void modelChosen() {
+        onFx(() -> {
+            settings.model().set("gemma3:12b");
+            return null;
+        });
+    }
+
+    // IF an edited title left the old suggested name, THEN the file would carry a title the book no longer has.
+    @Test
+    void afterTitleEdit_nameWasSuggested_suggestsAgain() {
+        modelChosen();
+        suggest();
+        assistant.answersFileName(Result.ok("Бурштиновий Приплив. Анна Гейл"));
+
+        titleEdited();
+
+        assertThat(assistant.asked()).hasSize(2);
+        assertThat(onFx(() -> exports.destination().get()))
+                .isEqualTo(dir.resolve("Бурштиновий Приплив. Анна Гейл.epub").toString());
+    }
+
+    // IF an edit overwrote a name the person typed, THEN their choice would be lost to a model.
+    @Test
+    void afterTitleEdit_personTypedTheName_keepsItAndAsksNothing() {
+        modelChosen();
+        suggest();
+        onFx(() -> {
+            exports.editDestination(dir.resolve("my book.epub").toString());
+            return null;
+        });
+
+        titleEdited();
+
+        assertThat(assistant.asked()).hasSize(1);
+        assertThat(onFx(() -> exports.destination().get()))
+                .isEqualTo(dir.resolve("my book.epub").toString());
+    }
+
+    // IF an edit asked the model before any suggestion was wanted, THEN a title edit would start model work unasked.
+    @Test
+    void afterTitleEdit_noSuggestionWasAsked_asksNothing() {
+        modelChosen();
+
+        titleEdited();
+
+        assertThat(assistant.asked()).isEmpty();
+    }
 }

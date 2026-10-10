@@ -15,14 +15,14 @@ import ua.bookloom.ui.state.BookTitleViewModel.Part;
 import ua.bookloom.ui.state.BookTitleViewModel.Row;
 
 /**
- * The Title and author card: the one translated title and author the whole book takes. A row fills when the run has
- * translated the book's own title and author and is edited here; an edit is committed on Enter or when the field loses
+ * The Title and author card of Export: the one translated title and author the whole book takes, which the file name
+ * is built from. A row fills when the run has translated the book's own title and author and is edited here; an edit is committed on Enter or when the field loses
  * focus, not on every key, because each commit is a stored edit.
  *
  * <p>The view model outlives this card, so it is observed through weak listeners held by the fields below.
  */
 @Slf4j
-final class BriefTitleCard {
+final class ExportTitleCard {
 
     private final BookTitleViewModel viewModel;
     private final Messages messages;
@@ -36,16 +36,17 @@ final class BriefTitleCard {
     private final ChangeListener<Row> onTitle;
     private final ChangeListener<Row> onAuthor;
 
-    BriefTitleCard(final BookTitleViewModel viewModel, final Messages messages) {
+    ExportTitleCard(final BookTitleViewModel viewModel, final Messages messages) {
         this.viewModel = viewModel;
         this.messages = messages;
-        this.titleRow = row("brief-book-title", MessageKey.BRIEF_TITLE, MessageKey.BRIEF_BOOK_TITLE_TIP, Part.TITLE);
-        this.authorRow =
-                row("brief-book-author", MessageKey.BRIEF_BOOK_AUTHOR, MessageKey.BRIEF_BOOK_AUTHOR_TIP, Part.AUTHOR);
-        final Label hint = BriefCards.hint(messages, MessageKey.BRIEF_BOOK_TITLE_HINT);
-        hint.setId("brief-book-hint");
+        this.titleRow =
+                row("export-book-title", MessageKey.EXPORT_BOOK_TITLE, MessageKey.EXPORT_BOOK_TITLE_TIP, Part.TITLE);
+        this.authorRow = row(
+                "export-book-author", MessageKey.EXPORT_BOOK_AUTHOR, MessageKey.EXPORT_BOOK_AUTHOR_TIP, Part.AUTHOR);
+        final Label hint = BriefCards.hint(messages, MessageKey.EXPORT_BOOK_TITLE_HINT);
+        hint.setId("export-book-hint");
         this.node =
-                BriefCards.card("brief-book-card", messages, MessageKey.BRIEF_CARD_TITLE, titleRow, authorRow, hint);
+                BriefCards.card("export-book-card", messages, MessageKey.EXPORT_BOOK_CARD, titleRow, authorRow, hint);
         this.onTitle = (observed, was, now) -> show(now, titleRow, titleField, titleSource);
         this.onAuthor = (observed, was, now) -> show(now, authorRow, authorField, authorSource);
         viewModel.title().addListener(new WeakChangeListener<>(onTitle));
@@ -88,7 +89,7 @@ final class BriefTitleCard {
         final boolean present = !row.source().isEmpty();
         box.setVisible(present);
         box.setManaged(present);
-        source.setText(messages.get(MessageKey.BRIEF_BOOK_TITLE_SOURCE, row.source()));
+        source.setText(messages.get(MessageKey.EXPORT_BOOK_TITLE_SOURCE, row.source()));
         field.setDisable(!row.editable());
         if (!field.getText().equals(row.target()) && !field.isFocused()) {
             field.setText(row.target());

@@ -33,6 +33,8 @@ public final class NameSuggestion {
     private final ReadOnlyBooleanWrapper authorKept = new ReadOnlyBooleanWrapper(false);
     private @Nullable String askedFor;
     private boolean applying;
+    // Whether the destination still holds a name this class put there, and not one the person typed or chose.
+    private boolean nameIsSuggested;
 
     NameSuggestion(
             final CurrentProject project,
@@ -44,7 +46,11 @@ public final class NameSuggestion {
         this.setup = setup;
         this.destination = Objects.requireNonNull(destination, "destination");
         destination.destination().addListener((observed, was, now) -> {
-            if (!applying && authorKept.get()) {
+            if (applying) {
+                return;
+            }
+            nameIsSuggested = false;
+            if (authorKept.get()) {
                 log.debug("the destination was edited; the note about the author's alphabet is dropped");
                 authorKept.set(false);
             }
@@ -72,6 +78,17 @@ public final class NameSuggestion {
      */
     public ReadOnlyBooleanProperty authorKept() {
         return authorKept.getReadOnlyProperty();
+    }
+
+    /**
+     * Reconsiders the file name after the title or author was edited: a name the model suggested is suggested again from
+     * the new title, while a name the person typed or chose, or no suggestion at all, is left alone.
+     */
+    public void afterTitleEdit() {
+        log.debug("title edited: the destination holds a suggested name {}", nameIsSuggested);
+        if (nameIsSuggested) {
+            ask();
+        }
     }
 
     /** Asks the model for the translated book's file name and puts it in the destination. */
@@ -137,6 +154,7 @@ public final class NameSuggestion {
         } finally {
             applying = false;
         }
+        nameIsSuggested = true;
         notice.set(messages.get(MessageKey.EXPORT_SUGGEST_NAME_DONE));
         authorKept.set(suggestion.authorKeptInSourceScript());
     }

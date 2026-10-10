@@ -1,6 +1,8 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Objects;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
@@ -19,6 +21,7 @@ import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportOutcome;
@@ -45,23 +48,34 @@ final class ExportView {
     private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
+    private final ExportTitleCard titles;
+    private final BookTitleViewModel titleModel;
     private final ExportDestinationCard destination;
     private final ExportSideFilesColumn sideFiles;
     private final ExportResult result;
     private final VBox statement = new VBox(LINE_SPACING);
     private final ListChangeListener<String> onStatement = change -> showStatement();
+    // A stored edit of the title or author gives a file name the model suggested a reason to be suggested again.
+    private final ChangeListener<Number> onTitleEdited;
 
     ExportView(
             final ExportViewModel viewModel,
+            final BookTitleViewModel titleModel,
             final CurrentProject project,
             final Messages messages,
             final Navigator navigator,
             final DestinationChooser chooser,
             final FileRevealer revealer) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.titleModel = Objects.requireNonNull(titleModel, "titleModel");
+        this.onTitleEdited = (observed, was, now) -> {
+            log.debug("the title or author was edited; the suggested file name is reconsidered");
+            viewModel.nameSuggestion.afterTitleEdit();
+        };
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.titles = new ExportTitleCard(titleModel, messages);
         this.destination = new ExportDestinationCard(viewModel, messages, chooser);
         this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
         this.result = new ExportResult(messages, revealer, navigator);
@@ -73,7 +87,8 @@ final class ExportView {
         log.debug("building the export screen for project {}", book.projectId());
         final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
         subtitle.setId("export-subtitle");
-        final VBox left = new VBox(SCREEN_SPACING, writeCard(book));
+        titleModel.edits().addListener(new WeakChangeListener<>(onTitleEdited));
+        final VBox left = new VBox(SCREEN_SPACING, titles.node(), writeCard(book));
         HBox.setHgrow(left, Priority.ALWAYS);
         final HBox columns = new HBox(SCREEN_SPACING, left, sideFiles.build());
         showOutcome(viewModel.outcome().get());

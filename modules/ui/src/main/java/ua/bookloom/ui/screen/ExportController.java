@@ -15,6 +15,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportOutcome;
@@ -55,6 +56,7 @@ public final class ExportController {
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the destination, choices and export this screen presents
+     * @param titles the translated title and author the Title and author card edits
      * @param project the holder of the open book
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Back and the route from the no-book state lead
@@ -67,6 +69,7 @@ public final class ExportController {
     @Inject
     public ExportController(
             final ExportViewModel viewModel,
+            final BookTitleViewModel titles,
             final CurrentProject project,
             final Messages messages,
             final Navigator navigator,
@@ -78,7 +81,7 @@ public final class ExportController {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.dialog = Objects.requireNonNull(dialog, "dialog");
-        this.view = new ExportView(viewModel, project, messages, navigator, chooser, revealer);
+        this.view = new ExportView(viewModel, titles, project, messages, navigator, chooser, revealer);
     }
 
     @FXML

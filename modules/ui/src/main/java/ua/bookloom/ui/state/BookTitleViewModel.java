@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +79,7 @@ public final class BookTitleViewModel {
     private final ExecutorService executor;
     private final ReadOnlyObjectWrapper<Row> title = new ReadOnlyObjectWrapper<>(Row.none());
     private final ReadOnlyObjectWrapper<Row> author = new ReadOnlyObjectWrapper<>(Row.none());
+    private final ReadOnlyIntegerWrapper edits = new ReadOnlyIntegerWrapper();
 
     /**
      * Follows the open book.
@@ -112,6 +115,16 @@ public final class BookTitleViewModel {
         return author.getReadOnlyProperty();
     }
 
+    /**
+     * How many of the person's edits have been stored and read back, so a screen can react to a change of the title or
+     * author that came from the person and not from a run.
+     *
+     * @return a read-only counter that only ever grows
+     */
+    public ReadOnlyIntegerProperty edits() {
+        return edits.getReadOnlyProperty();
+    }
+
     /** Reads both rows again from the stored project, which a run may have filled since they were last read. */
     public void refresh() {
         final OpenedBook book = project.book().get();
@@ -120,7 +133,7 @@ public final class BookTitleViewModel {
             return;
         }
         log.debug("reading the title rows of project {}", book.projectId());
-        submit(() -> readBoth(book.projectId()));
+        submit(() -> readBoth(book.projectId(), false));
     }
 
     /**
@@ -159,13 +172,13 @@ public final class BookTitleViewModel {
                     part,
                     Objects.requireNonNull(saved.error()).code());
         }
-        readBoth(projectId);
+        readBoth(projectId, saved.isOk());
     }
 
-    private void readBoth(final String projectId) {
+    private void readBoth(final String projectId, final boolean edited) {
         final Row titleRow = read(projectId, TITLE_ID);
         final Row authorRow = read(projectId, AUTHOR_ID);
-        Platform.runLater(() -> publish(projectId, titleRow, authorRow));
+        Platform.runLater(() -> publish(projectId, titleRow, authorRow, edited));
     }
 
     private Row read(final String projectId, final String segmentId) {
@@ -182,7 +195,7 @@ public final class BookTitleViewModel {
         return new Row(view.displaySource(), translated ? target : "", translated && !target.isBlank());
     }
 
-    private void publish(final String projectId, final Row titleRow, final Row authorRow) {
+    private void publish(final String projectId, final Row titleRow, final Row authorRow, final boolean edited) {
         final OpenedBook book = project.book().get();
         if (book == null || !book.projectId().equals(projectId)) {
             log.debug("title rows of project {} dropped: another book is open", projectId);
@@ -190,6 +203,9 @@ public final class BookTitleViewModel {
         }
         title.set(titleRow);
         author.set(authorRow);
+        if (edited) {
+            edits.set(edits.get() + 1);
+        }
     }
 
     private void submit(final Runnable work) {

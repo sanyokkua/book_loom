@@ -70,7 +70,6 @@ final class ExportDestinationCard {
                 BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row),
                 nameNotice(),
                 authorNote(),
-                titleHint(),
                 refusal(),
                 currentNote(),
                 replaceSwitch());
@@ -97,12 +96,6 @@ final class ExportDestinationCard {
         final Label note = BriefCards.hint(messages, MessageKey.EXPORT_SUGGEST_NAME_AUTHOR_KEPT);
         note.setId("export-author-kept");
         return BriefCards.shownWhile(note, viewModel.nameSuggestion.authorKept());
-    }
-
-    private Node titleHint() {
-        final Label hint = BriefCards.hint(messages, MessageKey.EXPORT_TITLE_HINT);
-        hint.setId("export-title-hint");
-        return hint;
     }
 
     private Node refusal() {

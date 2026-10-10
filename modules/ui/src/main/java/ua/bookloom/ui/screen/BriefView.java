@@ -19,7 +19,6 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -45,7 +44,6 @@ final class BriefView {
     private final BriefLanguagesCard languages;
     private final BriefToneCard tone;
     private final BriefPoliciesCard policies;
-    private final BriefTitleCard titles;
     private final BriefAlsoCard also;
     private final BriefQualityCard quality;
     private final StepFooter footer;
@@ -54,7 +52,6 @@ final class BriefView {
 
     BriefView(
             final BookBriefViewModel viewModel,
-            final BookTitleViewModel titleModel,
             final Messages messages,
             final Navigator navigator,
             final LanguageNames names,
@@ -68,7 +65,6 @@ final class BriefView {
         this.languages = new BriefLanguagesCard(viewModel, messages, names);
         this.tone = new BriefToneCard(viewModel, messages);
         this.policies = new BriefPoliciesCard(viewModel, messages);
-        this.titles = new BriefTitleCard(titleModel, messages);
         this.also = new BriefAlsoCard(viewModel, messages);
         this.quality = new BriefQualityCard(viewModel, settings, messages, navigator);
         this.footer = footer();
@@ -92,7 +88,7 @@ final class BriefView {
     private Node build() {
         final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.BRIEF_SUBTITLE), "muted");
         subtitle.setId("brief-subtitle");
-        final VBox left = column(languages.node(), titles.node(), tone.node());
+        final VBox left = column(languages.node(), tone.node());
         final VBox right = column(policies.node(), also.node(), quality.node());
         return new VBox(CARD_SPACING, subtitle, new HBox(COLUMN_SPACING, left, right), footer);
     }
