@@ -11,6 +11,7 @@ import static ua.bookloom.pipeline.export.ExportJobFixture.request;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,11 +21,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TestBooks;
@@ -102,6 +105,35 @@ class ExportJobSideFilesTest {
                         "- Flagged, written with the machine translation: 1",
                         "- ch1 · p02: omission (medium) — a clause is missing",
                         "The consistency pass was not run.");
+    }
+
+    // IF the report left out who translated the book and for how long, THEN a person comparing two exports of one book
+    // could not tell which model made which.
+    @Test
+    void run_reportChosenAfterARun_namesTheModelAndTheRunTime() {
+        final String id = frankenstein();
+        final Instant started = Instant.parse("2026-10-09T08:00:00Z");
+        ok(fixture.runs()
+                .save(new RunRecord(
+                        "run-1", id, started, started.plusSeconds(3725), JobState.COMPLETED, 2, 1, "gemma3:12b")));
+
+        ok(fixture.export(
+                request(id, tempDir.resolve("Frankenstein.uk.epub"), false, Set.of(SideFile.QUALITY_REPORT))));
+
+        assertThat(read(tempDir.resolve("Frankenstein.uk.report.md")))
+                .contains("## Last run", "- Model: gemma3:12b", "- Run time: 1:02:05");
+    }
+
+    // A book never run by this app has no run to name; the report says so instead of leaving a gap.
+    @Test
+    void run_reportChosenWithNoRunOnRecord_saysNoRunIsRecorded() {
+        final String id = frankenstein();
+
+        ok(fixture.export(
+                request(id, tempDir.resolve("Frankenstein.uk.epub"), false, Set.of(SideFile.QUALITY_REPORT))));
+
+        assertThat(read(tempDir.resolve("Frankenstein.uk.report.md")))
+                .contains("## Last run", "- Model: not recorded", "- Run time: not recorded");
     }
 
     // An accepted paragraph still in English is no flagged segment, yet the report lists it with the check that fired.

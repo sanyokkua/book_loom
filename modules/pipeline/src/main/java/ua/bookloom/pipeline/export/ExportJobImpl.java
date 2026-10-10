@@ -283,7 +283,7 @@ final class ExportJobImpl implements ExportJob {
         }
         return withSideFiles(
                 project,
-                new ExportFinish.Written(targets, fallbacks, glossary, pass),
+                new ExportFinish.Written(targets, fallbacks, glossary, pass, parts.lastRun(project.id())),
                 Objects.requireNonNull(written.data(), "written book"));
     }
 

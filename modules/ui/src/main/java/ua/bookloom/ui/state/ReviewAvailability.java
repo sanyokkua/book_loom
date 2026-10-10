@@ -71,7 +71,7 @@ final class ReviewAvailability {
         final boolean decidable = segment != null && isDecidable(segment.status());
         final boolean hasTarget = segment != null && hasTarget(segment);
         accept.set(offered && !dirty && decidable && hasTarget);
-        acceptNote.set(offered && decidable && !hasTarget ? MessageKey.REVIEW_ACCEPT_NEEDS_TARGET : null);
+        acceptNote.set(offered && decidable && !hasTarget ? noTargetNote(segment) : null);
         allSegments.set(reviewMode == ReviewMode.UNATTENDED && mirror.runState().get() == RunState.COMPLETED);
         log.debug(
                 "review availability: actions {}, accept {}, all segments {}, locked by {}",
@@ -79,6 +79,14 @@ final class ReviewAvailability {
                 accept.get(),
                 allSegments.get(),
                 lockReason.get());
+    }
+
+    // A refused reply the editor shows can be kept with Save edit, so the note points there; with none, there is
+    // nothing to keep and the person must write or retry first.
+    private static MessageKey noTargetNote(final @Nullable SegmentView segment) {
+        return segment != null && segment.rejectedTarget() != null
+                ? MessageKey.REVIEW_ACCEPT_NEEDS_SAVE
+                : MessageKey.REVIEW_ACCEPT_NEEDS_TARGET;
     }
 
     private MessageKey reasonLocked() {

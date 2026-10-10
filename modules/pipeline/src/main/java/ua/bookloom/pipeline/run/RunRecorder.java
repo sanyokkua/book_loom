@@ -25,6 +25,7 @@ public final class RunRecorder {
     private final String runId;
     private final String projectId;
     private final Clock clock;
+    private final @Nullable String model;
     private Instant startedAt;
     private int accepted;
     private int flagged;
@@ -36,12 +37,19 @@ public final class RunRecorder {
      * @param runId the non-null id of the run
      * @param projectId the non-null id of the project it runs
      * @param clock the non-null clock the start and end are read from
+     * @param model the id of the model the run uses, or null when none was named
      */
-    public RunRecorder(final RunRepository runs, final String runId, final String projectId, final Clock clock) {
+    public RunRecorder(
+            final RunRepository runs,
+            final String runId,
+            final String projectId,
+            final Clock clock,
+            @Nullable final String model) {
         this.runs = Objects.requireNonNull(runs, "runs");
         this.runId = Objects.requireNonNull(runId, "runId");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.model = model;
         this.startedAt = clock.instant();
     }
 
@@ -88,7 +96,7 @@ public final class RunRecorder {
     private void write(final JobState state, @Nullable final Instant endedAt) {
         log.debug("Writing run state runId={} state={}", runId, state);
         final Result<RunRecord> saved =
-                runs.save(new RunRecord(runId, projectId, startedAt, endedAt, state, accepted, flagged));
+                runs.save(new RunRecord(runId, projectId, startedAt, endedAt, state, accepted, flagged, model));
         if (saved.isErr()) {
             log.warn("The run state could not be stored runId={} state={}", runId, state);
         }

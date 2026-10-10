@@ -3,6 +3,7 @@ package ua.bookloom.ui.dialog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -11,10 +12,12 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SourceFallback;
+import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.FileRevealer;
 
@@ -23,6 +26,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
     private static final Path BOOK = Path.of("/books/Frankenstein.uk.epub");
     private static final int SIZE = 958_464;
+    private static final double MAX_CARD_WIDTH = 640;
 
     private void show() {
         show(List.of(), ConsistencySummary.NOT_RUN);
@@ -319,5 +323,44 @@ class ExportCompleteDialogTest extends ShellTestBase {
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
 
         assertThat(scene.getRoot().lookup("#export-complete-report")).isNull();
+    }
+
+    private static final Path LONG_BOOK = Path.of("/Users/someone/Documents/Translations/Burning Chrome — the second"
+            + " attempt/with a very long folder name that goes on and on/Burning Chrome.uk.epub");
+
+    private void showLongPathCopyingTo(final List<String> copied) {
+        final ExportReport report =
+                new ExportReport(LONG_BOOK, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0);
+        final ExportCompleteDialog dialog = new ExportCompleteDialog(
+                injector.getInstance(ModalHost.class), injector.getInstance(Messages.class), revealer(), copied::add);
+        onFx(() -> dialog.show(new ExportOutcome(report, SIZE)));
+    }
+
+    // IF a long folder were cut off in its row, THEN only a hover would show where the book went; it wraps within the
+    // card instead, which stays no wider than its limit.
+    @Test
+    void show_longFolder_wrapsItsWholeTextWithinTheCard() {
+        showLongPathCopyingTo(new ArrayList<>());
+
+        final Label location = (Label) required("export-complete-location");
+        assertThat(location.getText())
+                .isEqualTo(
+                        java.util.Objects.requireNonNull(LONG_BOOK.getParent()).toString());
+        assertThat(location.isWrapText()).isTrue();
+        assertThat(ThemeTestSupport.onFx(() ->
+                        required(ExportCompleteDialog.CARD_ID).getLayoutBounds().getWidth()))
+                .isLessThanOrEqualTo(MAX_CARD_WIDTH);
+    }
+
+    // IF the path could only be read, THEN a person could not paste it into a file manager or a message.
+    @Test
+    void copyPath_pressed_putsTheWholeFilePathOnTheClipboard() {
+        final List<String> copied = new ArrayList<>();
+        showLongPathCopyingTo(copied);
+
+        onFx(() -> ((Button) required("export-complete-copy")).fire());
+
+        assertThat(copied).containsExactly(LONG_BOOK.toString());
+        assertThat(TooltipProbe.tipText(required("export-complete-copy"))).contains("clipboard");
     }
 }

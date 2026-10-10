@@ -20,6 +20,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.GlossaryCsv;
 import ua.bookloom.pipeline.revision.ConsistencyReport;
@@ -46,6 +47,7 @@ final class SideFiles {
      * @param glossary the project's glossary entries
      * @param suspicious the accepted segments the final audit doubts
      * @param policy how each segment without an accepted target was written
+     * @param lastRun the project's last translation run, or null when it never ran
      */
     record Sources(
             Path destination,
@@ -56,7 +58,8 @@ final class SideFiles {
             @Nullable ConsistencyReport pass,
             List<GlossaryEntry> glossary,
             List<SuspiciousSegment> suspicious,
-            ExportPolicy policy) {
+            ExportPolicy policy,
+            @Nullable RunRecord lastRun) {
 
         /** Rejects missing parts and copies the collections. */
         Sources {
@@ -126,7 +129,8 @@ final class SideFiles {
                         sources.keptKinds(),
                         sources.pass(),
                         sources.suspicious(),
-                        sources.policy());
+                        sources.policy(),
+                        sources.lastRun());
         };
     }
 

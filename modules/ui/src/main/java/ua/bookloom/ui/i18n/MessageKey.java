@@ -1371,7 +1371,7 @@ public enum MessageKey {
     LIVE_CALL_PROMPT_FULL_TITLE("live.call.prompt.fullTitle"),
     /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
     LIVE_CALL_OUTCOME("live.call.outcome"),
-    /** Words for one reason in an outcome chip; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
+    /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
     LIVE_CALL_DETAIL("live.call.detail"),
     /** Context-section heading of the style sheet. */
     LIVE_CONTEXT_STYLE("live.context.style"),
@@ -1531,6 +1531,8 @@ public enum MessageKey {
     SHELL_CONNECTION_UNKNOWN("shell.connection.unknown"),
     /** Status-bar chip while the server answers; argument 0 is how long ago it last answered, as {@code m:ss}, a String. */
     SHELL_CONNECTION_STEADY("shell.connection.steady"),
+    /** Text of the connection chip once the run ended, when a clock since the last answer would only go stale. */
+    SHELL_CONNECTION_ANSWERED("shell.connection.answered"),
     /** Status-bar chip after recent failures; argument 0 is how many attempts failed in the last ten minutes. */
     SHELL_CONNECTION_UNSTEADY("shell.connection.unsteady"),
     /** Status-bar chip while the run waits for an unreachable provider and retries by itself. */
@@ -1624,6 +1626,10 @@ public enum MessageKey {
     EXPORT_COMPLETE_WRITTEN("export.complete.written"),
     /** Label of the folder row of the export-complete dialog. */
     EXPORT_COMPLETE_LOCATION("export.complete.location"),
+    /** Button of the export-complete dialog that puts the written book's full path on the clipboard. */
+    EXPORT_COMPLETE_COPY("export.complete.copy"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_COMPLETE_COPY}. */
+    EXPORT_COMPLETE_COPY_TIP("export.complete.copy.tip"),
     /** Label of the verification row of the export-complete dialog. */
     EXPORT_COMPLETE_VALIDATION("export.complete.validation"),
     /** Verification result of the export-complete dialog. */
@@ -1711,8 +1717,6 @@ public enum MessageKey {
      * broke with their counts ({@code quotes: 2, worse: 1}).
      */
     EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
-    /** Words for the rule a consistency answer broke; arguments: 0 the rule's name lower-cased with dashes as underscores, 1 the name as reported, shown when no words are known. */
-    EXPORT_CHECK_CONSISTENCY_RULE("export.check.consistency.rule"),
     /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
     EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
     /** The forward action of the last step, always unavailable. */
@@ -1929,6 +1933,8 @@ public enum MessageKey {
     REVIEW_READ_ONLY("review.readOnly"),
     /** Why Accept is off for a segment that kept no translation. */
     REVIEW_ACCEPT_NEEDS_TARGET("review.accept.needsTarget"),
+    /** Note shown when Accept is off for a segment whose editor holds the model's refused reply: Save edit keeps it. */
+    REVIEW_ACCEPT_NEEDS_SAVE("review.accept.needsSave"),
     /** Caption of the line that names what the model knew when it drafted the segment. */
     REVIEW_CONTEXT("review.context"),
     /** Caption of the list of a segment's findings. */

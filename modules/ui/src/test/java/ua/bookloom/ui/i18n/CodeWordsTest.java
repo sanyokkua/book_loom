@@ -58,15 +58,14 @@ class CodeWordsTest {
     // IF a rule a consistency answer broke were shown as its code, THEN the result line would read "latin-run: 1".
     @ParameterizedTest(name = "{0} in {1}")
     @CsvSource({
-        "quotes, en, quote marks",
+        "quotes, en, quote marks not paired",
         "latin-run, en, English words left",
         "not-accepted, en, not accepted",
-        "quotes, uk, лапки",
+        "quotes, uk, лапки не в парі",
         "worse, uk, гірша оцінка",
     })
     void consistencyRule_knownRule_readsAsWords(final String rule, final String tag, final String expected) {
-        assertThat(messagesFor(tag).code(MessageKey.EXPORT_CHECK_CONSISTENCY_RULE, rule))
-                .isEqualTo(expected);
+        assertThat(messagesFor(tag).code(MessageKey.LIVE_CALL_DETAIL, rule)).isEqualTo(expected);
     }
 
     // IF a code no catalogue knows were dropped or turned into "other", THEN a new reason would vanish from the screen.
@@ -74,7 +73,6 @@ class CodeWordsTest {
     @ValueSource(strings = {"BRAND_NEW", "made-up"})
     void code_unknown_isShownAsItIs(final String code) {
         assertThat(messagesFor("uk").code(MessageKey.LIVE_CALL_DETAIL, code)).isEqualTo(code);
-        assertThat(messagesFor("en").code(MessageKey.EXPORT_CHECK_CONSISTENCY_RULE, code))
-                .isEqualTo(code);
+        assertThat(messagesFor("en").code(MessageKey.LIVE_CALL_DETAIL, code)).isEqualTo(code);
     }
 }

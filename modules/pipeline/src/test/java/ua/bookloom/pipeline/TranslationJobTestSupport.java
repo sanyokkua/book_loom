@@ -207,6 +207,9 @@ final class TranslationJobTestSupport {
                 brief.dial());
     }
 
+    /** The model id every test job is started with, which its run record keeps. */
+    static final String MODEL_NAME = "scripted-model";
+
     static TranslationJobImpl job(final TestProject project, final ChatModel model) {
         return job(project, project.id(), model);
     }
@@ -224,7 +227,7 @@ final class TranslationJobTestSupport {
             final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
                 project.documents(),
-                new RunRequest(projectId, mode),
+                new RunRequest(projectId, mode, null, MODEL_NAME),
                 model,
                 new ObjectMapper(),
                 new PromptTemplates(),

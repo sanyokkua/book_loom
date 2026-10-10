@@ -141,14 +141,16 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
         assertThat(counts.data())
                 .isEqualTo(new ReviewCounts(
                         SEGMENT_COUNT, 0, 0, reviewed ? 0 : SEGMENT_COUNT, reviewed ? SEGMENT_COUNT : 0, 0, 0, 0, 0));
-        assertMirror();
+        assertMirror(reviewed);
     }
 
-    private void assertMirror() {
+    // The flagged figure is the desk's count once the run is over, so segments the person accepted are no longer shown
+    // as flagged beside a Review flagged button that counts none.
+    private void assertMirror(final boolean reviewed) {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(SEGMENT_COUNT);
         assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(0);
         assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(0);
-        assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(SEGMENT_COUNT);
+        assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(reviewed ? 0 : SEGMENT_COUNT);
     }
 }

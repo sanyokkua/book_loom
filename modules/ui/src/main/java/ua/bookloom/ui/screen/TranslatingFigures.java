@@ -69,8 +69,10 @@ final class TranslatingFigures {
                 new FigureLabel(),
                 "translating-pace-text",
                 "muted",
-                () -> paceText(mirror.live().throughput().get(), messages),
-                mirror.live().throughput());
+                () -> paceText(
+                        mirror.live().throughput().get(), mirror.runState().get(), messages),
+                mirror.live().throughput(),
+                mirror.runState());
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final VBox card = new VBox(CARD_SPACING, bar, new HBox(TILE_SPACING, line, spacer, pace));
@@ -217,10 +219,10 @@ final class TranslatingFigures {
         return String.join(PART_SEPARATOR, parts);
     }
 
-    static String paceText(final Throughput pace, final Messages messages) {
+    static String paceText(final Throughput pace, final RunState state, final Messages messages) {
         Objects.requireNonNull(pace, "pace");
         final List<String> parts = new ArrayList<>();
-        if (pace.timeLeft() != null) {
+        if (pace.timeLeft() != null && !state.hasEnded()) {
             parts.add(messages.get(MessageKey.TRANSLATING_PACE_LEFT, DurationText.format(messages, pace.timeLeft())));
         }
         if (pace.tokensPerSecond() != null) {

@@ -14,6 +14,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ExportJob;
@@ -45,6 +46,7 @@ public final class ExportServiceImpl implements ExportService {
     private final DocumentPort documents;
     private final ConsistencyPass consistencyPass;
     private final GlossaryRepository glossary;
+    private final RunRepository runs;
     private final Clock clock;
 
     @Override
@@ -107,7 +109,7 @@ public final class ExportServiceImpl implements ExportService {
         // The pass's calls reach the model the person chose; without one, only the name sweep runs.
         final ModelCalls calls = model == null ? null : shownCalls(project, model, progress);
         final ExportParts parts =
-                new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary);
+                new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary, runs);
         return Result.ok(new ExportJobImpl(request, parts, calls, progress));
     }
 

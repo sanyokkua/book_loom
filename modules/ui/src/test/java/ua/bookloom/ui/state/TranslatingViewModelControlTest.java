@@ -183,7 +183,8 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
 
         assertThat(engine.requests())
                 .containsExactly(
-                        new RunRequest("p1", ReviewMode.UNATTENDED), new RunRequest("p1", ReviewMode.UNATTENDED));
+                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL),
+                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL));
         assertThat(projects.imports()).containsExactly(BOOK);
         assertThat(state()).isEqualTo(RunState.RUNNING);
         assertThat(controls()).isEqualTo(PAUSE_AND_STOP);

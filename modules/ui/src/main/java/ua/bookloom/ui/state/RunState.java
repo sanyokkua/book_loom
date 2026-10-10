@@ -23,5 +23,23 @@ public enum RunState {
     /** The run returned completed and the book is written. */
     COMPLETED,
     /** The run was refused or ended on an error. */
-    FAILED
+    FAILED;
+
+    /**
+     * Whether the run is over, so figures that look ahead or tick with it, such as the time left, no longer apply.
+     *
+     * @return {@code true} once the run was stopped, completed or failed, {@code false} otherwise
+     */
+    public boolean hasEnded() {
+        return this == STOPPED || this == COMPLETED || this == FAILED;
+    }
+
+    /**
+     * Whether the run has stored everything it decided, so the review desk's count is complete.
+     *
+     * @return {@code true} when paused or ended, {@code false} while it decides or before any run
+     */
+    public boolean isSettled() {
+        return hasEnded() || this == PAUSED;
+    }
 }

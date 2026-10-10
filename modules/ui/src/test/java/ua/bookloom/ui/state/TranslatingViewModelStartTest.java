@@ -80,7 +80,7 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
         assertThat(projects.briefs())
                 .extracting(BookBrief::sourceLanguage, BookBrief::targetLanguage)
                 .containsExactly(tuple("en", "uk"));
-        assertThat(engine.requests()).containsExactly(new RunRequest("p1", ReviewMode.UNATTENDED));
+        assertThat(engine.requests()).containsExactly(new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL));
         assertThat(engine.askedOnFxThread()).containsExactly(false);
         assertThat(job.calls()).containsExactly("pauseAt", "recoverWith", "subscribe", "run");
         awaitState(RunState.RUNNING);
@@ -140,7 +140,7 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
 
         startAndPrepare();
 
-        assertThat(engine.requests()).containsExactly(new RunRequest("p1", mode));
+        assertThat(engine.requests()).containsExactly(new RunRequest("p1", mode, null, MODEL));
         assertThat(job.pausePoints()).isEqualTo(expected);
     }
 

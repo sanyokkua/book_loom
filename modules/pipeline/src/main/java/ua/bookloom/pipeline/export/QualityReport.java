@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.export;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -17,6 +18,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
@@ -31,6 +33,11 @@ import ua.bookloom.pipeline.revision.ConsistencyReport;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class QualityReport {
 
+    private static final String NOT_RECORDED = "not recorded";
+    private static final long SECONDS_PER_MINUTE = 60;
+    private static final long MINUTES_PER_HOUR = 60;
+    private static final long SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+
     /**
      * Builds the report of one export.
      *
@@ -42,6 +49,7 @@ final class QualityReport {
      * @param pass what the consistency pass changed, or null when it was not run
      * @param suspicious the non-null accepted segments the final audit doubts, listed with the checks that fired
      * @param policy the non-null way each segment without an accepted target was written
+     * @param lastRun the project's last translation run, or null when it never ran
      * @return the report's Markdown text
      */
     static String of(
@@ -52,11 +60,14 @@ final class QualityReport {
             final Set<SegmentKind> keptKinds,
             @Nullable final ConsistencyReport pass,
             final List<SuspiciousSegment> suspicious,
-            final ExportPolicy policy) {
+            final ExportPolicy policy,
+            @Nullable final RunRecord lastRun) {
         Objects.requireNonNull(counts, "counts");
         Objects.requireNonNull(policy, "policy");
         final String text = "# Export report: " + title + "\n\n"
                 + counts(counts)
+                + "\n"
+                + lastRun(lastRun)
                 + "\n"
                 + policy.text()
                 + "\n## Flagged segments\n\n"
@@ -67,6 +78,25 @@ final class QualityReport {
                 + ConsistencySection.of(pass);
         log.debug("Quality report built title={} length={} consistencyPass={}", title, text.length(), pass != null);
         return text;
+    }
+
+    // The run's length is its start to its end, so a pause counts: the report says "last run" and does not claim more.
+    private static String lastRun(@Nullable final RunRecord run) {
+        final String time = run == null || run.endedAt() == null
+                ? NOT_RECORDED
+                : clock(Duration.between(run.startedAt(), run.endedAt()));
+        final String model = run == null || run.model() == null ? NOT_RECORDED : run.model();
+        return "## Last run\n\n- Model: " + model + "\n- Run time: " + time + "\n";
+    }
+
+    private static String clock(final Duration length) {
+        final long seconds = length.toSeconds();
+        return String.format(
+                Locale.ROOT,
+                "%d:%02d:%02d",
+                seconds / SECONDS_PER_HOUR,
+                seconds / SECONDS_PER_MINUTE % MINUTES_PER_HOUR,
+                seconds % SECONDS_PER_MINUTE);
     }
 
     private static String counts(final ExportCounts counts) {

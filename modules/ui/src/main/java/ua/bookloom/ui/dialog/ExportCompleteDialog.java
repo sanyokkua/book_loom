@@ -12,6 +12,8 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -39,11 +41,14 @@ public final class ExportCompleteDialog {
     static final String CARD_ID = "export-complete-card";
     static final String CLOSE_ID = "export-complete-close";
     static final String FOLDER_ID = "export-complete-folder";
+    private static final double PATH_MAX_WIDTH = 420;
+
     static final String OPEN_ID = "export-complete-open";
 
     private final ModalHost modalHost;
     private final Messages messages;
     private final FileRevealer revealer;
+    private final Consumer<String> clipboard;
 
     /**
      * Creates the dialog.
@@ -54,9 +59,32 @@ public final class ExportCompleteDialog {
      */
     @Inject
     public ExportCompleteDialog(final ModalHost modalHost, final Messages messages, final FileRevealer revealer) {
+        this(modalHost, messages, revealer, ExportCompleteDialog::toClipboard);
+    }
+
+    /**
+     * Creates the dialog with its own clipboard, so a test can see what Copy path puts there.
+     *
+     * @param modalHost the shared overlay the card is shown in
+     * @param messages the catalogue every word of the card comes from
+     * @param revealer what Open folder and Open book ask of the system
+     * @param clipboard where Copy path puts the file's path
+     */
+    ExportCompleteDialog(
+            final ModalHost modalHost,
+            final Messages messages,
+            final FileRevealer revealer,
+            final Consumer<String> clipboard) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.revealer = Objects.requireNonNull(revealer, "revealer");
+        this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
+    }
+
+    private static void toClipboard(final String text) {
+        final ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        Clipboard.getSystemClipboard().setContent(content);
     }
 
     /**
@@ -87,6 +115,7 @@ public final class ExportCompleteDialog {
         final ExportReport report = outcome.report();
         final Label written = new Label(messages.get(MessageKey.EXPORT_COMPLETE_WRITTEN, file.getFileName()));
         written.setWrapText(true);
+        written.setMaxWidth(PATH_MAX_WIDTH);
         written.getStyleClass().add("dialog-text");
         final Path folder = file.getParent();
         // Plain success-coloured words after a check mark, as the export screen's own checks read: a row value, not a
@@ -97,16 +126,19 @@ public final class ExportCompleteDialog {
         verified.setId("export-complete-verified");
         verified.getStyleClass().add("status-ok");
         verified.setGraphic(mark);
-        // A long folder is cut short in its row, so the whole path is one hover away, as is the written file's.
+        // The whole folder path is also one hover away, as is the written file's.
         Tips.install(written, file.toString());
         final Label location = plain(folder == null ? "" : folder.toString());
         location.setId("export-complete-location");
+        // A long folder wraps inside the card instead of widening it; Copy path hands the whole path to the clipboard.
+        location.setWrapText(true);
+        location.setMaxWidth(PATH_MAX_WIDTH);
         if (folder != null) {
             Tips.install(location, folder.toString());
         }
         final VBox body = new VBox(
                 written,
-                row(MessageKey.EXPORT_COMPLETE_LOCATION, location),
+                row(MessageKey.EXPORT_COMPLETE_LOCATION, location, copyPath(file)),
                 row(MessageKey.EXPORT_COMPLETE_VALIDATION, verified),
                 row(MessageKey.EXPORT_COMPLETE_SIZE, plain(FileSizes.format(sizeBytes, messages))));
         addReport(body, report);
@@ -167,10 +199,25 @@ public final class ExportCompleteDialog {
         return value;
     }
 
-    private Node row(final MessageKey label, final Label value) {
+    private Button copyPath(final Path file) {
+        final Button copy = Tips.install(
+                messages,
+                new Button(messages.get(MessageKey.EXPORT_COMPLETE_COPY)),
+                MessageKey.EXPORT_COMPLETE_COPY_TIP);
+        copy.setId("export-complete-copy");
+        copy.getStyleClass().add("btn-ghost");
+        copy.setOnAction(event -> {
+            log.debug("export-complete copy path pressed");
+            clipboard.accept(file.toString());
+        });
+        return copy;
+    }
+
+    private Node row(final MessageKey label, final Node... values) {
         final Label key = new Label(messages.get(label));
         key.getStyleClass().add("kv-key");
-        final HBox row = new HBox(key, value);
+        final HBox row = new HBox(key);
+        row.getChildren().addAll(values);
         row.getStyleClass().add("kv");
         return row;
     }

@@ -28,6 +28,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
@@ -240,6 +241,7 @@ class ExportServiceImplTest {
                 port,
                 injector.getInstance(ConsistencyPass.class),
                 injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(RunRepository.class),
                 Clock.systemUTC());
         final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
         workers = Executors.newSingleThreadExecutor();

@@ -254,7 +254,7 @@ public final class StateMirror {
      */
     public void publishRunCleared() {
         log.debug("publishing run cleared");
-        Platform.runLater(this::resetToIdle);
+        Platform.runLater(() -> resetTo(null, null, RunState.IDLE));
     }
 
     /**
@@ -278,6 +278,10 @@ public final class StateMirror {
      */
     public void publishWaitingSeconds(final int seconds) {
         Platform.runLater(() -> waitingSeconds.set(seconds));
+    }
+
+    void showFlagged(final int count) {
+        applyFigures(figures.get().withFlagged(count));
     }
 
     /**
@@ -339,10 +343,6 @@ public final class StateMirror {
             this.failure.set(error);
             this.runState.set(state);
         });
-    }
-
-    private void resetToIdle() {
-        resetTo(null, null, RunState.IDLE);
     }
 
     private void resetTo(final @Nullable String fileName, final @Nullable RunMode mode, final RunState state) {

@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntConsumer;
 import javafx.application.Platform;
@@ -44,6 +45,22 @@ final class FlaggedCount {
     }
 
     /**
+     * Makes the desk's count the one the run's tiles show, once the run has stored everything it decided, so a person who
+     * accepted or edited a flagged segment sees one number on the tiles and on Review flagged. While the run decides, its
+     * own figure is the live one and the desk's read lags its last flush.
+     *
+     * @param mirror the run's state, whose flagged figure is replaced
+     * @param flagged the segments the desk counts as flagged
+     */
+    void show(final StateMirror mirror, final int flagged) {
+        final boolean settled = mirror.runState().get().isSettled();
+        log.debug("flagged count is now {}; shown on the tiles: {}", flagged, settled);
+        if (settled) {
+            mirror.showFlagged(flagged);
+        }
+    }
+
+    /**
      * Reads the count of a project and publishes it on the FX thread unless a newer read was asked for.
      *
      * @param projectId the project the open book is stored under
@@ -53,15 +70,20 @@ final class FlaggedCount {
     void read(final String projectId, final int shown, final IntConsumer publish) {
         Objects.requireNonNull(publish, "publish");
         final long mine = ticket.incrementAndGet();
-        executor.execute(() -> {
-            final int flagged = queries.flagged(projectId, shown);
-            Platform.runLater(() -> {
-                if (mine == ticket.get()) {
-                    publish.accept(flagged);
-                } else {
-                    log.debug("a count of {} read for an older request is dropped", flagged);
-                }
+        try {
+            executor.execute(() -> {
+                final int flagged = queries.flagged(projectId, shown);
+                Platform.runLater(() -> {
+                    if (mine == ticket.get()) {
+                        publish.accept(flagged);
+                    } else {
+                        log.debug("a count of {} read for an older request is dropped", flagged);
+                    }
+                });
             });
-        });
+        } catch (RejectedExecutionException closing) {
+            // A run can end while the application shuts its executor down: there is no one left to show the count to.
+            log.debug("the flagged count was not read: the executor is shut down", closing);
+        }
     }
 }

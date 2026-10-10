@@ -373,8 +373,8 @@ public final class ReviewViewModel {
     }
 
     private void publishCount(final int flagged) {
-        log.debug("flagged count is now {}", flagged);
         flaggedCount.set(flagged);
+        counts.show(mirror, flagged);
     }
 
     private void publishRows(final List<SegmentView> views) {

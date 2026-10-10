@@ -181,8 +181,8 @@ public final class RunStatusBar {
         final int percent = mirror.figures().get().percent();
         stateText.setText(stateText(state, percent));
         showMode(mirror.runMode().get());
-        showTimes(mirror.live().throughput().get());
-        showConnection(mirror.live().connection().get());
+        showTimes(mirror.live().throughput().get(), state);
+        showConnection(mirror.live().connection().get(), state);
         showControl(state, viewModel.controls().get());
     }
 
@@ -228,9 +228,10 @@ public final class RunStatusBar {
         }
     }
 
-    private void showTimes(final Throughput figures) {
+    private void showTimes(final Throughput figures, final RunState state) {
         elapsed.setText(messages.get(MessageKey.SHELL_RUN_ELAPSED, DurationText.format(messages, figures.elapsed())));
-        final Duration left = figures.timeLeft();
+        // A run that has ended has nothing left to estimate: its last figure would read "~0s left".
+        final Duration left = state.hasEnded() ? null : figures.timeLeft();
         view.want(timeLeft, left != null);
         if (left != null) {
             timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.format(messages, left)));
@@ -243,20 +244,12 @@ public final class RunStatusBar {
         }
     }
 
-    private void showConnection(final ConnectionStatus status) {
+    private void showConnection(final ConnectionStatus status, final RunState state) {
         // While the run waits for the provider by itself, the chip says so whatever the recent calls were.
         final boolean retrying = RecoveryState.waits(mirror.review().recovery().get());
         final ConnectionStatus.Health health = retrying ? ConnectionStatus.Health.UNSTEADY : status.health();
         final Duration since = status.sinceLastAnswer();
-        connection.setText(
-                retrying
-                        ? messages.get(MessageKey.SHELL_CONNECTION_RETRYING)
-                        : switch (health) {
-                            case UNKNOWN -> messages.get(MessageKey.SHELL_CONNECTION_UNKNOWN);
-                            case STEADY -> messages.get(MessageKey.SHELL_CONNECTION_STEADY, clock(since));
-                            case UNSTEADY ->
-                                messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
-                        });
+        connection.setText(retrying ? messages.get(MessageKey.SHELL_CONNECTION_RETRYING) : chipText(status, state));
         // Changed only when the health changes: a changed class list restyles and re-measures the chip.
         if (!connection.getStyleClass().contains(health.styleClass())) {
             connection.getStyleClass().removeAll(HEALTH_CLASSES);
@@ -272,6 +265,18 @@ public final class RunStatusBar {
                         String.valueOf(status.failuresRecently()),
                         rate(status.draftTokensPerSecond()),
                         rate(status.judgeTokensPerSecond())));
+    }
+
+    // Once the run has ended no clock is shown: it would stand at the last answer's age, a figure nothing refreshes.
+    private String chipText(final ConnectionStatus status, final RunState state) {
+        return switch (status.health()) {
+            case UNKNOWN -> messages.get(MessageKey.SHELL_CONNECTION_UNKNOWN);
+            case STEADY ->
+                state.hasEnded()
+                        ? messages.get(MessageKey.SHELL_CONNECTION_ANSWERED)
+                        : messages.get(MessageKey.SHELL_CONNECTION_STEADY, clock(status.sinceLastAnswer()));
+            case UNSTEADY -> messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
+        };
     }
 
     private String none() {

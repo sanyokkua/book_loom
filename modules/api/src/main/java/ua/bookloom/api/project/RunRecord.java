@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.JobState;
  * @param state the run's current state — never {@link JobState#NEW}
  * @param accepted the number of segments this run has accepted so far
  * @param flagged the number of segments this run has flagged so far
+ * @param model the id of the model the run was started with, or null when the caller named none
  */
 public record RunRecord(
         String runId,
@@ -25,7 +26,8 @@ public record RunRecord(
         @Nullable Instant endedAt,
         JobState state,
         int accepted,
-        int flagged) {
+        int flagged,
+        @Nullable String model) {
 
     /**
      * Validates the invariants a caller is entitled to assume: {@code state} is never {@link JobState#NEW}, and
@@ -46,6 +48,18 @@ public record RunRecord(
         if (!terminal && endedAt != null) {
             throw new IllegalArgumentException("endedAt must be null for non-terminal state " + state);
         }
+    }
+
+    /** A record of a run whose model is not known. */
+    public RunRecord(
+            final String runId,
+            final String projectId,
+            final Instant startedAt,
+            @Nullable final Instant endedAt,
+            final JobState state,
+            final int accepted,
+            final int flagged) {
+        this(runId, projectId, startedAt, endedAt, state, accepted, flagged, null);
     }
 
     private static boolean isTerminal(final JobState state) {

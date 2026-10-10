@@ -126,4 +126,40 @@ class ReviewPolishScreenTest extends TranslatingScreenTestBase {
         assertThat(((Label) required("review-findings-none")).getText())
                 .isEqualTo("Flagged by the run — no detail recorded.");
     }
+
+    /** A flagged segment with no stored translation whose refused reply the editor shows to be saved. */
+    private static SegmentView refusedReplyOnly() {
+        final SegmentView base = sourceOnly();
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                null,
+                null,
+                null,
+                base.findings(),
+                null,
+                base.path(),
+                false,
+                null,
+                null,
+                "Він пішов.");
+    }
+
+    // IF Accept were off with only "write or retry a translation", THEN a person looking at the model's refused reply
+    // would not learn that Save edit is what keeps it.
+    @Test
+    void accept_editorHoldsTheRefusedReply_isOffAndPointsToSaveEdit() throws TimeoutException {
+        openPanelOn(RunState.PAUSED, refusedReplyOnly());
+
+        assertThat(button("review-accept").isDisabled()).isTrue();
+        assertThat(button("review-save").isDisabled()).isFalse();
+        assertThat(((Label) required("review-accept-note")).getText())
+                .isEqualTo(
+                        "Accept is off: the text shown is the model's refused reply, not a stored translation."
+                                + " Save edit keeps it as your translation; Accept only confirms a translation already stored.");
+    }
 }

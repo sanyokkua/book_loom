@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.revision.ConsistencyReport;
 
@@ -31,7 +32,8 @@ final class ExportFinish {
             EffectiveTargets targets,
             Fallbacks fallbacks,
             List<GlossaryEntry> glossary,
-            @Nullable ConsistencyReport pass) {}
+            @Nullable ConsistencyReport pass,
+            @Nullable RunRecord lastRun) {}
 
     /**
      * The side files to write.
@@ -71,7 +73,8 @@ final class ExportFinish {
                         book.pass(),
                         book.glossary(),
                         suspicious,
-                        policy));
+                        policy,
+                        book.lastRun()));
         return new Built(contents, forced, policy);
     }
 

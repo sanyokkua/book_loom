@@ -67,6 +67,27 @@ public record RunFigures(
     }
 
     /**
+     * The same figures with another flagged count, for when the review desk's stored count replaces the run's.
+     *
+     * @param count the segments flagged now, not negative
+     * @return the figures with that flagged count; every other figure is as it was
+     */
+    public RunFigures withFlagged(final int count) {
+        return new RunFigures(
+                autoAccepted,
+                repaired,
+                count,
+                remaining,
+                total,
+                fraction,
+                section,
+                sections,
+                chunk,
+                chunks,
+                keptVerbatim);
+    }
+
+    /**
      * Segments accepted, with or without repair, and those kept as they are.
      *
      * @return auto-accepted plus repaired plus kept as is
