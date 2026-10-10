@@ -18,6 +18,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
@@ -185,20 +186,24 @@ final class GlossaryCells {
         }
     }
 
-    /** The flags of a row as chips: no target, likely junk. Cells log nothing, since they refresh on every scroll. */
+    /** The flags of a row as chips: changed by the last operation, no target, likely junk. Cells log nothing, since they refresh on every scroll. */
     static final class FlagsCell extends EntryCell<HBox> {
 
         private final Label noTarget;
         private final Label junk;
+        private final Label changed;
+        private final ChangeMarks.Side marks;
 
-        FlagsCell(final Messages messages) {
+        FlagsCell(final Messages messages, final ChangeMarks.Side marks) {
             super(new HBox(BADGE_SPACING));
+            this.marks = marks;
+            changed = ChangedMarks.chip(messages);
             noTarget = flag(messages, MessageKey.NAMES_STYLE_FLAG_NO_TARGET, MessageKey.NAMES_STYLE_FLAG_NO_TARGET_TIP);
             junk = flag(messages, MessageKey.NAMES_STYLE_FLAG_JUNK, MessageKey.NAMES_STYLE_FLAG_JUNK_TIP);
             noTarget.getStyleClass().add("chip-neutral");
             junk.getStyleClass().add("chip-warn");
             control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(noTarget, junk);
+            control().getChildren().addAll(changed, noTarget, junk);
         }
 
         private static Label flag(final Messages messages, final MessageKey text, final MessageKey tip) {
@@ -210,6 +215,7 @@ final class GlossaryCells {
 
         @Override
         void show(final HBox shown, final GlossaryEntry entry) {
+            setVisibleAndManaged(changed, marks.isMarked(entry.id()));
             setVisibleAndManaged(noTarget, GlossaryFlags.hasNoTarget(entry));
             setVisibleAndManaged(junk, GlossaryFlags.isLikelyJunk(entry));
         }

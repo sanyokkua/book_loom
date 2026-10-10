@@ -27,6 +27,7 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
+import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -65,6 +66,7 @@ final class NamesStyleView {
     private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
+    private final ChangeResultsDialog changeResultsDialog;
 
     NamesStyleView(
             final Messages messages,
@@ -74,7 +76,8 @@ final class NamesStyleView {
             final ModalHost modalHost,
             final Toasts toasts,
             final NoTargetDialog noTargetDialog,
-            final NarratorDialog narratorDialog) {
+            final NarratorDialog narratorDialog,
+            final ChangeResultsDialog changeResultsDialog) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
@@ -83,6 +86,7 @@ final class NamesStyleView {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
+        this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
     }
 
     Node build(final String projectId) {
@@ -93,8 +97,10 @@ final class NamesStyleView {
                 messages,
                 new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP)),
                 MessageKey.NAMES_STYLE_SKIP_TIP);
-        return new VBox(
+        final VBox screen = new VBox(
                 SCREEN_SPACING, noticeBanner(), card(), RecurringTermsCard.build(messages, glossary), skip, footer());
+        ResultsOpener.attach(screen, glossary, changeResultsDialog);
+        return screen;
     }
 
     private Node noticeBanner() {
@@ -123,6 +129,7 @@ final class NamesStyleView {
         final ChangeListener<Number> onRestore = (observed, was, now) -> table.refresh();
         table.getProperties().put(LISTENER_KEY, onRestore);
         glossary.restorations().addListener(new WeakChangeListener<>(onRestore));
+        glossary.marks().glossary().revision().addListener(new WeakChangeListener<>(onRestore));
         final VBox header = new VBox(CARD_SPACING, title(), toolbar(search));
         final VBox card = new VBox(CARD_SPACING, header, blockedNote(), table);
         card.setId("names-style-card");
@@ -154,6 +161,9 @@ final class NamesStyleView {
                         MessageKey.NAMES_STYLE_ADD_TIP,
                         this::openAddTerm));
         toolbar.getChildren().addAll(modelActions());
+        toolbar.getChildren()
+                .add(ChangedMarks.filter(
+                        messages, "names-style-changed-filter", glossary.marks().glossary()));
         toolbar.getChildren()
                 .addAll(
                         action(

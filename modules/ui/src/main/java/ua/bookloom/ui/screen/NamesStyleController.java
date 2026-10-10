@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.Messages;
@@ -41,6 +42,7 @@ public final class NamesStyleController {
     private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
+    private final ChangeResultsDialog changeResultsDialog;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -58,6 +60,7 @@ public final class NamesStyleController {
      * @param toasts where starting with unconfirmed suggestions is noted
      * @param noTargetDialog the question asked before starting with entries that have no target
      * @param narratorDialog the question asked before starting when the book is told in the first person
+     * @param changeResultsDialog the card that lists what each model operation changed
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -71,7 +74,8 @@ public final class NamesStyleController {
             final ModalHost modalHost,
             final Toasts toasts,
             final NoTargetDialog noTargetDialog,
-            final NarratorDialog narratorDialog) {
+            final NarratorDialog narratorDialog,
+            final ChangeResultsDialog changeResultsDialog) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -81,6 +85,7 @@ public final class NamesStyleController {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
+        this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
     }
 
     @FXML
@@ -103,7 +108,8 @@ public final class NamesStyleController {
                                 modalHost,
                                 toasts,
                                 noTargetDialog,
-                                narratorDialog)
+                                narratorDialog,
+                                changeResultsDialog)
                         .build(book.projectId())
                 : NoBookView.build(messages, navigator);
         body.getChildren().setAll(content);

@@ -2,7 +2,11 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.function.Supplier;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -22,6 +26,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.RecurringTerms;
 
@@ -47,11 +52,11 @@ final class RecurringTermsCard {
     private static final double RENDERING_WIDTH = 260;
     private static final double SEEN_WIDTH = 300;
     private static final double FIELD_WIDTH = 220;
+    private static final String MARKS_LISTENER = "recurring-marks-listener";
 
     static Node build(final Messages messages, final NamesStyleViewModel names) {
-        final RecurringTerms recurring = names.recurring();
         final VBox card = new VBox(
-                CARD_SPACING, title(messages), note(messages), toolbar(messages, names), table(messages, recurring));
+                CARD_SPACING, title(messages), note(messages), toolbar(messages, names), table(messages, names));
         card.setId("recurring-card");
         card.getStyleClass().add("card");
         return card;
@@ -91,6 +96,9 @@ final class RecurringTermsCard {
         final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, find);
         toolbar.getChildren().addAll(modelActions);
         toolbar.getChildren().addAll(typed, addButton);
+        toolbar.getChildren()
+                .add(ChangedMarks.filter(
+                        messages, "recurring-changed-filter", names.marks().terms()));
         toolbar.setId("recurring-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         return toolbar;
@@ -159,8 +167,19 @@ final class RecurringTermsCard {
         return button;
     }
 
-    private static TableView<LexiconEntry> table(final Messages messages, final RecurringTerms recurring) {
-        final TableView<LexiconEntry> table = new TableView<>(recurring.rows());
+    private static TableView<LexiconEntry> table(final Messages messages, final NamesStyleViewModel names) {
+        final RecurringTerms recurring = names.recurring();
+        final ChangeMarks.Side marks = names.marks().terms();
+        final FilteredList<LexiconEntry> shown = new FilteredList<>(recurring.rows());
+        shown.predicateProperty()
+                .bind(Bindings.createObjectBinding(
+                        () -> entry -> !marks.onlyChanged().get() || marks.isMarked(LexiconEntry.keyOf(entry.term())),
+                        marks.onlyChanged(),
+                        marks.revision()));
+        final TableView<LexiconEntry> table = new TableView<>(shown);
+        final ChangeListener<Number> onMarks = (observed, was, now) -> table.refresh();
+        table.getProperties().put(MARKS_LISTENER, onMarks);
+        marks.revision().addListener(new WeakChangeListener<>(onMarks));
         table.setId("recurring-table");
         table.getStyleClass().add("glossary-table");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
@@ -171,19 +190,19 @@ final class RecurringTermsCard {
         table.setFocusTraversable(false);
         table.setPrefHeight(HEADER_HEIGHT + VISIBLE_ROWS * ROW_HEIGHT);
         table.setMinHeight(HEADER_HEIGHT + ROW_HEIGHT);
-        table.getColumns().addAll(columns(messages, recurring));
+        table.getColumns().addAll(columns(messages, recurring, marks));
         return table;
     }
 
     private static List<TableColumn<LexiconEntry, LexiconEntry>> columns(
-            final Messages messages, final RecurringTerms recurring) {
+            final Messages messages, final RecurringTerms recurring, final ChangeMarks.Side marks) {
         return List.of(
                 column(
                         messages,
                         MessageKey.RECURRING_COLUMN_TERM,
                         MessageKey.RECURRING_COLUMN_TERM_TIP,
                         TERM_WIDTH,
-                        RecurringTermsCells.TermCell::new),
+                        () -> new RecurringTermsCells.TermCell(messages, marks)),
                 column(
                         messages,
                         MessageKey.RECURRING_COLUMN_RENDERING,

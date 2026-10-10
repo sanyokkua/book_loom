@@ -16,11 +16,17 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
+import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.state.ChangeKind;
+import ua.bookloom.ui.state.ChangeOperation;
+import ua.bookloom.ui.state.ChangeResults;
+import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ExportOutcome;
+import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -110,6 +116,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
             case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
+            case RESULTS ->
+                onFx(() -> injector.getInstance(ChangeResultsDialog.class).show(sampleResults(), () -> {}));
             case RETRY ->
                 onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
             case EXPORT_COMPLETE ->
@@ -118,6 +126,27 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
                         .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));
         }
+    }
+
+    // A review that removed one name, rewrote another and gave a reason, so the Why column is checked too.
+    private static ChangeResults sampleResults() {
+        return new ChangeResults(
+                ChangeOperation.NAME_REVIEW,
+                false,
+                List.of(
+                        new ChangeResults.Item(
+                                new ChangeRow(0, ChangeKind.REMOVED, "Hale", "No target · other", "—", "not a name"),
+                                done -> done.accept(true)),
+                        new ChangeResults.Item(
+                                new ChangeRow(
+                                        1,
+                                        ChangeKind.CHANGED,
+                                        "Well",
+                                        "No target · other",
+                                        "No target · character",
+                                        null),
+                                done -> done.accept(true))),
+                LiveCalls.EMPTY);
     }
 
     // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.

@@ -1006,6 +1006,12 @@
     -fx-text-fill: -color-muted;
 }
 
+.chip-info {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info-fg;
+}
+
 /* --- Buttons that sit beside the primary and secondary ones --------------------------------------------- */
 .btn-ghost {
     -fx-background-color: transparent;

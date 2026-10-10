@@ -18,6 +18,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.RecurringTerms;
 
 /**
@@ -63,16 +64,27 @@ final class RecurringTermsCells {
     }
 
     /** The source term. */
-    static final class TermCell extends RowCell<Label> {
+    static final class TermCell extends RowCell<HBox> {
 
-        TermCell() {
-            super(new Label());
-            control().getStyleClass().add("glossary-term");
+        private final Label term = new Label();
+        private final Label changed;
+        private final ChangeMarks.Side marks;
+
+        TermCell(final Messages messages, final ChangeMarks.Side marks) {
+            super(new HBox(ROW_SPACING));
+            this.marks = marks;
+            changed = ChangedMarks.chip(messages);
+            term.getStyleClass().add("glossary-term");
+            control().setAlignment(Pos.CENTER_LEFT);
+            control().getChildren().addAll(term, changed);
         }
 
         @Override
-        void show(final Label shown, final LexiconEntry entry) {
-            shown.setText(entry.term());
+        void show(final HBox shown, final LexiconEntry entry) {
+            term.setText(entry.term());
+            final boolean marked = marks.isMarked(LexiconEntry.keyOf(entry.term()));
+            changed.setVisible(marked);
+            changed.setManaged(marked);
         }
     }
 

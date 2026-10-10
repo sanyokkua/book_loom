@@ -2008,7 +2008,65 @@ public enum MessageKey {
     /** Button that retries the segment with the note and the temperature chosen. */
     DIALOG_RETRY_CONFIRM("dialog.retry.confirm"),
     /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_CONFIRM}. */
-    DIALOG_RETRY_CONFIRM_TIP("dialog.retry.confirm.tip");
+    DIALOG_RETRY_CONFIRM_TIP("dialog.retry.confirm.tip"),
+    /** Heading of the results dialog: the operation's name. */
+    RESULTS_TITLE("results.title"),
+    /** Name of the glossary's name scan in the results dialog. */
+    RESULTS_OP_NAME_SCAN("results.op.nameScan"),
+    /** Name of the glossary's review with the model in the results dialog. */
+    RESULTS_OP_NAME_REVIEW("results.op.nameReview"),
+    /** Name of the recurring terms' scan in the results dialog. */
+    RESULTS_OP_TERM_SCAN("results.op.termScan"),
+    /** Name of the recurring terms' review in the results dialog. */
+    RESULTS_OP_TERM_REVIEW("results.op.termReview"),
+    /** Name of the recurring terms' rendering suggestion in the results dialog. */
+    RESULTS_OP_TERM_TRANSLATE("results.op.termTranslate"),
+    /** The three counts at the top of the results dialog: added, removed, changed. */
+    RESULTS_SUMMARY("results.summary"),
+    /** Heading of the rows an operation added, with their count. */
+    RESULTS_ADDED("results.added"),
+    /** Heading of the rows an operation removed, with their count. */
+    RESULTS_REMOVED("results.removed"),
+    /** Heading of the rows an operation changed, with their count. */
+    RESULTS_CHANGED("results.changed"),
+    /** Line of the results dialog when an operation changed nothing. */
+    RESULTS_NOTHING("results.nothing"),
+    /** Line of the results dialog when the person stopped an operation. */
+    RESULTS_STOPPED("results.stopped"),
+    /** Column of the results rows: the term. */
+    RESULTS_COLUMN_TERM("results.column.term"),
+    /** Column of the results rows: the row before the operation. */
+    RESULTS_COLUMN_BEFORE("results.column.before"),
+    /** Column of the results rows: the row after the operation. */
+    RESULTS_COLUMN_AFTER("results.column.after"),
+    /** Column of the results rows: the model's reason, shown only when some row has one. */
+    RESULTS_COLUMN_WHY("results.column.why"),
+    /** Button of a results row that puts the row back as it was. */
+    RESULTS_REVERT("results.revert"),
+    /** Hover explanation of the control labelled by {@link #RESULTS_REVERT}. */
+    RESULTS_REVERT_TIP("results.revert.tip"),
+    /** Accessible name of a row's revert button: the term. */
+    RESULTS_REVERT_FOR("results.revert.for"),
+    /** Word shown in place of the revert button once a row was put back. */
+    RESULTS_REVERTED("results.reverted"),
+    /** Button of the results dialog that reverts every row. */
+    RESULTS_UNDO_ALL("results.undoAll"),
+    /** Hover explanation of the control labelled by {@link #RESULTS_UNDO_ALL}. */
+    RESULTS_UNDO_ALL_TIP("results.undoAll.tip"),
+    /** Button of the results dialog that closes it and shows only the changed rows. */
+    RESULTS_SHOW_CHANGED("results.showChanged"),
+    /** Hover explanation of the control labelled by {@link #RESULTS_SHOW_CHANGED}. */
+    RESULTS_SHOW_CHANGED_TIP("results.showChanged.tip"),
+    /** Chip on a row the last operation changed. */
+    CHANGED_MARKER("namesStyle.changed.marker"),
+    /** Hover explanation of the chip labelled by {@link #CHANGED_MARKER}. */
+    CHANGED_MARKER_TIP("namesStyle.changed.marker.tip"),
+    /** Toggle that shows only the rows the last operation changed. */
+    CHANGED_FILTER("namesStyle.changed.filter"),
+    /** Hover explanation of the control labelled by {@link #CHANGED_FILTER}. */
+    CHANGED_FILTER_TIP("namesStyle.changed.filter.tip"),
+    /** Line shown when putting a row back failed: the term. */
+    RESULTS_REVERT_FAILED("results.revert.failed");
 
     private final String key;
 

@@ -11,7 +11,6 @@ import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.event.Event;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -21,7 +20,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -32,8 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.ui.control.CallsSection;
 import ua.bookloom.ui.control.DurationText;
-import ua.bookloom.ui.control.LiveCallView;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
@@ -90,9 +88,7 @@ public final class BusyHost {
     private final Label elapsed = new Label();
     private final Label eta = new Label();
     private final VBox details = new VBox();
-    private final LiveCallView call;
-    private final LiveCallView previousCall;
-    private final TitledPane calls;
+    private final CallsSection calls;
     private final ButtonType cancelType;
     private final Button cancel;
     private final PauseTransition delay = new PauseTransition(DELAY);
@@ -114,9 +110,7 @@ public final class BusyHost {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
         cancelType = new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        call = callView(CALL_ID, MessageKey.LIVE_CALL_CURRENT);
-        previousCall = callView(CALL_ID + "-previous", MessageKey.LIVE_CALL_PREVIOUS);
-        calls = new TitledPane(messages.get(MessageKey.BUSY_CALLS), new VBox(call, previousCall));
+        calls = new CallsSection(CALLS_ID, CALL_ID, messages);
         buildCard();
         cancel = (Button) card.lookupButton(cancelType);
         wireCancel();
@@ -165,27 +159,11 @@ public final class BusyHost {
         final HBox times = new HBox(elapsed, gap, eta);
         times.setAlignment(Pos.CENTER_LEFT);
         details.setId(DETAILS_ID);
-        buildCalls();
         final VBox body = new VBox(bar, times, details, calls);
         body.getStyleClass().add("busy-body");
         card.setContent(body);
         card.getButtonTypes().setAll(cancelType);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-    }
-
-    private LiveCallView callView(final String id, final MessageKey heading) {
-        return new LiveCallView(
-                id,
-                new ReadOnlyStringWrapper(messages.get(heading)),
-                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_SOURCE_FALLBACK)),
-                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_TARGET_FALLBACK)),
-                messages);
-    }
-
-    private void buildCalls() {
-        calls.setId(CALLS_ID);
-        calls.setExpanded(false);
-        Tips.install(messages, calls, MessageKey.BUSY_CALLS_TIP);
     }
 
     private void wireCancel() {
@@ -269,17 +247,8 @@ public final class BusyHost {
         eta.setText(left == null ? "" : messages.get(MessageKey.BUSY_ETA, DurationText.format(messages, left)));
         eta.setVisible(left != null);
         showDetails(now);
-        showCalls(now.calls());
+        calls.show(now.calls());
         showCancel(now);
-    }
-
-    // The work's model calls, folded away until the person opens them; work that makes none shows no section.
-    private void showCalls(final LiveCalls live) {
-        final CallSnapshot current = live.current();
-        calls.setVisible(current != null);
-        calls.setManaged(current != null);
-        call.show(current, live);
-        previousCall.show(live.previous(), live);
     }
 
     private String stepText(final Activity now) {
@@ -336,7 +305,7 @@ public final class BusyHost {
         final LiveCalls live = now.calls();
         final CallSnapshot current = live.current();
         if (current != null && current.state() == CallState.WAITING) {
-            call.show(
+            calls.showCurrent(
                     current,
                     new LiveCalls(current, live.previous(), live.segments(), at.truncatedTo(ChronoUnit.SECONDS)));
         }

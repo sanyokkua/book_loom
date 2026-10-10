@@ -57,6 +57,8 @@ public final class NamesStyleViewModel {
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
     private final GlossaryAdditions additions;
+    private final ChangeMarks marks = new ChangeMarks();
+    private final ChangeLog changeLog;
     private String projectId = "";
     private long generation;
 
@@ -103,19 +105,12 @@ public final class NamesStyleViewModel {
             final Supplier<String> ids) {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.calls = new GlossaryCalls(executor);
-        this.modelRuns = new GlossaryModelRuns(
-                new GlossaryModelRuns.Screen(
-                        glossary,
-                        Objects.requireNonNull(lexicon, "lexicon"),
-                        models,
-                        settings,
-                        messages,
-                        rows,
-                        lexiconRows,
-                        notice,
-                        () -> projectId,
-                        Objects.requireNonNull(activities, "activities")),
-                calls);
+        this.changeLog = new ChangeLog(
+                new ChangeReverts(glossary, lexicon, calls, rows, lexiconRows, marks, notice, () -> projectId),
+                marks,
+                messages,
+                Objects.requireNonNull(activities, "activities"));
+        this.modelRuns = newModelRuns(lexicon, models, settings, messages, activities);
         this.recurring = new RecurringTerms(
                 new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice),
                 () -> projectId,
@@ -128,6 +123,28 @@ public final class NamesStyleViewModel {
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
         rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
                 (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
+    }
+
+    private GlossaryModelRuns newModelRuns(
+            final LexiconService lexicon,
+            final ChatModelFactory models,
+            final SettingsViewModel settings,
+            final Messages messages,
+            final ActivityTracker activities) {
+        return new GlossaryModelRuns(
+                new GlossaryModelRuns.Screen(
+                        glossary,
+                        Objects.requireNonNull(lexicon, "lexicon"),
+                        models,
+                        settings,
+                        messages,
+                        rows,
+                        lexiconRows,
+                        notice,
+                        () -> projectId,
+                        activities,
+                        changeLog),
+                calls);
     }
 
     /**
@@ -167,6 +184,25 @@ public final class NamesStyleViewModel {
     }
 
     /**
+     * What the last model operation did, exactly, for the results dialog to open on.
+     *
+     * @return a read-only property holding the results of the newest operation, or {@code null} while one runs or none
+     *     has finished since the screen opened
+     */
+    public ReadOnlyObjectProperty<@Nullable ChangeResults> results() {
+        return changeLog.results();
+    }
+
+    /**
+     * The rows the last operation added or changed, for their marker and the "Changed in last run" filter.
+     *
+     * @return the marks, which the next operation clears
+     */
+    public ChangeMarks marks() {
+        return marks;
+    }
+
+    /**
      * The recurring terms the Recurring terms card shows.
      *
      * @return the card's state, which lives as long as this view model
@@ -191,16 +227,20 @@ public final class NamesStyleViewModel {
      */
     public void show(final String project) {
         Objects.requireNonNull(project, "project");
+        final boolean sameProject = project.equals(projectId);
         projectId = project;
         final long ticket = ++generation;
         log.debug("showing the glossary of project {} (opening {})", project, ticket);
         rows.clear();
         notice.set(null);
+        if (!sameProject) {
+            changeLog.begin();
+        }
         recurring.show(project);
         calls.run(
                 "load",
                 () -> GlossaryLoad.loadOrScan(glossary, project),
-                answer -> ifCurrent(ticket, () -> settle("load", answer, all -> rows.setAll(all))));
+                answer -> ifCurrent(ticket, () -> loaded(answer)));
     }
 
     /**
@@ -257,18 +297,7 @@ public final class NamesStyleViewModel {
      */
     public void remove(final String entryId) {
         Objects.requireNonNull(entryId, "entryId");
-        log.debug("removing entry {} of project {}", entryId, projectId);
-        final String project = projectId;
-        final long ticket = generation;
-        calls.run(
-                "remove",
-                () -> glossary.remove(project, entryId),
-                answer -> ifCurrent(
-                        ticket,
-                        () -> settle(
-                                "remove",
-                                answer,
-                                gone -> rows.removeIf(row -> row.id().equals(entryId)))));
+        edits.remove(projectId, entryId, whileCurrent());
     }
 
     /** Runs the model name scan with the chosen model; the rows are kept and the proposals join them. */
@@ -359,21 +388,13 @@ public final class NamesStyleViewModel {
         }
     }
 
-    private void error(final String text) {
-        notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, text));
-    }
-
-    private <T> void settle(final String what, final Result<T> answer, final Consumer<T> onOk) {
+    private void loaded(final Result<List<GlossaryEntry>> answer) {
         final AppError failure = answer.error();
         if (failure != null) {
-            fail(what, failure);
+            log.warn("the glossary load failed with {}", failure.code());
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
             return;
         }
-        onOk.accept(Objects.requireNonNull(answer.data(), "data"));
-    }
-
-    private void fail(final String what, final AppError failure) {
-        log.warn("the glossary {} failed with {}", what, failure.code());
-        error(failure.message());
+        rows.setAll(Objects.requireNonNull(answer.data(), "data"));
     }
 }

@@ -61,6 +61,24 @@ record GlossaryRowEdits(
                 answer -> whileCurrent.accept(() -> updated(entryId, answer)));
     }
 
+    void remove(final String project, final String entryId, final Consumer<Runnable> whileCurrent) {
+        log.debug("removing entry {} of project {}", entryId, project);
+        calls.run(
+                "remove",
+                () -> glossary.remove(project, entryId),
+                answer -> whileCurrent.accept(() -> removed(entryId, answer)));
+    }
+
+    private void removed(final String entryId, final Result<Boolean> answer) {
+        final AppError failure = answer.error();
+        if (failure != null) {
+            log.warn("the glossary remove failed with {}", failure.code());
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+            return;
+        }
+        rows.removeIf(row -> row.id().equals(entryId));
+    }
+
     private void updated(final String entryId, final Result<GlossaryEntry> answer) {
         final int at = GlossaryEdits.indexOf(rows, entryId);
         final AppError failure = answer.error();

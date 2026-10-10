@@ -30,6 +30,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.GlossaryLabels;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
@@ -74,7 +75,13 @@ final class GlossaryTable {
     static TableView<GlossaryEntry> build(
             final Messages messages, final NamesStyleViewModel model, final StringProperty query) {
         final FilteredList<GlossaryEntry> filtered = new FilteredList<>(model.rows());
-        filtered.predicateProperty().bind(Bindings.createObjectBinding(() -> matching(query.get()), query));
+        final ChangeMarks.Side marks = model.marks().glossary();
+        filtered.predicateProperty()
+                .bind(Bindings.createObjectBinding(
+                        () -> matching(query.get()).and(changedOnly(marks)),
+                        query,
+                        marks.onlyChanged(),
+                        marks.revision()));
         final SortedList<GlossaryEntry> sorted = new SortedList<>(filtered);
         final TableView<GlossaryEntry> table = new TableView<>(sorted);
         sorted.comparatorProperty()
@@ -90,6 +97,10 @@ final class GlossaryTable {
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(columns(messages, model));
         return table;
+    }
+
+    private static Predicate<GlossaryEntry> changedOnly(final ChangeMarks.Side marks) {
+        return entry -> !marks.onlyChanged().get() || marks.isMarked(entry.id());
     }
 
     private static Label emptyLabel(final Messages messages, final StringProperty query) {
@@ -176,7 +187,8 @@ final class GlossaryTable {
                         MessageKey.NAMES_STYLE_COLUMN_FLAGS_TIP,
                         FLAGS_WIDTH,
                         Comparator.comparingInt(GlossaryFlags::junkScore).reversed(),
-                        () -> new GlossaryCells.FlagsCell(messages)));
+                        () -> new GlossaryCells.FlagsCell(
+                                messages, model.marks().glossary())));
     }
 
     private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {

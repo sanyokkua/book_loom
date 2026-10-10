@@ -41,6 +41,7 @@ final class ConformanceCases {
         RETRY,
         EXPORT_COMPLETE,
         ADD_TERM,
+        RESULTS,
         REVIEW_PANEL
     }
 
@@ -260,6 +261,7 @@ final class ConformanceCases {
                     List.of(
                             new Part("#add-term-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#add-term-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            ConformanceResultsCase.RESULTS_DIALOG,
             // Ready to translate: the ready card and the banner in the info role.
             new Screen(
                     "TRANSLATING",
