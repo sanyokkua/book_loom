@@ -35,6 +35,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     private volatile @Nullable Result<ReviewCounts> countsView;
     private volatile @Nullable CountDownLatch acceptGate;
     private final CountDownLatch acceptEntered = new CountDownLatch(1);
+    private volatile @Nullable CountDownLatch retryGate;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
@@ -64,6 +65,19 @@ public final class ScriptedReviewDesk implements ReviewDesk {
         acceptGate = new CountDownLatch(1);
     }
 
+    /** From now on {@code retry} blocks before it answers until {@link #releaseRetry()}, as a slow model would. */
+    public void holdRetry() {
+        retryGate = new CountDownLatch(1);
+    }
+
+    /** Lets the held {@code retry} answer; a no-op when none is held. */
+    public void releaseRetry() {
+        final CountDownLatch held = retryGate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
     /** Lets the held {@code accept} answer; a no-op when none is held. */
     public void releaseAccept() {
         final CountDownLatch held = acceptGate;
@@ -87,7 +101,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
         acceptEntered.countDown();
-        awaitAcceptGate();
+        await(acceptGate);
         return action("accept(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
@@ -108,6 +122,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             @Nullable final String note,
             final boolean lowerTemperature,
             final ChatModel model) {
+        await(retryGate);
         return action(
                 "retry(" + projectId + ", " + segmentId + ", note=" + note + ", lowerTemperature=" + lowerTemperature
                         + ")",
@@ -160,15 +175,14 @@ public final class ScriptedReviewDesk implements ReviewDesk {
         return answer("audit(" + projectId + ")");
     }
 
-    private void awaitAcceptGate() {
-        final CountDownLatch held = acceptGate;
+    private static void await(final @Nullable CountDownLatch held) {
         try {
             if (held != null && !held.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("the test never released the accept");
+                throw new IllegalStateException("the test never released the held call");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("interrupted while the accept was held", e);
+            throw new IllegalStateException("interrupted while a call was held", e);
         }
     }
 

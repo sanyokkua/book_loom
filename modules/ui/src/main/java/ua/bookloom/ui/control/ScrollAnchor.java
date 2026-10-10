@@ -41,6 +41,8 @@ public final class ScrollAnchor {
     /** How long after the last scroll event a gesture still counts as under way; a momentum tail stops sooner. */
     static final long GESTURE_QUIET_NANOS = 250_000_000L;
 
+    private static final String PROPERTY = ScrollAnchor.class.getName();
+
     private final ScrollPane pane;
     private final LongSupplier nanos;
     private long lastScroll;
@@ -77,7 +79,40 @@ public final class ScrollAnchor {
         pane.sceneProperty().addListener((observed, was, now) -> anchor.watchFocus(now));
         anchor.attach();
         anchor.watchFocus(pane.getScene());
+        pane.getProperties().put(PROPERTY, anchor);
         return anchor;
+    }
+
+    /**
+     * Runs a change the person did not make (a focus handed back to a replaced control) so that it cannot move the view
+     * of the anchored pane around {@code node}: the view is put back until the next pulse. Runs the change as it is
+     * when no anchored pane holds the node.
+     *
+     * @param node the node the change concerns; its nearest anchored scroll pane is held
+     * @param change the change, run at once on the FX thread
+     */
+    public static void holdWhile(final Node node, final Runnable change) {
+        Objects.requireNonNull(node, "node");
+        Objects.requireNonNull(change, "change");
+        Node walk = node;
+        while (walk != null) {
+            if (walk instanceof ScrollPane pane && pane.getProperties().get(PROPERTY) instanceof ScrollAnchor anchor) {
+                anchor.holdWhile(change);
+                return;
+            }
+            walk = walk.getParent();
+        }
+        change.run();
+    }
+
+    private void holdWhile(final Runnable change) {
+        log.debug("holding the view of {} across a change of focus", pane.getId());
+        holding = true;
+        try {
+            change.run();
+        } finally {
+            Platform.runLater(() -> holding = false);
+        }
     }
 
     /** Moves the view to the top and forgets the distance kept, as a new screen in the pane must start there. */

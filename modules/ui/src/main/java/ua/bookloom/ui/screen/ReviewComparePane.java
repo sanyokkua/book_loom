@@ -96,6 +96,7 @@ final class ReviewComparePane extends VBox {
         // Read-only while the actions are not offered, so typing never meets a Save that silently stays off.
         panes.target().editableProperty().bind(viewModel.actionsAvailable());
         getChildren().addAll(children());
+        ReviewFocusKeeper.install(this, viewModel.retryInFlight());
         viewModel.selected().addListener(new WeakChangeListener<>(onSelected));
         show(viewModel.selected().get());
     }

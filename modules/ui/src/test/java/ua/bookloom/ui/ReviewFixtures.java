@@ -191,4 +191,25 @@ public final class ReviewFixtures {
                 fullContext(),
                 null);
     }
+
+    /** What {@link #longSegment()} reads after a retry: the same segment, still flagged, with one short finding. */
+    public static SegmentView longSegmentRetried() {
+        final SegmentView before = longSegment();
+        return new SegmentView(
+                before.segmentId(),
+                before.locator(),
+                before.kind(),
+                before.status(),
+                before.maskedSource(),
+                before.maskedSource(),
+                "Коротко.",
+                null,
+                null,
+                List.of(new QaFinding("omission", Severity.HIGH, "short", "judge")),
+                0.5,
+                SegmentPath.DRAFT,
+                false,
+                before.context(),
+                null);
+    }
 }

@@ -102,4 +102,18 @@ class ScrollAnchorTest extends FxTestBase {
 
         assertThat(after).isLessThan(MOVED_VALUE - EXACT);
     }
+
+    // IF a focus handed back to a replaced control scrolled the pane to it, THEN a retry would throw the person to
+    // another part of the page; inside holdWhile the view returns to where it was.
+    @Test
+    void holdWhile_changeMovesTheView_putsTheViewBack() {
+        final double after = ThemeTestSupport.onFx(() -> {
+            ScrollAnchor.install(pane);
+            pane.setVvalue(KEPT_OFFSET_VALUE);
+            ScrollAnchor.holdWhile(content, () -> pane.setVvalue(MOVED_VALUE));
+            return pane.getVvalue();
+        });
+
+        assertThat(after).isCloseTo(KEPT_OFFSET_VALUE, within(EXACT));
+    }
 }

@@ -257,6 +257,10 @@ public final class ReviewViewModel {
         }
     }
 
+    public ReadOnlyBooleanProperty retryInFlight() {
+        return mirror.review().retryInFlight();
+    }
+
     /** Restores the machine target, if actions are offered. FX thread only. */
     public void revert() {
         act("revert", desk::revert);
