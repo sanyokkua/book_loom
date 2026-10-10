@@ -11,7 +11,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * The event filter {@link SmoothScroll} installs: finds the scroller an event belongs to and hands the distance to its
  * glide (wheel) or its per-pulse sum (trackpad). One writer moves a view for a gesture: a pixel event is either
- * consumed here and applied by the sum, or (a sideways swipe) left whole to JavaFX, never both.
+ * consumed here and applied by the sum, or (a sideways swipe) left whole to JavaFX, never both. What a sum asks of a
+ * view beyond its end goes on to the views around it.
  *
  * <p>It runs on the FX thread for every event, a couple of hundred a second, so it logs nothing per event unless
  * {@value ScrollStats#PER_EVENT_PROPERTY} is set; {@link ScrollStats} reports a total once a second instead.
@@ -22,6 +23,8 @@ final class ScrollFilter {
 
     private static final String GLIDE_KEY = "bookloom.smoothScroll.glide";
     private static final String FLUSH_KEY = "bookloom.smoothScroll.flush";
+    /** Less than this is rounding left by a scroll pane's value arithmetic, not a distance a view refused. */
+    private static final double HAND_OUT_PIXELS = 1e-3;
 
     private final Node root;
     private final PulseClock clock;
@@ -101,8 +104,29 @@ final class ScrollFilter {
     private PixelFlush flushOf(final Scroller scroller) {
         return (PixelFlush) scroller.node()
                 .getProperties()
-                .computeIfAbsent(
-                        FLUSH_KEY, key -> new PixelFlush(pixels -> stats.moved(scroller.moveBy(pixels)), clock));
+                .computeIfAbsent(FLUSH_KEY, key -> new PixelFlush(pixels -> moveOrHandOut(scroller, pixels), clock));
+    }
+
+    // A list's room is judged from its estimated position, so a flush can ask it for more than it has left; what it
+    // could not move goes to the scrollers around it, nearest first, instead of being lost.
+    private void moveOrHandOut(final Scroller scroller, final double pixels) {
+        double left = pixels - moved(scroller.moveBy(pixels));
+        for (Node node = scroller.node().getParent();
+                node != null && Math.abs(left) > HAND_OUT_PIXELS;
+                node = node.getParent()) {
+            final Scroller outer = Scroller.of(node);
+            if (outer != null && outer.hasRoom(left, 0)) {
+                left -= moved(outer.moveBy(left));
+            }
+            if (node.equals(root)) {
+                return;
+            }
+        }
+    }
+
+    private double moved(final double pixels) {
+        stats.moved(pixels);
+        return pixels;
     }
 
     void stopGlides(final MouseEvent event) {

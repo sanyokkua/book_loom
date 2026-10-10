@@ -25,6 +25,7 @@ final class ScrollStats {
     private long maxGap;
     private double pixelsIn;
     private double pixelsOut;
+    private long detached;
 
     ScrollStats(final LongSupplier nanos, final boolean perEvent) {
         this.nanos = nanos;
@@ -59,22 +60,34 @@ final class ScrollStats {
         report(nanos.getAsLong());
     }
 
+    /** An event of a gesture whose target has left the scene, handed on by {@link GestureRescue}. */
+    void targetDetached() {
+        detached++;
+        report(nanos.getAsLong());
+    }
+
+    long detachedInWindow() {
+        return detached;
+    }
+
     private void report(final long now) {
         if (now - windowStart < REPORT_NANOS) {
             return;
         }
-        if (events > 0 || pixelsOut > 0) {
+        if (events > 0 || pixelsOut > 0 || detached > 0) {
             log.debug(
-                    "scroll: {} events, {} px in, {} px out, max gap {} ms",
+                    "scroll: {} events, {} px in, {} px out, max gap {} ms, {} target detached",
                     events,
                     Math.round(pixelsIn),
                     Math.round(pixelsOut),
-                    Math.round(maxGap / NANOS_PER_MILLI));
+                    Math.round(maxGap / NANOS_PER_MILLI),
+                    detached);
         }
         windowStart = now;
         events = 0;
         maxGap = 0;
         pixelsIn = 0;
         pixelsOut = 0;
+        detached = 0;
     }
 }

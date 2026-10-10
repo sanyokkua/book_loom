@@ -366,11 +366,21 @@ whether vsync is on. The pulse logger prints every pulse slower than one frame (
 change on the same book and window size; a run of long pulses while scrolling a list points at its cells.
 
 Scroll events reach the FX thread a couple of hundred times a second on a trackpad, so the scroll code logs one DEBUG line a
-second (`scroll: N events, X px in, Y px out, max gap Z ms`) and nothing per event. To capture the raw events for a bug
+second (`scroll: N events, X px in, Y px out, max gap Z ms, D target detached`) and nothing per event. `D` counts the
+events of a gesture whose node was replaced mid-gesture (a rebuilt row, a swapped panel): JavaFX keeps firing them at
+the gone node, and `GestureRescue` hands them to the nearest scroll pane or list still on screen. To capture the raw events for a bug
 report (every event's `deltaX`, `deltaY`, inertia and units at TRACE, a line each), launch with
 `JAVA_TOOL_OPTIONS="-Dbookloom.log.scroll=true"` and the trace log on; expect the log itself to cost frame time then. A
 trackpad's vertical swipe carries a pixel or two of sideways noise; the larger of the two parts decides the direction,
 and only the vertical part is applied (`SmoothScrollReplayTest` replays such a gesture against hand-driven pulses).
+What a list cannot take of a frame's pixels goes on to the pane around it, and a list that moved zero is passed over
+in that direction until it moves (`GestureRescueTest`).
+
+To measure a trackpad hand run (15h.D2's targets), launch with `BOOKLOOM_LOG_LEVEL=DEBUG`, swipe for ten seconds on
+Translating during a run and on Names & style, and read the `scroll:` lines of `ua.bookloom.ui.control.ScrollStats`:
+`N events` per one-second line is the event rate (target 150 or more while the fingers move), `max gap` the longest
+pause between events (target under 40 ms), and a gesture is cut when its lines stop while the fingers still move — with
+`D target detached` above zero, the rescue caught a gesture that would have been cut.
 
 ---
 

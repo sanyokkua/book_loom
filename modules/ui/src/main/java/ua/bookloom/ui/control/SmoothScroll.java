@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
  * wheel's direction and moves that one, so a list inside a scrolling screen scrolls first and the screen takes over at
  * the list's end. A wheel notch is glided ({@link ScrollGlide#isDiscreteWheel}); the pixel deltas of a trackpad or its momentum
  * (macOS reports every event so) are added up and applied once per animation pulse by {@link PixelFlush}, unglided;
- * the start and end of a gesture, a touch screen and a mostly sideways swipe pass on untouched, and no state is kept between events beyond each view's own glide or pending sum. A pixel event counts as vertical when its vertical part is the larger, because macOS adds a pixel or two of sideways noise to a vertical swipe.
+ * the start and end of a gesture, a touch screen and a mostly sideways swipe pass on untouched, and no state is kept between events beyond each view's own glide or pending sum and the last gesture's target, which {@link GestureRescue} watches so that a gesture whose node is replaced goes on moving the view around it. A pixel event counts as vertical when its vertical part is the larger, because macOS adds a pixel or two of sideways noise to a vertical swipe.
  * Pressing a mouse button over a gliding view (to drag its scroll bar, say) stops the glide where it is. The system
  * property {@code bookloom.smoothScroll=false} turns the whole thing off. Events are summed into one DEBUG line a second ({@link ScrollStats}); {@code -Dbookloom.log.scroll=true} logs each at TRACE.
  */
@@ -50,6 +50,8 @@ public final class SmoothScroll {
     static <N extends Node> N install(
             final N root, final PulseClock clock, final PixelMode mode, final ScrollStats stats) {
         final ScrollFilter filter = new ScrollFilter(root, clock, mode, stats);
+        final GestureRescue rescue = new GestureRescue(root, stats);
+        root.addEventFilter(ScrollEvent.SCROLL_STARTED, rescue::onGestureStart);
         root.addEventFilter(ScrollEvent.SCROLL, filter::onScroll);
         root.addEventFilter(MouseEvent.MOUSE_PRESSED, filter::stopGlides);
         return root;

@@ -107,14 +107,24 @@ sealed interface Scroller permits Scroller.PaneScroller, Scroller.FlowScroller {
             return span / (last.getIndex() - first.getIndex() + 1);
         }
 
-        // The flow's total length is not public, so only its position (not the pending distance) tells it has room.
+        private static final String STUCK_KEY = "bookloom.smoothScroll.stuck";
+
+        // The flow's total length is not public, so only its position (not the pending distance) tells it has room;
+        // and as the position comes from estimated cell sizes, a flow that just moved zero the same way from the same
+        // position has none either, whatever the position says.
         @Override
         public boolean hasRoom(final double pixels, final double pending) {
             final boolean scrolls = node.getChildrenUnmodifiable().stream()
                     .anyMatch(child -> child instanceof ScrollBar bar
                             && bar.getOrientation() == Orientation.VERTICAL
                             && bar.isVisible());
-            return scrolls && ScrollGlide.hasRoom(node.getPosition(), 0, 1, pixels);
+            return scrolls && ScrollGlide.hasRoom(node.getPosition(), 0, 1, pixels) && !isStuckToward(pixels);
+        }
+
+        private boolean isStuckToward(final double pixels) {
+            return node.getProperties().get(STUCK_KEY) instanceof Stuck stuck
+                    && stuck.direction() == Math.signum(pixels)
+                    && stuck.position() == node.getPosition();
         }
 
         @Override
@@ -122,9 +132,25 @@ sealed interface Scroller permits Scroller.PaneScroller, Scroller.FlowScroller {
             return node.getHeight();
         }
 
+        // A move of zero marks the flow out of room that way until it moves at all, which in practice is a move the
+        // other way.
         @Override
         public double moveBy(final double pixels) {
-            return node.scrollPixels(pixels);
+            final double moved = node.scrollPixels(pixels);
+            if (moved != 0) {
+                node.getProperties().remove(STUCK_KEY);
+            } else if (pixels != 0) {
+                node.getProperties().put(STUCK_KEY, new Stuck(Math.signum(pixels), node.getPosition()));
+            }
+            return moved;
         }
     }
+
+    /**
+     * A flow that moved zero.
+     *
+     * @param direction the sign of the move it could not make
+     * @param position the flow's position then; once it differs, the flow has moved and the mark no longer holds
+     */
+    record Stuck(double direction, double position) {}
 }

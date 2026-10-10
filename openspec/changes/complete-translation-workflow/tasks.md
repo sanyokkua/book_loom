@@ -1613,7 +1613,7 @@ The owner translated Burning Chrome (en→uk, gemma-4-26b, Balanced, 21 min) and
 - [ ] 15f.A4 Infer an unstated narrator's gender from the majority of «я + past verb» forms and flag the minority.
 - [ ] 15f.A6 (moved to 15h.B1) Re-ask only the missing ids of a short batch reply before falling back one by one.
 - [x] 15f.A7b (moved to 15h.A8, narrowed to the one shape the runs showed) A deterministic normaliser for dialogue structure (attribution inside the quote, an unclosed nested quote, a dropped full stop).
-- [ ] 15f.C5ab (moved to 15h.D2) Scrolling on macOS: wheel and trackpad momentum and the Activity log's one-row step. The code paths are in `SmoothScroll`/`ScrollGlide`; the real events a Mac sends are unknown, so first read the TRACE lines of `ua.bookloom.ui.control.SmoothScroll` from a real scroll.
+- [ ] 15f.C5ab (moved to 15h.D2, which replaces it) Scrolling on macOS: wheel and trackpad momentum and the Activity log's one-row step. The code paths are in `SmoothScroll`/`ScrollFilter`/`GestureRescue`; the per-event TRACE lines of `ua.bookloom.ui.control.ScrollFilter` (`-Dbookloom.log.scroll=true`) show the real events a Mac sends.
 
 ## 15h. Quality round 4 and the UI round 2 — after the owner's Oct 9 e4b and 26b runs (after group 15f)
 
@@ -1651,7 +1651,7 @@ Burning Chrome was translated with gemma-4-e4b and gemma-4-26b (Balanced, LM Stu
 
 ### UI performance
 - [ ] 15h.D1 A run no longer re-lays out the screen: ticking figures (clock, timeout, tokens per second, elapsed, time left) sit in fixed-width boxes whose label is its own layout root; the live call rows are updated in place and the two views swap roles on a new call instead of rebuilding; prompt and reply bodies are one read-only text area filled only while expanded, and Copy builds its text on demand; the per-publish DEBUG lines in `LiveCallPanel` and `ScrollAnchor`'s scroll listener go. Test: a clock publish leaves the Translating root not needing layout; rows keep their identity across updates. Hand run: at most one slow pulse a minute with the pulse logger. → `:ui` — code and tests done, hand-run pulse measurement pending owner
-- [ ] 15h.D2 A trackpad gesture survives a replaced node: a scene filter records each gesture's target and scrollers and, when the target leaves the scene, re-fires the rest of the gesture to the nearest scroller still in it (`GestureRescue`, counted as "target detached" in ScrollStats); a flush the list cannot move goes to the outer pane, and a list that moved zero is out of room until a move the other way. Replaces 15f.C5ab. Hand run on Translating during a run and on Names & style: 150+ events a second, max gap under 40 ms, cut bursts under 5 % (28 % today). Depends on 15h.D1. → `:ui`
+- [ ] 15h.D2 A trackpad gesture survives a replaced node: a scene filter records each gesture's target and scrollers and, when the target leaves the scene, re-fires the rest of the gesture to the nearest scroller still in it (`GestureRescue`, counted as "target detached" in ScrollStats); a flush the list cannot move goes to the outer pane, and a list that moved zero is out of room until a move the other way. Replaces 15f.C5ab. Hand run on Translating during a run and on Names & style: 150+ events a second, max gap under 40 ms, cut bursts under 5 % (28 % today). Depends on 15h.D1. → `:ui` — code and tests done, trackpad hand-run pending owner
 - [ ] 15h.D3 A review retry keeps the page where it was (focus restored to the replacement control by id, the anchor held across the release). → `:ui`
 
 ### UI and UX
