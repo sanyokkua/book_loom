@@ -100,7 +100,7 @@ public final class PreScan {
             final NamePolicy policy,
             final ModelCalls calls) {
         final List<NameCandidate> candidates =
-                FrequencyScan.candidates(story.index(), story.ordinals(), 1, frame.sourceLanguage());
+                FrequencyScan.candidates(story.index(), story.ordinals(), 1, frame.analysisLanguage());
         log.info(
                 "Model pre-scan started project={} candidates={} batches={}",
                 projectId,
@@ -172,7 +172,7 @@ public final class PreScan {
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
-        return fresh(projectId, proposals, NameHygiene.occurrencesIn(story.visibleTexts()), frame.sourceLanguage())
+        return fresh(projectId, proposals, NameHygiene.occurrencesIn(story.visibleTexts()), frame.analysisLanguage())
                 .flatMap(fresh -> confirmed(fresh, story, frame, calls))
                 .flatMap(confirmed ->
                         suggestions.suggestOnto(seeded(confirmed, story, frame), story, frame, policy, calls))
@@ -182,7 +182,7 @@ public final class PreScan {
 
     private static List<GlossaryEntry> seeded(
             final List<GlossaryEntry> confirmed, final BookSlice story, final CallFrame frame) {
-        return PronounGender.seeded(confirmed, story.visibleTexts(), frame.sourceLanguage());
+        return PronounGender.seeded(confirmed, story.visibleTexts(), frame.analysisLanguage());
     }
 
     // A name the policy translates and the suggestion step left without a target is still written, so the person can

@@ -44,6 +44,13 @@ record TranslateArguments(
     private static final String OPENAI_COMPATIBLE_PROVIDER = "openai-compatible";
     private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
 
+    /** Refuses a request for Auto that also names a language, since Auto means no language is chosen. */
+    TranslateArguments {
+        if (isSourceAuto && sourceLanguage != null) {
+            throw new IllegalArgumentException("--from auto names no source language");
+        }
+    }
+
     /** Parses one complete argument list or returns a user-facing validation error. */
     static Result<TranslateArguments> parse(List<String> args) {
         Objects.requireNonNull(args, "args");

@@ -1,6 +1,7 @@
 package ua.bookloom.app.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.net.URI;
@@ -18,6 +19,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.NamePolicy;
 
@@ -251,6 +253,25 @@ class TranslateArgumentsTest {
                 TranslateArguments.parse(List.of(book().toString(), "--from", first, "--from", second));
 
         assertThat(errorOf(result).message()).isEqualTo("--from was repeated");
+    }
+
+    // IF a request for Auto could still carry a language, THEN the run would name a language nobody chose.
+    @Test
+    void constructor_autoSourceNamingALanguage_isRefused() throws IOException {
+        assertThatThrownBy(() -> new TranslateArguments(
+                        book(),
+                        BookFormat.MARKDOWN,
+                        "uk",
+                        "fr",
+                        true,
+                        false,
+                        "pseudo",
+                        null,
+                        null,
+                        null,
+                        RunOptions.DEFAULTS))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("auto");
     }
 
     private Path book() throws IOException {

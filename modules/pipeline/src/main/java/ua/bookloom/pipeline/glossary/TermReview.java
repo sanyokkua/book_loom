@@ -125,7 +125,7 @@ public final class TermReview {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
         final Map<String, Evidence> evidence = NameWindows.of(
-                in.story().index(), in.story().ordinals(), open, in.frame().sourceLanguage());
+                in.story().index(), in.story().ordinals(), open, in.frame().analysisLanguage());
         final Result<List<Verdict>> verdicts = ask(open, evidence, in.frame(), in.calls());
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
@@ -148,7 +148,7 @@ public final class TermReview {
                 projectId,
                 verdicts,
                 suggestions,
-                in.frame().sourceLanguage(),
+                in.frame().analysisLanguage(),
                 in.story().visibleTexts());
     }
 
@@ -170,7 +170,7 @@ public final class TermReview {
             return Result.ok(List.of());
         }
         final Map<String, Evidence> evidence =
-                NameWindows.of(story.index(), story.ordinals(), entries, frame.sourceLanguage());
+                NameWindows.of(story.index(), story.ordinals(), entries, frame.analysisLanguage());
         return ask(entries, evidence, frame, calls);
     }
 

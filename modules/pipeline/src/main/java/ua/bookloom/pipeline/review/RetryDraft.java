@@ -225,8 +225,7 @@ public final class RetryDraft {
             return refuse(ErrorCode.validation, record.segmentId(), "The brief names no language to translate into.");
         }
         final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
-        final CallFrame frame =
-                RetryFrames.of(brief, target, snapshot, document, openProjects.index(record.projectId()));
+        final CallFrame frame = RetryFrames.of(brief, snapshot, document, openProjects.index(record.projectId()));
         return FollowingTarget.of(segments, record)
                 .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
     }

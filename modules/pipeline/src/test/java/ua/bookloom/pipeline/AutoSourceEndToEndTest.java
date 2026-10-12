@@ -75,18 +75,65 @@ class AutoSourceEndToEndTest {
             "Ils déjeunèrent ensemble dans la cuisine. La jeune femme riait beaucoup, et la vieille dame se sentit plus"
                     + " légère qu'elle ne l'avait été depuis des années.",
             "Le lundi suivant, Le Courrier publia une courte nouvelle : le pont serait enfin construit. Aubry le lut"
-                    + " deux fois, puis le plia avec soin.");
+                    + " deux fois, puis le plia avec soin.",
+            "Dans la marge du journal, une main inconnue avait copié une phrase anglaise : \"We met Hessel at the"
+                    + " pier. She smiled.\"",
+            "Le neveu la recopia dans son carnet : \"Hessel waited by the gate. She never came back.\"",
+            "Aubry la relut le soir même : \"Then Hessel left the town, and she did not look back.\"");
+
+    private static final String CYRILLIC_PARAGRAPH = "*Здравствуйте*";
 
     @TempDir
     private Path tempDir;
+
+    private record Outcome(List<GlossaryEntry> glossary, List<String> prompts) {}
 
     // IF Auto leaked the English default into any reader, THEN this French book would show it in the prompts, the
     // glossary or the genders.
     @Test
     void run_frenchTextWithNoMetadataUnderAuto_infersTheLanguageAndReadsItAsNoOneInParticular() {
+        final Outcome outcome = translated(TestBooks.txt(tempDir.resolve("Livre.txt"), BOOK));
+
+        assertThat(outcome.glossary()).extracting(GlossaryEntry::term).contains("Courrier", "Aubry", "Vaux");
+        assertThat(outcome.glossary())
+                .extracting(GlossaryEntry::term)
+                .noneMatch(term -> term.equals("Le") || term.startsWith("Le "));
+        assertThat(outcome.glossary()).extracting(GlossaryEntry::gender).containsOnly(Gender.UNKNOWN);
+        assertThat(outcome.glossary()).noneMatch(GlossaryEntry::isGenderSuggested);
+        assertThat(outcome.prompts()).isNotEmpty();
+        assertThat(outcome.prompts())
+                .anySatisfy(text -> assertThat(text).contains(INFER))
+                .allSatisfy(text -> assertThat(text).doesNotContain("French (fr)", "English (en)"));
+    }
+
+    // IF a prompt named the book's own declaration under Auto, THEN a book declaring fr would be told "French (fr)"
+    // although the person chose nothing.
+    @Test
+    void run_markdownDeclaringFrenchUnderAuto_neverNamesTheDeclaredLanguageInAPrompt() {
+        final Outcome outcome = translated(TestBooks.markdown(tempDir.resolve("Livre.md"), BOOK, "fr"));
+
+        assertThat(outcome.prompts()).isNotEmpty();
+        assertThat(outcome.prompts())
+                .anySatisfy(text -> assertThat(text).contains(INFER))
+                .allSatisfy(text -> assertThat(text).doesNotContain("French (fr)", "English (en)"));
+    }
+
+    // IF the run did not pass the book's majority script, THEN the segment's own letters would decide, and a
+    // paragraph that is only a Cyrillic run would count as Cyrillic text and be sent for translation.
+    @Test
+    void run_segmentThatIsOnlyACyrillicRunInALatinBookUnderAuto_isNeverSentAsTranslatableText() {
+        final Outcome outcome =
+                translated(TestBooks.markdown(tempDir.resolve("Livre.md"), BOOK + "\n\n" + CYRILLIC_PARAGRAPH));
+
+        assertThat(outcome.prompts()).isNotEmpty();
+        // The neighbour shown as read-only context is plain text; what must never be sent is the run inside its markup.
+        assertThat(outcome.prompts()).allSatisfy(text -> assertThat(text).doesNotContain("⟦g0⟧Здравствуйте"));
+    }
+
+    private Outcome translated(final Path book) {
         final Injector injector = injector();
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(TestBooks.txt(tempDir.resolve("Livre.txt"), BOOK)));
+        final ImportedBook imported = dataOf(projects.importBook(book));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
         final BookBrief auto = Objects.requireNonNull(imported.brief(), "brief").withLanguages(null, "uk");
         dataOf(projects.updateBrief(projectId, auto));
@@ -96,19 +143,10 @@ class AutoSourceEndToEndTest {
                         .newJob(new RunRequest(projectId, ReviewMode.UNATTENDED), recording(requests)))
                 .run());
 
-        final List<GlossaryEntry> glossary =
-                dataOf(injector.getInstance(GlossaryRepository.class).all(projectId));
         assertThat(auto.sourceLanguage()).isNull();
-        assertThat(glossary).extracting(GlossaryEntry::term).contains("Courrier", "Aubry", "Vaux");
-        assertThat(glossary)
-                .extracting(GlossaryEntry::term)
-                .noneMatch(term -> term.equals("Le") || term.startsWith("Le "));
-        assertThat(glossary).extracting(GlossaryEntry::gender).containsOnly(Gender.UNKNOWN);
-        assertThat(glossary).noneMatch(GlossaryEntry::isGenderSuggested);
-        assertThat(requests).isNotEmpty();
-        assertThat(requests.stream().map(AutoSourceEndToEndTest::textOf).toList())
-                .anySatisfy(text -> assertThat(text).contains(INFER))
-                .allSatisfy(text -> assertThat(text).doesNotContain("French (fr)", "English (en)"));
+        return new Outcome(
+                dataOf(injector.getInstance(GlossaryRepository.class).all(projectId)),
+                requests.stream().map(AutoSourceEndToEndTest::textOf).toList());
     }
 
     private static Injector injector() {

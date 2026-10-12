@@ -40,7 +40,8 @@ public final class InjectedCharacters {
      *
      * @param segments the segments whose text decides who is present
      * @param glossary every glossary entry as the run read it
-     * @param sourceLanguage the source language's tag, which picks the pronouns read as evidence; null reads English
+     * @param sourceLanguage the tag of the language the code reads the book in, which picks the pronouns read as
+     *     evidence; null reads no pronoun, so the code gives no gender evidence
      * @return one line per present character of known gender, in glossary order, with the pronouns the text shows
      *     after the name when they agree with its gender ({@code Lyra — female (she ×2)}), a short name folded into its
      *     full name's line ({@code Danny Vosk (also Danny) — male}); never null, empty when none is present

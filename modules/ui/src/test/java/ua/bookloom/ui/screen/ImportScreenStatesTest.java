@@ -162,7 +162,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     }
 
     // IF an unrecognized declaration were swallowed or shown as a mismatch, THEN the person would not know the source
-    // language must be chosen on the brief.
+    // language is left to the model and can be chosen on the brief.
     @Test
     void unrecognized_bookOpened_quotesTheRawCodeAndSendsThePersonToTheBrief() throws TimeoutException {
         final Path source = dir.resolve("odd.epub");

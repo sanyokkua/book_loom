@@ -53,7 +53,7 @@ final class TermLearning {
     record Pair(String source, String target) {}
 
     private final CooccurrenceLearner learner;
-    private final @Nullable String sourceLanguage;
+    private final @Nullable String analysisLanguage;
     private final SegmentRepository segments;
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
@@ -72,10 +72,10 @@ final class TermLearning {
     TermLearning(
             final RunStores stores,
             final String projectId,
-            final @Nullable String sourceLanguage,
+            final @Nullable String analysisLanguage,
             final @Nullable String targetLanguage) {
         Objects.requireNonNull(stores, "stores");
-        this.sourceLanguage = sourceLanguage;
+        this.analysisLanguage = analysisLanguage;
         this.learner = new CooccurrenceLearner(
                 targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage));
         this.segments = stores.segments();
@@ -169,7 +169,7 @@ final class TermLearning {
     }
 
     private void track(final LexiconEntry entry) {
-        if (KeyTermScan.isTitle(entry.term(), sourceLanguage)) {
+        if (KeyTermScan.isTitle(entry.term(), analysisLanguage)) {
             learner.trackTitle(entry.term());
         } else {
             learner.track(entry.term(), true);

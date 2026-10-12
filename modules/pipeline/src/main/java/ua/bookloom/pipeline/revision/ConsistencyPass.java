@@ -36,7 +36,6 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -47,7 +46,6 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
@@ -295,12 +293,11 @@ public final class ConsistencyPass {
             final List<GlossaryEntry> entries,
             final BookContext context) {
         final String target = Objects.requireNonNull(brief.targetLanguage(), "target");
-        final String source = SourceLanguage.forPrompt(brief);
         final Map<String, Segment> sources = new LinkedHashMap<>();
         document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
         return new PassInputs(
                 projectId,
-                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages(), null, brief.narrator()),
+                CallFrame.forBook(brief, document, openProjects.index(projectId)),
                 brief.names(),
                 TypographyGate.around(GateFunction.of(documents, document.format()), target),
                 sources,

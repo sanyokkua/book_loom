@@ -240,7 +240,7 @@ public final class SuggestTargets {
         if (policy != NamePolicy.TRANSLITERATE) {
             return null;
         }
-        final Optional<Script> source = Languages.scriptOf(frame.sourceLanguage());
+        final Optional<Script> source = Languages.scriptOf(frame.analysisLanguage());
         final Optional<Script> target = Languages.scriptOf(frame.targetLanguage());
         final boolean differs = source.isPresent() && target.isPresent() && source.get() != target.get();
         log.debug("Suggestion script rule source={} target={} refusesSourceScript={}", source, target, differs);

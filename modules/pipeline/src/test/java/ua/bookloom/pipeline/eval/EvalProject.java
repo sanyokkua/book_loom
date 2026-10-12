@@ -29,7 +29,6 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
-import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -148,8 +147,7 @@ public final class EvalProject {
                 StyleSheet.from(brief),
                 brief.foreignPassages(),
                 setup.bookLanguage(),
-                brief.narrator(),
-                WordValidator.none());
+                brief.narrator());
         final RunSettings settings = new RunSettings(
                 PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window);
         final List<Segment> chunk = segments(setup.chunk(), 0);

@@ -84,8 +84,9 @@ public final class ChunkRunner {
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
-        this.followUp = new DecisionFollowUp(
-                settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, index, sinks, calls);
+        final String analysis = settings.frame().analysisLanguage();
+        this.followUp =
+                new DecisionFollowUp(settings.projectId(), analysis, steps.summary(), stores, index, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
         this.shortcuts = new DraftShortcuts(
                 settings.frame().styleSheet().text(),
@@ -94,10 +95,7 @@ public final class ChunkRunner {
         this.batches =
                 new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
         this.learning = new TermLearning(
-                stores,
-                settings.projectId(),
-                settings.frame().sourceLanguage(),
-                settings.frame().targetLanguage());
+                stores, settings.projectId(), analysis, settings.frame().targetLanguage());
     }
 
     /**

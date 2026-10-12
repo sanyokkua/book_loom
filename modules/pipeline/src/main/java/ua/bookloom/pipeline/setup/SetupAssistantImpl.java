@@ -40,6 +40,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.SelfHealCalls;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -48,7 +49,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -149,7 +149,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
                     "Nothing to suggest",
                     "The project must be stored, name a target language and have its book open."));
         }
-        return Result.ok(new Book(project, document, target));
+        return Result.ok(new Book(project, document, target, openProjects.index(projectId)));
     }
 
     private Result<FileNameSuggestion> askName(final Book book, final ModelCalls calls) {
@@ -302,13 +302,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private ChatRequest requestOf(
             final Book book, final PromptName name, final Map<String, String> user, final int tokens) {
         final BookBrief brief = book.project().brief();
-        final CallFrame frame = new CallFrame(
-                SourceLanguage.forPrompt(brief),
-                book.target(),
-                StyleSheet.from(brief),
-                brief.foreignPassages(),
-                null,
-                brief.narrator());
+        final CallFrame frame = CallFrame.forBook(brief, book.document(), book.index());
         final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, frame, user);
         return ChatRequests.build(name, messages, new OutputLimit(tokens / 2, tokens), false);
     }
@@ -389,5 +383,9 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 ErrorCode.internal, "Suggestion failed", "An unexpected failure stopped the suggestion.", null, cause));
     }
 
-    private record Book(Project project, Document document, String target) {}
+    private record Book(
+            Project project,
+            Document document,
+            String target,
+            @Nullable BookIndex index) {}
 }

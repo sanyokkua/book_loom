@@ -8,14 +8,18 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
- * The four system-message values every model call of a run carries — its language pair, its derived style sheet and
- * its foreign-passage policy — built once per run instead of every call re-deriving the same slots, plus the language
- * the book itself declares, which decides with the policy which blocks are foreign.
+ * What every model call of a run carries: its language pair, derived style sheet and foreign-passage policy, built once
+ * per run instead of every call re-deriving the same slots, plus the book's own language and script, which decide with
+ * the policy which blocks are foreign. Two source languages live here on purpose: {@code sourceLanguage} is what a
+ * prompt may name (the person's choice, or none under Auto), while {@code analysisLanguage} is what the code's own
+ * readers (name scans, pronoun evidence, stop words) may use — under Auto a declared tag the application recognises.
  *
- * @param sourceLanguage the project's source language tag, or null when the book declares none
+ * @param sourceLanguage the source language tag the person chose, or null for Auto; the only source a prompt names
  * @param targetLanguage the project's target language tag
  * @param styleSheet the run's derived style sheet
  * @param foreignPassagePolicy the Book Brief's foreign-passage policy
@@ -26,6 +30,8 @@ import ua.bookloom.pipeline.checks.WordValidator;
  *     unless a run is given another
  * @param bookScript the script most of the book's story is written in, counted by code; with no source language it
  *     decides which marked runs are foreign. Null when unknown, then the segment's own text decides
+ * @param analysisLanguage the language the code reads the book in, from {@link SourceLanguage#forAnalysis}: the chosen
+ *     tag, else a recognised declared tag, else null for the generic rules; never put into a prompt
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
@@ -35,7 +41,8 @@ public record CallFrame(
         @Nullable String bookLanguage,
         Narrator narrator,
         WordValidator wordValidator,
-        @Nullable UnicodeScript bookScript) {
+        @Nullable UnicodeScript bookScript,
+        @Nullable String analysisLanguage) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -46,27 +53,10 @@ public record CallFrame(
         Objects.requireNonNull(wordValidator, "wordValidator");
     }
 
-    /** A frame whose book script is not known. */
-    public CallFrame(
-            @Nullable String sourceLanguage,
-            String targetLanguage,
-            StyleSheet styleSheet,
-            ForeignPassagePolicy foreignPassagePolicy,
-            @Nullable String bookLanguage,
-            Narrator narrator,
-            WordValidator wordValidator) {
-        this(
-                sourceLanguage,
-                targetLanguage,
-                styleSheet,
-                foreignPassagePolicy,
-                bookLanguage,
-                narrator,
-                wordValidator,
-                null);
-    }
-
-    /** A frame whose run has no word validator. */
+    /**
+     * A frame whose run has no word validator, book script or opened book; the analysis language is the chosen source,
+     * as no book is at hand to read a declaration from.
+     */
     public CallFrame(
             @Nullable String sourceLanguage,
             String targetLanguage,
@@ -81,7 +71,9 @@ public record CallFrame(
                 foreignPassagePolicy,
                 bookLanguage,
                 narrator,
-                WordValidator.none());
+                WordValidator.none(),
+                null,
+                sourceLanguage);
     }
 
     /** A frame for a book whose narrator is not stated. */
@@ -120,15 +112,40 @@ public record CallFrame(
             final @Nullable UnicodeScript bookScript,
             final WordValidator words) {
         Objects.requireNonNull(brief, "brief");
+        Objects.requireNonNull(document, "document");
         return new CallFrame(
-                brief.sourceLanguage(),
+                SourceLanguage.forPrompt(brief),
                 Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
                 styleSheet,
                 brief.foreignPassages(),
                 bookLanguageOf(document),
                 brief.narrator(),
                 words,
-                bookScript);
+                bookScript,
+                SourceLanguage.forAnalysis(brief, document));
+    }
+
+    /**
+     * The frame of a call made on an opened book outside a translation run — the setup assistant, a glossary scan, the
+     * consistency pass — with the brief's own style sheet and no word validator.
+     *
+     * @param brief the project's brief, whose target language the caller has already checked
+     * @param document the opened book
+     * @param index the book's index, or null when it is not built; it only supplies the book's script
+     * @return the frame the call carries
+     */
+    public static CallFrame forBook(final BookBrief brief, final Document document, final @Nullable BookIndex index) {
+        return forRun(brief, StyleSheet.from(brief), document, scriptOf(index), WordValidator.none());
+    }
+
+    /**
+     * The script most of an indexed book's story is written in.
+     *
+     * @param index the book's index, or null when it is not built
+     * @return the majority script, or null when there is no index or no script holds a majority
+     */
+    public static @Nullable UnicodeScript scriptOf(final @Nullable BookIndex index) {
+        return index == null ? null : index.majorityScript().orElse(null);
     }
 
     /**

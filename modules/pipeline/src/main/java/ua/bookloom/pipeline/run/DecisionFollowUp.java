@@ -34,7 +34,7 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
 final class DecisionFollowUp {
 
     private final String projectId;
-    private final @Nullable String sourceLanguage;
+    private final @Nullable String analysisLanguage;
     private final RollingSummaryKeeper keeper;
     private final SummaryRepository summaries;
     private final SegmentRepository segments;
@@ -47,14 +47,14 @@ final class DecisionFollowUp {
 
     DecisionFollowUp(
             final String projectId,
-            @Nullable final String sourceLanguage,
+            @Nullable final String analysisLanguage,
             final RollingSummaryKeeper keeper,
             final RunStores stores,
             final BookIndex index,
             final RunSinks sinks,
             final RoutedCalls calls) {
         this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.sourceLanguage = sourceLanguage;
+        this.analysisLanguage = analysisLanguage;
         this.keeper = Objects.requireNonNull(keeper, "keeper");
         this.summaries = Objects.requireNonNull(stores, "stores").summaries();
         this.segments = stores.segments();
@@ -148,7 +148,7 @@ final class DecisionFollowUp {
     private Optional<AppError> scanNames(final WorkList work, final String unitId) {
         final List<Integer> scanned = decidedStory(work);
         final Result<List<GlossaryEntry>> proposed =
-                FrequencyScan.newTerms(projectId, index, scanned, sourceLanguage, glossary);
+                FrequencyScan.newTerms(projectId, index, scanned, analysisLanguage, glossary);
         if (proposed.isErr()) {
             return Optional.of(Objects.requireNonNull(proposed.error(), "error"));
         }

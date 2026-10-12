@@ -21,12 +21,10 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -132,11 +130,13 @@ public final class GlossaryModelScans {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before scanning for names."));
         }
-        final String source = SourceLanguage.forPrompt(brief);
-        log.debug("Glossary model action project={} source={} target={}", projectId, source, target);
-        return Result.ok(new Book(
-                BookSlice.story(index),
-                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()),
-                brief.names()));
+        final CallFrame frame = CallFrame.forBook(brief, document, index);
+        log.debug(
+                "Glossary model action project={} source={} analysis={} target={}",
+                projectId,
+                frame.sourceLanguage(),
+                frame.analysisLanguage(),
+                target);
+        return Result.ok(new Book(BookSlice.story(index), frame, brief.names()));
     }
 }

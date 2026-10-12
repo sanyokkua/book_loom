@@ -60,3 +60,7 @@ text would otherwise have every block marked foreign. Nothing is detected from t
 
 The source language may be Auto (no language chosen): "a plain-text book declares nothing, so the person chooses" no
 longer holds. Under Auto the model identifies the language and the code uses generic rules; see ADR-0042.
+
+"Nothing is detected from the text" still holds for the language: no code names the language of a text. The code does
+count letters by script (Latin, Cyrillic, …) to decide which marked runs are foreign under Auto; a script count says
+which alphabet a run is written in, not which language, and it neither selects a rule set nor appears in a prompt.

@@ -11,25 +11,21 @@ import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
-/** Builds the call frame a retry replays: the run's own language pair and style sheet, as the snapshot stored them. */
+/** Builds the call frame a retry replays: the run's own frame, with the style sheet the snapshot stored. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class RetryFrames {
 
     static CallFrame of(
             final BookBrief brief,
-            final String target,
             final ContextSnapshot snapshot,
             final Document document,
             final @Nullable BookIndex index) {
-        return new CallFrame(
-                brief.sourceLanguage(),
-                target,
+        return CallFrame.forRun(
+                brief,
                 StyleSheet.ofText(snapshot.styleSheet()),
-                brief.foreignPassages(),
-                CallFrame.bookLanguageOf(document),
-                brief.narrator(),
-                WordValidator.none(),
-                index == null ? null : index.majorityScript().orElse(null));
+                document,
+                CallFrame.scriptOf(index),
+                WordValidator.none());
     }
 }

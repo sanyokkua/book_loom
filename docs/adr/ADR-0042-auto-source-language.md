@@ -21,6 +21,8 @@ Prompts already know how to say "the language of this segment (infer it from its
 - One resolver, `pipeline.SourceLanguage`, answers the two questions. **For a prompt** the language is the chosen tag or
   none: a prompt under Auto never names a language nobody chose, not even the book's declaration. **For the code's own
   analysis** it is the chosen tag, else a declared tag the application recognises (in its normal form), else none.
+  Every model-call frame carries both (`CallFrame.sourceLanguage` for prompts, `CallFrame.analysisLanguage` for the
+  readers), so a reader cannot take the prompt's answer by mistake.
 - With no analysis language the code uses generic rules and assumes no language: the stop-word and title lists are the
   union of every bundled list; no pronoun table is read, so the code produces no gender evidence; no first-name list
   seeds a gender; no plural endings fold a name into its neighbour; the English contraction rule is off; the narrator
@@ -45,8 +47,13 @@ Prompts already know how to say "the language of this segment (infer it from its
   information than with a known language, so quality is lower than with a correct choice; the person is nudged to
   choose a language when the book declares one wrongly.
 - **Neutral:** `ResidueCheck`'s English exemption is a target-side rule and stays.
+- **Known limit:** with no analysis language the "never alone" word list adds language names, and it can only spell
+  them in English (`English`, `French`, …), so a book written in another language that names a language in its own
+  tongue (`Anglais`) may have it proposed as a name. The model review removes it; a bundled list per language would fix
+  it and is not planned.
 
 ## What would falsify this decision
 
-Real runs under Auto flag or mistranslate noticeably more segments than the same books with the language chosen, or the
-model's identification of the language is often wrong for the languages people translate from.
+The flagged share of a run under Auto is above 1.5 times the flagged share of a run of the same book and model with the
+language chosen, or the model misidentifies the language in 2 or more of 20 evaluation books. Either result means the
+generic rules or the model's identification are not good enough, and Auto should again ask the person to choose.

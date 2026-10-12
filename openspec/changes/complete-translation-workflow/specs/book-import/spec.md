@@ -248,9 +248,9 @@ language stays editable on the brief, so a wrong preselection costs one click.
 ### Requirement: Warn when a book declares a language the application does not recognize
 
 IF a book's declared language, after normalization, is not a language tag the application can name, THEN the
-import screen SHALL show a warning quoting the declared code as written and saying the source language must be
-chosen on the Book Brief, SHALL keep `Continue to Book Brief` available, and SHALL leave the Book Brief with no
-source language chosen.
+import screen SHALL show a warning quoting the declared code as written and saying the model will identify the source
+language and that it can be chosen on the Book Brief, SHALL keep `Continue to Book Brief` available, and SHALL leave
+the Book Brief with the source language Auto (no source language chosen; ADR-0042).
 
 **Source:** FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037
 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`),
@@ -262,9 +262,9 @@ claimed and choose accordingly.
 #### Scenario: An unrecognized code is quoted and nothing is preselected
 
 - **WHEN** an EPUB whose package declares `xx-yy` is opened
-- **THEN** a warning shows the code `xx-yy` and says the source language must be chosen on the Book Brief
+- **THEN** a warning shows the code `xx-yy` and says the model will identify the source language, which can be chosen on the Book Brief
 - **AND** `Continue to Book Brief` is available
-- **AND** the Book Brief opens with no source language chosen
+- **AND** the Book Brief opens with the source language Auto (no source language chosen)
 
 ### Requirement: Block a DRM-protected book and name its encryption
 

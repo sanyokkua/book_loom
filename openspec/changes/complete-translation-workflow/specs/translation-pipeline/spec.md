@@ -1532,6 +1532,58 @@ declaration is often missing or wrong.
   the same project in the same session
 - **THEN** the new run's first draft call is for `Book.md:5`, and no call is made for `Book.md:0` … `Book.md:4`
 
+### Requirement: Read a book with no source language by generic rules
+
+WHEN the Book Brief has no source language chosen (Auto), every prompt of the run SHALL name the source as `the
+language of this segment (infer it from its text)` and SHALL NOT name a language tag the book declares. The code's own
+analysis — the name and recurring-term scans, pronoun evidence, stop words and titles — SHALL read the book in the tag
+the person chose, else in a tag the book declares and the application recognizes, else in no language; and WHERE it
+reads in no language it SHALL use the union of every bundled stop-word and title list, SHALL read no pronoun table and
+so give no gender evidence, SHALL seed no gender from a first-name list, SHALL fold no plural ending into a name, and
+SHALL give no narrator hint. Under Auto, a run the book marks foreign SHALL be kept verbatim only WHEN it is written in
+a script other than the one most of the book's letters are written in, counted by code; a marked run in the book's own
+script SHALL be left to the prompt's foreign-passage rule.
+
+**Source:** FR-IMPORT-03, FR-BRIEF-01, FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`),
+ADR-0037 (as amended), ADR-0042 (`docs/adr/ADR-0042-auto-source-language.md`).
+In plain words: a book with no language to start from used to be read as English — `Le Rouge` in a French book became
+a name, and an English `she` gave a French character a gender. Now the model is asked to identify the language and the
+code assumes nothing about it: a word that is a function word in any bundled language is never a name by itself, and a
+pronoun table is read only for a language that is known. A language the person chose, or one the book declares and the
+application recognizes, is still used by the code, but a prompt never names a language nobody chose.
+
+#### Scenario: A declared language is never named in a prompt under Auto
+
+- **WHEN** a Markdown book whose front matter declares `lang: fr` is translated to `uk` with the source language Auto
+- **THEN** no request of the run contains `French (fr)`, and the system message says `the language of this segment
+  (infer it from its text)`
+
+#### Scenario: A function word of another language is not proposed with a name
+
+- **WHEN** a book declaring no language, with the source language Auto, holds `Il lisait Le Rouge hier soir.` four
+  times and its glossary is scanned
+- **THEN** the scan proposes `Rouge` and does not propose `Le Rouge` or `Le`
+
+#### Scenario: No pronoun or first name decides a gender under Auto
+
+- **WHEN** a book declaring no language, with the source language Auto, holds `We saw Hessel there. She smiled.` four
+  times and `We saw Rosalind there.` four times and its glossary is scanned
+- **THEN** `Hessel` and `Rosalind` are proposed with the gender unknown and no suggested gender
+
+#### Scenario: A declared and recognized language is still read by the code
+
+- **WHEN** a book declaring `en`, with the source language Auto, holds `Wren smiled. She left.` five times, `Wren` is a
+  character of unknown gender, and "Review with model" runs
+- **THEN** the code decides `Wren` female from the pronouns, and every request of the review that names a source says
+  `the language of this segment (infer it from its text)` and none names `English (en)`
+
+#### Scenario: A run in another script is kept, a run in the book's own script is not
+
+- **WHEN** a book written mostly in Latin letters, with the source language Auto, holds the paragraph `*Здравствуйте*`
+  and the paragraph `She whispered *au revoir* and left.`
+- **THEN** the Cyrillic run is kept behind one token and no request contains `Здравствуйте`
+- **AND** `au revoir` is not kept and is left to the prompt's foreign-passage rule
+
 ### Requirement: Accept a translation whose markup restores
 
 WHEN the model replies with a normal finish and the translation read from the reply is not empty after trimming, the
@@ -1902,8 +1954,9 @@ what the run has decided.
 WHEN a run starts, the screen SHALL raise the run-started transient message whose title and text the `notifications`
 capability's "Carry four severities of transient message, coloured by the status roles" defines.
 
-The screen SHALL refuse to start when no book is open, no source language is chosen, no target language is chosen, or
-no model is chosen, and SHALL say which is missing.
+The screen SHALL refuse to start when no book is open, no target language is chosen, or no model is chosen, and SHALL
+say which is missing. A run SHALL start with no source language chosen (Auto): the prompts then name the source as "the
+language of this segment (infer it from its text)" (ADR-0042).
 
 Each count SHALL be derived from the progress snapshot the engine emits, and from nothing else: **remaining** is that
 snapshot's pending count, which never includes a segment kept as source by choice; **auto-accepted**, **repaired and
@@ -1946,11 +1999,12 @@ could be closed; progress lives only in memory until storage arrives, so the mes
 - **WHEN** a book is open, the target language is `uk`, and no model has been chosen
 - **THEN** starting is refused with a message naming the missing model, and no run begins
 
-#### Scenario: A run cannot start without a source language
+#### Scenario: A run starts without a source language
 
 - **WHEN** the plain-text book `notes.txt`, which declares no language, is open, the target language is `uk`, a model is
-  chosen and no source language has been chosen
-- **THEN** starting is refused with a message naming the missing source language, and no run begins
+  chosen and no source language has been chosen (Auto)
+- **THEN** the run begins, and every prompt it sends names the source as "the language of this segment (infer it from
+  its text)"
 
 #### Scenario: Starting a run says to keep the application open
 

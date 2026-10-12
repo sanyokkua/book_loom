@@ -63,7 +63,7 @@ final class ChunkContext {
         this.gate = gate;
         this.lexicon = lexicon;
         this.lexiconFilter = LexiconFilter.of(
-                settings.frame().sourceLanguage(), settings.frame().targetLanguage());
+                settings.frame().analysisLanguage(), settings.frame().targetLanguage());
     }
 
     /**
@@ -159,7 +159,7 @@ final class ChunkContext {
     List<String> characterLines() {
         final List<String> lines = InjectedCharacters.within(
                 InjectedCharacters.select(
-                        chunk.segments(), glossary, settings.frame().sourceLanguage()),
+                        chunk.segments(), glossary, settings.frame().analysisLanguage()),
                 ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window())));
         log.debug("Reviewer character sheet lines={}", lines.size());
         return lines;
@@ -204,7 +204,7 @@ final class ChunkContext {
                 ChunkBudget.dynamicAllowance(settings.frame(), settings.window()),
                 lexicon.entries(settings.projectId()),
                 lexiconFilter,
-                settings.frame().sourceLanguage());
+                settings.frame().analysisLanguage());
         return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 
