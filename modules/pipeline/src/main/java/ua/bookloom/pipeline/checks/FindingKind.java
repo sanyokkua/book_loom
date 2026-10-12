@@ -58,5 +58,8 @@ public enum FindingKind {
     FOREIGN_WORD,
 
     /** A UUID, hexadecimal string, ISBN, web address or e-mail address of the source that the target changed or lost. */
-    IDENTIFIER_CHANGED
+    IDENTIFIER_CHANGED,
+
+    /** One quoted speech that addresses its listener with ти-forms and capitalised Ви-forms together. */
+    ADDRESS_MIX
 }

@@ -1415,3 +1415,30 @@ never checked.
 
 - **WHEN** a Ukrainian text holds `бекону`, `кобилу`, `очерету` and `ґанок`
 - **THEN** the alphabet check says nothing
+
+### Requirement: Hold one quoted speech to one form of address
+
+The deterministic text checks SHALL include an address-mix check driven by language data (15i.T6): a target language
+whose file lists `informalAddress` and `formalAddress` (Ukrainian: the ти-forms, and the Ви-forms written capitalised)
+gets one soft `address-mix` finding for each quoted speech (a quoted passage, or dash dialogue up to the dash that
+opens the author's remark) that holds a form of each list, naming both forms. The informal forms count in any case; a
+formal form counts only when it is capitalised and not the first word of a sentence, because a sentence start is
+capitalised whatever the word is. Only the speech is read, each speech on its own, never the narrator's words. The
+finding SHALL NOT block acceptance or flag a segment; with a repair round available it earns the same single directed fix
+as a narrator-gender finding, otherwise it stays a note for review. A language whose file lists no such keys is never
+checked.
+
+**Source:** task 15i.T6.
+In plain words: a model sometimes writes "ти" and "Ви" to the same listener in one line; the check names both forms so
+the one fix can pick a single way of address.
+
+#### Scenario: A speech that mixes the forms earns one directed fix
+
+- **WHEN** a Ukrainian draft holds «Сядь, тобі треба відпочити, а я принесу Вам чаю.» as one speech
+- **THEN** the segment is accepted with a soft `address-mix` finding naming "тобі" and "Вам", and one directed fix is asked for it
+- **AND** a fix that keeps the mix leaves the draft accepted with the finding as a note
+
+#### Scenario: Two speeches addressed differently are left alone
+
+- **WHEN** a paragraph holds one ти speech to a child and, after a remark, one Ви speech to a stranger
+- **THEN** the address-mix check says nothing

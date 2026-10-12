@@ -85,6 +85,9 @@ public enum CheckName {
     /** Text check, soft: a word of another language the target language's file replaces (тоже → теж). */
     FOREIGN_WORD(0.0, "language", "foreign-word", false),
 
+    /** Text check, soft: one quoted speech that mixes ти-forms and capitalised Ви-forms for one listener. */
+    ADDRESS_MIX(0.0, "language", "address-mix", false),
+
     /** Text check, soft: a word the word validator doubts is a real word of the target language. */
     UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),
 

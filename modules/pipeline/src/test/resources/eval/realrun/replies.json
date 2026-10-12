@@ -404,8 +404,8 @@
   "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
   "reply": "{\"target\": \"«Ти втомилася, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»\"}",
   "expect": "REFUSED",
-  "knownFailure": true,
-  "fixedBy": "15i.T6",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Nell",

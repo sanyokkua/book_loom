@@ -137,6 +137,7 @@ final class TextCheckGates {
             case NAME_SPELLING -> CheckName.NAME_SPELLING;
             case FOREIGN_WORD -> CheckName.FOREIGN_WORD;
             case IDENTIFIER_CHANGED -> CheckName.IDENTIFIER;
+            case ADDRESS_MIX -> CheckName.ADDRESS_MIX;
         };
     }
 }

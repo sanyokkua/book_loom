@@ -86,6 +86,7 @@ public final class TextChecks {
             findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), glossaryPairs));
         }
         findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
+        findings.addAll(AddressMixCheck.find(target, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
