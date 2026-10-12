@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -100,6 +101,34 @@ public record CallFrame(
             StyleSheet styleSheet,
             ForeignPassagePolicy foreignPassagePolicy) {
         this(sourceLanguage, targetLanguage, styleSheet, foreignPassagePolicy, null, Narrator.unspecified());
+    }
+
+    /**
+     * The frame of one run: the brief's languages, policy and narrator, the book's own language and script.
+     *
+     * @param brief the run's brief, whose target language the run start has already checked
+     * @param styleSheet the run's derived style sheet
+     * @param document the book being translated
+     * @param bookScript the script most of the story is written in, or null when unknown
+     * @param words the run's word validator
+     * @return the frame every call of the run carries
+     */
+    public static CallFrame forRun(
+            final BookBrief brief,
+            final StyleSheet styleSheet,
+            final Document document,
+            final @Nullable UnicodeScript bookScript,
+            final WordValidator words) {
+        Objects.requireNonNull(brief, "brief");
+        return new CallFrame(
+                brief.sourceLanguage(),
+                Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
+                styleSheet,
+                brief.foreignPassages(),
+                bookLanguageOf(document),
+                brief.narrator(),
+                words,
+                bookScript);
     }
 
     /**

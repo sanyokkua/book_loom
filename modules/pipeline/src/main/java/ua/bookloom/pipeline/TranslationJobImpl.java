@@ -290,15 +290,8 @@ final class TranslationJobImpl implements TranslationJob {
         final BookBrief brief = run.project().brief();
         final int window = ContextBudget.windowFor(request.detectedContext(), null);
         log.debug("Run window={} detected={}", window, request.detectedContext());
-        final CallFrame frame = new CallFrame(
-                brief.sourceLanguage(),
-                Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
-                styleSheet,
-                brief.foreignPassages(),
-                CallFrame.bookLanguageOf(run.document()),
-                brief.narrator(),
-                words,
-                run.index().majorityScript().orElse(null));
+        final CallFrame frame = CallFrame.forRun(
+                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
         final ModelCalls calls = new JobModelCalls(
                 onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                 this::emit,

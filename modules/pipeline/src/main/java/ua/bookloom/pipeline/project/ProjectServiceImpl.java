@@ -211,8 +211,7 @@ public final class ProjectServiceImpl implements ProjectService {
             final Document document,
             final int segmentCount) {
         final BookIndex index = buildIndex(id, document);
-        final NarratorHint hint = NarratorDetector.detect(
-                        document, brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage())
+        final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
                 .orElse(null);
         openProjects.put(id, document, index);
         log.info(
@@ -222,12 +221,6 @@ public final class ProjectServiceImpl implements ProjectService {
                 document.units().size(),
                 segmentCount,
                 id);
-<<<<<<< HEAD
-=======
-        buildIndex(id);
-        final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
-                .orElse(null);
->>>>>>> feature/complete-translation-workflow--15i-L1
         return new ImportedBook(id, inspection, profile, brief, hint);
     }
 
