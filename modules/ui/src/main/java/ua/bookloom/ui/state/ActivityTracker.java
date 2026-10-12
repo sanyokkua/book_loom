@@ -44,7 +44,7 @@ public final class ActivityTracker {
     private final ReadOnlyObjectWrapper<LiveCalls> lastCalls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private long lastId;
     private @Nullable Handle translation;
-    private final KeepAwake keepAwake;
+    private final AwakeHolders awake;
     private final Clock clock;
     private final BooleanBinding blocking =
             Bindings.createBooleanBinding(() -> running.stream().anyMatch(Activity::isBlocking), running);
@@ -61,10 +61,10 @@ public final class ActivityTracker {
     }
 
     /**
-     * Creates a tracker that follows the run and keeps the computer awake for as long as the run is registered.
+     * Creates a tracker that follows the run and keeps the computer awake while a model activity is registered.
      *
      * @param mirror where the run's state is read; a translating run is registered as {@link ActivityKind#TRANSLATION}
-     * @param keepAwake what holds the computer awake while the translation is registered
+     * @param keepAwake what holds the computer awake while an activity that asks the model is registered
      */
     @Inject
     public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake) {
@@ -75,12 +75,12 @@ public final class ActivityTracker {
      * Creates a tracker on a given clock, so a test can move the time that elapsed time and the ETA are read from.
      *
      * @param mirror where the run's state is read
-     * @param keepAwake what holds the computer awake while the translation is registered
+     * @param keepAwake what holds the computer awake while an activity that asks the model is registered
      * @param clock where an activity's start and its elapsed time are read
      */
     public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake, final Clock clock) {
         Objects.requireNonNull(mirror, "mirror");
-        this.keepAwake = Objects.requireNonNull(keepAwake, "keepAwake");
+        this.awake = new AwakeHolders(keepAwake);
         this.clock = Objects.requireNonNull(clock, "clock");
         mirror.runState().addListener((observed, was, now) -> followRun(isTranslating(mirror)));
         // The countdown republishes the recovery every second; only a change of whether it waits matters here.
@@ -113,11 +113,9 @@ public final class ActivityTracker {
         final Handle registered = translation;
         if (translating && registered == null) {
             translation = begin(ActivityKind.TRANSLATION, null);
-            keepAwake.start();
         } else if (!translating && registered != null) {
             registered.end();
             translation = null;
-            keepAwake.stop();
         } else {
             log.debug("the translation activity stays {}", translating ? "registered" : "absent");
         }
@@ -154,6 +152,7 @@ public final class ActivityTracker {
         running.add(new Activity(
                 id, kind, 0, cancel != null, kind.label(), clock.instant(), Activity.Progress.NONE, false));
         log.info("activity {} #{} started; running now {}", kind, id, kinds());
+        awake.hold(kind);
         return new Handle(id, kind);
     }
 
@@ -394,6 +393,7 @@ public final class ActivityTracker {
             cancels.remove(id);
             running.removeIf(activity -> activity.id() == id);
             log.info("activity {} #{} ended; running now {}", kind, id, kinds());
+            awake.release(kind);
         }
     }
 }

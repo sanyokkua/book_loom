@@ -20,6 +20,26 @@ public interface ProjectService {
     Result<ImportedBook> importBook(Path source);
 
     /**
+     * Counts the segments already decided in the project that importing {@code source} would reuse, so the person is
+     * asked before an import discards them.
+     *
+     * @param source the non-null candidate file
+     * @return the number of stored segments of that file's project that are not pending; {@code 0} when the file was
+     *     never imported or its content changed since, because stored decisions of another text mean nothing for it
+     */
+    Result<Integer> decidedSegments(Path source);
+
+    /**
+     * Opens a file whose project is already stored and keeps that project, its brief and its decided segments, where
+     * {@link #importBook} would reset the segments.
+     *
+     * @param source the non-null file whose project is stored
+     * @return the opened book with its stored brief; a {@code validation} error when no project is stored for it or
+     *     the file's content changed since it was imported
+     */
+    Result<ImportedBook> continueBook(Path source);
+
+    /**
      * Replaces a project's Book Brief.
      *
      * @param projectId the non-null owning project's id

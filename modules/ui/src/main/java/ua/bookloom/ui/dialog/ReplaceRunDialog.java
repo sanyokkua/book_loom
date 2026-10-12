@@ -33,6 +33,9 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
     static final String KEEP_ID = "replace-run-keep";
     static final String CONFIRM_ID = "replace-run-confirm";
     static final String STOPPING_ID = "replace-run-stopping";
+    static final String EARLIER_CARD_ID = "earlier-work-card";
+    static final String CONTINUE_ID = "earlier-work-continue";
+    static final String START_OVER_ID = "earlier-work-start-over";
 
     private final ModalHost modalHost;
     private final Messages messages;
@@ -74,6 +77,64 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
     }
 
     @Override
+    public void askEarlierWork(
+            final String fileName, final int decidedSegments, final Runnable onContinue, final Runnable onStartOver) {
+        Objects.requireNonNull(fileName, "fileName");
+        Objects.requireNonNull(onContinue, "onContinue");
+        Objects.requireNonNull(onStartOver, "onStartOver");
+        log.debug(
+                "asking whether to continue the earlier translation of {}: {} decided segment(s)",
+                fileName,
+                decidedSegments);
+        final DialogPane card = earlierCard(fileName, decidedSegments, onContinue, onStartOver);
+        shown = card;
+        // Escape closes the card and runs neither action, so backing out never discards or opens anything.
+        modalHost.show(card, false, true);
+    }
+
+    private DialogPane earlierCard(
+            final String fileName, final int decidedSegments, final Runnable onContinue, final Runnable onStartOver) {
+        final Label text = new Label(messages.get(MessageKey.DIALOG_EARLIER_WORK_BODY, fileName, decidedSegments));
+        text.setWrapText(true);
+        text.getStyleClass().add("dialog-text");
+        final DialogPane card = card(new VBox(text), MessageKey.DIALOG_EARLIER_WORK_TITLE, EARLIER_CARD_ID);
+        final ButtonType startOverType =
+                new ButtonType(messages.get(MessageKey.DIALOG_EARLIER_WORK_START_OVER), ButtonBar.ButtonData.OTHER);
+        final ButtonType continueType =
+                new ButtonType(messages.get(MessageKey.DIALOG_EARLIER_WORK_CONTINUE), ButtonBar.ButtonData.OK_DONE);
+        card.getButtonTypes().setAll(startOverType, continueType);
+        answer(
+                (Button) card.lookupButton(startOverType),
+                START_OVER_ID,
+                MessageKey.DIALOG_EARLIER_WORK_START_OVER_TIP,
+                "btn-danger-outline",
+                onStartOver);
+        answer(
+                (Button) card.lookupButton(continueType),
+                CONTINUE_ID,
+                MessageKey.DIALOG_EARLIER_WORK_CONTINUE_TIP,
+                "btn-primary",
+                onContinue);
+        return card;
+    }
+
+    private void answer(
+            final Button button,
+            final String id,
+            final MessageKey tip,
+            final String styleClass,
+            final Runnable action) {
+        button.setId(id);
+        Tips.install(messages, button, tip);
+        button.getStyleClass().add(styleClass);
+        button.setOnAction(event -> {
+            log.debug("earlier-translation question answered with {}", id);
+            modalHost.hide();
+            action.run();
+        });
+    }
+
+    @Override
     public void dismiss() {
         final Node card = shown;
         shown = null;
@@ -86,10 +147,14 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
     }
 
     private DialogPane card(final Node body) {
+        return card(body, MessageKey.DIALOG_REPLACE_RUN_TITLE, CARD_ID);
+    }
+
+    private DialogPane card(final Node body, final MessageKey titleKey, final String id) {
         final DialogPane card = new ModalCard();
-        card.setId(CARD_ID);
+        card.setId(id);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(MessageKey.DIALOG_REPLACE_RUN_TITLE));
+        final Label title = new Label(messages.get(titleKey));
         title.getStyleClass().add("dialog-title");
         final VBox header = new VBox(title);
         header.getStyleClass().add("dialog-h");

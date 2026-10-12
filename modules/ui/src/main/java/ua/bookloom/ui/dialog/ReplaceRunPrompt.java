@@ -19,6 +19,17 @@ public interface ReplaceRunPrompt {
      */
     void ask(String runFileName, String newFileName, RunState state, Runnable onConfirm);
 
+    /**
+     * Asks whether to continue a book's earlier translation or start over, before an import resets it. Closing the
+     * card without choosing (Escape) runs neither action. FX thread only.
+     *
+     * @param fileName the file about to be imported
+     * @param decidedSegments how many of its segments already hold a decision; at least 1
+     * @param onContinue what to do when the person keeps the earlier translation
+     * @param onStartOver what to do when the person discards it and imports afresh
+     */
+    void askEarlierWork(String fileName, int decidedSegments, Runnable onContinue, Runnable onStartOver);
+
     /** Closes the question once the run has ended; ignored when it is no longer shown. */
     void dismiss();
 }

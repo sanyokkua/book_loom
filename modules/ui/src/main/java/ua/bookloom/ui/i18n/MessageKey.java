@@ -467,6 +467,16 @@ public enum MessageKey {
     SETTINGS_MODEL_LISTING("settings.model.listing"),
     /** Note beside the model entry when no list was obtained; says the entry still accepts a typed name. */
     SETTINGS_MODEL_NO_LIST("settings.model.noList"),
+    /** Note under the model entry for the recommended model, Gemma 4 26B. */
+    SETTINGS_ADVICE_GEMMA_26B("settings.advice.gemma26b"),
+    /** Note under the model entry for Gemma 4 E4B, the smallest model that translates a book acceptably. */
+    SETTINGS_ADVICE_GEMMA_E4B("settings.advice.gemmaE4b"),
+    /** Warning under the model entry for Gemma 4 E2B, which is too small. */
+    SETTINGS_ADVICE_GEMMA_E2B("settings.advice.gemmaE2b"),
+    /** Warning under the model entry for the gpt-oss models. */
+    SETTINGS_ADVICE_GPT_OSS("settings.advice.gptOss"),
+    /** Note under the model entry on LM Studio: slower, no streaming, more control codes. */
+    SETTINGS_ADVICE_LM_STUDIO("settings.advice.lmStudio"),
     /** Label of the theme selector in the appearance tab. */
     APPEARANCE_THEME_LABEL("appearance.theme.label"),
     /** Option of the theme selector that always uses the light block. */
@@ -1819,6 +1829,18 @@ public enum MessageKey {
     DIALOG_REPLACE_RUN_CONFIRM_TIP("dialog.replaceRun.confirm.tip"),
     /** Line shown while the discarded run is being stopped. */
     DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
+    /** Title of the question asked before an import resets a book's earlier translation. */
+    DIALOG_EARLIER_WORK_TITLE("dialog.earlierWork.title"),
+    /** Body of that question; argument 0 is the file name, argument 1 the number of segments already decided. */
+    DIALOG_EARLIER_WORK_BODY("dialog.earlierWork.body"),
+    /** Button that keeps the earlier translation and opens the book where it stopped. */
+    DIALOG_EARLIER_WORK_CONTINUE("dialog.earlierWork.continue"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_EARLIER_WORK_CONTINUE}. */
+    DIALOG_EARLIER_WORK_CONTINUE_TIP("dialog.earlierWork.continue.tip"),
+    /** Button that discards the earlier translation and imports the book afresh. */
+    DIALOG_EARLIER_WORK_START_OVER("dialog.earlierWork.startOver"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_EARLIER_WORK_START_OVER}. */
+    DIALOG_EARLIER_WORK_START_OVER_TIP("dialog.earlierWork.startOver.tip"),
     /** Title of the question asked before starting with glossary entries that have no target. */
     DIALOG_NO_TARGET_TITLE("dialog.noTarget.title"),
     /** Body of that question; argument 0 is the number of entries without a target. */

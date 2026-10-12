@@ -100,7 +100,11 @@ public final class ImportViewModel {
      */
     public void open(final Path source) {
         Objects.requireNonNull(source, "source");
-        log.debug("open requested for {}", source);
+        open(source, false);
+    }
+
+    private void open(final Path source, final boolean keepEarlier) {
+        log.debug("open requested for {}, keeping the earlier translation: {}", source, keepEarlier);
         if (opening.get()) {
             log.debug("open of {} ignored: a book is still being opened", source);
             return;
@@ -114,7 +118,18 @@ public final class ImportViewModel {
         state.set(new ImportState.Opening(fileName));
         log.info("opening {}", fileName);
         log.trace("opening the file at {}", source);
-        submit(source, fileName);
+        submit(source, fileName, keepEarlier);
+    }
+
+    /**
+     * Opens a file whose earlier translation is kept, through the service's {@code continueBook}. Returns at once; the
+     * answer arrives on the FX thread. FX thread only.
+     *
+     * @param source the file whose stored project and decided segments are kept
+     */
+    public void continueWith(final Path source) {
+        Objects.requireNonNull(source, "source");
+        open(source, true);
     }
 
     /**
@@ -133,24 +148,28 @@ public final class ImportViewModel {
         release(previous);
     }
 
-    private void submit(final Path source, final String fileName) {
+    private void submit(final Path source, final String fileName, final boolean keepEarlier) {
         try {
-            executor.execute(() -> importOffThread(source, fileName));
+            executor.execute(() -> importOffThread(source, fileName, keepEarlier));
         } catch (RuntimeException rejected) {
             log.error("importing {} could not be submitted", fileName, rejected);
             publish(fileName, Result.err(internalError(rejected)));
         }
     }
 
-    private void importOffThread(final Path source, final String fileName) {
-        log.debug("importing {} on {}", fileName, Thread.currentThread().getName());
-        final Result<Answer> answer = importGuarded(source);
+    private void importOffThread(final Path source, final String fileName, final boolean keepEarlier) {
+        log.debug(
+                "importing {} on {}, keeping the earlier translation: {}",
+                fileName,
+                Thread.currentThread().getName(),
+                keepEarlier);
+        final Result<Answer> answer = importGuarded(source, keepEarlier);
         Platform.runLater(() -> publish(fileName, answer));
     }
 
-    private Result<Answer> importGuarded(final Path source) {
+    private Result<Answer> importGuarded(final Path source, final boolean keepEarlier) {
         try {
-            return answerOf(source, projects.importBook(source));
+            return answerOf(source, keepEarlier ? projects.continueBook(source) : projects.importBook(source));
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(internalError(thrown));

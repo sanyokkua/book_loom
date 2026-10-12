@@ -54,7 +54,7 @@ class ImportGuardTest extends RunnerTestBase {
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 new ActivityTracker(new StateMirror())));
-        guard = new ImportGuard(mirror, runner, imports, current, prompt);
+        guard = new ImportGuard(mirror, runner, imports, current, prompt, projects, new DirectExecutor());
         onFx(() -> {
             imports.open(FRANKENSTEIN);
             return null;

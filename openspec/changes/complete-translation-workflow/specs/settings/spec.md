@@ -115,6 +115,11 @@ truth.
 WHEN the selected provider changes, the application SHALL discard the previously offered list and the chosen
 model.
 
+WHERE the chosen model or the selected provider has advice (Ollama `gemma4` 26B recommended and E4B the minimum, a warning
+for E2B and for gpt-oss, and for LM Studio that it is slower, does not stream and sends more control codes), the
+application SHALL show it as a note under the chooser, decided from the model's name and the provider's kind alone, and
+SHALL show no note and take no room for a model it has no advice about on a server with none.
+
 The model chooser SHALL be shown on the providers area's detail card, for the selected provider, and SHALL NOT be
 shown on any other area, because the models area this build leaves unavailable ("Show every settings area, and
 enable only what works") is where the reference rendering draws it.
@@ -149,6 +154,18 @@ behind a door nothing in this build opens.
 
 - **WHEN** `gemma3:12b` is chosen on the Ollama provider and the LM Studio provider is then selected
 - **THEN** no model is chosen and the offered list is empty until it is fetched again
+
+#### Scenario: A model note follows the chosen model
+
+- **WHEN** the Ollama provider is selected and `gemma4:26b-mlx` is typed
+- **THEN** a note under the chooser says it is recommended
+- **AND** typing `gemma4:e2b-mlx` instead shows a warning, and an unknown model shows no note
+
+#### Scenario: LM Studio's limits are stated
+
+- **WHEN** the LM Studio provider is selected
+- **THEN** a note says it is slower, does not stream its replies and sends more control codes, even before a model is
+  chosen
 
 #### Scenario: A listing in flight reports itself
 

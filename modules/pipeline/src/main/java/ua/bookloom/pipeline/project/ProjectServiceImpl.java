@@ -8,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -21,8 +23,6 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -34,7 +34,6 @@ import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -81,6 +80,80 @@ public final class ProjectServiceImpl implements ProjectService {
         } catch (Throwable cause) {
             return Result.err(internalError("import the book", cause));
         }
+    }
+
+    @Override
+    public Result<Integer> decidedSegments(final Path source) {
+        Objects.requireNonNull(source, "source");
+        try {
+            final String id = projectId(source.toAbsolutePath().normalize());
+            final Result<Optional<Project>> found = projects.find(id);
+            if (found.isErr()) {
+                return Result.err(errorOf(found));
+            }
+            final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
+            if (stored == null || !StoredBooks.isUnchanged(stored, source)) {
+                log.debug("decidedSegments project={}: nothing stored for this content", id);
+                return Result.ok(0);
+            }
+            final Result<Integer> counted = segments.all(id).map(StoredBooks::countDecided);
+            log.debug("decidedSegments project={} decided={}", id, counted.data());
+            return counted;
+        } catch (Throwable cause) {
+            return Result.err(internalError("count the decided segments", cause));
+        }
+    }
+
+    @Override
+    public Result<ImportedBook> continueBook(final Path source) {
+        Objects.requireNonNull(source, "source");
+        try {
+            final Path normalized = source.toAbsolutePath().normalize();
+            final String id = projectId(normalized);
+            log.debug("continueBook path={} project={}", source, id);
+            final Result<Optional<Project>> found = projects.find(id);
+            if (found.isErr()) {
+                return Result.err(errorOf(found));
+            }
+            final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
+            if (stored == null || !StoredBooks.isUnchanged(stored, source)) {
+                log.warn("continueBook refused project={}: nothing stored for this content", id);
+                return Result.err(StoredBooks.nothingToContinue());
+            }
+            return inspector.inspect(source).flatMap(inspection -> reopen(stored, source, inspection));
+        } catch (Throwable cause) {
+            return Result.err(internalError("continue the book", cause));
+        }
+    }
+
+    private Result<ImportedBook> reopen(final Project stored, final Path source, final BookInspection inspection) {
+        if (inspection.verdict() != InspectionVerdict.READABLE) {
+            return Result.ok(new ImportedBook(null, inspection, null, null));
+        }
+        final Document previous = openProjects.remove(stored.id());
+        if (previous != null) {
+            log.debug("continue replaces the open book of project={}", stored.id());
+            documents.close(previous);
+        }
+        return documents
+                .open(source)
+                .flatMap(document ->
+                        closingUnlessImported(document, () -> profileAndKeep(stored, inspection, document)));
+    }
+
+    private Result<ImportedBook> profileAndKeep(
+            final Project stored, final BookInspection inspection, final Document document) {
+        return inspector
+                .profile(document)
+                .flatMap(profile -> segments.all(stored.id())
+                        .map(records -> imported(
+                                stored.id(),
+                                stored.source(),
+                                inspection,
+                                profile,
+                                stored.brief(),
+                                document,
+                                records.size())));
     }
 
     @Override
@@ -172,15 +245,18 @@ public final class ProjectServiceImpl implements ProjectService {
             log.debug("import replaces the open book of project={}", id);
             documents.close(previous);
         }
-        return documents.open(source).flatMap(document -> storeOrClose(id, normalized, inspection, document));
+        return documents
+                .open(source)
+                .flatMap(document ->
+                        closingUnlessImported(document, () -> profileAndStore(id, normalized, inspection, document)));
     }
 
     // The opened document is closed whenever the import does not complete, a failure that is thrown included.
-    private Result<ImportedBook> storeOrClose(
-            final String id, final Path source, final BookInspection inspection, final Document document) {
+    private Result<ImportedBook> closingUnlessImported(
+            final Document document, final Supplier<Result<ImportedBook>> finish) {
         boolean imported = false;
         try {
-            final Result<ImportedBook> stored = profileAndStore(id, source, inspection, document);
+            final Result<ImportedBook> stored = finish.get();
             imported = stored.isOk();
             return stored;
         } finally {
@@ -195,7 +271,7 @@ public final class ProjectServiceImpl implements ProjectService {
         return inspector.profile(document).flatMap(profile -> {
             final BookBrief brief = BookBrief.defaults(preselectSource(inspection.languageEvidence()));
             final Project project = new Project(id, source, document.format(), document.contentHash(), brief);
-            final List<SegmentRecord> records = pendingRecords(id, document);
+            final List<SegmentRecord> records = StoredBooks.pendingRecords(id, document);
             return projects.save(project)
                     .flatMap(saved -> segments.saveAll(id, records))
                     .map(count -> imported(id, source, inspection, profile, brief, document, count));
@@ -251,33 +327,6 @@ public final class ProjectServiceImpl implements ProjectService {
                 evidence.contentMajority(),
                 chosen);
         return chosen;
-    }
-
-    private static List<SegmentRecord> pendingRecords(final String projectId, final Document document) {
-        final List<SegmentRecord> records = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            for (final Segment segment : unit.segments()) {
-                records.add(new SegmentRecord(
-                        projectId,
-                        segment.id(),
-                        unit.id(),
-                        segment.order(),
-                        segment.kind(),
-                        SegmentStatus.PENDING,
-                        null,
-                        null,
-                        null,
-                        null,
-                        0.0,
-                        null,
-                        List.of(),
-                        SegmentPath.DRAFT,
-                        0,
-                        false,
-                        null));
-            }
-        }
-        return records;
     }
 
     private static BookPlan plan(final String projectId, final Document document, final BookBrief brief) {

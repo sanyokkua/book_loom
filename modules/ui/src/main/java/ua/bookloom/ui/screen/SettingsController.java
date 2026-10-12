@@ -30,6 +30,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ModelAdvice;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ProviderRow;
 import ua.bookloom.ui.state.ProviderTest;
@@ -66,6 +67,7 @@ public final class SettingsController {
     private final ListChangeListener<String> onOffered = change -> showOffered();
     private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
     private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
+    private final ChangeListener<List<ModelAdvice.Note>> onNotes = (observed, was, now) -> showNotes(now);
 
     /**
      * Set while this controller itself changes the combo's items, editor or value, so that the events those changes
@@ -84,6 +86,9 @@ public final class SettingsController {
 
     @FXML
     private ComboBox<String> modelCombo;
+
+    @FXML
+    private Label modelNote;
 
     @FXML
     private Label modelListing;
@@ -200,6 +205,8 @@ public final class SettingsController {
         modelCombo.getEditor().textProperty().addListener(onEntryText);
         viewModel.model().addListener(new WeakChangeListener<>(onModel));
         listing.offered().addListener(new WeakListChangeListener<>(onOffered));
+        viewModel.modelNotes().addListener(new WeakChangeListener<>(onNotes));
+        showNotes(viewModel.modelNotes().get());
         modelCombo.setOnAction(event -> onEntryCommitted());
         show(modelListing, listing.listing());
         show(modelNoList, listing.noListObtained());
@@ -209,6 +216,10 @@ public final class SettingsController {
                 .bind(Bindings.createBooleanBinding(
                         () -> !listing.refusal().get().isEmpty(), listing.refusal()));
         modelRefusal.managedProperty().bind(modelRefusal.visibleProperty());
+    }
+
+    private void showNotes(final List<ModelAdvice.Note> notes) {
+        ModelNoteLabel.show(modelNote, notes, messages);
     }
 
     private static void show(final Label note, final ObservableBooleanValue shown) {

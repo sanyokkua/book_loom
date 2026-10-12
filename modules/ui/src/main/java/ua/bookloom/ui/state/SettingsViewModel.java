@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
@@ -39,6 +41,7 @@ public final class SettingsViewModel {
     private final ObservableList<ProviderRow> providers;
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
     private final StringProperty model = new SimpleStringProperty("");
+    private final ReadOnlyObjectWrapper<List<ModelAdvice.Note>> modelNotes = new ReadOnlyObjectWrapper<>(List.of());
 
     /**
      * Reads the registry once and selects its first provider in {@link ua.bookloom.api.llm.ProviderKind} order.
@@ -74,7 +77,21 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(activities, "activities"));
         this.providers = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(rowsOf(configs)));
         providers.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
+        selectedProviderId.addListener((observed, was, now) -> refreshNotes());
+        model.addListener((observed, was, now) -> refreshNotes());
+        refreshNotes();
         log.info("settings ready: {} provider(s), selected '{}'", providers.size(), selectedProviderId.get());
+    }
+
+    private void refreshNotes() {
+        final String selected = selectedProviderId.get();
+        final List<ModelAdvice.Note> notes = providers.stream()
+                .filter(row -> row.id().equals(selected))
+                .findFirst()
+                .map(row -> ModelAdvice.notesFor(row.kind(), model.get()))
+                .orElse(List.of());
+        log.debug("model notes for provider '{}': {}", selected, notes.size());
+        modelNotes.set(notes);
     }
 
     private static List<ProviderRow> rowsOf(final ProviderConfigs configs) {
@@ -125,6 +142,15 @@ public final class SettingsViewModel {
      */
     public StringProperty model() {
         return model;
+    }
+
+    /**
+     * The advice for the selected provider and the chosen model, which follows both.
+     *
+     * @return a read-only property holding the notes of {@link ModelAdvice}, empty while there is none
+     */
+    public ReadOnlyObjectProperty<List<ModelAdvice.Note>> modelNotes() {
+        return modelNotes.getReadOnlyProperty();
     }
 
     /**

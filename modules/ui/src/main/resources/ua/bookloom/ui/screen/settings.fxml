@@ -58,6 +58,7 @@
                                   promptText="%settings.model.notChosen" prefWidth="260" HBox.hgrow="ALWAYS"
                                   maxWidth="Infinity"/>
                     </HBox>
+                    <Label fx:id="modelNote" id="settings-model-note" styleClass="hint" wrapText="true"/>
                     <Label fx:id="modelListing" id="settings-model-listing" styleClass="hint"
                            text="%settings.model.listing"/>
                     <Label fx:id="modelNoList" id="settings-model-nolist" styleClass="hint" wrapText="true"

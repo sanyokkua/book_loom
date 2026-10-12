@@ -75,11 +75,12 @@ control, and the single button acts through the same path as the screen's so the
 
 ### Requirement: Keep the computer awake while a run is at work
 
-WHILE a run translates, pauses or stops, or waits for the provider by itself, the desktop application SHALL keep the
-computer from sleeping through the operating system's own mechanism, tied to the application's process: on macOS
+WHILE a run translates, pauses or stops, or waits for the provider by itself, and WHILE any other activity asks the
+model for text (a names or terms scan, review or translation, a review retry, an export, a suggestion, the inference
+test), the desktop application SHALL keep the computer from sleeping through the operating system's own mechanism, tied to the application's process: on macOS
 `caffeinate -i -m -w <pid>`, on Linux `systemd-inhibit` when it is installed; on Windows, and on a Linux without it,
-nothing, with one WARN line. It SHALL let the computer sleep again once the run completes, stops or fails, or the person
-pauses it, and at exit. A missing or failing command SHALL never fail the run. The connection chip SHALL read
+nothing, with one WARN line. It SHALL let the computer sleep again only when the last of those activities has ended, so
+one ending never releases another's hold, and at exit. A missing or failing command SHALL never fail the run. The connection chip SHALL read
 "Provider unreachable · retrying" while the run waits for the provider by itself.
 
 **Source:** the overnight plan, step 11 (owner intent: a run left all night must not be frozen by an idle sleep).
@@ -90,6 +91,16 @@ local system command is not network traffic, so the offline invariant is untouch
 
 - **WHEN** a run starts on macOS, waits for the provider by itself for an hour, then is paused by the person
 - **THEN** `caffeinate -i -m -w <pid>` runs from the start through the wait and is ended at the person's pause
+
+#### Scenario: A long names pass keeps the computer awake
+
+- **WHEN** a names scan runs for ten minutes with no translation run
+- **THEN** the computer is kept awake throughout and is let sleep when the scan ends
+
+#### Scenario: Pausing the run does not release an export's hold
+
+- **WHEN** the run is paused by the person while an export still asks the model
+- **THEN** the computer stays awake until the export ends
 
 #### Scenario: No command on Windows
 
@@ -245,6 +256,36 @@ gets in the way.
 
 - **WHEN** the run over `Frankenstein.epub` is completed and `Kobzar.fb2` is chosen for import
 - **THEN** no dialog is shown, `Kobzar.fb2` is opened and the title bar shows no run
+
+### Requirement: Ask before an import resets a book's earlier translation
+
+WHEN a book is chosen for import and the project stored for that file already holds decided segments (accepted, revised
+or flagged, not pending) and the file's content is unchanged, the application SHALL ask whether to continue the earlier
+translation or to start over, and SHALL change nothing until the person answers. Continue SHALL open the book with its
+stored brief and decisions; Start over SHALL import the book afresh, which resets them; closing the question with Escape
+SHALL do neither. The count SHALL be looked up off the interface thread, and a lookup that fails SHALL open the book
+without asking. A finished run SHALL be cleared only once the person has chosen. WHEN the file was never imported, holds
+no decided segment or changed since, the application SHALL import it without asking.
+
+**Source:** `openspec/changes/complete-translation-workflow/tasks.md` 15i.T7 (owner intent: importing the same file
+again reset hours of decided work with no warning).
+In plain words: importing a file again rebuilds its segments as pending, so decisions are lost. The application says so
+first, with the number of segments, and lets the person keep them.
+
+#### Scenario: Re-importing a file with decided segments asks
+
+- **WHEN** `Dracula.epub` is chosen for import and its stored project holds seven decided segments
+- **THEN** the question names `Dracula.epub` and seven translated segments, and nothing is opened yet
+
+#### Scenario: Continue keeps the decisions
+
+- **WHEN** the person answers `Continue` to that question
+- **THEN** the book opens with its stored brief and all seven decisions
+
+#### Scenario: Start over clears them
+
+- **WHEN** the person answers `Start over`
+- **THEN** the book is imported afresh and no segment holds a decision
 
 ### Requirement: Let the person find and share the diagnostic log from About
 

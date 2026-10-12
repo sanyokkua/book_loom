@@ -35,6 +35,11 @@ public final class ScriptedProjectService implements ProjectService {
 
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
+    private final List<Path> continues = new CopyOnWriteArrayList<>();
+    private final List<Path> decidedAsked = new CopyOnWriteArrayList<>();
+    private final List<Boolean> decidedOnFxThread = new CopyOnWriteArrayList<>();
+    private final Map<Path, Integer> decided = new ConcurrentHashMap<>();
+    private volatile @Nullable AppError decidedFailure;
     private final List<Boolean> importsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<BookBrief> briefs = new CopyOnWriteArrayList<>();
     private final List<Boolean> briefsOnFxThread = new CopyOnWriteArrayList<>();
@@ -162,6 +167,50 @@ public final class ScriptedProjectService implements ProjectService {
             throw thrown;
         }
         return fallback;
+    }
+
+    @Override
+    public Result<Integer> decidedSegments(final Path source) {
+        decidedAsked.add(Objects.requireNonNull(source, "source"));
+        decidedOnFxThread.add(Platform.isFxApplicationThread());
+        final AppError failed = decidedFailure;
+        if (failed != null) {
+            return Result.err(failed);
+        }
+        return Result.ok(decided.getOrDefault(source, 0));
+    }
+
+    @Override
+    public Result<ImportedBook> continueBook(final Path source) {
+        continues.add(Objects.requireNonNull(source, "source"));
+        events.add("continue " + source);
+        final Result<ImportedBook> scripted = byPath.get(source);
+        return scripted != null ? scripted : fallback;
+    }
+
+    /** From now on answers {@link #decidedSegments} for {@code source} with {@code count}; other paths answer 0. */
+    public void onDecided(final Path source, final int count) {
+        decided.put(Objects.requireNonNull(source, "source"), count);
+    }
+
+    /** From now on answers every {@link #decidedSegments} with {@code failure}. */
+    public void failDecidedWith(final AppError failure) {
+        decidedFailure = Objects.requireNonNull(failure, "failure");
+    }
+
+    /** Every file {@link #decidedSegments} was asked about, in call order. */
+    public List<Path> decidedAsked() {
+        return List.copyOf(decidedAsked);
+    }
+
+    /** For each {@link #decidedSegments}, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> decidedCallsOnFxThread() {
+        return List.copyOf(decidedOnFxThread);
+    }
+
+    /** The source of every {@link #continueBook}, in call order. */
+    public List<Path> continues() {
+        return List.copyOf(continues);
     }
 
     @Override
