@@ -1,0 +1,280 @@
+{
+  "storySegments" : 24,
+  "nameScan" : [ {
+    "term" : "Tamsin",
+    "count" : 13,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Guildsmen",
+    "count" : 4,
+    "firstSentence" : "In the market the Guildsmen kept to their own side of the square.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Ostrene",
+    "count" : 4,
+    "firstSentence" : "An Ostrene merchant offered her a seat at his table.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velarians",
+    "count" : 3,
+    "firstSentence" : "The Velarians drank their coffee black and their wine warm.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velarian",
+    "count" : 2,
+    "firstSentence" : "A Velarian porter carried her bag to the inn.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Jorun Falk",
+    "count" : 1,
+    "firstSentence" : "Digital edition converted by Jorun Falk.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Falk Editions",
+    "count" : 1,
+    "firstSentence" : "Jorun Falk Editions, with thanks to every reader who sends a correction.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velar",
+    "count" : 1,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Ostrene",
+    "count" : 3,
+    "firstSentence" : "An Ostrene merchant offered her a seat at his table.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velarians",
+    "count" : 2,
+    "firstSentence" : "The Velarians drank their coffee black and their wine warm.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Jorun Falk",
+    "count" : 1,
+    "firstSentence" : "Digital edition converted by Jorun Falk.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Falk Editions",
+    "count" : 1,
+    "firstSentence" : "Jorun Falk Editions, with thanks to every reader who sends a correction.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velar",
+    "count" : 1,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Guildsmen",
+    "count" : 1,
+    "firstSentence" : "In the market the Guildsmen kept to their own side of the square.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velarian",
+    "count" : 1,
+    "firstSentence" : "A Velarian porter carried her bag to the inn.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ {
+    "term" : "guild",
+    "count" : 8,
+    "firstSentence" : "She carried one letter and one rule from the guild.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Tamsin" : {
+      "count" : 13,
+      "windows" : [ {
+        "text" : "Tamsin crossed the border into Velar on the last day of autumn. She carried one letter and one rule from the guild.",
+        "pronoun" : null
+      }, {
+        "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week. She kept the coffee habit.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Tamsin said the letter was for the guild alone. She did not raise her voice.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Tamsin, and nobody had a bad word for Tamsin.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Guildsmen" : {
+      "count" : 4,
+      "windows" : [ {
+        "text" : "In the market the Guildsmen kept to their own side of the square. They wore grey coats and spoke quietly.",
+        "pronoun" : null
+      }, {
+        "text" : "The Guildsmen came to her room on the fourth night. They asked about the letter and did not sit down.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
+        "pronoun" : null
+      }, {
+        "text" : "Tamsin walked back through the market alone. The Guildsmen watched her pass and did not follow.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Ostrene" : {
+      "count" : 4,
+      "windows" : [ {
+        "text" : "An Ostrene merchant offered her a seat at his table. The Ostrene always sat near the fire and never near the door.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "An Ostrene merchant offered her a seat at his table. The Ostrene always sat near the fire and never near the door.",
+        "pronoun" : null
+      }, {
+        "text" : "Tamsin ate with the Ostrene and the Velarians together. She noticed that nobody mentioned the guild.",
+        "pronoun" : null
+      }, {
+        "text" : "Tamsin went to the old town at the hour named. The Ostrene merchant was waiting beside the fountain.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Velarians" : {
+      "count" : 3,
+      "windows" : [ {
+        "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week.",
+        "pronoun" : null
+      }, {
+        "text" : "Tamsin ate with the Ostrene and the Velarians together. She noticed that nobody mentioned the guild.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "He said the guild could not be trusted, and that the Velarians knew it. Tamsin asked why the merchant was telling her.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she" ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Velarian" : {
+      "count" : 2,
+      "windows" : [ {
+        "text" : "A Velarian porter carried her bag to the inn. Tamsin tipped the man and the man bowed twice.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the morning a Velarian child brought her bread and a note. The note was unsigned.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Jorun Falk" : {
+      "count" : 3,
+      "windows" : [ {
+        "text" : "Digital edition converted by Jorun Falk.",
+        "pronoun" : null
+      }, {
+        "text" : "Jorun Falk Editions, with thanks to every reader who sends a correction.",
+        "pronoun" : null
+      }, {
+        "text" : "Jorun Falk wishes you a pleasant read.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Tamsin" : {
+      "count" : 13,
+      "examples" : [ "Tamsin crossed the border into Velar on the last day of autumn.", "Tamsin learned both habits in a week." ]
+    },
+    "Guildsmen" : {
+      "count" : 4,
+      "examples" : [ "In the market the Guildsmen kept to their own side of the square.", "The Guildsmen came to her room on the fourth night." ]
+    },
+    "Ostrene" : {
+      "count" : 4,
+      "examples" : [ "An Ostrene merchant offered her a seat at his table.", "The Ostrene always sat near the fire and never near the door." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Tamsin",
+    "mentions" : 13
+  }, {
+    "term" : "Guildsmen",
+    "mentions" : 4
+  }, {
+    "term" : "Ostrene",
+    "mentions" : 4
+  }, {
+    "term" : "Jorun Falk",
+    "mentions" : 3
+  }, {
+    "term" : "Velarians",
+    "mentions" : 3
+  }, {
+    "term" : "Velarian",
+    "mentions" : 2
+  } ],
+  "pronouns" : {
+    "Tamsin" : {
+      "female" : [ "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Guildsmen" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ ]
+    },
+    "Ostrene" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Velarians" : {
+      "female" : [ "she" ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Velarian" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ ]
+    },
+    "Jorun Falk" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

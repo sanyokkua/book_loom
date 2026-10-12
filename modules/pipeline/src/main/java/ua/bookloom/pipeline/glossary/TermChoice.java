@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -77,22 +76,22 @@ public final class TermChoice {
      * Asks the model which of the terms to keep.
      *
      * @param terms the non-null candidate terms, in the spelling the book uses
-     * @param segments the book's body segments, where each term's example is read
+     * @param story the book's body segments, where each term's example is read
      * @param frame the run's language pair and style
      * @param calls the seam every model call goes through
      * @return the verdicts as lexicon keys; the first failed call's error otherwise, and {@code validation} when an
      *     answer cannot be read, since a half-read answer must not decide what is removed
      */
     public Result<Choice> choose(
-            final List<String> terms, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
+            final List<String> terms, final BookSlice story, final CallFrame frame, final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
-        Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(calls, "calls");
         if (terms.isEmpty()) {
             return Result.ok(new Choice(Set.of(), Set.of()));
         }
-        final Map<String, Evidence> evidence = TermEvidence.of(segments, terms);
+        final Map<String, Evidence> evidence = TermEvidence.of(story.index(), story.ordinals(), terms);
         final String system =
                 templates.renderSystem(PromptName.TERM_CHOICE, frame).strip();
         return runBatches(terms, evidence, system, calls);

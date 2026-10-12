@@ -53,6 +53,17 @@ public final class OpenProjects {
     }
 
     /**
+     * Tells whether a project's book index has been built.
+     *
+     * @param projectId the non-null project id
+     * @return {@code true} if a book is open for the id and its index exists, {@code false} otherwise
+     */
+    public boolean hasIndex(final String projectId) {
+        final Opened found = opened.get(Objects.requireNonNull(projectId, "projectId"));
+        return found != null && found.index().get() != null;
+    }
+
+    /**
      * Reads a project's book index, building it from the held document the first time it is asked for (a document put
      * without an import has none yet). Two threads asking at once may both build; they get the same index back.
      *

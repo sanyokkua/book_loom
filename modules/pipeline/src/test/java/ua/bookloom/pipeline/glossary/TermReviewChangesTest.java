@@ -10,7 +10,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -35,7 +34,7 @@ class TermReviewChangesTest {
     private static final String PROJECT = "p1";
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-    private static final List<Segment> BOOK =
+    private static final BookSlice BOOK =
             GlossaryTestSegments.of(List.of("Well, Hale said.", "He knew it well.", "We met Hale today."));
     private static final String VERDICTS = "{\"verdicts\":["
             + "{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\",\"gender\":\"unknown\","

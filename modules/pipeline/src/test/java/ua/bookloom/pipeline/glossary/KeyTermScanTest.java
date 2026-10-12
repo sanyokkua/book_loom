@@ -85,9 +85,8 @@ class KeyTermScanTest {
     @MethodSource("books")
     void candidates_bookText_proposesExactlyTheTerms(
             final String description, final List<String> lines, final List<String> expected) {
-        final List<String> terms = KeyTermScan.candidates(GlossaryTestSegments.of(lines), "en").stream()
-                .map(NameCandidate::term)
-                .toList();
+        final List<String> terms =
+                termsOf(lines, "en").stream().map(NameCandidate::term).toList();
 
         assertThat(terms).containsExactlyElementsOf(expected);
     }
@@ -96,7 +95,7 @@ class KeyTermScanTest {
     void candidates_aLanguageWithoutATitleList_proposesOnlyDualUseWords() {
         final List<String> lines = copies("Mr. Hale nodded.", 5);
 
-        assertThat(KeyTermScan.candidates(GlossaryTestSegments.of(lines), "xx")).isEmpty();
+        assertThat(termsOf(lines, "xx")).isEmpty();
     }
 
     @Test
@@ -108,10 +107,11 @@ class KeyTermScanTest {
         lexicon.put(LexiconEntry.of("p1", "MR"));
         final List<String> lines = join(
                 copies("Then Mr. Hale nodded.", 3), copies("We saw the Imp again.", 3), copies("the imp laughed.", 3));
-        final var segments = GlossaryTestSegments.of(join(lines, copies("Sir Hale left.", 3)));
+        final BookSlice book = GlossaryTestSegments.of(join(lines, copies("Sir Hale left.", 3)));
 
         final var proposed = Objects.requireNonNull(
-                KeyTermScan.newTerms("p1", segments, "en", glossary, lexicon).data());
+                KeyTermScan.newTerms("p1", book.index(), book.ordinals(), "en", glossary, lexicon)
+                        .data());
 
         assertThat(proposed).extracting(LexiconEntry::term).containsExactly("sir");
     }
@@ -123,10 +123,19 @@ class KeyTermScanTest {
     void frequentWords_functionWordClass_isNeverACandidate(final String word) {
         final List<String> lines = join(copies("He saw the " + word + " furnace today.", 8));
 
-        final List<String> terms = KeyTermScan.frequentWords(GlossaryTestSegments.of(lines), "en", 20).stream()
-                .map(NameCandidate::term)
-                .toList();
+        final List<String> terms =
+                frequentOf(lines, "en", 20).stream().map(NameCandidate::term).toList();
 
         assertThat(terms).contains("furnace").doesNotContain(word);
+    }
+
+    private static List<NameCandidate> termsOf(final List<String> lines, final String language) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return KeyTermScan.candidates(book.index(), book.ordinals(), language);
+    }
+
+    private static List<NameCandidate> frequentOf(final List<String> lines, final String language, final int limit) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return KeyTermScan.frequentWords(book.index(), book.ordinals(), language, limit);
     }
 }

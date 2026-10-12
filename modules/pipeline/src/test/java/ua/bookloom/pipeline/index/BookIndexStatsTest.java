@@ -169,7 +169,7 @@ class BookIndexStatsTest {
     }
 
     // IF a book has front matter, an auxiliary unit, two body units and back matter, THEN story() is the body units'
-    // segments only, in listed order - the segments FrequencyScan.storyText reads.
+    // segments only, in listed order - the segments the name scans read.
     @Test
     void story_frontBodyAuxAndBackUnits_isTheNonAuxiliaryBodyOrdinals() {
         assertThat(BookIndex.of(book()).story()).containsExactly(1, 2, 3, 5);

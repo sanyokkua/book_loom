@@ -20,10 +20,10 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.index.WordCounts;
 
@@ -64,18 +64,18 @@ public final class KeyTermScan {
     private static final String FALLBACK_LANGUAGE = "en";
 
     /**
-     * The recurring terms of the segments.
+     * The recurring terms of some of the book's segments, read from the book's index.
      *
-     * @param segments the non-null segments to read, by their masked text
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
      * @param sourceLanguage the book's BCP 47 tag, choosing the title and stop-word lists; null reads English
      * @return the terms in lower case with their counts, most frequent first, at most {@link #MAX_PROPOSALS}; never
      *     null, empty when none qualifies
      */
-    public static List<NameCandidate> candidates(final List<Segment> segments, @Nullable final String sourceLanguage) {
-        Objects.requireNonNull(segments, "segments");
-        final List<Occurrences.Read> read = ScanText.of(segments, sourceLanguage).stream()
-                .map(Occurrences::read)
-                .toList();
+    public static List<NameCandidate> candidates(
+            final BookIndex index, final List<Integer> ordinals, @Nullable final String sourceLanguage) {
+        Objects.requireNonNull(index, "index");
+        final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final Set<String> titles = titles(sourceLanguage);
@@ -94,17 +94,19 @@ public final class KeyTermScan {
      * The words of the segments the model may choose recurring terms among: every word the book writes mostly in lower
      * case and often enough, that is no function word. The model, not a frequency list, decides which are terms.
      *
-     * @param segments the non-null segments to read, by their masked text
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
      * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list; null reads English
      * @param limit the most words returned; positive
      * @return the words in lower case with their counts, most frequent first; never null
      */
     public static List<NameCandidate> frequentWords(
-            final List<Segment> segments, @Nullable final String sourceLanguage, final int limit) {
-        Objects.requireNonNull(segments, "segments");
-        final List<Occurrences.Read> read = ScanText.of(segments, sourceLanguage).stream()
-                .map(Occurrences::read)
-                .toList();
+            final BookIndex index,
+            final List<Integer> ordinals,
+            @Nullable final String sourceLanguage,
+            final int limit) {
+        Objects.requireNonNull(index, "index");
+        final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final List<NameCandidate> frequent = tally(read).values().stream()
@@ -123,7 +125,8 @@ public final class KeyTermScan {
      * The lexicon entries a scan proposes, leaving out a term the glossary or the lexicon already holds.
      *
      * @param projectId the non-null project whose stores are read; nothing is written
-     * @param segments the non-null segments to scan
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to scan, in reading order; never null
      * @param sourceLanguage the book's BCP 47 tag, or null when unknown
      * @param glossary where the held glossary terms are read
      * @param lexicon where the held lexicon terms are read
@@ -131,7 +134,8 @@ public final class KeyTermScan {
      */
     public static Result<List<LexiconEntry>> newTerms(
             final String projectId,
-            final List<Segment> segments,
+            final BookIndex index,
+            final List<Integer> ordinals,
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary,
             final LexiconRepository lexicon) {
@@ -143,7 +147,7 @@ public final class KeyTermScan {
                     final Set<String> held = new HashSet<>();
                     heldNames.forEach(entry -> held.add(LexiconEntry.keyOf(entry.term())));
                     heldTerms.forEach(entry -> held.add(LexiconEntry.keyOf(entry.term())));
-                    final List<LexiconEntry> proposals = candidates(segments, sourceLanguage).stream()
+                    final List<LexiconEntry> proposals = candidates(index, ordinals, sourceLanguage).stream()
                             .filter(candidate -> !held.contains(LexiconEntry.keyOf(candidate.term())))
                             .map(candidate -> LexiconEntry.of(projectId, candidate.term()))
                             .toList();

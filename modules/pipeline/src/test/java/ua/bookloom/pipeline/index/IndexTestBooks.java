@@ -43,6 +43,13 @@ public final class IndexTestBooks {
         return document(unit("body", UnitRole.BODY, lines));
     }
 
+    /** The index of a book of one body unit that holds exactly these segments. */
+    public static BookIndex ofSegments(final List<Segment> segments) {
+        final Unit unit =
+                new Unit("body", 0, "body.xhtml", "application/xhtml+xml", new SkeletonHandle("body"), segments);
+        return BookIndex.of(document(unit));
+    }
+
     /** The invented book of the index tests: front 0; ch1 1, 2, 3; aux 4; ch2 5; back 6. */
     public static Document sample() {
         return document(

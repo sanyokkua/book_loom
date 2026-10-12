@@ -18,7 +18,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -35,7 +34,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
@@ -69,7 +68,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         return guarded(
                 "unknownGenders",
                 projectId,
-                () -> CharacterMentions.read(glossary, openProjects.get(projectId), projectId, minMentions));
+                () -> CharacterMentions.read(glossary, openProjects.index(projectId), projectId, minMentions));
     }
 
     @Override
@@ -147,24 +146,26 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     private Result<List<GlossaryEntry>> runScan(final String projectId) {
         final Document document = openProjects.get(projectId);
-        if (document == null) {
+        final BookIndex index = openProjects.index(projectId);
+        if (document == null || index == null) {
             return Result.err(notOpen(projectId));
         }
-        return glossary.all(projectId).flatMap(held -> scanIfEmpty(projectId, document, held));
+        final BookSlice story = BookSlice.story(index);
+        return glossary.all(projectId).flatMap(held -> scanIfEmpty(projectId, document, story, held));
     }
 
     private Result<List<GlossaryEntry>> scanIfEmpty(
-            final String projectId, final Document document, final List<GlossaryEntry> held) {
+            final String projectId, final Document document, final BookSlice story, final List<GlossaryEntry> held) {
         if (!held.isEmpty()) {
             log.debug("Glossary scan project={} skipped: the glossary holds {} entries", projectId, held.size());
             return Result.ok(List.of());
         }
         log.info("Glossary scan started project={}", projectId);
         final String language = sourceLanguage(projectId, document);
-        final List<Segment> body = bodySegments(document);
-        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(projectId, body, language, glossary)
+        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
+                        projectId, story.index(), story.ordinals(), language, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, language))
-                .map(proposals -> PronounGender.seeded(proposals, Tokens.visibleTexts(body), language))
+                .map(proposals -> PronounGender.seeded(proposals, story.visibleTexts(), language))
                 .flatMap(this::addAll);
         log.info(
                 "Glossary scan finished project={} ok={} entriesAdded={}",
@@ -346,10 +347,6 @@ public final class GlossaryServiceImpl implements GlossaryService {
         }
         log.info("Glossary exported project={} path={} entries={}", projectId, destination, entries.size());
         return Result.ok(destination);
-    }
-
-    static List<Segment> bodySegments(final Document document) {
-        return FrequencyScan.storyText(document);
     }
 
     private static boolean isLockedWithoutTarget(final GlossaryEntry entry) {

@@ -12,13 +12,12 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.PronounReader.Mention;
 import ua.bookloom.pipeline.glossary.PronounReader.Pronoun;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 
 /**
@@ -94,22 +93,24 @@ final class NameWindows {
     private record Use(int segment, int start, int sentence) {}
 
     /**
-     * Gathers the windows for the entries.
+     * Gathers the windows for the entries from the book's index.
      *
-     * @param segments the book's segments; never null
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
      * @param entries the entries asked about; never null
      * @param languageTag the source language's tag, which picks the pronouns; null reads English
      * @return the evidence by term as held; a term the book never uses maps to {@link Evidence#NONE}
      */
     static Map<String, Evidence> of(
-            final List<Segment> segments, final List<GlossaryEntry> entries, @Nullable final String languageTag) {
-        Objects.requireNonNull(segments, "segments");
+            final BookIndex index,
+            final List<Integer> ordinals,
+            final List<GlossaryEntry> entries,
+            @Nullable final String languageTag) {
+        Objects.requireNonNull(index, "index");
         Objects.requireNonNull(entries, "entries");
-        final List<Occurrences.Read> reads = segments.stream()
-                .map(segment -> Occurrences.read(segment.masked()))
-                .toList();
+        final List<Occurrences.Read> reads = index.reads(ordinals);
         final Map<String, List<Use>> uses = usesOf(reads, entries);
-        final List<String> texts = Tokens.visibleTexts(segments);
+        final List<String> texts = index.visibleTexts(ordinals);
         final Map<String, Evidence> evidence = new LinkedHashMap<>();
         for (final GlossaryEntry entry : entries) {
             final List<Use> found = uses.getOrDefault(entry.term(), List.of());
@@ -117,7 +118,7 @@ final class NameWindows {
         }
         log.debug(
                 "Name windows over {} segments for {} entries, {} used in the book",
-                segments.size(),
+                ordinals.size(),
                 entries.size(),
                 uses.size());
         return evidence;

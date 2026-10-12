@@ -8,14 +8,18 @@ import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.util.lang.LanguageTags;
 
 /**
  * A book read once into word postings, the reading order and each segment's place in it, so a name scan, a window or a
  * sharing question is answered from this structure instead of re-reading the book. Built from the segments' masked
  * text (each placeholder token read as one space); nothing here knows a language or a word list, only how the book
- * writes its words. Immutable after the build, so any thread may read it.
+ * writes its words. Immutable after the build, apart from the scan views it derives once per source language on the
+ * first scan that asks, so any thread may read it.
  */
 @Slf4j
 public final class BookIndex {
@@ -24,6 +28,7 @@ public final class BookIndex {
 
     private final IndexData data;
     private final long buildMillis;
+    private final Map<String, Map<Integer, Occurrences.Read>> scanViews = new ConcurrentHashMap<>();
 
     private BookIndex(final IndexData data, final long buildMillis) {
         this.data = data;
@@ -194,5 +199,48 @@ public final class BookIndex {
      */
     public List<Integer> story() {
         return data.story();
+    }
+
+    /**
+     * Reads some segments as the book's running text, which is what a name scan counts: no heading, title line,
+     * printing note or foreign passage. The text is cut once per source language and kept.
+     *
+     * @param ordinals the segments to read, in reading order; never null
+     * @param sourceLanguage the book's BCP 47 tag, deciding which passages are foreign; null counts none as foreign
+     * @return the read of each ordinal that is running text, in the order given; never null
+     */
+    public List<Occurrences.Read> scanReads(final List<Integer> ordinals, @Nullable final String sourceLanguage) {
+        Objects.requireNonNull(ordinals, "ordinals");
+        final String key = LanguageTags.normalize(sourceLanguage).orElse("");
+        final Map<Integer, Occurrences.Read> view =
+                scanViews.computeIfAbsent(key, _ -> ScanReads.of(data, sourceLanguage));
+        final List<Occurrences.Read> reads =
+                ordinals.stream().filter(view::containsKey).map(view::get).toList();
+        log.debug("Scan reads: {} of {} segments are running text, language {}", reads.size(), ordinals.size(), key);
+        return reads;
+    }
+
+    /**
+     * Reads some segments as they were read at the build.
+     *
+     * @param ordinals the segments to read, in reading order; never null
+     * @return one read per ordinal, in the order given; never null
+     * @throws IndexOutOfBoundsException if an ordinal is outside the book
+     */
+    public List<Occurrences.Read> reads(final List<Integer> ordinals) {
+        Objects.requireNonNull(ordinals, "ordinals");
+        return ordinals.stream().map(data.reads()::get).toList();
+    }
+
+    /**
+     * The text a model reads of some segments, to look names up in: each masked text with its placeholder tokens read
+     * as spaces.
+     *
+     * @param ordinals the segments to read, in reading order; never null
+     * @return one text per ordinal, in the order given; never null
+     * @throws IndexOutOfBoundsException if an ordinal is outside the book
+     */
+    public List<String> visibleTexts(final List<Integer> ordinals) {
+        return reads(ordinals).stream().map(Occurrences.Read::text).toList();
     }
 }

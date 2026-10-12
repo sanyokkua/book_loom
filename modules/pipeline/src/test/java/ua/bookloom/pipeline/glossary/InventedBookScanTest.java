@@ -12,6 +12,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * The name scan on a small invented book that reproduces what the scan got wrong on a real novel: interjections and
@@ -42,7 +43,7 @@ class InventedBookScanTest {
 
     @Test
     void candidates_sentenceInitialRunWhoseHeadIsSeenMidSentence_countsTheWholeRun() {
-        final List<NameCandidate> found = FrequencyScan.candidates(FrequencyScan.storyText(book()), THRESHOLD, "en");
+        final List<NameCandidate> found = namesOf(book(), THRESHOLD, "en");
 
         assertThat(found)
                 .filteredOn(candidate -> candidate.term().equals("Ansel Brack"))
@@ -64,9 +65,7 @@ class InventedBookScanTest {
     }
 
     private static List<String> terms(final int minCount) {
-        return FrequencyScan.candidates(FrequencyScan.storyText(book()), minCount, "en").stream()
-                .map(NameCandidate::term)
-                .toList();
+        return namesOf(book(), minCount, "en").stream().map(NameCandidate::term).toList();
     }
 
     private static Document book() {
@@ -143,11 +142,16 @@ class InventedBookScanTest {
                 id + ".xhtml",
                 "application/xhtml+xml",
                 new SkeletonHandle(id),
-                GlossaryTestSegments.of(paragraphs),
+                GlossaryTestSegments.segments(paragraphs),
                 role);
     }
 
     private static List<String> copies(final String line, final int times) {
         return Collections.nCopies(times, line);
+    }
+
+    private static List<NameCandidate> namesOf(final Document book, final int minCount, final String language) {
+        final BookIndex index = BookIndex.of(book);
+        return FrequencyScan.candidates(index, index.story(), minCount, language);
     }
 }

@@ -12,7 +12,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
@@ -22,6 +21,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -46,20 +46,20 @@ public final class GlossaryModelScans {
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
-    private record Book(List<Segment> segments, CallFrame frame, NamePolicy names) {}
+    private record Book(BookSlice story, CallFrame frame, NamePolicy names) {}
 
     Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> preScan.scan(
-                        projectId, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
+                        projectId, book.story(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     Result<GlossaryReviewReport> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> termReview.review(
-                        projectId, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
+                        projectId, book.story(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     /**
@@ -78,7 +78,7 @@ public final class GlossaryModelScans {
             final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> suggestTargets.suggestOnto(
-                        entries, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
+                        entries, book.story(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     /**
@@ -96,7 +96,7 @@ public final class GlossaryModelScans {
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         return book(projectId)
-                .flatMap(book -> termChoice.choose(terms, book.segments(), book.frame(), calls(model, progress, book)));
+                .flatMap(book -> termChoice.choose(terms, book.story(), book.frame(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
@@ -125,7 +125,8 @@ public final class GlossaryModelScans {
                     ErrorCode.validation, "Choose a target language", "Choose a target language before the scan."));
         }
         final Document document = openProjects.get(projectId);
-        if (document == null) {
+        final BookIndex index = openProjects.index(projectId);
+        if (document == null || index == null) {
             log.warn("Glossary model action project={} refused: no book is open", projectId);
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before scanning for names."));
@@ -133,7 +134,7 @@ public final class GlossaryModelScans {
         final String source = brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
         log.debug("Glossary model action project={} source={} target={}", projectId, source, target);
         return Result.ok(new Book(
-                GlossaryServiceImpl.bodySegments(document),
+                BookSlice.story(index),
                 new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()),
                 brief.names()));
     }

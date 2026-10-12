@@ -66,7 +66,7 @@ final class TermsEvalRunner {
         final Result<Choice> chosen = new TermChoice(TEMPLATES, MAPPER)
                 .choose(
                         termsCase.terms().stream().map(TermVerdict::term).toList(),
-                        StageFrames.segments(termsCase.sentences()),
+                        StageFrames.slice(termsCase.sentences()),
                         frame,
                         probe.calls(termsCase.target()));
         final StageProbe.Counts counts = probe.since(mark);
@@ -96,7 +96,7 @@ final class TermsEvalRunner {
                         TEMPLATES, MAPPER, glossary, new SuggestTargets(TEMPLATES, MAPPER))
                 .review(
                         PROJECT,
-                        StageFrames.segments(termsCase.sentences()),
+                        StageFrames.slice(termsCase.sentences()),
                         frameOf(termsCase),
                         StageFrames.brief(termsCase.source(), termsCase.target())
                                 .names(),

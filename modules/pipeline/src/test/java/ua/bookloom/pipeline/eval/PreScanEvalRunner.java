@@ -59,11 +59,7 @@ final class PreScanEvalRunner {
         final int mark = probe.mark();
         log.info("Pre-scan eval case={}", scanCase.id());
         final Result<EntryChanges<GlossaryEntry>> kept = scan.scan(
-                PROJECT,
-                StageFrames.segments(scanCase.sentences()),
-                frame,
-                brief.names(),
-                probe.calls(scanCase.target()));
+                PROJECT, StageFrames.slice(scanCase.sentences()), frame, brief.names(), probe.calls(scanCase.target()));
         final StageProbe.Counts counts = probe.since(mark);
         if (kept.isErr()) {
             final AppError error = Objects.requireNonNull(kept.error(), "error");

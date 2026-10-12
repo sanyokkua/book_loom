@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -50,7 +49,7 @@ class TermReviewTest {
     private static final String PROJECT = "p1";
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-    private static final List<Segment> BOOK = GlossaryTestSegments.of(
+    private static final BookSlice BOOK = GlossaryTestSegments.of(
             List.of("Well, Hale said.", "He knew it well.", "We met Hale today.", "Moreau smiled.", "We saw Milton."));
 
     private GlossaryRepository glossary;

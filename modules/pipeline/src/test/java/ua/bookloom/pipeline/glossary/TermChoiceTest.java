@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -36,7 +35,7 @@ class TermChoiceTest {
 
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-    private static final List<Segment> BOOK = GlossaryTestSegments.of(List.of(
+    private static final BookSlice BOOK = GlossaryTestSegments.of(List.of(
             "The master drew the pentacle on the floor.",
             "A pentacle needs a circle.",
             "She put the table by the door."));

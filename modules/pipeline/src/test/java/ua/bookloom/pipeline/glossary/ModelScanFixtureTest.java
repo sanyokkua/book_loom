@@ -22,7 +22,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -38,6 +37,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -81,7 +81,9 @@ class ModelScanFixtureTest {
     @ParameterizedTest
     @ValueSource(strings = {"earth-gravity.md", "earth-gravity.epub", "earth-gravity.fb2", "earth-gravity.txt"})
     void candidates_fixtureBook_holdTheNamesAndNoTitleWordNumberOrLanguage(final String file) {
-        final List<String> terms = FrequencyScan.candidates(body(file), 1, "en").stream()
+        final List<String> terms = FrequencyScan.candidates(
+                        body(file).index(), body(file).ordinals(), 1, "en")
+                .stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -165,13 +167,13 @@ class ModelScanFixtureTest {
                 .toList();
     }
 
-    private List<Segment> body(final String file) {
+    private BookSlice body(final String file) {
         final Document document = Objects.requireNonNull(
                 injector.getInstance(DocumentPort.class)
                         .open(FIXTURES.resolve(file))
                         .data(),
                 file);
-        return GlossaryServiceImpl.bodySegments(document);
+        return BookSlice.story(BookIndex.of(document));
     }
 
     private static ModelCalls keepsAllThenJudges(final Set<String> names) {

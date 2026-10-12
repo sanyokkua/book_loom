@@ -9,13 +9,12 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * Counts how often the body text names each character whose gender is still unknown, so Start asks only about those
@@ -30,21 +29,20 @@ final class CharacterMentions {
 
     static Result<List<UnknownGender>> read(
             final GlossaryRepository glossary,
-            @Nullable final Document document,
+            @Nullable final BookIndex index,
             final String projectId,
             final int minMentions) {
-        if (document == null) {
+        if (index == null) {
             log.debug("Unknown genders project={}: no book is open, so nothing is counted", projectId);
             return Result.ok(List.of());
         }
-        return glossary.all(projectId)
-                .map(held -> unknown(
-                        held, Tokens.visibleTexts(FrequencyScan.storyText(document)), Math.max(1, minMentions)));
+        return glossary.all(projectId).map(held -> unknown(held, index, Math.max(1, minMentions)));
     }
 
+    /** Counts the mentions in the story text of the book's index. */
     static List<UnknownGender> unknown(
-            final List<GlossaryEntry> entries, final List<String> texts, final int minMentions) {
-        final String body = String.join("\n", texts);
+            final List<GlossaryEntry> entries, final BookIndex index, final int minMentions) {
+        final String body = String.join("\n", index.visibleTexts(index.story()));
         final List<UnknownGender> found = entries.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() == Gender.UNKNOWN)
                 .map(entry -> new UnknownGender(entry.term(), count(entry.term(), body)))

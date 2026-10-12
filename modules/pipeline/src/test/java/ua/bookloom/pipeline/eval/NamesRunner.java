@@ -18,7 +18,6 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Names;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
-import ua.bookloom.pipeline.glossary.FrequencyScan;
 
 /**
  * Runs Names &amp; style over one book the way the app does, through the production {@code GlossaryService} and
@@ -107,9 +106,7 @@ final class NamesRunner {
     }
 
     private static List<String> storyParagraphs(final Prepared prepared) {
-        return FrequencyScan.storyText(prepared.document()).stream()
-                .map(Segment::sourceInner)
-                .toList();
+        return prepared.story().stream().map(Segment::sourceInner).toList();
     }
 
     private Map<String, Supplier<Result<?>>> steps(final Names names, final String id) {

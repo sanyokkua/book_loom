@@ -22,8 +22,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
-import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.glossary.FrequencyScan;
+import ua.bookloom.pipeline.glossary.BookSlice;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.PronounGender;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
@@ -88,7 +87,7 @@ final class JudgementRunner {
         return new TermReview(TEMPLATES, MAPPER, prepared.stores().glossary(), new SuggestTargets(TEMPLATES, MAPPER))
                 .review(
                         prepared.projectId(),
-                        FrequencyScan.storyText(prepared.document()),
+                        BookSlice.story(prepared.index()),
                         StageFrames.frame(brief, gold.sourceLanguage(), gold.targetLanguage()),
                         brief.names(),
                         probe.calls(gold.targetLanguage()));
@@ -108,7 +107,7 @@ final class JudgementRunner {
     // The scan seeds its proposals from the book's pronouns before storing them, as the app's scan does.
     private static void seed(final Prepared prepared, final JudgementGold gold) {
         final String project = prepared.projectId();
-        final List<String> texts = Tokens.visibleTexts(FrequencyScan.storyText(prepared.document()));
+        final List<String> texts = BookSlice.story(prepared.index()).visibleTexts();
         gold.characters()
                 .forEach(character -> prepared.stores()
                         .glossary()

@@ -14,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -26,7 +25,6 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
@@ -78,7 +76,7 @@ public final class TermReview {
      * Reviews the project's glossary with the model.
      *
      * @param projectId the project whose glossary is reviewed; never null
-     * @param segments the book's body segments, where the evidence is read; never null
+     * @param story the book's body segments, where the evidence is read; never null
      * @param frame the run's language pair and style, for the system message; never null
      * @param policy the Book Brief's name policy, which the suggested targets follow; never null
      * @param calls the seam every model call goes through; never null
@@ -87,18 +85,18 @@ public final class TermReview {
      */
     public Result<GlossaryReviewReport> review(
             final String projectId,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         try {
             return glossary.all(projectId)
-                    .flatMap(held -> run(projectId, held, new Inputs(segments, frame, policy, calls)));
+                    .flatMap(held -> run(projectId, held, new Inputs(story, frame, policy, calls)));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
@@ -112,7 +110,7 @@ public final class TermReview {
     }
 
     /** What every call of one review is asked with. */
-    private record Inputs(List<Segment> segments, CallFrame frame, NamePolicy policy, ModelCalls calls) {}
+    private record Inputs(BookSlice story, CallFrame frame, NamePolicy policy, ModelCalls calls) {}
 
     private Result<GlossaryReviewReport> run(final String projectId, final List<GlossaryEntry> held, final Inputs in) {
         final List<GlossaryEntry> open =
@@ -126,8 +124,8 @@ public final class TermReview {
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Map<String, Evidence> evidence =
-                NameWindows.of(in.segments(), open, in.frame().sourceLanguage());
+        final Map<String, Evidence> evidence = NameWindows.of(
+                in.story().index(), in.story().ordinals(), open, in.frame().sourceLanguage());
         final Result<List<Verdict>> verdicts = ask(open, evidence, in.frame(), in.calls());
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
@@ -135,7 +133,7 @@ public final class TermReview {
         }
         final List<Verdict> answered = Objects.requireNonNull(verdicts.data(), "verdicts");
         final Result<List<Suggestion>> suggested = suggestions.suggest(
-                ReviewCommit.survivors(open, answered), in.segments(), in.frame(), in.policy(), in.calls());
+                ReviewCommit.survivors(open, answered), in.story(), in.frame(), in.policy(), in.calls());
         if (suggested.isErr()) {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
@@ -151,7 +149,7 @@ public final class TermReview {
                 verdicts,
                 suggestions,
                 in.frame().sourceLanguage(),
-                Tokens.visibleTexts(in.segments()));
+                in.story().visibleTexts());
     }
 
     /**
@@ -159,22 +157,20 @@ public final class TermReview {
      * prompt, evidence and batching as a review of held entries, and nothing written.
      *
      * @param entries the entries to judge; never null
-     * @param segments the book's body segments, where the evidence is read; never null
+     * @param story the book's body segments, where the evidence is read; never null
      * @param frame the run's language pair and style; never null
      * @param calls the seam every model call goes through; never null
      * @return the verdicts the replies hold, which may leave an entry without one; or the first failed call's error
      */
     Result<List<Verdict>> judge(
-            final List<GlossaryEntry> entries,
-            final List<Segment> segments,
-            final CallFrame frame,
-            final ModelCalls calls) {
+            final List<GlossaryEntry> entries, final BookSlice story, final CallFrame frame, final ModelCalls calls) {
         Objects.requireNonNull(entries, "entries");
         log.debug("Judging {} proposed entries", entries.size());
         if (entries.isEmpty()) {
             return Result.ok(List.of());
         }
-        final Map<String, Evidence> evidence = NameWindows.of(segments, entries, frame.sourceLanguage());
+        final Map<String, Evidence> evidence =
+                NameWindows.of(story.index(), story.ordinals(), entries, frame.sourceLanguage());
         return ask(entries, evidence, frame, calls);
     }
 

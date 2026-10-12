@@ -12,6 +12,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * The refusals that stop a run before any model call: a target or source language that is not a language code, an
@@ -32,13 +33,15 @@ public final class RunStart {
      *
      * @param project the stored project, with the brief as it is now
      * @param document the project's opened book
+     * @param index the book's index, built once for the project and read by every scan of the run
      */
-    public record Started(Project project, Document document) {
+    public record Started(Project project, Document document, BookIndex index) {
 
         /** Rejects a missing component. */
         public Started {
             Objects.requireNonNull(project, "project");
             Objects.requireNonNull(document, "document");
+            Objects.requireNonNull(index, "index");
         }
     }
 
@@ -79,7 +82,8 @@ public final class RunStart {
             return Result.err(languages);
         }
         final Document document = stores.openProjects().get(project.id());
-        if (document == null) {
+        final BookIndex index = stores.openProjects().index(project.id());
+        if (document == null || index == null) {
             return Result.err(refusal(
                     "book-open",
                     project.id(),
@@ -87,7 +91,7 @@ public final class RunStart {
                     "No open project has this id; open the book again."));
         }
         log.debug("Run start checks passed project={}", project.id());
-        return Result.ok(new Started(project, document));
+        return Result.ok(new Started(project, document, index));
     }
 
     private static @Nullable AppError languageRefusal(final Project project) {

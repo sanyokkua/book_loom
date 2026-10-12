@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.pipeline.glossary.BookSlice;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
@@ -24,10 +26,11 @@ final class StageFrames {
         return new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages(), null, brief.narrator());
     }
 
-    /** The case's lines as the body segments of the eval's one unit. */
-    static List<Segment> segments(final List<String> sentences) {
-        return IntStream.range(0, sentences.size())
+    /** The case's lines as the body segments of the eval's one unit, read from an index. */
+    static BookSlice slice(final List<String> sentences) {
+        final List<Segment> segments = IntStream.range(0, sentences.size())
                 .mapToObj(order -> EvalProject.segment(order, sentences.get(order)))
                 .toList();
+        return BookSlice.story(IndexTestBooks.ofSegments(segments));
     }
 }

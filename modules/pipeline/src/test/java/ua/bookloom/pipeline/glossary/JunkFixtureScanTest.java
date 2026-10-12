@@ -15,6 +15,7 @@ import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * The name scan on the fixture book extended with the junk a published novel carried: a title page and a copyright
@@ -34,9 +35,8 @@ class JunkFixtureScanTest {
 
     @Test
     void candidates_fixtureWithJunkAdded_proposeOnlyTheNamesAndTheBooksOwnTerms() {
-        final List<String> terms = FrequencyScan.candidates(FrequencyScan.storyText(extended()), 1, "en").stream()
-                .map(NameCandidate::term)
-                .toList();
+        final List<String> terms =
+                namesOf(extended(), 1, "en").stream().map(NameCandidate::term).toList();
 
         assertThat(terms).doesNotContainAnyElementsOf(JUNK);
         assertThat(terms).containsExactlyInAnyOrderElementsOf(concat(NAMES, OWN_TERMS));
@@ -44,16 +44,15 @@ class JunkFixtureScanTest {
 
     @Test
     void candidates_fixtureWithJunkAddedAtTheProposalCount_noJunkSurvives() {
-        final List<String> terms =
-                FrequencyScan.candidates(FrequencyScan.storyText(extended()), PROPOSAL_COUNT, "en").stream()
-                        .map(NameCandidate::term)
-                        .toList();
+        final List<String> terms = namesOf(extended(), PROPOSAL_COUNT, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
 
         assertThat(terms).doesNotContainAnyElementsOf(JUNK);
     }
 
     @Test
-    void storyText_fixtureEpub_leavesOutTitleCopyrightContentsAndNotes() {
+    void story_fixtureEpub_leavesOutTitleCopyrightContentsAndNotes() {
         final Document book = open();
 
         assertThat(book.units())
@@ -65,8 +64,9 @@ class JunkFixtureScanTest {
                         "OEBPS/text/copyright.xhtml",
                         "OEBPS/text/contents.xhtml",
                         "OEBPS/text/notes.xhtml");
-        assertThat(FrequencyScan.storyText(book))
-                .extracting(segment -> segment.unit())
+        final BookIndex index = BookIndex.of(book);
+        assertThat(index.story())
+                .extracting(ordinal -> index.segment(ordinal).unitId())
                 .doesNotContain("OEBPS/text/title.xhtml", "OEBPS/text/copyright.xhtml", "aux");
     }
 
@@ -117,7 +117,7 @@ class JunkFixtureScanTest {
                 id + ".xhtml",
                 "application/xhtml+xml",
                 new SkeletonHandle(id),
-                GlossaryTestSegments.of(paragraphs),
+                GlossaryTestSegments.segments(paragraphs),
                 role);
     }
 
@@ -129,5 +129,10 @@ class JunkFixtureScanTest {
         final List<String> all = new ArrayList<>(first);
         all.addAll(second);
         return all;
+    }
+
+    private static List<NameCandidate> namesOf(final Document book, final int minCount, final String language) {
+        final BookIndex index = BookIndex.of(book);
+        return FrequencyScan.candidates(index, index.story(), minCount, language);
     }
 }

@@ -9,13 +9,21 @@ import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 
 /** Builds pending segments whose masked text is the given line, for the name-scan tests. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryTestSegments {
 
-    static List<Segment> of(final List<String> masked) {
+    /** The book of one body unit whose paragraphs are the lines, as the slice a glossary action reads. */
+    static BookSlice of(final List<String> masked) {
+        final List<Segment> segments = segments(masked);
+        return BookSlice.story(IndexTestBooks.ofSegments(segments));
+    }
+
+    /** Pending paragraph segments with the lines as their masked text, for a unit a test builds itself. */
+    static List<Segment> segments(final List<String> masked) {
         return IntStream.range(0, masked.size())
                 .mapToObj(index -> segment(index, masked.get(index)))
                 .toList();

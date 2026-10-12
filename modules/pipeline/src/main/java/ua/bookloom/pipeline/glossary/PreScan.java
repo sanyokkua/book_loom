@@ -17,7 +17,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -29,7 +28,6 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
@@ -66,7 +64,7 @@ public final class PreScan {
      * Asks the model about the book's candidate names and adds what it proposes to the glossary.
      *
      * @param projectId the project whose glossary receives the entries; never null
-     * @param segments the segments whose capitalised words are the candidates; never null, may be empty
+     * @param story the segments whose capitalised words are the candidates; never null, may be empty
      * @param frame the run's language pair and style, for the system message
      * @param policy the Book Brief's name policy, which the suggested targets follow
      * @param calls the seam every model call goes through
@@ -76,17 +74,17 @@ public final class PreScan {
      */
     public Result<EntryChanges<GlossaryEntry>> scan(
             final String projectId,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         try {
-            return run(projectId, segments, frame, policy, calls).map(EntryChanges::ofAdded);
+            return run(projectId, story, frame, policy, calls).map(EntryChanges::ofAdded);
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Name scan failed", "The model name scan could not be completed.", null, cause);
@@ -97,11 +95,12 @@ public final class PreScan {
 
     private Result<List<GlossaryEntry>> run(
             final String projectId,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
-        final List<NameCandidate> candidates = FrequencyScan.candidates(segments, 1, frame.sourceLanguage());
+        final List<NameCandidate> candidates =
+                FrequencyScan.candidates(story.index(), story.ordinals(), 1, frame.sourceLanguage());
         log.info(
                 "Model pre-scan started project={} candidates={} batches={}",
                 projectId,
@@ -122,7 +121,7 @@ public final class PreScan {
             return Result.err(failed);
         }
         final Result<List<GlossaryEntry>> merged =
-                merge(projectId, Objects.requireNonNull(proposals.data(), "proposals"), segments, frame, policy, calls);
+                merge(projectId, Objects.requireNonNull(proposals.data(), "proposals"), story, frame, policy, calls);
         log.info("Model pre-scan finished project={} ok={} entriesAdded={}", projectId, merged.isOk(), added(merged));
         return merged;
     }
@@ -134,11 +133,8 @@ public final class PreScan {
      * verdict, is not written.
      */
     private Result<List<GlossaryEntry>> confirmed(
-            final List<GlossaryEntry> fresh,
-            final List<Segment> segments,
-            final CallFrame frame,
-            final ModelCalls calls) {
-        return verdicts.judge(fresh, segments, frame, calls).map(answered -> {
+            final List<GlossaryEntry> fresh, final BookSlice story, final CallFrame frame, final ModelCalls calls) {
+        return verdicts.judge(fresh, story, frame, calls).map(answered -> {
             final List<GlossaryEntry> kept = answered.stream()
                     .filter(verdict -> verdict.kind() == Kind.NAME || verdict.kind() == Kind.TERM)
                     .map(PreScan::withVerdict)
@@ -172,25 +168,21 @@ public final class PreScan {
     private Result<List<GlossaryEntry>> merge(
             final String projectId,
             final Collection<Proposal> proposals,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
-        return fresh(
-                        projectId,
-                        proposals,
-                        NameHygiene.occurrencesIn(Tokens.visibleTexts(segments)),
-                        frame.sourceLanguage())
-                .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
+        return fresh(projectId, proposals, NameHygiene.occurrencesIn(story.visibleTexts()), frame.sourceLanguage())
+                .flatMap(fresh -> confirmed(fresh, story, frame, calls))
                 .flatMap(confirmed ->
-                        suggestions.suggestOnto(seeded(confirmed, segments, frame), segments, frame, policy, calls))
+                        suggestions.suggestOnto(seeded(confirmed, story, frame), story, frame, policy, calls))
                 .map(suggested -> noteWithoutTarget(suggested, policy))
                 .flatMap(this::addAll);
     }
 
     private static List<GlossaryEntry> seeded(
-            final List<GlossaryEntry> confirmed, final List<Segment> segments, final CallFrame frame) {
-        return PronounGender.seeded(confirmed, Tokens.visibleTexts(segments), frame.sourceLanguage());
+            final List<GlossaryEntry> confirmed, final BookSlice story, final CallFrame frame) {
+        return PronounGender.seeded(confirmed, story.visibleTexts(), frame.sourceLanguage());
     }
 
     // A name the policy translates and the suggestion step left without a target is still written, so the person can

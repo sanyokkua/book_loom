@@ -23,6 +23,8 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.NameCandidate;
+import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 
 /**
  * Local-only investigation: can a key term's rendering be learned from already translated segment pairs by
@@ -138,7 +140,8 @@ class LexiconCooccurrenceTool {
                 .flatMap(unit -> unit.segments().stream())
                 .toList();
         final Set<String> terms = new LinkedHashSet<>();
-        KeyTermScan.candidates(segments, System.getenv().getOrDefault("BOOKLOOM_LEX_FROM", "en")).stream()
+        final BookIndex index = IndexTestBooks.ofSegments(segments);
+        KeyTermScan.candidates(index, index.story(), System.getenv().getOrDefault("BOOKLOOM_LEX_FROM", "en")).stream()
                 .map(NameCandidate::term)
                 .forEach(terms::add);
         final Set<String> lower = new HashSet<>(terms);

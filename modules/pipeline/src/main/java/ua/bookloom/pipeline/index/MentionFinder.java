@@ -55,7 +55,7 @@ final class MentionFinder {
             final Case mode,
             final int ordinal,
             final List<Mention> found) {
-        final Occurrences.Read read = Occurrences.read(data.texts().get(ordinal));
+        final Occurrences.Read read = data.reads().get(ordinal);
         for (int start = 0; start + wanted.size() <= read.words().size(); start++) {
             if (isRun(read, start, wanted, mode)) {
                 final Occurrences.Word first = read.words().get(start);

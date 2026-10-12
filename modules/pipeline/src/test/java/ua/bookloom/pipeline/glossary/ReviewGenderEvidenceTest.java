@@ -15,7 +15,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -67,7 +66,7 @@ class ReviewGenderEvidenceTest {
     @Test
     void review_strongPronounCase_isDecidedWithoutAskingTheModel() {
         glossary.add(entry("p1:wren", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false));
-        final List<Segment> book = GlossaryTestSegments.of(List.of(
+        final BookSlice book = GlossaryTestSegments.of(List.of(
                 "Wren sat. She ate.",
                 "Wren ran. She fell.",
                 "Wren woke. She yawned.",
@@ -170,7 +169,7 @@ class ReviewGenderEvidenceTest {
     }
 
     // Five "she"s after Wren: a strong pronoun case.
-    private static final List<Segment> STRONG_BOOK = GlossaryTestSegments.of(IntStream.range(0, 5)
+    private static final BookSlice STRONG_BOOK = GlossaryTestSegments.of(IntStream.range(0, 5)
             .mapToObj(index -> "Day " + index + ". Wren smiled. She left.")
             .toList());
 
@@ -223,7 +222,7 @@ class ReviewGenderEvidenceTest {
                 .withSuggestedGender(Gender.MALE));
         glossary.add(entry("p1:wren", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withGender(Gender.MALE));
-        final List<Segment> book = GlossaryTestSegments.of(List.of("Hale smiled. She left.", "Wren smiled. She left."));
+        final BookSlice book = GlossaryTestSegments.of(List.of("Hale smiled. She left.", "Wren smiled. She left."));
         final String verdicts = "{\"verdicts\":["
                 + "{\"term\":\"Hale\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\","
                 + "\"windows\":[1]},"

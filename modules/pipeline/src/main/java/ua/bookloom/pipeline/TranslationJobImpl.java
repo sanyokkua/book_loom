@@ -272,7 +272,8 @@ final class TranslationJobImpl implements TranslationJob {
                 stores.lexicon(),
                 request.projectId(),
                 run.project().brief(),
-                run.document());
+                run.document(),
+                run.index());
         if (prepared.isErr()) {
             return finish(JobState.FAILED, run, errorOf(prepared));
         }

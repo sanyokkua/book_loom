@@ -19,7 +19,9 @@ import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalCase.SuggestedName;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
+import ua.bookloom.pipeline.glossary.BookSlice;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -42,7 +44,8 @@ final class SuggestEval {
                 .toList();
         final List<Segment> book =
                 suggest.sentences().stream().map(PromptEvalRunner::segment).toList();
-        final Result<List<GlossaryEntry>> answered = SUGGEST.suggestOnto(entries, book, frame, suggest.policy(), calls);
+        final Result<List<GlossaryEntry>> answered = SUGGEST.suggestOnto(
+                entries, BookSlice.story(IndexTestBooks.ofSegments(book)), frame, suggest.policy(), calls);
         final Map<String, GlossaryEntry> byTerm = answered.isOk()
                 ? Objects.requireNonNull(answered.data()).stream()
                         .collect(Collectors.toMap(GlossaryEntry::term, Function.identity()))

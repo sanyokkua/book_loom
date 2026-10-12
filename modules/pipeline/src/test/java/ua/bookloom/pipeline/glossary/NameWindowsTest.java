@@ -8,7 +8,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -23,8 +22,9 @@ class NameWindowsTest {
     }
 
     private static Evidence windowsOf(final GlossaryEntry entry, final List<String> paragraphs) {
-        final List<Segment> book = GlossaryTestSegments.of(paragraphs);
-        return NameWindows.of(book, List.of(entry), "en").getOrDefault(entry.term(), Evidence.NONE);
+        final BookSlice book = GlossaryTestSegments.of(paragraphs);
+        return NameWindows.of(book.index(), book.ordinals(), List.of(entry), "en")
+                .getOrDefault(entry.term(), Evidence.NONE);
     }
 
     // "Wren ran." used n times, one paragraph each, the paragraph number in the sentence before.

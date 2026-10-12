@@ -17,7 +17,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -90,8 +89,7 @@ class NewTermsTest {
     void newTerms_glossaryReadFails_returnsThatError() {
         final AppError failure = AppError.of(ErrorCode.internal, "Read failed", "The glossary could not be read.");
 
-        final Result<List<GlossaryEntry>> result =
-                FrequencyScan.newTerms(PROJECT, namesBook(), "en", new FailingGlossary(failure, null));
+        final Result<List<GlossaryEntry>> result = newTerms(namesBook(), new FailingGlossary(failure, null));
 
         assertThat(result.error()).isEqualTo(failure);
     }
@@ -100,8 +98,7 @@ class NewTermsTest {
     void newTerms_removalLookupFails_returnsThatError() {
         final AppError failure = AppError.of(ErrorCode.internal, "Read failed", "The removals could not be read.");
 
-        final Result<List<GlossaryEntry>> result =
-                FrequencyScan.newTerms(PROJECT, namesBook(), "en", new FailingGlossary(null, failure));
+        final Result<List<GlossaryEntry>> result = newTerms(namesBook(), new FailingGlossary(null, failure));
 
         assertThat(result.error()).isEqualTo(failure);
     }
@@ -112,13 +109,17 @@ class NewTermsTest {
         assertThat(GlossaryIds.of(project, term)).isEqualTo(id);
     }
 
-    private List<GlossaryEntry> newTermsOf(final List<Segment> segments) {
-        final Result<List<GlossaryEntry>> result = FrequencyScan.newTerms(PROJECT, segments, "en", glossary);
+    private List<GlossaryEntry> newTermsOf(final BookSlice book) {
+        final Result<List<GlossaryEntry>> result = newTerms(book, glossary);
         assertThat(result.isOk()).isTrue();
         return Objects.requireNonNull(result.data());
     }
 
-    private static List<Segment> namesBook() {
+    private static Result<List<GlossaryEntry>> newTerms(final BookSlice book, final GlossaryRepository repository) {
+        return FrequencyScan.newTerms(PROJECT, book.index(), book.ordinals(), "en", repository);
+    }
+
+    private static BookSlice namesBook() {
         final List<String> lines = new ArrayList<>(copies("We saw Hale at the door.", 5));
         lines.addAll(copies("They walked to Baker Street later.", 3));
         return GlossaryTestSegments.of(lines);

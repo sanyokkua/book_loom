@@ -16,6 +16,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PronounReader.Mention;
 import ua.bookloom.pipeline.glossary.PronounReader.Pronoun;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * A character's gender read from the book itself: the first third-person pronoun after each mention of the name, in
@@ -200,6 +201,24 @@ public final class PronounGender {
                 parts.add(String.join("/", new LinkedHashSet<>(words)) + " ×" + words.size());
             }
         }
+    }
+
+    /**
+     * Counts the pronouns that follow a name in some of the book's segments, from the book's index.
+     *
+     * @param term the non-blank glossary term
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
+     * @param languageTag the source language's tag, or null for English
+     * @return the pronouns seen; never null
+     */
+    public static Evidence of(
+            final String term,
+            final BookIndex index,
+            final List<Integer> ordinals,
+            @Nullable final String languageTag) {
+        Objects.requireNonNull(index, "index");
+        return of(term, index.visibleTexts(ordinals), languageTag);
     }
 
     /**

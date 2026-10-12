@@ -94,10 +94,9 @@ class FrequencyScanTest {
     })
     void candidates_stopWordOfTheLanguage_isNeverAName(
             final String language, final String line, final String expected) {
-        final List<String> terms =
-                FrequencyScan.candidates(GlossaryTestSegments.of(copies(line, 3)), THRESHOLD, language).stream()
-                        .map(NameCandidate::term)
-                        .toList();
+        final List<String> terms = namesOf(copies(line, 3), THRESHOLD, language).stream()
+                .map(NameCandidate::term)
+                .toList();
 
         assertThat(String.join(",", terms)).isEqualTo(expected);
     }
@@ -106,7 +105,7 @@ class FrequencyScanTest {
     @MethodSource({"books", "sentenceBreakBooks", "wordBooks"})
     void candidates_bookText_proposesExactlyTheTerms(
             final String description, final List<String> lines, final List<String> expectedTerms) {
-        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -117,7 +116,7 @@ class FrequencyScanTest {
     void candidates_minimumOne_returnsCountAndFirstSentenceOfTheFirstMention() {
         final List<String> lines = List.of("She met Moreau in the hall. He left.", "Then Moreau left.");
 
-        final List<NameCandidate> candidates = FrequencyScan.candidates(GlossaryTestSegments.of(lines), 1, "en");
+        final List<NameCandidate> candidates = namesOf(lines, 1, "en");
 
         assertThat(candidates).containsExactly(new NameCandidate("Moreau", 2, "She met Moreau in the hall."));
     }
@@ -126,7 +125,7 @@ class FrequencyScanTest {
     void candidates_possessiveEndsARun_nextNameIsSeparate() {
         final List<String> lines = copies("We saw Ember’s Zurich office again.", 3);
 
-        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -138,8 +137,7 @@ class FrequencyScanTest {
         final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
         lines.addAll(copies("We saw the Embers at the door.", 3));
 
-        final List<NameCandidate> candidates =
-                FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en");
+        final List<NameCandidate> candidates = namesOf(lines, THRESHOLD, "en");
 
         assertThat(candidates).hasSize(1);
         assertThat(candidates.getFirst().term()).isEqualTo("Ember");
@@ -152,8 +150,7 @@ class FrequencyScanTest {
         final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 15));
         lines.addAll(copies("We saw Zurish at the door.", 3));
 
-        final List<NameCandidate> candidates =
-                FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en");
+        final List<NameCandidate> candidates = namesOf(lines, THRESHOLD, "en");
 
         assertThat(candidates).extracting(NameCandidate::term).containsExactly("Zurich");
         assertThat(candidates.getFirst().aliases()).containsExactly("Zurish");
@@ -164,7 +161,7 @@ class FrequencyScanTest {
         final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 10));
         lines.addAll(copies("We saw Zurish at the door.", 4));
 
-        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -179,7 +176,7 @@ class FrequencyScanTest {
         final List<String> lines = new ArrayList<>(copies("We saw " + base + " at the door.", baseCount));
         lines.addAll(copies("We saw " + plural + " at the door.", pluralCount));
 
-        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -194,8 +191,9 @@ class FrequencyScanTest {
         lines.addAll(copies("We saw the Embers at the door.", 3));
         final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
                 .getInstance(GlossaryRepository.class);
+        final BookSlice book = GlossaryTestSegments.of(lines);
 
-        final List<GlossaryEntry> entries = FrequencyScan.newTerms("p1", GlossaryTestSegments.of(lines), "en", glossary)
+        final List<GlossaryEntry> entries = FrequencyScan.newTerms("p1", book.index(), book.ordinals(), "en", glossary)
                 .data();
 
         assertThat(entries)
@@ -228,5 +226,10 @@ class FrequencyScanTest {
 
     private static String forty(final String sentence) {
         return sentence.repeat(40);
+    }
+
+    private static List<NameCandidate> namesOf(final List<String> lines, final int minCount, final String language) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return FrequencyScan.candidates(book.index(), book.ordinals(), minCount, language);
     }
 }

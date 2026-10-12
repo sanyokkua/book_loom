@@ -3,12 +3,14 @@ package ua.bookloom.pipeline;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
@@ -26,6 +28,7 @@ import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
 import ua.bookloom.pipeline.glossary.TermReview;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
@@ -62,6 +65,19 @@ public final class SequenceJobs {
         /** The parsed book the run translates. */
         public Document document() {
             return Objects.requireNonNull(project.stores().openProjects().get(project.id()), "open document");
+        }
+
+        /** The project's book index, as the glossary and lexicon services read it. */
+        public BookIndex index() {
+            return Objects.requireNonNull(project.stores().openProjects().index(project.id()), "book index");
+        }
+
+        /** The body segments the scans read, in reading order. */
+        public List<Segment> story() {
+            final List<Segment> all = document().units().stream()
+                    .flatMap(unit -> unit.segments().stream())
+                    .toList();
+            return index().story().stream().map(all::get).toList();
         }
     }
 

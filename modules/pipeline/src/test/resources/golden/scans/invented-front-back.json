@@ -1,0 +1,220 @@
+{
+  "storySegments" : 13,
+  "nameScan" : [ {
+    "term" : "Corvin",
+    "count" : 8,
+    "firstSentence" : "She looked for Corvin among the crowd.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Ysolde",
+    "count" : 7,
+    "firstSentence" : "Ysolde stepped off the boat at Marrow Quay.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Marrow Quay",
+    "count" : 3,
+    "firstSentence" : "Ysolde stepped off the boat at Marrow Quay.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Lantern Road",
+    "count" : 2,
+    "firstSentence" : "He took Ysolde’s bag and led her up the Lantern Road.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Pell",
+    "count" : 1,
+    "firstSentence" : "Mr. Pell, the harbour clerk, waved.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Corvin",
+    "count" : 4,
+    "firstSentence" : "She looked for Corvin among the crowd.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Marrow Quay",
+    "count" : 2,
+    "firstSentence" : "Ysolde stepped off the boat at Marrow Quay.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Ysolde",
+    "count" : 1,
+    "firstSentence" : "He took Ysolde’s bag and led her up the Lantern Road.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Lantern Road",
+    "count" : 1,
+    "firstSentence" : "He took Ysolde’s bag and led her up the Lantern Road.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Corvin" : {
+      "count" : 11,
+      "windows" : [ {
+        "text" : "Ysolde stepped off the boat at Marrow Quay. She looked for Corvin among the crowd.",
+        "pronoun" : null
+      }, {
+        "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Ysolde said Gran Bazar Gran Bazar to Corvin, and he smiled.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Pell met them at Marrow Quay again. He said Corvin had been right about the weather.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she" ],
+        "male" : [ "he", "he" ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Ysolde" : {
+      "count" : 9,
+      "windows" : [ {
+        "text" : "Chapter One: Ysolde Arrives",
+        "pronoun" : null
+      }, {
+        "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
+        "pronoun" : null
+      }, {
+        "text" : "The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well. He gave Corvin a letter.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she" ],
+        "male" : [ "he" ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Marrow Quay" : {
+      "count" : 5,
+      "windows" : [ {
+        "text" : "Ysolde stepped off the boat at Marrow Quay. She looked for Corvin among the crowd.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "said Corvin. The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
+        "pronoun" : null
+      }, {
+        "text" : "O Marrow Quay, O Marrow Quay",
+        "pronoun" : null
+      }, {
+        "text" : "Pell met them at Marrow Quay again. He said Corvin had been right about the weather.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she" ],
+        "male" : [ "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Lantern Road" : {
+      "count" : 3,
+      "windows" : [ {
+        "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
+        "pronoun" : null
+      }, {
+        "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
+        "pronoun" : null
+      }, {
+        "text" : "Corvin lit the lamps along the Lantern Road. Ysolde carried the oil.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Pell" : {
+      "count" : 3,
+      "windows" : [ {
+        "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well.",
+        "pronoun" : null
+      }, {
+        "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well. He gave Corvin a letter.",
+        "pronoun" : null
+      }, {
+        "text" : "Pell met them at Marrow Quay again. He said Corvin had been right about the weather.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Corvin" : {
+      "count" : 11,
+      "examples" : [ "She looked for Corvin among the crowd.", "The Lantern Road Corvin met her at the gate." ]
+    },
+    "Ysolde" : {
+      "count" : 9,
+      "examples" : [ "Chapter One: Ysolde Arrives", "Ysolde stepped off the boat at Marrow Quay." ]
+    },
+    "Marrow Quay" : {
+      "count" : 5,
+      "examples" : [ "Ysolde stepped off the boat at Marrow Quay.", "The road to Marrow Quay is long.”" ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Corvin",
+    "mentions" : 11
+  }, {
+    "term" : "Ysolde",
+    "mentions" : 9
+  }, {
+    "term" : "Marrow Quay",
+    "mentions" : 5
+  }, {
+    "term" : "Lantern Road",
+    "mentions" : 3
+  }, {
+    "term" : "Pell",
+    "mentions" : 3
+  } ],
+  "pronouns" : {
+    "Corvin" : {
+      "female" : [ "she" ],
+      "male" : [ "he", "he" ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Ysolde" : {
+      "female" : [ "she", "she" ],
+      "male" : [ "he" ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Marrow Quay" : {
+      "female" : [ "she" ],
+      "male" : [ "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Lantern Road" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Pell" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

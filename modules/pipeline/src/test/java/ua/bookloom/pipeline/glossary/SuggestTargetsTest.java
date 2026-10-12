@@ -15,7 +15,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -42,7 +41,7 @@ class SuggestTargetsTest {
 
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-    private static final List<Segment> BOOK =
+    private static final BookSlice BOOK =
             GlossaryTestSegments.of(List.of("Hale walked to Milton.", "The Amulet glowed in the dark."));
     private static final GlossaryEntry HALE =
             new GlossaryEntry("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false);

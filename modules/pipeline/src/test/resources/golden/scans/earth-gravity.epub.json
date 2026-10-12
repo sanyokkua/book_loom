@@ -1,0 +1,376 @@
+{
+  "storySegments" : 111,
+  "nameScan" : [ {
+    "term" : "Earth",
+    "count" : 24,
+    "firstSentence" : "On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Reyes",
+    "count" : 13,
+    "firstSentence" : "Tomas Reyes objected.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Institute",
+    "count" : 8,
+    "firstSentence" : "It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Vance",
+    "count" : 7,
+    "firstSentence" : "Vance said.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Nell",
+    "count" : 7,
+    "firstSentence" : "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Harrow Vale",
+    "count" : 6,
+    "firstSentence" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Amulet",
+    "count" : 6,
+    "firstSentence" : "Is the Amulet really in the crate?”",
+    "aliases" : [ ]
+  }, {
+    "term" : "Moon",
+    "count" : 5,
+    "firstSentence" : "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon —",
+    "aliases" : [ ]
+  }, {
+    "term" : "Eleanor Vance",
+    "count" : 2,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Meridian Survey Institute",
+    "count" : 1,
+    "firstSentence" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+    "aliases" : [ ]
+  }, {
+    "term" : "NASA Solar System",
+    "count" : 1,
+    "firstSentence" : "Read more at NASA Solar System Exploration or in the article on Newton’s law .",
+    "aliases" : [ ]
+  }, {
+    "term" : "Exploration",
+    "count" : 1,
+    "firstSentence" : "Read more at NASA Solar System Exploration or in the article on Newton’s law .",
+    "aliases" : [ ]
+  }, {
+    "term" : "Tomas",
+    "count" : 1,
+    "firstSentence" : "asked Tomas.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Earth",
+    "count" : 17,
+    "firstSentence" : "On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Vance",
+    "count" : 4,
+    "firstSentence" : "Vance said.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Moon",
+    "count" : 4,
+    "firstSentence" : "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon —",
+    "aliases" : [ ]
+  }, {
+    "term" : "Reyes",
+    "count" : 3,
+    "firstSentence" : "Tomas Reyes objected.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Nell",
+    "count" : 3,
+    "firstSentence" : "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Eleanor Vance",
+    "count" : 1,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Sun",
+    "count" : 1,
+    "firstSentence" : "Earth remains in orbit around the Sun.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ {
+    "term" : "dr",
+    "count" : 4,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  } ],
+  "frequentWords" : [ {
+    "term" : "mass",
+    "count" : 19,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "object",
+    "count" : 13,
+    "firstSentence" : "Every object with mass attracts every other object with mass.",
+    "aliases" : [ ]
+  }, {
+    "term" : "gravity",
+    "count" : 11,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "weight",
+    "count" : 10,
+    "firstSentence" : "Weight describes the gravitational force acting on that mass.",
+    "aliases" : [ ]
+  }, {
+    "term" : "toward",
+    "count" : 8,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "centre",
+    "count" : 7,
+    "firstSentence" : "Earth attracts objects toward its centre of mass .",
+    "aliases" : [ ]
+  }, {
+    "term" : "pendulum",
+    "count" : 7,
+    "firstSentence" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory.",
+    "aliases" : [ ]
+  }, {
+    "term" : "back",
+    "count" : 6,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "gravitational",
+    "count" : 6,
+    "firstSentence" : "However, Earth has a mass of approximately , and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface.",
+    "aliases" : [ ]
+  }, {
+    "term" : "distance",
+    "count" : 6,
+    "firstSentence" : "Distance between the centres of mass",
+    "aliases" : [ ]
+  }, {
+    "term" : "night",
+    "count" : 6,
+    "firstSentence" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Earth" : {
+      "count" : 25,
+      "windows" : [ {
+        "text" : "Summary: Gravity is the force that attracts objects with mass toward one another. On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.",
+        "pronoun" : null
+      }, {
+        "text" : "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon — roughly one sixth of what the bathroom scale shows at home.",
+        "pronoun" : null
+      }, {
+        "text" : "Earth remains in orbit around the Sun.",
+        "pronoun" : null
+      }, {
+        "text" : "That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Reyes" : {
+      "count" : 13,
+      "windows" : [ {
+        "text" : "Don’t say everywhere ,” Tomas Reyes objected. Say everywhere we have measured .”",
+        "pronoun" : null
+      }, {
+        "text" : "Is the Amulet really in the crate?” Reyes asked on the first morning.",
+        "pronoun" : null
+      }, {
+        "text" : "The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "him", "his" ]
+      }
+    },
+    "Institute" : {
+      "count" : 9,
+      "windows" : [ {
+        "text" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+        "pronoun" : null
+      }, {
+        "text" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages.",
+        "pronoun" : null
+      }, {
+        "text" : "It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before.",
+        "pronoun" : null
+      }, {
+        "text" : "Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that some… He did not laugh, which I took as a sign of how tired he was.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Vance" : {
+      "count" : 9,
+      "windows" : [ {
+        "text" : "G ravity is one of the fundamental interactions in nature. Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+        "pronoun" : null
+      }, {
+        "text" : "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+        "pronoun" : null
+      }, {
+        "text" : "Vance kept the worked example pinned above her desk as a numbered plate:",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Nell" : {
+      "count" : 7,
+      "windows" : [ {
+        "text" : "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+        "pronoun" : null
+      }, {
+        "text" : "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud.",
+        "pronoun" : null
+      }, {
+        "text" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages.",
+        "pronoun" : null
+      }, {
+        "text" : "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Harrow Vale" : {
+      "count" : 7,
+      "windows" : [ {
+        "text" : "Chapter Four: The Harrow Vale Expedition",
+        "pronoun" : null
+      }, {
+        "text" : "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value.",
+        "pronoun" : null
+      }, {
+        "text" : "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of t… We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us.",
+        "pronoun" : null
+      }, {
+        "text" : "or so the old textbook claimed. 3 The Harrow Vale survey proved it wrong by a few parts in ten thousand.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "dr" : {
+      "count" : 4,
+      "examples" : [ "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.", "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall." ]
+    },
+    "Earth" : {
+      "count" : 25,
+      "examples" : [ "On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.", "However, Earth has a mass of approximately , and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface." ]
+    },
+    "Reyes" : {
+      "count" : 13,
+      "examples" : [ "Tomas Reyes objected.", "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall." ]
+    },
+    "Institute" : {
+      "count" : 9,
+      "examples" : [ "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.", "It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Earth",
+    "mentions" : 25
+  }, {
+    "term" : "Reyes",
+    "mentions" : 13
+  }, {
+    "term" : "Institute",
+    "mentions" : 9
+  }, {
+    "term" : "Vance",
+    "mentions" : 9
+  }, {
+    "term" : "Harrow Vale",
+    "mentions" : 7
+  }, {
+    "term" : "Nell",
+    "mentions" : 7
+  } ],
+  "pronouns" : {
+    "Earth" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Reyes" : {
+      "female" : [ ],
+      "male" : [ "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "him", "his" ]
+    },
+    "Institute" : {
+      "female" : [ ],
+      "male" : [ "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Vance" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Nell" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Harrow Vale" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

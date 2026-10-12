@@ -1,0 +1,411 @@
+{
+  "storySegments" : 92,
+  "nameScan" : [ {
+    "term" : "Earth",
+    "count" : 25,
+    "firstSentence" : "On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Reyes",
+    "count" : 13,
+    "firstSentence" : "Tomas Reyes objected.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Institute",
+    "count" : 8,
+    "firstSentence" : "It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Vance",
+    "count" : 7,
+    "firstSentence" : "Vance said.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Nell",
+    "count" : 7,
+    "firstSentence" : "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Amulet",
+    "count" : 6,
+    "firstSentence" : "Is the Amulet really in the crate?”",
+    "aliases" : [ ]
+  }, {
+    "term" : "Moon",
+    "count" : 5,
+    "firstSentence" : "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon —",
+    "aliases" : [ ]
+  }, {
+    "term" : "Harrow Vale",
+    "count" : 5,
+    "firstSentence" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Eleanor Vance",
+    "count" : 2,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "BookLoom",
+    "count" : 1,
+    "firstSentence" : "This edition was prepared as a test book for BookLoom.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Typical",
+    "count" : 1,
+    "firstSentence" : "Symbol | Meaning | Typical unit F | Gravitational force | newton (N) G | Gravitational constant | N·m²/kg² m₁ | Mass of the first object | kilogram (kg) m₂ | Mass of the second object | kilogram (kg) r | Distance between the centres of mass | metre (m)",
+    "aliases" : [ ]
+  }, {
+    "term" : "Meridian Survey Institute",
+    "count" : 1,
+    "firstSentence" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+    "aliases" : [ ]
+  }, {
+    "term" : "La",
+    "count" : 1,
+    "firstSentence" : "In the station log, a French visitor had added a note of her own: La pesanteur ne prend jamais de vacances.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Relative",
+    "count" : 1,
+    "firstSentence" : "Distance from Earth’s centre | Relative strength 1 × radius | 100% 2 × radius | 25% 3 × radius | 11.1% 4 × radius | 6.25%",
+    "aliases" : [ ]
+  }, {
+    "term" : "NASA Solar System",
+    "count" : 1,
+    "firstSentence" : "Read more at NASA Solar System Exploration or in the article on Newton’s law.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Exploration",
+    "count" : 1,
+    "firstSentence" : "Read more at NASA Solar System Exploration or in the article on Newton’s law.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Tomas",
+    "count" : 1,
+    "firstSentence" : "asked Tomas.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Earth",
+    "count" : 17,
+    "firstSentence" : "On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Vance",
+    "count" : 4,
+    "firstSentence" : "Vance said.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Moon",
+    "count" : 4,
+    "firstSentence" : "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon —",
+    "aliases" : [ ]
+  }, {
+    "term" : "Reyes",
+    "count" : 3,
+    "firstSentence" : "Tomas Reyes objected.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Nell",
+    "count" : 3,
+    "firstSentence" : "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+    "aliases" : [ ]
+  }, {
+    "term" : "BookLoom",
+    "count" : 1,
+    "firstSentence" : "This edition was prepared as a test book for BookLoom.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Eleanor Vance",
+    "count" : 1,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Sun",
+    "count" : 1,
+    "firstSentence" : "Objects fall toward Earth. • The Moon remains in orbit around Earth. • Earth remains in orbit around the Sun. • Oceans remain on Earth’s surface. • Earth’s atmosphere remains gravitationally bound to the planet.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Typical",
+    "count" : 1,
+    "firstSentence" : "Symbol | Meaning | Typical unit F | Gravitational force | newton (N) G | Gravitational constant | N·m²/kg² m₁ | Mass of the first object | kilogram (kg) m₂ | Mass of the second object | kilogram (kg) r | Distance between the centres of mass | metre (m)",
+    "aliases" : [ ]
+  }, {
+    "term" : "Distance",
+    "count" : 1,
+    "firstSentence" : "Symbol | Meaning | Typical unit F | Gravitational force | newton (N) G | Gravitational constant | N·m²/kg² m₁ | Mass of the first object | kilogram (kg) m₂ | Mass of the second object | kilogram (kg) r | Distance between the centres of mass | metre (m)",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ {
+    "term" : "dr",
+    "count" : 4,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  } ],
+  "frequentWords" : [ {
+    "term" : "mass",
+    "count" : 20,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "gravity",
+    "count" : 13,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "object",
+    "count" : 13,
+    "firstSentence" : "Every object with mass attracts every other object with mass.",
+    "aliases" : [ ]
+  }, {
+    "term" : "weight",
+    "count" : 11,
+    "firstSentence" : "Mass and weight",
+    "aliases" : [ ]
+  }, {
+    "term" : "toward",
+    "count" : 8,
+    "firstSentence" : "Summary: Gravity is the force that attracts objects with mass toward one another.",
+    "aliases" : [ ]
+  }, {
+    "term" : "centre",
+    "count" : 7,
+    "firstSentence" : "Earth attracts objects toward its centre of mass.",
+    "aliases" : [ ]
+  }, {
+    "term" : "pendulum",
+    "count" : 7,
+    "firstSentence" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory.",
+    "aliases" : [ ]
+  }, {
+    "term" : "back",
+    "count" : 6,
+    "firstSentence" : "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen.",
+    "aliases" : [ ]
+  }, {
+    "term" : "gravitational",
+    "count" : 6,
+    "firstSentence" : "However, Earth has a mass of approximately 5.972 × 10²⁴ kg, and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface.",
+    "aliases" : [ ]
+  }, {
+    "term" : "distance",
+    "count" : 6,
+    "firstSentence" : "Symbol | Meaning | Typical unit F | Gravitational force | newton (N) G | Gravitational constant | N·m²/kg² m₁ | Mass of the first object | kilogram (kg) m₂ | Mass of the second object | kilogram (kg) r | Distance between the centres of mass | metre (m)",
+    "aliases" : [ ]
+  }, {
+    "term" : "night",
+    "count" : 6,
+    "firstSentence" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Earth" : {
+      "count" : 28,
+      "windows" : [ {
+        "text" : "Earth Gravity",
+        "pronoun" : null
+      }, {
+        "text" : "The average gravitational acceleration near Earth’s surface is approximately 9.81 metres per second every second, written g = 9.81 m/s².[1]",
+        "pronoun" : null
+      }, {
+        "text" : "Objects fall toward Earth. • The Moon remains in orbit around Earth. • Earth remains in orbit around the Sun. • Oceans remain on Earth’s surface. • Earth’s atmosphere remains gravitationally bound to …",
+        "pronoun" : null
+      }, {
+        "text" : "That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Reyes" : {
+      "count" : 13,
+      "windows" : [ {
+        "text" : "Don’t say everywhere,” Tomas Reyes objected. Say everywhere we have measured.”",
+        "pronoun" : null
+      }, {
+        "text" : "Is the Amulet really in the crate?” Reyes asked on the first morning.",
+        "pronoun" : null
+      }, {
+        "text" : "The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "him", "his" ]
+      }
+    },
+    "Institute" : {
+      "count" : 11,
+      "windows" : [ {
+        "text" : "The Meridian Survey Institute",
+        "pronoun" : null
+      }, {
+        "text" : "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it.",
+        "pronoun" : null
+      }, {
+        "text" : "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of t… We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us.",
+        "pronoun" : null
+      }, {
+        "text" : "Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that some… He did not laugh, which I took as a sign of how tired he was.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Vance" : {
+      "count" : 10,
+      "windows" : [ {
+        "text" : "by Dr. Eleanor Vance",
+        "pronoun" : null
+      }, {
+        "text" : "Well, that is the whole trick,” Vance said. Mass pulls on mass —",
+        "pronoun" : null
+      }, {
+        "text" : "Vance kept the worked example pinned above her desk as a numbered plate:",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Nell" : {
+      "count" : 7,
+      "windows" : [ {
+        "text" : "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall.",
+        "pronoun" : null
+      }, {
+        "text" : "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud.",
+        "pronoun" : null
+      }, {
+        "text" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages.",
+        "pronoun" : null
+      }, {
+        "text" : "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Amulet" : {
+      "count" : 7,
+      "windows" : [ {
+        "text" : "This edition was prepared as a test book for BookLoom. Any resemblance to a real survey, a real valley or a real amulet is a coincidence.",
+        "pronoun" : null
+      }, {
+        "text" : "The Amulet was not magic, whatever the villagers said. It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters.",
+        "pronoun" : null
+      }, {
+        "text" : "Day one: wind from the west, light rain, readings steady. Day two: the gravimeter drifted by 0.02 mGal an hour and Reyes recalibrated it twice against the Amulet. Day three: the readings at the north end of Harrow Vale were lower than the readings at the south end, exactly as the slate maps predicted.",
+        "pronoun" : null
+      }, {
+        "text" : "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "dr" : {
+      "count" : 5,
+      "examples" : [ "by Dr. Eleanor Vance", "Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen." ]
+    },
+    "Earth" : {
+      "count" : 28,
+      "examples" : [ "Earth Gravity", "Chapter Two: How Earth’s Gravity Works Chapter Three: The Gravity Formula Chapter Four: The Harrow Vale Expedition Chapter Five: Gravity and Distance Chapter Six: The Long Night at the Observatory Cha…" ]
+    },
+    "Reyes" : {
+      "count" : 13,
+      "examples" : [ "Tomas Reyes objected.", "Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall." ]
+    },
+    "Institute" : {
+      "count" : 11,
+      "examples" : [ "The Meridian Survey Institute", "Copyright © 2026 The Meridian Survey Institute." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Earth",
+    "mentions" : 28
+  }, {
+    "term" : "Reyes",
+    "mentions" : 13
+  }, {
+    "term" : "Institute",
+    "mentions" : 11
+  }, {
+    "term" : "Vance",
+    "mentions" : 10
+  }, {
+    "term" : "Nell",
+    "mentions" : 7
+  }, {
+    "term" : "Amulet",
+    "mentions" : 6
+  } ],
+  "pronouns" : {
+    "Earth" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Reyes" : {
+      "female" : [ ],
+      "male" : [ "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "him", "his" ]
+    },
+    "Institute" : {
+      "female" : [ ],
+      "male" : [ "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Vance" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Nell" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Amulet" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

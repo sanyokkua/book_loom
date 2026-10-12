@@ -19,6 +19,8 @@ import ua.bookloom.pipeline.eval.RunCase.Check;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.NameCandidate;
+import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
 
 /**
@@ -82,9 +84,10 @@ class RealRunCorpusTest {
         for (int round = 0; round < scanCase.repeat(); round++) {
             scanCase.lines().forEach(line -> segments.add(EvalProject.segment(segments.size(), line)));
         }
+        final BookIndex index = IndexTestBooks.ofSegments(segments);
         return (scanCase.scan() == ScanCase.Scan.KEY_TERMS
-                        ? KeyTermScan.candidates(segments, "en")
-                        : FrequencyScan.candidates(segments, 1, "en"))
+                        ? KeyTermScan.candidates(index, index.story(), "en")
+                        : FrequencyScan.candidates(index, index.story(), 1, "en"))
                 .stream().map(NameCandidate::term).toList();
     }
 

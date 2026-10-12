@@ -1,0 +1,94 @@
+{
+  "storySegments" : 29,
+  "nameScan" : [ {
+    "term" : "Corin",
+    "count" : 18,
+    "firstSentence" : "Corin carried the tray to the nurse.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Mara",
+    "count" : 9,
+    "firstSentence" : "Mara came in from the yard with a basket of apples.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Corin" : {
+      "count" : 18,
+      "windows" : [ {
+        "text" : "Corin carried the tray to the nurse. She thanked him and went on folding sheets.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Corin sat on the low stool by the stove. He warmed his hands and watched the kettle.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Corin repaired the shutter by lamplight. He worked without hurry and did not look up.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Corin walked home by the lane. He whistled the old song and lost the tune at the gate.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she", "she" ],
+        "male" : [ "he", "he", "he", "he", "he", "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "his", "his" ]
+      }
+    },
+    "Mara" : {
+      "count" : 9,
+      "windows" : [ {
+        "text" : "Mara came in from the yard with a basket of apples. She set it on the table and counted them twice.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Mara wiped the counter and hummed. She had a way of humming that made the room feel smaller.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Mara laid the table for four. She put the good cups out, though nobody had said why.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Mara, and nobody had a bad word for Mara.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Corin" : {
+      "count" : 18,
+      "examples" : [ "Corin carried the tray to the nurse.", "Corin sat on the low stool by the stove." ]
+    },
+    "Mara" : {
+      "count" : 9,
+      "examples" : [ "Mara came in from the yard with a basket of apples.", "Mara wiped the counter and hummed." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Corin",
+    "mentions" : 18
+  }, {
+    "term" : "Mara",
+    "mentions" : 9
+  } ],
+  "pronouns" : {
+    "Corin" : {
+      "female" : [ "she", "she", "she", "she", "she" ],
+      "male" : [ "he", "he", "he", "he", "he", "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "his", "his" ]
+    },
+    "Mara" : {
+      "female" : [ "she", "she", "she", "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

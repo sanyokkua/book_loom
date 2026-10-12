@@ -17,7 +17,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -340,17 +339,17 @@ class PreScanTest {
         return messages.getLast().content();
     }
 
-    private static List<Segment> ninetyFiveNames() {
+    private static BookSlice ninetyFiveNames() {
         return GlossaryTestSegments.of(IntStream.range(0, 95)
                 .mapToObj(index -> "We met X" + (char) ('a' + index / 26) + (char) ('a' + index % 26) + " today.")
                 .toList());
     }
 
-    private static List<Segment> book(final String... lines) {
+    private static BookSlice book(final String... lines) {
         return GlossaryTestSegments.of(List.of(lines));
     }
 
-    private static List<Segment> book(final List<String> lines) {
+    private static BookSlice book(final List<String> lines) {
         return GlossaryTestSegments.of(lines);
     }
 

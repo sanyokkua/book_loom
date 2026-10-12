@@ -1,0 +1,54 @@
+{
+  "storySegments" : 23,
+  "nameScan" : [ {
+    "term" : "Iolanthe",
+    "count" : 12,
+    "firstSentence" : "Iolanthe unpacked the amplifier on the workbench.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Iolanthe" : {
+      "count" : 12,
+      "windows" : [ {
+        "text" : "Iolanthe unpacked the amplifier on the workbench. She had waited three weeks for the parts.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "The power supply unit came first. Iolanthe checked the fuse and the mains lead before she touched anything else.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Iolanthe switched the amplifier on. She watched the valves glow and waited for the hum to settle.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Iolanthe, and nobody had a bad word for Iolanthe.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Iolanthe" : {
+      "count" : 12,
+      "examples" : [ "Iolanthe unpacked the amplifier on the workbench.", "Iolanthe checked the fuse and the mains lead before she touched anything else." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Iolanthe",
+    "mentions" : 12
+  } ],
+  "pronouns" : {
+    "Iolanthe" : {
+      "female" : [ "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

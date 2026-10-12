@@ -28,12 +28,12 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.NameCandidate;
 import ua.bookloom.pipeline.glossary.TermChoice;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /**
@@ -161,13 +161,14 @@ public final class LexiconServiceImpl implements LexiconService {
 
     private Result<List<LexiconEntry>> runScan(final String projectId) {
         final Document document = openProjects.get(projectId);
-        if (document == null) {
+        final BookIndex index = openProjects.index(projectId);
+        if (document == null || index == null) {
             log.warn("Lexicon scan project={} refused: no book is open", projectId);
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
         }
         final Result<List<LexiconEntry>> proposed = KeyTermScan.newTerms(
-                projectId, FrequencyScan.storyText(document), sourceLanguage(projectId, document), glossary, lexicon);
+                projectId, index, index.story(), sourceLanguage(projectId, document), glossary, lexicon);
         if (proposed.isErr()) {
             return proposed;
         }
@@ -184,7 +185,8 @@ public final class LexiconServiceImpl implements LexiconService {
     private Result<List<LexiconEntry>> runModelScan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         final Document document = openProjects.get(projectId);
-        if (document == null) {
+        final BookIndex index = openProjects.index(projectId);
+        if (document == null || index == null) {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
         }
@@ -192,12 +194,13 @@ public final class LexiconServiceImpl implements LexiconService {
         if (held.isErr()) {
             return Result.err(Objects.requireNonNull(held.error(), "error"));
         }
-        final List<String> candidates = KeyTermScan.frequentWords(
-                        FrequencyScan.storyText(document), sourceLanguage(projectId, document), MAX_CANDIDATES)
-                .stream()
-                .map(NameCandidate::term)
-                .filter(term -> !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
-                .toList();
+        final List<String> candidates =
+                KeyTermScan.frequentWords(index, index.story(), sourceLanguage(projectId, document), MAX_CANDIDATES)
+                        .stream()
+                        .map(NameCandidate::term)
+                        .filter(term ->
+                                !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
+                        .toList();
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
                 .chooseTerms(projectId, candidates, model, progress)

@@ -10,18 +10,17 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorHint;
-import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.PronounGender;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
@@ -75,7 +74,8 @@ public final class PrepStage {
      * @param lexicon the non-null lexicon the recurring terms are proposed into when it is empty
      * @param projectId the non-null id of the project the run translates
      * @param brief the non-null brief as the run starts with it
-     * @param document the non-null opened book, whose body units are scanned
+     * @param document the non-null opened book
+     * @param index the non-null index of that book, whose body segments are scanned
      * @return what preparation settled, or the glossary's error
      */
     public static Result<Prepared> prepare(
@@ -83,20 +83,22 @@ public final class PrepStage {
             final LexiconRepository lexicon,
             final String projectId,
             final BookBrief brief,
-            final Document document) {
+            final Document document,
+            final BookIndex index) {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(lexicon, "lexicon");
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(index, "index");
         try {
             log.debug("Preparing run project={} dial={}", projectId, brief.dial());
             final StyleSheet styleSheet = StyleSheet.from(brief);
             final Result<Prepared> prepared = glossary.all(projectId)
                     .flatMap(held -> scanIfEmpty(
-                            glossary, projectId, document, sourceLanguageOf(brief, document), held, styleSheet))
+                            glossary, projectId, index, sourceLanguageOf(brief, document), held, styleSheet))
                     .flatMap(done -> scanKeyTermsIfEmpty(
-                                    glossary, lexicon, projectId, document, sourceLanguageOf(brief, document))
+                                    glossary, lexicon, projectId, index, sourceLanguageOf(brief, document))
                             .map(terms -> done.withNarratorHint(narratorOf(brief, document))));
             if (prepared.isOk()) {
                 logPrepared(projectId, Objects.requireNonNull(prepared.data(), "prepared"));
@@ -121,7 +123,7 @@ public final class PrepStage {
     private static Result<Prepared> scanIfEmpty(
             final GlossaryRepository glossary,
             final String projectId,
-            final Document document,
+            final BookIndex index,
             @Nullable final String sourceLanguage,
             final List<GlossaryEntry> held,
             final StyleSheet styleSheet) {
@@ -129,14 +131,13 @@ public final class PrepStage {
             log.debug("Name scan skipped project={}: the glossary holds {} entries", projectId, held.size());
             return GivenNames.seedHeld(glossary, projectId, sourceLanguage)
                     .flatMap(seeded -> PronounGender.seedHeld(
-                            glossary, projectId, Tokens.visibleTexts(bodySegments(document)), sourceLanguage))
+                            glossary, projectId, index.visibleTexts(index.story()), sourceLanguage))
                     .map(seeded -> new Prepared(styleSheet, false, 0));
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
-        return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary)
+        return FrequencyScan.newTerms(projectId, index, index.story(), sourceLanguage, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
-                .map(proposals ->
-                        PronounGender.seeded(proposals, Tokens.visibleTexts(bodySegments(document)), sourceLanguage))
+                .map(proposals -> PronounGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added));
     }
@@ -145,14 +146,14 @@ public final class PrepStage {
             final GlossaryRepository glossary,
             final LexiconRepository lexicon,
             final String projectId,
-            final Document document,
+            final BookIndex index,
             @Nullable final String sourceLanguage) {
         return lexicon.all(projectId).flatMap(held -> {
             if (!held.isEmpty()) {
                 log.debug("Key-term scan skipped project={}: the lexicon holds {} terms", projectId, held.size());
                 return Result.ok(0);
             }
-            return KeyTermScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary, lexicon)
+            return KeyTermScan.newTerms(projectId, index, index.story(), sourceLanguage, glossary, lexicon)
                     .flatMap(proposals -> putAll(lexicon, proposals));
         });
     }
@@ -181,10 +182,6 @@ public final class PrepStage {
             log.trace("Proposed name term={}", proposal.term());
         }
         return Result.ok(proposals.size());
-    }
-
-    private static List<Segment> bodySegments(final Document document) {
-        return FrequencyScan.storyText(document);
     }
 
     private static void logPrepared(final String projectId, final Prepared prepared) {

@@ -1,7 +1,8 @@
-package ua.bookloom.pipeline.glossary;
+package ua.bookloom.pipeline.index;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -11,22 +12,23 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.PlaceholderPair;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.text.JunkRules;
 
 /**
- * The segments a name scan reads: the book's running text only. A heading, a title page line or a contents entry
+ * The running text a name scan reads: the book's paragraphs only. A heading, a title page line or a contents entry
  * capitalises every word, so on the fixture book the model scan proposed {@code Gravity Formula}, {@code Six} and
  * {@code Practical Introduction} from chapter titles; a block the book marks as another language is not the source
  * language's names. A real name also occurs in running text, where it is found.
+ *
+ * <p>What counts as foreign depends on the source language the caller names, so the index keeps one view per language
+ * and builds it once, on the first scan that asks.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ScanText {
+final class ScanReads {
 
     /** The kinds of running text; headings, titles, metadata and alt text are not. */
     private static final Set<SegmentKind> RUNNING_TEXT = Set.of(
@@ -47,24 +49,36 @@ final class ScanText {
             Set.of("a", "an", "and", "as", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "with");
 
     /**
-     * The running text of {@code segments}, as masked texts a scan reads: each running-text segment that does not
-     * declare a foreign language, with every inline run that declares one blanked out and every title line dropped.
+     * Reads the running text of every segment of the book once.
      *
-     * @param segments the segments to read; never null
-     * @param sourceLanguage the book's source language tag, or null when unknown — then no text counts as foreign
-     * @return the texts, in order, none blank; never null
+     * @param data what the build left of the book
+     * @param sourceLanguage the book's source language tag, or null when unknown, when no text counts as foreign
+     * @return each running-text segment's scan read by ordinal; a segment that is not running text, declares a foreign
+     *     language or is left blank is absent
      */
-    static List<String> of(final List<Segment> segments, @Nullable final String sourceLanguage) {
-        Objects.requireNonNull(segments, "segments");
+    static Map<Integer, Occurrences.Read> of(final IndexData data, @Nullable final String sourceLanguage) {
         final Optional<String> source = LanguageTags.normalize(sourceLanguage);
-        final List<String> texts = segments.stream()
-                .filter(segment -> RUNNING_TEXT.contains(segment.kind()))
-                .filter(segment -> !isForeign(segment.declaredLanguage(), source))
-                .map(segment -> withoutTitleLines(withoutForeignRuns(segment, source)))
-                .filter(text -> !text.isBlank())
-                .toList();
-        log.debug("Scan text: {} running texts of {} segments", texts.size(), segments.size());
-        return texts;
+        final Map<Integer, Occurrences.Read> reads = new HashMap<>();
+        for (int ordinal = 0; ordinal < data.infos().size(); ordinal++) {
+            if (!RUNNING_TEXT.contains(data.infos().get(ordinal).kind())) {
+                continue;
+            }
+            final SegmentFacts facts = data.facts().get(ordinal);
+            if (isForeign(facts.declaredLanguage(), source)) {
+                continue;
+            }
+            final String text =
+                    withoutTitleLines(withoutForeignRuns(data.texts().get(ordinal), facts, source));
+            if (!text.isBlank()) {
+                reads.put(ordinal, Occurrences.read(text));
+            }
+        }
+        log.debug(
+                "Scan view of language {}: {} running texts of {} segments",
+                source,
+                reads.size(),
+                data.infos().size());
+        return reads;
     }
 
     private static boolean isForeign(@Nullable final String declaredLanguage, final Optional<String> source) {
@@ -73,9 +87,10 @@ final class ScanText {
     }
 
     // A French run inside an English sentence ("La pomme") is not an English name.
-    private static String withoutForeignRuns(final Segment segment, final Optional<String> source) {
-        String text = segment.masked();
-        for (final PlaceholderPair pair : segment.pairs()) {
+    private static String withoutForeignRuns(
+            final String masked, final SegmentFacts facts, final Optional<String> source) {
+        String text = masked;
+        for (final PlaceholderPair pair : facts.pairs()) {
             final int open = text.indexOf(pair.open());
             final int close = open < 0 ? -1 : text.indexOf(pair.close(), open);
             if (close >= 0 && isForeign(pair.language(), source)) {

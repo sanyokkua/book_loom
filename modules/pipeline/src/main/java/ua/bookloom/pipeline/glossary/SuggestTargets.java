@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -64,7 +63,7 @@ public final class SuggestTargets {
      * the name scan's confirmed proposals — so nothing is written here either.
      *
      * @param entries the entries to give a target; never null
-     * @param segments the book's body segments; never null
+     * @param story the book's body segments; never null
      * @param frame the run's language pair and style; never null
      * @param policy the Book Brief's name policy; never null
      * @param calls the seam every model call goes through; never null
@@ -73,11 +72,11 @@ public final class SuggestTargets {
      */
     public Result<List<GlossaryEntry>> suggestOnto(
             final List<GlossaryEntry> entries,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
-        return suggest(entries, segments, frame, policy, calls).map(answered -> {
+        return suggest(entries, story, frame, policy, calls).map(answered -> {
             final Map<String, Suggestion> byId = new HashMap<>();
             answered.forEach(suggestion -> byId.putIfAbsent(suggestion.entry().id(), suggestion));
             log.debug("Suggested targets for {} of {} entries", byId.size(), entries.size());
@@ -93,7 +92,7 @@ public final class SuggestTargets {
      * Suggests a target for each entry.
      *
      * @param entries the open entries, with the type and gender the verdicts gave them; never null
-     * @param segments the book's body segments, where each entry's example sentence is read; never null
+     * @param story the book's body segments, where each entry's example sentence is read; never null
      * @param frame the run's language pair and style; never null
      * @param policy the Book Brief's name policy; never null
      * @param calls the seam every model call goes through; never null
@@ -102,12 +101,12 @@ public final class SuggestTargets {
      */
     Result<List<Suggestion>> suggest(
             final List<GlossaryEntry> entries,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
         Objects.requireNonNull(entries, "entries");
-        Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
@@ -123,7 +122,7 @@ public final class SuggestTargets {
                 kept.size(),
                 asked.size(),
                 batches);
-        final Result<List<Suggestion>> answered = ask(asked, segments, frame, policy, calls);
+        final Result<List<Suggestion>> answered = ask(asked, story, frame, policy, calls);
         if (answered.isErr()) {
             log.warn("Glossary suggestions failed; nothing is suggested");
             return answered;
@@ -147,15 +146,14 @@ public final class SuggestTargets {
 
     private Result<List<Suggestion>> ask(
             final List<GlossaryEntry> asked,
-            final List<Segment> segments,
+            final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
         if (asked.isEmpty()) {
             return Result.ok(List.of());
         }
-        final Map<String, Evidence> evidence = TermEvidence.of(
-                segments, asked.stream().map(GlossaryEntry::term).toList());
+        final Map<String, Evidence> evidence = evidenceOf(story, asked);
         final String system = templates
                 .renderSystem(
                         PromptName.SUGGEST_TARGETS,
@@ -178,6 +176,13 @@ public final class SuggestTargets {
             suggestions.addAll(Objects.requireNonNull(answered.data(), "suggestions"));
         }
         return Result.ok(suggestions);
+    }
+
+    private static Map<String, Evidence> evidenceOf(final BookSlice story, final List<GlossaryEntry> asked) {
+        return TermEvidence.of(
+                story.index(),
+                story.ordinals(),
+                asked.stream().map(GlossaryEntry::term).toList());
     }
 
     private ChatRequest requestFor(

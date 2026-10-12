@@ -10,7 +10,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.document.Segment;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 
 /**
@@ -43,20 +43,21 @@ final class TermEvidence {
     }
 
     /**
-     * Gathers the evidence for the terms.
+     * Gathers the evidence for the terms from the book's index.
      *
-     * @param segments the book's segments; never null
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
      * @param terms the terms as held; never null
      * @return the evidence by term as given; a term the book never uses maps to {@link Evidence#NONE}
      */
-    static Map<String, Evidence> of(final List<Segment> segments, final Collection<String> terms) {
-        Objects.requireNonNull(segments, "segments");
+    static Map<String, Evidence> of(
+            final BookIndex index, final List<Integer> ordinals, final Collection<String> terms) {
+        Objects.requireNonNull(index, "index");
         Objects.requireNonNull(terms, "terms");
         final Map<String, String> termByKey = new HashMap<>();
         terms.forEach(term -> termByKey.put(keyOf(Occurrences.read(term).words()), term));
         final Map<String, Tally> tallies = new HashMap<>();
-        for (final Segment segment : segments) {
-            final Occurrences.Read read = Occurrences.read(segment.masked());
+        for (final Occurrences.Read read : index.reads(ordinals)) {
             final List<Occurrences.Word> words = read.words();
             for (int start = 0; start < words.size(); start++) {
                 countWindows(read, start, termByKey, tallies);
@@ -66,7 +67,7 @@ final class TermEvidence {
         terms.forEach(term ->
                 evidence.put(term, tallies.getOrDefault(term, new Tally()).evidence()));
         log.debug(
-                "Term evidence over {} segments for {} terms, {} seen", segments.size(), terms.size(), tallies.size());
+                "Term evidence over {} segments for {} terms, {} seen", ordinals.size(), terms.size(), tallies.size());
         return evidence;
     }
 

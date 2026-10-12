@@ -16,13 +16,11 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.index.WordCounts;
 import ua.bookloom.util.text.GlossaryKeys;
@@ -30,7 +28,7 @@ import ua.bookloom.util.text.JunkRules;
 
 /**
  * The deterministic name scan: every capitalised word, and every run of two or three, that occurs often enough away
- * from a sentence start in the book's running text ({@link ScanText}) — never in a heading or a title line. It takes whichever segments the caller passes, so one scan serves the whole book before a run
+ * from a sentence start in the book's running text ({@link BookIndex#scanReads}) — never in a heading or a title line. It takes whichever segments the caller passes, so one scan serves the whole book before a run
  * and "the segments decided so far" at the end of each chapter.
  *
  * <p>A word the book also writes in lower case often enough ({@link #LOWER_SHARE_LIMIT}) is a common word, not a
@@ -59,42 +57,23 @@ public final class FrequencyScan {
     static final double ALIAS_STANDALONE_LIMIT = 0.4;
 
     /**
-     * The segments of a book a name scan reads: those of the units the book itself places in its body, not its front
-     * or back matter (title and copyright pages, "also by" lists, acknowledgements) and not the auxiliary unit.
+     * Counts the capitalised words and runs of some of the book's segments, read from the book's index.
      *
-     * @param document the opened book; never null
-     * @return the segments in reading order; never null, empty when the book has no body unit
-     */
-    public static List<Segment> storyText(final Document document) {
-        Objects.requireNonNull(document, "document");
-        final List<Segment> story = document.units().stream()
-                .filter(unit -> !unit.isAuxiliary() && unit.role() == UnitRole.BODY)
-                .flatMap(unit -> unit.segments().stream())
-                .toList();
-        log.debug(
-                "Story text of {}: {} segments of {} units",
-                document.id(),
-                story.size(),
-                document.units().size());
-        return story;
-    }
-
-    /**
-     * Counts the capitalised words and runs of the segments.
-     *
-     * @param segments the segments to read, by their masked text; never null, may be empty
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null, may be empty
      * @param minCount the fewest occurrences a candidate needs; {@code 1} lists every one
      * @param sourceLanguage the BCP 47 tag of the book's language, choosing the stop-word list; null reads English
      * @return the candidates by count descending, then by first occurrence; never null, empty when none qualifies
      */
     public static List<NameCandidate> candidates(
-            final List<Segment> segments, final int minCount, @Nullable final String sourceLanguage) {
-        Objects.requireNonNull(segments, "segments");
+            final BookIndex index,
+            final List<Integer> ordinals,
+            final int minCount,
+            @Nullable final String sourceLanguage) {
+        Objects.requireNonNull(index, "index");
         log.debug(
-                "Name scan over {} segments, minimum count {}, language {}", segments.size(), minCount, sourceLanguage);
-        final List<Occurrences.Read> read = ScanText.of(segments, sourceLanguage).stream()
-                .map(Occurrences::read)
-                .toList();
+                "Name scan over {} segments, minimum count {}, language {}", ordinals.size(), minCount, sourceLanguage);
+        final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
@@ -210,22 +189,25 @@ public final class FrequencyScan {
      * of one name ({@code Hale}, {@code HALE}) share an entry id, so only the highest-ranked one is proposed.
      *
      * @param projectId the project whose glossary is read; never null
-     * @param segments the segments to scan; never null
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to scan, in reading order; never null
      * @param sourceLanguage the BCP 47 tag of the book's language, or null when it is not known
      * @param glossary where the entries and the removal memory are read; nothing is written
      * @return unlocked entries with no target, type other and gender unknown, in candidate order; or the read's error
      */
     public static Result<List<GlossaryEntry>> newTerms(
             final String projectId,
-            final List<Segment> segments,
+            final BookIndex index,
+            final List<Integer> ordinals,
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(ordinals, "ordinals");
         Objects.requireNonNull(glossary, "glossary");
         return glossary.all(projectId)
                 .flatMap(held -> unheldEntries(
-                        projectId, candidates(segments, PROPOSAL_MIN_COUNT, sourceLanguage), glossary, held));
+                        projectId, candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage), glossary, held));
     }
 
     private static Result<List<GlossaryEntry>> unheldEntries(

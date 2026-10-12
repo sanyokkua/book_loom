@@ -111,7 +111,8 @@ class PrepStageTest {
                         project.stores().lexicon(),
                         project.id(),
                         brief("en", "uk"),
-                        Objects.requireNonNull(project.stores().openProjects().get(project.id())))
+                        Objects.requireNonNull(project.stores().openProjects().get(project.id())),
+                        Objects.requireNonNull(project.stores().openProjects().index(project.id())))
                 .data();
 
         assertThat(Objects.requireNonNull(prepared).narratorHint())
@@ -132,7 +133,8 @@ class PrepStageTest {
                         project.stores().lexicon(),
                         project.id(),
                         brief("es", "uk"),
-                        Objects.requireNonNull(project.stores().openProjects().get(project.id())))
+                        Objects.requireNonNull(project.stores().openProjects().get(project.id())),
+                        Objects.requireNonNull(project.stores().openProjects().index(project.id())))
                 .data();
 
         assertThat(Objects.requireNonNull(prepared).narratorHint()).isNull();
