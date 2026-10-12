@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.pipeline.index.Occurrences;
 
 /**
  * How a book uses each of a set of terms, for the model's review: every occurrence in any case, and the first

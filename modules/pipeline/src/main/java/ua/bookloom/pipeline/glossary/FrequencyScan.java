@@ -23,6 +23,8 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.index.Occurrences;
+import ua.bookloom.pipeline.index.WordCounts;
 import ua.bookloom.util.text.GlossaryKeys;
 import ua.bookloom.util.text.JunkRules;
 

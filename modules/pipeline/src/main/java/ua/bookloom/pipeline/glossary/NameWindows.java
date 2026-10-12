@@ -19,6 +19,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.PronounReader.Mention;
 import ua.bookloom.pipeline.glossary.PronounReader.Pronoun;
+import ua.bookloom.pipeline.index.Occurrences;
 
 /**
  * The evidence the glossary review shows the model for each name (15h.A2): a few numbered windows from across the book

@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.index.Occurrences;
 
 /**
  * The bundled list, per language, of the words that are often capitalised but never a name — function words,

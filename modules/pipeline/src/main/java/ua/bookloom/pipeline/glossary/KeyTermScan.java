@@ -24,6 +24,8 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.index.Occurrences;
+import ua.bookloom.pipeline.index.WordCounts;
 
 /**
  * The deterministic scan for recurring common terms and titles — {@code master}, {@code imp}, {@code Mr} — that a model

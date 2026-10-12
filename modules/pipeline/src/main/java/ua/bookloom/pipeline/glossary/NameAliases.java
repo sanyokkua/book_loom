@@ -9,6 +9,7 @@ import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.prompt.PluralSuffixes;
 
 /**

@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.text.JunkRules;
 

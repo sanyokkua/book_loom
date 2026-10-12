@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.glossary;
+package ua.bookloom.pipeline.index;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,10 +23,10 @@ import ua.bookloom.pipeline.Tokens;
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class Occurrences {
+public final class Occurrences {
 
     /** English titles whose full stop does not end a sentence; a title is never a name itself. */
-    static final Set<String> HONORIFICS = Set.of("Mr", "Mrs", "Ms", "Dr", "St", "Prof");
+    private static final Set<String> HONORIFICS = Set.of("Mr", "Mrs", "Ms", "Dr", "St", "Prof");
 
     private static final int MAX_RUN_WORDS = 3;
     private static final String LETTERS = "[\\p{L}\\p{M}\\p{N}]+";
@@ -42,7 +42,7 @@ final class Occurrences {
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     /** One run found: the term and the sentence that holds this occurrence. */
-    record Occurrence(String term, String sentence) {}
+    public record Occurrence(String term, String sentence) {}
 
     /**
      * One word of a segment.
@@ -55,11 +55,11 @@ final class Occurrences {
      * @param initial whether it starts a sentence
      * @param sentence the index of its sentence
      */
-    record Word(
+    public record Word(
             String text, int start, int end, boolean possessive, boolean capitalised, boolean initial, int sentence) {
 
         /** The key a word's counts are kept under. */
-        String key() {
+        public String key() {
             return keyOf(text);
         }
     }
@@ -71,7 +71,7 @@ final class Occurrences {
      * @param words its words in order
      * @param sentences its sentences, whitespace collapsed, by index
      */
-    record Read(String text, List<Word> words, List<String> sentences) {}
+    public record Read(String text, List<Word> words, List<String> sentences) {}
 
     /**
      * The key a word is counted and looked up under: lower case, with every apostrophe read as {@code '}.
@@ -79,11 +79,17 @@ final class Occurrences {
      * @param word the word as written; never null
      * @return the key
      */
-    static String keyOf(final String word) {
+    public static String keyOf(final String word) {
         return APOSTROPHES.matcher(word.toLowerCase(Locale.ROOT)).replaceAll("'");
     }
 
-    static Read read(final String masked) {
+    /**
+     * Reads a segment's masked text into its words and sentences.
+     *
+     * @param masked the segment's masked text; never null
+     * @return the read; never null
+     */
+    public static Read read(final String masked) {
         final String text = Tokens.replace(masked, " ");
         final List<Integer> sentenceStarts = new ArrayList<>();
         final List<Word> words = words(text, sentenceStarts);
@@ -98,7 +104,7 @@ final class Occurrences {
      * @param nameLike whether a word may be (part of) a name
      * @return the runs in order; never null
      */
-    static List<Occurrence> runs(final Read read, final Predicate<Word> nameLike) {
+    public static List<Occurrence> runs(final Read read, final Predicate<Word> nameLike) {
         final List<Word> words = read.words();
         final List<Occurrence> found = new ArrayList<>();
         int index = 0;
@@ -116,6 +122,36 @@ final class Occurrences {
             index = runEnd;
         }
         return found;
+    }
+
+    /**
+     * Whether the word at {@code index} is a capital away from a sentence start and not beside another capitalised
+     * word, which would make it a part of a name ({@code Great Hall}, {@code Old Bailey}) and say nothing about the
+     * common word it also is.
+     *
+     * @param read the segment the word belongs to; never null
+     * @param index the word's position in {@code read.words()}
+     * @return {@code true} if the word stands alone, {@code false} otherwise
+     */
+    public static boolean isStandalone(final Read read, final int index) {
+        final Word word = read.words().get(index);
+        return word.capitalised() && !word.initial() && !hasCapitalNeighbour(read, index);
+    }
+
+    private static boolean hasCapitalNeighbour(final Read read, final int index) {
+        final List<Word> words = read.words();
+        final Word word = words.get(index);
+        final boolean before = index > 0
+                && words.get(index - 1).capitalised()
+                && read.text()
+                        .substring(words.get(index - 1).end(), word.start())
+                        .isBlank();
+        final boolean after = index + 1 < words.size()
+                && words.get(index + 1).capitalised()
+                && read.text()
+                        .substring(word.end(), words.get(index + 1).start())
+                        .isBlank();
+        return before || after;
     }
 
     private static List<Word> words(final String text, final List<Integer> sentenceStarts) {

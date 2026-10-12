@@ -37,6 +37,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.util.hash.HashUtil;
 import ua.bookloom.util.lang.LanguageTags;
@@ -207,10 +208,21 @@ public final class ProjectServiceImpl implements ProjectService {
                 document.units().size(),
                 segmentCount,
                 id);
+        buildIndex(id);
         final NarratorHint hint = NarratorDetector.detect(
                         document, brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage())
                 .orElse(null);
         return new ImportedBook(id, inspection, profile, brief, hint);
+    }
+
+    private void buildIndex(final String projectId) {
+        final BookIndex index = Objects.requireNonNull(openProjects.index(projectId), "index");
+        log.info(
+                "book index built project={} segments={} words={} millis={}",
+                projectId,
+                index.size(),
+                index.distinctWords(),
+                index.buildMillis());
     }
 
     private static @Nullable String preselectSource(final LanguageEvidence evidence) {
