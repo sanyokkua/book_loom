@@ -4,6 +4,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -34,6 +35,9 @@ final class PassChecks {
     static final String CHECKS = "checks";
     static final String WORSE = "worse";
 
+    private static final Set<String> MENDABLE =
+            Set.of(CheckName.SCRIPT_PURITY.raisedBy(), CheckName.ALPHABET.raisedBy());
+
     /** The checks whose failure says the old text is still in the source language. */
     private static final Set<CheckName> UNTRANSLATED =
             EnumSet.of(CheckName.ECHO, CheckName.SCRIPT, CheckName.LANGUAGE_IDENTITY);
@@ -59,16 +63,18 @@ final class PassChecks {
         final QaResult fresh = evaluate(inputs, segment, candidate, after);
         final QaResult old = evaluate(inputs, segment, before, before);
         final boolean untranslated = isUntranslated(old);
+        final RevisionGuards.Mode guardMode = isMended(mode, old, fresh) ? RevisionGuards.Mode.MENDED : mode;
         final Optional<String> refusal = AcceptanceRule.accepts(fresh, 0)
-                ? guards(segment, before, after, mode, untranslated)
+                ? guards(segment, before, after, guardMode, untranslated)
                         .or(() -> RoundProgress.isWorse(fresh, old) ? Optional.of(WORSE) : Optional.empty())
                         .or(() -> newDoubt(inputs, segment, before, after))
                 : Optional.of(CHECKS);
         log.debug(
-                "Pass checks segmentId={} mode={} oldUntranslated={} hardGatesPass={} failedOutright={} findings={}"
+                "Pass checks segmentId={} mode={} guardMode={} oldUntranslated={} hardGatesPass={} failedOutright={} findings={}"
                         + " refusal={}",
                 segment.id(),
                 mode,
+                guardMode,
                 untranslated,
                 fresh.hardGatesPass(),
                 fresh.failedOutright(),
@@ -117,6 +123,26 @@ final class PassChecks {
         return untranslated
                 ? RevisionGuards.violationOfSource(segment.masked(), after)
                 : RevisionGuards.violation(before, after, mode);
+    }
+
+    // A new draft of a doubted text that no longer has the broken word the old one had (a letter of another alphabet)
+    // is
+    // worth one lost dash or quote mark: refusing it keeps the broken word in the book.
+    private static boolean isMended(final RevisionGuards.Mode mode, final QaResult old, final QaResult fresh) {
+        if (mode != RevisionGuards.Mode.NO_LOSS) {
+            return false;
+        }
+        final Set<String> remaining = scriptFindings(fresh);
+        final boolean mended = !scriptFindings(old).stream().allMatch(remaining::contains);
+        log.debug("Pass mended={} oldScriptFindings={} newScriptFindings={}", mended, scriptFindings(old), remaining);
+        return mended;
+    }
+
+    private static Set<String> scriptFindings(final QaResult qa) {
+        return qa.findings().stream()
+                .map(QaFinding::raisedBy)
+                .filter(kind -> MENDABLE.contains(kind))
+                .collect(Collectors.toSet());
     }
 
     private static boolean isUntranslated(final QaResult old) {

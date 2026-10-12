@@ -34,7 +34,7 @@ class QualityLoopReplyRetryTest {
         final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("a.md"), "He opened the old door.");
         final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"target\":\"\\u001eВін відчинив старі двері.\"}"))
+                .answer(readable("{\"target\":\"Він відчинив\\u001e старі двері.\"}"))
                 .answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,

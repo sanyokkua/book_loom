@@ -13,6 +13,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.reviewer.EditApplier;
 import ua.bookloom.pipeline.reviewer.EditOutcome;
@@ -184,7 +185,7 @@ final class ReviewResolver {
         if (result instanceof RoundOutcome.StepError stepError) {
             return Result.err(stepError.error());
         }
-        if (result instanceof RoundOutcome.Evaluated fixed && notWorse(fixed, baseline)) {
+        if (result instanceof RoundOutcome.Evaluated fixed && isTakeable(fixed, edited, baseline, outcome)) {
             final List<EditOutcome.FailedEdit> remaining = stillQuoted(fixed, refused);
             if (remaining.size() < refused.size()) {
                 return Result.ok(adopted(outcome, fixed, findings, remaining));
@@ -238,6 +239,32 @@ final class ReviewResolver {
     // Hard gates hold and no blocker is new: a fix that trades one defect for another is never taken.
     private static boolean notWorse(final RoundOutcome.Evaluated fixed, final Set<String> baseline) {
         return fixed.qa().hardGatesPass() && baseline.containsAll(Blockers.of(fixed.qa()));
+    }
+
+    private static boolean isTakeable(
+            final RoundOutcome.Evaluated fixed,
+            final Edited edited,
+            final Set<String> baseline,
+            final DraftOutcome.Drafted outcome) {
+        return notWorse(fixed, baseline)
+                && !bringsLetters(fixed, edited.qa(), outcome.segment().id());
+    }
+
+    // The alphabet check only notes a word, so it is no blocker; a fix that mends the reviewer's quote by writing a
+    // letter
+    // the target language does not have would still swap one defect for another.
+    private static boolean bringsLetters(
+            final RoundOutcome.Evaluated fixed, final QaResult edited, final String segmentId) {
+        final long before = alphabetFindings(edited);
+        final long after = alphabetFindings(fixed.qa());
+        log.debug("Directed fix alphabet findings segment={} before={} after={}", segmentId, before, after);
+        return after > before;
+    }
+
+    private static long alphabetFindings(final QaResult qa) {
+        return qa.findings().stream()
+                .filter(finding -> finding.raisedBy().equals(CheckName.ALPHABET.raisedBy()))
+                .count();
     }
 
     private static List<EditOutcome.FailedEdit> stillQuoted(

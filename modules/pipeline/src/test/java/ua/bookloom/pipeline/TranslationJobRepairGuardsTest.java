@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
@@ -18,6 +19,8 @@ import java.util.Objects;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
@@ -41,7 +44,6 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 class TranslationJobRepairGuardsTest {
 
     private static final String T1 = "15i.T1";
-    private static final String T2 = "15i.T2";
 
     private static final String RUSSIAN_LETTER = "Я відчинив стары двері.";
     private static final String RIGHT = "Я відчинив старі двері.";
@@ -70,28 +72,69 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        KnownRed.until(T2, "fix-leading-quote-code", () -> {
-            assertThat(stored(project, "Book.txt:0"))
-                    .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                    .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
-        });
+        assertThat(stored(project, "Book.txt:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
     }
 
-    // IF the fix wrapped the words in tokens the segment never had, THEN the repair path would strip them and adopt a
-    // text the model never wrote as the fix.
+    // IF a fix reply that cannot be read flagged the segment or dropped its text, THEN one bad reply to a note-level
+    // fix would turn a book's accepted paragraph into work for the person.
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(
+            strings = {
+                "not a json reply at all",
+                "{\"target\":",
+                "{\"target\":\"Я відчинив\\u0001 старі двері.\"}",
+                "{\"other\":\"Я відчинив старі двері.\"}"
+            })
+    void run_fixReplyIsMalformed_leavesTheAcceptedDraftAcceptedAndUnchanged(final String malformed) {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(answer(targetReply(RUSSIAN_LETTER)))
+                .answerTimes(2, answer(malformed));
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+
+        report(job(project, model).run());
+
+        assertThat(stored(project, "Book.txt:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, RUSSIAN_LETTER);
+        assertThat(stored(project, "Book.txt:0").findings())
+                .extracting(QaFinding::severity)
+                .doesNotContain(Severity.HIGH);
+    }
+
+    // IF a fix that still holds a Russian letter (a different one) were adopted, THEN the repair would only move the
+    // defect; the alphabet check reads the fix too.
     @Test
-    void run_fixWrapsWordsInTokensTheSegmentLacks_keepsTheAcceptedDraft() {
+    void run_fixStillHoldsARussianLetter_keepsTheAcceptedDraft() {
+        final ScriptedChatModel model = replies(RUSSIAN_LETTER, "Я відчинив стыри двері.");
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+
+        report(job(project, model).run());
+
+        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(stored(project, "Book.txt:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, RUSSIAN_LETTER);
+    }
+
+    // A fix that wraps words in tokens the segment never had is not refused: the designed document-gate path puts the
+    // tokens aside, the good fix is adopted, and a low note says the markup was restored without a model.
+    @Test
+    void run_fixWrapsWordsInTokensTheSegmentLacks_adoptsTheTextWithTheTokensRemovedAndALowNote() {
         final ScriptedChatModel model = replies(RUSSIAN_LETTER, WITH_INVENTED_TOKENS);
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
 
         report(job(project, model).run());
 
-        KnownRed.until(T2, "fix-invents-tokens", () -> {
-            assertThat(formats(model)).containsExactly(DRAFT, FIX);
-            assertThat(stored(project, "Book.txt:0"))
-                    .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                    .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, RUSSIAN_LETTER);
-        });
+        final SegmentRecord stored = stored(project, "Book.txt:0");
+        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(stored)
+                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
+        assertThat(stored.findings())
+                .extracting(QaFinding::severity, QaFinding::raisedBy)
+                .contains(tuple(Severity.LOW, "placeholder"));
     }
 
     // IF a gender a scan only suggested were enforced, THEN a wrong guess about one main character would be

@@ -19,7 +19,6 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.pipeline.KnownRed;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -27,12 +26,10 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * What a directed fix may hand back (15i.T2): a reply with a stray quote code at its start or end is read, and a fix
- * that mends one finding by bringing a Russian letter is not taken over the draft. The cases still wrong today sit in
- * {@link KnownRed#until}; the paired cases without it hold before and after.
+ * that mends one finding by bringing a Russian letter is not taken over the draft.
  */
 class RepairReplyGuardsTest {
 
-    private static final String T2 = "15i.T2";
     private static final String QUOTE_FREE_SOURCE = "He opened the old door.";
     private static final String PLAIN_SOURCE = "Він відчинив старі двері.";
     private static final DirectedFix FIX =
@@ -65,15 +62,36 @@ class RepairReplyGuardsTest {
             strings = {
                 "{\"target\":\"\\u001eВін відчинив старі двері.\"}",
                 "{\"target\":\"Він відчинив старі двері.\\u001d\"}",
-                "{\"target\":\"\\u001f Він відчинив старі двері.\"}"
+                "{\"target\":\"\\u001f Він відчинив старі двері.\"}",
+                "{\"target\":\"\\u0001Він відчинив старі двері.\"}",
+                "{\"target\":\"Він відчинив старі двері.\\u0007\"}"
             })
     void fix_replyWithAStrayControlCodeAtAnEndOfAQuoteFreeText_returnsTheTextWithoutIt(final String reply) {
         final Result<RepairReply> result = fix(reply);
 
-        KnownRed.until(
-                T2,
-                "fix-stray-code-" + reply.hashCode(),
-                () -> assertThat(result.data()).isEqualTo(new RepairReply.Rewritten(PLAIN_SOURCE)));
+        assertThat(result.data()).isEqualTo(new RepairReply.Rewritten(PLAIN_SOURCE));
+    }
+
+    // Codes at BOTH ends of a text whose source has no quote mark are read too (they already are today).
+    @ParameterizedTest(name = "[{index}] {0}")
+    @ValueSource(
+            strings = {
+                "{\"target\":\"\\u001eВін відчинив старі двері.\\u001d\"}",
+                "{\"target\":\"\\u0001Він відчинив старі двері.\\u0007\"}"
+            })
+    void fix_codesAtBothEndsOfAQuoteFreeText_returnsTheTextWithoutThem(final String reply) {
+        final Result<RepairReply> result = fix(reply);
+
+        assertThat(result.data()).isEqualTo(new RepairReply.Rewritten(PLAIN_SOURCE));
+    }
+
+    // A code inside the text is not at an edge: it may only be mapped to a mark, and where it cannot be the reply stays
+    // malformed, so stripping the edges never hides a damaged middle.
+    @Test
+    void fix_replyWithAControlCodeInsideTheText_isStillMalformed() {
+        final Result<RepairReply> result = fix("{\"target\":\"Він відчинив\\u0001 старі двері.\"}");
+
+        assertThat(result.data()).isInstanceOf(RepairReply.Malformed.class);
     }
 
     // The reply the codes were meant to be, with a pair around a quote the source has, still maps to « ».
@@ -104,10 +122,8 @@ class RepairReplyGuardsTest {
 
         final SegmentOutcome decided = decide(model);
 
-        KnownRed.until(T2, "reviewer-fix-russian-letter", () -> {
-            assertThat(decided.machineTarget()).isEqualTo(DRAFT);
-            assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        });
+        assertThat(decided.machineTarget()).isEqualTo(DRAFT);
+        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
     }
 
     private static String reviewReply() {

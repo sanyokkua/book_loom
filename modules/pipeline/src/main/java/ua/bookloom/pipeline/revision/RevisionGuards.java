@@ -50,8 +50,16 @@ public final class RevisionGuards {
          * A new draft of a doubted text: a count may grow, since the old text may have lost a sentence or its quote
          * marks, but never shrink.
          */
-        NO_LOSS
+        NO_LOSS,
+        /**
+         * A new draft that removed a script or alphabet finding the doubted text had: {@link #NO_LOSS}, except that it
+         * may have lost one quote mark or one dialogue dash in all, the price a model pays for rewriting a word it
+         * had broken. {@link PassChecks} picks it, since only it knows what the redraft mended.
+         */
+        MENDED
     }
+
+    private static final int MENDED_MARK_ALLOWANCE = 1;
 
     /**
      * Whether the new text keeps what the old one had.
@@ -69,7 +77,8 @@ public final class RevisionGuards {
      *
      * @param before the old text, masked
      * @param after the new text, masked
-     * @param mode how the counts are compared
+     * @param mode how the counts are compared; {@link Mode#MENDED} only when the caller knows the new text removed a
+     *     script or alphabet finding
      * @return the broken rule's name ({@code quotes}, {@code dashes}, {@code sentences}, {@code words} or
      *     {@code latin-run}), or empty when the new text keeps every one
      */
@@ -144,10 +153,12 @@ public final class RevisionGuards {
     private static Optional<String> violationOf(final String before, final String after, final Mode mode) {
         final String old = DisplayText.of(before);
         final String fresh = DisplayText.of(after);
+        final long quotesLost = lost(count(old, QUOTE_MARKS), count(fresh, QUOTE_MARKS));
+        final long dashesLost = lost(count(old, DASHES), count(fresh, DASHES));
         final Optional<String> broken = Stream.of(
-                        broken(QUOTES, count(old, QUOTE_MARKS), count(fresh, QUOTE_MARKS), mode),
-                        broken(DASH_RULE, count(old, DASHES), count(fresh, DASHES), mode),
-                        broken(SENTENCES, Sentences.countLenient(old), Sentences.countLenient(fresh), mode),
+                        broken(QUOTES, count(old, QUOTE_MARKS), count(fresh, QUOTE_MARKS), mode, dashesLost),
+                        broken(DASH_RULE, count(old, DASHES), count(fresh, DASHES), mode, quotesLost),
+                        broken(SENTENCES, Sentences.countLenient(old), Sentences.countLenient(fresh), mode, 0),
                         losesWords(old, fresh) ? WORDS : null,
                         bringsLatinRun(old, fresh) ? LATIN : null)
                 .filter(Objects::nonNull)
@@ -181,9 +192,14 @@ public final class RevisionGuards {
         final String origin = DisplayText.of(source);
         final String fresh = DisplayText.of(after);
         final Optional<String> broken = Stream.of(
-                        broken(QUOTES, count(origin, QUOTE_MARKS), count(fresh, QUOTE_MARKS), Mode.NO_LOSS),
-                        broken(DASH_RULE, count(origin, DASHES), count(fresh, DASHES), Mode.NO_LOSS),
-                        broken(SENTENCES, Sentences.countLenient(origin), Sentences.countLenient(fresh), Mode.NO_LOSS))
+                        broken(QUOTES, count(origin, QUOTE_MARKS), count(fresh, QUOTE_MARKS), Mode.NO_LOSS, 0),
+                        broken(DASH_RULE, count(origin, DASHES), count(fresh, DASHES), Mode.NO_LOSS, 0),
+                        broken(
+                                SENTENCES,
+                                Sentences.countLenient(origin),
+                                Sentences.countLenient(fresh),
+                                Mode.NO_LOSS,
+                                0))
                 .filter(Objects::nonNull)
                 .findFirst();
         log.debug(
@@ -198,9 +214,20 @@ public final class RevisionGuards {
         return broken;
     }
 
-    private static @Nullable String broken(final String rule, final long old, final long fresh, final Mode mode) {
-        final boolean kept = mode == Mode.SAME_COUNTS ? old == fresh : fresh >= old;
+    // The marks the other mark rule already lost count against the one-mark allowance of a mended redraft.
+    private static @Nullable String broken(
+            final String rule, final long old, final long fresh, final Mode mode, final long otherLost) {
+        final boolean kept =
+                switch (mode) {
+                    case SAME_COUNTS -> old == fresh;
+                    case NO_LOSS -> fresh >= old;
+                    case MENDED -> fresh + Math.max(0, MENDED_MARK_ALLOWANCE - otherLost) >= old;
+                };
         return kept ? null : rule;
+    }
+
+    private static long lost(final long old, final long fresh) {
+        return Math.max(0, old - fresh);
     }
 
     private static int wordCount(final String text) {

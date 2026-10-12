@@ -53,11 +53,23 @@ class ConsistencyPassControlCodesTest {
     // IF the refusal still said "unreadable", THEN the cause of eight wasted calls stayed hidden.
     @Test
     void run_replyWithAnUnpairableCode_isRefusedNamingTheControlCodes() {
-        book.model().answerTo(CONSISTENCY, reply("\\u001eСем зустрів Гейла."));
+        book.model().answerTo(CONSISTENCY, reply("Сем\\u001e зустрів Гейла."));
 
         final ConsistencyReport report = ok(book.run(true));
 
         assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(BEFORE);
         assertThat(report.checks().refused()).containsExactly(entry("control_chars", 1));
+    }
+
+    // A code at the start that the mapper cannot place is dropped, and what is left is held to the quote rule as any
+    // reply is: here the closing quote mark is gone, so the old text stays.
+    @Test
+    void run_replyWithAStrayCodeAtTheStartAndNoQuotes_isReadAndRefusedForTheQuotes() {
+        book.model().answerTo(CONSISTENCY, reply("\\u001eСем зустрів Гейла."));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(BEFORE);
+        assertThat(report.checks().refused()).containsExactly(entry("quotes", 1));
     }
 }

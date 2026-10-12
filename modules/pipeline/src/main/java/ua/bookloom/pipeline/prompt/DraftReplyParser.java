@@ -24,6 +24,7 @@ public final class DraftReplyParser {
     public static final String CONTROL_CHARACTERS_DIAGNOSTIC =
             "held control characters; write quote marks and dashes as « » “ ” — themselves";
 
+    private static final String MARKS = "\"“”„«»—–";
     private static final Pattern TRAILING_CLOSERS = Pattern.compile("[\\s\\]}\"]*");
     private final ObjectMapper mapper;
 
@@ -55,20 +56,46 @@ public final class DraftReplyParser {
      * @return the parsed target, or the diagnostic of a reply outside the contract
      */
     public ParsedReply parse(final String replyText, final String source, @Nullable final String targetLanguage) {
+        return parse(replyText, source, targetLanguage, false);
+    }
+
+    /**
+     * Parses a repair reply: as {@link #parse(String, String, String)}, except that a control code the mapper cannot
+     * place at the start or end of the text is dropped instead of making the whole reply malformed. A code inside the
+     * text still has to be mapped to a mark, so a damaged middle is never hidden.
+     *
+     * @param replyText the model's whole reply
+     * @param source the masked source text the reply translates
+     * @param targetLanguage the BCP 47 tag whose quote convention mapped marks take; null for the guillemets
+     * @return the parsed target, or the diagnostic of a reply outside the contract
+     */
+    public ParsedReply parseRepair(final String replyText, final String source, @Nullable final String targetLanguage) {
+        return parse(replyText, source, targetLanguage, true);
+    }
+
+    private ParsedReply parse(
+            final String replyText,
+            final String source,
+            @Nullable final String targetLanguage,
+            final boolean dropEdgeCodes) {
         Objects.requireNonNull(replyText, "replyText");
         Objects.requireNonNull(source, "source");
-        log.debug("Parsing draft reply replyLength={} targetLanguage={}", replyText.length(), targetLanguage);
+        log.debug(
+                "Parsing draft reply replyLength={} targetLanguage={} dropEdgeCodes={}",
+                replyText.length(),
+                targetLanguage,
+                dropEdgeCodes);
         try {
             final JsonNode root = mapper.reader()
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .readTree(replyText);
             return logged(
                     validTarget(root)
-                            ? read(root.path("target").textValue(), source, targetLanguage)
+                            ? read(root.path("target").textValue(), source, targetLanguage, dropEdgeCodes)
                             : invalid(INVALID_OBJECT));
         } catch (JsonProcessingException ignored) {
             return withoutTrailingClosers(replyText)
-                    .map(object -> parse(object, source, targetLanguage))
+                    .map(object -> parse(object, source, targetLanguage, dropEdgeCodes))
                     .orElseGet(() -> logged(invalid("was not valid JSON")));
         }
     }
@@ -87,13 +114,30 @@ public final class DraftReplyParser {
         return Optional.of(replyText.substring(0, end.getAsInt()));
     }
 
-    private static ParsedReply read(final String target, final String source, @Nullable final String targetLanguage) {
-        if (!ControlCharacters.addsControl(source, target)) {
-            return structured(target);
-        }
-        return ControlCharacterMapper.map(source, target, targetLanguage)
+    // A repair reply may not bring a quote mark or a dash the source lacks, so a code at the edge of a text whose
+    // source
+    // holds none is a stray and goes first; otherwise the mapper reads it, and only what it cannot place at an edge
+    // goes.
+    private static ParsedReply read(
+            final String target,
+            final String source,
+            @Nullable final String targetLanguage,
+            final boolean dropEdgeCodes) {
+        final boolean strayFirst = dropEdgeCodes && source.chars().noneMatch(c -> MARKS.indexOf(c) >= 0);
+        final String text = strayFirst ? withoutEdgeCodes(target) : target;
+        log.debug("Control codes at the edges dropEdgeCodes={} strayFirst={}", dropEdgeCodes, strayFirst);
+        return mapped(text, source, targetLanguage)
+                .or(() -> dropEdgeCodes ? mapped(withoutEdgeCodes(text), source, targetLanguage) : Optional.empty())
+                .filter(read -> !read.isBlank())
                 .map(DraftReplyParser::structured)
                 .orElseGet(() -> invalid(CONTROL_CHARACTERS_DIAGNOSTIC));
+    }
+
+    private static Optional<String> mapped(
+            final String text, final String source, @Nullable final String targetLanguage) {
+        return ControlCharacters.addsControl(source, text)
+                ? ControlCharacterMapper.map(source, text, targetLanguage)
+                : Optional.of(text);
     }
 
     private static boolean validTarget(final JsonNode root) {
@@ -102,6 +146,19 @@ public final class DraftReplyParser {
                 && root.size() == 1
                 && root.path("target").isTextual()
                 && !root.path("target").textValue().isBlank();
+    }
+
+    private static String withoutEdgeCodes(final String raw) {
+        final String text = ControlCharacters.stripSpacing(raw);
+        int start = 0;
+        int end = text.length();
+        while (start < end && ControlCharacters.isControl(text.charAt(start))) {
+            start++;
+        }
+        while (end > start && ControlCharacters.isControl(text.charAt(end - 1))) {
+            end--;
+        }
+        return ControlCharacters.stripSpacing(text.substring(start, end));
     }
 
     private static ParsedReply structured(final String translation) {

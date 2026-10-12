@@ -51,7 +51,7 @@ public final class RepairReplies {
         if (response.finishReason() != FinishReason.STOP) {
             return Result.ok(new RepairReply.FlagNow(invalidFinish()));
         }
-        final ParsedReply parsed = parser.parse(response.content(), source, targetLanguage);
+        final ParsedReply parsed = parser.parseRepair(response.content(), source, targetLanguage);
         return parsed.kind() == ReplyKind.INVALID_STRUCTURED
                 ? Result.ok(new RepairReply.Malformed(parsed.diagnostic()))
                 : Result.ok(new RepairReply.Rewritten(parsed.translation().strip()));
