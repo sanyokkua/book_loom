@@ -28,7 +28,7 @@
     "targetLanguage": "uk",
     "brief": {
       "genre": "adventure",
-      "genreClass": ["adventure", "literary", "fiction", "drama", "travel", "fantasy"],
+      "genreClass": ["adventure", "drama", "travel", "fantasy"],
       "register": "NEUTRAL",
       "narrator": "THIRD",
       "narratorGender": "UNKNOWN"

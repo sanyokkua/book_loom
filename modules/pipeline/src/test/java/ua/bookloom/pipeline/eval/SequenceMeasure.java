@@ -46,6 +46,8 @@ final class SequenceMeasure {
     private static final String WORD_END = ")(?![\\p{L}\\p{M}])";
     private static final String GENDER_CHECK = "uk";
     private static final int MIN_ECHO_LETTERS = 3;
+    /** The ratio of a run that has nothing to be consistent about; the report prints it as n/a. */
+    static final double NO_RATIO = -1;
 
     private final SequenceFixture fixture;
 
@@ -219,6 +221,7 @@ final class SequenceMeasure {
 
     // DelTA's LTCR-1: of the later occurrences of a term or name that carry any listed form, the share that carry the
     // form its first such occurrence carried (the first listed one when it carried several), pooled over the fixture.
+    // -1 (reported as n/a) when no term has a later occurrence, because a run that repeated nothing was not consistent.
     private double ltcr1(final List<Decided> segments) {
         int later = 0;
         int kept = 0;
@@ -239,7 +242,7 @@ final class SequenceMeasure {
             later += tally.later();
             kept += tally.kept();
         }
-        return later == 0 ? 0 : (double) kept / later;
+        return later == 0 ? NO_RATIO : (double) kept / later;
     }
 
     /** The later occurrences of one term or name, and how many of them carry the form its first occurrence had. */

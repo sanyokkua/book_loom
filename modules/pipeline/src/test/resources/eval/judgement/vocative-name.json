@@ -28,7 +28,7 @@
     "targetLanguage": "uk",
     "brief": {
       "genre": "rural drama",
-      "genreClass": ["rural", "pastoral", "drama", "literary", "fiction"],
+      "genreClass": ["rural", "pastoral", "drama"],
       "register": "NEUTRAL",
       "narrator": "THIRD",
       "narratorGender": "UNKNOWN"

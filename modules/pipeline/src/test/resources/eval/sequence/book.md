@@ -21,17 +21,17 @@ Whitlock whispered, "Ms Ashdown never forgets a name, so be careful which one yo
 
 The fire had burned low, and Edwin added a log without being asked. Ms Ashdown read the report standing up, which was her habit when she meant to disagree. The imp watched the oak door for a long time before it understood what it was watching. The fire had burned low, and Zerubin added a log without being asked. It takes a magician years to learn that fear is only another tool. He said sir the way other people say please, with a little too much weight. Edwin muttered *Ad infinitum* under his breath, and then looked embarrassed at having said it aloud.[1]
 
-“The pentacle was perfect when I drew it, I swear,” Ms Pennyfeather muttered.
+“The pentacle was perfect when I drew it, I swear,” Ms Pellingham muttered.
 
 The mouldering corridor smelled of wax and wet wool. The circle hummed faintly, like a struck glass left to ring. Until 4:30, the house had kept its secrets well, and then it had stopped. Mr Quill stood at the window, turning the leather satchel over in his fingers, and said nothing for a long while. In the restless dark, the boy could hear his own heart quite clearly.
 
-He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. A new master was expected at Pennyfeather Lane by the autumn of 1887, and the whole house had been scrubbed for him. The sooty corridor smelled of wax and wet wool. Mrs Harrowgate poured the tea herself, because she trusted no servant with the candle on the tray.
+He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. A new master was expected at Pellingham Lane by the autumn of 1887, and the whole house had been scrubbed for him. The sooty corridor smelled of wax and wet wool. Mrs Harrowgate poured the tea herself, because she trusted no servant with the candle on the tray.
 
-Somewhere in the walls, the old pipes ticked and settled as the night cooled. An imp is not a servant, whatever the books say; it is a prisoner who has learned manners. Ms Pennyfeather tapped the tin cup twice with a pencil, as though it might confess. "A magician without his books is only a man with a good memory," the imp answered. Mr Pellbury stood at the window, turning the ledger over in his fingers, and said nothing for a long while. Every servant knew that the master disliked a slow corridor, and kept it swept. “You are late, boy, and the candles are almost gone,” Whitlock replied.
+Somewhere in the walls, the old pipes ticked and settled as the night cooled. An imp is not a servant, whatever the books say; it is a prisoner who has learned manners. Ms Pellingham tapped the tin cup twice with a pencil, as though it might confess. "A magician without his books is only a man with a good memory," the imp answered. Mr Pellbury stood at the window, turning the ledger over in his fingers, and said nothing for a long while. Every servant knew that the master disliked a slow corridor, and kept it swept. “You are late, boy, and the candles are almost gone,” Whitlock replied.
 
 Whitlock answered, "Tell Mrs Pellbury that supper will be late, and that I am sorry for it."
 
-The clock in Pennyfeather Lane had been wrong for years, and nobody minded. The imp traced the edge of the lantern with a finger of smoke, and the edge hissed. Since March 14th, the whole street had smelled of smoke, and nobody had ever explained why. The narrow lantern lay where it had been left, and nobody dared to move it.
+The clock in Pellingham Lane had been wrong for years, and nobody minded. The imp traced the edge of the lantern with a finger of smoke, and the edge hissed. Since March 14th, the whole street had smelled of smoke, and nobody had ever explained why. The narrow lantern lay where it had been left, and nobody dared to move it.
 
 And, a split second later, the explosion.
 
@@ -43,7 +43,7 @@ And then, silence again, deeper than before.
 
 "Where did Mr Quill put the cracked mirror? It was here before 4:30," Zerubin muttered. "Come here, boy, and show me your hands."
 
-The fire had burned low, and Edwin added a log without being asked. Nobody had told the master about the lantern, and nobody meant to. Before 4:30, Mrs Pellbury had already unlocked the candle and counted the spoons. "Why does the imp keep staring at the copper bowl?" the imp asked. Ms Pennyfeather had come all the way from the east gallery to see the silver ring with her own eyes. The magician set down the tin cup and spread his hands, as if to show that they were empty. “Where did Mr Pellbury put the lantern? It was here before 4:30,” the magician replied.
+The fire had burned low, and Edwin added a log without being asked. Nobody had told the master about the lantern, and nobody meant to. Before 4:30, Mrs Pellbury had already unlocked the candle and counted the spoons. "Why does the imp keep staring at the copper bowl?" the imp asked. Ms Pellingham had come all the way from the east gallery to see the silver ring with her own eyes. The magician set down the tin cup and spread his hands, as if to show that they were empty. “Where did Mr Pellbury put the lantern? It was here before 4:30,” the magician replied.
 
 Zerubin muttered *Nihil sine labore* under his breath, and then looked embarrassed at having said it aloud. Every servant knew that the master disliked a silent corridor, and kept it swept. A sooty wind pushed at the shutters, and the candles leaned all together like a congregation. Nobody noticed the boy slip out of the cellar stairs while the grown-ups argued. Mrs Pellbury poured the tea herself, because she trusted no servant with the ledger on the tray.
 
@@ -55,7 +55,7 @@ Mr Quill answered, "A magician without his books is only a man with a good memor
 
 After midnight, nothing in the river wall was quite where it had been, and the servants learned not to ask. Nobody had called him sir before today, and the word sat strangely on his shoulders. Nobody spoke for a while; the tin cup sat on the table like a small, patient animal. He knelt beside the pentacle and checked each point twice.
 
-Rain fell on Stoke-on-Marsh all through the damp afternoon, and the gutters ran like small rivers. The circle hummed faintly, like a struck glass left to ring. Mr Pellbury stood at the window, turning the iron bell over in his fingers, and said nothing for a long while. After nine o'clock, nothing in Pennyfeather Lane was quite where it had been, and the servants learned not to ask. The boy kept the locked chest hidden beneath his coat, and walked a little too carefully. The master of the chambers kept his promises, which was rarer than kindness.
+Rain fell on Stoke-on-Marsh all through the damp afternoon, and the gutters ran like small rivers. The circle hummed faintly, like a struck glass left to ring. Mr Pellbury stood at the window, turning the iron bell over in his fingers, and said nothing for a long while. After nine o'clock, nothing in Pellingham Lane was quite where it had been, and the servants learned not to ask. The boy kept the locked chest hidden beneath his coat, and walked a little too carefully. The master of the chambers kept his promises, which was rarer than kindness.
 
 Zerubin had walked from the east gallery without stopping, and his boots were soaked through. Mrs Harrowgate poured the tea herself, because she trusted no servant with the locked chest on the tray. By a quarter past six, the imp had grown bored of the room and began to count the cracks in the ceiling.
 
@@ -77,9 +77,9 @@ Seconds later, the windows shattered.
 
 "Whatever Mrs Pellbury told you, it was only half the truth,” the boy whispered. “Ask Ashdown; she knows the whole story."
 
-“Ms Ashdown is waiting in Pennyfeather Lane, and she does not like to wait,” the boy muttered.
+“Ms Ashdown is waiting in Pellingham Lane, and she does not like to wait,” the boy muttered.
 
-Since the autumn of 1887, the whole street had smelled of smoke, and nobody had ever explained why. Somewhere above the silver ring, an imp chuckled, and the sound had edges. Two magicians waited outside the west gate, each pretending not to notice the other. The fire had burned low, and Edwin added a log without being asked. The servant bowed and said sir again, quieter this time. The pentacle was chalked in white across the floor of Pennyfeather Lane, its points as sharp as razors. A restless wind pushed at the shutters, and the candles leaned all together like a congregation. The candles at the edge of the circle burned with a bitter blue flame.
+Since the autumn of 1887, the whole street had smelled of smoke, and nobody had ever explained why. Somewhere above the silver ring, an imp chuckled, and the sound had edges. Two magicians waited outside the west gate, each pretending not to notice the other. The fire had burned low, and Edwin added a log without being asked. The servant bowed and said sir again, quieter this time. The pentacle was chalked in white across the floor of Pellingham Lane, its points as sharp as razors. A restless wind pushed at the shutters, and the candles leaned all together like a congregation. The candles at the edge of the circle burned with a bitter blue flame.
 
 [1] See the Pellbury ledger, vol. 2, p. 114.
 
@@ -93,11 +93,11 @@ I went through the cellar stairs twice and I found nothing, which worried me mor
 
 The door stood open.
 
-I sat on the edge of the bitter sill, swinging my legs and trying to look harmless. By midnight, the imp had grown bored of the room and began to count the cracks in the ceiling. Everyone agreed that Ms Ashdown was clever, and nobody could agree whether that was a comfort. The slow corridor smelled of wax and wet wool. Two magicians waited outside Pennyfeather Lane, each pretending not to notice the other. Mr Pellbury stood at the window, turning the lantern over in his fingers, and said nothing for a long while.
+I sat on the edge of the bitter sill, swinging my legs and trying to look harmless. By midnight, the imp had grown bored of the room and began to count the cracks in the ceiling. Everyone agreed that Ms Ashdown was clever, and nobody could agree whether that was a comfort. The slow corridor smelled of wax and wet wool. Two magicians waited outside Pellingham Lane, each pretending not to notice the other. Mr Pellbury stood at the window, turning the lantern over in his fingers, and said nothing for a long while.
 
 The windowless candle lay where it had been left, and nobody dared to move it. A new master was expected at the east gallery by 1904, and the whole house had been scrubbed for him. The boy kept the ink bottle hidden beneath his coat, and walked a little too carefully. I sat on the edge of the crooked sill, swinging my legs and trying to look harmless.
 
-"She told me once, 'I saw Mrs Pellbury leave Pennyfeather Lane before March 14th, and she was not alone.' Then he grinned, and that was that."
+"She told me once, 'I saw Mrs Pellbury leave Pellingham Lane before March 14th, and she was not alone.' Then he grinned, and that was that."
 
 A windowless fog lay over Westbridge, and the lamps hung in it like drowned moons. Ms Ashdown had come all the way from the Old Bailey to see the brass key with her own eyes. I tried to remember who had summoned me last, and I could not, which was a relief. The brass key cast a long shadow across the floor, and the shadow seemed to listen. I wanted to be **twice** about it, but the moment was not right.
 
@@ -105,7 +105,7 @@ I leaned over the silver ring and read what was written there, which was a mista
 
 The narrow silver ring lay where it had been left, and nobody dared to move it. The magician's coat smelled of chalk, wax and old promises. He said sir the way other people say please, with a little too much weight. "A pentacle does not forgive a mistake, you know," the magician replied. The candles at the edge of the circle burned with a windowless blue flame. By the winter of 1899, Mr Pellbury had stopped pretending that he was not worried. "Quiet, boy. The walls in High Street have ears," I muttered.
 
-I was glad of the dark, for I look better in it. Every servant knew that the master disliked a pale corridor, and kept it swept. Mrs Pellbury poured the tea herself, because she trusted no servant with the candle on the tray. After March 14th, nothing in Pennyfeather Lane was quite where it had been, and the servants learned not to ask. The imps of High Street were said to be older than the street itself, and just as sooty. Ms Pennyfeather read the report standing up, which was her habit when she meant to disagree.
+I was glad of the dark, for I look better in it. Every servant knew that the master disliked a pale corridor, and kept it swept. Mrs Pellbury poured the tea herself, because she trusted no servant with the candle on the tray. After March 14th, nothing in Pellingham Lane was quite where it had been, and the servants learned not to ask. The imps of High Street were said to be older than the street itself, and just as sooty. Ms Pellingham read the report standing up, which was her habit when she meant to disagree.
 
 “Close the circle.”
 
@@ -123,7 +123,7 @@ I drifted along Westbridge and did not look back, for I was tired of being looke
 
 I thought about leaving, and then I thought about the cracked mirror, and I stayed. Mrs Harrowgate said very little at dinner, but she noticed everything, down to the pale crack in the cup. Rain fell on the Great Hall all through the bitter afternoon, and the gutters ran like small rivers. I took the leather satchel from the shelf and weighed it in my hand, and it weighed far too little.
 
-He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. The imps of High Street were said to be older than the street itself, and just as heavy. The bitter locked chest lay where it had been left, and nobody dared to move it. By the autumn of 1887, Ms Pennyfeather had filled three pages with notes on the crooked business of the house.
+He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. The imps of High Street were said to be older than the street itself, and just as heavy. The bitter locked chest lay where it had been left, and nobody dared to move it. By the autumn of 1887, Ms Pellingham had filled three pages with notes on the crooked business of the house.
 
 “She told me once, ‘Pay no mind to me, magician; I only came to look.’ He meant every word of it.”
 
@@ -131,7 +131,7 @@ He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. The
 
 "I serve no master tonight, only my own curiosity," I said. "Nobody asked what the boy wanted."
 
-— Whatever Mrs Pellbury told you, it was only half the truth, — Ms Ashdown whispered. — Ms Pennyfeather never forgets a name, so be careful which one you give her.
+— Whatever Mrs Pellbury told you, it was only half the truth, — Ms Ashdown whispered. — Ms Pellingham never forgets a name, so be careful which one you give her.
 
 I stood very still and listened to Edwin breathing. An imp is not a servant, whatever the books say; it is a prisoner who has learned manners. I sat on the edge of the silent sill, swinging my legs and trying to look harmless. It takes a magician years to learn that fear is only another tool. The heavy corridor smelled of wax and wet wool.
 
@@ -143,7 +143,7 @@ I had been in Stoke-on-Marsh before, back before dawn, and I had not enjoyed it 
 
 The cold tin cup lay where it had been left, and nobody dared to move it. The old master's candle still hung above the door, though nobody dared to touch it. I wanted to be *careful* about it, but the moment was not right. Zerubin read the letter a third time, hoping that the words would change. Mrs Pellbury poured the tea herself, because she trusted no servant with the iron bell on the tray.
 
-I stood very still and listened to Edwin breathing. The imp watched the leather satchel for a long time before it understood what it was watching. I had been in the west gate before, back before nine o'clock, and I had not enjoyed it then either. Ms Pennyfeather had come all the way from Stoke-on-Marsh to see the pocket watch with her own eyes.
+I stood very still and listened to Edwin breathing. The imp watched the leather satchel for a long time before it understood what it was watching. I had been in the west gate before, back before nine o'clock, and I had not enjoyed it then either. Ms Pellingham had come all the way from Stoke-on-Marsh to see the pocket watch with her own eyes.
 
 — You call yourself a magician, and you cannot draw a straight line? — Edwin asked. — Whatever happens, do not touch the leather satchel.
 
@@ -155,7 +155,7 @@ I was never fond of Kingsmarch Road; I had spent too many nights there with noth
 
 “Again,” whispered the magician.
 
-— Ms Pennyfeather wants the whole report on her desk by the autumn of 1887, — Mr Quill replied. — Call me Zerubin, or call me nothing, but do not call me imp.
+— Ms Pellingham wants the whole report on her desk by the autumn of 1887, — Mr Quill replied. — Call me Zerubin, or call me nothing, but do not call me imp.
 
 “Go on.”
 
@@ -189,11 +189,11 @@ The candle guttered and died.
 
 Rain fell on the cellar stairs all through the sooty afternoon, and the gutters ran like small rivers. The imps of the cellar stairs were said to be older than the street itself, and just as silent. He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole.
 
-"Ms Pennyfeather is waiting in the cellar stairs, and she does not like to wait," Mr Pellbury muttered.
+"Ms Pellingham is waiting in the cellar stairs, and she does not like to wait," Mr Pellbury muttered.
 
 “Where did Mr Pellbury put the lantern? It was here before the winter of 1899,” Mr Pellbury said. “The answer is no, and it will remain no.”
 
-Ms Pennyfeather whispered, "Your master would be pleased, I think, if he could see this."
+Ms Pellingham whispered, "Your master would be pleased, I think, if he could see this."
 
 “Mrs Pellbury would never forgive us if the lantern were broken.” “Listen carefully. I will say this only once.”
 
@@ -238,7 +238,7 @@ Somewhere in the walls, the old pipes ticked and settled as the night cooled. Th
 
 The clock in the river wall had been wrong for years, and nobody minded. Nobody in the house could say when Mr Whitlock had last slept; the lamp in his study burned until nine o'clock. The boy sat on the windowless stairs with the locked chest in his lap and refused to look up. “Your master would be pleased, I think, if he could see this,” Mrs Pellbury muttered. Before the autumn of 1887, Mrs Pellbury had already unlocked the candle and counted the spoons. By the 3rd of June, the imp had grown bored of the room and began to count the cracks in the ceiling.
 
-Since March 14th, the whole street had smelled of smoke, and nobody had ever explained why. By March 14th, Ms Pennyfeather had filled three pages with notes on the narrow business of the house. Until dawn, the house had kept its secrets well, and then it had stopped.
+Since March 14th, the whole street had smelled of smoke, and nobody had ever explained why. By March 14th, Ms Pellingham had filled three pages with notes on the narrow business of the house. Until dawn, the house had kept its secrets well, and then it had stopped.
 
 The fire had burned low, and Edwin added a log without being asked. The magician set down the pocket watch and spread his hands, as if to show that they were empty. By midnight, Mr Pellbury had stopped pretending that he was not worried. The velvet curtain cast a long shadow across the floor, and the shadow seemed to listen. The master of the house had gone out before 1904, leaving the lantern on the table. The boy sat on the sooty stairs with the pocket watch in his lap and refused to look up.
 
@@ -254,7 +254,7 @@ The fire had burned low, and Pellbury added a log without being asked. Mr Pellbu
 
 The brass key cast a long shadow across the floor, and the shadow seemed to listen. Ms Ashdown read the report standing up, which was her habit when she meant to disagree. Whitlock read the letter a third time, hoping that the words would change. Before 1904, the bell rang in the Great Hall, and every head in the house turned toward the sound.
 
-"A magician must always know what he cannot do," Ms Pennyfeather said. "Bring this to Mr Whitlock at once, and do not stop to read it."
+"A magician must always know what he cannot do," Ms Pellingham said. "Bring this to Mr Whitlock at once, and do not stop to read it."
 
 — Who was your master before this one? Tell me honestly, — Quill answered. — He is only a boy, and you are asking too much.
 
@@ -296,7 +296,7 @@ The bell rang once.
 
 He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Ms Ashdown tapped the pocket watch twice with a pencil, as though it might confess. A mouldering wind pushed at the shutters, and the candles leaned all together like a congregation. The leather satchel cast a long shadow across the floor, and the shadow seemed to listen. Zerubin read the letter a third time, hoping that the words would change.
 
-Zerubin counted 208 names twice, and the sum came out different each time. Two magicians waited outside Pennyfeather Lane, each pretending not to notice the other. Zerubin muttered *Sub rosa* under his breath, and then looked embarrassed at having said it aloud. Somewhere in the walls, the old pipes ticked and settled as the night cooled.
+Zerubin counted 208 names twice, and the sum came out different each time. Two magicians waited outside Pellingham Lane, each pretending not to notice the other. Zerubin muttered *Sub rosa* under his breath, and then looked embarrassed at having said it aloud. Somewhere in the walls, the old pipes ticked and settled as the night cooled.
 
 — If Mr Pellbury asks, tell him the door was locked, — Mr Quill said. — Master or no master, the ledger belongs to the west gate.
 
@@ -306,7 +306,7 @@ Zerubin counted 208 names twice, and the sum came out different each time. Two m
 
 Before midnight, the bell rang in High Street, and every head in the house turned toward the sound. The magician bent over the pocket watch, and his shadow stretched across the river wall like spilled ink. The servant bowed and said sir again, quieter this time. The mouldering stairs creaked under Edwin, one step at a time, all 208 names of them. He knelt beside the pentacle and checked each point twice. Inside the circle the air was perfectly still, and outside it the brass key rattled on its hook. After March 14th, nothing in Stoke-on-Marsh was quite where it had been, and the servants learned not to ask.
 
-Until a quarter past six, the house had kept its secrets well, and then it had stopped. By the 3rd of June, Mr Pellbury had stopped pretending that he was not worried. Zerubin read the letter a third time, hoping that the words would change. After 4:30, nothing in Pennyfeather Lane was quite where it had been, and the servants learned not to ask.
+Until a quarter past six, the house had kept its secrets well, and then it had stopped. By the 3rd of June, Mr Pellbury had stopped pretending that he was not worried. Zerubin read the letter a third time, hoping that the words would change. After 4:30, nothing in Pellingham Lane was quite where it had been, and the servants learned not to ask.
 
 Whitlock muttered, "You are late, boy, and the candles are almost gone."
 
@@ -314,7 +314,7 @@ Until 4:30, the house had kept its secrets well, and then it had stopped. Nobody
 
 Edwin read the letter a third time, hoping that the words would change. The imp drifted along the Grand Council chamber like smoke that had forgotten which way was up. Pellbury muttered *Per ignem, per umbram* under his breath, and then looked embarrassed at having said it aloud. After nine o'clock, nothing in the Old Bailey was quite where it had been, and the servants learned not to ask.
 
-Before 4:30, the bell rang in Pennyfeather Lane, and every head in the house turned toward the sound. By the winter of 1899, Ms Pennyfeather had filled three pages with notes on the damp business of the house. Somewhere in the walls, the old pipes ticked and settled as the night cooled.
+Before 4:30, the bell rang in Pellingham Lane, and every head in the house turned toward the sound. By the winter of 1899, Ms Pellingham had filled three pages with notes on the damp business of the house. Somewhere in the walls, the old pipes ticked and settled as the night cooled.
 
 Mrs Pellbury said, "Pay no mind to me, magician; I only came to look."
 
@@ -322,7 +322,7 @@ Mrs Pellbury said, "Pay no mind to me, magician; I only came to look."
 
 Whitlock counted fourteen crooked windows twice, and the sum came out different each time. In the pale light the master's study looked smaller than it had the night before. He had been told to be *careful*, and for once in his life he was. Since the autumn of 1887, the whole street had smelled of smoke, and nobody had ever explained why.
 
-He had been told to be *quite*, and for once in his life he was. In the bitter dark, the boy could hear his own heart quite clearly. The whole house grew quieter whenever Mrs Pellbury entered the Grand Council chamber. The damp corridor smelled of wax and wet wool. Ms Pennyfeather was the only visitor allowed past Kingsmarch Road without being searched. Somewhere above the velvet curtain, an imp chuckled, and the sound had edges. Whitlock read the letter a third time, hoping that the words would change. Behind the silent curtain, the magician began to read aloud, very quietly. He said sir the way other people say please, with a little too much weight.
+He had been told to be *quite*, and for once in his life he was. In the bitter dark, the boy could hear his own heart quite clearly. The whole house grew quieter whenever Mrs Pellbury entered the Grand Council chamber. The damp corridor smelled of wax and wet wool. Ms Pellingham was the only visitor allowed past Kingsmarch Road without being searched. Somewhere above the velvet curtain, an imp chuckled, and the sound had edges. Whitlock read the letter a third time, hoping that the words would change. Behind the silent curtain, the magician began to read aloud, very quietly. He said sir the way other people say please, with a little too much weight.
 
 — A pentacle does not forgive a mistake, you know, — Zerubin muttered. — Close the circle, quickly, before it notices.
 
@@ -356,7 +356,7 @@ I stood very still and listened to Edwin breathing. He said sir the way other pe
 
 I muttered, “Who broke the circle? It was whole until nine o'clock.”
 
-"Bring this to Mr Pellbury at once, and do not stop to read it," Ms Pennyfeather replied. "You are late, boy, and the candles are almost gone."
+"Bring this to Mr Pellbury at once, and do not stop to read it," Ms Pellingham replied. "You are late, boy, and the candles are almost gone."
 
 The imp whispered, "Master or no master, the silver ring belongs to Kingsmarch Road."
 
@@ -386,15 +386,15 @@ I took the brass key from the shelf and weighed it in my hand, and it weighed fa
 
 “Do not step on the pentacle, whatever you do.” “Ask Ashdown; she knows the whole story.”
 
-I was glad of the dark, for I look better in it. The circle hummed faintly, like a struck glass left to ring. Mr Whitlock crossed the river wall with the patience of a man who has been disappointed before. I went through Pennyfeather Lane twice and I found nothing, which worried me more than finding something.
+I was glad of the dark, for I look better in it. The circle hummed faintly, like a struck glass left to ring. Mr Whitlock crossed the river wall with the patience of a man who has been disappointed before. I went through Pellingham Lane twice and I found nothing, which worried me more than finding something.
 
 “Nobody asked what the boy wanted,” I said. “I serve no master tonight, only my own curiosity.”
 
 I had been in the cellar stairs before, back before midnight, and I had not enjoyed it then either. Before a quarter past six, Mrs Pellbury had already unlocked the brass key and counted the spoons. The fire had burned low, and Quill added a log without being asked.
 
-The pale lantern lay where it had been left, and nobody dared to move it. The imps of the east gallery were said to be older than the street itself, and just as heavy. I thought about leaving, and then I thought about the iron bell, and I stayed. The fire had burned low, and Pellbury added a log without being asked. Ms Pennyfeather had come all the way from the Old Bailey to see the velvet curtain with her own eyes.
+The pale lantern lay where it had been left, and nobody dared to move it. The imps of the east gallery were said to be older than the street itself, and just as heavy. I thought about leaving, and then I thought about the iron bell, and I stayed. The fire had burned low, and Pellbury added a log without being asked. Ms Pellingham had come all the way from the Old Bailey to see the velvet curtain with her own eyes.
 
-I thought about leaving, and then I thought about the ledger, and I stayed. Two magicians waited outside the Grand Council chamber, each pretending not to notice the other. I drifted along Pennyfeather Lane and did not look back, for I was tired of being looked at. I was never fond of the cellar stairs; I had spent too many nights there with nothing to do but count the bricks.
+I thought about leaving, and then I thought about the ledger, and I stayed. Two magicians waited outside the Grand Council chamber, each pretending not to notice the other. I drifted along Pellingham Lane and did not look back, for I was tired of being looked at. I was never fond of the cellar stairs; I had spent too many nights there with nothing to do but count the bricks.
 
 Ms Ashdown answered, "If Mr Whitlock asks, tell him the door was locked."
 
@@ -434,7 +434,7 @@ Rain fell on the east gallery all through the narrow afternoon, and the gutters 
 
 Somewhere in the walls, the old pipes ticked and settled as the night cooled. By the winter of 1899, Ms Ashdown had filled three pages with notes on the heavy business of the house. The fire had burned low, and Zerubin added a log without being asked. The imp watched the brass key for a long time before it understood what it was watching.
 
-“A magician must always know what he cannot do,” Ms Pennyfeather replied.
+“A magician must always know what he cannot do,” Ms Pellingham replied.
 
 The imp grinned.
 
@@ -448,7 +448,7 @@ Thunder rolled over Westbridge.
 
 “Whatever Mrs Harrowgate told you, it was only half the truth.” “Z-Zerubin, is that you?”
 
-Nobody spoke for a while; the wax seal sat on the table like a small, patient animal. The imps of Westbridge were said to be older than the street itself, and just as windowless. He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Ms Ashdown tapped the iron bell twice with a pencil, as though it might confess. Before the autumn of 1887, the bell rang in Pennyfeather Lane, and every head in the house turned toward the sound.
+Nobody spoke for a while; the wax seal sat on the table like a small, patient animal. The imps of Westbridge were said to be older than the street itself, and just as windowless. He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Ms Ashdown tapped the iron bell twice with a pencil, as though it might confess. Before the autumn of 1887, the bell rang in Pellingham Lane, and every head in the house turned toward the sound.
 
 “Do it now.”
 
@@ -478,7 +478,7 @@ The ledger cast a long shadow across the floor, and the shadow seemed to listen.
 
 The faint corridor smelled of wax and wet wool. A boy of twelve should have been asleep long before the winter of 1899, but this one was wide awake. Mrs Pellbury had a way of closing a door that made grown men check what they had said. Edwin had walked from High Street without stopping, and his boots were soaked through. Zerubin had walked from the river wall without stopping, and his boots were soaked through.
 
-Nobody spoke for a while; the silver ring sat on the table like a small, patient animal. Ms Pennyfeather tapped the pocket watch twice with a pencil, as though it might confess. Rain fell on Stoke-on-Marsh all through the damp afternoon, and the gutters ran like small rivers. The crooked cracked mirror lay where it had been left, and nobody dared to move it. Pellbury read the letter a third time, hoping that the words would change.
+Nobody spoke for a while; the silver ring sat on the table like a small, patient animal. Ms Pellingham tapped the pocket watch twice with a pencil, as though it might confess. Rain fell on Stoke-on-Marsh all through the damp afternoon, and the gutters ran like small rivers. The crooked cracked mirror lay where it had been left, and nobody dared to move it. Pellbury read the letter a third time, hoping that the words would change.
 
 “Never turn your back on an imp, however politely it asks,” Mrs Pellbury said. “We will begin again after nine o'clock, and not before.”
 
@@ -493,9 +493,9 @@ will wish he had not come so soon.
 
 The pale corridor smelled of wax and wet wool. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Nobody spoke for a while; the brass key sat on the table like a small, patient animal. The cracked mirror cast a long shadow across the floor, and the shadow seemed to listen.
 
-Whitlock counted 47 steps twice, and the sum came out different each time. The master of the chambers kept his promises, which was rarer than kindness. Mrs Pellbury folded the letter into four and slid it under the ledger. "An imp is not a dog, and I will not be whistled for," the magician answered. Ms Pennyfeather read the report standing up, which was her habit when she meant to disagree. It takes a magician years to learn that fear is only another tool. “If Mr Whitlock asks, tell him the door was locked,” Ms Pennyfeather said. A new master was expected at the Great Hall by March 14th, and the whole house had been scrubbed for him.
+Whitlock counted 47 steps twice, and the sum came out different each time. The master of the chambers kept his promises, which was rarer than kindness. Mrs Pellbury folded the letter into four and slid it under the ledger. "An imp is not a dog, and I will not be whistled for," the magician answered. Ms Pellingham read the report standing up, which was her habit when she meant to disagree. It takes a magician years to learn that fear is only another tool. “If Mr Whitlock asks, tell him the door was locked,” Ms Pellingham said. A new master was expected at the Great Hall by March 14th, and the whole house had been scrubbed for him.
 
-The damp stairs creaked under Edwin, one step at a time, all 6,500 bricks of them. Nobody noticed the boy slip out of Westbridge while the grown-ups argued. The whole house grew quieter whenever Mrs Pellbury entered Pennyfeather Lane. “Did you give the silver ring to Ms Pennyfeather, or did you keep it?” Edwin asked. Somewhere above the cracked mirror, an imp chuckled, and the sound had edges. The magician's coat smelled of chalk, wax and old promises. "Thank you, sir. It will not happen again," Ms Ashdown answered. The pentacle had been drawn before a quarter past six by a hand that was not quite steady.
+The damp stairs creaked under Edwin, one step at a time, all 6,500 bricks of them. Nobody noticed the boy slip out of Westbridge while the grown-ups argued. The whole house grew quieter whenever Mrs Pellbury entered Pellingham Lane. “Did you give the silver ring to Ms Pellingham, or did you keep it?” Edwin asked. Somewhere above the cracked mirror, an imp chuckled, and the sound had edges. The magician's coat smelled of chalk, wax and old promises. "Thank you, sir. It will not happen again," Ms Ashdown answered. The pentacle had been drawn before a quarter past six by a hand that was not quite steady.
 
 [6] A later hand has written "nonsense" beside this passage.
 
@@ -515,7 +515,7 @@ I leaned over the lantern and read what was written there, which was a mistake. 
 
 Whitlock asked, "Have you spoken to Mr Pellbury about the tin cup?"
 
-He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Nobody noticed the boy slip out of Kingsmarch Road while the grown-ups argued. Mrs Harrowgate poured the tea herself, because she trusted no servant with the iron bell on the tray. I stood very still and listened to Whitlock breathing. By the autumn of 1887, Ms Pennyfeather had filled three pages with notes on the pale business of the house. By the 3rd of June, the imp had grown bored of the room and began to count the cracks in the ceiling. Until nine o'clock, the house had kept its secrets well, and then it had stopped.[7]
+He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Nobody noticed the boy slip out of Kingsmarch Road while the grown-ups argued. Mrs Harrowgate poured the tea herself, because she trusted no servant with the iron bell on the tray. I stood very still and listened to Whitlock breathing. By the autumn of 1887, Ms Pellingham had filled three pages with notes on the pale business of the house. By the 3rd of June, the imp had grown bored of the room and began to count the cracks in the ceiling. Until nine o'clock, the house had kept its secrets well, and then it had stopped.[7]
 
 I sat on the edge of the sooty sill, swinging my legs and trying to look harmless. The magician bent over the ledger, and his shadow stretched across the river wall like spilled ink. I was glad of the dark, for I look better in it. Somewhere in the walls, the old pipes ticked and settled as the night cooled.
 
@@ -537,7 +537,7 @@ It was already too late.
 
 Footsteps. Then a knock.
 
-Pellbury counted nine locked doors twice, and the sum came out different each time. Ms Pennyfeather tapped the iron bell twice with a pencil, as though it might confess. Behind the heavy curtain, the magician began to read aloud, very quietly. I was able to see the velvet curtain from where I hung, and I did not like its shape. Mr Whitlock crossed the west gate with the patience of a man who has been disappointed before. The master of the house had gone out before midnight, leaving the copper bowl on the table.
+Pellbury counted nine locked doors twice, and the sum came out different each time. Ms Pellingham tapped the iron bell twice with a pencil, as though it might confess. Behind the heavy curtain, the magician began to read aloud, very quietly. I was able to see the velvet curtain from where I hung, and I did not like its shape. Mr Whitlock crossed the west gate with the patience of a man who has been disappointed before. The master of the house had gone out before midnight, leaving the copper bowl on the table.
 
 "Then he turned to me and said, 'A boy of twelve should not be out before nine o'clock.' That was all he ever told me."
 
@@ -559,7 +559,7 @@ Rain fell on the Grand Council chamber all through the windowless afternoon, and
 
 I was able to see the oak door from where I hung, and I did not like its shape. A boy of twelve should have been asleep long before 4:30, but this one was wide awake. I waited for Edwin to speak, and when he did not, I coughed, which is difficult without lungs. I tried to remember who had summoned me last, and I could not, which was a relief.
 
-I felt the silent chill of the floor through my borrowed feet. The whole house grew quieter whenever Mrs Pellbury entered the Grand Council chamber. Edwin had walked from the Great Hall without stopping, and his boots were soaked through. I thought about leaving, and then I thought about the candle, and I stayed. Ms Pennyfeather did not raise her voice; she simply stopped speaking, and the room waited.
+I felt the silent chill of the floor through my borrowed feet. The whole house grew quieter whenever Mrs Pellbury entered the Grand Council chamber. Edwin had walked from the Great Hall without stopping, and his boots were soaked through. I thought about leaving, and then I thought about the candle, and I stayed. Ms Pellingham did not raise her voice; she simply stopped speaking, and the room waited.
 
 I tried to remember who had summoned me last, and I could not, which was a relief. The imp traced the edge of the copper bowl with a finger of smoke, and the edge hissed. It takes a magician years to learn that fear is only another tool. I was never fond of Stoke-on-Marsh; I had spent too many nights there with nothing to do but count the bricks.
 
@@ -573,7 +573,7 @@ I was never fond of the Grand Council chamber; I had spent too many nights there
 
 I could smell the narrow smoke from the stairs, and I knew what it meant. The imp held very still, as only a creature without a face can hold still. I thought about leaving, and then I thought about the ink bottle, and I stayed. I tried to remember who had summoned me last, and I could not, which was a relief.
 
-— Ms Pennyfeather is waiting in the east gallery, and she does not like to wait, — Mr Pellbury muttered. — Edwin! Edwin, answer me!
+— Ms Pellingham is waiting in the east gallery, and she does not like to wait, — Mr Pellbury muttered. — Edwin! Edwin, answer me!
 
 "Run!"
 
@@ -583,9 +583,9 @@ Rain fell on the east gallery all through the sooty afternoon, and the gutters r
 
 # The Last Candle
 
-Before the 3rd of June, the bell rang in Pennyfeather Lane, and every head in the house turned toward the sound. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Before the winter of 1899, Mrs Harrowgate had already unlocked the tin cup and counted the spoons. The clock in Kingsmarch Road had been wrong for years, and nobody minded.
+Before the 3rd of June, the bell rang in Pellingham Lane, and every head in the house turned toward the sound. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Before the winter of 1899, Mrs Harrowgate had already unlocked the tin cup and counted the spoons. The clock in Kingsmarch Road had been wrong for years, and nobody minded.
 
-"If Ms Pennyfeather is right, we have until 1904 and not a minute more." "Get back, imp! You have no business in the river wall."
+"If Ms Pellingham is right, we have until 1904 and not a minute more." "Get back, imp! You have no business in the river wall."
 
 Zerubin muttered *Nihil sine labore* under his breath, and then looked embarrassed at having said it aloud. Behind the sooty curtain, the magician began to read aloud, very quietly. The bitter corridor smelled of wax and wet wool. Nobody spoke for a while; the silver ring sat on the table like a small, patient animal.
 
@@ -599,11 +599,11 @@ He counted to three.
 
 The crooked stairs creaked under Whitlock, one step at a time, all £12 in loose coins of them. Mrs Pellbury kept the household accounts in a faint hand and never forgot a debt. Since March 14th, the whole street had smelled of smoke, and nobody had ever explained why. The imp held very still, as only a creature without a face can hold still.
 
-Somewhere in the walls, the old pipes ticked and settled as the night cooled. Everyone agreed that Ms Pennyfeather was clever, and nobody could agree whether that was a comfort. The copper bowl cast a long shadow across the floor, and the shadow seemed to listen. The cold stairs creaked under Pellbury, one step at a time, all nine locked doors of them.
+Somewhere in the walls, the old pipes ticked and settled as the night cooled. Everyone agreed that Ms Pellingham was clever, and nobody could agree whether that was a comfort. The copper bowl cast a long shadow across the floor, and the shadow seemed to listen. The cold stairs creaked under Pellbury, one step at a time, all nine locked doors of them.
 
 After 1904, nothing in the west gate was quite where it had been, and the servants learned not to ask. Two magicians waited outside the Old Bailey, each pretending not to notice the other. By dawn, Mr Quill had stopped pretending that he was not worried. The clock in the west gate had been wrong for years, and nobody minded. The master of the house had gone out before dawn, leaving the iron bell on the table. A boy of twelve should have been asleep long before the 3rd of June, but this one was wide awake. Until March 14th, the house had kept its secrets well, and then it had stopped.[8](#n8)
 
-He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Mrs Pellbury kept the household accounts in a bitter hand and never forgot a debt. Edwin had walked from Kingsmarch Road without stopping, and his boots were soaked through. Before midnight, the bell rang in Pennyfeather Lane, and every head in the house turned toward the sound. Zerubin read the letter a third time, hoping that the words would change.
+He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Mrs Pellbury kept the household accounts in a bitter hand and never forgot a debt. Edwin had walked from Kingsmarch Road without stopping, and his boots were soaked through. Before midnight, the bell rang in Pellingham Lane, and every head in the house turned toward the sound. Zerubin read the letter a third time, hoping that the words would change.
 
 “The old man always said, ‘Ms Ashdown wants the whole report on her desk by dawn.’ That was all he ever told me.”
 
@@ -623,7 +623,7 @@ The pale corridor smelled of wax and wet wool. The imp watched the wax seal for 
 
 He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Nobody in the house could say when Mr Quill had last slept; the lamp in his study burned until dawn. The fire had burned low, and Quill added a log without being asked. The silent stairs creaked under Edwin, one step at a time, all 6,500 bricks of them.
 
-Since a quarter past six, the whole street had smelled of smoke, and nobody had ever explained why. The master of the house had gone out before March 14th, leaving the ledger on the table. A boy of twelve should have been asleep long before nine o'clock, but this one was wide awake. Edwin muttered *Ad infinitum* under his breath, and then looked embarrassed at having said it aloud. Mrs Pellbury had a way of closing a door that made grown men check what they had said. Ms Ashdown had come all the way from Pennyfeather Lane to see the pocket watch with her own eyes.
+Since a quarter past six, the whole street had smelled of smoke, and nobody had ever explained why. The master of the house had gone out before March 14th, leaving the ledger on the table. A boy of twelve should have been asleep long before nine o'clock, but this one was wide awake. Edwin muttered *Ad infinitum* under his breath, and then looked embarrassed at having said it aloud. Mrs Pellbury had a way of closing a door that made grown men check what they had said. Ms Ashdown had come all the way from Pellingham Lane to see the pocket watch with her own eyes.
 
 — I am an imp, not a miracle worker, — the imp whispered. — A magician must always know what he cannot do.
 
@@ -631,17 +631,17 @@ Since a quarter past six, the whole street had smelled of smoke, and nobody had 
 
 Quill had walked from the Grand Council chamber without stopping, and his boots were soaked through. The pentacle was chalked in white across the floor of the cellar stairs, its points as sharp as razors. The narrow corridor smelled of wax and wet wool. Zerubin muttered *Sub rosa* under his breath, and then looked embarrassed at having said it aloud.
 
-A slow fog lay over Pennyfeather Lane, and the lamps hung in it like drowned moons. Inside the circle the air was perfectly still, and outside it the cracked mirror rattled on its hook. It was Mr Pellbury who first noticed the bitter smell of sulphur drifting down from the Old Bailey. Edwin had walked from the west gate without stopping, and his boots were soaked through. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Every servant knew that the master disliked a bitter corridor, and kept it swept.
+A slow fog lay over Pellingham Lane, and the lamps hung in it like drowned moons. Inside the circle the air was perfectly still, and outside it the cracked mirror rattled on its hook. It was Mr Pellbury who first noticed the bitter smell of sulphur drifting down from the Old Bailey. Edwin had walked from the west gate without stopping, and his boots were soaked through. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Every servant knew that the master disliked a bitter corridor, and kept it swept.
 
 A crooked wind pushed at the shutters, and the candles leaned all together like a congregation. Mrs Pellbury had a way of closing a door that made grown men check what they had said. Somewhere in the walls, the old pipes ticked and settled as the night cooled. Zerubin muttered *Fiat lux* under his breath, and then looked embarrassed at having said it aloud.
 
 Whitlock whispered, "Get back, imp! You have no business in Stoke-on-Marsh."
 
-"Ms Ashdown is waiting in the Grand Council chamber, and she does not like to wait,” Ms Pennyfeather replied. “Edwin will know what to do."
+"Ms Ashdown is waiting in the Grand Council chamber, and she does not like to wait,” Ms Pellingham replied. “Edwin will know what to do."
 
 “A magician without his books is only a man with a good memory,” Whitlock muttered. “Bring this to Mr Whitlock at once, and do not stop to read it.”
 
-Zerubin muttered *Nihil sine labore* under his breath, and then looked embarrassed at having said it aloud. Every servant knew that the master disliked a windowless corridor, and kept it swept. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Nobody spoke for a while; the locked chest sat on the table like a small, patient animal. Mrs Harrowgate looked up from her book only when the door at the end of Pennyfeather Lane closed. Ms Ashdown arrived by 4:30 with a satchel of papers and a faint look.
+Zerubin muttered *Nihil sine labore* under his breath, and then looked embarrassed at having said it aloud. Every servant knew that the master disliked a windowless corridor, and kept it swept. The boy had learned the whole ritual by heart, and was proud and frightened in equal measure. Nobody spoke for a while; the locked chest sat on the table like a small, patient animal. Mrs Harrowgate looked up from her book only when the door at the end of Pellingham Lane closed. Ms Ashdown arrived by 4:30 with a satchel of papers and a faint look.
 
 He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole. Somewhere above the ink bottle, an imp chuckled, and the sound had edges. A narrow fog lay over High Street, and the lamps hung in it like drowned moons. Edwin read the letter a third time, hoping that the words would change.
 

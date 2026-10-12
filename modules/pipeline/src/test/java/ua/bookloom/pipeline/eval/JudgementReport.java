@@ -190,7 +190,7 @@ record JudgementReport(String suite, String model, List<Integer> seeds, List<Boo
         return entry == null ? NONE : answer.apply(entry);
     }
 
-    // The genre as the class word it holds, so "dark literary fiction" and "literary fiction" agree; any other genre
+    // The genre as the class word it holds, so "dark rural drama" and "rural drama" agree; any other genre
     // as its own lower-case words.
     static String genreAnswer(final List<String> genreClass, @Nullable final String genre) {
         if (genre == null || genre.isBlank()) {

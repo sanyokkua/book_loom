@@ -15,8 +15,6 @@
     "narratorGender": "UNKNOWN",
     "register": "NEUTRAL",
     "genreClass": [
-      "literary",
-      "fiction",
       "drama",
       "family"
     ],
@@ -41,8 +39,6 @@
     "narratorGender": "UNKNOWN",
     "register": "NEUTRAL",
     "genreClass": [
-      "literary",
-      "fiction",
       "drama",
       "family"
     ],
@@ -72,9 +68,7 @@
     "register": "NEUTRAL",
     "genreClass": [
       "fantasy",
-      "fiction",
-      "adventure",
-      "literary"
+      "adventure"
     ]
   },
   {
@@ -97,8 +91,6 @@
     "narratorGender": "UNKNOWN",
     "register": "NEUTRAL",
     "genreClass": [
-      "literary",
-      "fiction",
       "drama",
       "family"
     ]
@@ -124,9 +116,7 @@
     "register": "FORMAL_LITERARY",
     "genreClass": [
       "historical",
-      "adventure",
-      "fiction",
-      "literary"
+      "adventure"
     ]
   },
   {
@@ -150,7 +140,6 @@
     "register": "NEUTRAL",
     "genreClass": [
       "science fiction",
-      "fiction",
       "thriller",
       "mystery"
     ]
@@ -179,10 +168,8 @@
       "essay",
       "humor",
       "humour",
-      "literary",
       "nonfiction",
-      "non-fiction",
-      "fiction"
+      "non-fiction"
     ]
   },
   {
@@ -208,8 +195,7 @@
       "mystery",
       "crime",
       "detective",
-      "thriller",
-      "fiction"
+      "thriller"
     ]
   },
   {
@@ -234,7 +220,6 @@
     "genreClass": [
       "children",
       "fantasy",
-      "fiction",
       "adventure",
       "picture"
     ]
@@ -259,8 +244,6 @@
     "narratorGender": "UNKNOWN",
     "register": "NEUTRAL",
     "genreClass": [
-      "literary",
-      "fiction",
       "drama",
       "mystery"
     ]
@@ -286,12 +269,7 @@
     "register": "FORMAL_LITERARY",
     "genreClass": [
       "romance",
-      "literary",
-      "fiction",
-      "novel",
-      "classic",
-      "comedy",
-      "satire"
+      "classic"
     ]
   },
   {
@@ -315,9 +293,6 @@
     "register": "FORMAL_LITERARY",
     "genreClass": [
       "adventure",
-      "literary",
-      "fiction",
-      "novel",
       "classic",
       "sea"
     ]
@@ -344,8 +319,6 @@
     "genreClass": [
       "adventure",
       "children",
-      "fiction",
-      "novel",
       "classic",
       "comedy",
       "humor",
@@ -374,8 +347,6 @@
     "genreClass": [
       "horror",
       "gothic",
-      "fiction",
-      "novel",
       "classic",
       "epistolary",
       "thriller"
@@ -401,8 +372,6 @@
     "narratorGender": "UNKNOWN",
     "register": "NEUTRAL",
     "genreClass": [
-      "literary",
-      "fiction",
       "drama",
       "mystery"
     ]

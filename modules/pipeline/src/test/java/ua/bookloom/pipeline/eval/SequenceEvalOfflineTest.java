@@ -286,13 +286,13 @@ class SequenceEvalOfflineTest {
         assertThat(measureOf(segments, List.of()).ltcr1()).isEqualTo(0.625);
     }
 
-    // A run with nothing repeated has nothing to be consistent about: 0, as the other ratios of an empty run.
+    // A run with nothing repeated has nothing to be consistent about: -1, which the report prints as n/a, not 0 %.
     @Test
-    void measure_noTermRepeated_ltcr1IsZero() {
+    void measure_noTermRepeated_ltcr1IsNotApplicable() {
         final List<Decided> segments = List.of(
                 decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED));
 
-        assertThat(measureOf(segments, List.of()).ltcr1()).isZero();
+        assertThat(measureOf(segments, List.of()).ltcr1()).isEqualTo(-1.0);
     }
 
     private static SequenceMetrics measureOf(final List<Decided> segments, final List<LexiconEntry> lexicon) {
@@ -365,5 +365,15 @@ class SequenceEvalOfflineTest {
 
         assertThat(report.table()).contains("LTCR-1 88.4%");
         assertThat(report.json()).contains("\"ltcr1\" : 0.88");
+    }
+
+    @Test
+    void report_runWithNoRepeatedTerm_tablePrintsLtcr1AsNotApplicable() {
+        final List<Decided> segments = List.of(
+                decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED));
+
+        final SequenceReport report = new SequenceReport(measureOf(segments, List.of()));
+
+        assertThat(report.table()).contains("LTCR-1 n/a");
     }
 }

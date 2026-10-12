@@ -35,14 +35,14 @@ class EpubWriterSortKeyTest {
             </container>
             """;
 
-    // IF the old key stayed, THEN a library would shelve «Амулет Варканда» under "Amulet of Varkand, The".
+    // IF the old key stayed, THEN a library would shelve «Ліхтар Оска» under "Lantern of Osk, The".
     @Test
     void write_titleTranslated_dropsCalibreTitleSortAndTheTitlesFileAs() {
-        final Path output = writeWithAuxiliaryTarget("aux:title", "Амулет Варканда");
+        final Path output = writeWithAuxiliaryTarget("aux:title", "Ліхтар Оска");
 
         final String opf = rawOpfTextOf(output);
-        assertThat(opf).contains("<dc:title").contains("Амулет Варканда");
-        assertThat(opf).doesNotContain("calibre:title_sort").doesNotContain("Varkand, The");
+        assertThat(opf).contains("<dc:title").contains("Ліхтар Оска");
+        assertThat(opf).doesNotContain("calibre:title_sort").doesNotContain("Osk, The");
         assertThat(opf).doesNotContain("title-sort-key");
     }
 
@@ -82,7 +82,7 @@ class EpubWriterSortKeyTest {
         final String opf = rawOpfTextOf(output);
         assertThat(opf)
                 .contains("calibre:title_sort")
-                .contains("Varkand, The")
+                .contains("Osk, The")
                 .contains("Crane, Hallam")
                 .contains("title-sort-key")
                 .contains("author-sort-key");
@@ -102,15 +102,15 @@ class EpubWriterSortKeyTest {
         final OpenEpubRegistry registry = new OpenEpubRegistry();
         final Document document = new EpubReader(registry).read(epub);
         final EpubWriter writer = new EpubWriter(registry);
-        writer.write(withAuxiliaryTarget(document, "aux:title", "Амулет Варканда"), tempDir.resolve("one.epub"), "uk");
+        writer.write(withAuxiliaryTarget(document, "aux:title", "Ліхтар Оска"), tempDir.resolve("one.epub"), "uk");
 
         final Path second = writer.write(
-                withAuxiliaryTarget(document, "aux:title", "The Amulet of Varkand"), tempDir.resolve("two.epub"), "uk");
+                withAuxiliaryTarget(document, "aux:title", "The Lantern of Osk"), tempDir.resolve("two.epub"), "uk");
 
         assertThat(rawOpfTextOf(second))
-                .contains("The Amulet of Varkand")
+                .contains("The Lantern of Osk")
                 .contains("calibre:title_sort")
-                .contains("Varkand, The")
+                .contains("Osk, The")
                 .contains("title-sort-key");
     }
 
@@ -175,12 +175,12 @@ class EpubWriterSortKeyTest {
                 <?xml version="1.0" encoding="UTF-8"?>
                 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
                   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-                    <dc:title id="t1" opf:file-as="Amulet of Varkand, The">The Amulet of Varkand</dc:title>
+                    <dc:title id="t1" opf:file-as="Lantern of Osk, The">The Lantern of Osk</dc:title>
                     <dc:creator id="a1" opf:file-as="Crane, Hallam">Hallam Crane</dc:creator>
                     <dc:language>en</dc:language>
-                    <meta name="calibre:title_sort" content="Amulet of Varkand, The"/>
-                    <meta name="calibre:series" content="Zerubin"/>
-                    <meta refines="#t1" property="file-as" id="title-sort-key">Amulet of Varkand, The</meta>
+                    <meta name="calibre:title_sort" content="Lantern of Osk, The"/>
+                    <meta name="calibre:series" content="Osk Cycle"/>
+                    <meta refines="#t1" property="file-as" id="title-sort-key">Lantern of Osk, The</meta>
                     <meta refines="#a1" property="file-as" id="author-sort-key">Crane, Hallam</meta>
                   </metadata>
                   <manifest>

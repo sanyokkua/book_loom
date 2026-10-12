@@ -99,7 +99,7 @@ record SequenceReport(SequenceMetrics metrics) {
                         "dominantShare",
                         pct(m.dominantShareMean()),
                         "LTCR-1",
-                        pct(m.ltcr1())));
+                        ltcr(m.ltcr1())));
     }
 
     private static List<String> cost(final SequenceMetrics m) {
@@ -147,6 +147,10 @@ record SequenceReport(SequenceMetrics metrics) {
 
     private static String pct(final double share) {
         return String.format(Locale.ROOT, "%.1f%%", 100 * share);
+    }
+
+    private static String ltcr(final double ratio) {
+        return ratio < 0 ? "n/a" : pct(ratio);
     }
 
     private static String f2(final double value) {

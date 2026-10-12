@@ -29,7 +29,8 @@ import ua.bookloom.api.project.LexiconEntry;
  * gold character with no glossary entry counts as wrong for gender and type. A gold name (a character or a {@code
  * keep} term) is lost when no entry holds it as its term or an alias, compared without case, and a name that is both
  * a character and a keep term counts once. Junk is kept when a glossary entry has exactly the junk term as its term
- * (same case, so the real "Kessel Optik" is not the junk "KESSEL OPTIK"). A cluster's spelling is the first word of an
+ * (same case, so the real "Kessel Optik" is not the junk "KESSEL OPTIK"). The gender, type and cluster of a gold
+ * character are read from the entry that holds its name as its term or, failing that, as an alias, like the lost names. A cluster's spelling is the first word of an
  * entry's target, without case; a cluster with two or more members is consistent when its entries hold at most one
  * known gender. A gender is "verified" while the entry is not marked suggested ({@code !isGenderSuggested()}); 15i.N0
  * replaces that test with the gender origin.
@@ -44,7 +45,7 @@ import ua.bookloom.api.project.LexiconEntry;
  * @param clustersWithOneGender how many of those hold at most one known gender among their entries
  * @param spellings the distinct spellings of each cluster's name, by cluster id
  * @param junkKept how many gold junk terms are in the glossary
- * @param realNamesLost how many gold characters and {@code keep} names no entry holds
+ * @param lostNames the gold characters and {@code keep} names no entry holds, each once as the gold writes it
  * @param recurringKept how many gold recurring terms to keep are in the lexicon
  * @param recurringDropped how many gold recurring terms to keep are not in the lexicon
  * @param recurringJunkKept how many gold recurring terms to drop are in the lexicon
@@ -61,7 +62,7 @@ record NamesScore(
         int clustersWithOneGender,
         Map<String, Integer> spellings,
         int junkKept,
-        int realNamesLost,
+        List<String> lostNames,
         int recurringKept,
         int recurringDropped,
         int recurringJunkKept,
@@ -74,9 +75,15 @@ record NamesScore(
     private static final double MILLIS_PER_MINUTE = 60_000.0;
     private static final int ROUNDING_DIGITS = 3;
 
-    /** Copies the spellings. */
+    /** Copies the spellings and the lost names. */
     NamesScore {
         spellings = Map.copyOf(spellings);
+        lostNames = List.copyOf(lostNames);
+    }
+
+    /** How many gold characters and {@code keep} names no entry holds. */
+    int realNamesLost() {
+        return lostNames.size();
     }
 
     /**
@@ -99,8 +106,7 @@ record NamesScore(
             final Duration elapsed) {
         Objects.requireNonNull(gold, "gold");
         Objects.requireNonNull(paragraphs, "paragraphs");
-        final Map<String, GlossaryEntry> byTerm = new HashMap<>();
-        glossary.forEach(entry -> byTerm.put(lower(entry.term()), entry));
+        final Map<String, GlossaryEntry> byTerm = indexByName(glossary);
         final int[] characters = scoreCharacters(gold, String.join("\n", paragraphs), byTerm);
         final Map<String, List<JudgementGold.Person>> clusters = clustersOf(gold);
         final int[] recurring = scoreRecurring(gold, lexicon);
@@ -124,6 +130,14 @@ record NamesScore(
                 recurring[2],
                 calls,
                 elapsed.toMillis() / MILLIS_PER_MINUTE);
+    }
+
+    /** Every entry under its term and, where no entry has that term, under each of its aliases. */
+    private static Map<String, GlossaryEntry> indexByName(final List<GlossaryEntry> glossary) {
+        final Map<String, GlossaryEntry> byName = new HashMap<>();
+        glossary.forEach(entry -> byName.put(lower(entry.term()), entry));
+        glossary.forEach(entry -> entry.names().forEach(name -> byName.putIfAbsent(lower(name), entry)));
+        return byName;
     }
 
     /** The share of eligible characters with the gold gender; 1 when none is eligible. */
@@ -154,7 +168,7 @@ record NamesScore(
                 && clustersWithOneGender == clusters
                 && maxSpellings() <= 1
                 && junkKept == 0
-                && realNamesLost == 0
+                && lostNames.isEmpty()
                 && recurringDropped == 0
                 && recurringJunkKept == 0;
     }
@@ -177,7 +191,7 @@ record NamesScore(
                 + ",\"clusterRate\":" + round(clusterRate())
                 + ",\"spellings\":" + spelled
                 + ",\"junkKept\":" + junkKept
-                + ",\"realNamesLost\":" + realNamesLost
+                + ",\"realNamesLost\":" + realNamesLost()
                 + ",\"recurringKept\":" + recurringKept
                 + ",\"recurringDropped\":" + recurringDropped
                 + ",\"recurringJunkKept\":" + recurringJunkKept
@@ -262,14 +276,13 @@ record NamesScore(
         return spelled;
     }
 
-    private static int lostNames(final JudgementGold gold, final List<GlossaryEntry> glossary) {
+    private static List<String> lostNames(final JudgementGold gold, final List<GlossaryEntry> glossary) {
         final Set<String> held = new HashSet<>();
         glossary.forEach(entry -> entry.names().forEach(name -> held.add(lower(name))));
-        return (int) Stream.concat(gold.characters().stream().map(JudgementGold.Person::term), gold.keep().stream())
-                .map(NamesScore::lower)
-                .distinct()
-                .filter(name -> !held.contains(name))
-                .count();
+        final Set<String> seen = new HashSet<>();
+        return Stream.concat(gold.characters().stream().map(JudgementGold.Person::term), gold.keep().stream())
+                .filter(name -> !held.contains(lower(name)) && seen.add(lower(name)))
+                .toList();
     }
 
     /** Recurring terms kept, dropped and junk kept, in that order. */

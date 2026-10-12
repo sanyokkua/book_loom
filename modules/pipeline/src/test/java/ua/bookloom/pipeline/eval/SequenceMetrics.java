@@ -25,7 +25,7 @@ import lombok.Builder;
  * @param ltcr1 the long-term consistency ratio of DelTA (ICLR 2025): over the fixture's terms and names, the share of a
  *     term's later occurrences (its decided segments after the first one that carries a listed rendering) whose target
  *     carries the first rendering; occurrences with no listed rendering count for neither side, and a run with no later
- *     occurrence reports 0
+ *     occurrence reports -1 (printed as n/a)
  * @param renderingsPerTerm the mean number of distinct renderings over the fixture's terms that were rendered at all
  * @param nameVariants the spellings beyond the first, summed over the names
  * @param genderSlips narrator-gender findings in the first-person chapters

@@ -89,6 +89,22 @@ class NamesScoreTest {
                         List.of("Velar")));
     }
 
+    private static GlossaryEntry withAlias(
+            final String term, final String target, final TermType type, final String alias) {
+        return new GlossaryEntry(
+                P + ":" + term,
+                P,
+                term,
+                target,
+                type,
+                Gender.FEMALE,
+                false,
+                TargetOrigin.PERSON,
+                false,
+                false,
+                List.of(alias));
+    }
+
     private static List<LexiconEntry> lexicon() {
         return List.of(LexiconEntry.of(P, "bankers"), LexiconEntry.of(P, "mark"));
     }
@@ -145,7 +161,50 @@ class NamesScoreTest {
         // "Kessel Optik" does not count). Lost: Ysa, Perpetua and "Orrin & Vale"; Velar is held as an alias and
         // a name that is both a character and a keep term counts once.
         assertThat(score.junkKept()).isEqualTo(1);
+        assertThat(score.lostNames()).containsExactly("Ysa", "Perpetua", "Orrin & Vale");
         assertThat(score.realNamesLost()).isEqualTo(3);
+    }
+
+    @Test
+    void of_goldCharacterHeldOnlyAsAnAliasOfAnotherEntry_isScoredFromThatEntry() {
+        final JudgementGold gold = new JudgementGold(
+                null,
+                "en",
+                "uk",
+                GOLD.brief(),
+                List.of(
+                        new JudgementGold.Person("Ysolde", TermType.CHARACTER, Gender.FEMALE, "ysolde"),
+                        new JudgementGold.Person("Ysa", TermType.CHARACTER, Gender.FEMALE, "ysolde")),
+                List.of(),
+                List.of(),
+                List.of());
+        final List<GlossaryEntry> glossary = List.of(withAlias("Ysolde", "Ізольда", TermType.CHARACTER, "Ysa"));
+
+        final NamesScore score = NamesScore.of(gold, BOOK, glossary, List.of(), 0, Duration.ZERO);
+
+        assertThat(score.eligible()).isEqualTo(2);
+        assertThat(score.genderCorrect()).isEqualTo(2);
+        assertThat(score.typeCorrect()).isEqualTo(2);
+        assertThat(score.clustersWithOneGender()).isEqualTo(1);
+        assertThat(score.spellings()).containsOnly(Map.entry("ysolde", 1));
+        assertThat(score.realNamesLost()).isZero();
+    }
+
+    @Test
+    void of_nameThatIsBothACharacterAndAKeepTerm_isLostOnce() {
+        final JudgementGold gold = new JudgementGold(
+                null,
+                "en",
+                "uk",
+                GOLD.brief(),
+                List.of(new JudgementGold.Person("Perpetua", TermType.CHARACTER, Gender.FEMALE, null)),
+                List.of(),
+                List.of("Perpetua"),
+                List.of());
+
+        final NamesScore score = NamesScore.of(gold, BOOK, List.of(), List.of(), 0, Duration.ZERO);
+
+        assertThat(score.lostNames()).containsExactly("Perpetua");
     }
 
     @Test

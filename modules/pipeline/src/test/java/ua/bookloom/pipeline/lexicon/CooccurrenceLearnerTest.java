@@ -124,9 +124,9 @@ class CooccurrenceLearnerTest {
         final CooccurrenceLearner learner = learnerWithFiller("Mr");
 
         learner.observe("Mr Button came.", "Містер Баттон прийшов.");
-        learner.observe("He saw Mr Hopkins.", "Він бачив пана Гопкінса.");
+        learner.observe("He saw Mr Haskett.", "Він бачив пана Гаскета.");
         learner.observe("Mr Pellbury left.", "Містер Пеллбері пішов.");
-        learner.observe("Mr Simpkins sat.", "Пан Сімпкінс сів.");
+        learner.observe("Mr Tolliver sat.", "Пан Толівер сів.");
 
         assertThat(established(learner, "Mr")).isEmpty();
     }

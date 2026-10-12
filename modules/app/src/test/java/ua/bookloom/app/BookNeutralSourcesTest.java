@@ -20,15 +20,33 @@ import org.junit.jupiter.api.Test;
 /**
  * Keeps names, quotes and passages of the books under test out of the repository's sources. The list of what to keep
  * out is the owner's own and never committed (it would itself name the books): one case-sensitive word or phrase per
- * line in {@code neutral-denylist.txt} inside the directory {@code BOOKLOOM_CORPUS_DIR} points to; blank lines and
- * lines starting with {@code #} are skipped. Without the variable or the file the test is skipped, as on CI.
+ * line in {@code neutral-denylist.txt} inside the directory {@code BOOKLOOM_CORPUS_DIR} points to; an entry ending in
+ * {@code *} is a stem and matches every word that starts with it; blank lines and lines starting with {@code #} are
+ * skipped. Without the variable or the file the test is skipped, as on CI.
  */
 class BookNeutralSourcesTest {
 
     private static final String CORPUS_DIR_ENV = "BOOKLOOM_CORPUS_DIR";
     private static final String DENYLIST_FILE = "neutral-denylist.txt";
-    private static final Set<String> TEXT_EXTENSIONS =
-            Set.of("java", "kt", "kts", "properties", "prompt", "txt", "json", "md", "fxml", "css", "xml", "csv");
+    private static final Set<String> TEXT_EXTENSIONS = Set.of(
+            "java",
+            "kt",
+            "kts",
+            "properties",
+            "prompt",
+            "txt",
+            "json",
+            "jsonl",
+            "md",
+            "fxml",
+            "css",
+            "xml",
+            "csv",
+            "fb2",
+            "xhtml",
+            "html",
+            "opf",
+            "dtd");
     private static final String WORD_EDGE = "[\\p{L}\\p{N}_]";
 
     // IF a name from a book under test were typed into a test, a prompt or a fixture, THEN it would ship in the
@@ -38,6 +56,39 @@ class BookNeutralSourcesTest {
         final List<String> tokens = denylist();
 
         assertThat(hits(tokens)).as("denylisted tokens in modules/*/src").isEmpty();
+    }
+
+    @Test
+    void wholeWord_plainEntry_matchesTheWordAloneNotInsideAnother() {
+        final Pattern pattern = wholeWord(List.of("Orrin"));
+
+        assertThat(found(pattern, "Orrin came. Orrin's hat. Orrinson left. MyOrrin."))
+                .containsExactly("Orrin", "Orrin");
+    }
+
+    @Test
+    void wholeWord_entryEndingInAsterisk_matchesEveryWordThatStartsWithTheStem() {
+        final Pattern pattern = wholeWord(List.of("Wyn*"));
+
+        assertThat(found(pattern, "Wyn Wynthorpe's Wynford. Open Wyn."))
+                .containsExactly("Wyn", "Wynthorpe", "Wynford", "Wyn");
+    }
+
+    @Test
+    void wholeWord_stemAndPlainEntryTogether_eachKeepsItsOwnRule() {
+        final Pattern pattern = wholeWord(List.of("Kess*", "Vale"));
+
+        assertThat(found(pattern, "Kessel and Kessels and Vale and Valencia and a Kess."))
+                .containsExactly("Kessel", "Kessels", "Vale", "Kess");
+    }
+
+    private static List<String> found(final Pattern pattern, final String text) {
+        final Matcher matcher = pattern.matcher(text);
+        final List<String> found = new ArrayList<>();
+        while (matcher.find()) {
+            found.add(matcher.group(1));
+        }
+        return found;
     }
 
     private static List<String> denylist() {
@@ -79,13 +130,21 @@ class BookNeutralSourcesTest {
         return found;
     }
 
-    private static Pattern wholeWord(final List<String> tokens) {
+    // A plain entry is a whole word; an entry ending in "*" is a stem, so it ends in the rest of the word it starts.
+    static Pattern wholeWord(final List<String> tokens) {
         final String alternation = tokens.stream()
                 .sorted(Comparator.comparingInt(String::length).reversed())
-                .map(Pattern::quote)
+                .map(BookNeutralSourcesTest::alternative)
                 .reduce((left, right) -> left + "|" + right)
                 .orElseThrow();
-        return Pattern.compile("(?<!" + WORD_EDGE + ")(" + alternation + ")(?!" + WORD_EDGE + ")");
+        return Pattern.compile("(?<!" + WORD_EDGE + ")(" + alternation + ")");
+    }
+
+    private static String alternative(final String token) {
+        if (token.endsWith("*")) {
+            return Pattern.quote(token.substring(0, token.length() - 1)) + WORD_EDGE + "*";
+        }
+        return Pattern.quote(token) + "(?!" + WORD_EDGE + ")";
     }
 
     private static Stream<Path> textFiles(final Path root) {

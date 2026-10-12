@@ -26,10 +26,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "literary fiction",
+      "genre": "historical adventure",
       "genreClass": [
-        "literary",
-        "fiction",
         "drama",
         "adventure",
         "historical"

@@ -16,8 +16,8 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.fixture.BodyContentEpub;
 
 /**
- * The two paragraphs of a real book's chapter opening (Zerubin, {@code part0009.html}) whose export was refused
- * with "placeholder count written=2 reopened=0": a drop cap {@code <span>“A</span>ll} and an italic run ending
+ * Invented paragraphs in the markup shape of a chapter opening whose export was once refused with
+ * "placeholder count written=2 reopened=0": a drop cap {@code <span>“A</span>ll} and an italic run ending
  * in a closing quote. A reply that puts the drop cap's pair around the whole paragraph passed the old gate, was
  * written as a span around every word, and re-opened as a segment <em>of that span</em> — the reader makes the
  * outermost element owning text its block — so the written book had no inline markup left in that paragraph.

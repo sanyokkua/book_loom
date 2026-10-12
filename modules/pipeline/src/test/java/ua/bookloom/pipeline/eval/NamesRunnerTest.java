@@ -76,6 +76,38 @@ class NamesRunnerTest {
         assertThat(score.genderAccuracy()).isEqualTo(0.5);
     }
 
+    // IF the scan reads the bartender's name as the common word it is also written as, THEN the glossary has no entry
+    // "Mark", so the one real name the gold keeps is lost and the man is scored wrong for gender and type; fixed by
+    // 15i.N5.
+    @Test
+    void run_bartenderMark_theNameMarkIsLostAndOnlyLornaIsScored() {
+        final NamesBook book = NamesBook.byId("bartender-mark");
+        assumeThat(book.knownFailure()).isTrue();
+
+        final NamesScore score = run(book).score();
+
+        assertThat(score.lostNames()).containsExactly("Mark");
+        assertThat(score.eligible()).isEqualTo(2);
+        assertThat(score.genderCorrect()).isEqualTo(1);
+        assertThat(score.typeCorrect()).isEqualTo(1);
+        assertThat(score.junkKept()).isZero();
+    }
+
+    // IF the scan splits the shop name, THEN "Orrin & Vale" has no entry of its own (its halves are junk the gold
+    // names);
+    // the camera brand and the woman are held, so exactly the shop is lost; fixed by 15i.N3.
+    @Test
+    void run_brandAndCamera_theShopNameOrrinAndValeIsLost() {
+        final NamesBook book = NamesBook.byId("brand-and-camera");
+        assumeThat(book.knownFailure()).isTrue();
+
+        final NamesScore score = run(book).score();
+
+        assertThat(score.lostNames()).containsExactly("Orrin & Vale");
+        assertThat(score.typeCorrect()).isEqualTo(1);
+        assertThat(score.genderCorrect()).isEqualTo(score.eligible());
+    }
+
     @Test
     void run_anyBook_countsTheModelCallsItSentAndTimesTheRun() {
         final NamesScore score = run(NamesBook.byId("stray-he")).score();

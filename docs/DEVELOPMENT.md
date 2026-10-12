@@ -774,8 +774,13 @@ is only suggested, a redraft that mends a mixed-script word and drops one dash, 
 `KnownRed.until("15i.Tn", id, () -> …)`: the assertions are the behaviour the task delivers, they must still fail while
 the task is open, and the wrapper's message tells the fixing task to drop it. `eval/long-paragraphs.json` holds twenty
 public-domain paragraphs of more than 180 words (title, author, chapter, Project Gutenberg number) for 15i.X3. The
-sequence report adds LTCR-1 (DelTA, ICLR 2025): over the fixture's terms and names, the share of later occurrences that
-carry the rendering their first occurrence had.
+sequence report adds LTCR-1 (DelTA, ICLR 2025), as implemented in `SequenceMeasure`: for each fixture term and name, the decided
+segments with a target are read in order, and a segment counts only if its source names the term and its target carries at least one
+listed rendering or spelling. The first such segment fixes the term's rendering (the first listed one when it carries several); each
+later such segment counts once, per segment and not per occurrence, as kept when its target carries that rendering. A later segment
+whose target carries no listed rendering (echoed, untranslated, flagged without a target, or an unlisted form) is skipped and counts for
+neither side. The ratio is the kept count over the later segments, summed over all terms and names. It is -1, printed as `n/a`, when no term has a
+later segment, because a run that repeated nothing is not 0 % consistent.
 
 *Report.* Rows are grouped by kind and call (`quotes/draft`, `quotes/review`, `reviewer-long/review-batch`, …); a rate is
 the share of counted cases that came out as labelled. Extra metrics: `truncated` (reviewer calls whose reply stopped with
@@ -823,11 +828,11 @@ person by a male spirit in the past tense, the other five in the third person. D
 | `Mr` / `Mrs` / `Ms` with surnames | 71 / 64 / 66 paragraphs |
 | `master` / `imp` / `magician` / `boy` | 59 / 66 / 63 / 68 |
 | `sir` / `pentacle` / `circle` | 27 / 29 / 32 |
-| names with tempting spellings (Bartimaeus, Nathaniel, Underwood, Lovelace, Whitlock, Harrowgate, Quill), the stammered `B-Bartimaeus`, the hyphenated `Stoke-on-Marsh`, generic capitalised places (`Great Hall`, `Old Bailey`) | in narration and in speech |
+| names with tempting spellings (Zerubin, Edwin, Pellbury, Ashdown, Whitlock, Harrowgate, Quill), the stammered `Z-Zerubin`, the hyphenated `Stoke-on-Marsh`, generic capitalised places (`Great Hall`, `Old Bailey`) | in narration and in speech |
 | `[n]` footnote markers and footnote lines, `*emphasis*` / `**bold**`, Latin kept foreign, numbers and dates, three verses | 16 markers, 8 footnote lines, 14 Latin paragraphs |
 
-`manifest.json` lists the chapters and their narrator, the glossary the run starts with (Nathaniel locked, Underwood unlocked, Lovelace
-and Bartimaeus with no target) and, per term and name, the renderings and spellings that are counted (`master`'s list leaves out
+`manifest.json` lists the chapters and their narrator, the glossary the run starts with (Edwin locked, Pellbury unlocked, Ashdown
+and Zerubin with no target) and, per term and name, the renderings and spellings that are counted (`master`'s list leaves out
 `пан`, which a `Mr` in the same paragraph would otherwise claim). Three paragraphs are fixed anchors for the scripted model of the offline test.
 
 *Narrator modes* (`BOOKLOOM_EVAL_NARRATOR`, reports `<model>-sequence-<mode>.{txt,json}`, the JSON field `narrator`). `unset`, the default,
@@ -841,7 +846,7 @@ so the difference between the two rows is what the narrator field buys.
 | Metric | How it is read |
 |---|---|
 | `renderings/term`, `dominantShare` | per fixture term, the known renderings (inflected, as regular expressions) found in the targets of the paragraphs that name the term; the mean count of distinct ones over the terms rendered at all (1.00 is ideal) and, per term and as a mean, the commonest rendering's share (100 % is ideal; the real run's `master` was 143 майстер to 7 господар) |
-| `nameVariants` | per name, the spellings seen (`бартімей` and `бартімеус`); the sum of those beyond the first |
+| `nameVariants` | per name, the spellings seen (`зерубін` and `зеробін`); the sum of those beyond the first |
 | `genderSlips` | `GenderChecks` («я» + a past-tense word of the wrong gender) over the first-person chapters |
 | `english` | targets still in the source language: `LanguageIdentityCheck` finding or a plain echo of the source |
 | `flaggedNoTarget` | flagged segments with no stored target, which an export writes as the source (the 23-English-paragraphs bug, fixed by 15e.5) |
@@ -856,7 +861,7 @@ so the difference between the two rows is what the narrator field buys.
 
 Offline (`check`, no model, under 20 s): `SequenceFixtureTest` (the committed book equals the generator's output; paragraph, word and density
 counts; term and name counts; the narrator modes), `SequenceEvalOfflineTest` (the same code through the real job over `SequenceScriptedModel`,
-which drifts `master`, `Mr` and `Bartimaeus` for the second half of the book, says «я була» once, echoes one paragraph in English and appends one
+which drifts `master`, `Mr` and `Zerubin` for the second half of the book, says «я була» once, echoes one paragraph in English and appends one
 stray quote, and over hand-written runs for each defect class and the new metrics). No floor is asserted: 15e.4 records the "before" table
 and the thresholds per model class from this suite.
 

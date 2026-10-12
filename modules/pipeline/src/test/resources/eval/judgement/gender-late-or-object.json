@@ -34,8 +34,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "literary fiction",
-      "genreClass": ["literary", "fiction", "drama", "slice of life", "pastoral"],
+      "genre": "pastoral drama",
+      "genreClass": ["drama", "slice of life", "pastoral"],
       "register": "NEUTRAL",
       "narrator": "THIRD",
       "narratorGender": "UNKNOWN"

@@ -97,10 +97,40 @@ class CorefScorerTest {
         assertThat(outcomes(report)).containsExactly(Outcome.WRONG_VOTE);
     }
 
-    // IF a bare pronoun fits a pronoun of the target and one of another character, THEN it cannot vote safely.
+    // IF a bare "he" stands where only another character's "he" is, THEN it is a wrong vote, however many "he" letters
+    // the sentences about the target hold ("She", "the").
     @Test
-    void score_quoteThatFitsAPronounOfTheTargetAndOfAnotherCharacter_isWrongVote() {
+    void score_bareHeWhereOnlyAnotherCharacterIsHe_isWrongVote() {
         final CorefReport report = CorefScorer.score(List.of(CROWDED), answering(vote("he")));
+
+        assertThat(outcomes(report)).containsExactly(Outcome.WRONG_VOTE);
+    }
+
+    // IF the target is male and the window also has "She ..." of someone else, THEN "he" is a right vote: the "he" of
+    // "She" is no pronoun of the window.
+    @Test
+    void score_bareHeOfAMaleTargetInAWindowWithAnotherCharactersShe_isRightReferent() {
+        final CorefWindow mixed = window(
+                "Tovrin",
+                "Tovrin looked at Ilsabet. She nodded, and he smiled.",
+                pronoun("She nodded", "She", Referent.OTHER),
+                pronoun("he smiled", "he", Referent.TARGET));
+
+        final CorefReport report = CorefScorer.score(List.of(mixed), answering(vote("he")));
+
+        assertThat(outcomes(report)).containsExactly(Outcome.RIGHT_REFERENT);
+    }
+
+    // IF a bare "she" stands for the target in one sentence and for another woman in the next, THEN it cannot vote.
+    @Test
+    void score_bareSheThatFitsTheTargetsAndAnotherWomansPronoun_isWrongVote() {
+        final CorefWindow twoWomen = window(
+                "Ilsabet",
+                "Ilsabet met Yselde. She smiled, and she nodded.",
+                pronoun("She smiled", "She", Referent.TARGET),
+                pronoun("she nodded", "she", Referent.OTHER));
+
+        final CorefReport report = CorefScorer.score(List.of(twoWomen), answering(vote("she")));
 
         assertThat(outcomes(report)).containsExactly(Outcome.WRONG_VOTE);
     }

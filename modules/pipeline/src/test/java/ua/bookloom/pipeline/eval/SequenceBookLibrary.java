@@ -58,7 +58,7 @@ final class SequenceBookLibrary {
             "the Grand Council chamber",
             "the river wall",
             "the west gate",
-            "Pennyfeather Lane");
+            "Pellingham Lane");
 
     static final List<String> TIME = List.of(
             "4:30",
@@ -90,7 +90,7 @@ final class SequenceBookLibrary {
 
     static final List<String> MRS = List.of("Mrs Pellbury", "Mrs Pellbury", "Mrs Harrowgate");
 
-    static final List<String> MS = List.of("Ms Ashdown", "Ms Ashdown", "Ms Pennyfeather");
+    static final List<String> MS = List.of("Ms Ashdown", "Ms Ashdown", "Ms Pellingham");
 
     static final List<String> SPEAKER = List.of(
             "Edwin", "Zerubin", "{MR}", "{MRS}", "{MS}", "the boy", "the magician", "the imp", "Whitlock", "Quill");
