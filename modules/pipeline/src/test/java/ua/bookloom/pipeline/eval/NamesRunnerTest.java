@@ -89,6 +89,19 @@ class NamesRunnerTest {
         assertThat(score.junkKept()).isZero();
     }
 
+    // IF the short and the full spelling kept their pronouns apart, THEN three "she" and two "she" would each be too
+    // little to decide, and a model unsure of the short form would leave one woman with two genders; pooled, five of
+    // five decide both with no model (15i.N2).
+    @Test
+    void run_shortAndFullNameWithWeakEvidenceEach_endAsOneFemalePerson() {
+        final NamesScore score = run(NamesBook.byId("short-and-full-weak")).score();
+
+        assertThat(score.eligible()).isEqualTo(3);
+        assertThat(score.genderCorrect()).isEqualTo(3);
+        assertThat(score.wrongButVerified()).isZero();
+        assertThat(score.clusterRate()).isEqualTo(1.0);
+    }
+
     @Test
     void run_anyBook_countsTheModelCallsItSentAndTimesTheRun() {
         final NamesScore score = run(NamesBook.byId("stray-he")).score();

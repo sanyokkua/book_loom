@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,12 +73,13 @@ class NamesBookTest {
     }
 
     @Test
-    void books_ids_areTheNineShapesTheTaskNames() {
+    void books_ids_areTheShapesTheTaskNames() {
         assertThat(NamesBook.all())
                 .extracting(NamesBook::id)
                 .containsExactly(
                         "misattributed-she",
                         "short-and-full-form",
+                        "short-and-full-weak",
                         "city-her",
                         "stray-he",
                         "bartender-mark",
@@ -156,6 +158,21 @@ class NamesBookTest {
         assertThat(NamesBook.all().stream().filter(NamesBook::knownFailure))
                 .extracting(NamesBook::id, NamesBook::fixedBy)
                 .containsExactly(tuple("bartender-mark", "15i.N5"));
+    }
+
+    // IF either spelling alone were already a strong case, THEN the book would not show why the tallies must be pooled.
+    @Test
+    void shortAndFullWeak_pronounTallies_areThreeAndTwoSheAndNeitherIsStrongAlone() {
+        final List<String> paragraphs = NamesBook.byId("short-and-full-weak").paragraphs();
+
+        final PronounGender.Evidence full = PronounGender.of("Zephra Quillon", paragraphs, SOURCE);
+        final PronounGender.Evidence shortName = PronounGender.of("Zephra", paragraphs, SOURCE);
+
+        assertThat(full.femaleWords()).hasSize(3);
+        assertThat(shortName.femaleWords()).hasSize(2);
+        assertThat(full.isStrong()).isFalse();
+        assertThat(shortName.isStrong()).isFalse();
+        assertThat(full.and(shortName).isStrong()).isTrue();
     }
 
     @Test

@@ -202,7 +202,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
                     "Duplicate glossary term",
                     "'" + entry.term() + "' is already in the glossary."));
         }
-        final Result<GlossaryEntry> added = glossary.add(entry);
+        final Result<GlossaryEntry> added = glossary.add(entry).flatMap(stored -> shareGender(null, stored));
         log.debug("Glossary add project={} entryId={} ok={}", entry.projectId(), entry.id(), added.isOk());
         return added;
     }
@@ -222,7 +222,16 @@ public final class GlossaryServiceImpl implements GlossaryService {
             log.debug("Glossary update project={} entryId={} refused: unknown entry", entry.projectId(), entry.id());
             return glossary.update(entry);
         }
-        return glossary.update(entry).flatMap(stored -> recordTermChange(before.get(), stored));
+        return glossary.update(entry)
+                .flatMap(stored -> recordTermChange(before.get(), stored))
+                .flatMap(stored -> shareGender(before.get(), stored));
+    }
+
+    // A gender the person chose for one spelling of a name is chosen for the person (15i.N2).
+    private Result<GlossaryEntry> shareGender(@Nullable final GlossaryEntry before, final GlossaryEntry stored) {
+        final Document document = openProjects.get(stored.projectId());
+        final String language = document == null ? null : sourceLanguage(stored.projectId(), document);
+        return ClusterGender.propagate(glossary, stored, before, language).map(changed -> stored);
     }
 
     private Result<GlossaryEntry> recordTermChange(final GlossaryEntry before, final GlossaryEntry after) {

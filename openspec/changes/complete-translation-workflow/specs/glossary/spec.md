@@ -295,6 +295,75 @@ a model call, marked so the person can see and change it.
 - **WHEN** the entry `John` already has gender female
 - **THEN** preparation leaves it female and not marked
 
+### Requirement: One person, one gender
+
+The application SHALL group the glossary entries that name one person into a cluster, computed from the entries alone
+each time it is needed (no stored field, and no book index is needed), and SHALL treat the cluster as one person for
+gender:
+
+- the anchor of a cluster SHALL be a multi-word entry of type character that does not open with a title (`Arlo Venn`);
+  an alias SHALL never be an anchor or a member;
+- a one-word entry of type character or untyped SHALL join an anchor WHEN its word is the anchor's first or last word
+  (never a middle word) and exactly one anchor holds it; a place, a term or a title SHALL never join, and a surname two
+  anchors share SHALL join neither;
+- an honorific form (a title of the book's language from the bundled list, with or without a full stop, and a
+  surname: `Mr Venn`, `Dr Venn`) SHALL join the one anchor with that surname, and SHALL NOT count as an anchor itself;
+  WHEN the title shows a gender (the language file's `femaleTitles` and `maleTitles`: `Mrs`, `Miss`, `Ms`, `Mr`) it
+  SHALL join only WHEN the anchor's gender (the entry's, else the first-name list's for its first word) is the same,
+  so an unknown or another gender keeps `Mrs Venn` a person of her own;
+- the pronoun tally of every spelling of a person SHALL be pooled: the pooled tally decides a gender without the model
+  (five or more pronouns, 90 % agreeing) and is the tally the review checks the model's gender against;
+- a review SHALL end with one gender for each cluster: the person's, WHEN any member holds one the person set (the
+  other members take it as the person's, and two members with different person-set genders are all left alone); else
+  the verified one, else the suggested one, written to the members of a lower rank, with members that disagree at the
+  top rank left alone; a gender the person set SHALL never be overwritten;
+- a gender the person chooses for an entry (the table, the Add dialog, a CSV row) SHALL be written to the other members
+  as the person's WHEN the gender is known and the entry now holds it as the person's after a change (confirming a
+  suggested or verified gender included); clearing a gender, editing a target or any other field SHALL NOT change the
+  other members;
+- the character sheet SHALL list a member under its anchor WHEN the anchor has a gender and the member has none or the
+  same, and on a line of its own WHEN the genders differ.
+
+**Source:** 15i.N2 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01
+(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`).
+In plain words: a book calls one woman `Zephra` and `Zephra Quillon`; three "she" after each name are too few to
+decide either, six together decide both, and the model is never left to give them two genders. A gender the person
+sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to `Arlo Venn`: she may be his wife.
+
+#### Scenario: A short name and a full name are one person
+
+- **WHEN** the glossary holds `Arlo`, `Venn` and `Arlo Venn`, all characters
+- **THEN** each of the three has the other two in its cluster
+- **AND** with `Mira Venn` added `Venn` joins neither, `Arlo` still joins `Arlo Venn` and `Mira` would join `Mira Venn`
+
+#### Scenario: Only the first or the last word, only a character or an untyped entry
+
+- **WHEN** the glossary holds `Dane` and `Arlo Dane Venn`, or `Venn` of type place and `Arlo Venn`
+- **THEN** the entries are alone
+
+#### Scenario: A gendered honorific joins only a name of its gender
+
+- **WHEN** the glossary holds `Mrs Venn` and `Arlo Venn` (male, or of no gender and not a listed first name)
+- **THEN** `Mrs Venn` is alone
+- **AND** with `Mira Venn` (female) she joins it, `Mr Venn` joins `Arlo Venn` but not `Mira Venn`, and `Dr Venn` joins either
+
+#### Scenario: Three and two pronouns together decide
+
+- **WHEN** a book shows three "she" after `Zephra Quillon` and two after `Zephra`
+- **THEN** neither tally alone is strong, the pooled five are, and the review gives both entries the female gender with
+  no model call
+
+#### Scenario: The person's gender spreads and is never overwritten
+
+- **WHEN** the person sets `Arlo` male and `Arlo Venn` is a suggested female
+- **THEN** `Arlo Venn` becomes male as the person's, and a CSV row that sets a gender does the same
+- **AND** WHEN `Arlo` is male and `Arlo Venn` female, both set by the person, they stay as they are
+
+#### Scenario: Clearing a gender does not spread
+
+- **WHEN** the person clears `Arlo`'s gender
+- **THEN** `Arlo Venn` keeps its gender
+
 ### Requirement: Show the glossary as an editable table on Names & style
 
 The Names & style screen SHALL show the glossary as a table with the columns Source term, Type (character, place,

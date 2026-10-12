@@ -43,6 +43,7 @@ record NamesBook(
     static final List<String> IDS = List.of(
             "misattributed-she",
             "short-and-full-form",
+            "short-and-full-weak",
             "city-her",
             "stray-he",
             "bartender-mark",

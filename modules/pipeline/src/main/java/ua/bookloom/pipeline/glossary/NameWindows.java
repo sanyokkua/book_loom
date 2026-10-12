@@ -79,7 +79,7 @@ final class NameWindows {
     private record Use(int segment, int start, int sentence) {}
 
     /**
-     * Gathers the windows for the entries from the book's index.
+     * Gathers the windows for the entries from the book's index, each entry's pronouns its own (no cluster pools them).
      *
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
@@ -92,15 +92,36 @@ final class NameWindows {
             final List<Integer> ordinals,
             final List<GlossaryEntry> entries,
             @Nullable final String languageTag) {
+        return of(index, ordinals, entries, NameClusters.of(List.of(), index, languageTag), languageTag);
+    }
+
+    /**
+     * Gathers the windows for the entries from the book's index.
+     *
+     * @param index the project's book index; never null
+     * @param ordinals the ordinals of the segments to read, in reading order; never null
+     * @param entries the entries asked about; never null
+     * @param clusters the clusters of the whole glossary, built on the same index: the pronouns after any spelling of
+     *     a person count for each of them (15i.N2); never null
+     * @param languageTag the source language's tag, which picks the pronouns; null reads none
+     * @return the evidence by term as held; a term the book never uses maps to {@link Evidence#NONE}
+     */
+    static Map<String, Evidence> of(
+            final BookIndex index,
+            final List<Integer> ordinals,
+            final List<GlossaryEntry> entries,
+            final NameClusters clusters,
+            @Nullable final String languageTag) {
         Objects.requireNonNull(index, "index");
         Objects.requireNonNull(entries, "entries");
+        Objects.requireNonNull(clusters, "clusters");
         final List<Occurrences.Read> reads = index.reads(ordinals);
         final Map<String, List<Use>> uses = usesOf(reads, entries);
-        final List<String> texts = index.visibleTexts(ordinals);
         final Map<String, Evidence> evidence = new LinkedHashMap<>();
         for (final GlossaryEntry entry : entries) {
             final List<Use> found = uses.getOrDefault(entry.term(), List.of());
-            evidence.put(entry.term(), evidenceOf(entry, found, reads, texts, languageTag));
+            evidence.put(
+                    entry.term(), evidenceOf(entry, found, reads, clusters.pronounsOf(entry, ordinals), languageTag));
         }
         log.debug(
                 "Name windows over {} segments for {} entries, {} used in the book",
@@ -114,9 +135,8 @@ final class NameWindows {
             final GlossaryEntry entry,
             final List<Use> uses,
             final List<Occurrences.Read> reads,
-            final List<String> texts,
+            final PronounGender.Evidence pronouns,
             @Nullable final String languageTag) {
-        final PronounGender.Evidence pronouns = PronounGender.of(entry.term(), texts, languageTag);
         if (uses.isEmpty()) {
             return new Evidence(0, List.of(), pronouns);
         }

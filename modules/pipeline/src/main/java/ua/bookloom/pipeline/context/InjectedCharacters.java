@@ -1,13 +1,12 @@
 package ua.bookloom.pipeline.context;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +17,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.glossary.NameClusters;
 import ua.bookloom.pipeline.glossary.PronounGender;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 
@@ -25,15 +25,14 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
  * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
  * names whose gender is known, so a model never has to guess a pronoun or a verb ending from a name alone. A character
  * the segment does not name is never listed, so the sheet stays as short as the scene. A short name that is part of a
- * character's full name of the same gender ("Danny" of "Danny Vosk") shares that character's line, and the pronouns
- * the scene shows are listed only when they agree with the set gender (15h.A2).
+ * character's full name ("Danny" of "Danny Vosk", by {@link NameClusters}), and has no gender of its own or the same
+ * one, shares that character's line (15i.N2), and the pronouns the scene shows are listed only when they agree with the
+ * set gender (15h.A2).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class InjectedCharacters {
-
-    private static final Pattern SPACES = Pattern.compile("\\s+");
 
     /**
      * The sheet for some segments.
@@ -49,18 +48,21 @@ public final class InjectedCharacters {
     public static List<String> select(
             final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
         final List<String> texts = Tokens.visibleTexts(segments);
-        final List<GlossaryEntry> known = glossary.stream()
-                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() != Gender.UNKNOWN)
+        final List<GlossaryEntry> characters = glossary.stream()
+                .filter(entry -> entry.type() == TermType.CHARACTER)
                 .filter(entry -> !entry.term().isBlank())
                 .toList();
+        final NameClusters clusters = NameClusters.of(glossary, null, sourceLanguage);
         final Map<GlossaryEntry, List<GlossaryEntry>> lines = new LinkedHashMap<>();
-        for (final GlossaryEntry entry : known) {
+        for (final GlossaryEntry entry : characters) {
             if (namedIn(entry.term(), texts)) {
-                final GlossaryEntry full = fullNameOf(entry, known);
-                lines.computeIfAbsent(full, _ -> new ArrayList<>()).add(entry);
+                headOf(entry, clusters)
+                        .ifPresent(head -> lines.computeIfAbsent(head, _ -> new ArrayList<>())
+                                .add(entry));
             }
         }
-        final List<String> sheet = known.stream()
+        final List<String> sheet = characters.stream()
+                .filter(entry -> entry.gender() != Gender.UNKNOWN)
                 .filter(lines::containsKey)
                 .map(entry -> lineOf(entry, Objects.requireNonNull(lines.get(entry), "named"), texts, sourceLanguage))
                 .toList();
@@ -79,19 +81,15 @@ public final class InjectedCharacters {
         return select(segments, glossary, null);
     }
 
-    // The first longer character name of the same gender whose words hold this one's as a whole run, else the entry.
-    private static GlossaryEntry fullNameOf(final GlossaryEntry entry, final List<GlossaryEntry> known) {
-        final List<String> words = wordsOf(entry.term());
-        return known.stream()
-                .filter(other -> other.gender() == entry.gender())
-                .filter(other -> wordsOf(other.term()).size() > words.size())
-                .filter(other -> Collections.indexOfSubList(wordsOf(other.term()), words) >= 0)
-                .findFirst()
+    // The line a present name is listed on: its cluster's full name when that has a gender and this name has none or
+    // the same one, else the name itself; nothing when the line's gender is not known.
+    private static Optional<GlossaryEntry> headOf(final GlossaryEntry entry, final NameClusters clusters) {
+        final GlossaryEntry head = clusters.fullNameOf(entry)
+                .filter(full -> full.gender() != Gender.UNKNOWN)
+                .filter(full -> entry.gender() == Gender.UNKNOWN || entry.gender() == full.gender())
                 .orElse(entry);
-    }
-
-    private static List<String> wordsOf(final String term) {
-        return List.of(SPACES.split(term.strip()));
+        log.debug("Character sheet: entry {} is listed under {}", entry.id(), head.id());
+        return Optional.of(head).filter(listed -> listed.gender() != Gender.UNKNOWN);
     }
 
     private static String lineOf(

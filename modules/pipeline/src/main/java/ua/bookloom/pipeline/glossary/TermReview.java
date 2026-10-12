@@ -125,9 +125,7 @@ public final class TermReview {
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Map<String, Evidence> evidence = NameWindows.of(
-                in.story().index(), in.story().ordinals(), open, in.frame().analysisLanguage());
-        final Result<List<Verdict>> verdicts = ask(open, evidence, in.frame(), in.calls());
+        final Result<List<Verdict>> verdicts = ask(open, evidenceOf(open, held, in), in.frame(), in.calls());
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
             return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
@@ -140,6 +138,19 @@ public final class TermReview {
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
         }
         return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in);
+    }
+
+    // The pronouns after any spelling of a person count for each of them, so the evidence is read over the clusters of
+    // the whole glossary, not only of the open entries (15i.N2).
+    private static Map<String, Evidence> evidenceOf(
+            final List<GlossaryEntry> open, final List<GlossaryEntry> held, final Inputs in) {
+        final String language = in.frame().analysisLanguage();
+        return NameWindows.of(
+                in.story().index(),
+                in.story().ordinals(),
+                open,
+                NameClusters.of(held, in.story().index(), language),
+                language);
     }
 
     private Result<GlossaryReviewReport> commit(

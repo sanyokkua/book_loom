@@ -81,6 +81,7 @@ final class ReviewCommit {
         final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally)
                 .flatMap(done -> GivenNames.seedHeld(glossary, projectId, sourceLanguage)
                         .flatMap(seeded -> PronounGender.seedHeld(glossary, projectId, bookTexts, sourceLanguage))
+                        .flatMap(seeded -> ClusterGender.reconcile(glossary, projectId, sourceLanguage))
                         .map(seeded -> done));
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), "error"));
