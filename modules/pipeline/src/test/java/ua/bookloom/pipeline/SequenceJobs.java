@@ -1,6 +1,8 @@
 package ua.bookloom.pipeline;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -8,14 +10,24 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.glossary.GlossaryModelScans;
+import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
+import ua.bookloom.pipeline.glossary.PreScan;
+import ua.bookloom.pipeline.glossary.SuggestTargets;
+import ua.bookloom.pipeline.glossary.TermChoice;
+import ua.bookloom.pipeline.glossary.TermReview;
+import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
@@ -72,6 +84,41 @@ public final class SequenceJobs {
     /** The review desk's retry over the prepared book's own stores. */
     public static RetryDraft retryDraft(final Prepared prepared) {
         return ConsistencyPassFixture.retryDraft(prepared.project);
+    }
+
+    /**
+     * Names &amp; style as the app wires it, over the prepared book's own stores.
+     *
+     * @param glossary the production glossary service
+     * @param lexicon the production lexicon service
+     */
+    public record Names(GlossaryService glossary, LexiconService lexicon) {}
+
+    /** The glossary and lexicon services over the prepared book's stores (the names eval reaches them from here). */
+    public static Names names(final Prepared prepared) {
+        final PromptTemplates templates = new PromptTemplates();
+        final ObjectMapper mapper = new ObjectMapper();
+        final RunStores stores = prepared.stores();
+        final SuggestTargets suggest = new SuggestTargets(templates, mapper);
+        final TermReview review = new TermReview(templates, mapper, stores.glossary(), suggest);
+        final GlossaryModelScans scans = new GlossaryModelScans(
+                stores.projects(),
+                stores.openProjects(),
+                new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                review,
+                suggest,
+                new TermChoice(templates, mapper),
+                Clock.systemUTC());
+        return new Names(
+                new GlossaryServiceImpl(
+                        stores.glossary(),
+                        stores.segments(),
+                        prepared.project.deferrals(),
+                        stores.projects(),
+                        stores.openProjects(),
+                        scans),
+                new LexiconServiceImpl(
+                        stores.lexicon(), stores.glossary(), stores.projects(), stores.openProjects(), scans));
     }
 
     /**

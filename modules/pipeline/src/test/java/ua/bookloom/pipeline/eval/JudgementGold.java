@@ -29,10 +29,20 @@ import ua.bookloom.api.project.TermType;
  * @param targetLanguage the language it is translated into
  * @param brief the brief the person would choose
  * @param characters the main characters, each with the type and gender the review should end with
+ * @param junk terms a scan must not leave in the glossary (a heading, a nationality, a distress call, half of a brand)
+ * @param keep real names besides the characters that a scan and review must not lose (a place, a brand)
+ * @param recurringTerms the recurring common words a person would keep or drop in the lexicon
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 record JudgementGold(
-        @Nullable String book, String sourceLanguage, String targetLanguage, Brief brief, List<Person> characters) {
+        @Nullable String book,
+        String sourceLanguage,
+        String targetLanguage,
+        Brief brief,
+        List<Person> characters,
+        List<String> junk,
+        List<String> keep,
+        List<Recurring> recurringTerms) {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -42,6 +52,9 @@ record JudgementGold(
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         Objects.requireNonNull(brief, "brief");
         characters = characters == null ? List.of() : List.copyOf(characters);
+        junk = junk == null ? List.of() : List.copyOf(junk);
+        keep = keep == null ? List.of() : List.copyOf(keep);
+        recurringTerms = recurringTerms == null ? List.of() : List.copyOf(recurringTerms);
     }
 
     /**
@@ -107,14 +120,35 @@ record JudgementGold(
      * @param term the name as the book writes it, which is the glossary term
      * @param type the type
      * @param gender the gender; {@link Gender#UNKNOWN} when the book never shows it
+     * @param cluster the id shared by every written form of one person ("Dax" and "Dax Orlo"), or null for a name of
+     *     its own
      */
-    record Person(String term, TermType type, Gender gender) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Person(
+            String term,
+            TermType type,
+            Gender gender,
+            @Nullable String cluster) {
 
         /** Rejects a missing part. */
         Person {
             Objects.requireNonNull(term, "term");
             Objects.requireNonNull(type, "type");
             Objects.requireNonNull(gender, "gender");
+        }
+    }
+
+    /**
+     * A recurring common word and whether the lexicon should hold it.
+     *
+     * @param term the word
+     * @param keep {@code true} when a person would keep it, {@code false} when it is an ordinary word to drop
+     */
+    record Recurring(String term, boolean keep) {
+
+        /** Rejects a missing term. */
+        Recurring {
+            Objects.requireNonNull(term, "term");
         }
     }
 

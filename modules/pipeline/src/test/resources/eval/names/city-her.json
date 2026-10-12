@@ -1,0 +1,76 @@
+{
+  "id": "city-her",
+  "about": "The city Valtern is followed by 'Her' (possessive) eight times, each meaning its bankers; it is a place with no gender. Its recurring word 'bankers' is worth keeping.",
+  "title": "The Ledger Town",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Valtern",
+      "paragraphs": [
+        "Valtern lived on trade. Her bankers lent to kings and counted the interest in three languages.",
+        "Hale came to Valtern in the spring of his twentieth year. He carried one bag and a letter of introduction.",
+        "The streets of Valtern were narrow and loud. Her bankers kept the quietest rooms in the city.",
+        "Hale found a room above a chandler's shop. He paid a month in advance and slept until noon.",
+        "Valtern had no walls. Her bankers said that walls were bad for business and worse for credit.",
+        "Hale delivered the letter to the oldest bank on the square. The clerk read it twice and asked him to wait.",
+        "The bankers kept him waiting for two hours. They gave him tea in a cup too small for his hand.",
+        "Valtern could be cruel to strangers. Her bankers called it prudence, and Hale learned to call it that too.",
+        "Hale was given a desk in the back room. He copied accounts and said little.",
+        "In summer the canals of Valtern turned green. Her bankers moved their families to the hills.",
+        "Hale stayed behind with the ledgers. He learned the bankers' hand and then the bankers' silences.",
+        "The old banker died late in the summer. Hale walked behind the coffin through the empty streets of Valtern.",
+        "Valtern mourned for a day. Her bankers returned to their desks on the second morning.",
+        "Hale was offered the dead man's key. He took it, though he did not say whether he was glad.",
+        "The bankers voted in the autumn. They voted for caution, as they always did.",
+        "Hale learned that Valtern forgave nothing and forgot very little. Her bankers were the same.",
+        "In winter the canals froze and the city went quiet. Hale sat alone with the ledgers and a single candle.",
+        "He never left Valtern. Her bankers buried him in the spring, among their own.",
+        "In the district everyone knew Valtern, and nobody had a bad word for Valtern.",
+        "Years afterwards people still asked about Valtern, though few could say why.",
+        "In the district everyone knew Hale, and nobody had a bad word for Hale.",
+        "Years afterwards people still asked about Hale, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Valtern",
+        "type": "PLACE",
+        "gender": "UNKNOWN",
+        "cluster": "valtern"
+      },
+      {
+        "term": "Hale",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "hale"
+      }
+    ],
+    "junk": [],
+    "keep": [],
+    "recurringTerms": [
+      {
+        "term": "bankers",
+        "keep": true
+      }
+    ]
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Valtern": "Валтерн",
+      "Hale": "Гейл"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

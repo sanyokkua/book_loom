@@ -1,0 +1,84 @@
+{
+  "id": "short-and-full-form",
+  "about": "One man is written 'Dax Orlo' five times and 'Dax' nine times; the review must give both entries one gender and one spelling of the shared name.",
+  "title": "The Harbour Office",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Morning",
+      "paragraphs": [
+        "Dax Orlo arrived at the harbour office before dawn. He hung his wet coat on the nail by the door.",
+        "Ysolde was already there with the tide tables. She had marked three of them in red.",
+        "Dax read the first table slowly. He disliked red ink and said so.",
+        "The kettle began to sing. Ysolde took it off the stove and poured two cups.",
+        "Dax Orlo drank his tea standing up. He had never learned to sit while the harbour was awake.",
+        "Ysolde unrolled the chart. She pinned its corners with four brass weights.",
+        "Dax traced the channel with one finger. He stopped where the water turned pale.",
+        "The first boat of the morning nosed past the breakwater. Gulls rose and settled again.",
+        "Dax signalled from the window. He waved the red flag twice, slowly, as the rules required.",
+        "Ysolde noted the time in the log. She wrote small and straight, like her mother.",
+        "Dax Orlo kept the harbour office for thirty years. He knew every keel by its sound.",
+        "Ysolde brought him the second tide table. She did not argue about the ink this time.",
+        "Dax laughed at that. He had a short, dry laugh that startled the gulls.",
+        "By noon the fog had lifted and the water lay flat. Dax locked the cash box and wiped his hands.",
+        "Ysolde counted the day's fees. She entered them in the ledger and blotted the page.",
+        "Dax Orlo put on his coat again. He checked the nail twice before he left.",
+        "At the door Dax turned and looked back at the room. He nodded to Ysolde, who did not look up.",
+        "The harbour bell rang the half hour. Dax listened until the last note died.",
+        "Ysolde shut the ledger and set the kettle back on the stove. She waited for the next boat.",
+        "Dax came back at dusk with a parcel under his arm. He set it on the counter without a word.",
+        "Inside the parcel lay a small brass compass. Ysolde turned it over and read the maker's mark.",
+        "Dax Orlo said it had been his father's. He asked her to keep it on the chart table.",
+        "In the district everyone knew Dax Orlo, and nobody had a bad word for Dax Orlo.",
+        "Years afterwards people still asked about Dax Orlo, though few could say why.",
+        "In the district everyone knew Dax, and nobody had a bad word for Dax.",
+        "Years afterwards people still asked about Dax, though few could say why.",
+        "In the district everyone knew Ysolde, and nobody had a bad word for Ysolde.",
+        "Years afterwards people still asked about Ysolde, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Dax Orlo",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "dax"
+      },
+      {
+        "term": "Dax",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "dax"
+      },
+      {
+        "term": "Ysolde",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "ysolde"
+      }
+    ],
+    "junk": [],
+    "keep": [],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Dax Orlo": "Дакс Орло",
+      "Dax": "Дакс",
+      "Ysolde": "Ізольда"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

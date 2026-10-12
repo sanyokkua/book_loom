@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
@@ -43,6 +43,12 @@
 # every model, and prints each field's agreement across the seeds (target 80 % or more), its accuracy against the
 # book's gold, and the agreement of all models' answers pooled. --suite gold scores the same two steps on the owner's
 # books (BOOKLOOM_CORPUS_DIR holding <name>.gold.json files; docs/DEVELOPMENT.md, judgement evals).
+# --suite names (15i.E1) runs Names & style end to end (scan, prescan, review, translate, then the lexicon's scan, model
+# scan, review and suggest) through GlossaryService and LexiconService on the nine committed invented books
+# (BOOKLOOM_EVAL_BOOK=<id>|all) and, when BOOKLOOM_CORPUS_DIR is set, on every <name>.gold.json there (reports end in
+# -names.json). One row per model and book: gender % over the characters with five or more mentions, wrong-but-verified
+# genders, type %, the share of person clusters with one gender, spellings per cluster, junk kept, real names lost,
+# recurring terms right, calls and minutes. The per-model timeout defaults to 5400 s, as for sequence.
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -80,7 +86,7 @@ while [ $# -gt 0 ]; do
 done
 
 REPORTS=modules/pipeline/build/reports/promptEval
-if [ "$SUITE" = sequence ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
+if [ "$SUITE" = sequence ] || [ "$SUITE" = names ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
 
 run_one() {
   local entry=$1 narrator=${2:-unset} spec context label provider model api_model url env_provider log
@@ -171,6 +177,17 @@ if sys.argv[2] == "sequence":
         print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%% %7.1f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), 100 * r.get("ltcr1", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
     print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering; LTCR-1: the share of a term's or name's later occurrences that carry the rendering its first one had, DelTA's consistency metric)")
     sys.exit(0)
+if sys.argv[2] == "names":
+    print("%-30s %-32s %7s %6s %6s %9s %6s %5s %5s %9s %6s %7s" % ("model", "book", "gender", "wrongV", "type", "cluster1G", "spell", "junk", "lost", "termsOK", "calls", "minutes"))
+    for r in (r for r in reports if r.get("suite") == "names"):
+        for b in r["books"]:
+            s = b.get("score")
+            if s is None:
+                print("%-30s %-32s error %s" % (r["model"][-30:], b["book"][-32:], b.get("error")))
+                continue
+            print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
+    print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
+    sys.exit(0)
 if sys.argv[2] == "recall":
     pct = lambda v: "-" if v is None else "%.0f%%" % (100 * v)
     for r in (r for r in reports if r.get("suite") == "recall"):
@@ -227,7 +244,7 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

@@ -1,0 +1,69 @@
+{
+  "id": "technical-headings",
+  "about": "A technical chapter whose paragraph-length headings are capitalised phrases ('Power Supply Unit', 'Signal Path', 'Gain Stage', 'Output Stage') repeated through the chapter; they are no names.",
+  "title": "The Valve Amplifier",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Repair",
+      "paragraphs": [
+        "Iolanthe unpacked the amplifier on the workbench. She had waited three weeks for the parts.",
+        "Power Supply Unit",
+        "The power supply unit came first. Iolanthe checked the fuse and the mains lead before she touched anything else.",
+        "Signal Path",
+        "The signal path ran from the input jack to the first valve. Iolanthe traced it with a pencil and marked each joint.",
+        "Gain Stage",
+        "The gain stage was the part she trusted least. She measured it twice and wrote the numbers in the margin.",
+        "Output Stage",
+        "The output stage drove the speakers and ran hot. Iolanthe fitted a heat sink and tested it with a dummy load.",
+        "Iolanthe switched the amplifier on. She watched the valves glow and waited for the hum to settle.",
+        "Power Supply Unit",
+        "Back at the power supply unit she found a loose lead. She tightened it and the hum dropped by half.",
+        "Signal Path",
+        "Along the signal path a cheap capacitor had begun to leak. Iolanthe replaced it and logged the date.",
+        "Gain Stage",
+        "The gain stage needed a small adjustment. Iolanthe turned the trimmer a quarter turn and listened.",
+        "Output Stage",
+        "The output stage was sound. She cleaned the contacts and fixed the cover back in place.",
+        "Iolanthe played a record to test the whole chain. The first notes came out clean and warm.",
+        "She sat back and let the music run. After an hour Iolanthe wrote a short report for the owner.",
+        "In the district everyone knew Iolanthe, and nobody had a bad word for Iolanthe.",
+        "Years afterwards people still asked about Iolanthe, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Iolanthe",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "iolanthe"
+      }
+    ],
+    "junk": [
+      "Power Supply Unit",
+      "Signal Path",
+      "Gain Stage",
+      "Output Stage"
+    ],
+    "keep": [],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Iolanthe": "Іоланта"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

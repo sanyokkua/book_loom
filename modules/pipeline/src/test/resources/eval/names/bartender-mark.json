@@ -1,0 +1,78 @@
+{
+  "id": "bartender-mark",
+  "about": "A bartender is called Mark, and the book also holds 'a mark on the wall', 'the guild's mark' and a sentence-initial imperative 'Mark the spot'; the name is one man, the common word is no recurring term.",
+  "title": "The Back Room",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Closing",
+      "paragraphs": [
+        "Mark wiped the counter and hung the cloth over the tap. He did it every night at the same minute.",
+        "There was a mark on the wall behind the bar, a long grey smear at shoulder height. Nobody remembered how it had got there.",
+        "Lorna came in out of the rain and shook her coat. She asked for the usual and Mark poured it without a word.",
+        "Mark leaned on the bar. He liked the hour when the room was still empty.",
+        "The mark on the wall had been there longer than the bar itself. The owner swore it was a burn from the old fire.",
+        "Lorna drank slowly and watched the door. She had the look of someone who expected a letter.",
+        "Mark polished a glass against the light. He held it up and found a spot and polished it again.",
+        "\"Mark the spot,\" said a drunk in the corner, pointing at the ceiling. Nobody asked what spot he meant.",
+        "A man came in with a leather satchel and a stiff collar. Mark looked at him once and put down the glass.",
+        "Lorna turned her stool toward the stranger. She said she did not know him.",
+        "The stranger laid a coin on the bar, stamped with the guild's mark. Mark did not touch it.",
+        "Mark said the house did not take that kind of money. He said it quietly, as he said everything.",
+        "The stranger smiled and put the coin away. He asked about the mark on the wall instead.",
+        "Mark told him it was an old burn. Lorna said it was a hand, and that she could see the fingers.",
+        "They looked at the wall for a long moment. In the lamplight the mark did look a little like a hand.",
+        "The stranger finished his drink and left. Mark locked the door behind him and drew the bolt.",
+        "Lorna stayed until midnight. Mark washed the last glass and turned down the lamp.",
+        "In the morning Mark found a new mark on the wall, small and neat, at the height of a child's hand.",
+        "In the district everyone knew Mark, and nobody had a bad word for Mark.",
+        "Years afterwards people still asked about Mark, though few could say why.",
+        "In the district everyone knew Lorna, and nobody had a bad word for Lorna.",
+        "Years afterwards people still asked about Lorna, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Mark",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "mark"
+      },
+      {
+        "term": "Lorna",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "lorna"
+      }
+    ],
+    "junk": [],
+    "keep": [
+      "Mark"
+    ],
+    "recurringTerms": [
+      {
+        "term": "mark",
+        "keep": false
+      }
+    ]
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Mark": "Марк",
+      "Lorna": "Лорна"
+    },
+    "terms": {}
+  },
+  "knownFailure": true,
+  "fixedBy": "15i.N5"
+}

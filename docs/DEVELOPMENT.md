@@ -1084,6 +1084,42 @@ answers as the gold says (every field right); `JudgementSuitesTest` proves the a
 and the gold directory. The praise page found a defect: twelve blurbs ("A quiet triumph." The Northern Review) counted as a
 story chapter, so the brief read reviewers first; a story paragraph now needs two full sentences closed by their mark.
 
+<a id="names-suite"></a>**The names suite: Names & style end to end against gold (15i.E1).** `NamesRunner` runs a book the way the
+window does, through the production `GlossaryService` and `LexiconService` over the imported project's own stores (`SequenceJobs.names`):
+glossary scan, name prescan, review, translate, then lexicon scan, model scan, review and suggest. It then scores the final glossary
+and lexicon against the book's gold (`NamesScore`): the gender of every character with five or more mentions (accuracy, and the
+*wrong but verified* count, a wrong gender not marked suggested), the type of every gold character, whether the written forms of one
+person (one `cluster`) hold one gender, the distinct spellings per cluster, the junk a scan kept, the real names it lost, the
+recurring terms kept and dropped, and the calls and minutes. A mention is a whole-word, case-sensitive occurrence of the gold term.
+
+```bash
+scripts/eval-matrix.sh --suite names                                    # the nine committed books, every model
+BOOKLOOM_EVAL_BOOK=misattributed-she scripts/eval-matrix.sh --suite names --models "ollama:gemma4:e4b-mlx"
+BOOKLOOM_CORPUS_DIR=/abs/books scripts/eval-matrix.sh --suite names     # the committed books and the owner's gold set
+```
+
+`BOOKLOOM_EVAL_BOOK` is a committed id or `all` (the default); with `BOOKLOOM_CORPUS_DIR` set every `<name>.gold.json` directly under
+it runs too, its mentions counted in the book's story text. The report is `build/reports/promptEval/<model>-names.{txt,json}` and the
+history; the matrix prints, per model and book, gender % over the eligible characters, wrong-but-verified, type %, the share of
+person clusters with one gender, spellings per cluster (1 is ideal), junk kept, names lost, recurring terms right, calls and minutes.
+It measures and asserts no floor.
+
+The names gold extends the gold file above with these keys (the older code ignores them): `characters[].cluster` (the id shared by
+every written form of one person, such as "Dax" and "Dax Orlo"; absent for a name of its own), `junk[]` (terms a scan must not leave
+in the glossary: a heading, a nationality, a distress call, half of a brand), `keep[]` (real names besides the characters that must
+not be lost: a place, a brand, a person called Mark) and `recurringTerms[]` (`{"term", "keep"}`: the lower-case common words a person
+keeps in the lexicon, or `keep: false` for the ones a scan wrongly lists). Junk is matched against a glossary term with the same
+letter case, so `KESSEL OPTIK` is junk while `Kessel Optik` is the camera.
+
+*Committed books* (`src/test/resources/eval/names/*.json`, invented text; each has its gold, the answers a scripted model gives where
+they differ from the gold, and `knownFailure`/`fixedBy` when today's Scan, Review and Translate end wrong): `misattributed-she`
+(a man followed five times by another person's "she"; red until 15i.N1), `short-and-full-form`, `city-her`, `stray-he`,
+`bartender-mark` (a man called Mark beside "a mark on the wall"; red until 15i.N5), `brand-and-camera` (`Orrin & Vale` and
+`KESSEL OPTIK`/`Kessel Optik`/`Kessels`; red until 15i.N3), `groups-nationalities-converter`, `technical-headings`, `mayday`.
+`NamesRunnerTest` (in `check`) runs each through the runner with a scripted model: a book not marked a known failure must end clean,
+a marked one must still end wrong, so the test fails the day a task fixes it and the flag is dropped. `NamesScoreTest` holds every
+scoring rule to numbers written out by hand.
+
 *Book-neutral sources* (15i.E0): no name, quote or passage of a book under test may sit in `modules/*/src` — the committed
 cases above, the tests and the prompts use invented material of the same shape. `BookNeutralSourcesTest` (`:app`) enforces it
 from the owner's own list, which is never committed because it would name the books: it reads
