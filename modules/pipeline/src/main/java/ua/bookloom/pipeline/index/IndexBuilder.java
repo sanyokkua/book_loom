@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.index;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ final class IndexBuilder {
     private final Map<String, Integer> ordinalById = new HashMap<>();
     private final List<Integer> story = new ArrayList<>();
     private final Map<String, Tally> tallies = new HashMap<>();
+    private final Map<Character.UnicodeScript, Integer> storyScripts = new EnumMap<>(Character.UnicodeScript.class);
 
     static IndexData build(final Document document) {
         final IndexBuilder builder = new IndexBuilder();
@@ -51,6 +53,7 @@ final class IndexBuilder {
         ordinalById.put(segment.id(), ordinal);
         if (!unit.isAuxiliary() && unit.role() == UnitRole.BODY) {
             story.add(ordinal);
+            LetterScripts.addTo(segment.masked(), storyScripts);
         }
         final Occurrences.Read read = Occurrences.read(segment.masked());
         reads.add(read);
@@ -92,7 +95,8 @@ final class IndexBuilder {
                 List.copyOf(story),
                 postings,
                 stats,
-                language);
+                language,
+                LetterScripts.majorityOf(storyScripts).orElse(null));
     }
 
     /** One word form's postings and counts while the book is read. */

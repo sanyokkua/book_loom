@@ -49,7 +49,6 @@ final class NameWindows {
     static final int MAX_SENTENCE_CHARS = 200;
 
     private static final int MAX_TERM_WORDS = 3;
-    private static final String DEFAULT_LANGUAGE = "en";
 
     /**
      * One window of book text around a use of the name.
@@ -98,7 +97,7 @@ final class NameWindows {
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
      * @param entries the entries asked about; never null
-     * @param languageTag the source language's tag, which picks the pronouns; null reads English
+     * @param languageTag the source language's tag, which picks the pronouns; null reads none
      * @return the evidence by term as held; a term the book never uses maps to {@link Evidence#NONE}
      */
     static Map<String, Evidence> of(
@@ -135,10 +134,7 @@ final class NameWindows {
             return new Evidence(0, List.of(), pronouns);
         }
         final WindowReader reader = new WindowReader(
-                PronounReader.of(entry.term(), languageTag == null ? DEFAULT_LANGUAGE : languageTag),
-                reads,
-                new HashMap<>(),
-                pronouns.usesObjectForms());
+                PronounReader.of(entry.term(), languageTag), reads, new HashMap<>(), pronouns.usesObjectForms());
         final List<Use> chosen = chosen(uses, wanted(entry, uses.size()), reader);
         final List<Window> windows = chosen.stream().map(reader::window).toList();
         log.trace(

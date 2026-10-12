@@ -15,6 +15,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
+import ua.bookloom.pipeline.index.LetterScripts;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.util.lang.LanguageTags;
 
@@ -50,15 +51,15 @@ final class SpanFinder {
             final Segment segment,
             @Nullable final String sourceLanguage,
             @Nullable final String bookLanguage,
+            final Character.@Nullable UnicodeScript bookScript,
             final ForeignPassagePolicy policy) {
         final Optional<String> source = LanguageTags.normalize(sourceLanguage);
-        if (policy != ForeignPassagePolicy.KEEP || source.isEmpty()) {
-            log.debug(
-                    "Kept runs skipped segment={} policy={} sourceRecognized={}",
-                    segment.id(),
-                    policy,
-                    source.isPresent());
+        if (policy != ForeignPassagePolicy.KEEP) {
+            log.debug("Kept runs skipped segment={} policy={}", segment.id(), policy);
             return List.of();
+        }
+        if (source.isEmpty()) {
+            return keptRunsInAnotherScript(segment, bookScript);
         }
         if (isForeignBlock(segment, source.get(), bookLanguage)) {
             return List.of(new Found(0, segment.masked().length(), segment.masked(), CheckName.KEPT_RUN, null));
@@ -71,6 +72,30 @@ final class SpanFinder {
         }
         found.sort(Comparator.comparingInt(Found::start)
                 .thenComparing(Comparator.comparingInt(Found::end).reversed()));
+        return withoutNested(found);
+    }
+
+    // Auto: no language to compare a marked run with, so a run is foreign when it is written in a script other than the
+    // one the book is mostly written in; a passage in the same script is left to the prompt's foreign-passage rule.
+    private static List<Found> keptRunsInAnotherScript(
+            final Segment segment, final Character.@Nullable UnicodeScript bookScript) {
+        final Optional<Character.UnicodeScript> own =
+                Optional.ofNullable(bookScript).or(() -> LetterScripts.majorityOf(segment.masked()));
+        if (own.isEmpty()) {
+            return List.of();
+        }
+        final List<Found> found = new ArrayList<>();
+        for (final PlaceholderPair pair : segment.pairs()) {
+            runOf(segment.masked(), pair)
+                    .filter(run -> LetterScripts.majorityOf(run.restored())
+                            .filter(script -> script != own.get())
+                            .isPresent())
+                    .ifPresent(found::add);
+        }
+        found.sort(Comparator.comparingInt(Found::start)
+                .thenComparing(Comparator.comparingInt(Found::end).reversed()));
+        log.debug(
+                "Kept runs in another script segment={} bookScript={} kept={}", segment.id(), own.get(), found.size());
         return withoutNested(found);
     }
 

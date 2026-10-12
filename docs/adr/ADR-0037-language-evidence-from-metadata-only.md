@@ -55,3 +55,8 @@ The owner decided during the readiness review of `complete-translation-workflow`
 only, so inline foreign runs are now kept verbatim under the Keep policy. Block language became a recorded declaration
 compared with the brief's source, because the source language is editable and a book declaring `en-US` for Ukrainian
 text would otherwise have every block marked foreign. Nothing is detected from the text.
+
+## Amended by ADR-0042
+
+The source language may be Auto (no language chosen): "a plain-text book declares nothing, so the person chooses" no
+longer holds. Under Auto the model identifies the language and the code uses generic rules; see ADR-0042.

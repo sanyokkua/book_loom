@@ -206,9 +206,9 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(optional("names-style-start")).isNull();
     }
 
-    // IF a start with no source language reached the engine, THEN the model would be told a language nobody chose.
+    // IF Auto were refused at Start, THEN a book declaring no language could never be translated without a guess.
     @Test
-    void startTranslation_noSourceLanguage_isRefusedNamingTheSourceAndAsksForNoJob() throws Exception {
+    void startTranslation_autoSourceLanguage_asksForOneJobAndShowsTranslating() throws Exception {
         final java.nio.file.Path notes = java.nio.file.Path.of("notes.txt");
         projects.on(notes, Result.ok(BookFixtures.declaringNoLanguage("notes", BookFormat.TXT, 1)));
         openImport();
@@ -224,8 +224,8 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
         onFx(() -> button("names-style-start").fire());
 
-        assertThat(labelText("translating-banner-text"))
-                .isEqualTo("Choose the source language on the book brief, then start the translation.");
-        assertThat(engine.requests()).isEmpty();
+        job.awaitRunStarted();
+        assertThat(engine.requests()).hasSize(1);
+        assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 }

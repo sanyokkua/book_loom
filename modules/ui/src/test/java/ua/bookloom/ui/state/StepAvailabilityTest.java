@@ -19,7 +19,7 @@ class StepAvailabilityTest {
     private final CurrentProject project = new CurrentProject();
     private final StepAvailability availability = new StepAvailability(project);
 
-    private void openBook(final String source, final @Nullable String target) {
+    private void openBook(final @Nullable String source, final @Nullable String target) {
         OpenBookForTest.open(project, source, target);
     }
 
@@ -54,6 +54,18 @@ class StepAvailabilityTest {
         assertThat(availability.lockReason(ViewNames.NAMES_STYLE)).contains(MessageKey.NAV_LOCKED_NO_LANGUAGES);
         assertThat(availability.lockReason(ViewNames.TRANSLATING)).contains(MessageKey.NAV_LOCKED_NO_LANGUAGES);
         assertThat(availability.lockReason(ViewNames.EXPORT)).isEmpty();
+    }
+
+    // IF Auto kept the steps locked, THEN a book declaring no language could never reach Translating.
+    @Test
+    void lockReason_autoSourceWithATarget_opensEverything() {
+        openBook(null, "uk");
+
+        final List<Optional<MessageKey>> reasons = new ArrayList<>();
+        for (final ViewNames step : ViewNames.values()) {
+            reasons.add(availability.lockReason(step));
+        }
+        assertThat(reasons).allMatch(Optional::isEmpty);
     }
 
     @Test

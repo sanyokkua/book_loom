@@ -45,12 +45,15 @@ final class PronounReader {
      * A reader of one name.
      *
      * @param term the glossary term
-     * @param language the non-null language tag whose pronouns are read
-     * @return the reader, or null when the term is blank or the language lists no subject pronouns
+     * @param language the language tag whose pronouns are read; null when the language is not known
+     * @return the reader, or null when the term is blank, the language is not known or lists no subject pronouns
      */
-    static @Nullable PronounReader of(final String term, final String language) {
+    static @Nullable PronounReader of(final String term, final @Nullable String language) {
+        if (language == null || term.isBlank()) {
+            return null;
+        }
         final Tables tables = Tables.of(language);
-        if (term.isBlank() || tables.isEmpty()) {
+        if (tables.isEmpty()) {
             return null;
         }
         return new PronounReader(namePattern(term), probeOf(term), tables, language);

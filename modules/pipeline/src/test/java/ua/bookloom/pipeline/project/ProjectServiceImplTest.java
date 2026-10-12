@@ -327,4 +327,33 @@ class ProjectServiceImplTest {
                         .narratorHint())
                 .isNull();
     }
+
+    private static final String FIRST_PERSON_CHAPTER = String.join(
+            " ",
+            "I walked home through the cold rain. I did not look back.",
+            "The street was empty, and I counted the lamps as I passed them.",
+            "I had left the letter on the table. I knew that I would regret it.",
+            "When I reached the gate, I stopped and listened for a long time.");
+
+    // IF the detector ran with a language nobody chose or declared, THEN Auto would read every book as English.
+    @Test
+    void importBook_firstPersonTextDeclaringNothing_isAutoWithNoHint() {
+        final Path book = TestBooks.txt(tempDir.resolve("first.txt"), FIRST_PERSON_CHAPTER);
+
+        final ImportedBook imported = importOk(book);
+
+        assertThat(briefOf(imported).sourceLanguage()).isNull();
+        assertThat(imported.narratorHint()).isNull();
+    }
+
+    @Test
+    void importBook_firstPersonEpubDeclaringALanguageNothingRecognises_isAutoWithNoHint() {
+        final Path book =
+                TestBooks.epub(tempDir.resolve("first.epub"), List.of(List.of(FIRST_PERSON_CHAPTER)), "xx-yy");
+
+        final ImportedBook imported = importOk(book);
+
+        assertThat(briefOf(imported).sourceLanguage()).isNull();
+        assertThat(imported.narratorHint()).isNull();
+    }
 }

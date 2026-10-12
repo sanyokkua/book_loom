@@ -36,6 +36,7 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
@@ -221,6 +222,12 @@ public final class ProjectServiceImpl implements ProjectService {
                 document.units().size(),
                 segmentCount,
                 id);
+<<<<<<< HEAD
+=======
+        buildIndex(id);
+        final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
+                .orElse(null);
+>>>>>>> feature/complete-translation-workflow--15i-L1
         return new ImportedBook(id, inspection, profile, brief, hint);
     }
 

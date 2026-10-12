@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -31,23 +32,24 @@ final class NarratorGenderEvidence {
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     private final List<GlossaryEntry> people;
-    private final String languageTag;
+    private final @Nullable String languageTag;
     private final Map<String, Gender> addressTerms;
 
     /**
      * Prepares the check for one book.
      *
      * @param glossary the book's glossary entries; only characters of a known gender are used
-     * @param languageTag the source language's tag, which chooses the first-name list and the address terms
+     * @param languageTag the source language's tag, which chooses the first-name list and the address terms; null when it is not known, then
+     *     neither is used
      */
-    NarratorGenderEvidence(final List<GlossaryEntry> glossary, final String languageTag) {
+    NarratorGenderEvidence(final List<GlossaryEntry> glossary, @Nullable final String languageTag) {
         Objects.requireNonNull(glossary, "glossary");
-        this.languageTag = Objects.requireNonNull(languageTag, "languageTag");
+        this.languageTag = languageTag;
         this.people = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER)
                 .filter(entry -> isKnown(entry.gender()))
                 .toList();
-        this.addressTerms = AddressTerms.of(languageTag);
+        this.addressTerms = languageTag == null ? Map.of() : AddressTerms.of(languageTag);
         log.debug(
                 "Narrator gender evidence language={} glossaryPeople={} addressTerms={}",
                 languageTag,

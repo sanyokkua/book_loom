@@ -222,10 +222,10 @@ public final class NarratorDetector {
      * twin there, so they are paired here, and an unclosed one blanks the rest.
      *
      * @param paragraph a non-null paragraph, masked or display text
-     * @param languageTag the language whose quote marks apply
+     * @param languageTag the language whose quote marks apply, or null for the general table
      * @return the paragraph without its tokens and with its speech replaced by spaces
      */
-    public static String narration(final String paragraph, final String languageTag) {
+    public static String narration(final String paragraph, @Nullable final String languageTag) {
         Objects.requireNonNull(paragraph, "paragraph");
         final String blanked = QuotedSpans.narration(TOKEN.matcher(paragraph).replaceAll(""), languageTag);
         final char[] chars = blanked.toCharArray();

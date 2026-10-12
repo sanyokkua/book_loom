@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
@@ -55,12 +56,11 @@ final class BookSamples {
      * The samples of a book.
      *
      * @param document the opened book; only its body units are read
-     * @param languageTag the source language, whose quote marks tell speech from narration
+     * @param languageTag the source language, whose quote marks tell speech from narration; null for the general table
      * @return two disjoint samples, one for a book of a single sentence, none for a book with no story text
      */
-    static List<BookSample> of(final Document document, final String languageTag) {
+    static List<BookSample> of(final Document document, @Nullable final String languageTag) {
         Objects.requireNonNull(document, "document");
-        Objects.requireNonNull(languageTag, "languageTag");
         final List<Line> lines = lines(storyChapters(chapters(document)));
         final List<Window> windows = windows(lines);
         log.debug("Book samples of {}: {} story sentences, windows {}", document.id(), lines.size(), windows);
@@ -222,7 +222,7 @@ final class BookSamples {
         return text.toString();
     }
 
-    private static int dialoguePercent(final List<String> passages, final String languageTag) {
+    private static int dialoguePercent(final List<String> passages, @Nullable final String languageTag) {
         long letters = 0;
         long spoken = 0;
         for (final String passage : passages) {

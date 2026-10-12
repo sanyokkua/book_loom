@@ -38,7 +38,7 @@ public final class NameHygiene {
      *
      * @param term the non-blank candidate
      * @param candidates every term proposed or held beside it, itself included
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no English rules are assumed)
      * @return the reason, or empty when the candidate is fine
      */
     public static Optional<String> rejection(
@@ -52,7 +52,7 @@ public final class NameHygiene {
      *
      * @param term the non-blank candidate
      * @param candidates every term proposed or held beside it, itself included
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no English rules are assumed)
      * @param occurrences how many times the book writes a given string; null judges a fragment by the names alone
      * @return the reason, or empty when the candidate is fine
      */
@@ -92,7 +92,7 @@ public final class NameHygiene {
     }
 
     private static boolean isEnglish(@Nullable final String languageTag) {
-        return languageTag == null || languageTag.toLowerCase(Locale.ROOT).startsWith("en");
+        return languageTag != null && languageTag.toLowerCase(Locale.ROOT).startsWith("en");
     }
 
     private static Optional<String> contraction(final String term, @Nullable final String languageTag) {
@@ -108,7 +108,7 @@ public final class NameHygiene {
             final Collection<String> candidates,
             @Nullable final String languageTag,
             @Nullable final ToIntFunction<String> occurrences) {
-        final List<String> suffixes = NameAliases.suffixesOf(languageTag == null ? "en" : languageTag);
+        final List<String> suffixes = NameAliases.suffixesOf(languageTag);
         final String key = term.strip().toLowerCase(Locale.ROOT);
         return candidates.stream()
                 .filter(other -> !other.equals(term))

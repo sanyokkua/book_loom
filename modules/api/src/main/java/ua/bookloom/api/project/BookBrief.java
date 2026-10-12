@@ -11,7 +11,7 @@ import ua.bookloom.api.pipeline.QualityDial;
  * <p>The {@link #defaults(String)} values are what a newly opened book starts with — getting one wrong silently
  * changes every translation a person never explicitly configured.
  *
- * @param sourceLanguage the book's source language tag, or null when not yet detected/chosen
+ * @param sourceLanguage the book's source language tag, or null for Auto: the model identifies the language
  * @param targetLanguage the chosen target language tag, or null when not yet chosen
  * @param genre the chosen genre, or null when not set
  * @param register the chosen tone register

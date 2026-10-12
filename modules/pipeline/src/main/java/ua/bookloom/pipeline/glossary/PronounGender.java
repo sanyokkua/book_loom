@@ -46,8 +46,6 @@ public final class PronounGender {
     /** The share of the pronouns that must agree for a gender decided without the model. */
     static final double STRONG_SHARE = 0.9;
 
-    private static final String DEFAULT_LANGUAGE = "en";
-
     /**
      * The pronouns seen after a name. The object and possessive forms count only while the subject pronouns are fewer
      * than {@link #MIN_EVIDENCE} and none of those names the other gender, since an object form often names somebody
@@ -209,7 +207,7 @@ public final class PronounGender {
      * @param term the non-blank glossary term
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
      * @return the pronouns seen; never null
      */
     public static Evidence of(
@@ -226,13 +224,13 @@ public final class PronounGender {
      *
      * @param term the non-blank glossary term
      * @param texts the non-null visible texts to read, tokens already removed
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
      * @return the pronouns seen; empty evidence when the language lists no pronouns
      */
     public static Evidence of(final String term, final List<String> texts, @Nullable final String languageTag) {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(texts, "texts");
-        final PronounReader reader = PronounReader.of(term, languageTag == null ? DEFAULT_LANGUAGE : languageTag);
+        final PronounReader reader = PronounReader.of(term, languageTag);
         if (reader == null) {
             log.trace("Pronoun evidence skipped term={} language={}: no pronoun table", term, languageTag);
             return new Evidence(List.of(), List.of());
@@ -272,7 +270,7 @@ public final class PronounGender {
      *
      * @param entry the non-null entry
      * @param texts the non-null visible texts of the book
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
      * @return the entry with a suggested gender, or {@code entry} itself when nothing is to be suggested
      */
     public static GlossaryEntry seeded(
@@ -309,7 +307,7 @@ public final class PronounGender {
      *
      * @param entries the non-null entries
      * @param texts the non-null visible texts of the book
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
      * @return a list of the same size; never null
      */
     public static List<GlossaryEntry> seeded(
@@ -325,7 +323,7 @@ public final class PronounGender {
      * @param glossary the non-null glossary to read and update
      * @param projectId the non-null project
      * @param texts the non-null visible texts of the book
-     * @param languageTag the source language's tag, or null for English
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
      * @return how many entries changed, or the repository's error
      */
     public static Result<Integer> seedHeld(

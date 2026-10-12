@@ -36,6 +36,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -294,7 +295,7 @@ public final class ConsistencyPass {
             final List<GlossaryEntry> entries,
             final BookContext context) {
         final String target = Objects.requireNonNull(brief.targetLanguage(), "target");
-        final String source = brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
+        final String source = SourceLanguage.forPrompt(brief);
         final Map<String, Segment> sources = new LinkedHashMap<>();
         document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
         return new PassInputs(

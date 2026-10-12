@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
@@ -149,12 +148,14 @@ final class ScanSnapshot {
     /** The book is read once into the index and every call asks it. */
     private static final class IndexReaders {
 
-        private final @Nullable String language;
+        private final String language;
         private final BookIndex index;
         private final List<Integer> story;
 
         IndexReaders(final Document document) {
-            this.language = document.declaredLang();
+            // Every golden book is English prose; the plain-text one declares nothing, which now means Auto (no pronoun
+            // table), so the readers are told the language the person would have chosen.
+            this.language = "en";
             this.index = BookIndex.of(document);
             this.story = index.story();
         }

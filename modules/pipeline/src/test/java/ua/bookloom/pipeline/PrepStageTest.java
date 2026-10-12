@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -206,5 +207,61 @@ class PrepStageTest {
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
                 .containsExactly(Gender.UNKNOWN, false);
+    }
+
+    // --- the source language is Auto -------------------------------------------------------------------------
+
+    private static final String FRENCH_BOOK = String.join(
+            "\n\n",
+            "Il lisait Le Rouge hier soir.",
+            "Elle lisait Le Rouge hier soir.",
+            "Ils lisaient Le Rouge hier soir.",
+            "On lisait Le Rouge hier soir.");
+
+    private PrepStage.Prepared prepare(final TestProject project, final BookBrief brief) {
+        return Objects.requireNonNull(PrepStage.prepare(
+                        project.stores().glossary(),
+                        project.stores().lexicon(),
+                        project.id(),
+                        brief,
+                        Objects.requireNonNull(project.stores().openProjects().get(project.id())),
+                        Objects.requireNonNull(project.stores().openProjects().index(project.id())))
+                .data());
+    }
+
+    // IF Start asked the detector for a hint in a book of unknown language, THEN it would read the book as English.
+    @Test
+    void run_autoSourceBookDeclaringNothing_storesNoNarratorHint() {
+        final TestProject project =
+                project(TestBooks.markdown(tempDir.resolve("First.md"), FIRST_PERSON_BOOK), brief(null, "uk"));
+
+        final PrepStage.Prepared prepared = prepare(project, brief(null, "uk"));
+
+        assertThat(Objects.requireNonNull(prepared).narratorHint()).isNull();
+    }
+
+    // Auto still analyses a book that declares a language the application recognises, in that language.
+    @Test
+    void run_autoSourceBookDeclaringEnglish_storesTheNarratorHint() {
+        final TestProject project =
+                project(TestBooks.markdown(tempDir.resolve("First.md"), FIRST_PERSON_BOOK, "en"), brief(null, "uk"));
+
+        final PrepStage.Prepared prepared = prepare(project, brief(null, "uk"));
+
+        assertThat(Objects.requireNonNull(prepared).narratorHint())
+                .isNotNull()
+                .extracting(NarratorHint::person)
+                .isEqualTo(NarratorHint.Person.FIRST);
+    }
+
+    // IF the empty-glossary scan read a French book as English, THEN "Le Rouge" would open the glossary.
+    @Test
+    void run_autoSourceFrenchBook_proposesNoFunctionWordAsAName() {
+        final TestProject project =
+                project(TestBooks.markdown(tempDir.resolve("Livre.md"), FRENCH_BOOK), brief(null, "uk"));
+
+        prepare(project, brief(null, "uk"));
+
+        assertThat(glossary(project)).extracting(GlossaryEntry::term).containsExactly("Rouge");
     }
 }

@@ -7,7 +7,7 @@
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
 # draft A/B instead (consecutive cases, sized as a job sizes its batches unless --batch-sizes fixes the sweep, through the JSON batch protocol; reports end in
-# -batch.json) and prints one row per model and batch size. --suite words runs the garbled-word check (ADR-0042) over
+# -batch.json) and prints one row per model and batch size. --suite words runs the garbled-word check over
 # eval/words.json (reports end in -words.json) and prints recall and false positives per model. --suite realrun runs the
 # real-run corpus (15e.2: quotes, scripts, narrator, short lines, batch protocol, reviewer batches, repairs; reports end in
 # -realrun.json) and prints the share of cases right per kind and call, the known failures beside them, the truncated

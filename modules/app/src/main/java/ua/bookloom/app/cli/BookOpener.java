@@ -75,8 +75,17 @@ final class BookOpener {
                 : Result.ok(new Opened(projectId, brief));
     }
 
+    // Absent --from keeps what the import preselected; `--from auto` forces Auto even for a book that declares a
+    // language.
+    private static @Nullable String sourceFor(BookBrief opened, TranslateArguments arguments) {
+        if (arguments.isSourceAuto()) {
+            return null;
+        }
+        return arguments.sourceLanguage() == null ? opened.sourceLanguage() : arguments.sourceLanguage();
+    }
+
     private static BookBrief briefFor(BookBrief opened, TranslateArguments arguments) {
-        final String source = arguments.sourceLanguage() == null ? opened.sourceLanguage() : arguments.sourceLanguage();
+        final String source = sourceFor(opened, arguments);
         final BookBrief languages = opened.withLanguages(source, arguments.targetLanguage());
         final RunOptions options = arguments.options();
         final NamePolicy names = Objects.requireNonNullElse(options.names(), languages.names());

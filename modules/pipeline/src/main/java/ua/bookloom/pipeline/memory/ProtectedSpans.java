@@ -34,8 +34,8 @@ public final class ProtectedSpans {
      * Masks one segment.
      *
      * @param segment the segment whose masked text is protected; never null
-     * @param sourceLanguage the run's source language tag, or {@code null} when none is known — then no foreign run
-     *     is kept, since no language differs from an unknown one
+     * @param sourceLanguage the run's source language tag, or {@code null} for Auto — then a marked run is kept only
+     *     when it is written in a script other than the one the segment is mostly written in
      * @param policy the foreign-passage policy; only {@link ForeignPassagePolicy#KEEP} keeps a run
      * @param glossary every glossary entry; only locked ones with a non-blank target are hidden
      * @return the text to show the model, the spans to restore and the locked terms present
@@ -45,7 +45,27 @@ public final class ProtectedSpans {
             @Nullable final String sourceLanguage,
             final ForeignPassagePolicy policy,
             final List<GlossaryEntry> glossary) {
-        return mask(segment, sourceLanguage, null, policy, glossary);
+        return mask(segment, sourceLanguage, null, null, policy, glossary);
+    }
+
+    /**
+     * Masks one segment of a book whose majority script is known, which decides the foreign runs when there is no
+     * source language.
+     *
+     * @param segment the segment whose masked text is protected; never null
+     * @param sourceLanguage the run's source language tag, or {@code null} for Auto
+     * @param bookScript the script most of the book is written in, or {@code null} to count it in the segment itself
+     * @param policy the foreign-passage policy; only {@link ForeignPassagePolicy#KEEP} keeps a run
+     * @param glossary every glossary entry; only locked ones with a non-blank target are hidden
+     * @return the text to show the model, the spans to restore and the locked terms present
+     */
+    public static ProtectedMask mask(
+            final Segment segment,
+            @Nullable final String sourceLanguage,
+            final Character.@Nullable UnicodeScript bookScript,
+            final ForeignPassagePolicy policy,
+            final List<GlossaryEntry> glossary) {
+        return mask(segment, sourceLanguage, null, bookScript, policy, glossary);
     }
 
     /**
@@ -60,13 +80,20 @@ public final class ProtectedSpans {
      */
     public static ProtectedMask mask(final Segment segment, final CallFrame frame, final List<GlossaryEntry> glossary) {
         Objects.requireNonNull(frame, "frame");
-        return mask(segment, frame.sourceLanguage(), frame.bookLanguage(), frame.foreignPassagePolicy(), glossary);
+        return mask(
+                segment,
+                frame.sourceLanguage(),
+                frame.bookLanguage(),
+                frame.bookScript(),
+                frame.foreignPassagePolicy(),
+                glossary);
     }
 
     private static ProtectedMask mask(
             final Segment segment,
             @Nullable final String sourceLanguage,
             @Nullable final String bookLanguage,
+            final Character.@Nullable UnicodeScript bookScript,
             final ForeignPassagePolicy policy,
             final List<GlossaryEntry> glossary) {
         Objects.requireNonNull(segment, "segment");
@@ -79,7 +106,7 @@ public final class ProtectedSpans {
                 sourceLanguage,
                 policy,
                 glossary.size());
-        final List<Found> runs = SpanFinder.keptRuns(segment, sourceLanguage, bookLanguage, policy);
+        final List<Found> runs = SpanFinder.keptRuns(segment, sourceLanguage, bookLanguage, bookScript, policy);
         final List<Found> terms = SpanFinder.lockedTerms(text, runs, glossary);
         final List<Found> all = new ArrayList<>(runs);
         all.addAll(terms);

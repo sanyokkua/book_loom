@@ -9,6 +9,7 @@ import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.prompt.PluralSuffixes;
 
@@ -132,7 +133,7 @@ final class NameAliases {
         return index;
     }
 
-    static List<String> suffixesOf(final String languageTag) {
-        return PluralSuffixes.of(languageTag);
+    static List<String> suffixesOf(final @Nullable String languageTag) {
+        return languageTag == null ? List.of() : PluralSuffixes.of(languageTag);
     }
 }

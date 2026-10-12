@@ -18,6 +18,8 @@ import org.jspecify.annotations.Nullable;
  * @param postings each word key's occurrences in reading order
  * @param stats each word key's counts
  * @param language the book's language tag for token estimates, or {@code null} when unknown
+ * @param majorityScript the script most letters of the story segments are written in, or {@code null} when they hold
+ *     no letter
  */
 record IndexData(
         List<SegmentInfo> infos,
@@ -29,4 +31,5 @@ record IndexData(
         List<Integer> story,
         Map<String, List<Posting>> postings,
         Map<String, WordStats> stats,
-        @Nullable String language) {}
+        @Nullable String language,
+        Character.@Nullable UnicodeScript majorityScript) {}

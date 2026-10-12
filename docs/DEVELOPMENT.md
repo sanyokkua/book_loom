@@ -257,7 +257,7 @@ segment key in the evidence file first.
 ```
 
 Without provider flags it translates `<book>` with the deterministic offline `pseudo` model — the text comes back
-upper-cased — and writes `<name>.<to><suffix>` beside it; `--to` defaults to `uk`. `--provider ollama` and
+upper-cased — and writes `<name>.<to><suffix>` beside it; `--to` defaults to `uk`. Without `--from` the source language is the one the import preselected (the book's declared language, else Auto); `--from auto` asks the model to identify it even for a book that declares one. `--provider ollama` and
 `--provider lmstudio` use their local presets and require `--model`; `--provider openai-compatible` additionally
 requires `--base-url`. `--timeout` overrides the per-request timeout in seconds. `-q` keeps Gradle's own build chatter
 out of the way, so the command's preflight and completion lines are what you see; `--overwrite` allows replacing an

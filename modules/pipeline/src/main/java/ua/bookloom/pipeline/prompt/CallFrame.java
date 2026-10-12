@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.lang.Character.UnicodeScript;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -22,6 +23,8 @@ import ua.bookloom.pipeline.checks.WordValidator;
  * @param narrator the Book Brief's narrator, read by the gender check; the style sheet already tells the model
  * @param wordValidator the run's word validator, which the quality checks ask about doubtful words; the no-op one
  *     unless a run is given another
+ * @param bookScript the script most of the book's story is written in, counted by code; with no source language it
+ *     decides which marked runs are foreign. Null when unknown, then the segment's own text decides
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
@@ -30,7 +33,8 @@ public record CallFrame(
         ForeignPassagePolicy foreignPassagePolicy,
         @Nullable String bookLanguage,
         Narrator narrator,
-        WordValidator wordValidator) {
+        WordValidator wordValidator,
+        @Nullable UnicodeScript bookScript) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -39,6 +43,26 @@ public record CallFrame(
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(wordValidator, "wordValidator");
+    }
+
+    /** A frame whose book script is not known. */
+    public CallFrame(
+            @Nullable String sourceLanguage,
+            String targetLanguage,
+            StyleSheet styleSheet,
+            ForeignPassagePolicy foreignPassagePolicy,
+            @Nullable String bookLanguage,
+            Narrator narrator,
+            WordValidator wordValidator) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                styleSheet,
+                foreignPassagePolicy,
+                bookLanguage,
+                narrator,
+                wordValidator,
+                null);
     }
 
     /** A frame whose run has no word validator. */

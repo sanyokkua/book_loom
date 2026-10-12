@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +25,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
@@ -113,6 +116,61 @@ class TranslateCommandWireMockTest {
                 .noneSatisfy(request ->
                         assertThat(request.containsHeader("Authorization")).isTrue());
         assertThat(tempDir.resolve("Book.uk.md")).isRegularFile();
+    }
+
+    // `--from auto` asks the model to infer the language even where the file declares one the window would preselect;
+    // without the flag the declared English is the source.
+    @ParameterizedTest
+    @CsvSource(
+            value = {
+                "--from|auto|the language of this segment (infer it from its text)",
+                "--quality|balanced|English (en)"
+            },
+            delimiter = '|')
+    void run_declaredEnglishBookWithAndWithoutFromAuto_namesTheSourceAsTheFlagSays(
+            String option, String value, String expectedInPrompt) throws IOException {
+        stubProvider();
+        final Path source = declaredEnglishBook();
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+
+        final int exit = run(
+                List.of(
+                        source.toString(),
+                        option,
+                        value,
+                        "--to",
+                        "uk",
+                        "--provider",
+                        "openai-compatible",
+                        "--base-url",
+                        server.baseUrl() + "/v1",
+                        "--model",
+                        "qwen3"),
+                console);
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(server.findAll(postRequestedFor(urlEqualTo("/v1/chat/completions"))))
+                .extracting(LoggedRequest::getBodyAsString)
+                .anySatisfy(body -> assertThat(body).contains(expectedInPrompt));
+    }
+
+    private void stubProvider() {
+        server.stubFor(get(urlEqualTo("/v1/models"))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"qwen3\",\"object\":\"model\"}]}")));
+        server.stubFor(post(urlEqualTo("/v1/chat/completions")).willReturn(okJson(completion(TARGET_REPLY))));
+        server.stubFor(post(urlEqualTo("/v1/chat/completions"))
+                .withRequestBody(containing("Return exactly one JSON object"))
+                .atPriority(1)
+                .willReturn(okJson(completion(STATUS_REPLY))));
+    }
+
+    private Path declaredEnglishBook() throws IOException {
+        return Files.writeString(
+                tempDir.resolve("Book.fb2"),
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                        + "<FictionBook xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\"><description><title-info>"
+                        + "<genre>prose</genre><book-title>Test</book-title><lang>en</lang></title-info></description>"
+                        + "<body><section><p>He opened the old door.</p></section></body></FictionBook>");
     }
 
     private int run(List<String> arguments, ByteArrayOutputStream console) throws IOException {

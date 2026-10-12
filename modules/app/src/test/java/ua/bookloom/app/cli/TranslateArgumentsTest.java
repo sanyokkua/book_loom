@@ -226,6 +226,33 @@ class TranslateArgumentsTest {
         };
     }
 
+    // IF --from auto were refused as a malformed language code, THEN the command line could not ask for Auto.
+    @ParameterizedTest
+    @ValueSource(strings = {"auto", "AUTO", "Auto"})
+    void parse_fromAuto_isAccepted(String value) throws IOException {
+        final Result<TranslateArguments> result = TranslateArguments.parse(List.of(book().toString(), "--from", value));
+
+        assertThat(result.isOk()).isTrue();
+    }
+
+    // IF Auto widened the accepted words, THEN a typo of a language code would pass for a request to infer it.
+    @ParameterizedTest
+    @ValueSource(strings = {"automatic", "a", "auto-detect"})
+    void parse_fromAWordThatIsNotAnAutoNorACode_returnsValidationError(String value) throws IOException {
+        final Result<TranslateArguments> result = TranslateArguments.parse(List.of(book().toString(), "--from", value));
+
+        assertThat(errorOf(result).message()).isEqualTo("source language is invalid");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"auto,en", "en,auto", "auto,auto"})
+    void parse_fromGivenTwice_returnsValidationError(String first, String second) throws IOException {
+        final Result<TranslateArguments> result =
+                TranslateArguments.parse(List.of(book().toString(), "--from", first, "--from", second));
+
+        assertThat(errorOf(result).message()).isEqualTo("--from was repeated");
+    }
+
     private Path book() throws IOException {
         return Files.writeString(tempDir.resolve("Book.md"), "Hello world.\n", StandardCharsets.UTF_8);
     }

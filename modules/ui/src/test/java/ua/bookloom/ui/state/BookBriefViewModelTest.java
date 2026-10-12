@@ -73,18 +73,19 @@ class BookBriefViewModelTest extends BookBriefViewModelTestBase {
         assertThat(projects.briefs().getLast().targetLanguage()).isEqualTo("pl");
     }
 
-    // IF a book declaring nothing had a source anyway, THEN a run could start with a language nobody chose.
+    // IF Auto blocked Continue, THEN a book declaring nothing could not be translated without a guessed language.
     @Test
-    void canContinue_bookWithNoSource_isFalseUntilASourceAndATargetAreChosen() {
+    void canContinue_bookWithNoSource_isTrueOnceATargetIsChosen() {
         openBook(BookFixtures.declaringNoLanguage("notes", BookFormat.TXT, 1));
+        assertThat(canContinue()).isFalse();
+
         change(() -> brief.setTargetLanguage("uk"));
 
-        assertThat(sourceUndeclared()).isTrue();
-        assertThat(canContinue()).isFalse();
+        assertThat(current().sourceLanguage()).isNull();
+        assertThat(canContinue()).isTrue();
 
         change(() -> brief.setSourceLanguage("en"));
 
-        assertThat(sourceUndeclared()).isFalse();
         assertThat(canContinue()).isTrue();
     }
 

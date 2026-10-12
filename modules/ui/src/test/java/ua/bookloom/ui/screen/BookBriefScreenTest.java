@@ -93,15 +93,16 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(box("brief-source").getEditor().getText()).isEqualTo("English");
     }
 
-    // IF a book declaring nothing were shown with a guessed language, THEN the screen would state a fact nobody knows.
+    // IF a book declaring nothing were shown with a guessed language, THEN the screen would state a fact nobody knows;
+    // IF Auto blocked Continue, THEN the person would have to guess one.
     @Test
-    void source_bookDeclaringNothing_isEmptySaysSoAndBlocksContinue() throws TimeoutException {
+    void source_bookDeclaringNothing_isEmptySaysSoAndLeavesContinueOpenForAuto() throws TimeoutException {
         openBookThenShowBrief(Path.of("Diary.txt"), BookFixtures.declaringNoLanguage("diary", BookFormat.TXT, 1));
         onFx(() -> briefModel().setTargetLanguage("uk"));
 
         assertThat(box("brief-source").getCommitted()).isNull();
         assertThat(isShown("brief-source-undeclared")).isTrue();
-        assertThat(button("brief-continue").isDisabled()).isTrue();
+        assertThat(button("brief-continue").isDisabled()).isFalse();
 
         onFx(() -> box("brief-source").select("en"));
 

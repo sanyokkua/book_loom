@@ -69,8 +69,6 @@ public sealed interface RunNotice {
     enum Input {
         /** No book is open. */
         BOOK("book"),
-        /** The brief has no source language: the book declares none the application recognises and none was chosen. */
-        SOURCE_LANGUAGE("source"),
         /** The brief has no target language. */
         TARGET_LANGUAGE("target"),
         /** No model is chosen. */

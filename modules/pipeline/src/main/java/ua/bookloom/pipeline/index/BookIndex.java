@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeMap;
@@ -80,6 +81,15 @@ public final class BookIndex {
      */
     public long buildMillis() {
         return buildMillis;
+    }
+
+    /**
+     * Tells which writing system the story is mostly written in, counted by code from the letters themselves.
+     *
+     * @return the script most letters of the non-auxiliary body segments are written in, or empty when they hold none
+     */
+    public Optional<Character.UnicodeScript> majorityScript() {
+        return Optional.ofNullable(data.majorityScript());
     }
 
     /**

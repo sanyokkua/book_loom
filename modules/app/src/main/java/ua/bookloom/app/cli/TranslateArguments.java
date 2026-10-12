@@ -15,13 +15,20 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 
-/** Parsed, validated arguments for one translate command invocation, its {@link RunOptions} included. */
+/**
+ * Parsed, validated arguments for one translate command invocation, its {@link RunOptions} included.
+ *
+ * @param sourceLanguage the language {@code --from} named, or null when it named none or asked for Auto
+ * @param isSourceAuto whether {@code --from auto} asked the model to identify the language, overriding the one the
+ *     import preselected; with no {@code --from} at all the preselected language stays
+ */
 @Slf4j
 record TranslateArguments(
         Path source,
         BookFormat format,
         String targetLanguage,
         @Nullable String sourceLanguage,
+        boolean isSourceAuto,
         boolean overwrite,
         String providerId,
         @Nullable String modelId,
@@ -30,6 +37,7 @@ record TranslateArguments(
         RunOptions options) {
 
     private static final String DEFAULT_TARGET_LANGUAGE = "uk";
+    private static final String AUTO_SOURCE = "auto";
     private static final String PSEUDO_PROVIDER = "pseudo";
     private static final String OLLAMA_PROVIDER = "ollama";
     private static final String LM_STUDIO_PROVIDER = "lmstudio";
@@ -49,6 +57,8 @@ record TranslateArguments(
         private @Nullable Path source;
         private String targetLanguage = DEFAULT_TARGET_LANGUAGE;
         private @Nullable String sourceLanguage;
+        private boolean sourceLanguageSpecified;
+        private boolean isSourceAuto;
         private boolean targetSpecified;
         private boolean sourceSpecified;
         private boolean overwrite;
@@ -117,14 +127,16 @@ record TranslateArguments(
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
-            if (target ? targetSpecified : sourceLanguage != null) {
+            if (target ? targetSpecified : sourceLanguageSpecified) {
                 return invalidOption(option, target ? "--to was repeated" : "--from was repeated");
             }
             if (target) {
                 targetLanguage = dataOf(value);
                 targetSpecified = true;
             } else {
-                sourceLanguage = dataOf(value);
+                sourceLanguageSpecified = true;
+                isSourceAuto = AUTO_SOURCE.equalsIgnoreCase(dataOf(value));
+                sourceLanguage = isSourceAuto ? null : dataOf(value);
             }
             log.debug("translate parser option={} value={} outcome=accepted", option, dataOf(value));
             return Result.ok(index + 2);
@@ -234,6 +246,7 @@ record TranslateArguments(
                     dataOf(format),
                     targetLanguage,
                     sourceLanguage,
+                    isSourceAuto,
                     overwrite,
                     providerId,
                     modelId,
@@ -269,6 +282,7 @@ record TranslateArguments(
             }
             final boolean validSource = sourceLanguage == null
                     || LANGUAGE_CODE.matcher(sourceLanguage).matches();
+            log.debug("translate parser check=source-auto value={}", isSourceAuto);
             log.debug(
                     "translate parser check=source-language value={} outcome={}", sourceLanguage, outcome(validSource));
             return validSource ? Result.ok(Boolean.TRUE) : invalid("source language is invalid");

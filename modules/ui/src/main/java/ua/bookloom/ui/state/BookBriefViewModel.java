@@ -101,8 +101,8 @@ public final class BookBriefViewModel {
     }
 
     /**
-     * Whether a book is open whose brief has no source language: the book declares none the application recognises
-     * and none has been chosen.
+     * Whether a book is open whose brief has no source language (Auto): the book declares none the application
+     * recognises and none has been chosen, so the model identifies it.
      *
      * @return a read-only property
      */

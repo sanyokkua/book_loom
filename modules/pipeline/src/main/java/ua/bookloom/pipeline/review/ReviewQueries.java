@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -29,6 +30,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.audit.AuditFindings;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
@@ -103,12 +105,14 @@ public final class ReviewQueries {
         if (records.isErr() || open.isErr()) {
             return Result.err(Objects.requireNonNull(records.isErr() ? records.error() : open.error()));
         }
+        final BookIndex index = openProjects.index(projectId);
         return Result.ok(new Reading(
                 found.get().brief(),
                 Objects.requireNonNull(records.data()),
                 Objects.requireNonNull(open.data()),
                 sourcesOf(document),
-                SegmentLocators.of(document)));
+                SegmentLocators.of(document),
+                index == null ? null : index.majorityScript().orElse(null)));
     }
 
     private static Map<String, Segment> sourcesOf(final Document document) {
@@ -129,7 +133,8 @@ public final class ReviewQueries {
             List<SegmentRecord> records,
             List<Deferral> open,
             Map<String, Segment> sources,
-            Map<String, SegmentLocator> locators) {
+            Map<String, SegmentLocator> locators,
+            Character.@Nullable UnicodeScript bookScript) {
 
         private static final String MISSING = "The stored segment is not in the opened book: ";
 
@@ -177,7 +182,9 @@ public final class ReviewQueries {
                     Objects.requireNonNull(sources.get(record.segmentId()), MISSING + record.segmentId());
             final String source = brief.sourceLanguage();
             return ForeignMarking.isMarked(segment, source, brief.foreignPassages())
-                    || ProtectedSpans.mask(segment, source, brief.foreignPassages(), List.of()).spans().stream()
+                    || ProtectedSpans.mask(segment, source, bookScript, brief.foreignPassages(), List.of())
+                            .spans()
+                            .stream()
                             .anyMatch(span -> span.check() == CheckName.KEPT_RUN);
         }
 

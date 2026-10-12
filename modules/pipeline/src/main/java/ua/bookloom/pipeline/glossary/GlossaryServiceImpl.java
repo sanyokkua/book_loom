@@ -34,6 +34,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
@@ -180,9 +181,9 @@ public final class GlossaryServiceImpl implements GlossaryService {
                 .flatMap(project -> project.map(Project::brief))
                 .map(BookBrief::sourceLanguage)
                 .orElse(null);
-        log.debug(
-                "Glossary scan project={} language chosen={} declared={}", projectId, chosen, document.declaredLang());
-        return chosen == null ? document.declaredLang() : chosen;
+        final String language = SourceLanguage.forAnalysis(chosen, document);
+        log.debug("Glossary scan project={} analysis language={}", projectId, language);
+        return language;
     }
 
     private Result<GlossaryEntry> addEntry(final GlossaryEntry entry) {

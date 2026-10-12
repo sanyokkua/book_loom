@@ -16,6 +16,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorHint;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
@@ -170,7 +171,7 @@ public final class PrepStage {
     }
 
     private static @Nullable String sourceLanguageOf(final BookBrief brief, final Document document) {
-        return brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
+        return SourceLanguage.forAnalysis(brief, document);
     }
 
     private static Result<Integer> addAll(final GlossaryRepository glossary, final List<GlossaryEntry> proposals) {

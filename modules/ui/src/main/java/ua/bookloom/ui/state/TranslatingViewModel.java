@@ -266,7 +266,6 @@ public final class TranslatingViewModel {
     }
 
     private void onBriefChanged(final @Nullable BookBrief brief) {
-        clearIfSupplied(RunNotice.Input.SOURCE_LANGUAGE, () -> brief != null && brief.sourceLanguage() != null);
         clearIfSupplied(RunNotice.Input.TARGET_LANGUAGE, () -> brief != null && brief.targetLanguage() != null);
     }
 
@@ -284,9 +283,6 @@ public final class TranslatingViewModel {
         final BookBrief brief = current.brief().get();
         if (brief == null) {
             return Optional.of(RunNotice.Input.BOOK);
-        }
-        if (brief.sourceLanguage() == null) {
-            return Optional.of(RunNotice.Input.SOURCE_LANGUAGE);
         }
         if (brief.targetLanguage() == null) {
             return Optional.of(RunNotice.Input.TARGET_LANGUAGE);

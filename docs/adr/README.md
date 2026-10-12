@@ -62,3 +62,4 @@ explicitly — read them before planning work.
 | ADR-0039 | Import refusal kind reported as data; ErrorCode stays at fifteen                      | DD-14               |
 | ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
 | ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |
+| ADR-0042 | The source language may be Auto; the model identifies it, the code uses generic rules | EC-LANG-1           |

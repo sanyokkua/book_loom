@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Finds what a paragraph's characters say as a speaker and what they say as the narrator. A check about the narrator
@@ -29,7 +30,7 @@ public final class QuotedSpans {
      * @return a string of the same length as {@code text}; an opened quote that is never closed blanks the rest, so the
      *     text a caller reads is only what is surely the narrator's
      */
-    public static String narration(final String text, final String languageTag) {
+    public static String narration(final String text, @Nullable final String languageTag) {
         Objects.requireNonNull(text, "text");
         final char[] chars = text.toCharArray();
         blankQuotes(chars, QuoteConventions.withEnglish(QuoteConventions.forLanguage(languageTag)));

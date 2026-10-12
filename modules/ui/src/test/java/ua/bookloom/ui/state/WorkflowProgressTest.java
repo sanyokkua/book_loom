@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -26,7 +27,7 @@ class WorkflowProgressTest extends FxTestBase {
         progress = new WorkflowProgress(project, mirror);
     }
 
-    private void open(final String source, final String target) {
+    private void open(final @Nullable String source, final @Nullable String target) {
         interact(() -> OpenBookForTest.open(project, source, target));
     }
 
@@ -42,6 +43,16 @@ class WorkflowProgressTest extends FxTestBase {
     void briefContinuedWithValidLanguages_isDone() {
         // IF Continue did not mark the brief, THEN a finished step would stay a bare number.
         open("en", "uk");
+
+        interact(() -> progress.markDone(ViewNames.BOOK_BRIEF));
+
+        assertThat(progress.done()).contains(ViewNames.BOOK_BRIEF);
+    }
+
+    // IF Auto made the brief unfinishable, THEN a book declaring no language would never show its first step done.
+    @Test
+    void briefContinuedWithAnAutoSourceAndATarget_isDone() {
+        open(null, "uk");
 
         interact(() -> progress.markDone(ViewNames.BOOK_BRIEF));
 

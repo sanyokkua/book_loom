@@ -1,20 +1,12 @@
 package ua.bookloom.pipeline.glossary;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,15 +52,13 @@ public final class KeyTermScan {
 
     private static final int FREQUENT_MIN_LETTERS = 4;
     private static final int MIN_WORD_LETTERS = 3;
-    private static final String TITLES_DIRECTORY = "titles/";
-    private static final String FALLBACK_LANGUAGE = "en";
 
     /**
      * The recurring terms of some of the book's segments, read from the book's index.
      *
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
-     * @param sourceLanguage the book's BCP 47 tag, choosing the title and stop-word lists; null reads English
+     * @param sourceLanguage the book's BCP 47 tag, choosing the title and stop-word lists; null reads every bundled list together
      * @return the terms in lower case with their counts, most frequent first, at most {@link #MAX_PROPOSALS}; never
      *     null, empty when none qualifies
      */
@@ -78,7 +68,7 @@ public final class KeyTermScan {
         final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
-        final Set<String> titles = titles(sourceLanguage);
+        final Set<String> titles = StopWords.titles(sourceLanguage);
         final Map<String, NameCandidate> seen = tally(read);
         final List<NameCandidate> kept = seen.values().stream()
                 .filter(tally -> qualifies(tally, counts, stopWords, titles))
@@ -96,7 +86,7 @@ public final class KeyTermScan {
      *
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null
-     * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list; null reads English
+     * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list; null reads every bundled list together
      * @param limit the most words returned; positive
      * @return the words in lower case with their counts, most frequent first; never null
      */
@@ -164,12 +154,12 @@ public final class KeyTermScan {
      * Whether a term is a title of the source language's bundled list, which a book may write with a capital only.
      *
      * @param term the non-null term
-     * @param sourceLanguage the book's BCP 47 tag, or null to read English
+     * @param sourceLanguage the book's BCP 47 tag, or null when the language is not known
      * @return {@code true} if the list holds the term, {@code false} otherwise
      */
     public static boolean isTitle(final String term, @Nullable final String sourceLanguage) {
         Objects.requireNonNull(term, "term");
-        return titles(sourceLanguage).contains(Occurrences.keyOf(term));
+        return StopWords.titles(sourceLanguage).contains(Occurrences.keyOf(term));
     }
 
     private static boolean qualifies(
@@ -197,25 +187,5 @@ public final class KeyTermScan {
             }
         }
         return tallies;
-    }
-
-    private static Set<String> titles(@Nullable final String sourceLanguage) {
-        final String language = sourceLanguage == null || sourceLanguage.isBlank()
-                ? FALLBACK_LANGUAGE
-                : Locale.forLanguageTag(sourceLanguage.strip()).getLanguage();
-        final InputStream stream = KeyTermScan.class.getResourceAsStream(TITLES_DIRECTORY + language + ".txt");
-        if (stream == null) {
-            log.debug("No bundled title list for language {}", language);
-            return Set.of();
-        }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            return reader.lines()
-                    .map(String::strip)
-                    .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-                    .map(Occurrences::keyOf)
-                    .collect(Collectors.toUnmodifiableSet());
-        } catch (IOException cause) {
-            throw new UncheckedIOException("The bundled title list for " + language + " could not be read", cause);
-        }
     }
 }

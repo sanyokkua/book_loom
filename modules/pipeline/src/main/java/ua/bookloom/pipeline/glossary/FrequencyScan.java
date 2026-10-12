@@ -42,8 +42,6 @@ import ua.bookloom.util.text.JunkRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FrequencyScan {
 
-    private static final String FALLBACK_LANGUAGE = "en";
-
     /** How often a name must occur before {@link #newTerms} proposes it. */
     static final int PROPOSAL_MIN_COUNT = 3;
 
@@ -62,7 +60,7 @@ public final class FrequencyScan {
      * @param index the project's book index; never null
      * @param ordinals the ordinals of the segments to read, in reading order; never null, may be empty
      * @param minCount the fewest occurrences a candidate needs; {@code 1} lists every one
-     * @param sourceLanguage the BCP 47 tag of the book's language, choosing the stop-word list; null reads English
+     * @param sourceLanguage the BCP 47 tag of the book's language, choosing the stop-word list; null reads every bundled list together
      * @return the candidates by count descending, then by first occurrence; never null, empty when none qualifies
      */
     public static List<NameCandidate> candidates(
@@ -78,8 +76,7 @@ public final class FrequencyScan {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
         final Map<String, NameCandidate> tallies = NameAliases.fold(
-                tally(read, word -> isNameLike(word, counts, stopWords)),
-                NameAliases.suffixesOf(sourceLanguage == null ? FALLBACK_LANGUAGE : sourceLanguage));
+                tally(read, word -> isNameLike(word, counts, stopWords)), NameAliases.suffixesOf(sourceLanguage));
         dropJunk(tallies);
         dropHygiene(tallies, sourceLanguage, read);
         final List<NameCandidate> candidates = tallies.values().stream()

@@ -28,6 +28,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
@@ -371,7 +372,7 @@ public final class LexiconServiceImpl implements LexiconService {
                 .flatMap(project -> project.map(Project::brief))
                 .map(BookBrief::sourceLanguage)
                 .orElse(null);
-        return chosen == null ? document.declaredLang() : chosen;
+        return SourceLanguage.forAnalysis(chosen, document);
     }
 
     private static <T> Result<T> unknown(final String term) {

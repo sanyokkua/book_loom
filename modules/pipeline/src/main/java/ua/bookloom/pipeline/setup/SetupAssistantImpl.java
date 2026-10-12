@@ -36,6 +36,7 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.heal.SelfHealCalls;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
@@ -65,7 +66,6 @@ public final class SetupAssistantImpl implements SetupAssistant {
     // Six fields, each a value, a quote of up to fifteen words and a confidence, and the narrator's name.
     private static final int BRIEF_TOKENS = 512;
     private static final int SAMPLES = 2;
-    private static final String FALLBACK_LANGUAGE = "en";
     // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
     private static final int MAX_NAME_BYTES = 200;
     private static final Pattern RESERVED = Pattern.compile("(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?");
@@ -258,10 +258,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 .toList();
     }
 
-    private static String languageOf(final Book book) {
-        final String source = book.project().brief().sourceLanguage();
-        final String declared = book.document().declaredLang();
-        return source != null ? source : declared != null && !declared.isBlank() ? declared : FALLBACK_LANGUAGE;
+    private static @Nullable String languageOf(final Book book) {
+        return SourceLanguage.forAnalysis(book.project().brief(), book.document());
     }
 
     private Result<String> ask(
@@ -272,7 +270,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final ModelCalls calls) {
         final BookBrief brief = book.project().brief();
         final CallFrame frame = new CallFrame(
-                brief.sourceLanguage() == null ? book.document().declaredLang() : brief.sourceLanguage(),
+                SourceLanguage.forPrompt(brief),
                 book.target(),
                 StyleSheet.from(brief),
                 brief.foreignPassages(),

@@ -47,8 +47,9 @@ language the book's content documents declare; and where the book declares no la
 content documents that declare one agree, that content language.
 
 WHERE the book declares no language and its content documents give no majority, or declares a code the application
-cannot name, the screen SHALL start with no source language chosen, SHALL say that the book does not declare
-one, and SHALL keep `Continue` unavailable — so that no run can start — until a source language is chosen.
+cannot name, the screen SHALL start with the source language **Auto** (no source language chosen), SHALL say that the
+book does not declare one, and SHALL keep `Continue` available once a target language is chosen: under Auto the model
+identifies the source language and the code uses generic rules, assuming no language (ADR-0042).
 
 **Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-IMPORT-03
 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`),
@@ -56,10 +57,11 @@ one, and SHALL keep `Continue` unavailable — so that no run can start — unti
 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), `docs/next_features.md` §15 ("The source language
 cannot be corrected").
 In plain words: the application takes the source language from the book's metadata and never guesses it from the
-text, so the metadata's answer is only a starting point. Real books declare the wrong language — one surveyed EPUB
+text (it does not guess; the model identifies the language when none is chosen), so the metadata's answer is only a
+starting point. Real books declare the wrong language — one surveyed EPUB
 declares `en-US` for Ukrainian text, and the locked selector made the model keep Ukrainian passages verbatim in a
 Polish translation — so the person must be able to correct it. A book that declares nothing gets no invented
-default: a run with the wrong source language is worse than a run that waits for one click.
+default: it is Auto, and a run with a wrong chosen source language is worse than a run that asks the model.
 
 #### Scenario: The declared language is preselected and can be changed
 
@@ -73,12 +75,12 @@ default: a run with the wrong source language is worse than a run that waits for
   `Ukrainian` and the target to `Polish`
 - **THEN** the brief holds source `uk` and target `pl`
 
-#### Scenario: A book that declares nothing waits for a source
+#### Scenario: A book that declares nothing is Auto
 
 - **WHEN** a plain-text book declaring no language is open and `uk` is chosen as the target
-- **THEN** no source language is chosen, the screen says the book does not declare one, and `Continue` is
-  unavailable
-- **AND** after `English` is chosen as the source, `Continue` becomes available
+- **THEN** no source language is chosen (Auto), the screen says the book does not declare one, and `Continue` is
+  available
+- **AND** after `English` is chosen as the source, `Continue` stays available
 
 #### Scenario: A declared language outside the list is preselected
 
@@ -90,10 +92,10 @@ default: a run with the wrong source language is worse than a run that waits for
 - **WHEN** an EPUB whose package declares no language and whose content documents all declare `de` is open
 - **THEN** the source language shows `German` and `Continue` is available once a target is chosen
 
-#### Scenario: An unrecognized declaration also waits for a source
+#### Scenario: An unrecognized declaration is also Auto
 
-- **WHEN** a book declaring `xx-yy` is open
-- **THEN** no source language is chosen and `Continue` is unavailable
+- **WHEN** a book declaring `xx-yy` is open and a target is chosen
+- **THEN** no source language is chosen and `Continue` is available
 
 ### Requirement: Offer one searchable list of languages for source and target
 
