@@ -39,7 +39,7 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
                 projects,
                 new DirectExecutor(),
                 tag -> true,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities)));
+                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

@@ -39,7 +39,7 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
             settings.model().set("gemma3:12b");
             return null;
         });
-        final SetupHelper helper = new SetupHelper(blocking, models, settings, worker, activities);
+        final SetupHelper helper = new SetupHelper(blocking, models, settings, worker, activities, capabilities);
         final AtomicReference<Result<FileNameSuggestion>> answer = new AtomicReference<>();
         onFx(() -> helper.run(ActivityKind.SUGGEST_NAME, model -> blocking.suggestFileName("p", model), answer::set));
         assertThat(waiting.await(5, TimeUnit.SECONDS)).isTrue();

@@ -108,13 +108,13 @@ class JudgementBooksTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("books")
-    void briefSamples_book_startAtTheStoryAndHoldNothingBeforeIt(final JudgementBook book) {
+    void briefWindows_book_startAtTheStoryAndHoldNothingBeforeIt(final JudgementBook book) {
         final StageProbe probe = new StageProbe(new JudgementFakeModel(book, Set.of()));
 
         new JudgementRunner(probe).judge(book.id(), book.write(dir), book.gold());
 
         final List<String> samples = briefSamples(probe);
-        assertThat(samples).hasSize(2);
+        assertThat(samples).hasSizeBetween(1, 5);
         assertThat(samples.getFirst()).contains("Passage 1: " + book.expect().sampleStartsWith());
         assertThat(samples)
                 .allSatisfy(sample -> assertThat(book.expect().sampleNever()).noneMatch(sample::contains));

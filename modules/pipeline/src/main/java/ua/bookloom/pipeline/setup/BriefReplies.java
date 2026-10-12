@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.BriefField;
+import ua.bookloom.util.lang.LanguageTags;
 
 /**
  * Reads one sample's brief suggestion reply and keeps only the answers the sample supports. A neutral answer (a
@@ -29,6 +30,7 @@ final class BriefReplies {
     /** An answer the model is less sure of than this is not kept. */
     static final double MIN_CONFIDENCE = 0.5;
 
+    private static final String LANGUAGE = "language";
     private static final double SURE = 1.0;
     private static final Set<String> NEUTRAL = Set.of("", "neutral", "unspecified", "unknown");
     private static final Answer UNKNOWN = new Answer("unknown", "");
@@ -138,6 +140,26 @@ final class BriefReplies {
 
     private static String text(@Nullable final JsonNode node) {
         return node == null || node.isNull() ? "" : node.asText().strip();
+    }
+
+    /**
+     * The language a window's passage is written in, which only a book with no chosen source language (Auto) asks for.
+     *
+     * @param reply the parsed reply of one window
+     * @param chosenSource the source language the person chose, or null for Auto
+     * @return the reply's {@code language} as a normal language tag under Auto; empty when a source is chosen (whatever
+     *     the reply says), when the reply names none, or when it names no language
+     */
+    static Optional<String> language(final JsonNode reply, @Nullable final String chosenSource) {
+        Objects.requireNonNull(reply, "reply");
+        if (chosenSource != null) {
+            return Optional.empty();
+        }
+        final JsonNode node = reply.get(LANGUAGE);
+        final Optional<String> language =
+                node == null || !node.isTextual() ? Optional.empty() : LanguageTags.normalize(node.asText());
+        log.debug("Brief reply language under Auto: {}", language);
+        return language;
     }
 
     static String wireName(final BriefField field) {

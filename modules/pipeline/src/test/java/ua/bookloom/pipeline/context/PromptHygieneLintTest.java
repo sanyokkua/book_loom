@@ -74,6 +74,7 @@ class PromptHygieneLintTest {
                     "sample",
                     "Passage 1: " + "It was a bright cold day in April, and the clocks were striking thirteen."),
             Map.entry("dialogueShare", "12"),
+            Map.entry("askLanguage", "yes"),
             Map.entry("next", "Вона чекала."),
             Map.entry("extraInstruction", "Keep the dialogue tone."),
             Map.entry("passFocus", "This is a second pass over text already reviewed once."),

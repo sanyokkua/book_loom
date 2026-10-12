@@ -13,70 +13,181 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.Sentences;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 
 /**
- * Takes two disjoint samples of a book's story for the brief suggestion, so the brief is judged from the book and not
- * from its opening, and a field is kept only when both samples say the same. Each sample is three contiguous windows of
- * {@value #WINDOW} sentences: at the start of the first story chapter, in the middle of the story and at the start of a
- * late chapter; the second sample reads the {@value #WINDOW} sentences that follow each window of the first.
+ * Takes single windows of a book's story for the brief suggestion, so the brief is judged from the whole book and not
+ * from its opening, and each window is read on its own. The windows are spread from the start of the first story
+ * chapter to the last story chapter, never overlap, and are sized in tokens so each fits the model's window.
  *
  * <p>Story is what a chapter of the book's body holds when it has at least {@value #MIN_CHAPTER_SENTENCES} sentences
  * and a paragraph of two full sentences, each of three words or more and closed by its terminal mark: front and back
  * matter, the metadata unit, a contents list, a converter's page, a page of praise (a blurb's attribution is a
  * sentence with no mark) and a heading-only unit are not read. A book with no such chapter is read whole, minus its
- * short lines. A book too short for six windows is cut into six equal ones, and one too short for that into two halves.
+ * short lines.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class BookSamples {
 
-    /** The sentences in one window. */
-    static final int WINDOW = 40;
-
     /** A chapter with fewer sentences than this is not story. */
     static final int MIN_CHAPTER_SENTENCES = 20;
 
-    private static final int WINDOWS = 6;
-    private static final int SAMPLES = 2;
+    private static final int FAST_WINDOWS = 3;
+    private static final int BALANCED_WINDOWS = 4;
+    private static final int MAX_WINDOWS = 5;
+    private static final int FAST_WINDOW_TOKENS = 1_500;
+    private static final int BALANCED_WINDOW_TOKENS = 2_500;
+    private static final int MAX_WINDOW_TOKENS = 4_000;
+    // Below this a window shows too little of the book to judge, whatever a tiny model window leaves.
+    private static final int MIN_WINDOW_TOKENS = 200;
     private static final int STORY_PARAGRAPH_SENTENCES = 2;
     private static final int MIN_FALLBACK_CHARS = 40;
-    private static final double LATE = 0.8;
     private static final int PERCENT = 100;
     private static final Pattern CLOSED = Pattern.compile("[.!?…。！？][»”\"’)]*$");
 
-    private record Line(int chapter, int paragraph, String text) {}
+    private record Line(int paragraph, String text) {}
 
-    private record Window(int from, int size) {}
+    private record Window(int from, int to) {}
 
     /**
-     * The samples of a book.
+     * How many single windows the brief reads.
      *
-     * @param document the opened book; only its body units are read
-     * @param languageTag the source language, whose quote marks tell speech from narration; null for the general table
-     * @return two disjoint samples, one for a book of a single sentence, none for a book with no story text
+     * @param dial the quality dial; never null
+     * @return 3 for Fast, 4 for Balanced, 5 for Max
      */
-    static List<BookSample> of(final Document document, @Nullable final String languageTag) {
+    static int windowCount(final QualityDial dial) {
+        return switch (Objects.requireNonNull(dial, "dial")) {
+            case FAST -> FAST_WINDOWS;
+            case BALANCED -> BALANCED_WINDOWS;
+            case MAX -> MAX_WINDOWS;
+        };
+    }
+
+    /**
+     * The most tokens one window may hold: the dial's own size (1.5k, 2.5k, 4k), limited to the room the model's window
+     * leaves after the call's fixed part and the safety margin every setup call keeps.
+     *
+     * @param dial the quality dial; never null
+     * @param detectedContext the context length the provider reported, or null; limited as
+     *     {@code ContextBudget.windowFor(detectedContext, null)} limits it
+     * @param fixedTokens the tokens the call's system message, its other user text and the reply's cap take; not
+     *     negative
+     * @return the window's budget in tokens; at least 200, so a window is never empty
+     */
+    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
+        final int window = ContextBudget.windowFor(detectedContext, null);
+        final int room = window - ContextBudget.SAFETY_MARGIN - fixedTokens;
+        final int wanted =
+                switch (Objects.requireNonNull(dial, "dial")) {
+                    case FAST -> FAST_WINDOW_TOKENS;
+                    case BALANCED -> BALANCED_WINDOW_TOKENS;
+                    case MAX -> MAX_WINDOW_TOKENS;
+                };
+        final int tokens = Math.max(MIN_WINDOW_TOKENS, Math.min(wanted, room));
+        log.debug(
+                "Brief window budget: dial={} model window={} fixed={} room={} -> {} tokens",
+                dial,
+                window,
+                fixedTokens,
+                room,
+                tokens);
+        return tokens;
+    }
+
+    /**
+     * Single windows of the story, spread from the start of the first story chapter to the last story chapter.
+     *
+     * @param document the opened book; only its story chapters are read
+     * @param languageTag the source language for the token estimate and the dialogue share; null for the general table
+     * @param windows how many windows are wanted at most
+     * @param windowTokens the most tokens (as {@code TokenEstimator} measures them) one window may hold
+     * @return up to {@code windows} samples of one passage each, in reading order, never overlapping; fewer when the
+     *     story is too short for that many, one at least when the book has story text; empty when it has none
+     */
+    static List<BookSample> of(
+            final Document document, @Nullable final String languageTag, final int windows, final int windowTokens) {
         Objects.requireNonNull(document, "document");
         final List<Line> lines = lines(storyChapters(chapters(document)));
-        final List<Window> windows = windows(lines);
-        log.debug("Book samples of {}: {} story sentences, windows {}", document.id(), lines.size(), windows);
-        final List<BookSample> samples = new ArrayList<>();
-        for (int sample = 0; sample < SAMPLES; sample++) {
-            final List<String> passages = new ArrayList<>();
-            for (int index = sample; index < windows.size(); index += SAMPLES) {
-                passages.add(passage(lines, windows.get(index)));
+        if (lines.isEmpty()) {
+            log.debug("Book samples of {}: no story sentences", document.id());
+            return List.of();
+        }
+        final int storyTokens = TokenEstimator.estimate(passage(lines, new Window(0, lines.size())), languageTag);
+        final int count = Math.max(1, Math.min(windows, storyTokens / windowTokens));
+        log.debug(
+                "Book samples of {}: {} story sentences, {} tokens, {} of {} wanted windows of {} tokens",
+                document.id(),
+                lines.size(),
+                storyTokens,
+                count,
+                windows,
+                windowTokens);
+        final List<Window> placed = placed(lines, languageTag, count, windowTokens);
+        final List<BookSample> samples = placed.stream()
+                .map(window -> passage(lines, window))
+                .map(text -> new BookSample(List.of(text), dialoguePercent(text, languageTag)))
+                .toList();
+        log.debug("Book samples of {}: windows {}, dialogue shares {}", document.id(), placed, shares(samples));
+        return samples;
+    }
+
+    // The first window starts at the story's first sentence and the last ends at its last; the others are spread
+    // evenly between, each starting at a paragraph's start and never before the end of the window before it.
+    private static List<Window> placed(
+            final List<Line> lines, @Nullable final String languageTag, final int count, final int windowTokens) {
+        final int lastStart = count == 1 ? 0 : startOfLast(lines, languageTag, windowTokens);
+        final List<Window> placed = new ArrayList<>();
+        int previousEnd = 0;
+        for (int index = 0; index < count; index++) {
+            final int target = count == 1 ? 0 : (int) ((long) index * lastStart / (count - 1));
+            final int start = Math.max(previousEnd, paragraphStart(lines, target));
+            if (start >= lines.size()) {
+                log.debug("Book samples: window {} starts past the story's end and is dropped", index + 1);
+                break;
             }
-            passages.removeIf(String::isBlank);
-            if (!passages.isEmpty()) {
-                samples.add(new BookSample(passages, dialoguePercent(passages, languageTag)));
+            final Window window = new Window(start, endOfWindow(lines, languageTag, start, windowTokens));
+            placed.add(window);
+            previousEnd = window.to();
+        }
+        return placed;
+    }
+
+    // The latest start from which a window still reaches the story's end within the budget.
+    private static int startOfLast(final List<Line> lines, @Nullable final String languageTag, final int budget) {
+        int low = 0;
+        int high = lines.size() - 1;
+        while (low < high) {
+            final int middle = (low + high) / 2;
+            if (TokenEstimator.estimate(passage(lines, new Window(middle, lines.size())), languageTag) <= budget) {
+                high = middle;
+            } else {
+                low = middle + 1;
             }
         }
-        log.debug("Book samples of {}: {} samples, dialogue shares {}", document.id(), samples.size(), shares(samples));
-        return samples;
+        return low;
+    }
+
+    // The most sentences from start that fit the budget, at least one.
+    private static int endOfWindow(
+            final List<Line> lines, @Nullable final String languageTag, final int start, final int budget) {
+        int low = start + 1;
+        int high = Math.min(lines.size(), start + budget);
+        while (low < high) {
+            final int middle = (low + high + 1) / 2;
+            if (TokenEstimator.estimate(passage(lines, new Window(start, middle)), languageTag) <= budget) {
+                low = middle;
+            } else {
+                high = middle - 1;
+            }
+        }
+        return low;
     }
 
     private static List<Integer> shares(final List<BookSample> samples) {
@@ -149,47 +260,15 @@ final class BookSamples {
     private static List<Line> lines(final List<List<String>> chapters) {
         final List<Line> lines = new ArrayList<>();
         int paragraph = 0;
-        for (int chapter = 0; chapter < chapters.size(); chapter++) {
-            for (final String text : chapters.get(chapter)) {
+        for (final List<String> chapter : chapters) {
+            for (final String text : chapter) {
                 for (final String sentence : Sentences.split(text)) {
-                    lines.add(new Line(chapter, paragraph, sentence));
+                    lines.add(new Line(paragraph, sentence));
                 }
                 paragraph++;
             }
         }
         return lines;
-    }
-
-    // The windows in the order first sample, second sample, for the start, the middle and the late chapter.
-    private static List<Window> windows(final List<Line> lines) {
-        final int total = lines.size();
-        if (total >= WINDOWS * WINDOW) {
-            final int middle = clamp(paragraphStart(lines, total / 2), 2 * WINDOW, total - 4 * WINDOW);
-            final int late = clamp(chapterStart(lines, (int) (total * LATE)), middle + 2 * WINDOW, total - 2 * WINDOW);
-            log.debug("Book samples: full windows at 0, {} and {} of {} sentences", middle, late, total);
-            final List<Window> windows = new ArrayList<>();
-            for (final int start : List.of(0, middle, late)) {
-                windows.add(new Window(start, WINDOW));
-                windows.add(new Window(start + WINDOW, WINDOW));
-            }
-            return windows;
-        }
-        final int size = total / WINDOWS;
-        if (size > 0) {
-            log.debug("Book samples: {} sentences make six windows of {}", total, size);
-            final List<Window> windows = new ArrayList<>();
-            for (int index = 0; index < WINDOWS; index++) {
-                windows.add(new Window(index * size, size));
-            }
-            return windows;
-        }
-        final int half = (total + 1) / SAMPLES;
-        log.debug("Book samples: {} sentences make two halves", total);
-        return List.of(new Window(0, half), new Window(half, total - half));
-    }
-
-    private static int clamp(final int value, final int low, final int high) {
-        return Math.max(low, Math.min(value, high));
     }
 
     private static int paragraphStart(final List<Line> lines, final int at) {
@@ -200,18 +279,10 @@ final class BookSamples {
         return start;
     }
 
-    private static int chapterStart(final List<Line> lines, final int at) {
-        int start = at;
-        while (start > 0 && lines.get(start - 1).chapter() == lines.get(at).chapter()) {
-            start--;
-        }
-        return start;
-    }
-
     private static String passage(final List<Line> lines, final Window window) {
         final StringBuilder text = new StringBuilder();
         int paragraph = -1;
-        for (int index = window.from(); index < window.from() + window.size(); index++) {
+        for (int index = window.from(); index < window.to(); index++) {
             final Line line = lines.get(index);
             if (paragraph >= 0) {
                 text.append(line.paragraph() == paragraph ? " " : "\n");
@@ -222,15 +293,13 @@ final class BookSamples {
         return text.toString();
     }
 
-    private static int dialoguePercent(final List<String> passages, @Nullable final String languageTag) {
+    private static int dialoguePercent(final String passage, @Nullable final String languageTag) {
         long letters = 0;
         long spoken = 0;
-        for (final String passage : passages) {
-            for (final String paragraph : passage.lines().toList()) {
-                final String narration = NarratorDetector.narration(paragraph, languageTag);
-                letters += paragraph.chars().filter(Character::isLetter).count();
-                spoken += narration.length() == paragraph.length() ? spokenLetters(paragraph, narration) : 0;
-            }
+        for (final String paragraph : passage.lines().toList()) {
+            final String narration = NarratorDetector.narration(paragraph, languageTag);
+            letters += paragraph.chars().filter(Character::isLetter).count();
+            spoken += narration.length() == paragraph.length() ? spokenLetters(paragraph, narration) : 0;
         }
         return letters == 0 ? 0 : (int) Math.round((double) spoken * PERCENT / letters);
     }

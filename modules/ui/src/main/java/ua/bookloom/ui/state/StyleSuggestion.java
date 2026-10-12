@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -135,9 +136,12 @@ public final class StyleSuggestion {
         outcome.set(StyleSuggestionOutcome.NONE);
         forget();
         suggesting.set(true);
+        final Supplier<Optional<Integer>> detection = setup.detection();
         setup.runShown(
                         ActivityKind.SUGGEST_STYLE,
-                        (model, progress) -> setup.assistant().suggestBrief(book.projectId(), model, progress),
+                        (model, progress) -> setup.assistant()
+                                .suggestBrief(
+                                        book.projectId(), model, detection.get().orElse(null), progress),
                         answer -> answered(book.projectId(), answer))
                 .ifPresent(refusal -> {
                     suggesting.set(false);

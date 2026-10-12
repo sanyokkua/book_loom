@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.function.Consumer;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 
@@ -55,5 +56,21 @@ public interface SetupAssistant {
      */
     default Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model, Consumer<JobEvent> progress) {
         return suggestBrief(projectId, model);
+    }
+
+    /**
+     * As {@link #suggestBrief(String, ChatModel, Consumer)}, sizing each passage the model reads to the context window
+     * the model really has. An assistant that reads no passages ignores {@code detectedContext}.
+     *
+     * @param projectId the project whose book is open
+     * @param model the model to ask
+     * @param detectedContext the context length in tokens the provider reported for {@code model}, or null when it said
+     *     nothing, which sizes the passages for the default window
+     * @param progress the non-null receiver of each call's snapshot, called on the calling thread
+     * @return as {@link #suggestBrief(String, ChatModel)}
+     */
+    default Result<BriefSuggestion> suggestBrief(
+            String projectId, ChatModel model, @Nullable Integer detectedContext, Consumer<JobEvent> progress) {
+        return suggestBrief(projectId, model, progress);
     }
 }

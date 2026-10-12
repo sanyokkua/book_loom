@@ -37,7 +37,7 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
                 progress,
                 new DirectExecutor(),
                 activities,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities)));
+                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

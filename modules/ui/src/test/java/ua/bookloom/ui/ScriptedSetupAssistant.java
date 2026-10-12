@@ -1,13 +1,17 @@
 package ua.bookloom.ui;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 
 /** A setup assistant whose answers a test sets, and which records the projects it was asked about. */
@@ -19,6 +23,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private Result<FileNameSuggestion> fileName = cast();
     private Result<BriefSuggestion> brief = cast();
     private final List<String> asked = new ArrayList<>();
+    private final List<@Nullable Integer> detectedContexts = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
     private static <T> Result<T> cast() {
@@ -46,6 +51,21 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     /** The project ids a suggestion was asked for, in order. */
     public List<String> asked() {
         return List.copyOf(asked);
+    }
+
+    /** The context length each brief suggestion was asked with, in order; null where none was detected. */
+    public List<@Nullable Integer> detectedContexts() {
+        return Collections.unmodifiableList(detectedContexts);
+    }
+
+    @Override
+    public Result<BriefSuggestion> suggestBrief(
+            final String projectId,
+            final ChatModel model,
+            @Nullable final Integer detectedContext,
+            final Consumer<JobEvent> progress) {
+        detectedContexts.add(detectedContext);
+        return suggestBrief(projectId, model);
     }
 
     @Override

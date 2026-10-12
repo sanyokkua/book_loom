@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,7 +13,6 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
-import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -76,18 +74,19 @@ class SetupAssistantNarratorGenderTest {
     }
 
     // IF the model's vocative were dropped, THEN a narrator addressed as Ray would stay of unknown gender (Oct 9 e4b
-    // run).
+    // run). The book is shorter than one window, so it is read in one call.
     @Test
-    void suggestBrief_vocativeOfAGlossaryPersonInOneSample_suggestsThePersonsGender() {
+    void suggestBrief_vocativeOfAGlossaryPersonInTheWindow_suggestsThePersonsGender() {
         glossaryHoldsRay();
-        model.answer(reply("male", VOCATIVE, "Ray")).answer(reply("unknown", "", ""));
+        model.answer(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
-                .contains(new FieldEvidence(List.of(VOCATIVE), 1, 2));
+                .hasValueSatisfying(proof -> assertThat(proof.quotes()).containsExactly(VOCATIVE));
+        assertThat(model.requests()).hasSize(1);
     }
 
     // The brief's first-person narrator with no gender is filled, not left for the Start question.
@@ -95,7 +94,7 @@ class SetupAssistantNarratorGenderTest {
     void suggestBrief_firstPersonNarratorWithUnknownGenderSet_isFilledFromTheVocative() {
         glossaryHoldsRay();
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
-        model.answer(reply("male", VOCATIVE, "Ray")).answer(reply("unknown", "", ""));
+        model.answer(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -108,7 +107,7 @@ class SetupAssistantNarratorGenderTest {
     // Ray is not on the first-name list on purpose, so with no glossary person the code cannot gender him.
     @Test
     void suggestBrief_vocativeOfANameNobodyKnows_leavesTheGenderUnknown() {
-        model.answer(reply("male", VOCATIVE, "Ray")).answer(reply("male", VOCATIVE, "Ray"));
+        model.answer(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -120,7 +119,7 @@ class SetupAssistantNarratorGenderTest {
     void suggestBrief_personChoseTheGender_neverOverridesIt() {
         glossaryHoldsRay();
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
-        model.answer(reply("male", VOCATIVE, "Ray")).answer(reply("male", VOCATIVE, "Ray"));
+        model.answer(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();

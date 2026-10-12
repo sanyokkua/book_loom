@@ -118,7 +118,7 @@ class PromptShapeTest {
         final String prompt = prompt(PromptName.BRIEF_SUGGESTION);
 
         assertThat(prompt)
-                .contains("copied exactly from the passages", "\"confidence\"", "Dialogue share")
+                .contains("copied exactly from the passage", "\"confidence\"", "Dialogue share")
                 .doesNotContain("what you know of this book", "\"value\":\"male\"", "\"value\":\"female\"");
     }
 

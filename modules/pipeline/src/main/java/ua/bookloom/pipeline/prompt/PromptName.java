@@ -163,7 +163,7 @@ public enum PromptName {
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("fileName"), Set.of("title", "author", "titleTarget", "authorTarget", "correction"))),
 
-    /** The proposal of the Book Brief's tone and style from one sample of the book; one small call per sample. */
+    /** The proposal of the Book Brief's tone and style from one passage of the book; one small call per passage. */
     BRIEF_SUGGESTION(
             "brief-suggestion",
             CallKind.BRIEF_SUGGESTION,
@@ -172,7 +172,7 @@ public enum PromptName {
             0.1,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("sample", "dialogueShare"), Set.of("title", "author"))),
+            new Slots(Set.of("sample", "dialogueShare"), Set.of("title", "author", "askLanguage"))),
 
     /** The question what the model knows of the book by its title and author; one small call, checked against the metadata. */
     BOOK_KNOWLEDGE(

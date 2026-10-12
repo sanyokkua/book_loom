@@ -17,6 +17,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
@@ -44,6 +45,7 @@ public final class SetupHelper {
     private final SettingsViewModel settings;
     private final ExecutorService executor;
     private final ActivityTracker activities;
+    private final ModelCapabilities capabilities;
 
     /**
      * Creates the helper.
@@ -53,6 +55,7 @@ public final class SetupHelper {
      * @param settings where the chosen provider and model are read
      * @param executor the daemon executor the call runs on, never the FX thread
      * @param activities the model work under way
+     * @param capabilities where the chosen model's context length is detected
      */
     @Inject
     public SetupHelper(
@@ -60,12 +63,33 @@ public final class SetupHelper {
             final ChatModelFactory models,
             final SettingsViewModel settings,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final ModelCapabilities capabilities) {
         this.assistant = Objects.requireNonNull(assistant, "assistant");
         this.models = Objects.requireNonNull(models, "models");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.activities = Objects.requireNonNull(activities, "activities");
+        this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
+    }
+
+    /**
+     * Captures the chosen model now so its context length can be asked for later, off the FX thread: detection is a
+     * catalogue request, and the selection is a UI property that only the FX thread may read.
+     *
+     * @return asks the provider for the captured model's context length; empty when no model is chosen, the provider
+     *     says nothing or the request fails. Call it from the background work, never the FX thread.
+     */
+    public Supplier<Optional<Integer>> detection() {
+        final Optional<ModelSelection> selection = settings.selection();
+        log.debug(
+                "context detection captured for {}",
+                selection.map(ModelSelection::modelId).orElse("no model"));
+        return () -> {
+            final Optional<Integer> detected = selection.flatMap(capabilities::detectedTokens);
+            log.debug("detected context of the chosen model: {}", detected);
+            return detected;
+        };
     }
 
     /**

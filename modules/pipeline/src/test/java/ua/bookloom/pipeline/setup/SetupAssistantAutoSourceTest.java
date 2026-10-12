@@ -79,4 +79,16 @@ class SetupAssistantAutoSourceTest {
                         .contains("the language of this segment (infer it from its text)")
                         .doesNotContain("French (fr)"));
     }
+
+    // IF the passage's language were not asked, THEN Auto would have nothing to propose from (15i.B4 counts the
+    // windows).
+    @Test
+    void suggestBrief_autoSource_asksEachWindowForTheLanguageItIsWrittenIn() {
+        final ScriptedChatModel model = suggestUnderAuto(BODY);
+
+        assertThat(model.requests())
+                .isNotEmpty()
+                .allSatisfy(request -> assertThat(request.messages())
+                        .anyMatch(message -> message.content().contains("\"language\"")));
+    }
 }

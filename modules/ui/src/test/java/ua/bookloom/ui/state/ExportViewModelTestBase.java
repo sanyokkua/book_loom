@@ -9,6 +9,8 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
@@ -45,6 +47,9 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     ScriptedChatModelFactory models;
     SettingsViewModel settings;
     WorkflowProgress progress;
+
+    /** A provider that never says what window its model has. */
+    final ModelCapabilities capabilities = (providerId, modelId) -> Result.ok(ContextLength.unknown());
 
     @Override
     public final void start(final Stage stage) {

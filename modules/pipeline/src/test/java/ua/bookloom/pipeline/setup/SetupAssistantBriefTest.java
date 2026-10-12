@@ -17,7 +17,6 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
-import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
@@ -28,11 +27,11 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
-/** The model's proposal of the Book Brief: what it reads of the book, and what is kept from the two samples' answers. */
+/** The model's proposal of the Book Brief: what it reads of the book, and what is kept from the windows' answers. */
 class SetupAssistantBriefTest {
 
-    private static final String LONG_PARAGRAPH =
-            "The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.";
+    // Balanced reads four windows; the book is long enough (about 27,000 tokens) for every dial's windows.
+    private static final int WINDOWS = 4;
 
     @TempDir
     private Path tempDir;
@@ -43,8 +42,7 @@ class SetupAssistantBriefTest {
 
     @BeforeEach
     void open() {
-        desk = ReviewFixtures.markdown(
-                tempDir, LONG_PARAGRAPH + "\n\n" + LONG_PARAGRAPH + " Nobody came.\n\nOk.\n\n" + LONG_PARAGRAPH + "\n");
+        desk = ReviewFixtures.markdown(tempDir, BriefBooks.story(12, 100));
         model = new ScriptedChatModel();
         assistant = new SetupAssistantImpl(
                 desk.projects(),
@@ -78,7 +76,7 @@ class SetupAssistantBriefTest {
                 + confidence + "}";
     }
 
-    private static final String QUOTE = "The rain had not stopped for three days";
+    private static final String QUOTE = BriefBooks.QUOTE;
 
     private List<String> userMessages() {
         return model.requests().stream()
@@ -90,11 +88,15 @@ class SetupAssistantBriefTest {
                 .toList();
     }
 
+    /** Scripts the same reply for every window of the default (Balanced) dial. */
+    private void everyWindowAnswers(final String reply) {
+        model.answerTimes(WINDOWS, reply(reply));
+    }
+
     // IF the model were shown only the opening once, THEN one reading of 590 words would decide the whole brief.
     @Test
-    void suggestBrief_twoSamplesAgreeWithQuotesInTheBook_keepsEveryFieldWithItsEvidence() {
-        final String reply = brief("noir", "casual", "first-person, short sentences", "first", QUOTE, 0.9);
-        model.answer(reply(reply)).answer(reply(reply));
+    void suggestBrief_windowsAgreeWithQuotesInTheBook_keepsEveryFieldWithItsEvidence() {
+        everyWindowAnswers(brief("noir", "casual", "first-person, short sentences", "first", QUOTE, 0.9));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -103,46 +105,51 @@ class SetupAssistantBriefTest {
         assertThat(suggestion.register()).isEqualTo(Register.CASUAL);
         assertThat(suggestion.voiceEra()).isEqualTo("first-person, short sentences");
         assertThat(suggestion.narrator()).isEqualTo(NarratorPerson.FIRST);
-        assertThat(suggestion.evidenceOf(BriefField.REGISTER)).contains(new FieldEvidence(List.of(QUOTE), 2, 2));
-        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER)).contains(new FieldEvidence(List.of(), 2, 2));
-        assertThat(model.requests()).hasSize(2);
-        assertThat(userMessages().getFirst())
-                .contains("Sample (passages", "Passage 1:", "The rain had not stopped", "Dialogue share")
-                .doesNotContain("\nOk.\n");
-        assertThat(userMessages().getFirst()).isNotEqualTo(userMessages().getLast());
+        assertThat(suggestion.evidenceOf(BriefField.REGISTER))
+                .hasValueSatisfying(proof -> assertThat(proof.isKept()).isTrue());
+        assertThat(model.requests()).hasSize(WINDOWS);
+        assertThat(userMessages())
+                .allSatisfy(
+                        user -> assertThat(user).contains("Passage 1:", "The rain had not stopped", "Dialogue share"));
+        assertThat(userMessages()).doesNotHaveDuplicates();
     }
 
     // IF the prompt invited the model's memory of the book, THEN a famous title would outweigh what the text shows.
     @Test
-    void suggestBrief_systemMessage_asksOnlyFromThePassagesAndFixesNoGenderInItsExample() {
-        final String reply = brief("noir", "casual", "terse", "first", QUOTE, 0.9);
-        model.answer(reply(reply)).answer(reply(reply));
+    void suggestBrief_systemMessage_asksOnlyFromThePassageAndFixesNoGenderInItsExample() {
+        everyWindowAnswers(brief("noir", "casual", "terse", "first", QUOTE, 0.9));
 
         assertThat(assistant.suggestBrief(desk.projectId(), model).isOk()).isTrue();
 
         final String system = model.requests().getFirst().messages().getFirst().content();
         assertThat(system)
                 .doesNotContain("what you know of this book", "\"narratorGender\":\"male\"")
-                .contains("\"narratorGender\":{\"value\":\"unknown\"");
+                .contains("\"narratorGender\":{\"evidence\"");
     }
 
+    // The combine of today (unanimity) still runs over K answers; 15i.B4 replaces it by a majority.
     @Test
-    void suggestBrief_samplesDisagree_leavesTheFieldNeutralAndUncertain() {
-        model.answer(reply(brief("noir", "casual", "terse", "first", QUOTE, 0.9)))
-                .answer(reply(brief("noir", "formal", "terse", "first", QUOTE, 0.9)));
+    void suggestBrief_windowsDisagree_leavesTheFieldNeutralAndUncertain() {
+        final String casual = brief("noir", "casual", "terse", "first", QUOTE, 0.9);
+        final String formal = brief("noir", "formal", "terse", "first", QUOTE, 0.9);
+        model.answer(reply(formal)).answer(reply(casual)).answer(reply(formal)).answer(reply(casual));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
 
         assertThat(suggestion.register()).isEqualTo(Register.NEUTRAL);
-        assertThat(suggestion.evidenceOf(BriefField.REGISTER)).contains(new FieldEvidence(List.of(), 1, 2));
+        assertThat(suggestion.evidenceOf(BriefField.REGISTER))
+                .hasValueSatisfying(proof -> assertThat(proof.isKept()).isFalse());
         assertThat(suggestion.genre()).isEqualTo("noir");
     }
 
     // IF a quote were taken on trust, THEN a model could cite a line the book never had.
     @Test
-    void suggestBrief_quoteNotInTheSample_isNotKept() {
-        model.answer(reply(brief("noir", "casual", "terse", "first", "A line this book never had", 0.9)))
+    void suggestBrief_quoteNotInTheWindow_isNotKept() {
+        final String invented = brief("noir", "casual", "terse", "first", "A line this book never had", 0.9);
+        model.answer(reply(invented))
+                .answer(reply(invented))
+                .answer(reply(invented))
                 .answer(reply(brief("noir", "casual", "terse", "first", QUOTE, 0.9)));
 
         final BriefSuggestion suggestion =
@@ -151,12 +158,16 @@ class SetupAssistantBriefTest {
         assertThat(suggestion.genre()).isNull();
         assertThat(suggestion.register()).isEqualTo(Register.NEUTRAL);
         assertThat(suggestion.narrator()).isEqualTo(NarratorPerson.UNSPECIFIED);
-        assertThat(suggestion.evidenceOf(BriefField.GENRE)).contains(new FieldEvidence(List.of(), 1, 2));
+        assertThat(suggestion.evidenceOf(BriefField.GENRE))
+                .hasValueSatisfying(proof -> assertThat(proof.isKept()).isFalse());
     }
 
     @Test
     void suggestBrief_lowConfidence_isNotKept() {
-        model.answer(reply(brief("noir", "casual", "terse", "first", QUOTE, 0.3)))
+        final String unsure = brief("noir", "casual", "terse", "first", QUOTE, 0.3);
+        model.answer(reply(unsure))
+                .answer(reply(unsure))
+                .answer(reply(unsure))
                 .answer(reply(brief("noir", "casual", "terse", "first", QUOTE, 0.9)));
 
         assertThat(assistant.suggestBrief(desk.projectId(), model).data().register())
@@ -165,9 +176,8 @@ class SetupAssistantBriefTest {
 
     @Test
     void suggestBrief_unknownWordsInTheReply_fallBackToTheNeutralChoices() {
-        final String reply = "{\"genre\":\"\",\"register\":\"wild\",\"voice\":\"\",\"audience\":\"\","
-                + "\"narrator\":\"fourth\",\"narratorGender\":\"robot\"}";
-        model.answer(reply(reply)).answer(reply(reply));
+        everyWindowAnswers("{\"genre\":\"\",\"register\":\"wild\",\"voice\":\"\",\"audience\":\"\","
+                + "\"narrator\":\"fourth\",\"narratorGender\":\"robot\"}");
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -180,7 +190,7 @@ class SetupAssistantBriefTest {
 
     @Test
     void suggestBrief_replyThatIsNotJson_isAValidationError() {
-        model.answer(reply("I think it is a noir.")).answer(reply("Still a noir."));
+        everyWindowAnswers("I think it is a noir.");
 
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
@@ -189,7 +199,7 @@ class SetupAssistantBriefTest {
     }
 
     @Test
-    void suggestBrief_firstCallFails_returnsItsErrorAndAsksNoSecondSample() {
+    void suggestBrief_firstCallFails_returnsItsErrorAndAsksNoFurtherWindow() {
         model.answer(Result.err(AppError.of(ErrorCode.unreachable, "Down", "The server is not answering.")));
 
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
@@ -213,8 +223,7 @@ class SetupAssistantBriefTest {
         final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
         desk.projects()
                 .save(stored.withBrief(stored.brief().withNarrator(new Narrator(NarratorPerson.FIRST, Gender.MALE))));
-        final String reply = brief("noir", "casual", "third-person limited, terse", "third", QUOTE, 0.9);
-        model.answer(reply(reply)).answer(reply(reply));
+        everyWindowAnswers(brief("noir", "casual", "third-person limited, terse", "third", QUOTE, 0.9));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
