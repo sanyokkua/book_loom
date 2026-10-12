@@ -845,6 +845,11 @@
     -fx-font-weight: bold;
 }
 
+/* Two cards side by side or stacked (ui.control.TwoColumns): the one gap between the columns and between the cards. */
+.two-columns {
+    -fx-gap: 16px;
+}
+
 .card {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
