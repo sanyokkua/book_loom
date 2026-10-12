@@ -219,7 +219,7 @@ final class ReviewCommit {
 
     /**
      * The entry with the verdict's type where its own is unset, and, for a person whose gender is unknown, the
-     * verdict's gender: as decided when a cited window shows it, else as a suggestion nobody has verified (15h.A2). A
+     * verdict's gender: as decided when the book bears it out (15i.N1), else as a suggestion nobody has verified (15h.A2). A
      * stronger verdict is a verified one (15i.N0): it replaces a verified or a suggested gender (the same gender
      * becomes verified), an unverified verdict replaces no known gender, and a gender the person set is kept. A place
      * or a thing takes no gender from the review.

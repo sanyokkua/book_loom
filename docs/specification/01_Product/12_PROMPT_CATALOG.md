@@ -1038,9 +1038,11 @@ name preferred within its stretch, each the sentence with one sentence before an
 about 5,000 input tokens (system message included), at most 40 terms each. The entries that remain then go to
 `#glossary-target-suggestions` in the same action. The entries are only written once every call has answered: an entry
 judged not a name is removed (and remembered as removed) only while its type is still `other` and its gender
-`unknown`; an unset type takes the model's guess; a person's unknown gender takes the model's only when one of the
-windows it cites holds a pronoun of that gender the code gives the name, else it is written as a suggestion
-(`(suggested)`, unverified); a place or a thing takes no gender from the review; a locked entry or one whose target
+`unknown`; an unset type takes the model's guess; a person's unknown gender takes the model's as verified only when
+most of the distinct windows it cites (strictly more than half, and at least two unless fewer were shown) hold a
+pronoun of that gender the code gives the name and the book-wide tally does not favour the other gender (three or more
+opposing pronouns making 60 % or more of the counted ones); else it is written as a suggestion (`(suggested)`,
+unverified), and against a favoured tally the suggestion is the tally's gender; a place or a thing takes no gender from the review; a locked entry or one whose target
 the person chose is never sent or changed.
 
 **SYSTEM**

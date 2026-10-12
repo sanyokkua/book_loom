@@ -287,8 +287,11 @@ name — with a type (person, place, org, term, title or other), a gender (male,
 numbers of the windows it relied on, under a strict schema. Only after every call has answered, and against each entry
 as it then stands, the application SHALL remove through the glossary (so the removal is remembered) each entry judged
 not a name whose type is still other and gender still unknown, and SHALL set the type of an entry still of type other
-to the model's guess and the gender of a person still of gender unknown to the model's — as decided when a window it
-cites holds a pronoun of that gender the code gives the name, else as a suggestion nobody has verified — and SHALL write
+to the model's guess and the gender of a person still of gender unknown to the model's — as decided when most of the
+distinct windows it cites (strictly more than half, and at least two unless fewer were shown) hold a pronoun of that
+gender the code gives the name and the book-wide pronoun tally does not favour the other gender (three or more opposing
+pronouns making 60 % or more of the counted ones), else as a suggestion nobody has verified — against a favoured tally
+the suggestion is the tally's gender — and SHALL write
 the suggested targets that "Suggest target renderings with the model" asks for after the verdicts, in the same
 action; it SHALL NOT change a locked entry or one whose target the person chose, and SHALL then show the glossary as it
 stands and the line `Model review done: N rows removed, M rows updated, K targets suggested.` IF any call fails or the

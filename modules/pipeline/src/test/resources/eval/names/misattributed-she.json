@@ -84,7 +84,5 @@
       "Mara": "Мара"
     },
     "terms": {}
-  },
-  "knownFailure": true,
-  "fixedBy": "15i.N1"
+  }
 }

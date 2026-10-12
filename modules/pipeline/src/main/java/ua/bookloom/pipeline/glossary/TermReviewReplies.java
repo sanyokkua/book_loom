@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -21,15 +22,21 @@ import ua.bookloom.util.text.GlossaryKeys;
  * Reads one glossary-review reply. Only a verdict on a term of the batch survives, and a verdict word or type the
  * schema does not list reads as "no opinion", so an unreadable reply changes nothing. A "not-a-name" verdict removes
  * an entry, so it stands only with evidence: a phrase the model quotes that really occurs in one of the windows it
- * was given; without one it reads as "unsure" and the entry stays for the person to judge. A gender stands only when
- * one of the windows the model cites holds a pronoun of that gender the code gives the name; otherwise it is kept as
- * a suggestion nobody has verified (15h.A2).
+ * was given; without one it reads as "unsure" and the entry stays for the person to judge. A gender stands as verified only
+ * when most of the distinct windows the model cites (strictly more than half, and at least two unless fewer were
+ * shown) hold a pronoun of that gender the code gives the name, and the book-wide pronoun tally does not favour the
+ * other gender; a favoured tally replaces the model's gender with its own, unverified. Otherwise the gender is kept as
+ * a suggestion nobody has verified (15h.A2, 15i.N1).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TermReviewReplies {
 
+    private static final int MIN_MATCHING_WINDOWS = 2;
+    private static final int FAVOURED_MIN = 3;
+    private static final int FAVOURED_PERCENT = 60;
+    private static final int PERCENT = 100;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
     private static final Pattern QUOTE_MARKS = Pattern.compile("[\"'“”‘’«»„…]|\\.{3}");
 
@@ -123,23 +130,72 @@ final class TermReviewReplies {
             log.trace("Glossary review evidence for {} was '{}'", entry.term(), quoted);
             kind = Kind.UNSURE;
         }
-        final Gender gender = genderOf(node.path("gender").asText(""));
         final List<Integer> cited = numbers(node.path("windows"));
-        final boolean verified = gender != Gender.UNKNOWN && evidence.shows(cited, gender);
+        final GenderCall call = genderCall(genderOf(node.path("gender").asText("")), cited, evidence);
         log.debug(
                 "Glossary review verdict on entry {}: {} gender={} windows={} verified={}",
                 entry.id(),
                 kind,
-                gender,
+                call.gender(),
                 cited,
-                verified);
+                call.verified());
         return new Verdict(
                 entry,
                 kind,
                 typeOf(kind, node.path("type").asText("")),
-                gender,
+                call.gender(),
                 kind == Kind.NOT_A_NAME ? quoted : "",
+                call.verified());
+    }
+
+    /** The gender a verdict ends with and whether the book bears it out. */
+    private record GenderCall(Gender gender, boolean verified) {}
+
+    // A claimed gender stands verified only when most of the distinct windows it cites show it and the book-wide tally
+    // does not favour the other gender; against a favoured tally the tally's gender replaces it, unverified.
+    private static GenderCall genderCall(final Gender claimed, final List<Integer> cited, final Evidence evidence) {
+        if (claimed == Gender.UNKNOWN) {
+            return new GenderCall(claimed, false);
+        }
+        final Gender favoured = favouredBy(evidence.pronouns());
+        if (favoured != null && claimed != Gender.NEUTER && favoured != claimed) {
+            log.debug("Glossary review gender {} overruled by the book's pronoun tally: {}", claimed, favoured);
+            return new GenderCall(favoured, false);
+        }
+        return new GenderCall(claimed, matches(claimed, cited, evidence));
+    }
+
+    // Strictly more than half of the distinct valid cited windows, and at least min(2, windows shown) of them.
+    private static boolean matches(final Gender gender, final List<Integer> cited, final Evidence evidence) {
+        final List<Integer> distinct = cited.stream()
+                .distinct()
+                .filter(number -> number >= 1 && number <= evidence.windows().size())
+                .toList();
+        final long matching = distinct.stream()
+                .filter(number -> evidence.windows().get(number - 1).pronoun() == gender)
+                .count();
+        final boolean verified = matching * 2 > distinct.size()
+                && matching >= Math.min(MIN_MATCHING_WINDOWS, evidence.windows().size());
+        log.debug(
+                "Glossary review gender {}: {} of {} distinct cited windows match, {} shown, verified={}",
+                gender,
+                matching,
+                distinct.size(),
+                evidence.windows().size(),
                 verified);
+        return verified;
+    }
+
+    // The gender with three or more of the counted pronouns making 60 % or more of them, else null.
+    private static @Nullable Gender favouredBy(final PronounGender.Evidence tally) {
+        final int female = tally.female();
+        final int male = tally.male();
+        final int total = female + male;
+        log.debug("Glossary review pronoun tally: female={} male={}", female, male);
+        if (female >= FAVOURED_MIN && female * PERCENT >= total * FAVOURED_PERCENT) {
+            return Gender.FEMALE;
+        }
+        return male >= FAVOURED_MIN && male * PERCENT >= total * FAVOURED_PERCENT ? Gender.MALE : null;
     }
 
     private static List<Integer> numbers(final JsonNode windows) {

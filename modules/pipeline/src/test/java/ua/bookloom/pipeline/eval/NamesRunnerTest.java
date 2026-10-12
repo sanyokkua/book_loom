@@ -61,19 +61,15 @@ class NamesRunnerTest {
                 .isFalse();
     }
 
-    // IF a model that cites windows with a 'she' for a man is believed, THEN the man ends with a woman's gender that
-    // nothing marks as a guess; this is the owner's run failure, fixed by 15i.N1.
+    // IF the book's own pronoun tally (she x5, he x9) did not outweigh the model's windows, THEN the man would end with
+    // a woman's gender that nothing marks as a guess; with the tally he ends male, and suggested at worst (15i.N1).
     @Test
-    void run_misattributedShe_corinEndsWithAWrongGenderThatIsNotMarkedSuggested() {
-        final NamesBook book = NamesBook.byId("misattributed-she");
-        assumeThat(book.knownFailure()).isTrue();
+    void run_misattributedShe_corinEndsMaleAndNoWrongGenderIsVerified() {
+        final NamesScore score = run(NamesBook.byId("misattributed-she")).score();
 
-        final NamesScore score = run(book).score();
-
-        assertThat(score.wrongButVerified()).isEqualTo(1);
+        assertThat(score.wrongButVerified()).isZero();
         assertThat(score.eligible()).isEqualTo(2);
-        assertThat(score.genderCorrect()).isEqualTo(1);
-        assertThat(score.genderAccuracy()).isEqualTo(0.5);
+        assertThat(score.genderCorrect()).isEqualTo(2);
     }
 
     // IF the scan reads the bartender's name as the common word it is also written as, THEN the glossary has no entry

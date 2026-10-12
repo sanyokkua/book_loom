@@ -13,7 +13,7 @@ public enum GenderOrigin {
     PERSON,
 
     /**
-     * A model's answer a cited window shows, or a pronoun case the code counted: enforced in the run, and replaced by
+     * A model's answer most of its cited windows show and the book's tally allows, or a pronoun case the code counted: enforced in the run, and replaced by
      * a stronger verified verdict.
      */
     VERIFIED,

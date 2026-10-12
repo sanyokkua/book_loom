@@ -94,17 +94,6 @@ class NameWindowsTest {
                 windowsOf(entry("Ember", TermType.CHARACTER), List.of("Ember nodded. \"He never pays,\" said Badger."));
 
         assertThat(evidence.windows()).extracting(Window::pronoun).containsOnlyNulls();
-        assertThat(evidence.shows(List.of(1), Gender.MALE)).isFalse();
-    }
-
-    @Test
-    void shows_citedWindowWithThatGender_isTrueAndOtherNumbersAreIgnored() {
-        final Evidence evidence =
-                windowsOf(entry("Wren", TermType.CHARACTER), List.of("Wren slept.", "Wren stood. She left."));
-
-        assertThat(evidence.shows(List.of(2), Gender.FEMALE)).isTrue();
-        assertThat(evidence.shows(List.of(1, 7, 0), Gender.FEMALE)).isFalse();
-        assertThat(evidence.shows(List.of(2), Gender.MALE)).isFalse();
     }
 
     @Test
@@ -128,7 +117,6 @@ class NameWindowsTest {
         assertThat(evidence.windows())
                 .extracting(Window::pronoun)
                 .containsExactly(null, Gender.FEMALE, Gender.FEMALE, Gender.FEMALE);
-        assertThat(evidence.shows(List.of(1), Gender.MALE)).isFalse();
     }
 
     @Test

@@ -73,19 +73,6 @@ final class NameWindows {
         Evidence {
             windows = List.copyOf(windows);
         }
-
-        /**
-         * Whether a cited window holds a pronoun of the gender, which is what a gender the model claims rests on.
-         *
-         * @param numbers the window numbers the model cited, from 1; numbers outside the shown windows are ignored
-         * @param gender the gender the model claims
-         * @return {@code true} if one cited window's pronoun is of that gender, {@code false} otherwise
-         */
-        boolean shows(final List<Integer> numbers, final Gender gender) {
-            return numbers.stream()
-                    .filter(number -> number >= 1 && number <= windows.size())
-                    .anyMatch(number -> windows.get(number - 1).pronoun() == gender);
-        }
     }
 
     /** One use of a name: the segment, where the name starts in its visible text, and the sentence that holds it. */

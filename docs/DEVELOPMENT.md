@@ -1118,7 +1118,7 @@ letter case, so `KESSEL OPTIK` is junk while `Kessel Optik` is the camera.
 
 *Committed books* (`src/test/resources/eval/names/*.json`, invented text; each has its gold, the answers a scripted model gives where
 they differ from the gold, and `knownFailure`/`fixedBy` when today's Scan, Review and Translate end wrong): `misattributed-she`
-(a man followed five times by another person's "she"; red until 15i.N1), `short-and-full-form`, `city-her`, `stray-he`,
+(a man followed five times by another person's "she"; clean since 15i.N1), `short-and-full-form`, `city-her`, `stray-he`,
 `bartender-mark` (a man called Mark beside "a mark on the wall"; red until 15i.N5), `brand-and-camera` (`Orrin & Vale` and
 `KESSEL OPTIK`/`Kessel Optik`/`Kessels`; red until 15i.N3), `groups-nationalities-converter`, `technical-headings`, `mayday`.
 `NamesRunnerTest` (in `check`) runs each through the runner with a scripted model: a book not marked a known failure must end clean,
