@@ -18,6 +18,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
@@ -219,8 +220,9 @@ final class ReviewCommit {
     /**
      * The entry with the verdict's type where its own is unset, and, for a person whose gender is unknown, the
      * verdict's gender: as decided when a cited window shows it, else as a suggestion nobody has verified (15h.A2). A
-     * verified gender also replaces a suggested one (a first-name seed, a pre-scan proposal, an earlier unverified
-     * review); a gender the person set is kept. A place or a thing takes no gender from the review.
+     * stronger verdict is a verified one (15i.N0): it replaces a verified or a suggested gender (the same gender
+     * becomes verified), an unverified verdict replaces no known gender, and a gender the person set is kept. A place
+     * or a thing takes no gender from the review.
      */
     static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
         final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
@@ -232,18 +234,19 @@ final class ReviewCommit {
                     ? typed.withInferredGender(verdict.gender())
                     : typed.withSuggestedGender(verdict.gender());
         }
-        final boolean replaces = now.isGenderSuggested() && verdict.genderVerified();
+        final GenderOrigin held = now.genderOrigin();
+        final boolean replaces = verdict.genderVerified() && held != GenderOrigin.PERSON;
         log.debug(
-                "Glossary review gender for entry {}: held suggested={} verified={} replaces={}",
+                "Glossary review gender for entry {}: held={} verified={} replaces={}",
                 now.id(),
-                now.isGenderSuggested(),
+                held,
                 verdict.genderVerified(),
                 replaces);
-        return replaces ? confirmed(typed, verdict.gender()) : typed;
+        return replaces ? verified(typed, verdict.gender()) : typed;
     }
 
-    // A verified verdict stands as an inferred gender even where it agrees with the suggestion it replaces.
-    private static GlossaryEntry confirmed(final GlossaryEntry entry, final Gender gender) {
+    // A verified verdict stands as a verified gender even where it agrees with the suggestion it replaces.
+    private static GlossaryEntry verified(final GlossaryEntry entry, final Gender gender) {
         return new GlossaryEntry(
                 entry.id(),
                 entry.projectId(),
@@ -253,7 +256,7 @@ final class ReviewCommit {
                 gender,
                 entry.locked(),
                 entry.origin(),
-                false,
+                GenderOrigin.VERIFIED,
                 entry.genderSeedTried(),
                 entry.aliases());
     }

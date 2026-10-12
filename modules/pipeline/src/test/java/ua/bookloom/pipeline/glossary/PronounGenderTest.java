@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PronounGender.Evidence;
@@ -66,7 +67,7 @@ class PronounGenderTest {
         final GlossaryEntry seeded = PronounGender.seeded(entry("Chisel", TermType.CHARACTER), FEMALE_TEXTS, "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(seeded.isGenderSuggested()).isTrue();
+        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
     }
 
     @Test

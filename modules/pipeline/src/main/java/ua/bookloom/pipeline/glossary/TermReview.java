@@ -22,6 +22,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
@@ -207,12 +208,13 @@ public final class TermReview {
     private static Optional<Verdict> decidedByCode(final GlossaryEntry entry, final Map<String, Evidence> evidence) {
         final PronounGender.Evidence pronouns =
                 evidence.getOrDefault(entry.term(), Evidence.NONE).pronouns();
-        final boolean person =
-                entry.type() == TermType.CHARACTER || (entry.type() == TermType.OTHER && entry.isGenderSuggested());
+        final boolean person = entry.type() == TermType.CHARACTER
+                || (entry.type() == TermType.OTHER && entry.genderOrigin() == GenderOrigin.SUGGESTED);
         log.debug(
-                "Glossary review code decision for entry {}: type={} person={} strong={}",
+                "Glossary review code decision for entry {}: type={} genderOrigin={} person={} strong={}",
                 entry.id(),
                 entry.type(),
+                entry.genderOrigin(),
                 person,
                 pronouns.isStrong());
         final Optional<Gender> decided = person && pronouns.isStrong() ? pronouns.dominant() : Optional.empty();

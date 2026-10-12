@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.CsvRecords.CsvRecord;
 
@@ -171,9 +173,29 @@ public final class GlossaryCsv {
                     row.type(),
                     row.gender());
         }
-        return new GlossaryEntry(
-                        existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked())
-                .withAliases(existing.aliases());
+        final GlossaryEntry result = new GlossaryEntry(
+                existing.id(),
+                existing.projectId(),
+                existing.term(),
+                row.target(),
+                type,
+                gender,
+                row.locked(),
+                TargetOrigin.PERSON,
+                row.gender() == Gender.UNKNOWN ? existing.genderOrigin() : GenderOrigin.PERSON,
+                existing.genderSeedTried(),
+                existing.aliases());
+        logOrigin(existing, result);
+        return result;
+    }
+
+    private static void logOrigin(final GlossaryEntry existing, final GlossaryEntry result) {
+        log.debug(
+                "Glossary import entry {} gender={} origin={} (held origin {})",
+                existing.id(),
+                result.gender(),
+                result.genderOrigin(),
+                existing.genderOrigin());
     }
 
     private static boolean isGeneric(final TermType type) {

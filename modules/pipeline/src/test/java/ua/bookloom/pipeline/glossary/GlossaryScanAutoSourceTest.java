@@ -72,7 +72,7 @@ class GlossaryScanAutoSourceTest {
 
         assertThat(added).extracting(GlossaryEntry::term).containsExactly("Hale");
         assertThat(added.getFirst().gender()).isEqualTo(Gender.UNKNOWN);
-        assertThat(added.getFirst().isGenderSuggested()).isFalse();
+        assertThat(added.getFirst().genderOrigin()).isNull();
     }
 
     // IF a first-name list were chosen for an unknown language, THEN a name would be gendered by a list for no
@@ -84,7 +84,7 @@ class GlossaryScanAutoSourceTest {
         final List<GlossaryEntry> added = scanned();
 
         assertThat(added).extracting(GlossaryEntry::term).containsExactly("Rosalind");
-        assertThat(added.getFirst().isGenderSuggested()).isFalse();
+        assertThat(added.getFirst().genderOrigin()).isNull();
     }
 
     // A book that does declare a language the application recognises is still analysed in it under Auto.

@@ -15,12 +15,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 
 /**
  * What Names &amp; style left of a book, scored against its gold (15i.E1): the gender of every character the book
- * mentions at least {@link #MIN_MENTIONS} times (a wrong gender that is not marked suggested is "wrong but verified",
+ * mentions at least {@link #MIN_MENTIONS} times (a wrong gender with the origin verified is "wrong but verified",
  * the worst kind), the type of every gold character, whether the written forms of one person (a gold cluster id)
  * agree on one gender and one spelling of the name, the junk a scan left, the real names it lost and the recurring
  * terms it kept and dropped.
@@ -32,13 +33,12 @@ import ua.bookloom.api.project.LexiconEntry;
  * (same case, so the real "Kessel Optik" is not the junk "KESSEL OPTIK"). The gender, type and cluster of a gold
  * character are read from the entry that holds its name as its term or, failing that, as an alias, like the lost names. A cluster's spelling is the first word of an
  * entry's target, without case; a cluster with two or more members is consistent when its entries hold at most one
- * known gender. A gender is "verified" while the entry is not marked suggested ({@code !isGenderSuggested()}); 15i.N0
- * replaces that test with the gender origin.
+ * known gender. A gender is "verified" when its origin is {@link GenderOrigin#VERIFIED} (15i.N0).
  *
  * @param eligible the gold characters with {@link #MIN_MENTIONS} or more mentions
  * @param genderCorrect how many of them ended with the gold gender
- * @param wrongButVerified how many of them ended with a known gender that is not the gold one and is not marked
- *     suggested
+ * @param wrongButVerified how many of them ended with a known gender that is not the gold one and whose origin is
+ *     verified
  * @param typeCorrect how many gold characters ended with the gold type
  * @param typeScored how many gold characters were scored for type
  * @param clusters how many gold clusters have two or more members
@@ -223,7 +223,7 @@ record NamesScore(
         return entry != null
                 && entry.gender() != person.gender()
                 && entry.gender() != Gender.UNKNOWN
-                && !entry.isGenderSuggested();
+                && entry.genderOrigin() == GenderOrigin.VERIFIED;
     }
 
     private static int mentions(final String text, final String term) {

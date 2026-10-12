@@ -185,7 +185,7 @@ anything is written.
 WHEN a preparation or a model review finds a glossary entry that is unlocked, has no gender, was never tried and is
 already typed as a character (by the person, the scan's model typing or the review) whose first word, of an entry of at most three words, is a
 common given name that the source language's bundled list (`given-names-<language>.txt`, "seed, not exhaustive":
-English, Ukrainian and Russian) holds for one gender, the application SHALL set that gender and mark it as a suggestion (`GlossaryEntry.genderSuggested`). Seeding SHALL
+English, Ukrainian and Russian) holds for one gender, the application SHALL set that gender and mark it as a suggestion (`GlossaryEntry.genderOrigin` = `SUGGESTED`). Seeding SHALL
 NEVER change an entry's type: a place or an untyped entry named like a person (`Victoria Station`, `Florence`) stays what
 it is, and the model's verdict types it. An entry is seeded at most once (`GlossaryEntry.genderSeedTried`, set when
 the list proposed a gender or when the person set the gender in any way, even back to unknown), so a gender the

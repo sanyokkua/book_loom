@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 
@@ -55,7 +56,7 @@ class GivenNamesTest {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.MALE);
-        assertThat(seeded.isGenderSuggested()).isTrue();
+        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
         assertThat(seeded.locked()).isFalse();
     }
 
@@ -117,16 +118,16 @@ class GivenNamesTest {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.withInferredGender(Gender.MALE)).isSameAs(seeded);
-        assertThat(seeded.withInferredGender(Gender.MALE).isGenderSuggested()).isTrue();
-        assertThat(seeded.withGender(Gender.MALE).isGenderSuggested()).isFalse();
+        assertThat(seeded.withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
     }
 
     @Test
     void seeded_aPersonsGenderEditOrLock_confirmsItButATargetEditDoesNot() {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
-        assertThat(seeded.withGender(Gender.MALE).isGenderSuggested()).isFalse();
-        assertThat(seeded.withLocked(true).isGenderSuggested()).isFalse();
-        assertThat(seeded.withTarget("Джон").isGenderSuggested()).isTrue();
+        assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(seeded.withTarget("Джон").genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
     }
 }

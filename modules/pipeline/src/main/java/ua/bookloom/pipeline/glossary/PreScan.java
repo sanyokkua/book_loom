@@ -25,8 +25,10 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
@@ -306,14 +308,17 @@ public final class PreScan {
     private static GlossaryEntry entryOf(final String projectId, final Proposal proposal) {
         final String term = proposal.candidate().term();
         return new GlossaryEntry(
-                        GlossaryIds.of(projectId, term),
-                        projectId,
-                        term,
-                        null,
-                        proposal.type(),
-                        proposal.gender(),
-                        false)
-                .withAliases(proposal.candidate().aliases());
+                GlossaryIds.of(projectId, term),
+                projectId,
+                term,
+                null,
+                proposal.type(),
+                proposal.gender(),
+                false,
+                TargetOrigin.PERSON,
+                GenderOrigin.SUGGESTED,
+                false,
+                proposal.candidate().aliases());
     }
 
     private static String existingTerms(final List<GlossaryEntry> held) {

@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
@@ -156,9 +157,9 @@ class PrepStageTest {
                         GlossaryEntry::term,
                         GlossaryEntry::type,
                         GlossaryEntry::gender,
-                        GlossaryEntry::isGenderSuggested,
+                        GlossaryEntry::genderOrigin,
                         GlossaryEntry::locked)
-                .containsExactly("Rosalind", TermType.OTHER, Gender.UNKNOWN, false, false);
+                .containsExactly("Rosalind", TermType.OTHER, Gender.UNKNOWN, null, false);
     }
 
     @Test
@@ -180,8 +181,8 @@ class PrepStageTest {
         assertThat(glossary(project))
                 .filteredOn(entry -> entry.term().equals("Harry"))
                 .singleElement()
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(Gender.MALE, true);
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(Gender.MALE, GenderOrigin.SUGGESTED);
     }
 
     // A person set Harry back to unknown on purpose; a run start must not suggest the list's gender again.
@@ -205,8 +206,8 @@ class PrepStageTest {
         assertThat(glossary(project))
                 .filteredOn(entry -> entry.term().equals("Harry"))
                 .singleElement()
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(Gender.UNKNOWN, false);
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(Gender.UNKNOWN, null);
     }
 
     // --- the source language is Auto -------------------------------------------------------------------------

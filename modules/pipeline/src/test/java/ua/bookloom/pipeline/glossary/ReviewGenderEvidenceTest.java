@@ -25,6 +25,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TargetOrigin;
@@ -78,8 +79,8 @@ class ReviewGenderEvidenceTest {
 
         assertThat(model.requests()).extracting(ChatRequest::callKind).containsExactly(CallKind.SUGGEST_TARGETS);
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, false));
+                .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, GenderOrigin.VERIFIED));
     }
 
     // A gender stands when a cited window holds a pronoun of it outside speech; the Ember shape cites Badger's "he".
@@ -87,17 +88,17 @@ class ReviewGenderEvidenceTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "Wren stood. She left. | female | 1 | FEMALE | false",
-                "Wren stood. She left. | male | 1 | MALE | true",
-                "Wren stood. She left. | female | 2 | FEMALE | true",
-                "Wren nodded. \"He never pays,\" said Badger. | male | 1 | MALE | true"
+                "Wren stood. She left. | female | 1 | FEMALE | VERIFIED",
+                "Wren stood. She left. | male | 1 | MALE | SUGGESTED",
+                "Wren stood. She left. | female | 2 | FEMALE | SUGGESTED",
+                "Wren nodded. \"He never pays,\" said Badger. | male | 1 | MALE | SUGGESTED"
             })
     void review_modelGender_isDecidedOnlyWhenACitedWindowShowsIt(
             final String paragraph,
             final String gender,
             final int window,
             final Gender expected,
-            final boolean suggestedOnly) {
+            final GenderOrigin expectedOrigin) {
         glossary.add(entry("p1:wren", "Wren", null, TermType.OTHER, Gender.UNKNOWN, false));
         final String verdict = "{\"verdicts\":[{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"person\","
                 + "\"gender\":\"" + gender + "\",\"windows\":[" + window + "],\"evidence\":\"\"}]}";
@@ -107,8 +108,8 @@ class ReviewGenderEvidenceTest {
         review.review(PROJECT, GlossaryTestSegments.of(List.of(paragraph)), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple(expected, suggestedOnly));
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(tuple(expected, expectedOrigin));
     }
 
     // IF a batch were forty names whatever their windows, THEN a book's long passages would overflow a small context.
@@ -143,9 +144,9 @@ class ReviewGenderEvidenceTest {
 
     // IF the proposal's first-sentence guess won, THEN a speaker's "he" next to a woman's name would stand (15h.A2).
     @ParameterizedTest
-    @CsvSource({"female,FEMALE,false", "unknown,MALE,true"})
+    @CsvSource({"female,FEMALE,VERIFIED", "unknown,MALE,SUGGESTED"})
     void scan_proposalGender_neverOverridesTheReview(
-            final String reviewGender, final Gender expected, final boolean suggestedOnly) {
+            final String reviewGender, final Gender expected, final GenderOrigin expectedOrigin) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"terms\":[{\"term\":\"Justine\",\"type\":\"person\",\"gender\":\"male\"}]}"));
         final String verdict = "{\"verdicts\":[{\"term\":\"Justine\",\"verdict\":\"name\",\"type\":\"person\","
@@ -164,8 +165,8 @@ class ReviewGenderEvidenceTest {
                 calls);
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple(expected, suggestedOnly));
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(tuple(expected, expectedOrigin));
     }
 
     // Five "she"s after Wren: a strong pronoun case.
@@ -211,8 +212,8 @@ class ReviewGenderEvidenceTest {
 
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple(Gender.FEMALE, false));
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(tuple(Gender.FEMALE, GenderOrigin.VERIFIED));
     }
 
     // IF a first-name seed outranked a verdict the book's own window proves, THEN Hale stayed a man.
@@ -234,8 +235,10 @@ class ReviewGenderEvidenceTest {
         review.review(PROJECT, book, FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple("Hale", Gender.FEMALE, false), tuple("Wren", Gender.MALE, false));
+                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(
+                        tuple("Hale", Gender.FEMALE, GenderOrigin.VERIFIED),
+                        tuple("Wren", Gender.MALE, GenderOrigin.PERSON));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";

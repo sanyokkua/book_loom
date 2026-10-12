@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorPerson;
@@ -59,7 +60,17 @@ class NamesScoreTest {
     private static GlossaryEntry entry(
             final String term, final String target, final TermType type, final Gender gender, final boolean suggested) {
         return new GlossaryEntry(
-                P + ":" + term, P, term, target, type, gender, false, TargetOrigin.PERSON, suggested, false, List.of());
+                P + ":" + term,
+                P,
+                term,
+                target,
+                type,
+                gender,
+                false,
+                TargetOrigin.PERSON,
+                suggested ? GenderOrigin.SUGGESTED : GenderOrigin.VERIFIED,
+                false,
+                List.of());
     }
 
     // Dax Orlo is right; Dax is a verified wrong gender and its own spelling of the name; Ysolde is wrong but still a
@@ -84,7 +95,7 @@ class NamesScoreTest {
                         Gender.UNKNOWN,
                         false,
                         TargetOrigin.PERSON,
-                        false,
+                        null,
                         false,
                         List.of("Velar")));
     }
@@ -100,7 +111,7 @@ class NamesScoreTest {
                 Gender.FEMALE,
                 false,
                 TargetOrigin.PERSON,
-                false,
+                GenderOrigin.VERIFIED,
                 false,
                 List.of(alias));
     }

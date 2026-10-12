@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TargetOrigin;
@@ -312,8 +313,10 @@ class TermReviewTest {
         review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
-                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple("John", Gender.MALE, true), tuple("Mary", Gender.MALE, false));
+                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(
+                        tuple("John", Gender.MALE, GenderOrigin.SUGGESTED),
+                        tuple("Mary", Gender.MALE, GenderOrigin.PERSON));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";

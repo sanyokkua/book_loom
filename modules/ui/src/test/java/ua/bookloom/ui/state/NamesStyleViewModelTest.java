@@ -17,6 +17,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
@@ -282,5 +283,54 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(glossary.added()).containsExactly(stored);
         assertThat(added).hasValue(1);
         assertThat(rows()).containsExactly(stored);
+    }
+
+    // IF the Add dialog's entry carried no origin for a gender the person chose, THEN the next review could overwrite
+    // it (15i.N0).
+    @Test
+    void add_dialogWithAChosenGender_sendsTheGenderAsThePersons() {
+        showWith();
+        glossary.willAnswer(Result.ok(
+                new GlossaryEntry("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
+
+        run(() ->
+                vm.add(new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, message -> {}));
+
+        assertThat(glossary.added())
+                .singleElement()
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+    }
+
+    @Test
+    void add_dialogWithNoGender_sendsNoGenderOrigin() {
+        showWith();
+        glossary.willAnswer(Result.ok(
+                new GlossaryEntry("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
+
+        run(() -> vm.add(new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, false), () -> {}, message -> {}));
+
+        assertThat(glossary.added())
+                .singleElement()
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(Gender.UNKNOWN, null);
+    }
+
+    // IF the table's gender edit kept the old origin, THEN a verified or suggested gender the person picked would stay
+    // open to the next review.
+    @Test
+    void setGender_overAVerifiedGender_sendsTheNewGenderAsThePersons() {
+        final GlossaryEntry held = new GlossaryEntry(
+                        "e1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withInferredGender(Gender.MALE);
+        showWith(held);
+        glossary.willAnswer(Result.ok(held.withGender(Gender.FEMALE)));
+
+        run(() -> vm.setGender("e1", Gender.FEMALE));
+
+        assertThat(glossary.updated())
+                .singleElement()
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
     }
 }

@@ -68,7 +68,7 @@ class GlossaryEntryTest {
                         "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.MALE);
 
-        assertThat(seeded.isGenderSuggested()).isTrue();
+        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
         assertThat(seeded.gender()).isEqualTo(Gender.MALE);
     }
 
@@ -78,8 +78,8 @@ class GlossaryEntryTest {
                         "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.MALE);
 
-        assertThat(seeded.withGender(Gender.FEMALE).isGenderSuggested()).isFalse();
-        assertThat(seeded.withLocked(true).isGenderSuggested()).isFalse();
+        assertThat(seeded.withGender(Gender.FEMALE).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
     }
 
     @Test
@@ -87,6 +87,6 @@ class GlossaryEntryTest {
         final GlossaryEntry entry = new GlossaryEntry(
                 "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false, TargetOrigin.PERSON, true);
 
-        assertThat(entry.isGenderSuggested()).isFalse();
+        assertThat(entry.genderOrigin()).isNull();
     }
 }

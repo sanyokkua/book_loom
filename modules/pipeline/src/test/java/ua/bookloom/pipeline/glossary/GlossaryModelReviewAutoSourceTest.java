@@ -30,6 +30,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
@@ -92,8 +93,8 @@ class GlossaryModelReviewAutoSourceTest {
         assertThat(report.isOk()).isTrue();
         assertThat(Objects.requireNonNull(service.entries(PROJECT).data()))
                 .filteredOn(entry -> entry.term().equals("Wren"))
-                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(tuple(Gender.FEMALE, false));
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(tuple(Gender.FEMALE, GenderOrigin.VERIFIED));
         assertThat(requests).extracting(ChatRequest::callKind).contains(CallKind.REVIEW_TERMS);
         assertThat(requests.stream()
                         .map(GlossaryModelReviewAutoSourceTest::textOf)
