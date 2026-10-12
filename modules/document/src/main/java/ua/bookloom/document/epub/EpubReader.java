@@ -28,6 +28,7 @@ import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.JsoupTreeNode;
+import ua.bookloom.document.model.PublicationYear;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.TreeDialect;
 import ua.bookloom.document.model.TreeNode;
@@ -241,6 +242,15 @@ public final class EpubReader {
         if (opf.author() != null) {
             metadata.put(MetadataKey.AUTHOR.key(), opf.author());
         }
+        PublicationYear.of(opf.date()).ifPresent(year -> metadata.put(MetadataKey.DATE.key(), year));
+        if (opf.publisher() != null && !opf.publisher().isBlank()) {
+            metadata.put(MetadataKey.PUBLISHER.key(), opf.publisher());
+        }
+        log.debug(
+                "EPUB metadata keys={} declaredDate={} hasPublisher={}",
+                metadata.keySet(),
+                opf.date(),
+                metadata.containsKey(MetadataKey.PUBLISHER.key()));
         return metadata;
     }
 

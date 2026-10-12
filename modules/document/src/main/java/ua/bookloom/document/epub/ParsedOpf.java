@@ -12,6 +12,8 @@ import org.jspecify.annotations.Nullable;
  * @param dcLanguages every declared {@code dc:language}, in document order; empty if none
  * @param title the first declared {@code dc:title}, or {@code null} if none
  * @param author the first declared {@code dc:creator}, or {@code null} if none
+ * @param date the first declared {@code dc:date}, as written, or {@code null} if none
+ * @param publisher the first declared {@code dc:publisher}, or {@code null} if none
  * @param manifestItems every declared manifest item, in document order — the whole manifest rather than only
  *     the spine, because DRM adjudication has to establish the media type of encrypted fonts and images the
  *     spine never references (ADR-0026)
@@ -32,6 +34,8 @@ record ParsedOpf(
         List<String> dcLanguages,
         @Nullable String title,
         @Nullable String author,
+        @Nullable String date,
+        @Nullable String publisher,
         List<ManifestItem> manifestItems,
         List<SpineItem> spineItems,
         Document jdomDocument,

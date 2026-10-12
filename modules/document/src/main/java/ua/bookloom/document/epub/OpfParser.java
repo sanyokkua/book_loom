@@ -44,6 +44,8 @@ final class OpfParser {
                 readTexts(root, "language"),
                 readFirstText(root, "title"),
                 readFirstText(root, "creator"),
+                readFirstText(root, "date"),
+                readFirstText(root, "publisher"),
                 List.copyOf(manifest.values()),
                 spine,
                 doc,

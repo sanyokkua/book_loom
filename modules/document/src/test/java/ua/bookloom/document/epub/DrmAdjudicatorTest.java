@@ -27,6 +27,8 @@ class DrmAdjudicatorTest {
                 List.of("en"),
                 "Title",
                 "Author",
+                null,
+                null,
                 List.of(items),
                 List.of(new SpineItem("c01", "c01.xhtml", "application/xhtml+xml")),
                 new org.jdom2.Document(new org.jdom2.Element("package")),

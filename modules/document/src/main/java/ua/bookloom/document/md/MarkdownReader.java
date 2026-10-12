@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.commonmark.ext.autolink.AutolinkExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
@@ -33,6 +34,7 @@ import ua.bookloom.util.hash.HashUtil;
  * spelling: {@code *em*} and {@code _em_} are the same document, so re-rendering would normalise formatting
  * everywhere, in parts of the file nobody translated.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class MarkdownReader {
 
@@ -71,6 +73,7 @@ public final class MarkdownReader {
         final Charset charset = resolution.charset();
         final Frontmatter.Split split = Frontmatter.split(textOf(fileBytes, resolution));
         final Map<String, String> metadata = Frontmatter.scan(split.block());
+        log.debug("Markdown frontmatter keys={}", metadata.keySet());
         final int bodyByteOffset = bodyByteOffset(split, resolution, charset);
         final int[] byteOffsets = MarkdownSpans.byteOffsets(split.body(), charset);
 

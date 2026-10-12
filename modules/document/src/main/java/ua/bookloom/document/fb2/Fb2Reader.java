@@ -153,8 +153,8 @@ public final class Fb2Reader {
             org.jdom2.Document tree,
             CharsetLadder.Resolution resolution,
             @Nullable String declaredEncodingName) {
-        final Element titleInfo =
-                Fb2Metadata.childOf(Fb2Metadata.childOf(tree.getRootElement(), "description"), "title-info");
+        final Element description = Fb2Metadata.childOf(tree.getRootElement(), "description");
+        final Element titleInfo = Fb2Metadata.childOf(description, "title-info");
         final UnitsResult units = readUnits(tree, source.name());
         final String documentId = UUID.randomUUID().toString();
         registry.put(
@@ -177,7 +177,7 @@ public final class Fb2Reader {
                 resolution.charset().name(),
                 resolution.hasBom(),
                 HashUtil.sha256Hex(source.bytes()),
-                Fb2Metadata.read(titleInfo),
+                Fb2Metadata.read(description),
                 units.units());
     }
 

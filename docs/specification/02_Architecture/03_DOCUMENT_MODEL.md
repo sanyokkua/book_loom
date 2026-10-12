@@ -27,12 +27,18 @@ not about inline runs (those live inside the segment as masked spans).
 
 ```
 Document
- ├─ id, format(EPUB|FB2|MD|TXT), detectedSourceLang, declaredLang, metadata(cover, title, author…)
+ ├─ id, format(EPUB|FB2|MD|TXT), detectedSourceLang, declaredLang, metadata(cover, title, author, date, publisher…)
  └─ Unit[] (spine order, plus one trailing auxiliary unit — see #metadata-unit)
       ├─ id, order, href/name, mediaType
       ├─ skeleton : Dom          // full tree: tags, attrs, images, fonts, IDs, comments, CDATA, entities, encoding
       └─ Segment[] (document order)
 ```
+
+The metadata map holds only facts a source declares, as strings: `title`, `author`, `date` (a bare four-digit year — the
+first run of exactly four digits in EPUB `dc:date`, FB2 `title-info/date` (its `value` attribute first, else
+`publish-info/year`) or a Markdown frontmatter `date:` line; absent when there is none) and `publisher` (EPUB
+`dc:publisher`, FB2 `publish-info/publisher`, frontmatter `publisher:`). `date` and `publisher` are never segments of
+their own and plain text has no metadata.
 
 `Segment` (record in `:api`, persisted per `06_DATA_MODEL_SQLITE.md`):
 

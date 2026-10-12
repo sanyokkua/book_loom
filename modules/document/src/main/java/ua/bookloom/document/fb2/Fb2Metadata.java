@@ -3,14 +3,17 @@ package ua.bookloom.document.fb2;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.MetadataKey;
+import ua.bookloom.document.model.PublicationYear;
 
 /**
- * Reads the book's declared language, title and author out of {@code description/title-info}.
+ * Reads the book's declared language, title, author, year and publisher out of {@code description}.
  *
  * <p>Absence is representable and never invented. Real books get this wrong constantly — one surveyed FB2
  * declares English on a French book and another declares no language at all — and the declared language exists
@@ -24,6 +27,7 @@ import ua.bookloom.api.document.MetadataKey;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class Fb2Metadata {
 
@@ -40,16 +44,38 @@ final class Fb2Metadata {
     }
 
     /**
-     * The book-level metadata this change records — title and author.
+     * The book-level metadata this change records — title, author, year and publisher.
      *
-     * @param titleInfo the book's {@code title-info} element, or {@code null} when it has none
+     * @param description the book's {@code description} element, or {@code null} when it has none; {@code
+     *     publish-info} sits beside {@code title-info} under it, so the title-info alone is not enough
      * @return an ordered map carrying only the keys the source actually provides; never null, possibly empty
      */
-    static Map<String, String> read(@Nullable Element titleInfo) {
+    static Map<String, String> read(@Nullable Element description) {
+        final Element titleInfo = childOf(description, "title-info");
+        final Element publishInfo = childOf(description, "publish-info");
         final Map<String, String> metadata = new LinkedHashMap<>();
         putIfPresent(metadata, MetadataKey.TITLE.key(), textOrNull(childOf(titleInfo, "book-title")));
         putIfPresent(metadata, MetadataKey.AUTHOR.key(), authorOf(titleInfo));
+        putIfPresent(metadata, MetadataKey.DATE.key(), yearOf(titleInfo, publishInfo));
+        putIfPresent(metadata, MetadataKey.PUBLISHER.key(), textOrNull(childOf(publishInfo, "publisher")));
+        log.debug("FB2 metadata keys={}", metadata.keySet());
         return metadata;
+    }
+
+    /**
+     * The book's year: {@code title-info/date} (its machine-readable {@code value} before its text) and, when that
+     * holds no four-digit year, {@code publish-info/year}.
+     */
+    private static @Nullable String yearOf(@Nullable Element titleInfo, @Nullable Element publishInfo) {
+        final Element date = childOf(titleInfo, "date");
+        if (date != null) {
+            final Optional<String> fromValue = PublicationYear.of(date.getAttributeValue("value"));
+            final Optional<String> year = fromValue.isPresent() ? fromValue : PublicationYear.of(date.getText());
+            if (year.isPresent()) {
+                return year.get();
+            }
+        }
+        return PublicationYear.of(textOrNull(childOf(publishInfo, "year"))).orElse(null);
     }
 
     /**
