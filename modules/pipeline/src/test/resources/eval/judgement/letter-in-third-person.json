@@ -1,0 +1,68 @@
+{
+  "id": "letter-in-third-person",
+  "about": "A third-person novel with one first-person letter set in its first chapter: the model may quote a line of the letter as the narrator's, but the narration outside the letter is third person and the code reads it so.",
+  "title": "The Thursday Post",
+  "author": "Gerda Lindqvist-Roe",
+  "chapters": [
+    {
+      "title": "Thursday",
+      "paragraphs": [
+        "The post came up the valley on Thursdays, and Edda Marrow was waiting at the gate before the cart had cleared the bridge.",
+        "She had waited at that gate every Thursday since March. The carter knew it and always slowed his horse.",
+        "This time he held out a single envelope, grey with road dust. Edda turned it over twice before she opened it.",
+        "Inside was a letter in her brother's hand. She sat down on the stone step to read it.",
+        "Dear Edda, I write from the harbour town, where I have found work at last. I did not tell you before because I was afraid you would worry. I will send money at the end of the month, and I will come home when the snow melts. Your brother, Anton.",
+        "Edda read it a third time. Then she folded it along its creases and put it into her apron.",
+        "Pavel came across the yard with a bucket in each hand. He set them down and looked at her face.",
+        "\"Bad news?\" he asked.",
+        "\"None at all,\" Edda said. \"Anton has found work.\"",
+        "He picked up the buckets again. He did not say that Anton had left in the autumn without a word, and that nobody had expected a letter.",
+        "The kitchen was warm and smelled of bread. Edda put the kettle on the hob and set two cups on the table.",
+        "Pavel drank his tea standing, the way he always did. He watched the lane through the small window above the sink.",
+        "The sun moved across the floor. The clock on the dresser struck eleven and then, after a pause, struck once more by mistake.",
+        "Edda took down the tin where she kept the household money. She counted it twice and wrote the sum on the back of an old bill.",
+        "In the afternoon she walked down to the bridge. The river was high with meltwater and the planks were wet underfoot.",
+        "Edda stood there until the light began to go. Then she turned back toward the farm, where Pavel had already lit the lamp."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "rural drama",
+      "genreClass": [
+        "rural",
+        "drama",
+        "literary",
+        "fiction",
+        "family"
+      ],
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Edda",
+        "type": "CHARACTER",
+        "gender": "FEMALE"
+      },
+      {
+        "term": "Pavel",
+        "type": "CHARACTER",
+        "gender": "MALE"
+      }
+    ]
+  },
+  "expect": {
+    "narrator": "THIRD",
+    "pronouns": {
+      "Edda": "FEMALE",
+      "Pavel": "MALE"
+    },
+    "sampleStartsWith": "The post came up the valley",
+    "sampleNever": []
+  },
+  "narratorQuotes": []
+}

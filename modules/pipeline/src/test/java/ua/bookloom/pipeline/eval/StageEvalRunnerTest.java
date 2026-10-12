@@ -53,13 +53,23 @@ class StageEvalRunnerTest {
         return drafts;
     }
 
+    // The two cases the generic fake model (a drama, a neutral register, an unknown gender) answers right; the cases
+    // added
+    // for the new prediction are answered by SetupScriptedModel in SetupScoreTest.
+    private static List<StageCases.SetupCase> genericSetupCases() {
+        return StageCases.setup().stream()
+                .filter(setupCase -> setupCase.id().equals("setup-en-uk-first-person")
+                        || setupCase.id().equals("setup-ru-uk-third-person"))
+                .toList();
+    }
+
     @Test
     void cases_cover_everyStageInBothLanguagePairs() {
         assertThat(StageCases.prescan())
                 .extracting(StageCases.PreScanCase::source)
                 .containsExactly("en", "ru");
         assertThat(StageCases.terms()).extracting(StageCases.TermsCase::source).containsExactly("en", "ru");
-        assertThat(StageCases.setup()).hasSize(2);
+        assertThat(StageCases.setup()).hasSize(15);
         assertThat(StageCases.retry()).extracting(RetryBook::id).containsExactly("en-uk", "ru-uk");
         assertThat(StageCases.retry().getFirst().cases())
                 .extracting(StageCases.RetryCase::id)
@@ -125,7 +135,7 @@ class StageEvalRunnerTest {
     void setup_goodModel_namesTheBookInTheTargetScriptAndTheNarrator() {
         final SetupEvalRunner runner = new SetupEvalRunner(new StageFakeModel(false), workDir);
 
-        final List<StageRow> rows = runner.run(StageCases.setup());
+        final List<StageRow> rows = runner.run(genericSetupCases());
 
         assertThat(rows)
                 .extracting(StageRow::id)
@@ -147,7 +157,7 @@ class StageEvalRunnerTest {
                                 .replace("\"genre\":{\"value\":\"drama\"", "\"genre\":{\"value\":\"western\""),
                         response.finishReason()));
 
-        final List<StageRow> rows = new SetupEvalRunner(western, workDir).run(StageCases.setup());
+        final List<StageRow> rows = new SetupEvalRunner(western, workDir).run(genericSetupCases());
 
         assertThat(rows.stream().filter(row -> row.id().endsWith(":brief")))
                 .allSatisfy(row -> assertThat(row.passed()).isFalse())

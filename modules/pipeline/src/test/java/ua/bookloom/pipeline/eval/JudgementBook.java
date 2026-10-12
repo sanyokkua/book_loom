@@ -46,7 +46,10 @@ record JudgementBook(
             "vocative-name",
             "female-narrator-address",
             "front-matter-converter",
-            "alternating-narrators");
+            "alternating-narrators",
+            "letter-in-third-person",
+            "first-person-vocative-name",
+            "quoted-woman-not-the-narrator");
 
     /** The case the stability suite runs when {@code BOOKLOOM_EVAL_BOOK} is unset. */
     static final String DEFAULT_ID = "front-matter-converter";
@@ -70,12 +73,16 @@ record JudgementBook(
      * @param pronouns the gender the book's pronouns decide for a name, {@link Gender#UNKNOWN} when they decide none
      * @param sampleStartsWith the text the brief's first sample must start with, or null when not checked
      * @param sampleNever text no sample the brief reads may hold
+     * @param verifiedGender the narrator's gender the brief can verify with no model and an empty glossary, or null when
+     *     it is the gold's; {@link Gender#UNKNOWN} for a narrator named only by others' vocatives, which the code can
+     *     verify only once that name is a glossary character (15i.T5)
      */
     record Expect(
             String narrator,
             Map<String, Gender> pronouns,
             @Nullable String sampleStartsWith,
-            List<String> sampleNever) {
+            List<String> sampleNever,
+            @Nullable Gender verifiedGender) {
 
         /** Copies the parts. */
         Expect {

@@ -103,7 +103,7 @@ class JudgementSuitesTest {
 
     @Test
     void books_all_givesEveryCommittedBookAndAnUnknownIdFailsNamingThem() {
-        assertThat(JudgementSuites.books("all")).hasSize(6);
+        assertThat(JudgementSuites.books("all")).hasSize(9);
         assertThat(JudgementSuites.books(null)).extracting(JudgementBook::id).containsExactly(JudgementBook.DEFAULT_ID);
         assertThatThrownBy(() -> JudgementSuites.books("nope"))
                 .isInstanceOf(IllegalArgumentException.class)

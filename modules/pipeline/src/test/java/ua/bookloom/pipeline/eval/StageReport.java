@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.ToIntFunction;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A stage suite's measurement of one model: the share of cases that ended as stated and the wasted work (failed and
@@ -12,8 +13,18 @@ import java.util.function.ToIntFunction;
  * @param suite the suite name, {@code prescan}, {@code terms}, {@code setup}, {@code consistency} or {@code retry}
  * @param model the model measured
  * @param rows one row per case and stage
+ * @param setupScore the setup suite's per-field score, or null for every other suite
  */
-record StageReport(String suite, String model, List<StageRow> rows) {
+record StageReport(
+        String suite,
+        String model,
+        List<StageRow> rows,
+        @Nullable SetupScore setupScore) {
+
+    /** A report with no per-field score. */
+    StageReport(final String suite, final String model, final List<StageRow> rows) {
+        this(suite, model, rows, null);
+    }
 
     /** Copies the rows. */
     StageReport {
@@ -51,7 +62,7 @@ record StageReport(String suite, String model, List<StageRow> rows) {
 
     /** The report as one JSON object; {@code suite} tells the matrix table which suite it is. */
     String json() {
-        return String.format(
+        final String json = String.format(
                 Locale.ROOT,
                 "{\"suite\":\"%s\",\"model\":\"%s\",\"cases\":%d,\"passRate\":%.3f,\"calls\":%d,\"failed\":%d,"
                         + "\"repeated\":%d,\"refused\":%d,\"wastedCallRate\":%.3f,\"callsPerCase\":%.3f}",
@@ -65,6 +76,9 @@ record StageReport(String suite, String model, List<StageRow> rows) {
                 refused(),
                 wastedCallRate(),
                 rows.isEmpty() ? 0.0 : (double) calls() / rows.size());
+        return setupScore == null
+                ? json
+                : json.substring(0, json.length() - 1) + ",\"perField\":" + setupScore.json() + "}";
     }
 
     /** The share of calls that failed or repeated a request an earlier call had sent. */
@@ -84,6 +98,9 @@ record StageReport(String suite, String model, List<StageRow> rows) {
                 failed(),
                 repeated(),
                 refused()));
+        if (setupScore != null) {
+            out.append(String.format("%nper field: %s", setupScore.line()));
+        }
         for (final StageRow row : rows) {
             out.append(String.format(
                     Locale.ROOT,

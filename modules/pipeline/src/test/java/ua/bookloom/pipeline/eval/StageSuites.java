@@ -15,11 +15,15 @@ final class StageSuites {
     static final List<String> NAMES = List.of("prescan", "terms", "setup", "consistency", "retry", "replay");
 
     static StageReport run(final String suite, final String modelId, final ChatModel model, final Path workDir) {
+        if ("setup".equals(suite)) {
+            final SetupEvalRunner runner = new SetupEvalRunner(model, workDir);
+            final List<StageRow> rows = runner.run(StageCases.setup());
+            return new StageReport(suite, modelId, rows, runner.score());
+        }
         final List<StageRow> rows =
                 switch (suite) {
                     case "prescan" -> new PreScanEvalRunner(model).run(StageCases.prescan());
                     case "terms" -> new TermsEvalRunner(model).run(StageCases.terms());
-                    case "setup" -> new SetupEvalRunner(model, workDir).run(StageCases.setup());
                     case "consistency" -> new RetryEvalRunner(model, workDir).consistency(StageCases.retry());
                     case "retry" -> new RetryEvalRunner(model, workDir).retry(StageCases.retry());
                     case "replay" -> replay(model);

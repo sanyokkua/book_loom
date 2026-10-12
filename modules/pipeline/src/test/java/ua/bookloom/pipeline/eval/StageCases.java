@@ -64,6 +64,11 @@ final class StageCases {
     /**
      * A small FB2 book for the file-name and Book Brief suggestions, with the brief a reader would give it: the narrator
      * and its gender, the register, and the genre's class (lower-case words, any one of which a right genre holds).
+     * The book's own metadata may be empty ({@code title} and {@code author} blank: a book with none), and it may carry
+     * the year and publisher the knowledge check compares an answer with (15i.B2). {@code expectKnowledge} is what the
+     * model's "do you know this book" answer must be: {@code unknown} for an invented title and for a book with no
+     * title, {@code known} for a {@code classic} (a public-domain book, published before 1929, whose title, author and
+     * year the model must know).
      */
     record SetupCase(
             String id,
@@ -72,17 +77,35 @@ final class StageCases {
             String fileStem,
             String title,
             String author,
+            @Nullable Integer year,
+            @Nullable String publisher,
+            boolean classic,
+            String expectKnowledge,
             List<String> paragraphs,
             NarratorPerson narrator,
             Gender narratorGender,
             Register register,
             List<String> genreClass) {
 
+        /** The two answers a knowledge check can be held to. */
+        static final List<String> KNOWLEDGE = List.of("known", "unknown");
+
         SetupCase {
             paragraphs = List.copyOf(paragraphs);
             Objects.requireNonNull(narratorGender, "narratorGender");
             Objects.requireNonNull(register, "register");
             genreClass = List.copyOf(genreClass);
+            title = title == null ? "" : title;
+            author = author == null ? "" : author;
+            expectKnowledge = expectKnowledge == null ? "unknown" : expectKnowledge;
+            if (!KNOWLEDGE.contains(expectKnowledge)) {
+                throw new IllegalArgumentException("expectKnowledge must be known or unknown: " + expectKnowledge);
+            }
+        }
+
+        /** Whether the book names a title; the knowledge call is skipped for a book that does not. */
+        boolean hasTitle() {
+            return !title.isBlank();
         }
     }
 

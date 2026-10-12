@@ -51,6 +51,19 @@ class NarratorGenderEvidenceTest {
         return new NarratorGenderEvidence(List.of(glossary), "en");
     }
 
+    // IF an invented narrator name that is in no first-name list proved a gender before the book's glossary held her,
+    // THEN the brief would state a gender the code cannot check; once she is a glossary character it is proved.
+    @Test
+    void genderOf_vocativeNameOfAnUnlistedNarrator_isProvedOnlyOnceTheNameIsAGlossaryCharacter() {
+        final GlossaryEntry thessaly =
+                new GlossaryEntry("g3", "p1", "Thessaly", null, TermType.CHARACTER, Gender.FEMALE, false);
+
+        assertThat(english().genderOf("Hold the rope tight, Thessaly", "Thessaly"))
+                .isEmpty();
+        assertThat(english(thessaly).genderOf("Hold the rope tight, Thessaly", "Thessaly"))
+                .hasValue(Gender.FEMALE);
+    }
+
     // IF a vocative naming a glossary person were thrown away, THEN a narrator addressed as Ray would stay of
     // unknown gender.
     @Test

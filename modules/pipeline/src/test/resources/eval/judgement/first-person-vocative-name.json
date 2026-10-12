@@ -1,0 +1,81 @@
+{
+  "id": "first-person-vocative-name",
+  "about": "A first-person narrator, a woman, named only by the other characters addressing her ('Thessaly'); the name is no glossary character when the brief is suggested, so the code cannot yet verify her gender from it, and it can once the Names step lists her.",
+  "title": "The Hill Farm Winter",
+  "author": "Corin Ashdown",
+  "chapters": [
+    {
+      "title": "The First Snow",
+      "paragraphs": [
+        "I woke before the others, as I always did on the hill farm, and lay listening to the wind in the chimney.",
+        "Dov was already in the yard. I could hear him breaking the ice on the trough with the heel of his boot.",
+        "\"Hold the rope tight, Thessaly,\" he called up to the loft, and I took the end of it in both hands.",
+        "I pulled until my shoulders ached. The sack of feed swung up through the hatch and I dragged it across the boards.",
+        "Brin came in from the barn stamping the snow off his boots. He nodded to me and said nothing, which was his way.",
+        "\"Thessaly says she will take the east pasture today,\" Dov told him, and Brin grunted his agreement.",
+        "I tied my scarf and pulled on the old coat that hung by the door. It smelled of smoke and sheep.",
+        "The east pasture lay under a clean white sheet, and I walked out across it counting the ewes.",
+        "\"Careful on the slope, Thessaly,\" Brin shouted from the gate, and I raised one hand without turning round.",
+        "By noon I had found all but one. I went back along my own tracks and found her in the lee of the wall.",
+        "I carried her home across my shoulders. She was light, and she bleated twice, and then she was quiet.",
+        "\"Where is Thessaly?\" Dov asked when I did not come to the table. \"She went out for the ewes, and she said she would be an hour.\"",
+        "I came in then, with snow on my hair and the ewe still warm against my neck, and the kitchen went quiet.",
+        "Dov looked at me for a long moment. Then he laughed, and pulled out the chair beside his own."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "rural drama",
+      "genreClass": [
+        "rural",
+        "drama",
+        "literary",
+        "fiction",
+        "pastoral"
+      ],
+      "register": "NEUTRAL",
+      "narrator": "FIRST",
+      "narratorGender": "FEMALE"
+    },
+    "characters": [
+      {
+        "term": "Thessaly",
+        "type": "CHARACTER",
+        "gender": "FEMALE"
+      },
+      {
+        "term": "Dov",
+        "type": "CHARACTER",
+        "gender": "MALE"
+      },
+      {
+        "term": "Brin",
+        "type": "CHARACTER",
+        "gender": "MALE"
+      }
+    ]
+  },
+  "expect": {
+    "narrator": "FIRST",
+    "pronouns": {
+      "Thessaly": "UNKNOWN",
+      "Brin": "MALE"
+    },
+    "sampleStartsWith": "I woke before the others",
+    "sampleNever": [],
+    "verifiedGender": "UNKNOWN"
+  },
+  "narratorQuotes": [
+    {
+      "quote": "Hold the rope tight, Thessaly",
+      "name": "Thessaly"
+    },
+    {
+      "quote": "Careful on the slope, Thessaly",
+      "name": "Thessaly"
+    }
+  ]
+}

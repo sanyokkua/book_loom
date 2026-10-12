@@ -29,6 +29,7 @@ final class SetupEvalRunner {
 
     private final StageProbe probe;
     private final Path workDir;
+    private final List<SetupScore.Observed> observed = new ArrayList<>();
 
     SetupEvalRunner(final ChatModel model, final Path workDir) {
         this.probe = new StageProbe(Objects.requireNonNull(model, "model"));
@@ -37,6 +38,16 @@ final class SetupEvalRunner {
 
     StageProbe probe() {
         return probe;
+    }
+
+    /** What the model answered for each case run so far, in run order; knowledge stays null until 15i.B2 asks it. */
+    List<SetupScore.Observed> observed() {
+        return List.copyOf(observed);
+    }
+
+    /** The per-field score of the cases run so far. */
+    SetupScore score() {
+        return SetupScore.of(observed());
     }
 
     List<StageRow> run(final List<SetupCase> cases) {
@@ -91,9 +102,11 @@ final class SetupEvalRunner {
         final StageProbe.Counts counts = probe.since(mark);
         final String id = setupCase.id() + ":brief";
         if (result.isErr()) {
+            observed.add(new SetupScore.Observed(setupCase, null, null));
             return failed(id, Objects.requireNonNull(result.error()).code().name(), counts);
         }
         final BriefSuggestion brief = Objects.requireNonNull(result.data(), "brief");
+        observed.add(new SetupScore.Observed(setupCase, brief, null));
         final List<String> misses = misses(setupCase, brief);
         return new StageRow(
                 id,
@@ -133,7 +146,13 @@ final class SetupEvalRunner {
     private Path write(final SetupCase setupCase) {
         return Fb2Fixture.write(
                 workDir,
-                new Fb2Fixture.Meta(setupCase.fileStem(), setupCase.title(), setupCase.author(), setupCase.source()),
+                new Fb2Fixture.Meta(
+                        setupCase.fileStem(),
+                        setupCase.title(),
+                        setupCase.author(),
+                        setupCase.source(),
+                        setupCase.year(),
+                        setupCase.publisher()),
                 List.of(new Fb2Fixture.Section(null, setupCase.paragraphs())));
     }
 }

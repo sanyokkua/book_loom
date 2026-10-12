@@ -219,6 +219,13 @@ if sys.argv[2] in STAGES:
     print("%-36s %-12s %5s %6s %6s %6s %8s %7s" % ("model", "suite", "cases", "pass", "calls", "failed", "repeated", "refused"))
     for r in (r for r in reports if r.get("suite") == sys.argv[2]):
         print("%-36s %-12s %5d %5.0f%% %6d %6d %8d %7d" % (r["model"], r["suite"], r["cases"], 100 * r["passRate"], r["calls"], r["failed"], r["repeated"], r["refused"]))
+    fields = [r for r in reports if r.get("suite") == "setup" == sys.argv[2] and "perField" in r]
+    if fields:
+        names = list(fields[0]["perField"])
+        print()
+        print("%-36s " % "setup right per field" + " ".join("%s" % n for n in names))
+        for r in fields:
+            print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
 rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]

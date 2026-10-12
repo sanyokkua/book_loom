@@ -918,6 +918,13 @@ answers the class read and refused (`ConsistencyChecks.refused`, undecided term 
 `StageEvalRunnerTest` (a fake model answering like a good one, and a silent one), which also compares the recorded request with
 the production prompt for the stage.
 
+*Setup cases for the new prediction (15i.E3).* `eval/stages/setup.json` also holds eight invented title and author pairs
+(`invented-01…08`), four public-domain classics (`classic-*`, published before 1929, with the year in the FB2 `<date>`) and a
+book with no metadata (`setup-no-metadata`). A case carries `expectKnowledge` (`unknown` for an invented or title-less book,
+`known` for a classic), `year`, `publisher` and `classic`; the knowledge answer is scored from 15i.B2 on, until then
+`SetupScore` reads `knowledge.* n/a`. The per-field score (genre by the gold class, register, narrator, narrator's gender,
+knowledge split into invented and classic) is `SetupScore`, proven offline by `SetupScoreTest` over `SetupScriptedModel`.
+
 **Defect-class corpus (A5).** `eval/realrun/text.json` (`RunCase`; an optional `sourceLanguage` makes a case ru to uk, an optional
 `marker` is a regex a model's draft must match where no production check decides) holds invented sentences for the classes
 the October 8 run showed: a female character with a consonant-ending name whose verbs the draft makes masculine
@@ -1051,7 +1058,11 @@ under the term the book uses most. Three to five books make the set.
 sentences after the name; a man shown only by his/him), `straight-quoted-speech` (another man's "He" inside straight-quoted
 speech next to a woman's name), `vocative-name` (a woman named mostly as a vocative before "he said"), `female-narrator-address`
 (a first-person woman shown only by "ma'am" and her name), `front-matter-converter` (title page, copyright, twelve blurbs of
-praise, dedication, contents and a converter's page before the story), `alternating-narrators`. Each holds its chapters, its
+praise, dedication, contents and a converter's page before the story), `alternating-narrators`, and for the new prediction
+(15i.E3) `letter-in-third-person` (a first-person letter inside a third-person novel: the quote misleads, the narrator detector
+is right), `first-person-vocative-name` (a woman narrator named only by others' vocatives: the code verifies her gender only once
+the name is a glossary character, `expect.verifiedGender` is `UNKNOWN` until then, 15i.T5) and `quoted-woman-not-the-narrator`
+(a man's own quoted "Mind the step, Lucy" is a woman's name, not his; "sir" shows his gender). Each holds its chapters, its
 gold, what the code must conclude with no model (`expect`: the narrator detector's person, the pronoun reader's gender per
 name, where the brief's first sample starts and what no sample may hold) and the quotes a good model gives for the narrator's
 gender. `JudgementBooksTest` (in `check`) holds the code to `expect` and runs each book through the runner with a fake model that
