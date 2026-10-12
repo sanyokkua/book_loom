@@ -44,7 +44,7 @@ class ScanGoldenTest {
         assertThat(pretty(ScanSnapshot.overIndex(document))).isEqualTo(pretty(golden(book)));
     }
 
-    // IF a golden were empty, it would pin nothing, so every book must record names, windows and a scan subset.
+    // IF a golden were empty, it would pin nothing, so every book must record names, windows, evidence and pronouns.
     @ParameterizedTest
     @MethodSource("books")
     void golden_everyBook_pinsNamesWindowsAndPronouns(final String book) {
@@ -54,6 +54,9 @@ class ScanGoldenTest {
         assertThat(golden.get("nameScanFirstHalf")).isNotNull();
         assertThat(golden.get("windows")).isNotEmpty();
         assertThat(golden.get("pronouns")).isNotEmpty();
+        assertThat(golden.get("termEvidence")).isNotEmpty();
+        assertThat(golden.get("unknownGenderMentions")).isNotEmpty();
+        assertThat(golden.get("storySegments").asInt()).isPositive();
     }
 
     // The recorder: it writes the files from the index path and is skipped unless asked for.

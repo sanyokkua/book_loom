@@ -98,6 +98,19 @@ class TranslationJobNamesAndDeferralsTest {
         assertThat(events).containsSubsequence("decided " + LAST_OF_CHAPTER_TWO, "GLOSSARY +1");
     }
 
+    // The run reads the index it started with: a close or re-import of the project mid-run changes nothing for it.
+    @Test
+    void run_bookClosedMidRun_unitEndScanStillReadsTheRunsOwnIndex() {
+        final TestProject project = project(moreauChapters(), epubBrief());
+        add(project, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+        final TranslationJobImpl translation = job(project, replies(MOREAU_REPLIES));
+
+        runPausedAfterFirstChapter(
+                translation, () -> project.stores().openProjects().remove(project.id()));
+
+        assertThat(glossary(project)).extracting(GlossaryEntry::term).containsExactlyInAnyOrder("Hale", "Moreau");
+    }
+
     @Test
     void run_unitEndScan_skipsRemovedTerm() {
         final TestProject project = project(moreauChapters(), epubBrief());

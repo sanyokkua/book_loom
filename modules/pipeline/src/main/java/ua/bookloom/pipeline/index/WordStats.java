@@ -1,7 +1,10 @@
 package ua.bookloom.pipeline.index;
 
 /**
- * How a book writes one word.
+ * How a book writes one word, over every segment of the book, headings and title lines included. The scans count the
+ * running text only ({@link WordCounts} over {@link BookIndex#scanReads}: no heading, title line, printing note or
+ * foreign passage), so a {@code lowerShare} read here can differ from the one a scan acts on; both apply the one
+ * counting rule of {@code WordTally}.
  *
  * @param total every occurrence, in any case
  * @param lowerCase occurrences written in lower case

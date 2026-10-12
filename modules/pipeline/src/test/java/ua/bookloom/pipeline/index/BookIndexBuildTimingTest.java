@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -41,9 +42,21 @@ class BookIndexBuildTimingTest {
                 index.size(),
                 CHAPTERS * PARAGRAPHS_PER_CHAPTER * WORDS_PER_PARAGRAPH,
                 millis);
+        logRetainedSize(index);
         assertThat(index.size()).isEqualTo(CHAPTERS * PARAGRAPHS_PER_CHAPTER);
         assertThat(index.stats("ivo").total()).isPositive();
         assertThat(index.mentions(List.of("Garrick Ashdown"), Case.SENSITIVE)).isNotEmpty();
+    }
+
+    // An approximate retained size: one posting per word read, and the characters of every read text the index holds.
+    private static void logRetainedSize(final BookIndex index) {
+        final List<Occurrences.Read> reads =
+                index.reads(IntStream.range(0, index.size()).boxed().toList());
+        log.info(
+                "book index retained: postings={} wordForms={} readChars={}",
+                reads.stream().mapToInt(read -> read.words().size()).sum(),
+                index.distinctWords(),
+                reads.stream().mapToInt(read -> read.text().length()).sum());
     }
 
     private static Document generatedBook() {

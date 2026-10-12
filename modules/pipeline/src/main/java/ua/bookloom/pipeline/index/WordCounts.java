@@ -13,10 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class WordCounts {
 
-    private final Map<String, Integer> lower = new HashMap<>();
-    private final Map<String, Integer> capitalised = new HashMap<>();
-    private final Map<String, Integer> midSentence = new HashMap<>();
-    private final Map<String, Integer> standalone = new HashMap<>();
+    private final Map<String, WordTally> tallies = new HashMap<>();
 
     private WordCounts() {}
 
@@ -29,38 +26,16 @@ public final class WordCounts {
     public static WordCounts of(final List<Occurrences.Read> segments) {
         final WordCounts counts = new WordCounts();
         for (final Occurrences.Read segment : segments) {
-            segment.words().forEach(counts::count);
-            countStandalone(counts, segment);
+            final List<Occurrences.Word> words = segment.words();
+            for (int index = 0; index < words.size(); index++) {
+                final Occurrences.Word word = words.get(index);
+                counts.tallies
+                        .computeIfAbsent(word.key(), _ -> new WordTally())
+                        .add(word, Occurrences.isStandalone(segment, index));
+            }
         }
-        log.debug(
-                "Word counts over {} segments: {} lower-case forms, {} capitalised forms",
-                segments.size(),
-                counts.lower.size(),
-                counts.capitalised.size());
+        log.debug("Word counts over {} segments: {} word forms", segments.size(), counts.tallies.size());
         return counts;
-    }
-
-    private static void countStandalone(final WordCounts counts, final Occurrences.Read segment) {
-        final List<Occurrences.Word> words = segment.words();
-        for (int index = 0; index < words.size(); index++) {
-            if (Occurrences.isStandalone(segment, index)) {
-                counts.standalone.merge(words.get(index).key(), 1, Integer::sum);
-            }
-        }
-    }
-
-    private void count(final Occurrences.Word word) {
-        final String key = word.key();
-        if (!word.capitalised()) {
-            if (Character.isLowerCase(word.text().codePointAt(0))) {
-                lower.merge(key, 1, Integer::sum);
-            }
-            return;
-        }
-        capitalised.merge(key, 1, Integer::sum);
-        if (!word.initial()) {
-            midSentence.merge(key, 1, Integer::sum);
-        }
     }
 
     /**
@@ -70,9 +45,8 @@ public final class WordCounts {
      * @return from 0 (never in lower case, or never seen) to 1 (only in lower case)
      */
     public double lowerShare(final String key) {
-        final int lowerCount = lower.getOrDefault(key, 0);
-        final int total = lowerCount + capitalised.getOrDefault(key, 0);
-        return total == 0 ? 0 : (double) lowerCount / total;
+        final WordTally tally = tallies.get(key);
+        return tally == null ? 0 : tally.lowerShare();
     }
 
     /**
@@ -82,7 +56,8 @@ public final class WordCounts {
      * @return the count; 0 when never
      */
     public int midSentence(final String key) {
-        return midSentence.getOrDefault(key, 0);
+        final WordTally tally = tallies.get(key);
+        return tally == null ? 0 : tally.capitalisedMidSentence();
     }
 
     /**
@@ -93,6 +68,7 @@ public final class WordCounts {
      * @return the count; 0 when never
      */
     public int standaloneMidSentence(final String key) {
-        return standalone.getOrDefault(key, 0);
+        final WordTally tally = tallies.get(key);
+        return tally == null ? 0 : tally.standalone();
     }
 }

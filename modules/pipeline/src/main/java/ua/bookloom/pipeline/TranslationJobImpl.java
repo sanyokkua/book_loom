@@ -334,7 +334,8 @@ final class TranslationJobImpl implements TranslationJob {
                 settings,
                 stores,
                 sinks,
-                SegmentLocators.of(run.document()));
+                SegmentLocators.of(run.document()),
+                run.index());
     }
 
     private JobBoundaries boundaries() {

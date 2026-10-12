@@ -98,24 +98,13 @@ final class IndexBuilder {
     /** One word form's postings and counts while the book is read. */
     private static final class Tally {
         private final List<Posting> postings = new ArrayList<>();
-        private int lowerCase;
-        private int capitalised;
-        private int capitalisedMidSentence;
-        private int sentenceInitial;
-        private int standalone;
+        private final WordTally counts = new WordTally();
         private int segments;
         private int lastOrdinal = -1;
 
         void add(final Occurrences.Word word, final Posting posting) {
             postings.add(posting);
-            if (posting.capitalised()) {
-                capitalised++;
-                capitalisedMidSentence += posting.sentenceInitial() ? 0 : 1;
-            } else if (Character.isLowerCase(word.text().codePointAt(0))) {
-                lowerCase++;
-            }
-            sentenceInitial += posting.sentenceInitial() ? 1 : 0;
-            standalone += posting.standalone() ? 1 : 0;
+            counts.add(word, posting.standalone());
             if (posting.ordinal() != lastOrdinal) {
                 segments++;
                 lastOrdinal = posting.ordinal();
@@ -123,14 +112,13 @@ final class IndexBuilder {
         }
 
         WordStats stats() {
-            final int seen = lowerCase + capitalised;
             return new WordStats(
                     postings.size(),
-                    lowerCase,
-                    capitalisedMidSentence,
-                    sentenceInitial,
-                    standalone,
-                    seen == 0 ? 0 : (double) lowerCase / seen,
+                    counts.lowerCase(),
+                    counts.capitalisedMidSentence(),
+                    counts.sentenceInitial(),
+                    counts.standalone(),
+                    counts.lowerShare(),
                     segments,
                     postings.getFirst().ordinal());
         }

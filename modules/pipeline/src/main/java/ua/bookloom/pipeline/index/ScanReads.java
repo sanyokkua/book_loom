@@ -67,10 +67,11 @@ final class ScanReads {
             if (isForeign(facts.declaredLanguage(), source)) {
                 continue;
             }
-            final String text =
-                    withoutTitleLines(withoutForeignRuns(data.texts().get(ordinal), facts, source));
+            final String masked = data.texts().get(ordinal);
+            final String text = withoutTitleLines(withoutForeignRuns(masked, facts, source));
             if (!text.isBlank()) {
-                reads.put(ordinal, Occurrences.read(text));
+                // Nothing was cut: the read made at the build is the very same one.
+                reads.put(ordinal, text.equals(masked) ? data.reads().get(ordinal) : Occurrences.read(text));
             }
         }
         log.debug(

@@ -23,6 +23,7 @@ import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
@@ -67,13 +68,15 @@ public final class ChunkRunner {
      * @param stores the non-null stores the glossary and earlier decisions are read from
      * @param sinks the non-null places every decision goes
      * @param locators the non-null locator of every segment of the opened book
+     * @param index the non-null index of the book the run started with, which a later close or import cannot change
      */
     public ChunkRunner(
             final RunSteps steps,
             final RunSettings settings,
             final RunStores stores,
             final RunSinks sinks,
-            final Map<String, SegmentLocator> locators) {
+            final Map<String, SegmentLocator> locators,
+            final BookIndex index) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.stores = Objects.requireNonNull(stores, "stores");
@@ -82,7 +85,7 @@ public final class ChunkRunner {
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
         this.followUp = new DecisionFollowUp(
-                settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, sinks, calls);
+                settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, index, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
         this.shortcuts = new DraftShortcuts(
                 settings.frame().styleSheet().text(),

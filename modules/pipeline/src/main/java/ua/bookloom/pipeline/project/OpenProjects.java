@@ -5,11 +5,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /** The one place an opened {@link Document} lives, so every later service reads the same parsed book by project id. */
+@Slf4j
 @Singleton
 public final class OpenProjects {
 
@@ -19,15 +21,28 @@ public final class OpenProjects {
     private record Opened(Document document, AtomicReference<@Nullable BookIndex> index) {}
 
     /**
-     * Holds the document opened for a project and drops the index of the book it replaces.
+     * Holds the document opened for a project and drops the index of the book it replaces; the first
+     * {@link #index} call builds the new one.
      *
      * @param projectId the non-null project id
      * @param document the non-null opened document
      */
     public void put(final String projectId, final Document document) {
+        put(projectId, document, null);
+    }
+
+    /**
+     * Holds the document opened for a project together with the index already built from it.
+     *
+     * @param projectId the non-null project id
+     * @param document the non-null opened document
+     * @param index the index of exactly this document, or {@code null} to have it built on first use
+     */
+    public void put(final String projectId, final Document document, @Nullable final BookIndex index) {
+        log.debug("Holding the open book project={} indexBuilt={}", projectId, index != null);
         opened.put(
                 Objects.requireNonNull(projectId, "projectId"),
-                new Opened(Objects.requireNonNull(document, "document"), new AtomicReference<>()));
+                new Opened(Objects.requireNonNull(document, "document"), new AtomicReference<>(index)));
     }
 
     /**
@@ -49,6 +64,7 @@ public final class OpenProjects {
      */
     public @Nullable Document remove(final String projectId) {
         final Opened removed = opened.remove(Objects.requireNonNull(projectId, "projectId"));
+        log.debug("Forgetting the open book project={} wasOpen={}", projectId, removed != null);
         return removed == null ? null : removed.document();
     }
 
@@ -73,12 +89,16 @@ public final class OpenProjects {
     public @Nullable BookIndex index(final String projectId) {
         final Opened found = opened.get(Objects.requireNonNull(projectId, "projectId"));
         if (found == null) {
+            log.debug("No index for project={}: no book is open", projectId);
             return null;
         }
         BookIndex built = found.index().get();
         if (built == null) {
+            log.debug("Building the index of project={} on first use", projectId);
             found.index().compareAndSet(null, BookIndex.of(found.document()));
             built = found.index().get();
+        } else {
+            log.debug("Serving the cached index of project={}", projectId);
         }
         return built;
     }

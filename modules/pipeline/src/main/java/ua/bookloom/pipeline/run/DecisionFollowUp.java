@@ -20,7 +20,6 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
-import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
@@ -40,7 +39,7 @@ final class DecisionFollowUp {
     private final SummaryRepository summaries;
     private final SegmentRepository segments;
     private final GlossaryRepository glossary;
-    private final OpenProjects openProjects;
+    private final BookIndex index;
     private final RunSinks sinks;
     private final RoutedCalls calls;
     private final List<Segment> decidedInUnit = new ArrayList<>();
@@ -51,6 +50,7 @@ final class DecisionFollowUp {
             @Nullable final String sourceLanguage,
             final RollingSummaryKeeper keeper,
             final RunStores stores,
+            final BookIndex index,
             final RunSinks sinks,
             final RoutedCalls calls) {
         this.projectId = Objects.requireNonNull(projectId, "projectId");
@@ -59,7 +59,7 @@ final class DecisionFollowUp {
         this.summaries = Objects.requireNonNull(stores, "stores").summaries();
         this.segments = stores.segments();
         this.glossary = stores.glossary();
-        this.openProjects = stores.openProjects();
+        this.index = Objects.requireNonNull(index, "index");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");
     }
@@ -146,12 +146,7 @@ final class DecisionFollowUp {
      * announces the entries the commit actually added — the commit skips a term the person holds or removed.
      */
     private Optional<AppError> scanNames(final WorkList work, final String unitId) {
-        final BookIndex index = openProjects.index(projectId);
-        if (index == null) {
-            log.warn("Unit-end name scan unitId={} skipped: the book is no longer open", unitId);
-            return Optional.empty();
-        }
-        final List<Integer> scanned = decidedStory(work, index);
+        final List<Integer> scanned = decidedStory(work);
         final Result<List<GlossaryEntry>> proposed =
                 FrequencyScan.newTerms(projectId, index, scanned, sourceLanguage, glossary);
         if (proposed.isErr()) {
@@ -176,13 +171,17 @@ final class DecisionFollowUp {
     }
 
     // The decided story segments in the order they were decided, as ordinals of the book's index.
-    private List<Integer> decidedStory(final WorkList work, final BookIndex index) {
-        return Stream.concat(work.decidedSegments().stream(), decidedInUnit.stream())
+    private List<Integer> decidedStory(final WorkList work) {
+        final List<Segment> story = Stream.concat(work.decidedSegments().stream(), decidedInUnit.stream())
                 .filter(work.story()::holds)
+                .toList();
+        final List<Integer> ordinals = story.stream()
                 .map(segment -> index.ordinalOf(segment.id()))
                 .flatMapToInt(OptionalInt::stream)
                 .boxed()
                 .toList();
+        log.debug("Decided story segments={} missingFromIndex={}", story.size(), story.size() - ordinals.size());
+        return ordinals;
     }
 
     private Result<Integer> countHeld(final List<GlossaryEntry> proposals) {

@@ -46,15 +46,40 @@ final class Speech {
         };
     }
 
+    // Only the line holding the position counts: a new line starts narration again, and a dash between two digits
+    // (1990–1995) is a range, not a speaker's dash.
     private static boolean isDashSpeech(final String text, final int position) {
-        final String line = text.stripLeading();
-        if (line.isEmpty() || DASHES.indexOf(line.charAt(0)) < 0) {
+        final int lineStart = lineStartBefore(text, position);
+        int first = lineStart;
+        while (first < position && Character.isWhitespace(text.charAt(first))) {
+            first++;
+        }
+        if (first >= position || DASHES.indexOf(text.charAt(first)) < 0) {
             return false;
         }
-        final long dashes = text.substring(0, position)
-                .chars()
-                .filter(dash -> DASHES.indexOf(dash) >= 0)
-                .count();
+        int dashes = 0;
+        for (int index = first; index < position; index++) {
+            dashes += isSpeakerDash(text, index) ? 1 : 0;
+        }
         return dashes % 2 == 1;
+    }
+
+    private static int lineStartBefore(final String text, final int position) {
+        int start = position;
+        while (start > 0 && text.charAt(start - 1) != '\n' && text.charAt(start - 1) != '\r') {
+            start--;
+        }
+        return start;
+    }
+
+    private static boolean isSpeakerDash(final String text, final int index) {
+        if (DASHES.indexOf(text.charAt(index)) < 0) {
+            return false;
+        }
+        final boolean range = index > 0
+                && index + 1 < text.length()
+                && Character.isDigit(text.charAt(index - 1))
+                && Character.isDigit(text.charAt(index + 1));
+        return !range;
     }
 }

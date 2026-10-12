@@ -171,13 +171,22 @@ public final class ProjectServiceImpl implements ProjectService {
             log.debug("import replaces the open book of project={}", id);
             documents.close(previous);
         }
-        return documents.open(source).flatMap(document -> {
-            final Result<ImportedBook> stored = profileAndStore(id, normalized, inspection, document);
-            if (stored.isErr()) {
+        return documents.open(source).flatMap(document -> storeOrClose(id, normalized, inspection, document));
+    }
+
+    // The opened document is closed whenever the import does not complete, a failure that is thrown included.
+    private Result<ImportedBook> storeOrClose(
+            final String id, final Path source, final BookInspection inspection, final Document document) {
+        boolean imported = false;
+        try {
+            final Result<ImportedBook> stored = profileAndStore(id, source, inspection, document);
+            imported = stored.isOk();
+            return stored;
+        } finally {
+            if (!imported) {
                 documents.close(document);
             }
-            return stored;
-        });
+        }
     }
 
     private Result<ImportedBook> profileAndStore(
@@ -200,7 +209,11 @@ public final class ProjectServiceImpl implements ProjectService {
             final BookBrief brief,
             final Document document,
             final int segmentCount) {
-        openProjects.put(id, document);
+        final BookIndex index = buildIndex(id, document);
+        final NarratorHint hint = NarratorDetector.detect(
+                        document, brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage())
+                .orElse(null);
+        openProjects.put(id, document, index);
         log.info(
                 "book imported path={} format={} units={} segments={} project={}",
                 source,
@@ -208,21 +221,19 @@ public final class ProjectServiceImpl implements ProjectService {
                 document.units().size(),
                 segmentCount,
                 id);
-        buildIndex(id);
-        final NarratorHint hint = NarratorDetector.detect(
-                        document, brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage())
-                .orElse(null);
         return new ImportedBook(id, inspection, profile, brief, hint);
     }
 
-    private void buildIndex(final String projectId) {
-        final BookIndex index = Objects.requireNonNull(openProjects.index(projectId), "index");
+    // Built, like the narrator hint, before the book is registered, so a failure leaves nothing open.
+    private static BookIndex buildIndex(final String projectId, final Document document) {
+        final BookIndex index = BookIndex.of(document);
         log.info(
                 "book index built project={} segments={} words={} millis={}",
                 projectId,
                 index.size(),
                 index.distinctWords(),
                 index.buildMillis());
+        return index;
     }
 
     private static @Nullable String preselectSource(final LanguageEvidence evidence) {
