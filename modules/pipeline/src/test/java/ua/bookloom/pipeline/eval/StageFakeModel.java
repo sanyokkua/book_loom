@@ -53,6 +53,10 @@ final class StageFakeModel implements ChatModel {
         if (format.equals(PromptName.SUGGEST_TARGETS.responseFormatName())) {
             return "{\"suggestions\":[]}";
         }
+        if (format.equals(PromptName.BOOK_KNOWLEDGE.responseFormatName())) {
+            return "{\"known\":false,\"title\":\"\",\"author\":\"\",\"year\":0,\"genre\":\"\","
+                    + "\"audience\":\"\",\"era\":\"\",\"narration\":\"\",\"summary\":\"\",\"confidence\":0.0}";
+        }
         if (format.equals(PromptName.FILE_NAME.responseFormatName())) {
             return "{\"target\":\"Джейн Остлер. Скляний сад. 2009\"}";
         }

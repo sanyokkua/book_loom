@@ -39,5 +39,8 @@ public enum CallKind {
     FILE_NAME,
 
     /** A setup call proposing the Book Brief's tone and style from the opening of the book. */
-    BRIEF_SUGGESTION
+    BRIEF_SUGGESTION,
+
+    /** A setup call asking what the model knows of the book by its title and author, checked against the metadata. */
+    BOOK_KNOWLEDGE
 }

@@ -44,6 +44,19 @@ class CallKindTotalsTest {
                         Duration.ZERO));
     }
 
+    // 15i.B2: the knowledge question is a kind of its own, so the run summary and the report give it its own line.
+    @Test
+    void record_bookKnowledgeCall_getsItsOwnKindLine() {
+        final CallKindTotals totals = new CallKindTotals();
+        totals.record(answered(CallKind.BOOK_KNOWLEDGE, 4000, new TokenUsage(300, 90, Duration.ofSeconds(3))));
+        totals.record(answered(CallKind.BRIEF_SUGGESTION, 9000, new TokenUsage(900, 200, Duration.ofSeconds(8))));
+
+        assertThat(totals.totals()).containsOnlyKeys(CallKind.BOOK_KNOWLEDGE, CallKind.BRIEF_SUGGESTION);
+        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.BOOK_KNOWLEDGE))
+                        .elapsed())
+                .isEqualTo(Duration.ofSeconds(4));
+    }
+
     private static CallKindTotals.Totals draftTotals() {
         return new CallKindTotals.Totals(
                 2,

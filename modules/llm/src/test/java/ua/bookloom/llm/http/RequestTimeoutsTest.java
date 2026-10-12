@@ -70,6 +70,17 @@ class RequestTimeoutsTest {
         assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
     }
 
+    // The knowledge question is a small setup call like the brief and the file name: two minutes, whatever it expects.
+    @ParameterizedTest
+    @CsvSource({"BOOK_KNOWLEDGE,", "BOOK_KNOWLEDGE,160", "BRIEF_SUGGESTION,", "FILE_NAME,48"})
+    void forChat_setupCall_isTwoMinutesWhateverTheConfigAndExpectedOutput(
+            CallKind kind, @Nullable Integer expectedOutputTokens) {
+        final ProviderConfig bounded =
+                RequestTimeouts.forChat(config(Duration.ofSeconds(30)), request(kind, expectedOutputTokens));
+
+        assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
+    }
+
     @ParameterizedTest
     @CsvSource({"180,60", "90,60", "30,30"})
     void streamIdle_configuredTimeout_isSixtySecondsOrTheConfiguredTimeoutWhenShorter(

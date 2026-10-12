@@ -20,10 +20,10 @@ class SetupReportTest {
 
         assertThat(report.table())
                 .contains("per field: genre 15/15 register 15/15 narrator 15/15 narratorGender 15/15"
-                        + " knowledge.invented n/a knowledge.classic n/a");
+                        + " knowledge.invented 11/11 knowledge.classic 4/4");
         assertThat(report.json())
                 .contains("\"perField\":{\"genre\":1.000,\"register\":1.000,\"narrator\":1.000,"
-                        + "\"narratorGender\":1.000,\"knowledge.invented\":null,\"knowledge.classic\":null}")
+                        + "\"narratorGender\":1.000,\"knowledge.invented\":1.000,\"knowledge.classic\":1.000}")
                 .endsWith("}}");
     }
 

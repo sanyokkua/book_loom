@@ -6,6 +6,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.glossary.TermChoiceSchema;
+import ua.bookloom.pipeline.setup.BookKnowledgeSchema;
 import ua.bookloom.pipeline.setup.BriefSuggestionSchema;
 
 /**
@@ -172,6 +173,17 @@ public enum PromptName {
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("sample", "dialogueShare"), Set.of("title", "author"))),
+
+    /** The question what the model knows of the book by its title and author; one small call, checked against the metadata. */
+    BOOK_KNOWLEDGE(
+            "book-knowledge",
+            CallKind.BOOK_KNOWLEDGE,
+            "book-knowledge",
+            BookKnowledgeSchema.SCHEMA,
+            0.0,
+            null,
+            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("title"), Set.of("author"))),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(

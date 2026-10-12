@@ -19,7 +19,7 @@ import ua.bookloom.pipeline.eval.StageCases.SetupCase;
 
 /**
  * The setup suite's per-field score (15i.E3) over a scripted model, with hard-coded counts: genre, register, narrator
- * and narrator gender against the gold of each case, and the knowledge answer (which is not asked until 15i.B2) split
+ * and narrator gender against the gold of each case, and the knowledge answer of the production verdict split
  * into the invented books, which must be "unknown", and the classics, which must be "known".
  */
 class SetupScoreTest {
@@ -35,7 +35,9 @@ class SetupScoreTest {
     }
 
     // IF the scripted model flips two of the fifteen cases, THEN exactly those two briefs miss, and the report says
-    // 13 of 15 for the register and the narrator and 15 of 15 for the genre and the narrator's gender.
+    // 13 of 15 for the register and the narrator and 15 of 15 for the genre and the narrator's gender. The same two
+    // are also answered the wrong way about what the model knows: the invented weir is "known" (echoed back), the
+    // classic whale is "unknown"; the untitled book makes no call and is right.
     @Test
     void score_scriptedModelWrongOnTwoCases_countsEachBriefFieldAgainstTheGold() {
         final List<SetupCase> cases = StageCases.setup();
@@ -56,15 +58,19 @@ class SetupScoreTest {
                         tuple("register", 13, 15),
                         tuple("narrator", 13, 15),
                         tuple("narratorGender", 15, 15),
-                        tuple("knowledge.invented", 0, 0),
-                        tuple("knowledge.classic", 0, 0));
+                        tuple("knowledge.invented", 10, 11),
+                        tuple("knowledge.classic", 3, 4));
+        assertThat(rows.stream().filter(row -> row.id().endsWith(":knowledge") && !row.passed()))
+                .as(rows.toString())
+                .extracting(StageRow::id)
+                .containsExactly("invented-06-thirteenth-weir:knowledge", "classic-moby-dick:knowledge");
         assertThat(score.line())
                 .isEqualTo("genre 15/15 register 13/15 narrator 13/15 narratorGender 15/15"
-                        + " knowledge.invented n/a knowledge.classic n/a");
+                        + " knowledge.invented 10/11 knowledge.classic 3/4");
     }
 
     @Test
-    void observed_runOverAllCases_holdsOneEntryPerCaseInOrderWithNoKnowledgeAnswerYet() {
+    void observed_runOverAllCases_holdsOneEntryPerCaseInOrderWithItsKnowledgeAnswer() {
         final List<SetupCase> cases = StageCases.setup();
         final SetupEvalRunner runner = new SetupEvalRunner(new SetupScriptedModel(cases, Set.of()), dir);
 
@@ -74,10 +80,14 @@ class SetupScoreTest {
         assertThat(runner.observed())
                 .extracting(observed -> observed.setupCase().id())
                 .startsWith("setup-en-uk-first-person", "setup-ru-uk-third-person", "invented-01-lantern-ledger");
-        assertThat(runner.observed()).allSatisfy(observed -> {
-            assertThat(observed.brief()).isNotNull();
-            assertThat(observed.knowledge()).isNull();
-        });
+        assertThat(runner.observed())
+                .allSatisfy(observed -> assertThat(observed.brief()).isNotNull());
+        assertThat(runner.observed())
+                .extracting(Observed::knowledge)
+                .containsExactly(
+                        "unknown", "unknown", "unknown", "unknown", "unknown", "unknown", "unknown", "unknown",
+                        "unknown", "unknown", "known", "known", "known", "known", "unknown");
+        assertThat(runner.score().line()).endsWith("knowledge.invented 11/11 knowledge.classic 4/4");
     }
 
     // IF the report mixed the invented books with the classics, THEN a model that knows the classics and invents an

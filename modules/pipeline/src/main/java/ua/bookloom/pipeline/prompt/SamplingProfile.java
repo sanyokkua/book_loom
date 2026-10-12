@@ -49,6 +49,7 @@ public enum SamplingProfile {
                     SUSPICIOUS_WORDS,
                     FILE_NAME,
                     BRIEF_SUGGESTION,
+                    BOOK_KNOWLEDGE,
                     SUMMARY -> ANALYSIS;
         };
     }

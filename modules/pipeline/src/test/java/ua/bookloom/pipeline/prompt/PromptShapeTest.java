@@ -52,7 +52,8 @@ class PromptShapeTest {
             "draft-batch-json", "items",
             "suspicious-words", "words",
             "brief-suggestion", "genre",
-            "term-choice", "terms");
+            "term-choice", "terms",
+            "book-knowledge", "known");
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
     // language-rules map replaced the per-language example files.
@@ -87,7 +88,8 @@ class PromptShapeTest {
                 "SUSPICIOUS_WORDS",
                 "FILE_NAME",
                 "BRIEF_SUGGESTION",
-                "TERM_CHOICE"
+                "TERM_CHOICE",
+                "BOOK_KNOWLEDGE"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
@@ -118,6 +120,44 @@ class PromptShapeTest {
         assertThat(prompt)
                 .contains("copied exactly from the passages", "\"confidence\"", "Dialogue share")
                 .doesNotContain("what you know of this book", "\"value\":\"male\"", "\"value\":\"female\"");
+    }
+
+    // IF the example reply said "known: true", THEN a small model would copy it for every book, invented ones too; the
+    // example is the safe answer.
+    @Test
+    void render_bookKnowledge_exampleReplyIsTheNotKnownAnswer() {
+        final JsonNode example = prompt(PromptName.BOOK_KNOWLEDGE)
+                .lines()
+                .filter(line -> line.contains("{") && !line.contains("<"))
+                .map(line -> line.substring(line.indexOf('{')))
+                .map(PromptShapeTest::tree)
+                .filter(node -> node.has("known"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(example.path("known").isBoolean()).isTrue();
+        assertThat(example.path("known").asBoolean()).isFalse();
+        assertThat(example.path("confidence").isNumber()).isTrue();
+    }
+
+    // The question names the book by its title and author and gives the model nothing to read; the book's own words
+    // are what the answer is checked against, so the prompt tells the model to answer unknown rather than guess.
+    @Test
+    void render_bookKnowledge_asksAboutTheTitleAndAuthorAndAllowsNotKnowing() {
+        final String user = TEMPLATES.renderUser(
+                PromptName.BOOK_KNOWLEDGE, Map.of("title", "The Lantern Ledger", "author", "Orsolya Venn"));
+
+        assertThat(user).contains("The Lantern Ledger", "Orsolya Venn").doesNotContain("{{", "}}");
+        assertThat(system(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
+                .contains("known")
+                .containsAnyOf("do not guess", "never guess", "not guess", "not sure", "unsure");
+    }
+
+    @Test
+    void render_bookKnowledgeWithoutAnAuthor_showsNoAuthorLine() {
+        final String user = TEMPLATES.renderUser(PromptName.BOOK_KNOWLEDGE, Map.of("title", "The Lantern Ledger"));
+
+        assertThat(user).contains("The Lantern Ledger").doesNotContain("Author");
     }
 
     // The draft system is sent with every segment of a book; a small model must still read its last rule.
@@ -185,6 +225,14 @@ class PromptShapeTest {
         values.computeIfPresent("tokens", (slot, value) -> "⟦g0⟧ ⟦g1⟧");
         values.computeIfPresent("expectedTokens", (slot, value) -> "⟦g0⟧ ⟦g1⟧");
         return TEMPLATES.renderUser(name, values);
+    }
+
+    private static JsonNode tree(final String candidate) {
+        try {
+            return MAPPER.readTree(candidate);
+        } catch (JsonProcessingException notJson) {
+            return MAPPER.missingNode();
+        }
     }
 
     private static String replyKey(final PromptName name) {

@@ -172,7 +172,8 @@ class JobModelCallSnapshotsTest {
                 "SUMMARY",
                 "SUSPICIOUS_WORDS",
                 "BRIEF_SUGGESTION",
-                "FILE_NAME"
+                "FILE_NAME",
+                "BOOK_KNOWLEDGE"
             })
     void callAbout_segmentlessWholePrompt_publishesASnapshotLabelledByItsPrompt(final PromptName name) {
         callsOver(TranslationJobTestSupport.replies("x"))

@@ -22,13 +22,18 @@ import ua.bookloom.pipeline.prompt.PromptName;
  * request is about (by the file name or the case's first words in the request), answers the brief with the case's gold
  * genre, register and narrator, quoting the sample it was given, and answers every field of a case in {@code wrongIds}
  * the other way (the other narrator, and a register that is not the gold's). The narrator's gender is always unknown,
- * as a model that can verify nothing from three paragraphs says.
+ * as a model that can verify nothing from three paragraphs says. Asked what it knows of a book, it knows the classics
+ * (echoing their title, author and year) and not the invented books, and a case in {@code wrongIds} gets the other
+ * answer.
  */
 final class SetupScriptedModel implements ChatModel {
 
     private static final Pattern FIRST_PASSAGE = Pattern.compile("Passage 1: (\\S+(?: \\S+){0,4})");
     private static final Pattern FIRST_PERSON = Pattern.compile("(?<=\\s)I \\p{L}+");
     private static final int PREFIX = 24;
+    private static final String NOT_KNOWN = "{\"known\":false,\"title\":\"\",\"author\":\"\",\"year\":0,"
+            + "\"genre\":\"\",\"audience\":\"\",\"era\":\"\",\"narration\":\"\",\"summary\":\"\","
+            + "\"confidence\":0.0}";
 
     private final List<SetupCase> cases;
     private final Set<String> wrongIds;
@@ -46,8 +51,32 @@ final class SetupScriptedModel implements ChatModel {
         if (format.equals(PromptName.FILE_NAME.responseFormatName())) {
             return ok("{\"target\":\"Книга. Автор. 2000\"}");
         }
+        if (format.equals(PromptName.BOOK_KNOWLEDGE.responseFormatName())) {
+            return ok(knowledge(user));
+        }
         final Optional<SetupCase> found = caseOf(user);
         return ok(found.map(setupCase -> brief(setupCase, user)).orElse("{}"));
+    }
+
+    // A model that knows the classics echoes their title, author and year; one that is asked about an invented book
+    // says it does not know. A case in wrongIds is answered the other way: a classic it "does not know", an invented
+    // book it "knows", echoing what it was asked (a hallucination the echo check cannot catch by itself).
+    private String knowledge(final String user) {
+        final Optional<SetupCase> found = cases.stream()
+                .filter(setupCase ->
+                        setupCase.hasTitle() && user.contains(setupCase.title()) && user.contains(setupCase.author()))
+                .findFirst();
+        if (found.isEmpty()) {
+            return NOT_KNOWN;
+        }
+        final SetupCase setupCase = found.get();
+        final boolean knows = setupCase.classic() != wrongIds.contains(setupCase.id());
+        return knows
+                ? "{\"known\":true,\"title\":\"" + escaped(setupCase.title()) + "\",\"author\":\""
+                        + escaped(setupCase.author()) + "\",\"year\":" + setupCase.year()
+                        + ",\"genre\":\"novel\",\"audience\":\"adult\",\"era\":\"\",\"narration\":\"\","
+                        + "\"summary\":\"\",\"confidence\":0.9}"
+                : NOT_KNOWN;
     }
 
     private Optional<SetupCase> caseOf(final String user) {
