@@ -887,6 +887,15 @@ scripts/eval-matrix.sh --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx" --
 Leave `BOOKLOOM_EVAL_ONLY` out to run the draft, fix and `review-*` pair cases as well; `--langs all` runs each language's
 mini-corpus. Reports land in `modules/pipeline/build/reports/promptEval/<model>.txt` and `.json`.
 
+**Coref probe (15i.E2).** 31 invented windows of two to five paragraphs (`src/test/resources/eval/coref/windows.json`), each
+naming one target and listing every third-person pronoun with its gold referent (the target, another character, a place's
+people, nothing), in six shapes: another character in the next sentence, a speaker's pronoun in quotes, a place's "her", a
+first-person narrator, a pronoun with no referent, and plain. `CorefScorer` scores a `CorefReader` per window: wrong if any
+vote names a pronoun that is not the target's (or fits the target's and another's), right if it has a vote and none is wrong,
+else abstention; a quote not in the window is dropped. The gate is wrong votes at most 5 % of the windows that voted
+(`CorefReport.wrongVoteRate`), per model: above it that model's window votes only break ties. The fixture and scorer are
+tested in the normal gate; `--suite coref` (the model-backed reader and the matrix wiring) arrives with 15i.N4.
+
 **Stage suites (plan A4).** The model-call stages no other suite reaches are measured through their production classes on
 small invented fixtures (`src/test/resources/eval/stages/*.json`, English and Russian to Ukrainian, no book text), selected
 with `BOOKLOOM_EVAL_SUITE` and run like the others (`BOOKLOOM_EVAL_URL` required, `@Tag("promptEval")`, never in `check`):
