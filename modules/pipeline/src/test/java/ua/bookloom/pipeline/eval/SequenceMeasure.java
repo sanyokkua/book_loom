@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
@@ -67,6 +68,7 @@ final class SequenceMeasure {
                 .names(names);
         quality(builder, segments, terms, names);
         realRun(builder, run, terms);
+        builder.ltcr1(ltcr1(segments));
         lexicon(builder, run.lexicon());
         cost(builder, run);
         return builder.build();
@@ -213,6 +215,57 @@ final class SequenceMeasure {
     private static double dominantShare(final Collection<Integer> counts) {
         final int total = counts.stream().mapToInt(Integer::intValue).sum();
         return total == 0 ? 0 : (double) Collections.max(counts) / total;
+    }
+
+    // DelTA's LTCR-1: of the later occurrences of a term or name that carry any listed form, the share that carry the
+    // form its first such occurrence carried (the first listed one when it carried several), pooled over the fixture.
+    private double ltcr1(final List<Decided> segments) {
+        int later = 0;
+        int kept = 0;
+        final List<Tally> tallies = new ArrayList<>();
+        for (final Term term : fixture.terms()) {
+            final List<Pattern> forms = term.renderings().stream()
+                    .map(rendering -> Pattern.compile(WORD_START + rendering.pattern() + WORD_END))
+                    .toList();
+            tallies.add(repeats(segments, Pattern.compile(term.pattern()), forms));
+        }
+        for (final Name name : fixture.names()) {
+            final List<Pattern> forms = name.spellings().stream()
+                    .map(spelling -> Pattern.compile("(?<![\\p{L}\\p{M}])" + Pattern.quote(spelling)))
+                    .toList();
+            tallies.add(repeats(segments, Pattern.compile("\\b" + Pattern.quote(name.name()) + "\\b"), forms));
+        }
+        for (final Tally tally : tallies) {
+            later += tally.later();
+            kept += tally.kept();
+        }
+        return later == 0 ? 0 : (double) kept / later;
+    }
+
+    /** The later occurrences of one term or name, and how many of them carry the form its first occurrence had. */
+    private record Tally(int later, int kept) {}
+
+    private static Tally repeats(final List<Decided> segments, final Pattern source, final List<Pattern> forms) {
+        final List<List<Integer>> carried = new ArrayList<>();
+        for (final Decided segment : segments) {
+            if (segment.target() != null && source.matcher(segment.source()).find()) {
+                final String target = segment.target().toLowerCase(Locale.ROOT);
+                final List<Integer> held = IntStream.range(0, forms.size())
+                        .filter(form -> forms.get(form).matcher(target).find())
+                        .boxed()
+                        .toList();
+                if (!held.isEmpty()) {
+                    carried.add(held);
+                }
+            }
+        }
+        if (carried.isEmpty()) {
+            return new Tally(0, 0);
+        }
+        final int first = carried.getFirst().getFirst();
+        final List<List<Integer>> after = carried.subList(1, carried.size());
+        return new Tally(after.size(), (int)
+                after.stream().filter(held -> held.contains(first)).count());
     }
 
     private TermStat term(final Term term, final List<Decided> segments) {

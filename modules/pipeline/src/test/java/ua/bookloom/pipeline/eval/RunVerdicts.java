@@ -65,6 +65,7 @@ final class RunVerdicts {
             case OMISSION -> hardGateFails(candidate, CheckName.SENTENCE_COUNT);
             case VOCATIVE -> hardGateFails(candidate, CheckName.VOCATIVE);
             case RESIDUE -> hasBlocking(candidate, FindingKind.PROTOCOL_LEAK);
+            case LATIN_RUN -> hardGateFails(candidate, CheckName.LATIN_RUN);
             case NONE -> false;
         };
     }

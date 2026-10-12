@@ -22,6 +22,10 @@ import lombok.Builder;
  * @param termClaimedWrong lexicon terms whose learned rendering another term also claimed
  * @param claimedRenderings those shared renderings, {@code rendering <- term, term}
  * @param dominantShareMean the mean over the terms of the share of their occurrences carrying the commonest rendering
+ * @param ltcr1 the long-term consistency ratio of DelTA (ICLR 2025): over the fixture's terms and names, the share of a
+ *     term's later occurrences (its decided segments after the first one that carries a listed rendering) whose target
+ *     carries the first rendering; occurrences with no listed rendering count for neither side, and a run with no later
+ *     occurrence reports 0
  * @param renderingsPerTerm the mean number of distinct renderings over the fixture's terms that were rendered at all
  * @param nameVariants the spellings beyond the first, summed over the names
  * @param genderSlips narrator-gender findings in the first-person chapters
@@ -69,6 +73,7 @@ record SequenceMetrics(
         int termClaimedWrong,
         List<String> claimedRenderings,
         double dominantShareMean,
+        double ltcr1,
         double renderingsPerTerm,
         int nameVariants,
         int genderSlips,

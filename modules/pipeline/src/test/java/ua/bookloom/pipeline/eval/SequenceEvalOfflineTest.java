@@ -90,6 +90,14 @@ class SequenceEvalOfflineTest {
         assertThat(scripted.dominantShareMean()).isCloseTo(0.9080, within(0.0005));
     }
 
+    // The first rendering of each of the 14 terms and names is the one its first rendered segment carries, so the drift
+    // of master (26 of 48 later occurrences), Mr (36 of 69) and Zerubin (26 of 55) is what costs the book: 642 of its
+    // 726 later occurrences keep the first rendering.
+    @Test
+    void run_scriptedBook_ltcr1IsTheShareOfLaterOccurrencesThatKeepTheFirstRendering() {
+        assertThat(scripted.ltcr1()).isCloseTo(0.8843, within(0.0001));
+    }
+
     @Test
     void run_zerubinSpelledTwoWays_oneVariantBeyondTheFirst() {
         final NameStat name = scripted.names().stream()
@@ -254,6 +262,39 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.claimedRenderings()).containsExactly("пані <- mr, mrs");
     }
 
+    // Later occurrences: master 3 (2 keep господар), Mr 1 (0 keep містер), boy 2 (2), Zerubin 2 (1 keeps зерубін). The
+    // echoed, unrendered and flagged imps count for neither side, and one rendered imp has no later occurrence.
+    @Test
+    void measure_handWrittenRepeats_ltcr1PoolsTermsAndNamesAndSkipsOccurrencesWithoutARendering() {
+        final List<Decided> segments = List.of(
+                decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED),
+                decided(1, NarratorPerson.THIRD, "The master left.", "Господар пішов.", SegmentStatus.ACCEPTED),
+                decided(2, NarratorPerson.THIRD, "The master sat.", "Учитель сів.", SegmentStatus.ACCEPTED),
+                decided(3, NarratorPerson.THIRD, "The master spoke.", "Господар заговорив.", SegmentStatus.ACCEPTED),
+                decided(4, NarratorPerson.THIRD, "Mr Bell came.", "Містер Белл прийшов.", SegmentStatus.ACCEPTED),
+                decided(5, NarratorPerson.THIRD, "Mr Bell left.", "Пан Белл пішов.", SegmentStatus.ACCEPTED),
+                decided(6, NarratorPerson.THIRD, "The boy ran.", "Хлопчик побіг.", SegmentStatus.ACCEPTED),
+                decided(7, NarratorPerson.THIRD, "The boy sat.", "Хлопчик сів.", SegmentStatus.ACCEPTED),
+                decided(8, NarratorPerson.THIRD, "The boy fell.", "Хлопчик упав.", SegmentStatus.ACCEPTED),
+                decided(9, NarratorPerson.THIRD, "Zerubin came.", "Зерубін прийшов.", SegmentStatus.ACCEPTED),
+                decided(10, NarratorPerson.THIRD, "Zerubin left.", "Зерубін пішов.", SegmentStatus.ACCEPTED),
+                decided(11, NarratorPerson.THIRD, "Zerubin sat.", "Зеробін сів.", SegmentStatus.ACCEPTED),
+                decided(12, NarratorPerson.THIRD, "The imp ran.", "Біс побіг.", SegmentStatus.ACCEPTED),
+                decided(13, NarratorPerson.THIRD, "The imp hid.", "The imp hid.", SegmentStatus.ACCEPTED),
+                decided(14, NarratorPerson.THIRD, "The imp waited.", null, SegmentStatus.FLAGGED));
+
+        assertThat(measureOf(segments, List.of()).ltcr1()).isEqualTo(0.625);
+    }
+
+    // A run with nothing repeated has nothing to be consistent about: 0, as the other ratios of an empty run.
+    @Test
+    void measure_noTermRepeated_ltcr1IsZero() {
+        final List<Decided> segments = List.of(
+                decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED));
+
+        assertThat(measureOf(segments, List.of()).ltcr1()).isZero();
+    }
+
     private static SequenceMetrics measureOf(final List<Decided> segments, final List<LexiconEntry> lexicon) {
         final SequenceRun run = new SequenceRun(
                 new JobReport(
@@ -315,5 +356,14 @@ class SequenceEvalOfflineTest {
                         "\"vocativeMissing\" : ",
                         "\"wastedCallRate\" : ",
                         "\"costByKind\" : ");
+    }
+
+    // The matrix reads the JSON and a person reads the table: both carry the figure under DelTA's name.
+    @Test
+    void report_scriptedMetrics_tableNamesLtcr1WithItsShareAndJsonCarriesTheFigure() {
+        final SequenceReport report = new SequenceReport(scripted);
+
+        assertThat(report.table()).contains("LTCR-1 88.4%");
+        assertThat(report.json()).contains("\"ltcr1\" : 0.88");
     }
 }

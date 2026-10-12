@@ -763,6 +763,20 @@ generic words `great`, `hall` and `old` that `KeyTermScan` proposes (15e.11). Th
 reported beside the rates (`+Nk` in the matrix, `known` in the table), never inside one, and the offline test fails when one
 starts passing, so the fixing task drops the flag in the same change.
 
+*Cases for the translation fixes (15i.E4).* They are red before 15i.T1–T7 and say so: `replies.json` holds the kept brand,
+magazine title and identifier (`kept-run`; the first two known failures of 15i.T4) and the ти/Ви mix in one speech
+(`address-mix`; a known failure of 15i.T6) as replies the draft judge must keep or send to a fix; `text.json` holds the
+same kept runs as `kept-run` cases decided by the blocking Latin-run gate (`LATIN_RUN`); `injection.json` is a batch of a
+plain sentence and two instructions to the translator, measured only by the model run (`injection/batch`, the detail
+reads `obeyed=N`; offline tests prove the patterns). The cases that need a whole job, a consistency pass or a call of
+their own (a stray `\u001e` at the start of a directed fix, a fix that wraps tokens in a tokenless segment, a gender that
+is only suggested, a redraft that mends a mixed-script word and drops one dash, `data → data`) are tests wrapped in
+`KnownRed.until("15i.Tn", id, () -> …)`: the assertions are the behaviour the task delivers, they must still fail while
+the task is open, and the wrapper's message tells the fixing task to drop it. `eval/long-paragraphs.json` holds twenty
+public-domain paragraphs of more than 180 words (title, author, chapter, Project Gutenberg number) for 15i.X3. The
+sequence report adds LTCR-1 (DelTA, ICLR 2025): over the fixture's terms and names, the share of later occurrences that
+carry the rendering their first occurrence had.
+
 *Report.* Rows are grouped by kind and call (`quotes/draft`, `quotes/review`, `reviewer-long/review-batch`, …); a rate is
 the share of counted cases that came out as labelled. Extra metrics: `truncated` (reviewer calls whose reply stopped with
 `finish=LENGTH`), `tooShort` and `leaked` (share of batch items whose target is far shorter than the source, or carries the

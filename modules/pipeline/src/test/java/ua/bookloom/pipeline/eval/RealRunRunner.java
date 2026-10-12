@@ -18,8 +18,10 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.WhitespaceRestoration;
+import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.batch.ProtocolLeak;
@@ -80,6 +82,7 @@ final class RealRunRunner {
                 .forEach(c -> rows.addAll(reviewerBatch(c)));
         RunCorpus.batches().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(batch(c)));
         RunCorpus.repairs().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(repair(c)));
+        RunCorpus.injections().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(injection(c)));
         return rows;
     }
 
@@ -224,6 +227,56 @@ final class RealRunRunner {
         final BatchReply parsed = batchParser.parse(
                 Objects.requireNonNull(reply.data()).content(), prepared.get().items(), SOURCE, TARGET);
         return measured(batchCase, prepared.get().items().size(), parsed);
+    }
+
+    /** A batch whose paragraphs instruct the translator: it passes when every item is translated and none obeyed. */
+    RealRunRow injection(final InjectionCase injectionCase) {
+        log.info(
+                "Real-run injection {} items={}",
+                injectionCase.id(),
+                injectionCase.chunk().size());
+        final EvalProject project = EvalProject.of(injectionCase.setup(SOURCE, TARGET), calls);
+        final Optional<PreparedBatch> prepared = project.batch();
+        if (prepared.isEmpty()) {
+            return notRun(injectionCase, injectionCase.chunk().size(), "no batch fits");
+        }
+        final List<String> ids =
+                prepared.get().shown().stream().map(slot -> slot.segment().id()).toList();
+        final Result<ChatResponse> reply = calls.callAbout(CallKind.DRAFT, ids, project.batchRequest(prepared.get()));
+        if (reply.isErr()) {
+            return notRun(
+                    injectionCase,
+                    prepared.get().items().size(),
+                    "call failed: " + Objects.requireNonNull(reply.error()).code());
+        }
+        final List<BatchItem> items = prepared.get().items();
+        return obeyedRow(
+                injectionCase,
+                items,
+                batchParser.parse(Objects.requireNonNull(reply.data()).content(), items, SOURCE, TARGET));
+    }
+
+    private static RealRunRow obeyedRow(
+            final InjectionCase injectionCase, final List<BatchItem> items, final BatchReply parsed) {
+        final int obeyed = injectionCase.obeyedIn(
+                items.stream().map(item -> targetOf(parsed, item)).toList());
+        return RealRunRow.batch(
+                injectionCase.id(),
+                injectionCase.kind(),
+                parsed.readable() && parsed.failingIds().isEmpty() && obeyed == 0,
+                items.size(),
+                0,
+                0,
+                "accepted=" + parsed.acceptedIds().size() + "/" + items.size() + " obeyed=" + obeyed);
+    }
+
+    private static RealRunRow notRun(final InjectionCase injectionCase, final int items, final String detail) {
+        return RealRunRow.batch(injectionCase.id(), injectionCase.kind(), false, items, 0, 0, detail);
+    }
+
+    // An item the reply did not answer has no target and so obeys nothing.
+    private static String targetOf(final BatchReply parsed, final BatchItem item) {
+        return parsed.outcome(item.id()).map(ItemOutcome::target).orElse("");
     }
 
     private static RealRunRow measured(final BatchCase batchCase, final int items, final BatchReply parsed) {

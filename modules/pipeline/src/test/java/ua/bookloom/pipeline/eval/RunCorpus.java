@@ -48,6 +48,11 @@ final class RunCorpus {
         return load("scan.json", new TypeReference<>() {});
     }
 
+    /** Batches whose paragraphs instruct the translator: a model-run case for the injection prompt round. */
+    static List<InjectionCase> injections() {
+        return load("injection.json", new TypeReference<>() {});
+    }
+
     /** Synthetic model replies and what production makes of each. */
     static List<ReplyCase> replies() {
         return load("replies.json", new TypeReference<>() {});

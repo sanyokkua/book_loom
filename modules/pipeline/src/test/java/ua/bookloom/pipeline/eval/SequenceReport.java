@@ -97,7 +97,9 @@ record SequenceReport(SequenceMetrics metrics) {
                         "claimed",
                         m.claimedRenderings(),
                         "dominantShare",
-                        pct(m.dominantShareMean())));
+                        pct(m.dominantShareMean()),
+                        "LTCR-1",
+                        pct(m.ltcr1())));
     }
 
     private static List<String> cost(final SequenceMetrics m) {

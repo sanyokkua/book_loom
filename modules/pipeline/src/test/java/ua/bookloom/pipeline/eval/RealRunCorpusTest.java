@@ -162,11 +162,11 @@ class RealRunCorpusTest {
     @Test
     void knownFailure_everyCase_namesTheTaskThatFixesIt() {
         assertThat(RunCorpus.text().stream().filter(RunCase::knownFailure))
-                .allSatisfy(runCase -> assertThat(runCase.fixedBy()).matches("15e\\.\\d+"));
+                .allSatisfy(runCase -> assertThat(runCase.fixedBy()).matches("15e\\.\\d+|15i\\.T\\d+"));
         assertThat(RunCorpus.batches().stream()
                         .flatMap(c -> c.replies().stream())
                         .filter(BatchCase.Reply::knownFailure))
-                .allSatisfy(reply -> assertThat(reply.fixedBy()).matches("15e\\.\\d+"));
+                .allSatisfy(reply -> assertThat(reply.fixedBy()).matches("15e\\.\\d+|15i\\.T\\d+"));
     }
 
     @Test

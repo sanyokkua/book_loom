@@ -69,7 +69,7 @@ class DefectClassCorpusTest {
                             .as(replyCase.id() + " now decided right: drop knownFailure (task " + replyCase.fixedBy()
                                     + ")")
                             .isNotEqualTo(replyCase.resolved());
-                    assertThat(replyCase.fixedBy()).matches("[A-E]\\d+");
+                    assertThat(replyCase.fixedBy()).matches("[A-E]\\d+|15i\\.T\\d+");
                 });
     }
 

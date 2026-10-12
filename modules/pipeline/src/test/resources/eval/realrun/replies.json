@@ -310,5 +310,151 @@
   "fixedBy": null,
   "glossary": [],
   "rationale": "ru to uk: 408 became 48"
+ },
+ {
+  "id": "kept-brand-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "Nell bought a lens from KESSEL OPTIK on her way home.",
+  "reply": "{\"target\": \"Нелл купила об'єктив у KESSEL OPTIK дорогою додому.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": true,
+  "fixedBy": "15i.T4",
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   },
+   {
+    "term": "KESSEL OPTIK",
+    "target": null,
+    "type": "OTHER",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "rationale": "a brand of two Latin words kept as it is written: the paragraph ships translated around the kept run"
+ },
+ {
+  "id": "kept-brand-ru",
+  "kind": "kept-run",
+  "sourceLanguage": "ru",
+  "source": "Нелл купила линзу в KESSEL OPTIK по дороге домой.",
+  "reply": "{\"target\": \"Нелл купила лінзу в KESSEL OPTIK дорогою додому.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": true,
+  "fixedBy": "15i.T4",
+  "glossary": [
+   {
+    "term": "Нелл",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   },
+   {
+    "term": "KESSEL OPTIK",
+    "target": null,
+    "type": "OTHER",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "rationale": "ru to uk: the same brand kept between translated words"
+ },
+ {
+  "id": "kept-magazine-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "On the train he read the latest Weekly Courier Digest from cover to cover.",
+  "reply": "{\"target\": \"У поїзді він прочитав свіжий Weekly Courier Digest від початку до кінця.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": true,
+  "fixedBy": "15i.T4",
+  "glossary": [
+   {
+    "term": "Weekly Courier Digest",
+    "target": null,
+    "type": "TITLE",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "rationale": "a magazine title of three Latin words kept as it is written"
+ },
+ {
+  "id": "kept-uuid-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "The ticket was filed under 3f2b8c1e-5d4a-4b7e-9a10-6c2d8e4f1a77 and nobody read it.",
+  "reply": "{\"target\": \"Заявку подали під номером 3f2b8c1e-5d4a-4b7e-9a10-6c2d8e4f1a77, і ніхто її не прочитав.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "an identifier the target keeps letter for letter is no untranslated phrase"
+ },
+ {
+  "id": "address-mix-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ти втомилася, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»\"}",
+  "expect": "REFUSED",
+  "knownFailure": true,
+  "fixedBy": "15i.T6",
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "one speech to one listener that writes ти-forms and capitalised Ви-forms together"
+ },
+ {
+  "id": "address-informal-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ти втомилася, Нелл. Сядь, тобі треба відпочити, а я принесу тобі чаю.»\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the same speech addressed throughout with ти-forms"
+ },
+ {
+  "id": "address-formal-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ви втомилися, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the same speech addressed throughout with capitalised Ви-forms"
  }
 ]

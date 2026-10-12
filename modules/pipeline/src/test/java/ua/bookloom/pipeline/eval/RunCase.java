@@ -64,6 +64,8 @@ record RunCase(
         VOCATIVE,
         /** A blocking reply-residue finding: a stray closer or label from the reply's JSON. */
         RESIDUE,
+        /** A blocking Latin run: two or more Latin words of the source left in a Cyrillic target. */
+        LATIN_RUN,
         /** No production check: only the reviewer can tell. */
         NONE
     }

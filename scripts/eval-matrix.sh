@@ -166,10 +166,10 @@ if sys.argv[2] == "sequence":
         g = lambda k, r=r: r.get(k, 0)
         print("%-30s %-6s %-8s %5d %7.2f %6d %7d %7d %6d %6d %6d %5.1f%% %7d %6.1f%% %6.2f %7.2f" % (r.get("model", "?"), r.get("narrator", "?"), r.get("dial", "?"), g("segments"), g("renderingsPerTerm"), g("nameVariants"), g("genderSlips"), g("englishLeftovers"), g("quoteFailures"), g("asciiQuotes"), g("mixedScript"), 100.0 * g("flagged") / max(1, g("segments")), g("flaggedWithoutTarget"), 100 * g("batchFallbackRate"), g("callsPerSegment"), g("secondsPerSegment")))
     print()
-    print("%-30s %-6s %7s %7s %8s %8s %8s %8s %8s  %s" % ("model", "narr", "hard0", "leaked", "revTrunc", "claimed", "domin%", "learned", "cover", "per term: distinct renderings (dominant share)"))
+    print("%-30s %-6s %7s %7s %8s %8s %8s %8s %8s %8s  %s" % ("model", "narr", "hard0", "leaked", "revTrunc", "claimed", "domin%", "learned", "cover", "LTCR-1", "per term: distinct renderings (dominant share)"))
     for r in runs:
-        print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
-    print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering)")
+        print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%% %7.1f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), 100 * r.get("ltcr1", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
+    print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering; LTCR-1: the share of a term's or name's later occurrences that carry the rendering its first one had, DelTA's consistency metric)")
     sys.exit(0)
 if sys.argv[2] == "recall":
     pct = lambda v: "-" if v is None else "%.0f%%" % (100 * v)
