@@ -47,8 +47,11 @@ class FrequencyScanTest {
                         copies("Then Ann Bea Cy Di sang.", 3),
                         List.of("Ann Bea Cy", "Di")),
                 Arguments.of("a comma does not join a run", copies("Then Ann, Bea sang.", 3), List.of("Ann", "Bea")),
+                Arguments.of("a lower-case word ends a run", copies("Then Ann sang to Bea.", 3), List.of("Ann", "Bea")),
                 Arguments.of(
-                        "a lower-case word ends a run", copies("Then Ann and Bea sang.", 3), List.of("Ann", "Bea")));
+                        "a pair always joined by 'and' is one name (15i.N3)",
+                        copies("Then Ann and Bea sang.", 3),
+                        List.of("Ann and Bea")));
     }
 
     static Stream<Arguments> sentenceBreakBooks() {

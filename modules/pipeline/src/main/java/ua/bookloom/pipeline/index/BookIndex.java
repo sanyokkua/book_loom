@@ -152,6 +152,18 @@ public final class BookIndex {
     }
 
     /**
+     * Tells whether a mention lies in the story's running text, as against a heading, title line, contents entry,
+     * printing note, front or back matter or the auxiliary unit. Speech is part of the story.
+     *
+     * @param mention a mention this index found; never null
+     * @return {@code true} if it is in the story's running text, {@code false} otherwise
+     */
+    public boolean isStoryText(final Mention mention) {
+        Objects.requireNonNull(mention, "mention");
+        return ScanReads.isStoryText(data, mention);
+    }
+
+    /**
      * Cuts the text around some of the mentions of one name.
      *
      * @param mentions the mentions in reading order; never null

@@ -66,6 +66,6 @@
     },
     "terms": {}
   },
-  "knownFailure": true,
-  "fixedBy": "15i.N3"
+  "knownFailure": false,
+  "fixedBy": null
 }

@@ -163,6 +163,36 @@ class BookIndexMentionsTest {
                 .isEqualTo(narration);
     }
 
+    // IF a shop is written "Orrin & Vale", THEN the pair is found as one run from the first word to the last, and
+    // only where the book writes the same ampersand between the words.
+    @Test
+    void mentions_nameWithAnAmpersand_isFoundAsOneRunWhereTheBookJoinsThemSo() {
+        final String joined = "We stopped at Orrin & Vale on the corner.";
+        final BookIndex index = index(joined, "Orrin and Vale waved.", "Orrin Vale waved.", "Orrin, Vale waved.");
+
+        final List<Mention> found = index.mentions(List.of("Orrin & Vale"), Case.SENSITIVE);
+
+        assertThat(found)
+                .extracting(Mention::name, Mention::ordinal, mention -> textOf(joined, mention))
+                .containsExactly(tuple("Orrin & Vale", 0, "Orrin & Vale"));
+    }
+
+    @Test
+    void mentions_nameWithAnd_isFoundAsAThreeWordRun() {
+        final BookIndex index = index("We stopped at Orrin and Vale on the corner.", "Orrin & Vale waved.");
+
+        assertThat(index.mentions(List.of("Orrin and Vale"), Case.SENSITIVE))
+                .extracting(Mention::ordinal)
+                .containsExactly(0);
+    }
+
+    @Test
+    void mentions_halvesOfAJoinedName_areStillFoundOnTheirOwn() {
+        final BookIndex index = index("We stopped at Orrin & Vale on the corner.");
+
+        assertThat(index.mentions(List.of("Orrin", "Vale"), Case.SENSITIVE)).hasSize(2);
+    }
+
     static Stream<Arguments> speechAndNarration() {
         return Stream.of(
                 Arguments.of("She asked where Ivo was.", true),

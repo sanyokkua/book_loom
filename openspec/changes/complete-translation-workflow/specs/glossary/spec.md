@@ -98,6 +98,69 @@ capitals; the stop-word list catches the function words and interjections a book
 - **WHEN** the glossary already holds the person's entry `Hale` → `Гейл` and a run prepares
 - **THEN** preparation runs no scan and leaves the glossary holding exactly that entry
 
+### Requirement: Triage the name candidates by code before any model reads them
+
+The deterministic scan SHALL end with a triage of its candidates, at every minimum count (the glossary scan's 3 and the
+model scan's 1 alike), measured over the whole book through the book index whatever slice was scanned, and its result
+SHALL be what the glossary scan proposes and the model scan is shown:
+
+- a mention is in narration WHEN it lies in the running text of a body unit — a paragraph, a verse line, a list item, a
+  table cell, a footnote or a caption, speech included — outside a title line or a printing note; a mention in a
+  heading, a title, a contents entry, a title-line paragraph, a printing note, front or back matter or the auxiliary
+  unit is not;
+- a candidate SHALL be dropped WHEN 70% or more of its mentions (its aliases' included, letter case kept) are not in
+  narration and fewer than 3 are in narration;
+- a pair written `A & B` or `A and B` SHALL be one candidate WHEN both halves are written joined in 80% or more of
+  their own uses: its term is the first joined writing, its count the joined uses (it must itself reach the minimum
+  count), its first sentence the first joined sentence, a joined writing with the other connector its alias, and
+  neither half SHALL be proposed on its own; below 80% the halves stay separate candidates and the pair is not one;
+- spellings that differ only in letter case SHALL be one candidate before the junk rules read them: the base is the
+  spelling not written in capitals, else the commoner one (the earlier on a tie), the others are its aliases, and the
+  counts add.
+
+A joined name SHALL still be found as one run by the book index's mentions, so later readings of the name can use it.
+
+**Source:** 15i.N3 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01
+(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`).
+In plain words: a technical book repeats a section name in every heading and a converter credits itself on the title
+page; neither is a character, and the model should never be asked about them. A shop written `Orrin & Vale` is one
+name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the text is one name with two writings.
+
+#### Scenario: A name that is mostly a heading is dropped
+
+- **WHEN** `Quillon` is a heading 8 times and is written in the story's narration twice
+- **THEN** it is not a candidate, at minimum count 1 or 3
+- **AND** with 3 mentions in the story it is kept, however many headings repeat it; with 7 headings and 2 mentions in the
+  story (78% outside) it is dropped; with 1 heading and 2 in the story (33% outside) it is kept
+
+#### Scenario: Speech is narration
+
+- **WHEN** `Quillon` is a heading 8 times and the story writes it 3 times, all inside quotation marks
+- **THEN** it is kept
+
+#### Scenario: A credit in the front and back matter is dropped
+
+- **WHEN** `Jorun Falk` is written twice in the front matter and twice in the back matter and nowhere in the story
+- **THEN** a scan over every segment of the book does not propose it
+
+#### Scenario: A joined pair is one name at 80%
+
+- **WHEN** `Orrin & Vale` is written 8 times and each of `Orrin` and `Vale` alone twice
+- **THEN** `Orrin & Vale` is proposed with a count of 8 and its first joined sentence, and `Orrin` and `Vale` are not
+- **AND** with 7 joined and 3 alone each (70%) `Orrin` and `Vale` are proposed and the pair is not; with `and` for `&` the
+  same holds
+
+#### Scenario: Both halves must be joined
+
+- **WHEN** `Orrin & Vale` is written 9 times, `Orrin` alone once and `Vale` alone 11 times
+- **THEN** `Orrin` and `Vale` are proposed and the pair is not
+
+#### Scenario: Case variants are one name
+
+- **WHEN** the book writes `KESSEL OPTIK` 5 times and `Kessel Optik` 3 times
+- **THEN** `Kessel Optik` is proposed with a count of 8 and the alias `KESSEL OPTIK`
+- **AND** with `McKay` 4 times and `Mckay` twice the base is `McKay`, and with `HALE` 4 times and `Hale` twice it is `Hale`
+
 ### Requirement: Run the model scan only when the person asks for it
 
 WHEN the person presses the model scan button on Names & style, the application SHALL send the model every capitalised
@@ -115,7 +178,11 @@ kept proposals into the glossary only after every call has answered, matching te
 suggested target where the model gave one. IF any call fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error
 in place. Each call SHALL be announced, timed and attempt-counted as a run's model calls are, the screen SHALL show
 which request it is waiting on, and WHEN the person presses Stop the request in flight SHALL be interrupted and
-nothing written. The application SHALL NOT run the model scan on its own, when a run starts included.
+nothing written. The application SHALL NOT run the model scan on its own, when a run starts included. The scan SHALL
+make no call and answer an empty change, with one INFO line naming why, WHEN the Book Brief's dial is below Max and the
+deterministic scan already proposes 10 names or more (the names written 3 times or more once the triage has dropped
+what is not a name); at Max, or with fewer than 10, it SHALL run as above. The candidates it sends are the triaged ones
+of "Triage the name candidates by code before any model reads them".
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan`, DD-46
@@ -169,6 +236,12 @@ anything is written.
   `ErrorCode.unreachable`
 - **THEN** both entries remain, nothing the first call proposed is added, and the screen shows the provider-unreachable
   message in place
+
+#### Scenario: The model scan is a second opinion
+
+- **WHEN** the dial is Balanced and the book has 12 names each written 3 times
+- **THEN** pressing the scan makes no model call and changes nothing
+- **AND** with 9 such names, or at Max with 30 or 9, it asks once (one batch of up to 40 candidates)
 
 #### Scenario: Nothing is sent until the button is pressed
 

@@ -149,13 +149,13 @@ class NamesBookTest {
                 .isEqualTo("Corin carried the tray to the nurse. She thanked him and went on folding sheets.");
     }
 
-    // The books red today, each with the task that fixes it: a plain word's capital (N5) and a brand written with an
-    // ampersand (N3); the she that is not his was fixed by N1.
+    // The one book red today, with the task that fixes it: a plain word's capital (N5); the she that is not his was
+    // fixed by N1 and the brand written with an ampersand by N3.
     @Test
-    void books_knownFailures_areTheTwoShapesTodaysScanAndReviewGetWrong() {
+    void books_knownFailures_areTheOneShapeTodaysScanAndReviewGetWrong() {
         assertThat(NamesBook.all().stream().filter(NamesBook::knownFailure))
                 .extracting(NamesBook::id, NamesBook::fixedBy)
-                .containsExactlyInAnyOrder(tuple("bartender-mark", "15i.N5"), tuple("brand-and-camera", "15i.N3"));
+                .containsExactly(tuple("bartender-mark", "15i.N5"));
     }
 
     @Test

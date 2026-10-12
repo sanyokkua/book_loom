@@ -44,7 +44,8 @@ public interface GlossaryService {
      * @param projectId the non-null project id
      * @param model the non-null model to call
      * @param progress the non-null receiver of each model call's start and finish, on the calling thread
-     * @return the entries the pre-scan added; nothing is added unless every call answered
+     * @return the entries the pre-scan added; nothing is added unless every call answered, and nothing is asked below
+     *     the Max dial when the code already proposes ten names or more
      */
     Result<EntryChanges<GlossaryEntry>> prescan(String projectId, ChatModel model, Consumer<JobEvent> progress);
 

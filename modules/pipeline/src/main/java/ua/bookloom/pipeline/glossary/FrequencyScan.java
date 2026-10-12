@@ -36,6 +36,8 @@ import ua.bookloom.util.text.JunkRules;
  * A capitalised word at a sentence start counts when the book writes it with a capital mid-sentence at least
  * {@link #CREDIT_MIN_MID_SENTENCE} times, so a name that often opens a sentence is not undercounted, and a single word
  * that mostly occurs inside a longer name ({@code Garrick} of {@code Garrick Ashdown}) is not proposed on its own.
+ * Spellings that differ only in letter case are folded first ({@link CaseVariants}); the list ends with the
+ * {@link CandidateTriage}, which drops heading-only names and joins a written pair.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -73,22 +75,43 @@ public final class FrequencyScan {
                 "Name scan over {} segments, minimum count {}, language {}", ordinals.size(), minCount, sourceLanguage);
         final List<Occurrences.Read> read = index.scanReads(ordinals, sourceLanguage);
         final WordCounts counts = WordCounts.of(read);
+        final Map<String, NameCandidate> tallies = cleanTallies(read, counts, sourceLanguage);
+        final List<NameCandidate> kept = keep(tallies, counts, minCount, sourceLanguage);
+        final List<NameCandidate> candidates = CandidateTriage.apply(index, kept, minCount);
+        log.debug(
+                "Name scan counted {} distinct names, {} kept at {}, {} after triage",
+                tallies.size(),
+                kept.size(),
+                minCount,
+                candidates.size());
+        candidates.forEach(candidate ->
+                log.trace("Name candidate {} x{}: {}", candidate.term(), candidate.count(), candidate.firstSentence()));
+        return candidates;
+    }
+
+    private static Map<String, NameCandidate> cleanTallies(
+            final List<Occurrences.Read> read, final WordCounts counts, @Nullable final String sourceLanguage) {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
-        final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
         final Map<String, NameCandidate> tallies = NameAliases.fold(
-                tally(read, word -> isNameLike(word, counts, stopWords)), NameAliases.suffixesOf(sourceLanguage));
+                CaseVariants.fold(tally(read, word -> isNameLike(word, counts, stopWords))),
+                NameAliases.suffixesOf(sourceLanguage));
         dropJunk(tallies);
         dropHygiene(tallies, sourceLanguage, read);
-        final List<NameCandidate> candidates = tallies.values().stream()
+        return tallies;
+    }
+
+    private static List<NameCandidate> keep(
+            final Map<String, NameCandidate> tallies,
+            final WordCounts counts,
+            final int minCount,
+            @Nullable final String sourceLanguage) {
+        final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
+        return tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
                 .filter(tally -> isNotCommonWord(tally, counts, neverAlone))
                 .filter(tally -> isNotPartOfLongerName(tally, tallies.values(), minCount))
                 .sorted((left, right) -> Integer.compare(right.count(), left.count()))
                 .toList();
-        log.debug("Name scan counted {} distinct names, {} kept at {}", tallies.size(), candidates.size(), minCount);
-        candidates.forEach(candidate ->
-                log.trace("Name candidate {} x{}: {}", candidate.term(), candidate.count(), candidate.firstSentence()));
-        return candidates;
     }
 
     // The book's own counts let hygiene keep a plural-shaped name the fold kept as a name of its own.

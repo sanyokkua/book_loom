@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.text.JunkRules;
 
@@ -80,6 +81,28 @@ final class ScanReads {
                 reads.size(),
                 data.infos().size());
         return reads;
+    }
+
+    /**
+     * Whether a mention lies in the story's running text: a paragraph-like segment of a body unit that is not the
+     * auxiliary one, outside a title line or a printing note. Speech counts; a heading, contents entry, front or back
+     * matter does not.
+     */
+    static boolean isStoryText(final IndexData data, final Mention mention) {
+        final SegmentInfo info = data.infos().get(mention.ordinal());
+        if (info.auxiliary() || info.role() != UnitRole.BODY || !RUNNING_TEXT.contains(info.kind())) {
+            return false;
+        }
+        final String line = lineAt(data.reads().get(mention.ordinal()).text(), mention.start());
+        return !JunkRules.isPrintingNote(line) && !isTitleLine(line);
+    }
+
+    private static String lineAt(final String text, final int position) {
+        final int from = Math.max(text.lastIndexOf('\n', position), text.lastIndexOf('\r', position)) + 1;
+        final int newline = text.indexOf('\n', position);
+        final int carriage = text.indexOf('\r', position);
+        final int to = Math.min(newline < 0 ? text.length() : newline, carriage < 0 ? text.length() : carriage);
+        return text.substring(from, to);
     }
 
     private static boolean isForeign(@Nullable final String declaredLanguage, final Optional<String> source) {

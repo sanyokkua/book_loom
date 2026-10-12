@@ -17,6 +17,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
@@ -45,13 +46,34 @@ public final class GlossaryModelScans {
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
-    private record Book(BookSlice story, CallFrame frame, NamePolicy names) {}
+    private record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
 
     Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
-                .flatMap(book -> preScan.scan(
-                        projectId, book.story(), book.frame(), book.names(), calls(model, progress, book)));
+                .flatMap(book -> isGatedOut(projectId, book)
+                        ? Result.ok(EntryChanges.none())
+                        : preScan.scan(
+                                projectId, book.story(), book.frame(), book.names(), calls(model, progress, book)));
+    }
+
+    private static boolean isGatedOut(final String projectId, final Book book) {
+        final int proposals = FrequencyScan.candidates(
+                        book.story().index(),
+                        book.story().ordinals(),
+                        FrequencyScan.PROPOSAL_MIN_COUNT,
+                        book.frame().analysisLanguage())
+                .size();
+        final boolean isWanted = PreScanGate.isWanted(book.dial(), proposals);
+        if (!isWanted) {
+            log.info(
+                    "Model pre-scan project={} not run: dial {} and the code already proposes {} names (the model scan runs at Max or under {})",
+                    projectId,
+                    book.dial(),
+                    proposals,
+                    PreScanGate.MIN_PROPOSALS);
+        }
+        return !isWanted;
     }
 
     Result<GlossaryReviewReport> review(
@@ -137,6 +159,6 @@ public final class GlossaryModelScans {
                 frame.sourceLanguage(),
                 frame.analysisLanguage(),
                 target);
-        return Result.ok(new Book(BookSlice.story(index), frame, brief.names()));
+        return Result.ok(new Book(BookSlice.story(index), frame, brief.names(), brief.dial()));
     }
 }

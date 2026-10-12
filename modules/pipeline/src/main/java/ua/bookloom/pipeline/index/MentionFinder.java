@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Finds a name in the book as a run of up to three words separated by blanks only; a possessive ends a run, so
- * {@code Ashdown’s Garrick} is two names, and a trailing one is no part of the mention.
+ * {@code Ashdown’s Garrick} is two names, and a trailing one is no part of the mention. A name written with an
+ * ampersand between two words ({@code Orrin & Vale}) is found where the book writes the same ampersand between them,
+ * so a pair that is one name stays findable; a joint {@code and} is a word and needs no rule.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -19,6 +21,7 @@ final class MentionFinder {
 
     private static final int MAX_NAME_WORDS = 3;
     private static final Pattern BLANKS = Pattern.compile("\\p{Zs}+");
+    private static final Pattern AMPERSAND_GAP = Pattern.compile("\\p{Zs}+&\\p{Zs}+");
     private static final Pattern APOSTROPHES = Pattern.compile("[’ʼ]");
 
     static List<Mention> find(final IndexData data, final Iterable<String> names, final Case mode) {
@@ -30,16 +33,23 @@ final class MentionFinder {
         return found;
     }
 
+    /** The words a name asks for, and for each gap after the first word whether the name writes an ampersand there. */
+    private record Wanted(List<Occurrences.Word> words, List<Boolean> ampersandBefore) {}
+
     private static List<Mention> findOne(final IndexData data, final String name, final Case mode) {
-        final List<Occurrences.Word> wanted = Occurrences.read(name).words();
-        if (wanted.isEmpty() || wanted.size() > MAX_NAME_WORDS) {
-            log.debug("Name '{}' is {} words, not a run of one to {}", name, wanted.size(), MAX_NAME_WORDS);
+        final Wanted wanted = wantedBy(name);
+        if (wanted.words().isEmpty() || wanted.words().size() > MAX_NAME_WORDS) {
+            log.debug(
+                    "Name '{}' is {} words, not a run of one to {}",
+                    name,
+                    wanted.words().size(),
+                    MAX_NAME_WORDS);
             return List.of();
         }
         final List<Mention> found = new ArrayList<>();
         int previous = -1;
         for (final Posting posting :
-                data.postings().getOrDefault(wanted.getFirst().key(), List.of())) {
+                data.postings().getOrDefault(wanted.words().getFirst().key(), List.of())) {
             if (posting.ordinal() != previous) {
                 previous = posting.ordinal();
                 inSegment(data, name, wanted, mode, posting.ordinal(), found);
@@ -48,18 +58,34 @@ final class MentionFinder {
         return found;
     }
 
+    private static Wanted wantedBy(final String name) {
+        final Occurrences.Read read = Occurrences.read(name);
+        final List<Boolean> ampersands = new ArrayList<>();
+        for (int index = 0; index < read.words().size(); index++) {
+            ampersands.add(index > 0
+                    && AMPERSAND_GAP
+                            .matcher(read.text()
+                                    .substring(
+                                            read.words().get(index - 1).end(),
+                                            read.words().get(index).start()))
+                            .matches());
+        }
+        return new Wanted(read.words(), ampersands);
+    }
+
     private static void inSegment(
             final IndexData data,
             final String name,
-            final List<Occurrences.Word> wanted,
+            final Wanted wanted,
             final Case mode,
             final int ordinal,
             final List<Mention> found) {
         final Occurrences.Read read = data.reads().get(ordinal);
-        for (int start = 0; start + wanted.size() <= read.words().size(); start++) {
+        final int length = wanted.words().size();
+        for (int start = 0; start + length <= read.words().size(); start++) {
             if (isRun(read, start, wanted, mode)) {
                 final Occurrences.Word first = read.words().get(start);
-                final Occurrences.Word last = read.words().get(start + wanted.size() - 1);
+                final Occurrences.Word last = read.words().get(start + length - 1);
                 final int end = last.start() + last.text().length();
                 found.add(new Mention(
                         name,
@@ -72,23 +98,27 @@ final class MentionFinder {
         }
     }
 
-    private static boolean isRun(
-            final Occurrences.Read read, final int start, final List<Occurrences.Word> wanted, final Case mode) {
-        for (int offset = 0; offset < wanted.size(); offset++) {
+    private static boolean isRun(final Occurrences.Read read, final int start, final Wanted wanted, final Case mode) {
+        for (int offset = 0; offset < wanted.words().size(); offset++) {
             final Occurrences.Word word = read.words().get(start + offset);
-            if (!isSame(word, wanted.get(offset), mode) || (offset > 0 && !isJoined(read, start + offset))) {
+            if (!isSame(word, wanted.words().get(offset), mode)
+                    || (offset > 0
+                            && !isJoined(
+                                    read,
+                                    start + offset,
+                                    wanted.ampersandBefore().get(offset)))) {
                 return false;
             }
         }
         return true;
     }
 
-    private static boolean isJoined(final Occurrences.Read read, final int index) {
+    private static boolean isJoined(final Occurrences.Read read, final int index, final boolean ampersand) {
         final Occurrences.Word before = read.words().get(index - 1);
+        final String gap =
+                read.text().substring(before.end(), read.words().get(index).start());
         return !before.possessive()
-                && BLANKS.matcher(read.text()
-                                .substring(before.end(), read.words().get(index).start()))
-                        .matches();
+                && (ampersand ? AMPERSAND_GAP : BLANKS).matcher(gap).matches();
     }
 
     private static boolean isSame(final Occurrences.Word word, final Occurrences.Word wanted, final Case mode) {

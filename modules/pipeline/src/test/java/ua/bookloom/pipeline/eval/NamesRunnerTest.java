@@ -89,21 +89,6 @@ class NamesRunnerTest {
         assertThat(score.junkKept()).isZero();
     }
 
-    // IF the scan splits the shop name, THEN "Orrin & Vale" has no entry of its own (its halves are junk the gold
-    // names);
-    // the camera brand and the woman are held, so exactly the shop is lost; fixed by 15i.N3.
-    @Test
-    void run_brandAndCamera_theShopNameOrrinAndValeIsLost() {
-        final NamesBook book = NamesBook.byId("brand-and-camera");
-        assumeThat(book.knownFailure()).isTrue();
-
-        final NamesScore score = run(book).score();
-
-        assertThat(score.lostNames()).containsExactly("Orrin & Vale");
-        assertThat(score.typeCorrect()).isEqualTo(1);
-        assertThat(score.genderCorrect()).isEqualTo(score.eligible());
-    }
-
     @Test
     void run_anyBook_countsTheModelCallsItSentAndTimesTheRun() {
         final NamesScore score = run(NamesBook.byId("stray-he")).score();
