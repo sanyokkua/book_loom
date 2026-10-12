@@ -1066,7 +1066,7 @@ answers pooled.
 ```
 
 `book` is relative to the gold file's directory. `register` is `FORMAL_LITERARY`, `NEUTRAL` or `CASUAL`; `narrator` is `FIRST`,
-`THIRD` or `UNSPECIFIED` (also for a book whose narrators alternate); `narratorGender` and a character's `gender` are `MALE`,
+`THIRD` or `UNSPECIFIED` (a book whose first-person narration alternates with third-person chapters is `FIRST`, as the Brief preselects for a mixed book, 15i.B4); `narratorGender` and a character's `gender` are `MALE`,
 `FEMALE`, `NEUTER` or `UNKNOWN` (the book never shows it); `type` is `CHARACTER`, `PLACE`, `TERM`, `TITLE` or `OTHER`; `names`
 is `TRANSLATE`, `TRANSLITERATE` or `KEEP_ORIGINAL`. `genreClass` holds lower-case words, any one of which a right genre contains
 (empty: the genre is not scored); `genre`, `voiceEra`, `audience` and `names` are optional and only used when the same file is
