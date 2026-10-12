@@ -296,72 +296,72 @@ class TermLearningTest {
     @Test
     void committed_nameWithNoTarget_getsTheSpellingTheBookUsedAsASuggestion() {
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", null, TermType.CHARACTER, Gender.MALE, false));
+                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
-            {"Bartimaeus walked on.", "Бартімей ішов далі."},
-            {"They saw Bartimaeus.", "Вони бачили Бартимея."},
-            {"Bartimaeus slept.", "Бартімей спав."}
+            {"Zerubin walked on.", "Зерубін ішов далі."},
+            {"They saw Zerubin.", "Вони бачили Зерубіна."},
+            {"Zerubin slept.", "Зерубін спав."}
         }));
 
         final GlossaryEntry entry =
                 Objects.requireNonNull(stores.glossary().all(PROJECT).data()).getFirst();
-        assertThat(entry.target()).isEqualTo("Бартімей");
+        assertThat(entry.target()).isEqualTo("Зерубін");
         assertThat(entry.isSuggested()).isTrue();
     }
 
     @Test
     void committed_nameTheCurrentEntryAlreadyHasATargetFor_isLeftAsThePersonSetIt() {
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", null, TermType.CHARACTER, Gender.MALE, false));
+                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
         stores.glossary()
                 .update(new GlossaryEntry(
-                        "g1", PROJECT, "Bartimaeus", "Бартимей", TermType.CHARACTER, Gender.FEMALE, false));
+                        "g1", PROJECT, "Zerubin", "Зерубин", TermType.CHARACTER, Gender.FEMALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
-            {"Bartimaeus walked on.", "Бартімей ішов далі."},
-            {"Bartimaeus sat.", "Бартімей сидів."},
-            {"Bartimaeus slept.", "Бартімей спав."}
+            {"Zerubin walked on.", "Зерубін ішов далі."},
+            {"Zerubin sat.", "Зерубін сидів."},
+            {"Zerubin slept.", "Зерубін спав."}
         }));
 
         assertThat(Objects.requireNonNull(stores.glossary().all(PROJECT).data()).getFirst())
                 .extracting(GlossaryEntry::target, GlossaryEntry::gender)
-                .containsExactly("Бартимей", Gender.FEMALE);
+                .containsExactly("Зерубин", Gender.FEMALE);
     }
 
     @Test
     void committed_nameWithALockedTarget_isLeftAlone() {
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", "Бартимей", TermType.CHARACTER, Gender.MALE, true));
+                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", "Зерубин", TermType.CHARACTER, Gender.MALE, true));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
-            {"Bartimaeus walked on.", "Бартімей ішов далі."},
-            {"Bartimaeus sat.", "Бартімей сидів."},
-            {"Bartimaeus slept.", "Бартімей спав."}
+            {"Zerubin walked on.", "Зерубін ішов далі."},
+            {"Zerubin sat.", "Зерубін сидів."},
+            {"Zerubin slept.", "Зерубін спав."}
         }));
 
         assertThat(Objects.requireNonNull(stores.glossary().all(PROJECT).data())
                         .getFirst()
                         .target())
-                .isEqualTo("Бартимей");
+                .isEqualTo("Зерубин");
     }
 
     @Test
     void committed_titleWrittenBesideAName_isNotTheNamesSpelling() {
         stores.lexicon().put(LexiconEntry.of(PROJECT, "Ms"));
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Lovelace", null, TermType.CHARACTER, Gender.FEMALE, false));
+                .add(new GlossaryEntry("g1", PROJECT, "Ashdown", null, TermType.CHARACTER, Gender.FEMALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
-            {"Ms Lovelace walked on.", "Тоді Міс Лавлейс ішла далі."},
-            {"Ms Lovelace sat.", "Потім Міс Ловлейс сиділа тихо."},
-            {"Ms Lovelace slept.", "Вночі Міс Лавлис спала міцно."}
+            {"Ms Ashdown walked on.", "Тоді Міс Ешдаун ішла далі."},
+            {"Ms Ashdown sat.", "Потім Міс Ешдоун сиділа тихо."},
+            {"Ms Ashdown slept.", "Вночі Міс Ешдан спала міцно."}
         }));
 
         final GlossaryEntry entry = Objects.requireNonNull(
                         stores.glossary().all(PROJECT).data())
                 .stream()
-                .filter(held -> held.term().equals("Lovelace"))
+                .filter(held -> held.term().equals("Ashdown"))
                 .findFirst()
                 .orElseThrow();
         assertThat(entry.target()).isNull();

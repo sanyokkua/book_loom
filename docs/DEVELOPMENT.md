@@ -1010,7 +1010,7 @@ answers pooled.
 
 ```json
 {
-  "book": "Burning Chrome.epub",
+  "book": "Glass Harbour.epub",
   "sourceLanguage": "en",
   "targetLanguage": "uk",
   "brief": {
@@ -1024,8 +1024,8 @@ answers pooled.
     "narratorGender": "MALE"
   },
   "characters": [
-    {"term": "Rikki", "type": "CHARACTER", "gender": "FEMALE"},
-    {"term": "Bobby Quine", "type": "CHARACTER", "gender": "MALE"}
+    {"term": "Lena", "type": "CHARACTER", "gender": "FEMALE"},
+    {"term": "Danny Vosk", "type": "CHARACTER", "gender": "MALE"}
   ]
 }
 ```
@@ -1049,6 +1049,14 @@ gender. `JudgementBooksTest` (in `check`) holds the code to `expect` and runs ea
 answers as the gold says (every field right); `JudgementSuitesTest` proves the agreement and accuracy scoring, the seed handling
 and the gold directory. The praise page found a defect: twelve blurbs ("A quiet triumph." The Northern Review) counted as a
 story chapter, so the brief read reviewers first; a story paragraph now needs two full sentences closed by their mark.
+
+*Book-neutral sources* (15i.E0): no name, quote or passage of a book under test may sit in `modules/*/src` — the committed
+cases above, the tests and the prompts use invented material of the same shape. `BookNeutralSourcesTest` (`:app`) enforces it
+from the owner's own list, which is never committed because it would name the books: it reads
+`$BOOKLOOM_CORPUS_DIR/neutral-denylist.txt` (one case-sensitive word or phrase per line, `#` comments and blank lines skipped)
+and fails with every `path:line: token` that holds one as a whole word in a text file (java, kt, properties, prompt, txt, json,
+md, fxml, css, xml, csv). It is skipped by a JUnit assumption when the variable is unset or the file is absent, so CI and a
+checkout without the corpus stay green.
 
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,

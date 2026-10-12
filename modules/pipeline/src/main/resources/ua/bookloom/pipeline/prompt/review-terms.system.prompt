@@ -10,10 +10,10 @@ Judge from the count and the windows. Keep the term exactly as listed; do not tr
 A "not-a-name" verdict needs evidence: copy into "evidence", word for word, a short phrase from one of the listed windows that shows the term used as an ordinary word. If no window shows it, do not answer "not-a-name"; answer "name" or "term". For "name" and "term" leave "evidence" empty ("").
 
 Examples:
-- "Well" — 120×, [1] "Well, perhaps it was my mood." → {"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Well, perhaps it was my mood"}
-- "Simon Lovelace" — [1] "\"He is late,\" said Simon Lovelace.", [2] "Simon Lovelace smiled. He raised his glass." → {"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}
-- "Al-Arish" — [1] "They rode on to Al-Arish." → {"term":"Al-Arish","verdict":"name","type":"place","gender":"unknown","windows":[1],"evidence":""}
+- "Still" — 120×, [1] "Still, perhaps it was the weather." → {"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"}
+- "Garrick Ashdown" — [1] "\"He is late,\" said Garrick Ashdown.", [2] "Garrick Ashdown smiled. He raised his glass." → {"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}
+- "El-Barun" — [1] "They rode on to El-Barun." → {"term":"El-Barun","verdict":"name","type":"place","gender":"unknown","windows":[1],"evidence":""}
 
 Output ONLY the JSON object, one verdict per listed term: no commentary, markdown or code fences.
 A valid reply:
-{"verdicts":[{"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Well, perhaps it was my mood"},{"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}]}
+{"verdicts":[{"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"},{"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}]}

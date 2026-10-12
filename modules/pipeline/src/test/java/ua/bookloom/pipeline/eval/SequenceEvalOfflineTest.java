@@ -91,14 +91,14 @@ class SequenceEvalOfflineTest {
     }
 
     @Test
-    void run_bartimaeusSpelledTwoWays_oneVariantBeyondTheFirst() {
+    void run_zerubinSpelledTwoWays_oneVariantBeyondTheFirst() {
         final NameStat name = scripted.names().stream()
-                .filter(n -> n.name().equals("Bartimaeus"))
+                .filter(n -> n.name().equals("Zerubin"))
                 .findFirst()
                 .orElseThrow();
 
         assertThat(name.variants()).isEqualTo(2);
-        assertThat(name.spellings()).containsEntry("бартімей", 27).containsEntry("бартімеус", 29);
+        assertThat(name.spellings()).containsEntry("зерубін", 27).containsEntry("зеробін", 29);
         assertThat(scripted.nameVariants()).isEqualTo(1);
     }
 

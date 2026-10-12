@@ -79,6 +79,6 @@ class BatchEvalCasesTest {
 
         assertThat(first.context().draft().glossaryLines())
                 .singleElement()
-                .satisfies(line -> assertThat(line).matches("1: ⟦g\\d+⟧ → Бартімеус, character, male"));
+                .satisfies(line -> assertThat(line).matches("1: ⟦g\\d+⟧ → Зерубін, character, male"));
     }
 }

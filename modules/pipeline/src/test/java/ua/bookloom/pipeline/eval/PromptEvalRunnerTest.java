@@ -59,7 +59,7 @@ class PromptEvalRunnerTest {
 
         assertThat(sent).singleElement().satisfies(call -> {
             assertThat(call.kind()).isEqualTo(CallKind.DRAFT);
-            assertThat(user(call)).contains("Simon Lovelace → Саймон Лавлейс (character, male)");
+            assertThat(user(call)).contains("Garrick Ashdown → Гаррік Ешдаун (character, male)");
         });
     }
 
@@ -68,9 +68,9 @@ class PromptEvalRunnerTest {
         final List<Sent> sent = run(named("glossary-locked-name"));
 
         assertThat(user(sent.getFirst()))
-                .contains("⟦g0⟧ → Бартімеус, character, male")
+                .contains("⟦g0⟧ → Зерубін, character, male")
                 .contains("<Text>\n⟦g0⟧ walked into the library")
-                .doesNotContain("<Text>\nBartimaeus");
+                .doesNotContain("<Text>\nZerubin");
     }
 
     @Test

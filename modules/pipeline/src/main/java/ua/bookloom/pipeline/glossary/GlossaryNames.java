@@ -9,7 +9,7 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
  * Every spelling a glossary entry is known by in the book — its term and the aliases the name scan folded into it
- * ({@code Chromes} into {@code Chrome}, a misspelling into the name) — read as one name wherever the glossary is
+ * ({@code Embers} into {@code Ember}, a misspelling into the name) — read as one name wherever the glossary is
  * matched against a text: the chunk's terms, the name checks' {@code term → target} lines and the presence test that
  * decides what a prompt lists. An alias shares its entry's target.
  */

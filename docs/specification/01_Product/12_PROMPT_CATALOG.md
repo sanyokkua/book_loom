@@ -843,12 +843,12 @@ If gender is not inferable, use "unknown". If no candidate is a name or a term, 
 {{/languageRules}}
 Examples:
 - "Well" opening "Well, I never." → not a name: leave it out.
-- "Simon Lovelace" in "Simon Lovelace smiled at his guests." → {"term":"Simon Lovelace","type":"person","gender":"male","note":"a magician","confidence":0.9}
-- "Al-Arish" in "They rode on to Al-Arish." → {"term":"Al-Arish","type":"place","gender":"unknown","note":"a town","confidence":0.8}
+- "Garrick Ashdown" in "Garrick Ashdown smiled at his guests." → {"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}
+- "El-Barun" in "They rode on to El-Barun." → {"term":"El-Barun","type":"place","gender":"unknown","note":"a town","confidence":0.8}
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 A valid reply:
-{"terms":[{"term":"Simon Lovelace","type":"person","gender":"male","note":"a magician","confidence":0.9}]}
+{"terms":[{"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}]}
 ```
 
 **USER**
@@ -934,13 +934,13 @@ windows that shows the term used as an ordinary word. If no window shows it, do 
 "name" or "term". For "name" and "term" leave "evidence" empty ("").
 
 Examples:
-- "Well" — 120×, [1] "Well, perhaps it was my mood." → {"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Well, perhaps it was my mood"}
-- "Simon Lovelace" — [1] "\"He is late,\" said Simon Lovelace.", [2] "Simon Lovelace smiled. He raised his glass." → {"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}
-- "Al-Arish" — [1] "They rode on to Al-Arish." → {"term":"Al-Arish","verdict":"name","type":"place","gender":"unknown","windows":[1],"evidence":""}
+- "Still" — 120×, [1] "Still, perhaps it was the weather." → {"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"}
+- "Garrick Ashdown" — [1] "\"He is late,\" said Garrick Ashdown.", [2] "Garrick Ashdown smiled. He raised his glass." → {"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}
+- "El-Barun" — [1] "They rode on to El-Barun." → {"term":"El-Barun","verdict":"name","type":"place","gender":"unknown","windows":[1],"evidence":""}
 
 Output ONLY the JSON object, one verdict per listed term: no commentary, markdown or code fences.
 A valid reply:
-{"verdicts":[{"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Well, perhaps it was my mood"},{"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}]}
+{"verdicts":[{"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"},{"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}]}
 ```
 
 **USER**
@@ -1080,7 +1080,7 @@ transcription of foreign names (H as Г, a double consonant kept, `-ia` as `-і�
 goes the other way — and otherwise `Spell the name the way an educated native translator would print it, using the
 target language's standard conventions for foreign names.` `{{examples}}` is the `nameExample` key of the pair, the
 target or `generic.properties`
-(`en-uk`: `Nathaniel → Натаніель`, `Wales → Уельс`, `Meridian Survey Institute → Інститут Меридіанського зондування`,
+(`en-uk`: `Edwin → Едвін`, `Wales → Уельс`, `Meridian Survey Institute → Інститут Меридіанського зондування`,
 `Well → ""`; generic: the `""` case only), chosen as `#few-shot-examples` chooses.
 
 **USER**
@@ -1114,7 +1114,7 @@ helper-call timeout (120 s). Each batch is announced (`BatchStarted`) so the scr
 
 Tolerant read: a suggestion for a term outside the batch, an empty target, a target of more than one line, holding a
 `⟦`/`⟧` or longer than 80 characters is dropped; under Transliterate with differing scripts a Latin look-alike inside a
-Cyrillic word is put back as its Cyrillic twin (gemma4:e4b wrote `Вeнс` with a Latin `e`) and a target with any letter
+Cyrillic word is put back as its Cyrillic twin (gemma4:e4b wrote `Варгa` with a Latin `a`) and a target with any letter
 left in the source's script is dropped. An unreadable reply suggests nothing. The pseudo model answers every term with
 `""`, so it suggests nothing. Calibration on gemma4:e4b-mlx (2026-10-02, the `suggest` promptEval case): `Елеонора
 Венс`, `Гарроу Вейл`, `Інститут Меридіанського зондування`, `Амулет` — every place and thing came back `neuter`,
@@ -1150,7 +1150,7 @@ relationships, places and terminology decisions.
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 Example reply (English → Ukrainian; write yours in the languages above):
-{"summary":{"source":"Nathaniel, a young apprentice, summons the djinni Bartimaeus.","target":"Натаніель, юний учень, викликає джина Бартімеуса."},"facts":["Бартімеус — джин, чоловічого роду."]}
+{"summary":{"source":"Edwin, a young apprentice, summons the djinni Zerubin.","target":"Едвін, юний учень, викликає джина Зерубіна."},"facts":["Зерубін — джин, чоловічого роду."]}
 ```
 
 **USER**

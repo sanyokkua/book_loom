@@ -46,18 +46,18 @@ class BriefAgreementTest {
     @Test
     void combine_bothSamplesSayCasualWithQuotes_keepsItWithBothQuotes() {
         final BriefSuggestion suggestion = BriefAgreement.combine(
-                List.of(register("casual", "Hang on, man"), register("casual", "yeah, sure")), 2);
+                List.of(register("casual", "Hold on, man"), register("casual", "yeah, sure")), 2);
 
         assertThat(suggestion.register()).isEqualTo(Register.CASUAL);
         assertThat(suggestion.evidenceOf(BriefField.REGISTER))
-                .contains(new FieldEvidence(List.of("Hang on, man", "yeah, sure"), 2, 2));
+                .contains(new FieldEvidence(List.of("Hold on, man", "yeah, sure"), 2, 2));
     }
 
     // IF one sample's answer were kept, THEN e4b's formal and 26b's casual reading of one text would both be "sure".
     @Test
     void combine_samplesDisagree_leavesTheFieldNeutralAndUncertain() {
         final BriefSuggestion suggestion = BriefAgreement.combine(
-                List.of(register("casual", "Hang on, man"), register("formal", "Thus spake he")), 2);
+                List.of(register("casual", "Hold on, man"), register("formal", "Thus spake he")), 2);
 
         assertThat(suggestion.register()).isEqualTo(Register.NEUTRAL);
         assertThat(suggestion.evidenceOf(BriefField.REGISTER)).contains(new FieldEvidence(List.of(), 1, 2));
@@ -66,7 +66,7 @@ class BriefAgreementTest {
     @Test
     void combine_oneReplyUnreadable_leavesEveryFieldUncertain() {
         final BriefSuggestion suggestion =
-                BriefAgreement.combine(Arrays.asList(register("casual", "Hang on, man"), null), 2);
+                BriefAgreement.combine(Arrays.asList(register("casual", "Hold on, man"), null), 2);
 
         assertThat(suggestion.register()).isEqualTo(Register.NEUTRAL);
         assertThat(suggestion.evidence().values()).noneMatch(FieldEvidence::isAgreed);
@@ -74,7 +74,7 @@ class BriefAgreementTest {
 
     @Test
     void combine_onlyOneSampleTaken_countsTheMissingOneAsNoAnswer() {
-        final BriefSuggestion suggestion = BriefAgreement.combine(List.of(register("casual", "Hang on, man")), 2);
+        final BriefSuggestion suggestion = BriefAgreement.combine(List.of(register("casual", "Hold on, man")), 2);
 
         assertThat(suggestion.evidenceOf(BriefField.REGISTER)).contains(new FieldEvidence(List.of(), 1, 2));
     }
@@ -99,11 +99,11 @@ class BriefAgreementTest {
     @Test
     void combine_genderProvenInOneSampleAndTheOtherShowsNone_keepsTheProvenGender() {
         final BriefSuggestion suggestion =
-                BriefAgreement.combine(List.of(gender("male", "Hang on to your ass, Jack"), gender("unknown", "")), 2);
+                BriefAgreement.combine(List.of(gender("male", "Hold on tight, Ray"), gender("unknown", "")), 2);
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
-                .contains(new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2));
+                .contains(new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2));
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
                 .hasValueSatisfying(evidence -> assertThat(evidence.isKept()).isTrue());
     }

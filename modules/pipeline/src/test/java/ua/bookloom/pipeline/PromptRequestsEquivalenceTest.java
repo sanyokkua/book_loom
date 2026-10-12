@@ -60,11 +60,11 @@ class PromptRequestsEquivalenceTest {
     private static final String FIX = "directed-fix";
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final int PARAGRAPHS = 8;
-    private static final String SUMMARY_TEXT = "Раніше: Натаніель шукав стару мапу.";
+    private static final String SUMMARY_TEXT = "Раніше: Едвін шукав стару мапу.";
 
     private static final List<String> SOURCES = List.of(
-            "Bartimaeus waited by the old fireplace for hours.",
-            "Nathaniel opened the door and the master smiled.",
+            "Zerubin waited by the old fireplace for hours.",
+            "Edwin opened the door and the master smiled.",
             "I walked home through the cold rain.",
             "The lamp burned low on the table.",
             "Nobody spoke until the clock struck nine.",
@@ -72,7 +72,7 @@ class PromptRequestsEquivalenceTest {
             "Outside, the wind shook the shutters.",
             "I closed the book and went to sleep.");
     private static final List<String> TARGETS = List.of(
-            "Бартімеус годинами чекав біля старого каміна.",
+            "Зерубін годинами чекав біля старого каміна.",
             "⟦g0⟧ відчинив двері, і господар усміхнувся.",
             "Я йшов додому крізь холодний дощ.",
             "Лампа тьмяно горіла на столі біля вікна.",
@@ -83,8 +83,8 @@ class PromptRequestsEquivalenceTest {
     private static final String ECHO_OF_LAST = "I CLOSED THE BOOK AND WENT TO SLEEP.";
 
     private static final List<EvalTerm> GLOSSARY = List.of(
-            new EvalTerm("Bartimaeus", "Бартімеус", TermType.CHARACTER, Gender.MALE, false),
-            new EvalTerm("Nathaniel", "Натаніель", TermType.CHARACTER, Gender.MALE, true));
+            new EvalTerm("Zerubin", "Зерубін", TermType.CHARACTER, Gender.MALE, false),
+            new EvalTerm("Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, true));
     private static final Narrator FIRST_PERSON_MALE = new Narrator(NarratorPerson.FIRST, Gender.MALE);
 
     @TempDir
@@ -138,7 +138,7 @@ class PromptRequestsEquivalenceTest {
     private static EvalContext context(final boolean withLexicon, final int earlierPairs) {
         return new EvalContext(
                 IntStream.range(0, earlierPairs)
-                        .mapToObj(i -> new Pair(SOURCES.get(i), TARGETS.get(i).replace("⟦g0⟧", "Натаніель")))
+                        .mapToObj(i -> new Pair(SOURCES.get(i), TARGETS.get(i).replace("⟦g0⟧", "Едвін")))
                         .toList(),
                 SUMMARY_TEXT,
                 withLexicon ? List.of(new EvalContext.Rendering("master", "господар")) : List.of(),
@@ -215,7 +215,7 @@ class PromptRequestsEquivalenceTest {
 
         TranslationJobTestSupport.qualityLoop().review(pairs, eval.loop(), ReviewPass.FIRST, evalCalls(recording));
 
-        assertThat(sent(job, 2).messages().get(1).content()).contains("Бартімеус", "господар", "<Pair id=\"s8\">");
+        assertThat(sent(job, 2).messages().get(1).content()).contains("Зерубін", "господар", "<Pair id=\"s8\">");
         assertThat(sent(recording, 0)).isEqualTo(sent(job, 2));
     }
 

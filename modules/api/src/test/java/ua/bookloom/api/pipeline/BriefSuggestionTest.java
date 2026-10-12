@@ -111,7 +111,7 @@ class BriefSuggestionTest {
                         BriefField.NARRATOR,
                         AGREED,
                         BriefField.NARRATOR_GENDER,
-                        new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2)));
+                        new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2)));
     }
 
     // IF a first-person narrator whose gender nobody chose discarded the model's verified answer, THEN the Start
@@ -125,7 +125,7 @@ class BriefSuggestionTest {
         assertThat(aligned.narrator()).isEqualTo(NarratorPerson.FIRST);
         assertThat(aligned.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(aligned.evidenceOf(BriefField.NARRATOR_GENDER))
-                .contains(new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2));
+                .contains(new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2));
         assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR);
     }
 
@@ -159,7 +159,7 @@ class BriefSuggestionTest {
 
     // A field the code proved from one sample's quote is kept although the other sample showed nothing.
     @ParameterizedTest
-    @CsvSource({"2,2,'',true", "1,2,'',false", "1,2,'Hang on, Jack',true", "0,2,'',false"})
+    @CsvSource({"2,2,'',true", "1,2,'',false", "1,2,'Hold on, Ray',true", "0,2,'',false"})
     void isKept_agreementOrAVerifiedQuote_keepsTheField(
             final int agreeing, final int samples, final String quote, final boolean expected) {
         final List<String> quotes = quote.isEmpty() ? List.of() : List.of(quote);

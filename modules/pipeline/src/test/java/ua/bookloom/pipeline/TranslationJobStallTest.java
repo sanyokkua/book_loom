@@ -43,7 +43,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * The stall of the Bartimaeus hand test, replayed through a whole run: a judge that does not answer flags its segment
+ * The stall of the Zerubin hand test, replayed through a whole run: a judge that does not answer flags its segment
  * and the run goes on, a segment that keeps failing is flagged after two pauses, a paused run can skip the failing
  * segment, and a resumed run continues at the call that failed.
  */

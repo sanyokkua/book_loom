@@ -81,13 +81,13 @@ class ContextScopeTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "Sendai|He flew to Ono-Sendai at dawn.|false",
-                "Ono-Sendai|He flew to Ono-Sendai at dawn.|true",
-                "Sendai|He flew to Sendai at dawn.|true",
+                "Mura|He flew to Kito-Mura at dawn.|false",
+                "Kito-Mura|He flew to Kito-Mura at dawn.|true",
+                "Mura|He flew to Mura at dawn.|true",
                 "Corvin|Corvin's hat blew off.|true",
                 "Corvin|Both Corvins laughed.|true",
                 "Corvin|Corvinian wine.|false",
-                "Gentleman Loser|The Gentleman  Loser smiled.|true",
+                "Copper Kettle|The Copper  Kettle smiled.|true",
                 "Case|He opened the case.|false",
                 "Case|Case opened the door.|true",
                 "Майлз|Майлза не було вдома.|true",

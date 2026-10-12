@@ -25,7 +25,7 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
  * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
  * names whose gender is known, so a model never has to guess a pronoun or a verb ending from a name alone. A character
  * the segment does not name is never listed, so the sheet stays as short as the scene. A short name that is part of a
- * character's full name of the same gender ("Bobby" of "Bobby Quine") shares that character's line, and the pronouns
+ * character's full name of the same gender ("Danny" of "Danny Vosk") shares that character's line, and the pronouns
  * the scene shows are listed only when they agree with the set gender (15h.A2).
  */
 @Slf4j
@@ -43,7 +43,7 @@ public final class InjectedCharacters {
      * @param sourceLanguage the source language's tag, which picks the pronouns read as evidence; null reads English
      * @return one line per present character of known gender, in glossary order, with the pronouns the text shows
      *     after the name when they agree with its gender ({@code Lyra — female (she ×2)}), a short name folded into its
-     *     full name's line ({@code Bobby Quine (also Bobby) — male}); never null, empty when none is present
+     *     full name's line ({@code Danny Vosk (also Danny) — male}); never null, empty when none is present
      */
     public static List<String> select(
             final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {

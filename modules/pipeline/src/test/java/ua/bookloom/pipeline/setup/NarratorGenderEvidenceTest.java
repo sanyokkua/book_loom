@@ -23,17 +23,17 @@ class NarratorGenderEvidenceTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final BookSample ENGLISH = new BookSample(
             List.of(
-                    "\"Hang on to your ass, Jack,\" Bobby said. I lit a cigarette and watched the rain.",
-                    "\"Molly, you came back,\" the barman said to me. \"Yes, ma'am, right away,\" the boy answered me."
+                    "\"Hold on tight, Ray,\" Danny said. I lit a cigarette and watched the rain.",
+                    "\"Nora, you came back,\" the barman said to me. \"Yes, ma'am, right away,\" the boy answered me."
                             + " \"Sir, the car is ready,\" the driver told me. \"Zorbu, wake up,\" somebody said."),
             40);
     private static final BookSample UKRAINIAN = new BookSample(
             List.of("«Пане, ви забули капелюха», — гукнув мені швейцар. «Дівчино, зачекай!» — крикнула мені сусідка."),
             60);
-    private static final GlossaryEntry JACK =
-            new GlossaryEntry("g1", "p1", "Jack", null, TermType.CHARACTER, Gender.MALE, false);
-    private static final GlossaryEntry JACK_PLACE =
-            new GlossaryEntry("g2", "p1", "Jack", null, TermType.PLACE, Gender.MALE, false);
+    private static final GlossaryEntry RAY =
+            new GlossaryEntry("g1", "p1", "Ray", null, TermType.CHARACTER, Gender.MALE, false);
+    private static final GlossaryEntry RAY_PLACE =
+            new GlossaryEntry("g2", "p1", "Ray", null, TermType.PLACE, Gender.MALE, false);
 
     private static Answer read(
             final String value,
@@ -51,26 +51,27 @@ class NarratorGenderEvidenceTest {
         return new NarratorGenderEvidence(List.of(glossary), "en");
     }
 
-    // IF a vocative naming a glossary person were thrown away, THEN Burning Chrome's Jack would stay of unknown gender.
+    // IF a vocative naming a glossary person were thrown away, THEN a narrator addressed as Ray would stay of
+    // unknown gender.
     @Test
     void read_vocativeOfAGlossaryPerson_takesThePersonsGender() throws JsonProcessingException {
-        final Answer answer = read("male", "Hang on to your ass, Jack", "Jack", ENGLISH, english(JACK));
+        final Answer answer = read("male", "Hold on tight, Ray", "Ray", ENGLISH, english(RAY));
 
-        assertThat(answer).isEqualTo(new Answer("male", "Hang on to your ass, Jack"));
+        assertThat(answer).isEqualTo(new Answer("male", "Hold on tight, Ray"));
     }
 
     // The gender is the name's, never the model's word for it.
     @Test
     void read_listedFirstNameTheModelGenderedWrongly_takesTheListedGender() throws JsonProcessingException {
-        final Answer answer = read("male", "Molly, you came back", "Molly", ENGLISH, english());
+        final Answer answer = read("male", "Nora, you came back", "Nora", ENGLISH, english());
 
-        assertThat(answer).isEqualTo(new Answer("female", "Molly, you came back"));
+        assertThat(answer).isEqualTo(new Answer("female", "Nora, you came back"));
     }
 
     // IF a quote were taken on trust, THEN a model could name the narrator from a line the book never had.
     @Test
     void read_vocativeQuoteNotInTheSample_leavesTheGenderUnknown() throws JsonProcessingException {
-        final Answer answer = read("male", "Hold on to your hat, Jack", "Jack", ENGLISH, english(JACK));
+        final Answer answer = read("male", "Hold on to your hat, Ray", "Ray", ENGLISH, english(RAY));
 
         assertThat(answer).isEqualTo(new Answer("unknown", ""));
     }
@@ -81,14 +82,14 @@ class NarratorGenderEvidenceTest {
             value = {
                 // Neither in the glossary nor on the first-name list.
                 "Zorbu, wake up|Zorbu",
-                // Jack is left off the list on purpose, and the glossary's Jack is a place, not a person.
-                "Hang on to your ass, Jack|Jack",
+                // Ray is left off the list on purpose, and the glossary's Ray is a place, not a person.
+                "Hold on tight, Ray|Ray",
                 // A listed name that is not in the quote.
-                "Hang on to your ass, Jack|Molly"
+                "Hold on tight, Ray|Nora"
             })
     void read_nameTheCodeCannotGender_leavesTheGenderUnknown(final String quote, final String name)
             throws JsonProcessingException {
-        final Answer answer = read("male", quote, name, ENGLISH, english(JACK_PLACE));
+        final Answer answer = read("male", quote, name, ENGLISH, english(RAY_PLACE));
 
         assertThat(answer).isEqualTo(new Answer("unknown", ""));
     }
@@ -143,9 +144,9 @@ class NarratorGenderEvidenceTest {
 
     @Test
     void genderOf_glossaryPersonByOneWordOfItsTerm_takesItsGender() {
-        final GlossaryEntry rikki =
-                new GlossaryEntry("g3", "p1", "Rikki Wildside", null, TermType.CHARACTER, Gender.FEMALE, false);
+        final GlossaryEntry lena =
+                new GlossaryEntry("g3", "p1", "Lena Brightwater", null, TermType.CHARACTER, Gender.FEMALE, false);
 
-        assertThat(english(rikki).genderOf("Rikki, come here", "Rikki")).contains(Gender.FEMALE);
+        assertThat(english(lena).genderOf("Lena, come here", "Lena")).contains(Gender.FEMALE);
     }
 }

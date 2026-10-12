@@ -111,23 +111,23 @@ class EchoCheckTest {
             null,
             List.of("Тарас Бульба", "Остап Бульба"));
     private static final SoftCheckInput GLOSSARY_NAME_ECHO_SKIPS = SoftCheckFixtures.scriptEcho(
-            "Bartimaeus!",
-            "Bartimaeus!",
+            "Zerubin!",
+            "Zerubin!",
             "en",
             "uk",
             NamePolicy.TRANSLITERATE,
             ForeignPassagePolicy.TRANSLATE,
             null,
-            List.of("Bartimaeus"));
+            List.of("Zerubin"));
     private static final SoftCheckInput GLOSSARY_NAME_WITH_WORDS_NOT_BLOCKING = SoftCheckFixtures.scriptEcho(
-            "Bartimaeus said.",
-            "Bartimaeus said.",
+            "Zerubin said.",
+            "Zerubin said.",
             "en",
             "uk",
             NamePolicy.TRANSLITERATE,
             ForeignPassagePolicy.TRANSLATE,
             null,
-            List.of("Bartimaeus"));
+            List.of("Zerubin"));
     private static final SoftCheckInput TRANSLATE_POLICY_MARKED_BLOCK_FAILS = SoftCheckFixtures.scriptEcho(
             "Je ne regrette rien.",
             "Je ne regrette rien.",

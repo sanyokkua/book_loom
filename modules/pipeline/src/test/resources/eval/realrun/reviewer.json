@@ -277,8 +277,8 @@
   "long": false,
   "glossary": [
    {
-    "term": "Blue Lights",
-    "target": "Сині Вогні",
+    "term": "Red Lantern",
+    "target": "Червоний Ліхтар",
     "type": "PLACE",
     "gender": "UNKNOWN",
     "locked": false
@@ -293,8 +293,8 @@
     "note": ""
    },
    {
-    "source": "Nobody had been to the Blue Lights since the war.",
-    "candidate": "Ніхто не бував у Синіх Вогнях від часів війни.",
+    "source": "Nobody had been to the Red Lantern since the war.",
+    "candidate": "Ніхто не бував у Червоному Ліхтарі від часів війни.",
     "defective": false,
     "note": ""
    },

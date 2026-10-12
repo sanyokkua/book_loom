@@ -79,7 +79,7 @@ final class CriterionFit {
 
     // A name's form is the glossary's and the sentence's business: a meaning, gender or agreement edit that re-inflects
     // a
-    // name (Джеку → Джек, Хром → Хромів) made the text worse in a real run, so only a terminology edit may touch one.
+    // name (Дейне → Дейн, Ембер → Емберів) made the text worse in a real run, so only a terminology edit may touch one.
     static boolean changesNameForm(final String quote, final String replacement, final Collection<String> renderings) {
         // Only a rendering that starts with a capital is a name's: the lexicon's common-noun renderings (господар) are
         // meant to be inflected and are never held to their spelling.

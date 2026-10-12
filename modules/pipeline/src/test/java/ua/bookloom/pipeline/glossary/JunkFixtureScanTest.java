@@ -30,7 +30,7 @@ class JunkFixtureScanTest {
     private static final List<String> OWN_TERMS =
             List.of("Earth", "Institute", "Moon", "NASA Solar System", "Exploration");
     private static final List<String> JUNK =
-            List.of("T-shirt", "Yellow Pages", "CROYDON", "Hyperion Books", "Jonathan Stroud", "Stroud", "Jonathan");
+            List.of("T-shirt", "Yellow Pages", "BRANWICK", "Larkspur Books", "Hallam Crane", "Crane", "Hallam");
 
     @Test
     void candidates_fixtureWithJunkAdded_proposeOnlyTheNamesAndTheBooksOwnTerms() {
@@ -90,9 +90,9 @@ class JunkFixtureScanTest {
 
     private static List<String> front() {
         final List<String> lines = new ArrayList<>();
-        lines.addAll(copies("Jonathan Stroud", 4));
-        lines.addAll(copies("Published by Hyperion Books in New York", 4));
-        lines.addAll(copies("Hyperion Books and Jonathan Stroud, Printed in CROYDON", 4));
+        lines.addAll(copies("Hallam Crane", 4));
+        lines.addAll(copies("Published by Larkspur Books in New York", 4));
+        lines.addAll(copies("Larkspur Books and Hallam Crane, Printed in BRANWICK", 4));
         return lines;
     }
 
@@ -100,14 +100,14 @@ class JunkFixtureScanTest {
         final List<String> lines = new ArrayList<>();
         lines.addAll(copies("The boy wore a stained T-shirt that day.", 4));
         lines.addAll(copies("They looked it up in the Yellow Pages again.", 4));
-        lines.addAll(copies("The sign over the road said CROYDON in red.", 4));
-        lines.addAll(copies("Printed in CROYDON by CPI Books and sold by Hyperion Books", 4));
-        lines.addAll(copies("Text copyright © 2003 by Jonathan Stroud", 4));
+        lines.addAll(copies("The sign over the road said BRANWICK in red.", 4));
+        lines.addAll(copies("Printed in BRANWICK by CPI Books and sold by Larkspur Books", 4));
+        lines.addAll(copies("Text copyright © 2003 by Hallam Crane", 4));
         return lines;
     }
 
     private static List<String> back() {
-        return copies("Also by Jonathan Stroud: Hyperion Books titles", 4);
+        return copies("Also by Hallam Crane: Larkspur Books titles", 4);
     }
 
     private static Unit unit(final String id, final UnitRole role, final List<String> paragraphs) {

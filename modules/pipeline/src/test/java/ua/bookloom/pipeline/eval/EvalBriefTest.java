@@ -38,7 +38,7 @@ class EvalBriefTest {
     }
 
     @Test
-    void of_burningChromePreset_givesTheStyleSheetOfTheRealRunsBrief() {
+    void of_glassHarbourPreset_givesTheStyleSheetOfTheRealRunsBrief() {
         final BookBrief real = new BookBrief(
                 "en",
                 "uk",
@@ -54,7 +54,7 @@ class EvalBriefTest {
                 BookBrief.defaults("en").alsoTranslate(),
                 QualityDial.BALANCED);
 
-        final BookBrief eval = EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "burning-chrome"));
+        final BookBrief eval = EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour"));
 
         assertThat(StyleSheet.from(eval).text()).isEqualTo(StyleSheet.from(real).text());
         assertThat(StyleSheet.from(eval).text()).contains(REAL_RUN_STYLE.strip());
@@ -66,7 +66,7 @@ class EvalBriefTest {
                 "en",
                 "uk",
                 Map.of(
-                        "BOOKLOOM_EVAL_PRESET", "burning-chrome",
+                        "BOOKLOOM_EVAL_PRESET", "glass-harbour",
                         "BOOKLOOM_EVAL_REGISTER", "casual",
                         "BOOKLOOM_EVAL_NAMES", "keep",
                         "BOOKLOOM_EVAL_GENRE", "noir",
@@ -92,13 +92,13 @@ class EvalBriefTest {
     }
 
     private Path goldFile() throws IOException {
-        final Path file = dir.resolve("chrome.gold.json");
+        final Path file = dir.resolve("harbour.gold.json");
         Files.writeString(file, """
-                {"book": "Burning Chrome.epub", "sourceLanguage": "en", "targetLanguage": "uk",
+                {"book": "Glass Harbour.epub", "sourceLanguage": "en", "targetLanguage": "uk",
                  "brief": {"genre": "cyberpunk short stories", "genreClass": ["cyberpunk"], "register": "CASUAL",
                            "voiceEra": "hard-boiled 1980s slang", "names": "TRANSLITERATE",
                            "narrator": "FIRST", "narratorGender": "MALE"},
-                 "characters": [{"term": "Rikki", "type": "CHARACTER", "gender": "FEMALE"}]}
+                 "characters": [{"term": "Lena", "type": "CHARACTER", "gender": "FEMALE"}]}
                 """);
         return file;
     }
@@ -122,7 +122,7 @@ class EvalBriefTest {
                 "en",
                 "uk",
                 Map.of(
-                        "BOOKLOOM_EVAL_PRESET", "burning-chrome",
+                        "BOOKLOOM_EVAL_PRESET", "glass-harbour",
                         "BOOKLOOM_EVAL_GOLD", goldFile().toString(),
                         "BOOKLOOM_EVAL_GENRE", "noir"));
 
@@ -134,7 +134,7 @@ class EvalBriefTest {
 
     @Test
     void of_noGold_leavesTheNarratorUnstated() {
-        assertThat(EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "burning-chrome"))
+        assertThat(EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour"))
                         .narrator())
                 .isEqualTo(Narrator.unspecified());
     }
@@ -143,12 +143,12 @@ class EvalBriefTest {
     void of_unknownPreset_failsNamingThePresets() {
         assertThatThrownBy(() -> EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "nope")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("burning-chrome");
+                .hasMessageContaining("glass-harbour");
     }
 
     @Test
     void project_withThePreset_sendsTheRealRunsStyleSheet() {
-        final BookBrief brief = EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "burning-chrome"));
+        final BookBrief brief = EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour"));
         final EvalProject project = EvalProject.of(
                 EvalProject.Setup.single("en", "uk", List.of(), EvalContext.none(), "He ran."),
                 (kind, segment, request) -> null,

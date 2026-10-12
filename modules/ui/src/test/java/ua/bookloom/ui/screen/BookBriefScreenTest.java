@@ -263,14 +263,14 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         NarratorPerson.UNSPECIFIED,
                         Gender.UNKNOWN,
                         Map.of(
-                                BriefField.REGISTER, new FieldEvidence(List.of("Hang on, man"), 2, 2),
+                                BriefField.REGISTER, new FieldEvidence(List.of("Hold on, man"), 2, 2),
                                 BriefField.GENRE, new FieldEvidence(List.of(), 1, 2)))));
 
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-evidence-register"));
 
         assertThat(((Label) required("brief-evidence-register")).getText())
-                .isEqualTo("“Hang on, man” · 2 of 2 samples agree");
+                .isEqualTo("“Hold on, man” · 2 of 2 samples agree");
         assertThat(isShown("brief-evidence-register-uncertain")).isFalse();
         assertThat(isShown("brief-evidence-genre-uncertain")).isTrue();
         assertThat(((Label) required("brief-evidence-genre-uncertain")).getText())
@@ -292,7 +292,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         null,
                         NarratorPerson.UNSPECIFIED,
                         Gender.UNKNOWN,
-                        Map.of(BriefField.REGISTER, new FieldEvidence(List.of("Hang on, man"), 2, 2)))));
+                        Map.of(BriefField.REGISTER, new FieldEvidence(List.of("Hold on, man"), 2, 2)))));
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-evidence-register"));
 
@@ -315,9 +315,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         null,
                         NarratorPerson.FIRST,
                         Gender.MALE,
-                        Map.of(
-                                BriefField.NARRATOR_GENDER,
-                                new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2)))));
+                        Map.of(BriefField.NARRATOR_GENDER, new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2)))));
 
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-tone-narrator-gender-suggested"));
@@ -325,7 +323,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(((Label) required("brief-tone-narrator-gender-suggested")).getText())
                 .isEqualTo("Male (suggested)");
         assertThat(((Label) required("brief-evidence-narrator-gender")).getText())
-                .isEqualTo("“Hang on to your ass, Jack” · 1 of 2 samples agrees");
+                .isEqualTo("“Hold on tight, Ray” · 1 of 2 samples agrees");
         assertThat(isShown("brief-evidence-narrator-gender-uncertain")).isFalse();
 
         onFx(() -> briefModel().setNarratorGender(Gender.FEMALE));

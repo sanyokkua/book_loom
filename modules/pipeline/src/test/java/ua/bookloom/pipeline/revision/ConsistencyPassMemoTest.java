@@ -105,7 +105,7 @@ class ConsistencyPassMemoTest {
     private static final PassOptions EXPORT = new PassOptions(true, false);
     private static final ContextSnapshot SNAPSHOT =
             new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
-    private static final String QUOTED = "«Біжи, Боббі», — сказав я. Він побіг.";
+    private static final String QUOTED = "«Біжи, Денні», — сказав я. Він побіг.";
     private static final String UNCHANGED = "{\"unchanged\":true}";
 
     private void scriptFirstExport(final String draft) {
@@ -121,13 +121,13 @@ class ConsistencyPassMemoTest {
     void runExport_flaggedSegmentRetriedWithoutChange_sendsNoCallOnTheNextExport() {
         ReviewFixtures.update(
                 book.desk(),
-                RevisionBook.RUN_BOBBY,
+                RevisionBook.RUN_DANNY,
                 record -> record.withStatus(SegmentStatus.FLAGGED)
                         .withMachineTarget(QUOTED, QUOTED)
                         .withFindings(List.of(new QaFinding("completeness", Severity.HIGH, "a sentence", "dropped"))));
-        ReviewFixtures.withContext(book.desk(), RevisionBook.RUN_BOBBY, SNAPSHOT);
+        ReviewFixtures.withContext(book.desk(), RevisionBook.RUN_DANNY, SNAPSHOT);
         // The retry loses the quote marks, so it is refused and the segment stays as it was.
-        scriptFirstExport("Біжи, Боббі, сказав я. Він побіг.");
+        scriptFirstExport("Біжи, Денні, сказав я. Він побіг.");
         ok(book.runExport(EXPORT));
         final int firstExport = book.model().requests().size();
 
@@ -140,9 +140,9 @@ class ConsistencyPassMemoTest {
     // IF an audit-doubted segment were drafted again on every export, THEN the same doubt cost a call each time.
     @Test
     void runExport_auditDoubtedSegmentRetriedWithoutChange_sendsNoCallOnTheNextExport() {
-        final String doubled = "Боббі зайшов зайшов. Він сів.";
-        book.decide(RevisionBook.BOBBY, doubled, doubled);
-        ReviewFixtures.withContext(book.desk(), RevisionBook.BOBBY, SNAPSHOT);
+        final String doubled = "Денні зайшов зайшов. Він сів.";
+        book.decide(RevisionBook.DANNY, doubled, doubled);
+        ReviewFixtures.withContext(book.desk(), RevisionBook.DANNY, SNAPSHOT);
         // The retry gives the same text back: no better, so the old one is kept.
         scriptFirstExport(doubled);
         ok(book.runExport(EXPORT));
@@ -157,13 +157,13 @@ class ConsistencyPassMemoTest {
     // IF the memory ignored the glossary, THEN a name fixed by the person would never get its paragraph drafted again.
     @Test
     void runExport_glossaryChangedSinceTheLastExport_draftsTheDoubtedSegmentAgain() {
-        final String doubled = "Боббі зайшов зайшов. Він сів.";
-        book.decide(RevisionBook.BOBBY, doubled, doubled);
-        ReviewFixtures.withContext(book.desk(), RevisionBook.BOBBY, SNAPSHOT);
+        final String doubled = "Денні зайшов зайшов. Він сів.";
+        book.decide(RevisionBook.DANNY, doubled, doubled);
+        ReviewFixtures.withContext(book.desk(), RevisionBook.DANNY, SNAPSHOT);
         scriptFirstExport(doubled);
         ok(book.runExport(EXPORT));
         final long firstDrafts = drafts();
-        book.add(book.character("Bobby", "Боббі", Gender.MALE, false));
+        book.add(book.character("Danny", "Денні", Gender.MALE, false));
         scriptFirstExport(doubled);
 
         ok(book.runExport(EXPORT));

@@ -325,8 +325,8 @@ class ExportCompleteDialogTest extends ShellTestBase {
         assertThat(scene.getRoot().lookup("#export-complete-report")).isNull();
     }
 
-    private static final Path LONG_BOOK = Path.of("/Users/someone/Documents/Translations/Burning Chrome — the second"
-            + " attempt/with a very long folder name that goes on and on/Burning Chrome.uk.epub");
+    private static final Path LONG_BOOK = Path.of("/Users/someone/Documents/Translations/Glass Harbour — the second"
+            + " attempt/with a very long folder name that goes on and on/Glass Harbour.uk.epub");
 
     private void showLongPathCopyingTo(final List<String> copied) {
         final ExportReport report =

@@ -52,7 +52,7 @@ class SequenceFixtureTest {
                         NarratorPerson.THIRD);
         assertThat(fixture.glossary())
                 .extracting(SequenceFixture.GlossarySeed::term)
-                .contains("Nathaniel", "Lovelace", "Bartimaeus");
+                .contains("Edwin", "Ashdown", "Zerubin");
     }
 
     @Test
@@ -145,15 +145,7 @@ class SequenceFixtureTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "Nathaniel,25",
-        "Bartimaeus,25",
-        "Underwood,60",
-        "Lovelace,25",
-        "Whitlock,20",
-        "Harrowgate,15",
-        "Quill,20"
-    })
+    @CsvSource({"Edwin,25", "Zerubin,25", "Pellbury,60", "Ashdown,25", "Whitlock,20", "Harrowgate,15", "Quill,20"})
     void bookText_name_occursInAtLeastTheExpectedNumberOfParagraphs(final String name, final long least) {
         final Pattern pattern = Pattern.compile("\\b" + name + "\\b");
 
@@ -168,8 +160,8 @@ class SequenceFixtureTest {
     void bookText_fixture_carriesTheShapesTheRealRunBrokeOn() {
         final String book = SequenceFixture.bookText();
 
-        assertThat(book).contains("\n— ", "‘", "B-Bartimaeus", "Stoke-on-Marsh", "the Old Bailey");
-        assertThat(book).contains("Great Hall", "£12", "March 14th", "1887", "4:30", "I am Bartimaeus");
+        assertThat(book).contains("\n— ", "‘", "Z-Zerubin", "Stoke-on-Marsh", "the Old Bailey");
+        assertThat(book).contains("Great Hall", "£12", "March 14th", "1887", "4:30", "I am Zerubin");
         assertThat(book).contains("\n[1] ", "[2](#n2)", "**twice**", "  \nthe spirit waits");
         assertThat(paragraphs()).anyMatch(line -> line.startsWith("\"") && line.contains(" '"));
         assertThat(paragraphs().stream().filter(line -> LATIN.matcher(line).find()))

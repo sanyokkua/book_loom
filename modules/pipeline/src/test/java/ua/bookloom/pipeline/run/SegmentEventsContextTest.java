@@ -33,14 +33,14 @@ class SegmentEventsContextTest {
                 "A boy summons a djinni.",
                 "Plain prose.",
                 List.of(new SnapshotRendering("magician", "чарівник")),
-                List.of("Nathaniel — male"));
+                List.of("Edwin — male"));
 
         events.contextAssembled("Book.md:0", snapshot);
 
         assertThat(emitted).singleElement().isInstanceOfSatisfying(ContextAssembled.class, assembled -> {
             final ContextSnapshot shown = assembled.context();
             assertThat(shown.lexicon()).containsExactly(new SnapshotRendering("magician", "чарівник"));
-            assertThat(shown.characters()).containsExactly("Nathaniel — male");
+            assertThat(shown.characters()).containsExactly("Edwin — male");
             assertThat(shown.precedingTargets()).containsExactly("Він пішов.");
             assertThat(shown.styleSheet()).isEqualTo("Plain prose.");
         });

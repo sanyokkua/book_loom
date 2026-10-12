@@ -18,8 +18,8 @@ import ua.bookloom.pipeline.prompt.AddressTerms;
 
 /**
  * Decides whether a quote the model gave for the narrator's gender shows that gender in words the code can check. Two
- * kinds of quote do: one that calls the narrator by a name, or in which the narrator gives it ("Hang on to your ass,
- * Jack"), when that name stands in the quote and is a glossary person of known gender or a listed first name, whose
+ * kinds of quote do: one that calls the narrator by a name, or in which the narrator gives it ("Hold on tight,
+ * Ray"), when that name stands in the quote and is a glossary person of known gender or a listed first name, whose
  * gender it then is; and one that addresses the narrator with a word of the source language's {@code addressTerms}
  * ({@code ma'am}, {@code пане}), when the quote holds words of one gender only. The model's own word for the gender never
  * decides it. That the quote exists in the sample is checked by the caller.
@@ -94,7 +94,7 @@ final class NarratorGenderEvidence {
         return GivenNames.genderOf(name, languageTag);
     }
 
-    // A person is named by the whole term ("Rikki Wildside") or by one word of it ("Rikki").
+    // A person is named by the whole term ("Lena Brightwater") or by one word of it ("Lena").
     private static boolean namedBy(final GlossaryEntry entry, final String name, final List<String> nameWords) {
         if (entry.term().strip().equalsIgnoreCase(name)) {
             return true;

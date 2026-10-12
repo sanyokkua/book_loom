@@ -12,8 +12,8 @@ import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 
 /**
- * Whether a glossary name the source calls out — set off by a comma at the start or end of a sentence, {@code Finn, you
- * never listen} / {@code you never listen, Finn?} — is still in the target. A name in that position is the easiest to
+ * Whether a glossary name the source calls out — set off by a comma at the start or end of a sentence, {@code Dane, you
+ * never listen} / {@code you never listen, Dane?} — is still in the target. A name in that position is the easiest to
  * lose: the sentence reads whole without it, so no length check notices. The name may be declined, so the target is
  * held to the same stem match the lexicon uses. Blocking.
  */
@@ -24,7 +24,7 @@ final class VocativeCheck {
 
     private static final String ARROW = " → ";
     private static final String CLOSERS = "[\\s.!?…»”\"’)]*";
-    // The mark that closes a quoted word before the name (Boys,' Bobby), the one that closes the speech after it,
+    // The mark that closes a quoted word before the name (Lads,' Danny), the one that closes the speech after it,
     // and the short dialogue tag that may follow it (I said).
     private static final String BEFORE_NAME = "[,;][’'”\"]*\\s+";
     private static final String SPEECH_END = "[,.!?…]*[»”\"’')]+";

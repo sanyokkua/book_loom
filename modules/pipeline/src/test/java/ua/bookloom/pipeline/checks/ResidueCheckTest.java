@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** Reply residue (JSON closers, wrapper labels) the model leaves in a target, from the Burning Chrome hand run. */
+/** Reply residue (JSON closers, wrapper labels) the model leaves in a target, from the Glass Harbour hand run. */
 class ResidueCheckTest {
 
     @ParameterizedTest(name = "{0}")

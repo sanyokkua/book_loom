@@ -89,9 +89,9 @@ class TermMappingVerifierTest {
     @Test
     void verify_hyphenatedTargetWord_holdsEachPart() {
         final var pairs = TermMappingVerifier.verify(
-                Map.of("Bartimaeus", "Бартімей"), List.of("Bartimaeus"), "B-Bartimaeus came.", "Б-Бартімей прийшов.");
+                Map.of("Zerubin", "Зерубін"), List.of("Zerubin"), "Z-Zerubin came.", "З-Зерубін прийшов.");
 
-        assertThat(pairs).containsExactly(new TermMappingVerifier.Pair("Bartimaeus", "Бартімей"));
+        assertThat(pairs).containsExactly(new TermMappingVerifier.Pair("Zerubin", "Зерубін"));
     }
 
     @ParameterizedTest
@@ -113,19 +113,19 @@ class TermMappingVerifierTest {
         assertThat(pairs).hasSize(1);
     }
 
-    // IF the stem rule were one-sided, THEN a glossary Боббі would be "missing" from a text that writes Бобі, and the
+    // IF the stem rule were one-sided, THEN a glossary Денні would be "missing" from a text that writes Дені, and the
     // reverse would pass: the two spellings of one name must be judged alike.
     @ParameterizedTest
     @CsvSource({
-        "Боббі,Бобі сказав це.",
-        "Бобі,Боббі сказав це.",
+        "Денні,Дені сказав це.",
+        "Дені,Денні сказав це.",
         "Майлз,Майлс сказав це.",
         "Майлс,Майлз сказав це.",
-        "Боббі,Боббі сказав це."
+        "Денні,Денні сказав це."
     })
     void verify_nameSpelledWithDoubledLetterOrVoicedFinal_holdsBothWays(final String rendering, final String target) {
         final var pairs = TermMappingVerifier.verify(
-                Map.of("Bobby", rendering), List.of("Bobby"), "Bobby said it.", target, List.of("гзж", "кцч", "хсш"));
+                Map.of("Danny", rendering), List.of("Danny"), "Danny said it.", target, List.of("гзж", "кцч", "хсш"));
 
         assertThat(pairs).hasSize(1);
     }
@@ -133,10 +133,10 @@ class TermMappingVerifierTest {
     @Test
     void verify_unrelatedNameSharingAStart_isStillDropped() {
         assertThat(TermMappingVerifier.verify(
-                        Map.of("Bobby", "Боббі"),
-                        List.of("Bobby"),
-                        "Bobby said it.",
-                        "Бобер сказав це.",
+                        Map.of("Danny", "Денні"),
+                        List.of("Danny"),
+                        "Danny said it.",
+                        "Денер сказав це.",
                         List.of("гзж")))
                 .isEmpty();
     }

@@ -83,34 +83,17 @@ final class SequenceBookLibrary {
             "£12 in loose coins",
             "6,500 bricks");
 
-    static final List<String> NAME = List.of(
-            "Nathaniel",
-            "Nathaniel",
-            "Nathaniel",
-            "Bartimaeus",
-            "Bartimaeus",
-            "Bartimaeus",
-            "Underwood",
-            "Whitlock",
-            "Quill");
+    static final List<String> NAME =
+            List.of("Edwin", "Edwin", "Edwin", "Zerubin", "Zerubin", "Zerubin", "Pellbury", "Whitlock", "Quill");
 
-    static final List<String> MR = List.of("Mr Underwood", "Mr Underwood", "Mr Whitlock", "Mr Quill");
+    static final List<String> MR = List.of("Mr Pellbury", "Mr Pellbury", "Mr Whitlock", "Mr Quill");
 
-    static final List<String> MRS = List.of("Mrs Underwood", "Mrs Underwood", "Mrs Harrowgate");
+    static final List<String> MRS = List.of("Mrs Pellbury", "Mrs Pellbury", "Mrs Harrowgate");
 
-    static final List<String> MS = List.of("Ms Lovelace", "Ms Lovelace", "Ms Pennyfeather");
+    static final List<String> MS = List.of("Ms Ashdown", "Ms Ashdown", "Ms Pennyfeather");
 
     static final List<String> SPEAKER = List.of(
-            "Nathaniel",
-            "Bartimaeus",
-            "{MR}",
-            "{MRS}",
-            "{MS}",
-            "the boy",
-            "the magician",
-            "the imp",
-            "Whitlock",
-            "Quill");
+            "Edwin", "Zerubin", "{MR}", "{MRS}", "{MS}", "the boy", "the magician", "the imp", "Whitlock", "Quill");
 
     static final List<String> LATIN = List.of(
             "*Fiat lux*",
@@ -143,7 +126,7 @@ final class SequenceBookLibrary {
             "The {ADJ} stairs creaked under {NAME}, one step at a time, all {NUMPHRASE} of them.",
             "A {ADJ} fog lay over {PLACE}, and the lamps hung in it like drowned moons.",
             "{NAME} muttered {LATIN} under his breath, and then looked embarrassed at having said it aloud.",
-            "He stammered the name twice, B-Bartimaeus, B-Bartimaeus, before it came out whole.",
+            "He stammered the name twice, Z-Zerubin, Z-Zerubin, before it came out whole.",
             "After {TIME}, nothing in {PLACE} was quite where it had been, and the servants learned not to ask.");
 
     static final List<String> SCENE1 = List.of(
@@ -189,12 +172,12 @@ final class SequenceBookLibrary {
             "We are all in danger tonight, so please be {EM}.");
 
     static final List<String> NAME_SPEECH = List.of(
-            "I am Bartimaeus, and I do not enjoy being kept waiting.",
-            "B-Bartimaeus, is that you?",
-            "Nathaniel! Nathaniel, answer me!",
-            "Call me Bartimaeus, or call me nothing, but do not call me imp.",
-            "Underwood has never been a spirit, and he has never been a good many things.",
-            "Ask Lovelace; she knows the whole story.",
+            "I am Zerubin, and I do not enjoy being kept waiting.",
+            "Z-Zerubin, is that you?",
+            "Edwin! Edwin, answer me!",
+            "Call me Zerubin, or call me nothing, but do not call me imp.",
+            "Pellbury has never been a spirit, and he has never been a good many things.",
+            "Ask Ashdown; she knows the whole story.",
             "Whitlock sent word from {PLACE} that the road is closed.",
             "Harrowgate will not like this, but Harrowgate does not like anything.");
 
@@ -269,7 +252,7 @@ final class SequenceBookLibrary {
                     + "who walks tonight beneath the moon  \nwill wish he had not come so soon.");
 
     static final List<String> FOOTNOTE = List.of(
-            "See the Underwood ledger, vol. 2, p. 114.",
+            "See the Pellbury ledger, vol. 2, p. 114.",
             "The Old Bailey records for 1887 give a different date.",
             "The phrase is Latin: let there be light.",
             "Here the manuscript is damaged; the missing words are guessed.",

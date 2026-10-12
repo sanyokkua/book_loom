@@ -22,15 +22,15 @@ import ua.bookloom.ui.ViewNames;
 class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry HAS_TARGET =
-            new GlossaryEntry("e1", "p1", "Nathaniel", "Натаніель", TermType.CHARACTER, Gender.MALE, false);
+            new GlossaryEntry("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry NO_TARGET =
-            new GlossaryEntry("e2", "p1", "Underwood", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            new GlossaryEntry("e2", "p1", "Pellbury", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry BLANK_TARGET =
-            new GlossaryEntry("e3", "p1", "Lovelace", "  ", TermType.CHARACTER, Gender.UNKNOWN, false);
+            new GlossaryEntry("e3", "p1", "Ashdown", "  ", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry SHOUTED =
-            new GlossaryEntry("e4", "p1", "CROYDON", "Кройдон", TermType.PLACE, Gender.UNKNOWN, false);
+            new GlossaryEntry("e4", "p1", "BRANWICK", "Бранвік", TermType.PLACE, Gender.UNKNOWN, false);
     private static final GlossaryEntry HYPHENATED =
-            new GlossaryEntry("e5", "p1", "Bull-head", "Бик", TermType.OTHER, Gender.UNKNOWN, false);
+            new GlossaryEntry("e5", "p1", "Ox-horn", "Волорог", TermType.OTHER, Gender.UNKNOWN, false);
 
     private static final String CARD = "no-target-card";
 
@@ -62,7 +62,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
         assertThat(isAsking()).isTrue();
         assertThat(textsUnder(required(CARD)))
                 .contains("2 entries have no target — the model will choose.", "Review names", "Start anyway");
-        assertThat(listedTerms()).containsExactly("Underwood", "Lovelace");
+        assertThat(listedTerms()).containsExactly("Pellbury", "Ashdown");
         assertThat(engine.requests()).isEmpty();
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.NAMES_STYLE);
     }
@@ -133,7 +133,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() ->
                         table().getItems().stream().map(GlossaryEntry::term).toList()))
-                .containsExactly("CROYDON", "Bull-head", "Nathaniel", "Underwood");
+                .containsExactly("BRANWICK", "Ox-horn", "Edwin", "Pellbury");
     }
 
     // IF the chips did not follow the rows, THEN a missing target or a likely junk term would look like any other row.

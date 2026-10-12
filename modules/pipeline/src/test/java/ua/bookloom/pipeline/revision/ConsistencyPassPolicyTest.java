@@ -2,8 +2,8 @@ package ua.bookloom.pipeline.revision;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
-import static ua.bookloom.pipeline.revision.RevisionBook.BOBBY;
-import static ua.bookloom.pipeline.revision.RevisionBook.RUN_BOBBY;
+import static ua.bookloom.pipeline.revision.RevisionBook.DANNY;
+import static ua.bookloom.pipeline.revision.RevisionBook.RUN_DANNY;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_MET_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
@@ -31,7 +31,7 @@ class ConsistencyPassPolicyTest {
             new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
     private static final String OLD = "Сем зустрів давнього друга.";
     private static final String REWRITTEN = "Самуїл побачив старого приятеля.";
-    private static final String GOOD = "Боббі зайшов, потім сів.";
+    private static final String GOOD = "Денні зайшов, потім сів.";
 
     @TempDir
     private Path tempDir;
@@ -57,15 +57,15 @@ class ConsistencyPassPolicyTest {
     // early paragraph while the mixed-script word of a later one stayed.
     @Test
     void run_twoFlaggedSegments_theOneWithABlockingFindingIsDraftedFirst() {
-        flagged(BOBBY, GOOD, "reviewer");
-        flagged(RUN_BOBBY, "Біжи, Боббі, — сказав я.", "quote-balance");
+        flagged(DANNY, GOOD, "reviewer");
+        flagged(RUN_DANNY, "Біжи, Денні, — сказав я.", "quote-balance");
         book.model().answerTo("draft", Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Stopped.")));
 
         final Result<ConsistencyReport> ran = book.runExport(EXPORT);
 
         assertThat(ran.error()).isNotNull();
         assertThat(book.model().requests()).hasSize(1);
-        assertThat(book.userMessage(0)).contains("Run, Bobby");
+        assertThat(book.userMessage(0)).contains("Run, Danny");
     }
 
     // IF an answer that rewrote most of a sound paragraph were stored, THEN the pass would trade a translation for a

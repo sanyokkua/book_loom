@@ -68,8 +68,8 @@ class NameMissingCheckTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "Bartimaeus|Бартімей|B-Bartimaeus came back.|Б-Бартімей повернувся.",
-                "Bartimaeus|Бартімей|Bartimaeus-senior came back.|Бартімей-старший повернувся.",
+                "Zerubin|Зерубін|Z-Zerubin came back.|З-Зерубін повернувся.",
+                "Zerubin|Зерубін|Zerubin-senior came back.|Зерубін-старший повернувся.",
                 "London|Лондон|The London police came.|Лондонського поліцейського викликали.",
                 "Prague|Прага|The Prague papers came.|Празькі газети надійшли.",
                 "Prague|Прага|Prague came.|Прага прийшла."
@@ -95,12 +95,12 @@ class NameMissingCheckTest {
     void lost_genuinelyMissingNameBesideAPresentOne_isStillReportedWithTermAndTarget() {
         final List<GlossaryEntry> glossary = List.of(
                 entry("Maurice", "Моріс", TermType.CHARACTER, false),
-                entry("Bartimaeus", "Бартімей", TermType.CHARACTER, false));
+                entry("Zerubin", "Зерубін", TermType.CHARACTER, false));
 
         final List<GlossaryEntry> lost =
-                NameMissingCheck.lost(glossary, "Maurice and Bartimaeus came.", "Моріс і хтось прийшли.", "uk");
+                NameMissingCheck.lost(glossary, "Maurice and Zerubin came.", "Моріс і хтось прийшли.", "uk");
 
-        assertThat(lost).extracting(GlossaryEntry::term).containsExactly("Bartimaeus");
+        assertThat(lost).extracting(GlossaryEntry::term).containsExactly("Zerubin");
     }
 
     @Test
@@ -136,20 +136,19 @@ class NameMissingCheckTest {
 
     @Test
     void lost_hyphenatedRenderingDeclinedInBothParts_isNotLost() {
-        final List<GlossaryEntry> glossary =
-                List.of(entry("Gentleman Loser", "Джентльмен-Лузер", TermType.PLACE, false));
+        final List<GlossaryEntry> glossary = List.of(entry("Copper Kettle", "Мідний-Казан", TermType.PLACE, false));
 
         assertThat(NameMissingCheck.lost(
-                        glossary, "Bobby drank in the Gentleman Loser.", "Боббі пив у Джентльмені-Лузері.", "uk"))
+                        glossary, "Danny drank in the Copper Kettle.", "Денні пив у Мідному-Казані.", "uk"))
                 .isEmpty();
     }
 
     @Test
     void lost_verbThatSpellsACharactersName_isNotTheCharacter() {
-        final List<GlossaryEntry> glossary = List.of(entry("Jack", "Джек", TermType.CHARACTER, false));
+        final List<GlossaryEntry> glossary = List.of(entry("Wade", "Вейд", TermType.CHARACTER, false));
 
         assertThat(NameMissingCheck.lost(
-                        glossary, "You can jack into the matrix.", "Можна підключитися до матриці.", "uk"))
+                        glossary, "You can wade into the matrix.", "Можна підключитися до матриці.", "uk"))
                 .isEmpty();
     }
 }

@@ -553,23 +553,23 @@
   "id": "omission-tail-partners",
   "kind": "omission",
   "check": "OMISSION",
-  "source": "Bobby was another one of those young-old faces you see drinking in the Gentleman Loser, the chic bar for computer cowboys, rustlers, cybernetic second-story men. We were partners.",
-  "good": "Боббі був ще одним із тих молодих-старих облич, які можна побачити за склянкою в «Джентльмені-Лузері», шикарному барі для комп'ютерних ковбоїв, розкрадачів та кібернетичних зломщиків. Ми були партнерами.",
-  "bad": "Боббі був ще одним із тих молодих-старих облич, які можна побачити за склянкою в «Джентльмені-Лузері», шикарному барі для комп'ютерних ковбоїв, розкрадачів та кібернетичних зломщиків.",
+  "source": "Danny was one of those sun-bleached old hands you meet drinking at the Copper Kettle, the narrow bar for ferrymen, net-menders, harbour pilots. We were partners.",
+  "good": "Денні був одним із тих вигорілих на сонці старих бувалих, яких можна зустріти за склянкою в «Мідному Чайнику», вузькому барі для поромників, сітярів, лоцманів. Ми були партнерами.",
+  "bad": "Денні був одним із тих вигорілих на сонці старих бувалих, яких можна зустріти за склянкою в «Мідному Чайнику», вузькому барі для поромників, сітярів, лоцманів.",
   "deterministic": true,
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [
    {
-    "term": "Bobby",
-    "target": "Боббі",
+    "term": "Danny",
+    "target": "Денні",
     "type": "CHARACTER",
     "gender": "MALE",
     "locked": false
    }
   ],
   "context": null,
-  "rationale": "Burning Chrome ch4 p14: the last source sentence is gone; the length ratio stays about 1.0, so only a sentence count sees it"
+  "rationale": "invented; shape from an owner run (omission of a list tail): the last source sentence is gone; the length ratio stays about 1.0, so only a sentence count sees it"
  },
  {
   "id": "omission-tail-short",
@@ -589,45 +589,45 @@
   "id": "vocative-name-lost",
   "kind": "vocative",
   "check": "VOCATIVE",
-  "source": "So when'd you ever buy anything you didn't know what it was, Finn?",
-  "good": "То коли це ти купував щось, не знаючи, що це таке, Фінне?",
-  "bad": "То коли це ти купував щось, чого не знав, що це?",
+  "source": "So when did you ever sign a paper you hadn't read first, Dane?",
+  "good": "То коли ти взагалі підписував папір, якого не прочитав, Дейне?",
+  "bad": "То коли ти взагалі підписував папір, якого не прочитав?",
   "deterministic": true,
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [
    {
-    "term": "Finn",
-    "target": "Фінн",
+    "term": "Dane",
+    "target": "Дейн",
     "type": "CHARACTER",
     "gender": "MALE",
     "locked": false
    }
   ],
   "context": null,
-  "rationale": "Burning Chrome ch4 p26: the vocative name at the end of the line is missing from the target"
+  "rationale": "invented; shape from an owner run (a trailing vocative): the vocative name at the end of the line is missing from the target"
  },
  {
   "id": "vocative-name-lost-leading",
   "kind": "vocative",
   "check": "VOCATIVE",
-  "source": "Finn, you never listen to anyone.",
-  "good": "Фінне, ти нікого не слухаєш.",
+  "source": "Dane, you never listen to anyone.",
+  "good": "Дейне, ти нікого не слухаєш.",
   "bad": "Ти нікого не слухаєш.",
   "deterministic": true,
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [
    {
-    "term": "Finn",
-    "target": "Фінн",
+    "term": "Dane",
+    "target": "Дейн",
     "type": "CHARACTER",
     "gender": "MALE",
     "locked": false
    }
   ],
   "context": null,
-  "rationale": "a leading vocative dropped; the declined form Фінне counts as present"
+  "rationale": "a leading vocative dropped; the declined form Дейне counts as present"
  },
  {
   "id": "female-name-flint-en",
@@ -649,7 +649,7 @@
    }
   ],
   "context": null,
-  "rationale": "invented consonant-ending name of a woman; the draft puts the verb after the name in the masculine (the Chrome class)",
+  "rationale": "invented consonant-ending name of a woman; the draft puts the verb after the name in the masculine (the Ember class)",
   "marker": "(?iu)флінт\\S*\\s+зупинилась|флінт\\S*\\s+зупинилася"
  },
  {

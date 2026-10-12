@@ -15,7 +15,7 @@ import ua.bookloom.api.project.Gender;
 
 /**
  * A woman's name in a Ukrainian text, held to two rules. A name that ends in a consonant does not decline when it is
- * a woman's (Хром, not Хрома, Хромові, Хромового), and the past-tense verb right after the name, in the same clause,
+ * a woman's (Ембер, not Ембера, Емберові, Емберового), and the past-tense verb right after the name, in the same clause,
  * ends as a woman's verb does (-ла), not as a man's (-в) — nor is the pronoun «він» put there. Only the narrator's
  * words are read, quoted speech and dash dialogue blanked, since another voice may be talking about her wrongly. Both
  * are suffix rules and can misread a word that ends like a verb, so the findings are soft.

@@ -35,7 +35,7 @@ import ua.bookloom.util.text.JunkRules;
  * name, in any language with capitals; a word on the language's bundled stop-word list never starts or joins a name.
  * A capitalised word at a sentence start counts when the book writes it with a capital mid-sentence at least
  * {@link #CREDIT_MIN_MID_SENTENCE} times, so a name that often opens a sentence is not undercounted, and a single word
- * that mostly occurs inside a longer name ({@code Simon} of {@code Simon Lovelace}) is not proposed on its own.
+ * that mostly occurs inside a longer name ({@code Garrick} of {@code Garrick Ashdown}) is not proposed on its own.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

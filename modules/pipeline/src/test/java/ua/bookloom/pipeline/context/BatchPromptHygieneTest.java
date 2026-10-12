@@ -33,7 +33,7 @@ class BatchPromptHygieneTest {
                 new DraftContext(
                         List.of(),
                         "Hale searches for his brother.",
-                        List.of("Hale → Гейл (character, male)", "1: ⟦g0⟧ → Бартімеус, person, male"),
+                        List.of("Hale → Гейл (character, male)", "1: ⟦g0⟧ → Зерубін, person, male"),
                         List.of("He left. → Він пішов.")),
                 List.of(new Pair("He left.", "Він пішов."), new Pair("It was late.", "Було пізно.")),
                 "She smiled.",

@@ -25,7 +25,7 @@
 # `lms load --context-length <N>` (default 16384) and, when a label is given, under the identifier `<model>-<label>`, so the
 # same model in two quants (or two context lengths) gives two reports. --models takes the same entries with the columns
 # joined by commas: "lmstudio:google/gemma-4-e4b,32768,q8". The brief the eval sends is BOOKLOOM_EVAL_PRESET (e.g.
-# burning-chrome), BOOKLOOM_EVAL_BRIEF (a JSON file) or BOOKLOOM_EVAL_REGISTER / _NAMES / _GENRE / _DIAL; they pass through.
+# glass-harbour), BOOKLOOM_EVAL_BRIEF (a JSON file) or BOOKLOOM_EVAL_REGISTER / _NAMES / _GENRE / _DIAL; they pass through.
 # The window is the model's reported context length capped at 16384 (as a run does) unless BOOKLOOM_EVAL_WINDOW is set.
 # --suite prescan|terms|setup|consistency|retry runs the model-call stages the other suites never reach (A4), each through
 # its production class on small invented fixtures (eval/stages/*.json; reports end in -<suite>.json): prescan = the glossary

@@ -87,11 +87,11 @@ class NameWindowsTest {
                 .contains(tuple("Wren stood. She left.", Gender.FEMALE));
     }
 
-    // IF a speaker's pronoun proved a gender, THEN the model could cite Tiger's "he" for Chrome (Burning Chrome).
+    // IF a speaker's pronoun proved a gender, THEN the model could cite Badger's "he" for Ember (Glass Harbour).
     @Test
     void of_pronounOnlyInsideStraightQuotedSpeech_provesNoGender() {
-        final Evidence evidence = windowsOf(
-                entry("Chrome", TermType.CHARACTER), List.of("Chrome nodded. \"He never pays,\" said Tiger."));
+        final Evidence evidence =
+                windowsOf(entry("Ember", TermType.CHARACTER), List.of("Ember nodded. \"He never pays,\" said Badger."));
 
         assertThat(evidence.windows()).extracting(Window::pronoun).containsOnlyNulls();
         assertThat(evidence.shows(List.of(1), Gender.MALE)).isFalse();
@@ -114,16 +114,16 @@ class NameWindowsTest {
                 .isEmpty();
     }
 
-    // IF an object form counted against the name's own subject pronouns, THEN "Tiger hit him" made Tiger a man.
+    // IF an object form counted against the name's own subject pronouns, THEN "Badger hit him" made Badger a man.
     @Test
     void of_objectFormWhileSubjectPronounsNameTheOtherGender_givesTheWindowNoPronoun() {
         final Evidence evidence = windowsOf(
-                entry("Tiger", TermType.CHARACTER),
+                entry("Badger", TermType.CHARACTER),
                 List.of(
-                        "Tiger hit him.",
-                        "Tiger laughed. She ran.",
-                        "Tiger laughed. She ran.",
-                        "Tiger laughed. She ran."));
+                        "Badger hit him.",
+                        "Badger laughed. She ran.",
+                        "Badger laughed. She ran.",
+                        "Badger laughed. She ran."));
 
         assertThat(evidence.windows())
                 .extracting(Window::pronoun)
@@ -133,7 +133,7 @@ class NameWindowsTest {
 
     @Test
     void of_objectFormWithNoSubjectPronouns_stillGivesTheWindowItsGender() {
-        final Evidence evidence = windowsOf(entry("Tiger", TermType.CHARACTER), List.of("Tiger hit him."));
+        final Evidence evidence = windowsOf(entry("Badger", TermType.CHARACTER), List.of("Badger hit him."));
 
         assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE);
     }

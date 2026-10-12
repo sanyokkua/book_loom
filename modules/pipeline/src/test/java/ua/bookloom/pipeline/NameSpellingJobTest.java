@@ -34,30 +34,30 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
  * A glossary name with no target gets the spelling the book used for it, as a suggestion. The model here never reports
- * anything, writes «Бартімей» for {@code Bartimaeus} three times and then drifts to «Бартимей» unless its prompt names
+ * anything, writes «Зерубін» for {@code Zerubin} three times and then drifts to «Зерубин» unless its prompt names
  * the spelling; each chapter is one chunk, so the third chapter's pairs are learned before the fourth is read.
  */
 class NameSpellingJobTest {
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
     private static final Pattern SHOWN = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
-    private static final String SPELLING_LINE = "Bartimaeus → Бартімей";
-    private static final String P4 = "Bartimaeus sat in the dark.";
+    private static final String SPELLING_LINE = "Zerubin → Зерубін";
+    private static final String P4 = "Zerubin sat in the dark.";
     private static final List<List<String>> CHAPTERS = List.of(
-            List.of("Bartimaeus walked to the harbour.", "The boats rested in the harbour."),
-            List.of("Bartimaeus opened the old door.", "The lamp burned all night."),
-            List.of("Bartimaeus smiled at the sea.", "The wind rose over the hills."),
+            List.of("Zerubin walked to the harbour.", "The boats rested in the harbour."),
+            List.of("Zerubin opened the old door.", "The lamp burned all night."),
+            List.of("Zerubin smiled at the sea.", "The wind rose over the hills."),
             List.of(P4, "The bell rang twice."));
     private static final Map<String, String> TARGETS = Map.of(
-            "Bartimaeus walked to the harbour.",
+            "Zerubin walked to the harbour.",
             "%s пішов до гавані.",
             "The boats rested in the harbour.",
             "Човни спокійно стояли біля причалу.",
-            "Bartimaeus opened the old door.",
+            "Zerubin opened the old door.",
             "%s відчинив старі двері.",
             "The lamp burned all night.",
             "Лампа горіла цілу ніч.",
-            "Bartimaeus smiled at the sea.",
+            "Zerubin smiled at the sea.",
             "%s посміхнувся морю.",
             "The wind rose over the hills.",
             "Вітер здійнявся над пагорбами.",
@@ -74,7 +74,7 @@ class NameSpellingJobTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    /** Never reports terms; drifts to «Бартимей» in the fourth chapter unless its prompt names «Бартімей». */
+    /** Never reports terms; drifts to «Зерубин» in the fourth chapter unless its prompt names «Зерубін». */
     private static final class DriftingModel implements ChatModel {
 
         private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
@@ -83,7 +83,7 @@ class NameSpellingJobTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String user = userMessage(request);
-            final String name = user.contains(P4) && !user.contains(SPELLING_LINE) ? "Бартимей" : "Бартімей";
+            final String name = user.contains(P4) && !user.contains(SPELLING_LINE) ? "Зерубин" : "Зерубін";
             final Matcher items = ITEM.matcher(user);
             final List<String> entries = new ArrayList<>();
             while (items.find()) {
@@ -110,12 +110,11 @@ class NameSpellingJobTest {
                 project(TestBooks.epub(tempDir.resolve("Book.epub"), CHAPTERS, "en"), brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
-                        "g1", project.id(), "Bartimaeus", target, TermType.CHARACTER, Gender.MALE, locked));
+                .add(new GlossaryEntry("g1", project.id(), "Zerubin", target, TermType.CHARACTER, Gender.MALE, locked));
         return project;
     }
 
-    private static GlossaryEntry bartimaeus(final TestProject project) {
+    private static GlossaryEntry zerubin(final TestProject project) {
         return Objects.requireNonNull(
                         project.stores().glossary().all(project.id()).data())
                 .getFirst();
@@ -138,20 +137,20 @@ class NameSpellingJobTest {
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED))
                 .run());
 
-        assertThat(bartimaeus(project).target()).isEqualTo("Бартімей");
-        assertThat(bartimaeus(project).isSuggested()).isTrue();
-        assertThat(storedTargets(project)).noneMatch(target -> target.contains("Бартимей"));
+        assertThat(zerubin(project).target()).isEqualTo("Зерубін");
+        assertThat(zerubin(project).isSuggested()).isTrue();
+        assertThat(storedTargets(project)).noneMatch(target -> target.contains("Зерубин"));
     }
 
     @Test
     void run_nameWithTheMansOwnTarget_isNeverReplacedByWhatTheBookUsed() {
         final DriftingModel model = new DriftingModel();
-        final TestProject project = book(false, "Бартимей");
+        final TestProject project = book(false, "Зерубин");
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED))
                 .run());
 
-        assertThat(bartimaeus(project).target()).isEqualTo("Бартимей");
-        assertThat(bartimaeus(project).isSuggested()).isFalse();
+        assertThat(zerubin(project).target()).isEqualTo("Зерубин");
+        assertThat(zerubin(project).isSuggested()).isFalse();
     }
 }

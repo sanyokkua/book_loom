@@ -34,7 +34,7 @@ import ua.bookloom.api.project.LexiconEntry;
  * has clearly overtaken it ({@link #retained}): a term the model renders two ways would otherwise lose its rendering
  * the moment the second way is used three times, and the book would be left with a hint that came and went. A glossary
  * name whose target is empty is tracked with {@link #trackName}; its candidates are the capitalised target words, and
- * the spellings that share a stem ({@code Бартімей}, {@code Бартимей}) count as one.
+ * the spellings that share a stem ({@code Зерубін}, {@code Зерубин}) count as one.
  *
  * <p>Only vocabulary counts are kept, so memory grows with the book's vocabulary, never with its length. Not
  * thread-safe: used from the job thread only, and deterministic for a given sequence of calls.

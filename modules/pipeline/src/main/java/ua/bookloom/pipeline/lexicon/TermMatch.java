@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * Finds a key term in a text. {@link #occursIn} and {@link #matches} are for reading what a run proved (a hyphen
- * separates words, so a stuttered {@code B-Bartimaeus} still names {@code Bartimaeus}): a whole word or phrase in any
+ * separates words, so a stuttered {@code Z-Zerubin} still names {@code Zerubin}): a whole word or phrase in any
  * case, an English plural or possessive tolerated. {@link #isNamedIn} is for choosing what a prompt lists, and is
- * stricter: a word joined to another by a hyphen is one word, so {@code Sendai} is not found inside {@code Ono-Sendai};
+ * stricter: a word joined to another by a hyphen is one word, so {@code Mura} is not found inside {@code Kito-Mura};
  * a term that opens with a capital is found only with a capital (a name is not the common word it spells); and a term
  * that ends in a non-Latin letter keeps its stem and tolerates a short ending, because declension changes the end of a
  * word there. Words of a multi-word term may be separated by any run of spaces.

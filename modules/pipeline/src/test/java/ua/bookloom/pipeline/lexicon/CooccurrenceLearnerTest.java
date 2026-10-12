@@ -72,9 +72,9 @@ class CooccurrenceLearnerTest {
     void established_capitalisedMidSentenceWord_isAName_andIsIgnored() {
         final CooccurrenceLearner learner = learnerWithFiller("djinni");
 
-        learner.observe("The djinni laughed.", "Тоді засміявся Бартімеус голосно.");
-        learner.observe("The djinni sulked.", "Там похмурився Бартімеус довго.");
-        learner.observe("The djinni waited.", "Тут чекав Бартімеус мовчки.");
+        learner.observe("The djinni laughed.", "Тоді засміявся Зерубін голосно.");
+        learner.observe("The djinni sulked.", "Там похмурився Зерубін довго.");
+        learner.observe("The djinni waited.", "Тут чекав Зерубін мовчки.");
 
         assertThat(established(learner, "djinni")).isEmpty();
     }
@@ -125,7 +125,7 @@ class CooccurrenceLearnerTest {
 
         learner.observe("Mr Button came.", "Містер Баттон прийшов.");
         learner.observe("He saw Mr Hopkins.", "Він бачив пана Гопкінса.");
-        learner.observe("Mr Underwood left.", "Містер Андервуд пішов.");
+        learner.observe("Mr Pellbury left.", "Містер Пеллбері пішов.");
         learner.observe("Mr Simpkins sat.", "Пан Сімпкінс сів.");
 
         assertThat(established(learner, "Mr")).isEmpty();
@@ -328,45 +328,45 @@ class CooccurrenceLearnerTest {
     @Test
     void established_nameWithTwoSpellingsOfOneStem_isOneRenderingInTheMostUsedSpelling() {
         final CooccurrenceLearner learner = learnerWithFiller();
-        learner.trackName("Bartimaeus");
+        learner.trackName("Zerubin");
 
-        learner.observe("Bartimaeus laughed.", "Бартімей засміявся.");
-        learner.observe("Then Bartimaeus left.", "Потім пішов Бартимей.");
-        learner.observe("Bartimaeus sat down.", "Бартімей сів.");
-        learner.observe("They saw Bartimaeus.", "Вони побачили Бартімея.");
+        learner.observe("Zerubin laughed.", "Зерубін засміявся.");
+        learner.observe("Then Zerubin left.", "Потім пішов Зерубин.");
+        learner.observe("Zerubin sat down.", "Зерубін сів.");
+        learner.observe("They saw Zerubin.", "Вони побачили Зерубіна.");
 
-        assertThat(established(learner, "Bartimaeus"))
+        assertThat(established(learner, "Zerubin"))
                 .hasValueSatisfying(found -> assertThat(found)
                         .extracting(Learned::rendering, Learned::support, Learned::occurrences)
-                        .containsExactly("Бартімей", 4, 4));
+                        .containsExactly("Зерубін", 4, 4));
     }
 
     @Test
     void established_nameWithOnlyACommonSentenceStartWord_isNothing() {
         final CooccurrenceLearner learner = learnerWithFiller();
-        learner.trackName("Bartimaeus");
+        learner.trackName("Zerubin");
 
-        learner.observe("Bartimaeus laughed.", "Він засміявся голосно.");
-        learner.observe("Bartimaeus sat.", "Він сидів голосно.");
-        learner.observe("Bartimaeus left.", "Він пішов голосно.");
+        learner.observe("Zerubin laughed.", "Він засміявся голосно.");
+        learner.observe("Zerubin sat.", "Він сидів голосно.");
+        learner.observe("Zerubin left.", "Він пішов голосно.");
 
-        assertThat(established(learner, "Bartimaeus")).isEmpty();
+        assertThat(established(learner, "Zerubin")).isEmpty();
     }
 
     @Test
     void established_titleWrittenBesideEverySurname_isNotTheSpellingOfOneName() {
         final CooccurrenceLearner learner = learnerWithFiller();
-        learner.trackName("Lovelace");
+        learner.trackName("Ashdown");
 
-        learner.observe("Ms Lovelace laughed.", "Міс Лавлейс засміялась.");
-        learner.observe("Ms Lovelace sat.", "Міс Лавлейс сиділа.");
-        learner.observe("Ms Lovelace left.", "Міс Лавлейс пішла.");
+        learner.observe("Ms Ashdown laughed.", "Міс Ешдаун засміялась.");
+        learner.observe("Ms Ashdown sat.", "Міс Ешдаун сиділа.");
+        learner.observe("Ms Ashdown left.", "Міс Ешдаун пішла.");
         learner.observe("Ms Whitlock came.", "Міс Вітлок прийшла.");
         learner.observe("Ms Quill spoke.", "Міс Квіл мовила.");
         learner.observe("Ms Harrow wrote.", "Міс Гарроу писала.");
 
-        assertThat(established(learner, "Lovelace"))
-                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("Лавлейс"));
+        assertThat(established(learner, "Ashdown"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("Ешдаун"));
     }
 
     @Test

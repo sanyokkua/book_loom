@@ -27,7 +27,7 @@ import ua.bookloom.ui.dialog.NarratorDialog;
 class NamesStyleNarratorTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry NAME =
-            new GlossaryEntry("e1", "p1", "Nathaniel", "Натаніель", TermType.CHARACTER, Gender.MALE, false);
+            new GlossaryEntry("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
     private static final String CARD = "narrator-card";
 
     private void showNamesStyle(final NarratorHint hint) throws Exception {

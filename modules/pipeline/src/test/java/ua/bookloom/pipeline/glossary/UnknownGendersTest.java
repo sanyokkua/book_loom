@@ -49,16 +49,16 @@ class UnknownGendersTest {
                 PROJECT,
                 book(
                         List.of(
-                                "Chrome came in. Chrome sat. Chrome’s coat. Chrome left. Chrome ran. Finn spoke.",
-                                "Finn spoke. Finn spoke. Finn spoke. Finn spoke. Finn spoke. Finn spoke. Rare met."),
+                                "Ember came in. Ember sat. Ember’s coat. Ember left. Ember ran. Dane spoke.",
+                                "Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke. Rare met."),
                         "Title"));
-        add("Chrome", TermType.CHARACTER, Gender.UNKNOWN);
-        add("Finn", TermType.CHARACTER, Gender.UNKNOWN);
+        add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
+        add("Dane", TermType.CHARACTER, Gender.UNKNOWN);
         add("Rare", TermType.CHARACTER, Gender.UNKNOWN);
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
 
-        assertThat(asked).containsExactly(new UnknownGender("Finn", 7), new UnknownGender("Chrome", 5));
+        assertThat(asked).containsExactly(new UnknownGender("Dane", 7), new UnknownGender("Ember", 5));
     }
 
     @Test
@@ -73,15 +73,15 @@ class UnknownGendersTest {
 
     @Test
     void unknownGenders_namesInAuxiliaryText_areNotCounted() {
-        openProjects.put(PROJECT, book(List.of("Nothing here."), "Chrome Chrome Chrome Chrome Chrome Chrome"));
-        add("Chrome", TermType.CHARACTER, Gender.UNKNOWN);
+        openProjects.put(PROJECT, book(List.of("Nothing here."), "Ember Ember Ember Ember Ember Ember"));
+        add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
 
         assertThat(service.unknownGenders(PROJECT, 5).data()).isEmpty();
     }
 
     @Test
     void unknownGenders_noBookOpen_isEmptyNotAnError() {
-        add("Chrome", TermType.CHARACTER, Gender.UNKNOWN);
+        add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
 
         assertThat(service.unknownGenders(PROJECT, 5).isOk()).isTrue();
         assertThat(service.unknownGenders(PROJECT, 5).data()).isEmpty();

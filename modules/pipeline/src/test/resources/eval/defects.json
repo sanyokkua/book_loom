@@ -8,7 +8,7 @@
  {"id":"english-accepted","kind":"untranslated","source":"The night was cold and the streets were empty.","candidate":"The night was cold and the streets were empty.","defective":true,"rationale":"left in English"},
  {"id":"translated-clean","kind":"untranslated","source":"The night was cold and the streets were empty.","candidate":"Ніч була холодна, а вулиці порожні.","defective":false,"rationale":"faithful"},
  {"id":"idiom-clean","kind":"idiom","source":"It was raining cats and dogs.","candidate":"Дощ ллє як із відра.","defective":false,"rationale":"idiomatic rendering, not an error"},
- {"id":"name-clean","kind":"glossary","source":"Nathaniel opened the door.","candidate":"Натаніель відчинив двері.","defective":false,"rationale":"faithful; the judge must not invent glossary violations"},
+ {"id":"name-clean","kind":"glossary","source":"Edwin opened the door.","candidate":"Едвін відчинив двері.","defective":false,"rationale":"faithful; the judge must not invent glossary violations"},
  {"id":"gender-slip","kind":"gender","source":"She was tired, but she kept walking.","candidate":"Вона втомився, але йшов далі.","defective":true,"rationale":"masculine verbs for a female subject"},
  {"id":"gender-clean","kind":"gender","source":"She was tired, but she kept walking.","candidate":"Вона втомилася, але йшла далі.","defective":false,"rationale":"faithful"},
  {"id":"lexical-drift","kind":"drift","source":"The magician raised his staff. The magician spoke.","candidate":"Чарівник підняв свій посох. Фокусник заговорив.","defective":true,"rationale":"the same character named two ways"},

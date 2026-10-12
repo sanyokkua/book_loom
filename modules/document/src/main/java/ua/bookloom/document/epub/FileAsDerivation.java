@@ -29,7 +29,7 @@ final class FileAsDerivation {
     /**
      * Builds the new key.
      *
-     * @param sourceKey the key the source carried for the creator, for example {@code Gibson, William}; never null
+     * @param sourceKey the key the source carried for the creator, for example {@code Ashby, Martin}; never null
      * @param translatedName the creator's translated text; never null
      * @return the {@code Last, First} key of the translated name, or null when the source key was not surname-first,
      *     the name has fewer than two words, or its letters are not in an alphabetic script

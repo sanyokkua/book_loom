@@ -83,8 +83,8 @@ class DraftReplyParserTest {
                 Arguments.of(
                         "controls written for quotes and dash",
                         "{\"target\":\"\\u001eДавай\\u001d, \\u0013сказав я\"}"),
-                Arguments.of("control at the end", "{\"target\":\"Цюрих і Джек\\u001f\"}"),
-                Arguments.of("control at the start", "{\"target\":\"\\u001cЦюрих і Джек\"}"));
+                Arguments.of("control at the end", "{\"target\":\"Цюрих і Рей\\u001f\"}"),
+                Arguments.of("control at the start", "{\"target\":\"\\u001cЦюрих і Рей\"}"));
     }
 
     private static DraftReplyParser parser() {

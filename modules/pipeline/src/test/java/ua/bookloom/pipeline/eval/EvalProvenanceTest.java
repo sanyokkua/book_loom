@@ -61,14 +61,14 @@ class EvalProvenanceTest {
     void capture_settings_areRecorded() {
         final EvalProvenance p = provenance(Map.of(
                 "BOOKLOOM_EVAL_LABEL", "round 2",
-                "BOOKLOOM_EVAL_PRESET", "burning-chrome",
+                "BOOKLOOM_EVAL_PRESET", "glass-harbour",
                 "BOOKLOOM_EVAL_PROVIDER", "lmstudio"));
 
         assertThat(p.timestamp()).isEqualTo("2026-10-08T12:34:56Z");
         assertThat(p.gitSha()).isEqualTo("unknown");
         assertThat(p)
                 .extracting("label", "provider", "window", "dial", "brief", "suite")
-                .containsExactly("round 2", "lmstudio", 16384, "BALANCED", "preset=burning-chrome", "realrun");
+                .containsExactly("round 2", "lmstudio", 16384, "BALANCED", "preset=glass-harbour", "realrun");
         assertThat(p.runName()).isEqualTo("20261008-123456-realrun-gemma4_e4b-mlx-round_2");
     }
 

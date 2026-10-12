@@ -59,10 +59,10 @@ class PromptContextPaneTest extends FxTestBase {
                 A djinni is summoned.
 
                 [Glossary]
-                Lovelace → Лавлейс
+                Ashdown → Ешдаун
 
                 [Characters]
-                Nathaniel (he)
+                Edwin (he)
 
                 [Previous pairs]
                 Rain.

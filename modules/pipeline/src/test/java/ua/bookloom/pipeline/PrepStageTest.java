@@ -141,7 +141,7 @@ class PrepStageTest {
     @Test
     void run_emptyGlossaryWithAListedFirstName_proposesItUntypedWithNoGender() {
         final String text =
-                "We met Hermione.\n\nThen Hermione left.\n\nLater Hermione ran.\n\nSo Hermione won.\n\nAnd Hermione slept.";
+                "We met Rosalind.\n\nThen Rosalind left.\n\nLater Rosalind ran.\n\nSo Rosalind won.\n\nAnd Rosalind slept.";
         final TestProject project = project(TestBooks.markdown(tempDir.resolve("H.md"), text), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, replies(HALE_REPLIES));
 
@@ -155,7 +155,7 @@ class PrepStageTest {
                         GlossaryEntry::gender,
                         GlossaryEntry::isGenderSuggested,
                         GlossaryEntry::locked)
-                .containsExactly("Hermione", TermType.OTHER, Gender.UNKNOWN, false, false);
+                .containsExactly("Rosalind", TermType.OTHER, Gender.UNKNOWN, false, false);
     }
 
     @Test

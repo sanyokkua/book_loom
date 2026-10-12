@@ -15,7 +15,7 @@ import ua.bookloom.pipeline.prompt.Pronouns;
  * What both name-spelling checks (the run-time one and the whole-book audit) agree on: two words are one name when they
  * are equal once doubled letters are collapsed and the language's voiced and voiceless consonant pairs are folded, and
  * a common word of the language (a pronoun, a stop word, any word the targets also write in lower case) is never a
- * spelling of a name, however well it folds into one («Він» for «Фінн»).
+ * spelling of a name, however well it folds into one («Він» for «Вінн»).
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

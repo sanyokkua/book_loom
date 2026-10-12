@@ -55,16 +55,16 @@ class SentenceCountCheckTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "Finn, you never listen.|Ти ніколи не слухаєш.|true",
-                "You never listen, Finn!|Ти ніколи не слухаєш, Фінне!|false",
-                "You never listen, Finn!|Ти ніколи не слухаєш.|true",
-                "Finn is here.|Він тут.|false",
+                "Dane, you never listen.|Ти ніколи не слухаєш.|true",
+                "You never listen, Dane!|Ти ніколи не слухаєш, Дейне!|false",
+                "You never listen, Dane!|Ти ніколи не слухаєш.|true",
+                "Dane is here.|Він тут.|false",
                 "No, master.|Ні, учителю.|false",
                 "Yes, Sir.|Так, пане.|false"
             })
     void vocative_calledOutName_mustSurviveInSomeForm(final String source, final String target, final boolean lost) {
         final List<CheckFinding> found = VocativeCheck.find(
-                source, target, List.of("Finn → Фінн", "master → господар", "Sir → Сер"), List.of("гзж"), "en");
+                source, target, List.of("Dane → Дейн", "master → господар", "Sir → Сер"), List.of("гзж"), "en");
 
         assertThat(!found.isEmpty()).isEqualTo(lost);
     }

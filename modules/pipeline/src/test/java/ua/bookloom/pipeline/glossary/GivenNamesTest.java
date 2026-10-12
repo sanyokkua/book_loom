@@ -20,9 +20,9 @@ class GivenNamesTest {
     @ParameterizedTest
     @CsvSource({
         "John,en,MALE",
-        "Hermione,en,FEMALE",
-        "Hermione Granger,en,FEMALE",
-        "Nathaniel,en,MALE",
+        "Rosalind,en,FEMALE",
+        "Rosalind Marsh,en,FEMALE",
+        "Edwin,en,MALE",
         "Іван,uk,MALE",
         "Оксана,uk,FEMALE",
         "Сергей,ru,MALE",
@@ -34,7 +34,7 @@ class GivenNamesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"Alex", "Sam", "Chris", "Jamie", "Taylor", "Mark", "Will", "Rose", "Hogwarts", "john"})
+    @ValueSource(strings = {"Alex", "Sam", "Chris", "Jamie", "Taylor", "Mark", "Will", "Rose", "Thornwick", "john"})
     void genderOf_unisexCommonWordOrUnlistedOrLowerCase_isEmpty(final String term) {
         assertThat(GivenNames.genderOf(term, "en")).isEmpty();
     }
@@ -89,7 +89,7 @@ class GivenNamesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"Florence", "Victoria Station", "George Street", "Austin", "Hermione"})
+    @ValueSource(strings = {"Florence", "Victoria Station", "George Street", "Austin", "Rosalind"})
     void seeded_untypedEntryNamedLikeAPerson_isNeverRetyped(final String term) {
         final GlossaryEntry untyped = entry(term, TermType.OTHER, Gender.UNKNOWN);
 

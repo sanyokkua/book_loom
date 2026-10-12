@@ -50,7 +50,7 @@ class TranslationJobVerbatimTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // The Bartimaeus run sent the chapter number '2' to the model (740 prompt tokens) and then flagged its echo.
+    // The Zerubin run sent the chapter number '2' to the model (740 prompt tokens) and then flagged its echo.
     @ParameterizedTest
     @ValueSource(strings = {"2", "***", "XIV", "IV.", "A", "§ 3 —", "1/2"})
     void run_untranslatableParagraph_keptVerbatimWithoutModelCall(final String untranslatable) {
@@ -138,15 +138,15 @@ class TranslationJobVerbatimTest {
     // A segment that is only a locked name takes the name's locked rendering, with no call.
     @Test
     void run_lockedNameAlone_writtenAsItsRenderingWithoutCall() {
-        final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "Bartimaeus\n\nHe left.\n");
+        final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "Zerubin\n\nHe left.\n");
         final TestProject project = project(source, brief("en", "uk"));
         project.stores()
                 .glossary()
                 .add(new GlossaryEntry(
-                        GlossaryIds.of(project.id(), "Bartimaeus"),
+                        GlossaryIds.of(project.id(), "Zerubin"),
                         project.id(),
-                        "Bartimaeus",
-                        "Бартімеус",
+                        "Zerubin",
+                        "Зерубін",
                         TermType.CHARACTER,
                         Gender.MALE,
                         true));
@@ -157,7 +157,7 @@ class TranslationJobVerbatimTest {
         assertThat(model.requests()).hasSize(1);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, "Бартімеус");
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, "Зерубін");
     }
 
     // 58 'image' alt texts made 58 calls; identical auxiliary sources now share one.

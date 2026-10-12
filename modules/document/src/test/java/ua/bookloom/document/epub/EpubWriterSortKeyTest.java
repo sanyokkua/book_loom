@@ -35,43 +35,43 @@ class EpubWriterSortKeyTest {
             </container>
             """;
 
-    // IF the old key stayed, THEN a library would shelve «Амулет Самарканда» under "Amulet of Samarkand, The".
+    // IF the old key stayed, THEN a library would shelve «Амулет Варканда» under "Amulet of Varkand, The".
     @Test
     void write_titleTranslated_dropsCalibreTitleSortAndTheTitlesFileAs() {
-        final Path output = writeWithAuxiliaryTarget("aux:title", "Амулет Самарканда");
+        final Path output = writeWithAuxiliaryTarget("aux:title", "Амулет Варканда");
 
         final String opf = rawOpfTextOf(output);
-        assertThat(opf).contains("<dc:title").contains("Амулет Самарканда");
-        assertThat(opf).doesNotContain("calibre:title_sort").doesNotContain("Samarkand, The");
+        assertThat(opf).contains("<dc:title").contains("Амулет Варканда");
+        assertThat(opf).doesNotContain("calibre:title_sort").doesNotContain("Varkand, The");
         assertThat(opf).doesNotContain("title-sort-key");
     }
 
     // IF the old key were only dropped, THEN the translated book would lose its surname-first shelving.
     @Test
     void write_authorTranslated_rewritesTheFileAsAttributeAndRefinementFromTheTranslatedName() {
-        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Джонатан Страуд");
+        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Геллам Крейн");
 
         final String opf = rawOpfTextOf(output);
-        assertThat(opf).contains("opf:file-as=\"Страуд, Джонатан\"");
-        assertThat(opf).contains(">Страуд, Джонатан</meta>");
-        assertThat(opf).doesNotContain("Stroud, Jonathan");
+        assertThat(opf).contains("opf:file-as=\"Крейн, Геллам\"");
+        assertThat(opf).contains(">Крейн, Геллам</meta>");
+        assertThat(opf).doesNotContain("Crane, Hallam");
         assertThat(opf).contains("calibre:title_sort");
     }
 
     // IF a name in han script were split on spaces, THEN the key would be nonsense; absent is right.
     @Test
     void write_authorTranslatedToANonAlphabeticScript_leavesNoFileAs() {
-        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "乔纳森 斯特劳德");
+        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "哈勒姆 克兰");
 
-        assertThat(rawOpfTextOf(output)).doesNotContain("Stroud, Jonathan").doesNotContain("author-sort-key");
+        assertThat(rawOpfTextOf(output)).doesNotContain("Crane, Hallam").doesNotContain("author-sort-key");
     }
 
     // IF a one-word author were given a key, THEN it would read "Name, " — no key at all is right.
     @Test
     void write_authorTranslatedToOneWord_leavesNoFileAs() {
-        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Страуд");
+        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Крейн");
 
-        assertThat(rawOpfTextOf(output)).doesNotContain("Stroud, Jonathan").doesNotContain("author-sort-key");
+        assertThat(rawOpfTextOf(output)).doesNotContain("Crane, Hallam").doesNotContain("author-sort-key");
     }
 
     // IF a book written with no translated title lost its keys, THEN a no-op export would no longer equal its source.
@@ -82,8 +82,8 @@ class EpubWriterSortKeyTest {
         final String opf = rawOpfTextOf(output);
         assertThat(opf)
                 .contains("calibre:title_sort")
-                .contains("Samarkand, The")
-                .contains("Stroud, Jonathan")
+                .contains("Varkand, The")
+                .contains("Crane, Hallam")
                 .contains("title-sort-key")
                 .contains("author-sort-key");
     }
@@ -102,18 +102,15 @@ class EpubWriterSortKeyTest {
         final OpenEpubRegistry registry = new OpenEpubRegistry();
         final Document document = new EpubReader(registry).read(epub);
         final EpubWriter writer = new EpubWriter(registry);
-        writer.write(
-                withAuxiliaryTarget(document, "aux:title", "Амулет Самарканда"), tempDir.resolve("one.epub"), "uk");
+        writer.write(withAuxiliaryTarget(document, "aux:title", "Амулет Варканда"), tempDir.resolve("one.epub"), "uk");
 
         final Path second = writer.write(
-                withAuxiliaryTarget(document, "aux:title", "The Amulet of Samarkand"),
-                tempDir.resolve("two.epub"),
-                "uk");
+                withAuxiliaryTarget(document, "aux:title", "The Amulet of Varkand"), tempDir.resolve("two.epub"), "uk");
 
         assertThat(rawOpfTextOf(second))
-                .contains("The Amulet of Samarkand")
+                .contains("The Amulet of Varkand")
                 .contains("calibre:title_sort")
-                .contains("Samarkand, The")
+                .contains("Varkand, The")
                 .contains("title-sort-key");
     }
 
@@ -178,13 +175,13 @@ class EpubWriterSortKeyTest {
                 <?xml version="1.0" encoding="UTF-8"?>
                 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
                   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-                    <dc:title id="t1" opf:file-as="Amulet of Samarkand, The">The Amulet of Samarkand</dc:title>
-                    <dc:creator id="a1" opf:file-as="Stroud, Jonathan">Jonathan Stroud</dc:creator>
+                    <dc:title id="t1" opf:file-as="Amulet of Varkand, The">The Amulet of Varkand</dc:title>
+                    <dc:creator id="a1" opf:file-as="Crane, Hallam">Hallam Crane</dc:creator>
                     <dc:language>en</dc:language>
-                    <meta name="calibre:title_sort" content="Amulet of Samarkand, The"/>
-                    <meta name="calibre:series" content="Bartimaeus"/>
-                    <meta refines="#t1" property="file-as" id="title-sort-key">Amulet of Samarkand, The</meta>
-                    <meta refines="#a1" property="file-as" id="author-sort-key">Stroud, Jonathan</meta>
+                    <meta name="calibre:title_sort" content="Amulet of Varkand, The"/>
+                    <meta name="calibre:series" content="Zerubin"/>
+                    <meta refines="#t1" property="file-as" id="title-sort-key">Amulet of Varkand, The</meta>
+                    <meta refines="#a1" property="file-as" id="author-sort-key">Crane, Hallam</meta>
                   </metadata>
                   <manifest>
                     <item id="c01" href="c01.xhtml" media-type="application/xhtml+xml"/>

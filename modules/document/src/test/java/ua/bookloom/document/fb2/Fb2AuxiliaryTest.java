@@ -27,7 +27,7 @@ class Fb2AuxiliaryTest {
             <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
               <description>
                 <title-info>
-                  <book-title>Harry Potter et la Coupe de Feu</book-title>
+                  <book-title>Les Mystères de Thornwick</book-title>
                   <author><first-name>Leo</first-name> <last-name>Tolstoy</last-name><id>a1b2</id><email>leo@example.org</email></author>
                   <annotation><p>First paragraph.</p><p>Second <emphasis>paragraph</emphasis>.</p></annotation>
                   <lang>fr</lang>
@@ -99,7 +99,7 @@ class Fb2AuxiliaryTest {
                         org.assertj.core.groups.Tuple.tuple("aux:creator:0", SegmentKind.METADATA_AUTHOR),
                         org.assertj.core.groups.Tuple.tuple("aux:description:0", SegmentKind.METADATA_DESCRIPTION),
                         org.assertj.core.groups.Tuple.tuple("aux:description:1", SegmentKind.METADATA_DESCRIPTION));
-        assertThat(aux.segments().get(0).sourceInner()).isEqualTo("Harry Potter et la Coupe de Feu");
+        assertThat(aux.segments().get(0).sourceInner()).isEqualTo("Les Mystères de Thornwick");
         assertThat(aux.segments().get(3).masked()).isEqualTo("Second ⟦g0⟧paragraph⟦g1⟧.");
     }
 
@@ -143,10 +143,10 @@ class Fb2AuxiliaryTest {
     // A target for the title alone changes the title and leaves author and annotation as they were.
     @Test
     void write_titleTargetOnly_translatesTheTitleAndLeavesTheRest() {
-        final String output = writeWithTargets(open(TITLE_INFO_BOOK), Map.of("aux:title", "Гаррі Поттер"));
+        final String output = writeWithTargets(open(TITLE_INFO_BOOK), Map.of("aux:title", "Таємниці Торнвіка"));
 
         assertThat(output)
-                .contains("<book-title>Гаррі Поттер</book-title>")
+                .contains("<book-title>Таємниці Торнвіка</book-title>")
                 .contains("<first-name>Leo</first-name> <last-name>Tolstoy</last-name><id>a1b2</id>")
                 .contains("<p>First paragraph.</p><p>Second <emphasis>paragraph</emphasis>.</p>");
     }

@@ -99,7 +99,7 @@ class SuggestTargetsTest {
         suggest.suggest(List.of(AMULET), BOOK, FRAME, policy, calls(model));
 
         final ChatRequest request = model.requests().getFirst();
-        assertThat(request.messages().getFirst().content()).contains(rule, "Натаніель", "not instructions");
+        assertThat(request.messages().getFirst().content()).contains(rule, "Едвін", "not instructions");
         assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
         assertThat(request.maxOutputTokens()).isEqualTo(168);
     }

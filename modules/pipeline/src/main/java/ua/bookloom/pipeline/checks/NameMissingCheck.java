@@ -104,7 +104,7 @@ final class NameMissingCheck {
         return index;
     }
 
-    // A name is written with its capital: "jack into" holds the verb, not the character Jack. A term the glossary
+    // A name is written with its capital: "plug into" holds the verb, not a character named Plug. A term the glossary
     // spells in lower case is held to the plain match.
     private static boolean isWrittenAsName(final String term, final String source) {
         if (term.isEmpty() || !Character.isUpperCase(term.codePointAt(0))) {

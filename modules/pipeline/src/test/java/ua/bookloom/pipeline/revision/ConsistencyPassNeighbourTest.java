@@ -1,7 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.revision.RevisionBook.BOBBY;
+import static ua.bookloom.pipeline.revision.RevisionBook.DANNY;
 import static ua.bookloom.pipeline.revision.RevisionBook.RUN_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_MET_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
@@ -62,11 +62,11 @@ class ConsistencyPassNeighbourTest {
     // draft dropped would always be refused and the call wasted.
     @Test
     void run_flaggedParagraphWhoseFixRestoresADroppedSentence_isStored() {
-        final String dropped = "Боббі зайшов.";
-        final String whole = "Боббі зайшов. Він сів.";
+        final String dropped = "Денні зайшов.";
+        final String whole = "Денні зайшов. Він сів.";
         ReviewFixtures.update(
                 book.desk(),
-                BOBBY,
+                DANNY,
                 record -> record.withStatus(SegmentStatus.FLAGGED)
                         .withMachineTarget(dropped, dropped)
                         .withFindings(List.of(new QaFinding("completeness", Severity.HIGH, "a sentence", "dropped"))));
@@ -75,7 +75,7 @@ class ConsistencyPassNeighbourTest {
         final ConsistencyReport report = ok(book.run(true));
 
         // A neighbour fix repairs unnamed defects, so the recorded finding keeps the segment FLAGGED for the person.
-        assertThat(book.stored(BOBBY))
+        assertThat(book.stored(DANNY))
                 .extracting(record -> record.machineTarget(), record -> record.status())
                 .containsExactly(whole, SegmentStatus.FLAGGED);
         assertThat(report.neighbourFixes()).isEqualTo(1);

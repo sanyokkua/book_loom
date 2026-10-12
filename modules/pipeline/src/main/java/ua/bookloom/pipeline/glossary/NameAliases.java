@@ -12,8 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.prompt.PluralSuffixes;
 
 /**
- * Folds a name candidate that is only another spelling of a commoner one into it: the plural of a name ({@code Chromes}
- * beside {@code Chrome}, the endings from the language file's {@code pluralSuffixes}) that the book writes at most half
+ * Folds a name candidate that is only another spelling of a commoner one into it: the plural of a name ({@code Embers}
+ * beside {@code Ember}, the endings from the language file's {@code pluralSuffixes}) that the book writes at most half
  * as often, or a name one edit away that the book writes at most a fifth as often (a typo). The variant is not proposed on its own; the commoner name carries it
  * as an alias, so both spellings share one glossary entry and one target.
  */

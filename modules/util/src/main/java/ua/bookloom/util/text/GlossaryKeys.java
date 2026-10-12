@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * The one comparison key of a glossary term, shared by the repository, the scans, the Add term dialog and the CSV
- * import, so {@code Lovelace}, {@code LOVELACE}, {@code Lovelace's} and {@code "Lovelace,"} are one term everywhere.
+ * import, so {@code Ashdown}, {@code ASHDOWN}, {@code Ashdown's} and {@code "Ashdown,"} are one term everywhere.
  *
  * <p>Before this key each way in compared differently (exact lower case in one place, {@code equalsIgnoreCase} in
  * another, NFC in a third), so a name could be held twice and a removed name could come back in another spelling.

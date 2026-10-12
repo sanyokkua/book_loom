@@ -11,7 +11,7 @@ import ua.bookloom.api.document.PlaceholderRepair;
 
 /**
  * The deterministic placeholder repair over the shapes a small model produces: one token of a pair dropped (the two
- * Bartimaeus paragraphs that reached export broken), a token repeated or invented, and a placement so wrong that only
+ * Zerubin paragraphs that reached export broken), a token repeated or invented, and a placement so wrong that only
  * re-placing every token passes. A pair is written {@code open-close} by index, pairs separated by {@code ;}.
  */
 class TokenRepairTest {

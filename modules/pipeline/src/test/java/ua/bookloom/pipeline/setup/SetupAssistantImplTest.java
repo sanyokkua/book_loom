@@ -66,8 +66,8 @@ class SetupAssistantImplTest {
                 .orElseThrow();
     }
 
-    private static final String LATIN_AUTHOR = "{\"target\":\"William Gibson. Палаючий хром. 1986\"}";
-    private static final String UKRAINIAN_AUTHOR = "{\"target\":\"Вільям Гібсон. Палаючий хром. 1986\"}";
+    private static final String LATIN_AUTHOR = "{\"target\":\"Martin Ashby. Скляна гавань. 1986\"}";
+    private static final String UKRAINIAN_AUTHOR = "{\"target\":\"Мартін Ешбі. Скляна гавань. 1986\"}";
 
     // IF an author left in Latin letters were offered as it is, THEN every Ukrainian file name would need a hand fix.
     @Test
@@ -76,35 +76,35 @@ class SetupAssistantImplTest {
 
         final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
 
-        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Вільям Гібсон. Палаючий хром. 1986", false));
+        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Мартін Ешбі. Скляна гавань. 1986", false));
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().getLast().messages().getLast().content())
-                .contains("Correction:", "William Gibson")
+                .contains("Correction:", "Martin Ashby")
                 .contains("Latin letters");
     }
 
-    // IF the model's lower-case second word were kept, THEN the file would name the book «Палаючий хром» while the book
-    // says «Палаючий Хром».
+    // IF the model's lower-case second word were kept, THEN the file would name the book «Скляна гавань» while the book
+    // says «Скляна Гавань».
     @Test
     void suggestFileName_bookHasATranslatedTitle_isShownIt_andTheNameSpellsTitleAndAuthorAsTheBookDoes() {
-        translated(Map.of("aux:title", "Палаючий Хром", "aux:creator:0", "Вільям Гібсон"));
-        model.answer(reply("{\"target\":\"вільям гібсон. палаючий хром. 1986\"}"));
+        translated(Map.of("aux:title", "Скляна Гавань", "aux:creator:0", "Мартін Ешбі"));
+        model.answer(reply("{\"target\":\"мартін ешбі. скляна гавань. 1986\"}"));
 
         final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
 
         assertThat(result.error()).isNull();
-        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Вільям Гібсон. Палаючий Хром. 1986", false));
+        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Мартін Ешбі. Скляна Гавань. 1986", false));
         assertThat(userMessage())
-                .contains("Translated title (use exactly as written): Палаючий Хром")
-                .contains("Translated author (use exactly as written): Вільям Гібсон");
+                .contains("Translated title (use exactly as written): Скляна Гавань")
+                .contains("Translated author (use exactly as written): Мартін Ешбі");
     }
 
     @Test
     void suggestFileName_titleNotTranslatedYet_isLeftAsTheModelWroteIt() {
-        model.answer(reply("{\"target\":\"Вільям Гібсон. Палаючий хром. 1986\"}"));
+        model.answer(reply("{\"target\":\"Мартін Ешбі. Скляна гавань. 1986\"}"));
 
         assertThat(assistant.suggestFileName(desk.projectId(), model).data().name())
-                .isEqualTo("Вільям Гібсон. Палаючий хром. 1986");
+                .isEqualTo("Мартін Ешбі. Скляна гавань. 1986");
         assertThat(userMessage()).doesNotContain("Translated title");
     }
 
@@ -145,7 +145,7 @@ class SetupAssistantImplTest {
         final FileNameSuggestion suggestion =
                 assistant.suggestFileName(desk.projectId(), model).data();
 
-        assertThat(suggestion).isEqualTo(new FileNameSuggestion("William Gibson. Палаючий хром. 1986", true));
+        assertThat(suggestion).isEqualTo(new FileNameSuggestion("Martin Ashby. Скляна гавань. 1986", true));
         assertThat(model.requests()).hasSize(2);
     }
 
@@ -155,6 +155,6 @@ class SetupAssistantImplTest {
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Down", "The server is not answering.")));
 
         assertThat(assistant.suggestFileName(desk.projectId(), model).data())
-                .isEqualTo(new FileNameSuggestion("William Gibson. Палаючий хром. 1986", true));
+                .isEqualTo(new FileNameSuggestion("Martin Ashby. Скляна гавань. 1986", true));
     }
 }

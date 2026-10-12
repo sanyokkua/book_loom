@@ -29,7 +29,7 @@ import ua.bookloom.api.project.Register;
  * {@code BOOKLOOM_EVAL_REGISTER}, {@code _NAMES} ({@code translate}, {@code transliterate} or {@code keep}),
  * {@code _GENRE} and {@code _DIAL}.
  *
- * <p>The {@code burning-chrome} preset is one model's frozen answer (the e4b run's brief, from its trace log), kept so
+ * <p>The {@code glass-harbour} preset is one model's frozen answer (the e4b run's brief, from its trace log), kept so
  * that earlier reports can be measured again; the gold is what a reader of the book chose, and is what a new
  * measurement should be sized for.
  */
@@ -42,8 +42,8 @@ final class EvalBrief {
     private static final String PREFIX = "BOOKLOOM_EVAL_";
     private static final String KEEP = "keep";
 
-    /** The brief of the Burning Chrome run the owner reviewed (the trace log's session line and style sheet). */
-    private static final Map<String, String> BURNING_CHROME = Map.of(
+    /** The brief of an owner run of a cyberpunk story collection (the trace log's session line and style sheet). */
+    private static final Map<String, String> GLASS_HARBOUR = Map.of(
             "register", "FORMAL_LITERARY",
             "names", "TRANSLATE",
             "dial", "BALANCED",
@@ -51,7 +51,7 @@ final class EvalBrief {
             "voiceEra", "intense, technical jargon mixed with visceral description",
             "audience", "readers interested in cyberpunk themes");
 
-    private static final Map<String, Map<String, String>> PRESETS = Map.of("burning-chrome", BURNING_CHROME);
+    private static final Map<String, Map<String, String>> PRESETS = Map.of("glass-harbour", GLASS_HARBOUR);
 
     /** The brief for the languages, from the settings an environment (or a test's map) holds. */
     static BookBrief of(final String source, final String target, final Map<String, String> env) {

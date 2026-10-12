@@ -19,7 +19,7 @@ import ua.bookloom.api.llm.FinishReason;
 /**
  * A model that translates the fixture word for word with a fixed Ukrainian vocabulary and drifts on purpose, so the
  * metric code is proven against defects whose counts are known: {@code master} and {@code Mr} change rendering and
- * {@code Bartimaeus} changes spelling halfway through the book, one narrator paragraph says «я була», one paragraph is
+ * {@code Zerubin} changes spelling halfway through the book, one narrator paragraph says «я була», one paragraph is
  * echoed in English and one carries a stray quote. The drift depends on the order a source was first seen, so a repeated
  * call for the same text answers the same way.
  */
@@ -108,10 +108,10 @@ final class SequenceScriptedModel implements ChatModel {
             case "sir" -> "сер";
             case "pentacle" -> "пентакль";
             case "circle" -> "коло";
-            case "bartimaeus" -> drifted ? "Бартімеус" : "Бартімей";
-            case "nathaniel" -> "Натаніель";
-            case "underwood" -> "Андервуд";
-            case "lovelace" -> "Лавлейс";
+            case "zerubin" -> drifted ? "Зеробін" : "Зерубін";
+            case "edwin" -> "Едвін";
+            case "pellbury" -> "Пеллбері";
+            case "ashdown" -> "Ешдаун";
             case "i" -> "я";
             case "laughed" -> "була";
             default -> nextFiller();

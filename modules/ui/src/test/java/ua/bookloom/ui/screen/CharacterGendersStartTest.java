@@ -23,7 +23,7 @@ import ua.bookloom.ui.dialog.CharacterGendersDialog;
 class CharacterGendersStartTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry NAME =
-            new GlossaryEntry("e1", "p1", "Chrome", "Хром", TermType.CHARACTER, Gender.UNKNOWN, false);
+            new GlossaryEntry("e1", "p1", "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final String CARD = "genders-card";
 
     private void showNamesStyle(final List<UnknownGender> unknown) throws Exception {
@@ -59,20 +59,20 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
     // IF the run started silently, THEN a character the book names forty times would be drafted with a guessed gender.
     @Test
     void start_characterWithUnknownGender_listsItWithItsMentionsBeforeStarting() throws Exception {
-        showNamesStyle(List.of(new UnknownGender("Chrome", 12)));
+        showNamesStyle(List.of(new UnknownGender("Ember", 12)));
 
         onFx(() -> button("names-style-start").fire());
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Characters without a gender", "Chrome — 12 mentions", "Back", "Start anyway");
+                .contains("Characters without a gender", "Ember — 12 mentions", "Back", "Start anyway");
         assertThat(engine.requests()).isEmpty();
         assertThat(glossary.unknownGenderCalls()).containsExactly("p1:5");
     }
 
     @Test
     void startAnyway_pressed_startsTheRunAndAsksNoMoreForTheBook() throws Exception {
-        showNamesStyle(List.of(new UnknownGender("Chrome", 12)));
+        showNamesStyle(List.of(new UnknownGender("Ember", 12)));
         onFx(() -> button("names-style-start").fire());
         awaitAsking();
 
@@ -89,7 +89,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
     // Enter is the default button: it must be "Start anyway", never a choice that changes anything.
     @Test
     void enter_onTheQuestion_choosesStartAnyway() throws Exception {
-        showNamesStyle(List.of(new UnknownGender("Chrome", 12)));
+        showNamesStyle(List.of(new UnknownGender("Ember", 12)));
         onFx(() -> button("names-style-start").fire());
         awaitAsking();
 
@@ -103,7 +103,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
 
     @Test
     void back_pressed_startsNothingAndAsksAgainAtTheNextStart() throws Exception {
-        showNamesStyle(List.of(new UnknownGender("Chrome", 12)));
+        showNamesStyle(List.of(new UnknownGender("Ember", 12)));
         onFx(() -> button("names-style-start").fire());
         awaitAsking();
 

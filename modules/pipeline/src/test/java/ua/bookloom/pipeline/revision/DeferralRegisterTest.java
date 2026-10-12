@@ -201,7 +201,7 @@ class DeferralRegisterTest {
     }
 
     // IF a title naming a character counted, THEN a book with the name in every heading would wait on one gender
-    // 28 times over (the "Chrome" headings of a real run).
+    // 28 times over (the "Ember" headings of a real run).
     @ParameterizedTest
     @EnumSource(
             value = SegmentKind.class,

@@ -30,14 +30,14 @@ class ContextSectionOrderTest extends FxTestBase {
     private static final ContextSnapshot EVERYTHING = new ContextSnapshot(
             List.of("Дощ лив стіною."),
             List.of(
-                    new SnapshotTerm("Lovelace", "Лавлейс", TermType.CHARACTER, Gender.MALE, true),
-                    new SnapshotTerm("Bartimaeus", "Бартімеус", TermType.CHARACTER, Gender.MALE, false),
-                    new SnapshotTerm("Nathaniel", "Натаніель", TermType.CHARACTER, Gender.MALE, false, true)),
+                    new SnapshotTerm("Ashdown", "Ешдаун", TermType.CHARACTER, Gender.MALE, true),
+                    new SnapshotTerm("Zerubin", "Зерубін", TermType.CHARACTER, Gender.MALE, false),
+                    new SnapshotTerm("Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false, true)),
             List.of(new SnapshotTmHit(SnapshotTmHit.TmHitKind.EXACT, "The amulet glowed.", "Амулет світився.")),
             "A djinni is summoned.",
             "Literary, warm.",
             List.of(new SnapshotRendering("magician", "чарівник")),
-            List.of("Nathaniel (he)"));
+            List.of("Edwin (he)"));
 
     private final Messages messages = new Messages(() -> Locale.ENGLISH);
 
@@ -119,7 +119,7 @@ class ContextSectionOrderTest extends FxTestBase {
                         "Preceding translations");
         assertThat(copied.get(0))
                 .contains("magician → чарівник")
-                .contains("Nathaniel (he)")
+                .contains("Edwin (he)")
                 .contains("Literary, warm.");
     }
 

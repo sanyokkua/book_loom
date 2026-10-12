@@ -291,16 +291,15 @@ class GlossaryCsvTest {
     void importCsv_exportedSuggestionAndLockedNames_keepLockAndGenderAndTheSuggestionBecomesTheirs()
             throws IOException {
         service.add(new GlossaryEntry(
-                "p1:bartimaeus",
+                "p1:zerubin",
                 PROJECT,
-                "Bartimaeus",
-                "Бартімей",
+                "Zerubin",
+                "Зерубін",
                 TermType.CHARACTER,
                 Gender.MALE,
                 false,
                 TargetOrigin.SUGGESTED));
-        service.add(new GlossaryEntry(
-                "p1:nathaniel", PROJECT, "Nathaniel", "Натаніел", TermType.CHARACTER, Gender.MALE, true));
+        service.add(new GlossaryEntry("p1:edwin", PROJECT, "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, true));
         final Path file = dir.resolve("glossary.csv");
         service.exportCsv(PROJECT, file);
 
@@ -314,8 +313,8 @@ class GlossaryCsvTest {
                         GlossaryEntry::locked,
                         GlossaryEntry::isSuggested)
                 .containsExactly(
-                        tuple("Bartimaeus", "Бартімей", Gender.MALE, false, false),
-                        tuple("Nathaniel", "Натаніел", Gender.MALE, true, false));
+                        tuple("Zerubin", "Зерубін", Gender.MALE, false, false),
+                        tuple("Edwin", "Едвін", Gender.MALE, true, false));
     }
 
     private Path write(final String... lines) throws IOException {

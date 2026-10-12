@@ -21,7 +21,7 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
- * One glossary name written two ways across the decided targets (Майлз, Майлс; Боббі, Бобі). A single segment cannot
+ * One glossary name written two ways across the decided targets (Майлз, Майлс; Денні, Дені). A single segment cannot
  * show it, so the scan reads every target in order and reports each name once, on the first segment that holds an odd
  * spelling. Two words are the same name when they are equal once doubled letters are collapsed and the language's
  * voiced and voiceless consonant pairs are folded, so a declined form (Майлза) or another name (Майла) is never a

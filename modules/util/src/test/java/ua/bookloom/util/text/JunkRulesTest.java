@@ -12,7 +12,7 @@ class JunkRulesTest {
 
     @ParameterizedTest
     @ValueSource(
-            strings = {"CROYDON", "NASA", "OK", "T-shirt", "X-ray", "Yellow Pages", "Hyperion Books", "Random House"})
+            strings = {"BRANWICK", "NASA", "OK", "T-shirt", "X-ray", "Yellow Pages", "Larkspur Books", "Random House"})
     void isJunk_printingNoteAllCapsOrInitialCompound_isDropped(final String term) {
         assertThat(JunkRules.isJunk(term)).isTrue();
     }
@@ -20,14 +20,14 @@ class JunkRulesTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "Nathaniel",
-                "Simon Lovelace",
-                "Al-Arish",
+                "Edwin",
+                "Garrick Ashdown",
+                "El-Barun",
                 "Harrow Vale",
                 "Meridian Survey Institute",
                 "Amulet",
                 "I",
-                "Bull-head",
+                "Ox-horn",
                 "Nat",
                 "Ємельян"
             })
@@ -36,7 +36,7 @@ class JunkRulesTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"Bull-head,1", "Room 101,1", "Nat,0", "Al,1", "Nathaniel,0", "CROYDON,2", "T-shirt,2"})
+    @CsvSource({"Ox-horn,1", "Room 101,1", "Nat,0", "Al,1", "Edwin,0", "BRANWICK,2", "T-shirt,2"})
     void likelihood_term_scoresByItsShape(final String term, final int score) {
         assertThat(JunkRules.likelihood(term)).isEqualTo(score);
     }
@@ -49,12 +49,12 @@ class JunkRulesTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "Text copyright © 2003 by Jonathan Stroud",
+                "Text copyright © 2003 by Hallam Crane",
                 "All rights reserved. No part of this book may be reproduced.",
-                "Visit www.disneyhyperionbooks.com",
+                "Visit www.larkspurbooks.example.com",
                 "ISBN 978-1-4231-0000-0",
-                "Printed in CROYDON by CPI Books",
-                "By Jonathan Stroud",
+                "Printed in BRANWICK by CPI Books",
+                "By Hallam Crane",
                 "First published in Great Britain in 2003"
             })
     void isPrintingNote_rightsImprintAddressOrCredit_isANote(final String line) {
@@ -65,7 +65,7 @@ class JunkRulesTest {
     @ValueSource(
             strings = {
                 "He walked by the river and saw nothing at all.",
-                "“Nathaniel,” said Underwood, “come here.”",
+                "“Edwin,” said Pellbury, “come here.”",
                 "She copied the page by hand."
             })
     void isPrintingNote_storySentence_isNotANote(final String line) {

@@ -26,7 +26,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
                     "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CONFIRMED =
-            new GlossaryEntry("e2", "p1", "Hermione", null, TermType.CHARACTER, Gender.FEMALE, false);
+            new GlossaryEntry("e2", "p1", "Rosalind", null, TermType.CHARACTER, Gender.FEMALE, false);
 
     private List<String> genderLabels() throws Exception {
         readyToStart();

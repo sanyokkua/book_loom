@@ -130,7 +130,7 @@ public final class TermMappingVerifier {
                 .allMatch(word -> targetWords.stream().anyMatch(held -> sameWord(word, held, alternations)));
     }
 
-    // One name written with a doubled letter or not (Боббі, Бобі) is the same word: both sides are judged alike.
+    // One name written with a doubled letter or not (Денні, Дені) is the same word: both sides are judged alike.
     private static boolean sameWord(
             final String renderingWord, final String targetWord, final List<String> alternations) {
         return sameStem(renderingWord, targetWord, alternations)
@@ -183,7 +183,7 @@ public final class TermMappingVerifier {
         return Math.max(Math.min(STEM_FLOOR, length), length - cut);
     }
 
-    // A hyphenated target word counts whole and by each part (Б-Бартімей holds Бартімей); a rendering stays whole.
+    // A hyphenated target word counts whole and by each part (З-Зерубін holds Зерубін); a rendering stays whole.
     private static List<String> wordsOf(final String text, final boolean splitHyphens) {
         return WORD.matcher(text.toLowerCase(Locale.ROOT))
                 .results()

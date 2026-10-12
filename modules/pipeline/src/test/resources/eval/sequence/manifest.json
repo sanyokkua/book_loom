@@ -37,28 +37,28 @@
  ],
  "glossary": [
   {
-   "term": "Nathaniel",
-   "target": "Натаніель",
+   "term": "Edwin",
+   "target": "Едвін",
    "type": "CHARACTER",
    "gender": "MALE",
    "locked": true
   },
   {
-   "term": "Underwood",
-   "target": "Андервуд",
+   "term": "Pellbury",
+   "target": "Пеллбері",
    "type": "CHARACTER",
    "gender": "MALE",
    "locked": false
   },
   {
-   "term": "Lovelace",
+   "term": "Ashdown",
    "target": null,
    "type": "CHARACTER",
    "gender": "FEMALE",
    "locked": false
   },
   {
-   "term": "Bartimaeus",
+   "term": "Zerubin",
    "target": null,
    "type": "CHARACTER",
    "gender": "MALE",
@@ -249,37 +249,37 @@
  ],
  "names": [
   {
-   "name": "Bartimaeus",
+   "name": "Zerubin",
    "spellings": [
-    "бартімей",
-    "бартімеус",
-    "бартимей",
-    "бартимеус"
+    "зерубін",
+    "зеробін",
+    "зірубін",
+    "зерубин"
    ]
   },
   {
-   "name": "Nathaniel",
+   "name": "Edwin",
    "spellings": [
-    "натаніел",
-    "натаніль",
-    "нетаніел",
-    "натанієл"
+    "едвін",
+    "едвин",
+    "ендвін",
+    "едуін"
    ]
   },
   {
-   "name": "Underwood",
+   "name": "Pellbury",
    "spellings": [
-    "андервуд",
-    "ундервуд",
-    "андервід"
+    "пеллбері",
+    "пелбері",
+    "пеллберрі"
    ]
   },
   {
-   "name": "Lovelace",
+   "name": "Ashdown",
    "spellings": [
-    "лавлейс",
-    "ловлейс",
-    "лавлис"
+    "ешдаун",
+    "ешдавн",
+    "ешдоун"
    ]
   },
   {

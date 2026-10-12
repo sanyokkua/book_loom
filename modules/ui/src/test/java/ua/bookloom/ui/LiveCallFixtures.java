@@ -45,8 +45,8 @@ public final class LiveCallFixtures {
                 new PromptSection(
                         "summary", "[Book so far]", PromptSection.Origin.USER, List.of("A djinni is summoned.")),
                 new PromptSection(
-                        "glossaryTerms", "[Glossary]", PromptSection.Origin.USER, List.of("Lovelace → Лавлейс")),
-                new PromptSection("characters", "[Characters]", PromptSection.Origin.USER, List.of("Nathaniel (he)")),
+                        "glossaryTerms", "[Glossary]", PromptSection.Origin.USER, List.of("Ashdown → Ешдаун")),
+                new PromptSection("characters", "[Characters]", PromptSection.Origin.USER, List.of("Edwin (he)")),
                 new PromptSection(
                         "precedingPairs", "[Previous pairs]", PromptSection.Origin.USER, List.of("Rain.", "Дощ.")));
     }

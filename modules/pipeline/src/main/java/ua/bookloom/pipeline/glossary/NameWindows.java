@@ -26,7 +26,7 @@ import ua.bookloom.pipeline.glossary.PronounReader.Pronoun;
  * before and after, a narration window whose pronoun the code can give the name preferred within its stretch, and the
  * code's pronoun tally over the whole book. Each window records the pronoun the code gives the name there, so a
  * gender the model claims can be checked against the windows it cites. A name judged from its first sentence or two
- * was the old way, and it gave a woman the gender of the speaker's "he" (Burning Chrome, 2026-10-09).
+ * was the old way, and it gave a woman the gender of the speaker's "he" (an owner run, 2026-10-09).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

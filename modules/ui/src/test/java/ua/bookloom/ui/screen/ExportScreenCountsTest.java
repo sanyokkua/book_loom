@@ -54,10 +54,10 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
                 Map.of(DeferralReason.GENDER_UNKNOWN, 142),
                 0,
                 ConsistencyChecks.NONE,
-                List.of(new GenderWait("Chrome", 120), new GenderWait("Finn", 30)))));
+                List.of(new GenderWait("Ember", 120), new GenderWait("Dane", 30)))));
 
         assertThat(labelText("export-check-awaiting-gender"))
-                .isEqualTo("142 segments wait on a character's gender: Chrome ×120, Finn ×30. Set it in Names & style;"
+                .isEqualTo("142 segments wait on a character's gender: Ember ×120, Dane ×30. Set it in Names & style;"
                         + " the next export re-renders them.");
     }
 
@@ -71,7 +71,7 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
                 Map.of(DeferralReason.GENDER_UNKNOWN, 1),
                 0,
                 ConsistencyChecks.NONE,
-                List.of(new GenderWait("Chrome", 1)))));
+                List.of(new GenderWait("Ember", 1)))));
 
         onFx(() -> button("export-awaiting-gender-open").fire());
 

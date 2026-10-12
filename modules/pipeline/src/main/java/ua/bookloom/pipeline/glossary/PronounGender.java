@@ -50,7 +50,7 @@ public final class PronounGender {
     /**
      * The pronouns seen after a name. The object and possessive forms count only while the subject pronouns are fewer
      * than {@link #MIN_EVIDENCE} and none of those names the other gender, since an object form often names somebody
-     * else ("Tiger hit him").
+     * else ("Badger hit him").
      *
      * @param femaleWords the feminine subject pronouns, one per mention that had one, as written in lower case
      * @param maleWords the masculine subject pronouns, one per mention that had one

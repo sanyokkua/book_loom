@@ -80,10 +80,10 @@ final class SequenceBookGenerator {
             "I have been summoned by better magicians than this one, and by worse. I laughed. A boy who gives orders"
                     + " to an imp while standing in the dark is either very brave or very foolish.",
             "4:MEDIUM",
-            "I am Bartimaeus, and I do not enjoy being kept waiting in a circle. The boy stared at me as though I"
+            "I am Zerubin, and I do not enjoy being kept waiting in a circle. The boy stared at me as though I"
                     + " might bite, and I had no such plan, not yet.",
             "2:MEDIUM",
-            "The morning brought no rain and no peace. Mr Underwood sat at the long table with a letter in his hand.");
+            "The morning brought no rain and no peace. Mr Pellbury sat at the long table with a letter in his hand.");
 
     private enum Kind {
         MEDIUM,

@@ -29,7 +29,7 @@ class WhitespaceRestorationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"Давай, сказав я.", "Рядок\nдругий\tтаб\r\n", "«Цюрих» — Джек…"})
+    @ValueSource(strings = {"Давай, сказав я.", "Рядок\nдругий\tтаб\r\n", "«Цюрих» — Рей…"})
     void addsControl_ordinaryProse_isFalse(final String text) {
         assertThat(ControlCharacters.addsControl("", text)).isFalse();
     }

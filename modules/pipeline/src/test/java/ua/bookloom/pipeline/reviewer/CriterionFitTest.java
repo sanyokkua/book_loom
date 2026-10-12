@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 /** {@link CriterionFit}: an edit that re-inflects a glossary name is the reviewer's guess, not evidence. */
 class CriterionFitTest {
 
-    private static final List<String> NAMES = List.of("Джек", "Хром", "Боббі");
+    private static final List<String> NAMES = List.of("Дейн", "Ембер", "Денні");
 
     private static boolean fits(final ReviewCriterion criterion, final String quote, final String replacement) {
         return CriterionFit.fits(new ReviewEdit(criterion, quote, replacement), quote, NAMES);
@@ -19,9 +19,9 @@ class CriterionFitTest {
     // IF a reviewer could change the form of a name under agreement, THEN a correct vocative became a nominative.
     @ParameterizedTest
     @CsvSource({
-        "AGREEMENT,Тримайся міцніше Джеку,Тримайся міцніше Джек",
-        "AGREEMENT,льоду Хрому,льоду Хромів",
-        "MEANING,Джек пішов,Хром пішов"
+        "AGREEMENT,Тримайся міцніше Дейне,Тримайся міцніше Дейн",
+        "AGREEMENT,льоду Емберу,льоду Емберів",
+        "MEANING,Дейн пішов,Ембер пішов"
     })
     void fits_meaningGenderOrAgreementEditThatChangesANameForm_doesNotFit(
             final ReviewCriterion criterion, final String quote, final String replacement) {
@@ -31,8 +31,8 @@ class CriterionFitTest {
     @ParameterizedTest
     @CsvSource({
         "GENDER,Вона сказав,Вона сказала",
-        "GENDER,Боббі сказав їй,Боббі сказала їй",
-        "AGREEMENT,Боббі втомилась,Боббі втомився",
+        "GENDER,Денні сказав їй,Денні сказала їй",
+        "AGREEMENT,Денні втомилась,Денні втомився",
         "AGREEMENT,старі двері відчинилась,старі двері відчинилися"
     })
     void fits_editThatLeavesEveryNameAsItWas_stillFits(
@@ -51,12 +51,12 @@ class CriterionFitTest {
     void fits_editNearACommonNounOrAWordSharingANamesStart_stillFits(
             final ReviewCriterion criterion, final String quote, final String replacement) {
         assertThat(CriterionFit.fits(
-                        new ReviewEdit(criterion, quote, replacement), quote, List.of("Джек", "господар", "чарівник")))
+                        new ReviewEdit(criterion, quote, replacement), quote, List.of("Дейн", "господар", "чарівник")))
                 .isTrue();
     }
 
     @ParameterizedTest
-    @CsvSource({"TERMINOLOGY,Джак сказали,Джек сказали"})
+    @CsvSource({"TERMINOLOGY,Дайн сказали,Дейн сказали"})
     void fits_terminologyEdit_mayStillTouchANameForm(
             final ReviewCriterion criterion, final String quote, final String replacement) {
         assertThat(CriterionFit.fits(new ReviewEdit(criterion, quote, replacement), quote, NAMES))

@@ -16,19 +16,21 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.fixture.BodyContentEpub;
 
 /**
- * The two paragraphs of a real book's chapter opening (Bartimaeus, {@code part0009.html}) whose export was refused
- * with "placeholder count written=2 reopened=0": a drop cap {@code <span>“A</span>bove} and an italic run ending
+ * The two paragraphs of a real book's chapter opening (Zerubin, {@code part0009.html}) whose export was refused
+ * with "placeholder count written=2 reopened=0": a drop cap {@code <span>“A</span>ll} and an italic run ending
  * in a closing quote. A reply that puts the drop cap's pair around the whole paragraph passed the old gate, was
  * written as a span around every word, and re-opened as a segment <em>of that span</em> — the reader makes the
  * outermost element owning text its block — so the written book had no inline markup left in that paragraph.
  */
 class DropCapRoundTripTest {
 
-    private static final String BODY = "<p class=\"tx\"><span class=\"calibre8\">“A</span>bove all,” said his master,"
-            + " “there is one fact.”</p>\n"
-            + "<p class=\"tx1\">“Remember <i class=\"calibre3\">this,”</i> he said in a soft voice.</p>\n";
+    private static final String BODY =
+            "<p class=\"tx\"><span class=\"calibre8\">“A</span>ll rules bend,” said his tutor,"
+                    + " “there is one rule.”</p>\n"
+                    + "<p class=\"tx1\">“Remember <i class=\"calibre3\">this,”</i> he said in a soft voice.</p>\n";
 
-    private static final String WRAPPED_WHOLE = "⟦g0⟧«Понад усе», — сказав його господар, — «є один факт».⟦g1⟧";
+    private static final String WRAPPED_WHOLE =
+            "⟦g0⟧«Усі правила гнуться», — сказав його наставник, — «є одне правило».⟦g1⟧";
 
     @TempDir
     private Path dir;
@@ -40,7 +42,9 @@ class DropCapRoundTripTest {
         final Document book = open(service, BodyContentEpub.withBody(dir.resolve("book.epub"), BODY));
 
         final Document reopened = writeAndReopen(
-                service, book, "<span class=\"calibre8\">«Понад усе», — сказав його господар, — «є один факт».</span>");
+                service,
+                book,
+                "<span class=\"calibre8\">«Усі правила гнуться», — сказав його наставник, — «є одне правило».</span>");
 
         assertThat(firstBody(reopened).placeholders()).isEmpty();
     }
@@ -63,14 +67,16 @@ class DropCapRoundTripTest {
         final DocumentService service = DocumentServices.newService();
         final Document book = open(service, BodyContentEpub.withBody(dir.resolve("book.epub"), BODY));
         final Segment segment = firstBody(book);
-        final String restored = Objects.requireNonNull(
-                service.unmask(book.format(), segment, "⟦g0⟧«П⟦g1⟧онад усе», — сказав його господар, — «є один факт».")
-                        .data());
+        final String restored = Objects.requireNonNull(service.unmask(
+                        book.format(),
+                        segment,
+                        "⟦g0⟧«У⟦g1⟧сі правила гнуться», — сказав його наставник, — «є одне правило».")
+                .data());
 
         final Document reopened = writeAndReopen(service, book, restored);
 
         assertThat(firstBody(reopened).masked())
-                .isEqualTo("⟦g0⟧«П⟦g1⟧онад усе», — сказав його господар, — «є один факт».");
+                .isEqualTo("⟦g0⟧«У⟦g1⟧сі правила гнуться», — сказав його наставник, — «є одне правило».");
         assertThat(List.copyOf(firstBody(reopened).placeholders().values()))
                 .containsExactly("<span class=\"calibre8\">", "</span>");
     }

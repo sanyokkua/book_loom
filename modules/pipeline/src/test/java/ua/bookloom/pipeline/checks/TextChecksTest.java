@@ -63,7 +63,7 @@ class TextChecksTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "a name left in Latin|Harry met Hermione.|Гаррі зустрів Hermione.",
+                "a name left in Latin|Harry met Rosalind.|Гаррі зустрів Rosalind.",
                 "an ordinal suffix after digits|The 90s were calm.|90х були спокійними.",
                 "a unit after a number|It weighed 5 kg.|Це важило 5 кг.",
                 "a chemical formula|It smelled of H2O.|Пахло H2O.",
@@ -293,11 +293,11 @@ class TextChecksTest {
     @Test
     void run_latinRunThatIsAGlossaryRendering_isNotALatinRun() {
         final List<CheckFinding> found = TextChecks.run(
-                "Bobby Quine sat at the bar.",
-                "Bobby Quine сидів біля стійки.",
+                "Danny Vosk sat at the bar.",
+                "Danny Vosk сидів біля стійки.",
                 "en",
                 "uk",
-                List.of("Bobby Quine → Bobby Quine"));
+                List.of("Danny Vosk → Danny Vosk"));
 
         assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
     }
@@ -305,11 +305,11 @@ class TextChecksTest {
     @Test
     void run_latinRunBesideAGlossaryRendering_isStillALatinRun() {
         final List<CheckFinding> found = TextChecks.run(
-                "Bobby Quine read the Daily Courier on the train.",
-                "Bobby Quine читав Daily Courier у нічному поїзді.",
+                "Danny Vosk read the Daily Courier on the train.",
+                "Danny Vosk читав Daily Courier у нічному поїзді.",
                 "en",
                 "uk",
-                List.of("Bobby Quine → Bobby Quine"));
+                List.of("Danny Vosk → Danny Vosk"));
 
         assertThat(found)
                 .filteredOn(finding -> finding.kind() == FindingKind.LATIN_RUN)
@@ -384,7 +384,7 @@ class TextChecksTest {
     @Test
     void run_pronounThatFoldsIntoTheLostName_isNotItsSpelling() {
         final List<CheckFinding> found =
-                TextChecks.run("Finn stayed home.", "Він залишився вдома.", "en", "uk", List.of("Finn → Фінн"));
+                TextChecks.run("Dane stayed home.", "Він залишився вдома.", "en", "uk", List.of("Dane → Дейн"));
 
         assertThat(found).singleElement().extracting(CheckFinding::kind).isEqualTo(FindingKind.NAME_MISSING);
     }

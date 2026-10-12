@@ -16,8 +16,8 @@ import ua.bookloom.pipeline.Tokens;
  * {@code Hale⟦g3⟧Street} is the run {@code Hale Street}; {@code DisplayText} would glue it into one word. A lone
  * capital letter (the English pronoun {@code I}) is never a name.
  *
- * <p>An apostrophe or a hyphen between letters keeps one word ({@code Don’t}, {@code O'Brien}, {@code Al-Arish}), but
- * a trailing possessive does not belong to the name ({@code Lovelace’s} is {@code Lovelace}). A sentence starts after
+ * <p>An apostrophe or a hyphen between letters keeps one word ({@code Don’t}, {@code O'Brien}, {@code El-Barun}), but
+ * a trailing possessive does not belong to the name ({@code Ashdown’s} is {@code Ashdown}). A sentence starts after
  * a full stop, a question or exclamation mark or an ellipsis, and also after a dash or a quotation mark, since in
  * fiction a capital there is as likely to open speech as to be a name.
  */
@@ -92,7 +92,7 @@ final class Occurrences {
 
     /**
      * The runs of a read segment: a word the test accepts, followed by up to two more accepted words separated from it
-     * by spaces only; a possessive ends a run, so {@code Chrome’s Zurich} is two names.
+     * by spaces only; a possessive ends a run, so {@code Ember’s Zurich} is two names.
      *
      * @param read the segment
      * @param nameLike whether a word may be (part of) a name

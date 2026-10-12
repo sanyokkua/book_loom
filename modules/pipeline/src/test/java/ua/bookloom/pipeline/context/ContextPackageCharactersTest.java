@@ -62,15 +62,14 @@ class ContextPackageCharactersTest {
     // IF a short name had a line of its own, THEN one person would read as two on the sheet.
     @Test
     void assemble_shortNameOfAFullName_isFoldedIntoTheFullNamesLine() {
-        final GlossaryEntry bobby = ContextFixtures.entry("Bobby", "Боббі", TermType.CHARACTER, Gender.MALE, false);
-        final GlossaryEntry bobbyQuine =
-                ContextFixtures.entry("Bobby Quine", "Боббі Квайн", TermType.CHARACTER, Gender.MALE, false);
+        final GlossaryEntry danny = ContextFixtures.entry("Danny", "Денні", TermType.CHARACTER, Gender.MALE, false);
+        final GlossaryEntry dannyVosk =
+                ContextFixtures.entry("Danny Vosk", "Денні Воск", TermType.CHARACTER, Gender.MALE, false);
 
         final ContextPackage assembled =
-                assemble("Bobby Quine came in. Later Bobby left. He was tired.", 1000, List.of(bobby, bobbyQuine));
+                assemble("Danny Vosk came in. Later Danny left. He was tired.", 1000, List.of(danny, dannyVosk));
 
-        assertThat(assembled.draftContext().characterLines())
-                .containsExactly("Bobby Quine (also Bobby) — male (he ×1)");
+        assertThat(assembled.draftContext().characterLines()).containsExactly("Danny Vosk (also Danny) — male (he ×1)");
     }
 
     @Test

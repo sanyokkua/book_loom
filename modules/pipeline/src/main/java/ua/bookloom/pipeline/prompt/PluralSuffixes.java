@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * The endings that make a plural of a name, from a language file's {@code pluralSuffixes} key, so the name scan folds
- * {@code Chromes} into {@code Chrome} by data and never by a hard-coded tag.
+ * {@code Embers} into {@code Ember} by data and never by a hard-coded tag.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

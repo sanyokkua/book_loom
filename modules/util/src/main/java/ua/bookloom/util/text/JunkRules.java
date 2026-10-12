@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * What a name scan must never propose, and how likely an entry already in the glossary is to be one of those. A real
- * run on a published novel proposed {@code T-shirt}, {@code Yellow Pages}, {@code CROYDON} and a publisher's name:
+ * run on a published novel proposed {@code T-shirt}, {@code Yellow Pages}, {@code BRANWICK} and a publisher's name:
  * the scan counts capitalised words, and the book's printing notes, an everyday compound with a capital initial and
  * a directory's name all look like names to it. The rules are shape and vocabulary only, so they need no model.
  *
@@ -127,7 +127,7 @@ public final class JunkRules {
                 && PRINTING_NOTE.matcher(line.strip()).find();
     }
 
-    // Every word has at least two letters and none is lower case: CROYDON, NASA, but not I or A.
+    // Every word has at least two letters and none is lower case: BRANWICK, NASA, but not I or A.
     private static boolean isAllCaps(final String[] words) {
         for (final String word : words) {
             final boolean allUpper =

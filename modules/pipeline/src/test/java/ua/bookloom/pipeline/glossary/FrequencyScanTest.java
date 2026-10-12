@@ -61,7 +61,7 @@ class FrequencyScanTest {
 
     static Stream<Arguments> wordBooks() {
         return Stream.of(
-                Arguments.of("a hyphenated place is one word", copies("We rode to Al-Arish.", 3), List.of("Al-Arish")),
+                Arguments.of("a hyphenated place is one word", copies("We rode to El-Barun.", 3), List.of("El-Barun")),
                 Arguments.of(
                         "a possessive is not part of the name", copies("We saw Hale’s house.", 3), List.of("Hale")),
                 Arguments.of("an apostrophe inside a name", copies("We met O'Brien there.", 3), List.of("O'Brien")),
@@ -124,27 +124,27 @@ class FrequencyScanTest {
 
     @Test
     void candidates_possessiveEndsARun_nextNameIsSeparate() {
-        final List<String> lines = copies("We saw Chrome’s Zurich office again.", 3);
+        final List<String> lines = copies("We saw Ember’s Zurich office again.", 3);
 
         final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
-        assertThat(terms).containsExactlyInAnyOrder("Chrome", "Zurich");
+        assertThat(terms).containsExactlyInAnyOrder("Ember", "Zurich");
     }
 
     @Test
     void candidates_pluralOfAnotherName_isItsAliasAndAddsToItsCount() {
-        final List<String> lines = new ArrayList<>(copies("We saw Chrome at the door.", 6));
-        lines.addAll(copies("We saw the Chromes at the door.", 3));
+        final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
+        lines.addAll(copies("We saw the Embers at the door.", 3));
 
         final List<NameCandidate> candidates =
                 FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en");
 
         assertThat(candidates).hasSize(1);
-        assertThat(candidates.getFirst().term()).isEqualTo("Chrome");
+        assertThat(candidates.getFirst().term()).isEqualTo("Ember");
         assertThat(candidates.getFirst().count()).isEqualTo(9);
-        assertThat(candidates.getFirst().aliases()).containsExactly("Chromes");
+        assertThat(candidates.getFirst().aliases()).containsExactly("Embers");
     }
 
     @Test
@@ -190,8 +190,8 @@ class FrequencyScanTest {
     // target.
     @Test
     void newTerms_pluralAlias_isHeldByTheProposedEntry() {
-        final List<String> lines = new ArrayList<>(copies("We saw Chrome at the door.", 6));
-        lines.addAll(copies("We saw the Chromes at the door.", 3));
+        final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
+        lines.addAll(copies("We saw the Embers at the door.", 3));
         final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
                 .getInstance(GlossaryRepository.class);
 
@@ -200,7 +200,7 @@ class FrequencyScanTest {
 
         assertThat(entries)
                 .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
-                .containsExactly(tuple("Chrome", List.of("Chromes")));
+                .containsExactly(tuple("Ember", List.of("Embers")));
     }
 
     private static List<String> namesAndRuns() {

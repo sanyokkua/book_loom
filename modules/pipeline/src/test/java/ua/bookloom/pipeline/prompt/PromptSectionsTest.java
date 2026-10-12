@@ -24,9 +24,9 @@ class PromptSectionsTest {
         values.put("source", "English");
         values.put("target", "Ukrainian");
         values.put("items", "<s id=\"1\">He left.</s>\n<s id=\"2\">She stayed.</s>");
-        values.put("glossaryTerms", "Bartimaeus → Бартімеус");
+        values.put("glossaryTerms", "Zerubin → Зерубін");
         values.put("lockedNames", "");
-        values.put("characters", "Bartimaeus — male");
+        values.put("characters", "Zerubin — male");
         values.put("precedingPairs", "Source: Hi.\nTranslation: Привіт.");
         values.put("nextSource", "They met.");
         values.put("summary", "");
@@ -76,7 +76,7 @@ class PromptSectionsTest {
         values.put("tokens", "⟦g0⟧ ⟦g1⟧");
         values.put("text", "⟦g0⟧He⟦g1⟧ left.");
         values.put("summary", "A boy summons a djinni.");
-        values.put("characters", "Nathaniel — male");
+        values.put("characters", "Edwin — male");
         values.put("memoryHint", "He left. → Він пішов.");
         values.put("precedingTargets", "");
 

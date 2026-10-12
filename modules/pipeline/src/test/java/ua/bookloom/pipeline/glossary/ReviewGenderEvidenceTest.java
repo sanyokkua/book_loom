@@ -83,7 +83,7 @@ class ReviewGenderEvidenceTest {
                 .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, false));
     }
 
-    // A gender stands when a cited window holds a pronoun of it outside speech; the Chrome shape cites Tiger's "he".
+    // A gender stands when a cited window holds a pronoun of it outside speech; the Ember shape cites Badger's "he".
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
@@ -91,7 +91,7 @@ class ReviewGenderEvidenceTest {
                 "Wren stood. She left. | female | 1 | FEMALE | false",
                 "Wren stood. She left. | male | 1 | MALE | true",
                 "Wren stood. She left. | female | 2 | FEMALE | true",
-                "Wren nodded. \"He never pays,\" said Tiger. | male | 1 | MALE | true"
+                "Wren nodded. \"He never pays,\" said Badger. | male | 1 | MALE | true"
             })
     void review_modelGender_isDecidedOnlyWhenACitedWindowShowsIt(
             final String paragraph,

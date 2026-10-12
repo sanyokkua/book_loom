@@ -43,8 +43,8 @@ class NameVariantsTest {
     @Test
     void find_nameSpelledWithADoubledLetter_isReported() {
         final Map<String, List<QaFinding>> found = NameVariants.find(
-                List.of(name("Bobby", "Боббі", TermType.CHARACTER)),
-                targets("s1", "Боббі пішов.", "s2", "Він сказав Бобі це."),
+                List.of(name("Danny", "Денні", TermType.CHARACTER)),
+                targets("s1", "Денні пішов.", "s2", "Він сказав Дені це."),
                 "uk");
 
         assertThat(found).containsOnlyKeys("s2");
@@ -63,8 +63,8 @@ class NameVariantsTest {
     @Test
     void find_entryThatIsNotAPersonOrPlaceOrHasNoTarget_isNotChecked() {
         final Map<String, List<QaFinding>> found = NameVariants.find(
-                List.of(name("Miles", "Майлз", TermType.TERM), name("Jack", "", TermType.CHARACTER)),
-                targets("s1", "Майлз і Майлс. Джек і Джик."),
+                List.of(name("Miles", "Майлз", TermType.TERM), name("Ray", "", TermType.CHARACTER)),
+                targets("s1", "Майлз і Майлс. Рей і Рай."),
                 "uk");
 
         assertThat(found).isEmpty();

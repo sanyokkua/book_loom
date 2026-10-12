@@ -19,8 +19,8 @@ class BatchContextsTest {
         final BatchContext joined = BatchContexts.of(
                 List.of("1", "2"),
                 List.of(
-                        context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Бартімеус, person, male"),
-                        context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Бартімеус, person, male")),
+                        context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Зерубін, person, male"),
+                        context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Зерубін, person, male")),
                 List.of(),
                 "",
                 List.of());
@@ -28,8 +28,8 @@ class BatchContextsTest {
         assertThat(joined.draft().glossaryLines())
                 .containsExactly(
                         "Hale → Гейл (character, male)",
-                        "1: ⟦g0⟧ → Бартімеус, person, male",
-                        "2: ⟦g0⟧ → Бартімеус, person, male");
+                        "1: ⟦g0⟧ → Зерубін, person, male",
+                        "2: ⟦g0⟧ → Зерубін, person, male");
         assertThat(joined.draft().summary()).isEqualTo("Hale searches.");
         assertThat(joined.draft().memoryLines()).containsExactly("He left. → Він пішов.");
     }

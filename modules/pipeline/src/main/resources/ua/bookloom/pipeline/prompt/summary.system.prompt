@@ -11,4 +11,4 @@ Update the summary so far with what this chapter establishes: characters (with t
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 Example reply (English → Ukrainian; write yours in the languages above):
-{"summary":{"source":"Nathaniel, a young apprentice, summons the djinni Bartimaeus.","target":"Натаніель, юний учень, викликає джина Бартімеуса."},"facts":["Бартімеус — джин, чоловічого роду."]}
+{"summary":{"source":"Edwin, a young apprentice, summons the djinni Zerubin.","target":"Едвін, юний учень, викликає джина Зерубіна."},"facts":["Зерубін — джин, чоловічого роду."]}
