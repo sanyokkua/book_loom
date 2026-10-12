@@ -296,7 +296,7 @@ every repair must parse strictly and pass unmasking.
 
 A batch carries consecutive segments of one unit in one call (15d.8): when a chunk reaches a segment that needs a call,
 that segment and the next ones that need one go together, up to the adaptive batch size (8 to start, halved on a lost,
-repeated, merged or foreign id, one more after three clean batches, at most 16) and the chunk's source-token budget. The
+repeated, merged or foreign id, left as it is when the reply answered only the first item or was cut at the length cap, one more after three clean batches, at most 16) and the chunk's source-token budget. The
 system message (`draft-batch-json.system.prompt`; the draft's rules with the item rules, the style sheet,
 `{{languageRules}}` and the batch examples from the pair's, else the target's, else the generic `batchExample.N` keys; about
 850 tokens, within `ChunkBudget.SYSTEM_PROMPT_RESERVE`) is byte-identical across a run's batches, and the user message

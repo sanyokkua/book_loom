@@ -56,7 +56,7 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
  */
 class BatchDraftingJobTest {
 
-    private static final String BATCH = "draft-batch-json";
+    static final String BATCH = "draft-batch-json";
     private static final SegmentCounts ALL_FOUR_ACCEPTED = new SegmentCounts(0, 4, 0, 0, 0);
 
     @TempDir
@@ -67,15 +67,15 @@ class BatchDraftingJobTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    private static Result<ChatResponse> batchReply(final String json) {
+    static Result<ChatResponse> batchReply(final String json) {
         return Result.ok(new ChatResponse(json, FinishReason.STOP));
     }
 
-    private static String entry(final String id, final String target) {
+    static String entry(final String id, final String target) {
         return "{\"id\":\"" + id + "\",\"target\":\"" + target + "\"}";
     }
 
-    private static String items(final String... entries) {
+    static String items(final String... entries) {
         return "{\"items\":[" + String.join(",", entries) + "]}";
     }
 
@@ -263,7 +263,7 @@ class BatchDraftingJobTest {
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 16, 0, 0, 0));
     }
 
-    private static String numbered(final int first, final int count, final int missingLocalId) {
+    static String numbered(final int first, final int count, final int missingLocalId) {
         return items(IntStream.range(0, count)
                 .filter(index -> index + 1 != missingLocalId)
                 .mapToObj(index -> entry(Integer.toString(index + 1), "Короткий рядок " + (first + index) + "."))

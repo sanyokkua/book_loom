@@ -881,7 +881,7 @@ and the rest). `qwen2.5:1.5b` is kept only as a stub for API checks, never for t
 **Batch A/B (15d.8).** `scripts/eval-matrix.sh --suite batch [--batch-sizes 4,8,12,16] --models "ollama:<id> lmstudio:<id>"`
 sends batches of consecutive draft cases through the JSON batch protocol. Without `--batch-sizes` the size is the job's: the first
 batch has `BatchDrafter.DEFAULT_INITIAL_SIZE` cases and each reply goes to a production `BatchDrafter.record`, which halves the
-size on a lost numbering, an omission or a merge and grows it after a clean streak (the table then has a row per size reached);
+size on a lost numbering, an omission or a merge (not on a reply that answered only the first item or was cut at the length cap, 15i.T3) and grows it after a clean streak (the table then has a row per size reached);
 `--batch-sizes` fixes the old sweep. The draft cases include two invented long paragraphs (over 250 and over 400 characters,
 with numbers that must survive). It prints, per model and size: `idValid` (items
 answered under their id exactly once), `tokGate` (also kept their tokens in order), `omit`, `merge` and output tokens per

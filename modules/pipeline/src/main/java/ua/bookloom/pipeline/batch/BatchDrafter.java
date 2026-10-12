@@ -11,6 +11,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.pipeline.DisplayText;
@@ -47,7 +48,9 @@ public final class BatchDrafter {
     /** How many ids a readable reply must leave out before the missing ones are asked again together. */
     public static final int MIN_MISSING_TO_REASK = 2;
 
-    static final int MAX_SIZE = 16;
+    /** The ceiling of the adaptive size; the initial size is not a cap, and the token budget and the unit cut a batch further. */
+    public static final int MAX_SIZE = 16;
+
     static final int CLEAN_STREAK_TO_GROW = 3;
 
     private final BatchPromptBuilder prompts;
@@ -167,7 +170,7 @@ public final class BatchDrafter {
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
                 : parser.parse(response.content(), items, sourceLanguage, targetLanguage);
-        return Result.ok(reply);
+        return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
     }
 
     /**
@@ -243,7 +246,7 @@ public final class BatchDrafter {
                         : outcome)
                 .toList();
         log.debug("Re-ask answered ids={}", again.acceptedIds());
-        return new BatchReply(true, merged);
+        return new BatchReply(true, merged, first.cut());
     }
 
     /**
@@ -260,28 +263,80 @@ public final class BatchDrafter {
 
     /**
      * Feeds a batch's first reply to the adaptive size, never a re-ask's, so a model that needs the second call still
-     * shrinks the batches: a lost numbering, an omission or a merge halves it, a reply whose
-     * ids were all right counts toward growing it. An item that only failed its own checks is the item's problem, not
-     * the size's.
+     * shrinks the batches: a lost numbering, an omission or a merge halves it, a reply whose ids were all right counts
+     * toward growing it. Neither a reply that answered only the first item nor one cut at the length cap says
+     * anything about the size (a 2-item batch stops early the same way, and a cut was a loop), so those leave it as
+     * it is; their missing ids are asked again as for any omission. An item that only failed its own checks is the
+     * item's problem, not the size's.
      *
      * @param reply the non-null reply of the batch just made
      */
     public void record(final BatchReply reply) {
         Objects.requireNonNull(reply, "reply");
-        final Optional<Failure> failure = failureOf(reply);
-        failure.ifPresentOrElse(size::recordFailure, size::recordClean);
-        log.debug("Batch recorded failure={} nextSize={}", failure.orElse(null), size.size());
+        final Outcome outcome = outcomeOf(reply);
+        final int before = size.size();
+        outcome.failure().ifPresent(size::recordFailure);
+        if (outcome == Outcome.CLEAN) {
+            size.recordClean();
+        }
+        log.debug(
+                "Batch recorded outcome={} sent={} size={} nextSize={} maxSize={}",
+                outcome,
+                reply.outcomes().size() - reply.count(ItemStatus.EXTRA),
+                before,
+                size.size(),
+                MAX_SIZE);
     }
 
-    static Optional<Failure> failureOf(final BatchReply reply) {
+    /** What a first reply says about the batch size; only the kinds with a {@link Failure} shrink it. */
+    enum Outcome {
+        /** Every id was right. */
+        CLEAN(null),
+        /** Only the first item came back and the model stopped normally: no size signal. */
+        FIRST_ONLY(null),
+        /** The reply hit the length cap with ids missing: no size signal. */
+        CUT(null),
+        /** Some ids were left out, or the reply was unreadable. */
+        OMISSION(Failure.OMISSION),
+        /** The reply named an id the batch never held. */
+        WRONG_ID(Failure.WRONG_ID),
+        /** The reply carries two items under one id. */
+        MERGE(Failure.MERGE);
+
+        private final @Nullable Failure failure;
+
+        Outcome(final @Nullable Failure failure) {
+            this.failure = failure;
+        }
+
+        Optional<Failure> failure() {
+            return Optional.ofNullable(failure);
+        }
+    }
+
+    static Outcome outcomeOf(final BatchReply reply) {
         if (reply.count(ItemStatus.MERGED_SUSPECT) > 0) {
-            return Optional.of(Failure.MERGE);
+            return Outcome.MERGE;
         }
         if (reply.count(ItemStatus.EXTRA) > 0) {
-            return Optional.of(Failure.WRONG_ID);
+            return Outcome.WRONG_ID;
         }
         final boolean omitted =
                 !reply.readable() || reply.count(ItemStatus.MISSING) > 0 || reply.count(ItemStatus.DUPLICATE) > 0;
-        return omitted ? Optional.of(Failure.OMISSION) : Optional.empty();
+        if (!omitted) {
+            return Outcome.CLEAN;
+        }
+        if (reply.readable() && reply.cut()) {
+            return Outcome.CUT;
+        }
+        return isFirstOnly(reply) ? Outcome.FIRST_ONLY : Outcome.OMISSION;
+    }
+
+    // The first expected id answered, every other one absent: the model chose to stop after one entry.
+    private static boolean isFirstOnly(final BatchReply reply) {
+        final List<ItemOutcome> expected = reply.outcomes();
+        return expected.size() > 1
+                && expected.getFirst().status() != ItemStatus.MISSING
+                && expected.stream().skip(1).allMatch(outcome -> outcome.status() == ItemStatus.MISSING);
     }
 }

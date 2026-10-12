@@ -9,12 +9,24 @@ import java.util.Optional;
  *
  * @param readable whether the reply held any entry at all; a refusal, an apology or an empty reply is not readable
  * @param outcomes one outcome for each expected id in the batch's order, then one for each extra id
+ * @param cut whether the model stopped at the reply's length cap, which says the reply ran on (a loop inside one
+ *     item, in the measured case), not that the batch held too many items
  */
-public record BatchReply(boolean readable, List<ItemOutcome> outcomes) {
+public record BatchReply(boolean readable, List<ItemOutcome> outcomes, boolean cut) {
 
     /** Copies the outcomes. */
     public BatchReply {
         outcomes = List.copyOf(Objects.requireNonNull(outcomes, "outcomes"));
+    }
+
+    /** A reply that was not cut at the length cap. */
+    public BatchReply(final boolean readable, final List<ItemOutcome> outcomes) {
+        this(readable, outcomes, false);
+    }
+
+    /** This reply, marked as cut at the length cap or not. */
+    public BatchReply withCut(final boolean isCut) {
+        return new BatchReply(readable, outcomes, isCut);
     }
 
     /**
@@ -26,7 +38,8 @@ public record BatchReply(boolean readable, List<ItemOutcome> outcomes) {
     public static BatchReply unreadable(final List<String> ids) {
         return new BatchReply(
                 false,
-                ids.stream().map(id -> ItemOutcome.bare(id, ItemStatus.MISSING)).toList());
+                ids.stream().map(id -> ItemOutcome.bare(id, ItemStatus.MISSING)).toList(),
+                false);
     }
 
     /** The outcome of an id, or empty when the reply and the batch never named it. */

@@ -2,6 +2,10 @@ package ua.bookloom.pipeline.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -69,7 +74,7 @@ class BatchDrafterTest {
                 drafter.draft(BatchContext.empty(), items, List.of("a", "b")).data(), "reply");
     }
 
-    private static Result<ChatResponse> reply(final String content) {
+    static Result<ChatResponse> reply(final String content) {
         return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
 
@@ -84,16 +89,20 @@ class BatchDrafterTest {
         assertThat(Objects.requireNonNull(result.data()).acceptedIds()).containsExactly("1", "2");
     }
 
-    private static final List<BatchItem> FOUR = List.of(
+    static final List<BatchItem> FOUR = List.of(
             new BatchItem("1", "She opened the door."),
             new BatchItem("2", "He said nothing."),
             new BatchItem("3", "The rain stopped."),
             new BatchItem("4", "Night fell."));
-    private static final List<String> FOUR_IDS = List.of("s1", "s2", "s3", "s4");
-    private static final List<String> FOUR_SOURCES =
+    static final List<String> FOUR_IDS = List.of("s1", "s2", "s3", "s4");
+    static final List<String> FOUR_SOURCES =
             List.of("She opened the door.", "He said nothing.", "The rain stopped.", "Night fell.");
 
     private BatchDrafter drafterAnswering(final List<Result<ChatResponse>> answers) {
+        return scriptedDrafter(answers, segments);
+    }
+
+    static BatchDrafter scriptedDrafter(final List<Result<ChatResponse>> answers, final List<List<String>> segments) {
         final ModelCalls scripted = new ModelCalls() {
             private int next;
 
@@ -121,7 +130,7 @@ class BatchDrafterTest {
                 8);
     }
 
-    private static String entries(final String... pairs) {
+    static String entries(final String... pairs) {
         final List<String> parts = new ArrayList<>();
         for (int i = 0; i < pairs.length; i += 2) {
             parts.add("{\"id\":\"" + pairs[i] + "\",\"target\":\"" + pairs[i + 1] + "\"}");
@@ -129,7 +138,7 @@ class BatchDrafterTest {
         return "{\"items\":[" + String.join(",", parts) + "]}";
     }
 
-    private BatchReply firstReply(final BatchDrafter drafter) {
+    static BatchReply firstReply(final BatchDrafter drafter) {
         return Objects.requireNonNull(
                 drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null)
                         .data(),
@@ -199,7 +208,7 @@ class BatchDrafterTest {
         assertThat(merged.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
     }
 
-    private static BatchReply reasked(final BatchDrafter drafter, final BatchReply first) {
+    static BatchReply reasked(final BatchDrafter drafter, final BatchReply first) {
         return Objects.requireNonNull(
                 drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first)
                         .data(),
@@ -241,15 +250,55 @@ class BatchDrafterTest {
         assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.unreachable);
     }
 
+    // IF the model answers several items but drops one in the middle, THEN the batch was too much for it and halves.
     @Test
-    void record_replyMissingAnId_halvesTheSize() {
-        final BatchDrafter drafter = drafter(
-                reply("{\"items\":[{\"id\":\"1\",\"target\":\"Вона відчинила двері й визирнула надвір.\"}]}"), 8);
-        final BatchReply reply = drafted(drafter, ITEMS);
+    void record_replyDroppingAMiddleItemWithANormalStop_halvesTheSize() {
+        final BatchDrafter drafter = drafterAnswering(
+                List.of(reply(entries("1", "Вона відчинила двері.", "2", "Він мовчав.", "4", "Настала ніч."))));
 
-        drafter.record(reply);
+        drafter.record(firstReply(drafter));
 
         assertThat(drafter.size()).isEqualTo(4);
+    }
+
+    // IF the reply holds the first item and nothing else, THEN the model chose to stop early, which a smaller
+    // batch does not cure (2-item batches did it too), so the size stays.
+    @Test
+    void record_replyAnsweringOnlyTheFirstItem_keepsTheSize() {
+        final BatchDrafter drafter = drafter(
+                reply("{\"items\":[{\"id\":\"1\",\"target\":\"Вона відчинила двері й визирнула надвір.\"}]}"), 8);
+
+        drafter.record(drafted(drafter, ITEMS));
+
+        assertThat(drafter.size()).isEqualTo(8);
+    }
+
+    // IF a batch is made of two items and the controller allows ten, THEN the line says what was sent, what the next
+    // batch may carry and the ceiling, so a size above the first one reads as the controller's state.
+    @Test
+    void record_firstItemOnlyReply_logsWhatWasSentTheNextSizeAndTheCeiling() {
+        final BatchDrafter drafter = drafter(reply(entries("1", "Вона відчинила двері.")), 10);
+        final BatchReply reply = drafted(drafter, ITEMS);
+        final Logger log = (Logger) LoggerFactory.getLogger(BatchDrafter.class);
+        final Level before = log.getLevel();
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        log.setLevel(Level.DEBUG);
+        log.addAppender(appender);
+
+        try {
+            drafter.record(reply);
+        } finally {
+            log.detachAppender(appender);
+            log.setLevel(before);
+        }
+
+        assertThat(appender.list)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .filteredOn(message -> message.startsWith("Batch recorded"))
+                .singleElement()
+                .asString()
+                .contains("outcome=FIRST_ONLY", "sent=2", "nextSize=10", "maxSize=16");
     }
 
     @Test

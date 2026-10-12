@@ -301,12 +301,13 @@ final class BatchStage {
 
     private void logSettled(final int segments, final int adopted, final BatchAttempt.Kind kind) {
         log.info(
-                "Batch answered segments={} adopted={} fallbacks={} kind={} nextSize={}",
+                "Batch answered segments={} adopted={} fallbacks={} kind={} nextSize={} maxSize={}",
                 segments,
                 adopted,
                 segments - adopted,
                 kind,
-                drafter.size());
+                drafter.size(),
+                BatchDrafter.MAX_SIZE);
     }
 
     // The step is named by its first segment, so a skip skips that one, flagged as a single draft's skip is.
