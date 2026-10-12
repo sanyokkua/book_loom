@@ -144,6 +144,7 @@ record JudgementGold(
      * @param term the word
      * @param keep {@code true} when a person would keep it, {@code false} when it is an ordinary word to drop
      */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     record Recurring(String term, boolean keep) {
 
         /** Rejects a missing term. */
