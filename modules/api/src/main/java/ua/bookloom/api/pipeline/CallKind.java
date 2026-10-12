@@ -38,9 +38,12 @@ public enum CallKind {
     /** A setup call proposing the translated book's file name. */
     FILE_NAME,
 
-    /** A setup call proposing the Book Brief's tone and style from the opening of the book. */
+    /** A setup call reading one passage of the book's story for the Book Brief's tone and style. */
     BRIEF_SUGGESTION,
 
     /** A setup call asking what the model knows of the book by its title and author, checked against the metadata. */
-    BOOK_KNOWLEDGE
+    BOOK_KNOWLEDGE,
+
+    /** A setup call deciding the brief's genre, audience and voice from the facts, the knowledge and the readings. */
+    BRIEF_SYNTHESIS
 }

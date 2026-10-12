@@ -621,6 +621,10 @@ public enum MessageKey {
     BRIEF_EVIDENCE_AGREED("brief.evidence.agreed"),
     /** Hover explanation of the line labelled by {@link #BRIEF_EVIDENCE_AGREED}. */
     BRIEF_EVIDENCE_AGREED_TIP("brief.evidence.agreed.tip"),
+    /** Line under a suggested field that stands on what the model knows of the book. */
+    BRIEF_EVIDENCE_KNOWLEDGE("brief.evidence.knowledge"),
+    /** Line under a suggested field the code counted over the whole book, such as the narrator. */
+    BRIEF_EVIDENCE_MEASURED("brief.evidence.measured"),
     /** Chip beside a field the samples of the book did not agree on. */
     BRIEF_EVIDENCE_UNCERTAIN("brief.evidence.uncertain"),
     /** Hover explanation of the chip labelled by {@link #BRIEF_EVIDENCE_UNCERTAIN}. */

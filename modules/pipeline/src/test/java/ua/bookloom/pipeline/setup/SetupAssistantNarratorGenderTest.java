@@ -5,14 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -24,7 +27,11 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
-/** The brief suggestion gives a first-person narrator a gender only from a vocative or address the code verified. */
+/**
+ * The brief suggestion gives a first-person narrator a gender only from a vocative or address the code verified, and
+ * hands the brief the quote with the origin {@code VERIFIED} (15i.B4). The book has no title, so nothing is asked of
+ * what the model knows; it is read in one window, then the synthesis is asked once.
+ */
 class SetupAssistantNarratorGenderTest {
 
     private static final String VOCATIVE = "Hold on tight, Ray";
@@ -60,6 +67,12 @@ class SetupAssistantNarratorGenderTest {
         return Result.ok(new ChatResponse(json, FinishReason.STOP));
     }
 
+    // The window's answer and an empty synthesis: no genre, audience or voice is decided from it.
+    private void modelAnswers(final Result<ChatResponse> window) {
+        model.answerTo("brief-suggestion", window);
+        model.answerTo("brief-synthesis", Result.ok(new ChatResponse("{}", FinishReason.STOP)));
+    }
+
     private void glossaryHoldsRay() {
         assertThat(desk.glossary()
                         .add(new GlossaryEntry(
@@ -78,7 +91,7 @@ class SetupAssistantNarratorGenderTest {
     @Test
     void suggestBrief_vocativeOfAGlossaryPersonInTheWindow_suggestsThePersonsGender() {
         glossaryHoldsRay();
-        model.answer(reply("male", VOCATIVE, "Ray"));
+        modelAnswers(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -86,7 +99,12 @@ class SetupAssistantNarratorGenderTest {
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
                 .hasValueSatisfying(proof -> assertThat(proof.quotes()).containsExactly(VOCATIVE));
-        assertThat(model.requests()).hasSize(1);
+        assertThat(suggestion.suggestedNarrator())
+                .isEqualTo(new Narrator(
+                        NarratorPerson.FIRST, Gender.MALE, Narrator.GenderOrigin.VERIFIED, List.of(VOCATIVE)));
+        assertThat(model.requests())
+                .extracting(ChatRequest::callKind)
+                .containsExactly(CallKind.BRIEF_SUGGESTION, CallKind.BRIEF_SYNTHESIS);
     }
 
     // The brief's first-person narrator with no gender is filled, not left for the Start question.
@@ -94,7 +112,7 @@ class SetupAssistantNarratorGenderTest {
     void suggestBrief_firstPersonNarratorWithUnknownGenderSet_isFilledFromTheVocative() {
         glossaryHoldsRay();
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
-        model.answer(reply("male", VOCATIVE, "Ray"));
+        modelAnswers(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -107,7 +125,7 @@ class SetupAssistantNarratorGenderTest {
     // Ray is not on the first-name list on purpose, so with no glossary person the code cannot gender him.
     @Test
     void suggestBrief_vocativeOfANameNobodyKnows_leavesTheGenderUnknown() {
-        model.answer(reply("male", VOCATIVE, "Ray"));
+        modelAnswers(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();
@@ -119,7 +137,7 @@ class SetupAssistantNarratorGenderTest {
     void suggestBrief_personChoseTheGender_neverOverridesIt() {
         glossaryHoldsRay();
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
-        model.answer(reply("male", VOCATIVE, "Ray"));
+        modelAnswers(reply("male", VOCATIVE, "Ray"));
 
         final BriefSuggestion suggestion =
                 assistant.suggestBrief(desk.projectId(), model).data();

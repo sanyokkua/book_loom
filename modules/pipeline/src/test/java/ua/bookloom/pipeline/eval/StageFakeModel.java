@@ -8,6 +8,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.project.Genre;
 import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
@@ -59,6 +60,9 @@ final class StageFakeModel implements ChatModel {
         }
         if (format.equals(PromptName.FILE_NAME.responseFormatName())) {
             return "{\"target\":\"Джейн Остлер. Скляний сад. 2009\"}";
+        }
+        if (format.equals(PromptName.BRIEF_SYNTHESIS.responseFormatName())) {
+            return SynthesisReplies.of(Genre.DRAMA);
         }
         return brief(user);
     }

@@ -357,7 +357,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "first-person male narrator, feminine verbs after я"
@@ -376,7 +378,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "adjective and verb in the feminine for a male narrator"
@@ -403,7 +407,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "slip in the main clause, with a female character named beside the narrator"
@@ -422,7 +428,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "narration after a quoted speech"
@@ -441,7 +449,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "FEMALE"
+    "gender": "FEMALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "the mirror case: a female narrator rendered in the masculine"
@@ -460,7 +470,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "rationale": "the check reads the word right after я, so a verb behind \"нічого не\" is missed (28 slips in the real run); only the reviewer can flag it"

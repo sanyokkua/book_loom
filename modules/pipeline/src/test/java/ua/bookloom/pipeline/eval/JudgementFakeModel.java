@@ -62,6 +62,10 @@ final class JudgementFakeModel implements ChatModel {
         if (format.equals(PromptName.SUGGEST_TARGETS.responseFormatName())) {
             return "{\"suggestions\":[]}";
         }
+        if (format.equals(PromptName.BRIEF_SYNTHESIS.responseFormatName())) {
+            return SynthesisReplies.of(
+                    SynthesisReplies.inClass(book.gold().brief().genreClass()));
+        }
         return brief(user, wrong);
     }
 

@@ -8,6 +8,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.glossary.TermChoiceSchema;
 import ua.bookloom.pipeline.setup.BookKnowledgeSchema;
 import ua.bookloom.pipeline.setup.BriefSuggestionSchema;
+import ua.bookloom.pipeline.setup.BriefSynthesisSchema;
 
 /**
  * One owner per model call's template files, call kind, response-format name and sampling temperature, so no call
@@ -184,6 +185,20 @@ public enum PromptName {
             null,
             new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
             new Slots(Set.of("title"), Set.of("author"))),
+
+    /**
+     * The one call that decides the brief's genre, audience and voice from the book's facts, the accepted knowledge of
+     * it and the passages' verified readings, each value with the basis the code then checks (15i.B4).
+     */
+    BRIEF_SYNTHESIS(
+            "brief-synthesis",
+            CallKind.BRIEF_SYNTHESIS,
+            "brief-synthesis",
+            BriefSynthesisSchema.SCHEMA,
+            0.0,
+            null,
+            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("reports"), Set.of("title", "author", "year", "publisher", "description", "knowledge"))),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(

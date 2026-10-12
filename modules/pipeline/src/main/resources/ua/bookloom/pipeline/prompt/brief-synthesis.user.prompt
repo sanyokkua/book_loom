@@ -1,0 +1,25 @@
+<Input>
+{{#title}}
+Title: {{title}}
+{{/title}}
+{{#author}}
+Author: {{author}}
+{{/author}}
+{{#year}}
+Year: {{year}}
+{{/year}}
+{{#publisher}}
+Publisher: {{publisher}}
+{{/publisher}}
+{{#description}}
+Description: {{description}}
+{{/description}}
+{{#knowledge}}
+What you know of this book, checked against its metadata and accepted:
+{{knowledge}}
+{{/knowledge}}
+Reports of the passages read, each with the passage's quote:
+{{reports}}
+</Input>
+
+Return one JSON object with the fields genre, audience and voice, each with basis (knowledge, passages) and then value.

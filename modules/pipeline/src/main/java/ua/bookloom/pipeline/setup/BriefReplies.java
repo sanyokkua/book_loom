@@ -86,7 +86,7 @@ final class BriefReplies {
                 answers.put(
                         field,
                         supported
-                                .flatMap(kept -> proven(kept, node, narratorGender))
+                                .flatMap(kept -> proven(kept, node, sample, narratorGender))
                                 .orElse(UNKNOWN));
             } else {
                 supported.ifPresent(kept -> answers.put(field, kept));
@@ -95,10 +95,18 @@ final class BriefReplies {
         return answers;
     }
 
-    // The gender the quote proves replaces the model's word for it; one the quote does not prove is no evidence.
+    // The gender the quote proves replaces the model's word for it; one the quote does not prove is no evidence, and
+    // neither is a name or a word of address the narrator says to someone else.
     private static Optional<Answer> proven(
-            final Answer answer, final JsonNode node, final NarratorGenderEvidence narratorGender) {
+            final Answer answer,
+            final JsonNode node,
+            final BookSample sample,
+            final NarratorGenderEvidence narratorGender) {
         final String name = text(node.get("name"));
+        if (narratorGender.isSaidToAnother(sample, answer.quote(), name)) {
+            log.warn("Brief reply narrator gender {} is no vote: the narrator says it to someone else", answer.value());
+            return Optional.empty();
+        }
         final Optional<String> gender = narratorGender
                 .genderOf(answer.quote(), name)
                 .map(proved -> proved.name().toLowerCase(Locale.ROOT));

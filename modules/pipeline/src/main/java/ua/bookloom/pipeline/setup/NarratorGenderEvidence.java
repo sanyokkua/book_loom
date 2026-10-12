@@ -16,6 +16,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.prompt.AddressTerms;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Decides whether a quote the model gave for the narrator's gender shows that gender in words the code can check. Two
@@ -23,7 +24,8 @@ import ua.bookloom.pipeline.prompt.AddressTerms;
  * Ray"), when that name stands in the quote and is a glossary person of known gender or a listed first name, whose
  * gender it then is; and one that addresses the narrator with a word of the source language's {@code addressTerms}
  * ({@code ma'am}, {@code пане}), when the quote holds words of one gender only. The model's own word for the gender never
- * decides it. That the quote exists in the sample is checked by the caller.
+ * decides it. That the quote exists in the sample is checked by the caller, and so is that the narrator does not say it
+ * to someone else ({@link #isSaidToAnother}).
  */
 @Slf4j
 final class NarratorGenderEvidence {
@@ -34,6 +36,7 @@ final class NarratorGenderEvidence {
     private final List<GlossaryEntry> people;
     private final @Nullable String languageTag;
     private final Map<String, Gender> addressTerms;
+    private final Set<String> firstPersonPronouns;
 
     /**
      * Prepares the check for one book.
@@ -50,6 +53,8 @@ final class NarratorGenderEvidence {
                 .filter(entry -> isKnown(entry.gender()))
                 .toList();
         this.addressTerms = languageTag == null ? Map.of() : AddressTerms.of(languageTag);
+        this.firstPersonPronouns =
+                languageTag == null ? Set.of() : LanguageRules.bundled().firstPersonPronouns(languageTag);
         log.debug(
                 "Narrator gender evidence language={} glossaryPeople={} addressTerms={}",
                 languageTag,
@@ -77,6 +82,23 @@ final class NarratorGenderEvidence {
                 words.stream().map(addressTerms::get).filter(Objects::nonNull).collect(Collectors.toSet());
         log.debug("Narrator address terms in the quote show genders {}", addressed);
         return addressed.size() == 1 ? Optional.of(addressed.iterator().next()) : Optional.empty();
+    }
+
+    /**
+     * Whether the narrator says the quote to someone else, so its name or word of address is not the narrator's
+     * ({@link NarratorSpeech}).
+     *
+     * @param sample the window the quote was found in
+     * @param quote the quote
+     * @param name the name the model read from it; blank for a word of address
+     * @return {@code true} if the narrator speaks it and it is not the narrator's own introduction, {@code false}
+     *     otherwise, and always when the language lists no first-person pronoun
+     */
+    boolean isSaidToAnother(final BookSample sample, final String quote, final String name) {
+        Objects.requireNonNull(sample, "sample");
+        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(name, "name");
+        return NarratorSpeech.isToAnother(sample.passages(), quote, name, firstPersonPronouns);
     }
 
     private Optional<Gender> byName(final List<String> quoteWords, final String name) {

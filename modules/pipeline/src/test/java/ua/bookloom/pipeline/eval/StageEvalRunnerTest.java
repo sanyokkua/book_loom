@@ -148,13 +148,14 @@ class StageEvalRunnerTest {
         assertThat(sent.messages().getLast().content()).contains("File name: j_ostler-the_glass_orchard");
     }
 
+    // The genre is the synthesis call's since 15i.B4: its answer is the one replaced, with a listed genre outside the
+    // class.
     @Test
     void setup_modelWithAGenreOutsideTheClass_failsTheBriefNamingTheGenre() {
         final StageFakeModel good = new StageFakeModel(false);
         final ChatModel western = request -> good.chat(request)
                 .map(response -> new ChatResponse(
-                        response.content()
-                                .replace("\"genre\":{\"value\":\"drama\"", "\"genre\":{\"value\":\"western\""),
+                        response.content().replace("\"value\":\"Drama\"", "\"value\":\"Western\""),
                         response.finishReason()));
 
         final List<StageRow> rows = new SetupEvalRunner(western, workDir).run(genericSetupCases());

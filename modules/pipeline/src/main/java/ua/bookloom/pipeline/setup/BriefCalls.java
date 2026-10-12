@@ -1,12 +1,10 @@
 package ua.bookloom.pipeline.setup;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.pipeline.BriefField;
@@ -53,13 +51,5 @@ final class BriefCalls {
                 .map(Map.Entry::getKey)
                 .sorted()
                 .toList();
-    }
-
-    // 15i.B4 counts the windows' languages into a proposal; until then each is only recorded.
-    static void logLanguage(final int window, final @Nullable JsonNode reply, final @Nullable String chosen) {
-        if (reply != null) {
-            BriefReplies.language(reply, chosen)
-                    .ifPresent(language -> log.debug("Brief window {} is written in {}", window + 1, language));
-        }
     }
 }

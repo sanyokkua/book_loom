@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -40,8 +43,8 @@ class SetupAssistantAutoSourceTest {
         final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withLanguages(null, "uk")));
         final ScriptedChatModel model = new ScriptedChatModel();
-        model.answer(Result.ok(new ChatResponse(REPLY, FinishReason.STOP)))
-                .answer(Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
+        model.answerTo("brief-suggestion", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)))
+                .answerTo("brief-synthesis", Result.ok(new ChatResponse("{}", FinishReason.STOP)));
         final SetupAssistantImpl assistant = new SetupAssistantImpl(
                 desk.projects(),
                 desk.segments(),
@@ -57,12 +60,19 @@ class SetupAssistantAutoSourceTest {
         return model;
     }
 
+    // The window calls only: the synthesis after them reads no passage and asks no language (15i.B4).
+    private static List<ChatRequest> windows(final ScriptedChatModel model) {
+        return model.requests().stream()
+                .filter(request -> request.callKind() == CallKind.BRIEF_SUGGESTION)
+                .toList();
+    }
+
     // IF the setup call named a language nobody chose, THEN the model would be told to translate from it.
     @Test
     void suggestBrief_autoSourceBookDeclaringNothing_tellsTheModelToInferTheLanguage() {
         final ScriptedChatModel model = suggestUnderAuto(BODY);
 
-        assertThat(model.requests())
+        assertThat(windows(model))
                 .isNotEmpty()
                 .allSatisfy(request -> assertThat(request.messages().getFirst().content())
                         .contains("the language of this segment (infer it from its text)"));
@@ -73,7 +83,7 @@ class SetupAssistantAutoSourceTest {
     void suggestBrief_autoSourceBookDeclaringFrench_stillTellsTheModelToInferTheLanguage() {
         final ScriptedChatModel model = suggestUnderAuto("---\nlang: fr\n---\n\n" + BODY);
 
-        assertThat(model.requests())
+        assertThat(windows(model))
                 .isNotEmpty()
                 .allSatisfy(request -> assertThat(request.messages().getFirst().content())
                         .contains("the language of this segment (infer it from its text)")
@@ -86,7 +96,7 @@ class SetupAssistantAutoSourceTest {
     void suggestBrief_autoSource_asksEachWindowForTheLanguageItIsWrittenIn() {
         final ScriptedChatModel model = suggestUnderAuto(BODY);
 
-        assertThat(model.requests())
+        assertThat(windows(model))
                 .isNotEmpty()
                 .allSatisfy(request -> assertThat(request.messages())
                         .anyMatch(message -> message.content().contains("\"language\"")));

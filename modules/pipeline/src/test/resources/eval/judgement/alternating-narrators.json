@@ -1,6 +1,6 @@
 {
   "id": "alternating-narrators",
-  "about": "The chapters alternate between a first-person narrator and a third-person account of Petra, so no single narrator may be suggested.",
+  "about": "The chapters alternate between a first-person narrator and a third-person account of Petra; the detector reads it as mixed, which the brief takes as first person so the first-person chapters keep the narrator rules (15i.B4), with no gender suggested.",
   "title": "Two Lighthouses",
   "author": "Owen Hale",
   "chapters": [
@@ -47,7 +47,7 @@
       "genre": "romantic drama",
       "genreClass": ["drama", "romance"],
       "register": "NEUTRAL",
-      "narrator": "UNSPECIFIED",
+      "narrator": "FIRST",
       "narratorGender": "UNKNOWN"
     },
     "characters": [

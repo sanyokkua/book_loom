@@ -66,22 +66,33 @@ final class BriefEvidenceRow {
         if (evidence == null) {
             return;
         }
-        final String text = evidence.quotes().isEmpty() || uncertain
-                ? messages.get(MessageKey.BRIEF_EVIDENCE_AGREED, evidence.agreeing(), evidence.samples())
-                : messages.get(
-                        MessageKey.BRIEF_EVIDENCE_QUOTED,
-                        evidence.quotes().getFirst(),
-                        evidence.agreeing(),
-                        evidence.samples());
+        final String text = textOf(evidence);
         // The card shows the brief on every keystroke; only a new evidence line is worth a log line.
         if (!text.equals(line.getText())) {
             log.debug(
-                    "brief evidence of {}: {} of {} samples agree, {} quotes",
+                    "brief evidence of {}: basis {}, {} of {} samples agree, {} quotes",
                     field,
+                    evidence.basis(),
                     evidence.agreeing(),
                     evidence.samples(),
                     evidence.quotes().size());
             line.setText(text);
         }
+    }
+
+    // A field that stands on what the model knows, or on the code's own count, has no passages to count.
+    private String textOf(final FieldEvidence evidence) {
+        return switch (evidence.basis()) {
+            case KNOWLEDGE -> messages.get(MessageKey.BRIEF_EVIDENCE_KNOWLEDGE);
+            case MEASURED -> messages.get(MessageKey.BRIEF_EVIDENCE_MEASURED);
+            case PASSAGES, UNCERTAIN ->
+                evidence.quotes().isEmpty() || !evidence.isKept()
+                        ? messages.get(MessageKey.BRIEF_EVIDENCE_AGREED, evidence.agreeing(), evidence.samples())
+                        : messages.get(
+                                MessageKey.BRIEF_EVIDENCE_QUOTED,
+                                evidence.quotes().getFirst(),
+                                evidence.agreeing(),
+                                evidence.samples());
+        };
     }
 }

@@ -14,7 +14,9 @@ import ua.bookloom.pipeline.eval.StageCases.SetupCase;
 /**
  * The setup suite asks the production knowledge question (15i.B2) and records the verdict in
  * {@code Observed.knowledge}, offline over the scripted model: a classic's title, author and year are echoed and the
- * verdict is {@code known}; an invented book is {@code unknown}; a book with no metadata makes no call at all.
+ * verdict is {@code known}; an invented book is {@code unknown}; a book with no metadata makes no call at all. Since
+ * 15i.B4 the brief suggestion asks the same question first, so a titled book is asked twice in the suite: once inside
+ * the brief, once for the knowledge row, which measures the question on its own.
  */
 class SetupEvalKnowledgeTest {
 
@@ -35,13 +37,13 @@ class SetupEvalKnowledgeTest {
     }
 
     @Test
-    void run_classicBook_isAskedOnceAboutItsTitleAndAuthorAndIsKnown() {
+    void run_classicBook_isAskedAboutItsTitleAndAuthorInTheBriefAndInItsRowAndIsKnown() {
         final SetupCase classic = caseOf("classic-dracula");
         final SetupEvalRunner runner = new SetupEvalRunner(new SetupScriptedModel(List.of(classic), Set.of()), dir);
 
         final List<StageRow> rows = runner.run(List.of(classic));
 
-        assertThat(knowledgeRequests(runner)).hasSize(1);
+        assertThat(knowledgeRequests(runner)).hasSize(2);
         assertThat(knowledgeRequests(runner).getFirst().messages().getLast().content())
                 .contains("Dracula", "Bram Stoker");
         assertThat(runner.observed()).extracting(SetupScore.Observed::knowledge).containsExactly("known");
@@ -55,13 +57,13 @@ class SetupEvalKnowledgeTest {
     }
 
     @Test
-    void run_inventedBook_isAskedOnceAndIsUnknown() {
+    void run_inventedBook_isAskedInTheBriefAndInItsRowAndIsUnknown() {
         final SetupCase invented = caseOf("invented-03-salt-road");
         final SetupEvalRunner runner = new SetupEvalRunner(new SetupScriptedModel(List.of(invented), Set.of()), dir);
 
         final List<StageRow> rows = runner.run(List.of(invented));
 
-        assertThat(knowledgeRequests(runner)).hasSize(1);
+        assertThat(knowledgeRequests(runner)).hasSize(2);
         assertThat(runner.observed()).extracting(SetupScore.Observed::knowledge).containsExactly("unknown");
         assertThat(rows.stream().filter(row -> row.id().endsWith(":knowledge")))
                 .singleElement()

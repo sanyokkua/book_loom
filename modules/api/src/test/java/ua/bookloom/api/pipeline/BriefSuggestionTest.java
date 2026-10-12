@@ -56,7 +56,8 @@ class BriefSuggestionTest {
         assertThat(aligned.narratorGender()).isEqualTo(Gender.MALE);
     }
 
-    private static final FieldEvidence AGREED = new FieldEvidence(List.of("I lit a cigarette"), 2, 2);
+    private static final FieldEvidence AGREED =
+            new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("I lit a cigarette"), 2, 2);
 
     private static BriefSuggestion withEvidence(final String voice) {
         return new BriefSuggestion(
@@ -111,7 +112,7 @@ class BriefSuggestionTest {
                         BriefField.NARRATOR,
                         AGREED,
                         BriefField.NARRATOR_GENDER,
-                        new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2)));
+                        new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2)));
     }
 
     // IF a first-person narrator whose gender nobody chose discarded the model's verified answer, THEN the Start
@@ -125,7 +126,7 @@ class BriefSuggestionTest {
         assertThat(aligned.narrator()).isEqualTo(NarratorPerson.FIRST);
         assertThat(aligned.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(aligned.evidenceOf(BriefField.NARRATOR_GENDER))
-                .contains(new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2));
+                .contains(new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2));
         assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR);
     }
 
@@ -155,29 +156,5 @@ class BriefSuggestionTest {
 
         assertThat(aligned.narratorGender()).isEqualTo(Gender.UNKNOWN);
         assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR_GENDER);
-    }
-
-    // A field the code proved from one sample's quote is kept although the other sample showed nothing.
-    @ParameterizedTest
-    @CsvSource({"2,2,'',true", "1,2,'',false", "1,2,'Hold on, Ray',true", "0,2,'',false"})
-    void isKept_agreementOrAVerifiedQuote_keepsTheField(
-            final int agreeing, final int samples, final String quote, final boolean expected) {
-        final List<String> quotes = quote.isEmpty() ? List.of() : List.of(quote);
-
-        assertThat(new FieldEvidence(quotes, agreeing, samples).isKept()).isEqualTo(expected);
-    }
-
-    @ParameterizedTest
-    @CsvSource({"2,2,true", "1,2,false", "0,2,false"})
-    void isAgreed_agreeingOfSamples_isTrueOnlyWhenAllAgree(
-            final int agreeing, final int samples, final boolean expected) {
-        assertThat(new FieldEvidence(List.of(), agreeing, samples).isAgreed()).isEqualTo(expected);
-    }
-
-    @ParameterizedTest
-    @CsvSource({"3,2", "-1,2", "0,0"})
-    void fieldEvidence_countsThatCannotHold_areRejected(final int agreeing, final int samples) {
-        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
-                .isThrownBy(() -> new FieldEvidence(List.of(), agreeing, samples));
     }
 }

@@ -542,14 +542,17 @@ the narrator by a name, or the narrator gives it ("Hang on to your ass, Jack"), 
 quote and is a glossary character of known gender (the whole term or one word of it) or a name of the source language's
 first-name list, whose gender is then the narrator's whatever the model said; or, with no name, the quote holds words of
 the source language file's `addressTerms` table (`term>male` / `term>female`, such as `sir`, `ma'am`, `пане`, `дівчино`)
-of one gender only. Any other answer SHALL be the unknown gender. A gender one sample proves SHALL be kept unless another
-sample proves the other gender, and shown with its quote and the number of proving samples (`1 of 2 samples agrees`),
-not as uncertain. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
+of one gender only. A name or word of address the narrator says to someone else — the attribution beside the quoted
+speech names the narrator (`"Mind the step, Lucy," I said`) — SHALL be no vote, while the narrator's own introduction
+(`"I'm Lucy," I said`) is one. Any other answer SHALL be the unknown gender. A gender one window proves SHALL be kept
+unless another window proves the other gender, and shown with its quote and the number of proving windows, not as
+uncertain; the brief's narrator SHALL keep the proving quotes and the gender origin `VERIFIED` (the person's own choice
+is `PERSON`), so a later step can check the quotes again. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
 `Male (suggested)` or `Female (suggested)` with a hover explanation in English and Ukrainian until the person changes it;
 a gender the person set is never replaced, a third-person narrator gets none, and with no kept gender the gender stays
 unknown and the Start question asks as before.
 
-**Source:** FR-BRIEF-02; tasks 15h.G2.
+**Source:** FR-BRIEF-02; tasks 15h.G2, 15i.B4.
 In plain words: the model was free to say "male" from nothing, and its answer was then thrown away for a book whose
 narrator was already set to first person. Now the model has to point at a line the code can check — a name it can look
 up or a word like "ma'am" — and the gender it proves fills only a gap, marked as a suggestion.
@@ -564,6 +567,66 @@ up or a word like "ma'am" — and the gender it proves fills only a gap, marked 
 
 - **WHEN** the model answers `female` with a quote that holds neither a known name nor a word of address
 - **THEN** the narrator's gender stays unknown and Start translation asks who narrates
+
+#### Scenario: A name the narrator says to someone else is no vote
+
+- **WHEN** a window holds `"Mind the step, Lucy," I said` and the model answers `female` with the name `Lucy`
+- **THEN** that window gives no gender vote
+
+### Requirement: Suggest the tone and style from verified readings, one decision per field
+
+WHEN the person asks the model to suggest the tone and style, the application SHALL ask what the model knows of the book
+(`book-knowledge`, accepted only by its echo check), read K single windows of the story (Fast 3, Balanced 4, Max 5, fewer
+for a short story) with one `brief-suggestion` call each, each answer kept only with a quote found in its window, and then
+ask one `brief-synthesis` call over the book's facts, the accepted knowledge and the windows' verified readings; it SHALL
+then decide each field once. The register SHALL be kept by a strict majority of all K windows (a window with no verified
+answer counts against every value). The narrator's person SHALL be the narrator detector's when it answers — a mixed book
+is first person — else a strict majority of the windows. The narrator's gender follows the requirement above. The genre
+(one of the 40 listed names), the audience (`adult`, `young adult`, `children`, `general` or `academic`) and the voice /
+era (at most 12 words) SHALL come from the synthesis, each with a basis named before its value, and SHALL stand only when
+the basis holds: two cited windows that each had a verified reading of the field, accepted knowledge whose own field
+agrees with the value, or one cited window when that knowledge agrees or the whole story was read in one window; a cited
+window counts once and only when it read the field. Any other field SHALL stay neutral or empty and be shown as
+uncertain. Each field SHALL say what it stands on (`from 3 of 4 passages`, `from what the model knows of this book`, the
+detector's count). WHILE the source language is Auto, the language a strict majority of the windows name SHALL be a
+proposal only, never applied to the brief. A failed window call SHALL fail the suggestion; a failed knowledge question or
+synthesis SHALL only leave its fields uncertain.
+
+**Source:** FR-BRIEF-02; tasks 15h.G1, 15i.B2–B4; `docs/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`.
+In plain words: one window can be an odd stretch of a book, and a model's memory of a famous title can be wrong, so a
+field is kept only when most of the book's passages say it, or when the model's checked knowledge of the book says the
+same as the passages; otherwise the field stays for the person to choose.
+
+#### Scenario: Three of four windows decide the register
+
+- **WHEN** three of four windows answer `casual` with quotes found in them and the fourth answers `formal`
+- **THEN** the suggested register is `Casual`, shown as `from 3 of 4 passages`
+
+#### Scenario: A split register stays neutral and uncertain
+
+- **WHEN** two windows answer `casual` and two answer `formal`
+- **THEN** the suggested register is `Neutral` and shown as uncertain
+
+#### Scenario: One window alone does not decide the genre
+
+- **WHEN** the synthesis names `Mystery` citing one of four windows and the model does not know the book
+- **THEN** the genre stays empty and is shown as uncertain
+
+#### Scenario: Knowledge that agrees keeps the audience
+
+- **WHEN** the model's accepted knowledge says `adult readers` and the synthesis names the audience `adult` on that
+  knowledge
+- **THEN** the audience is `adult`, shown as from what the model knows of this book
+
+#### Scenario: The detector's person outweighs the windows
+
+- **WHEN** the detector reads the book as third person and every window answers `first`
+- **THEN** the suggested narrator is third person
+
+#### Scenario: Under Auto the windows' language is only proposed
+
+- **WHEN** the source language is Auto and three of four windows say the passage is French
+- **THEN** the suggestion proposes French and the brief's source language stays Auto
 
 ## REMOVED Requirements
 

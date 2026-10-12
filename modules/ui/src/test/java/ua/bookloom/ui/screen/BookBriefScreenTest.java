@@ -264,8 +264,9 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         NarratorPerson.UNSPECIFIED,
                         Gender.UNKNOWN,
                         Map.of(
-                                BriefField.REGISTER, new FieldEvidence(List.of("Hold on, man"), 2, 2),
-                                BriefField.GENRE, new FieldEvidence(List.of(), 1, 2)))));
+                                BriefField.REGISTER,
+                                        new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on, man"), 2, 2),
+                                BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 2)))));
 
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-evidence-register"));
@@ -293,7 +294,9 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         null,
                         NarratorPerson.UNSPECIFIED,
                         Gender.UNKNOWN,
-                        Map.of(BriefField.REGISTER, new FieldEvidence(List.of("Hold on, man"), 2, 2)))));
+                        Map.of(
+                                BriefField.REGISTER,
+                                new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on, man"), 2, 2)))));
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-evidence-register"));
 
@@ -316,7 +319,10 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         null,
                         NarratorPerson.FIRST,
                         Gender.MALE,
-                        Map.of(BriefField.NARRATOR_GENDER, new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2)))));
+                        Map.of(
+                                BriefField.NARRATOR_GENDER,
+                                new FieldEvidence(
+                                        FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2)))));
 
         onFx(() -> button("brief-suggest-style").fire());
         awaitFx(() -> isShown("brief-tone-narrator-gender-suggested"));

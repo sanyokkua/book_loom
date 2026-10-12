@@ -138,7 +138,7 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
                 null,
                 NarratorPerson.UNSPECIFIED,
                 Gender.UNKNOWN,
-                Map.of(BriefField.REGISTER, new FieldEvidence(List.of(), 1, 2)))));
+                Map.of(BriefField.REGISTER, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 2)))));
 
         suggest();
 
@@ -208,8 +208,9 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         assertThat(stored().narrator().gender()).isEqualTo(Gender.MALE);
     }
 
-    private static final FieldEvidence AGREED = new FieldEvidence(List.of("Hold on, man"), 2, 2);
-    private static final FieldEvidence UNCERTAIN = new FieldEvidence(List.of(), 1, 2);
+    private static final FieldEvidence AGREED =
+            new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on, man"), 2, 2);
+    private static final FieldEvidence UNCERTAIN = new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 2);
 
     private static BriefSuggestion withEvidence(final NarratorPerson narrator) {
         return new BriefSuggestion(
@@ -276,7 +277,8 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         assertThat(evidence(BriefField.GENRE)).contains(AGREED);
     }
 
-    private static final FieldEvidence VOCATIVE = new FieldEvidence(List.of("Hold on tight, Ray"), 1, 2);
+    private static final FieldEvidence VOCATIVE =
+            new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2);
 
     private static BriefSuggestion provenGender(final Gender gender) {
         return new BriefSuggestion(

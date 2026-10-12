@@ -70,9 +70,17 @@ class RequestTimeoutsTest {
         assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
     }
 
-    // The knowledge question is a small setup call like the brief and the file name: two minutes, whatever it expects.
+    // The knowledge question and the brief's synthesis (15i.B4) are small setup calls like the brief and the file name:
+    // two minutes, whatever they expect.
     @ParameterizedTest
-    @CsvSource({"BOOK_KNOWLEDGE,", "BOOK_KNOWLEDGE,160", "BRIEF_SUGGESTION,", "FILE_NAME,48"})
+    @CsvSource({
+        "BOOK_KNOWLEDGE,",
+        "BOOK_KNOWLEDGE,160",
+        "BRIEF_SUGGESTION,",
+        "FILE_NAME,48",
+        "BRIEF_SYNTHESIS,",
+        "BRIEF_SYNTHESIS,160"
+    })
     void forChat_setupCall_isTwoMinutesWhateverTheConfigAndExpectedOutput(
             CallKind kind, @Nullable Integer expectedOutputTokens) {
         final ProviderConfig bounded =

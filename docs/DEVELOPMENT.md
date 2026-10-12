@@ -923,7 +923,7 @@ with `BOOKLOOM_EVAL_SUITE` and run like the others (`BOOKLOOM_EVAL_URL` required
 |---|---|---|
 | `prescan` | `PreScan` (PRESCAN, then the verdict and suggestion calls) | a woman's one-word name kept as a female character, a place kept, a weekday and a language name left out |
 | `terms` | `TermChoice` (TERM_CHOICE) and `TermReview` (REVIEW_TERMS) | everyday words (keep, black, screen) dropped, a jargon term kept; held names kept, a weekday removed |
-| `setup` | `SetupAssistantImpl` (FILE_NAME, BRIEF_SUGGESTION) | a file name in the target script with its author part in it; the narrator the text is told in, the narrator's gender, the register and a genre of the case's class (`genreClass`, any one of whose words the genre holds) |
+| `setup` | `SetupAssistantImpl` (FILE_NAME; BOOK_KNOWLEDGE, BRIEF_SUGGESTION per window, BRIEF_SYNTHESIS) | a file name in the target script with its author part in it; the narrator the text is told in, the narrator's gender, the register and a genre of the case's class (`genreClass`, any one of whose words the genre holds) |
 | `consistency` | `ConsistencyPass` (`RetryPass`, `RetryDraft`, `NeighbourRevision`, `RevisionCall`) | a planted mixed-script word, a left-untranslated sentence, a trailing `"}` and a dropped vocative repaired |
 | `retry` | `RetryDraft.retry` (the review desk's Retry) | the same four planted defects repaired by one retry each |
 | `replay` | the draft parsers and judges (`ReplyJudge`, the batch parser), over calls read from a real trace log | see "Replay from a trace log" below |

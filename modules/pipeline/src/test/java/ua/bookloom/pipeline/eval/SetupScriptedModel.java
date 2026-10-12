@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
@@ -37,6 +38,8 @@ final class SetupScriptedModel implements ChatModel {
 
     private final List<SetupCase> cases;
     private final Set<String> wrongIds;
+    // The case the last window was about: the synthesis that follows names a genre of its class (15i.B4).
+    private @Nullable SetupCase lastCase;
 
     SetupScriptedModel(final List<SetupCase> cases, final Set<String> wrongIds) {
         this.cases = List.copyOf(Objects.requireNonNull(cases, "cases"));
@@ -54,7 +57,11 @@ final class SetupScriptedModel implements ChatModel {
         if (format.equals(PromptName.BOOK_KNOWLEDGE.responseFormatName())) {
             return ok(knowledge(user));
         }
+        if (format.equals(PromptName.BRIEF_SYNTHESIS.responseFormatName())) {
+            return ok(SynthesisReplies.of(lastCase == null ? null : SynthesisReplies.inClass(lastCase.genreClass())));
+        }
         final Optional<SetupCase> found = caseOf(user);
+        found.ifPresent(setupCase -> lastCase = setupCase);
         return ok(found.map(setupCase -> brief(setupCase, user)).orElse("{}"));
     }
 

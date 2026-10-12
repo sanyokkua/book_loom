@@ -100,7 +100,15 @@ class PromptHygieneLintTest {
             Map.entry("itemTokens", "1: ⟦g0⟧ ⟦g1⟧"),
             Map.entry("characters", "Hale — a man"),
             Map.entry("precedingPairs", "Source: He left.\nTranslation: Він пішов."),
-            Map.entry("nextSource", "He came back."));
+            Map.entry("nextSource", "He came back."),
+            Map.entry("year", "1945"),
+            Map.entry("publisher", "Secker and Warburg"),
+            Map.entry("description", "The animals of a farm drive out their farmer and rule it themselves."),
+            Map.entry("knowledge", "Genre: political satire\nAudience: adult readers"),
+            Map.entry(
+                    "reports",
+                    "Passage 1: genre \"satire\" (quote: \"the clocks were striking thirteen\"); audience nothing"
+                            + " shown; voice nothing shown."));
 
     @ParameterizedTest
     @EnumSource(PromptName.class)

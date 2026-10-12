@@ -134,7 +134,9 @@
   "context": {
    "narrator": {
     "person": "FIRST",
-    "gender": "MALE"
+    "gender": "MALE",
+    "genderOrigin": "PERSON",
+    "evidence": []
    }
   },
   "pairs": [

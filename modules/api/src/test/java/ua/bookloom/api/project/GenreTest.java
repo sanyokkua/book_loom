@@ -1,15 +1,18 @@
-package ua.bookloom.ui.state;
+package ua.bookloom.api.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.ui.i18n.LocaleProvider;
-import ua.bookloom.ui.i18n.Messages;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-/** The genre list is exactly forty entries in a fixed order, sent in English and shown in the interface language. */
+/**
+ * The forty genres, moved from the interface to {@code :api} (15i.B4) so the brief's synthesis can hold the model to
+ * them: exactly forty in a fixed order, sent by their English name, found again from any spelling of that name.
+ */
 class GenreTest {
 
     private static final List<String> EXPECTED = List.of(
@@ -64,35 +67,36 @@ class GenreTest {
         assertThat(Arrays.stream(Genre.values()).map(Genre::english)).doesNotHaveDuplicates();
     }
 
-    @Test
-    void gothicNovel_underUkrainian_isShownInUkrainianAndSentInEnglish() {
-        final Messages messages = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
+    // IF the model's "gothic NOVEL " were not the listed genre, THEN a right answer in the wrong case would be refused.
+    @ParameterizedTest
+    @CsvSource({"Gothic novel, GOTHIC_NOVEL", "gothic NOVEL, GOTHIC_NOVEL", "'  self-help ', SELF_HELP"})
+    void ofEnglish_anySpellingOfAListedName_isThatGenre(final String text, final Genre expected) {
+        assertThat(Genre.ofEnglish(text)).contains(expected);
+    }
 
-        assertThat(messages.get(Genre.GOTHIC_NOVEL.messageKey())).isEqualTo("Готичний роман");
-        assertThat(Genre.GOTHIC_NOVEL.english()).isEqualTo("Gothic novel");
+    // IF a genre outside the forty were taken, THEN the brief would hold a label no screen can show in Ukrainian.
+    @ParameterizedTest
+    @ValueSource(strings = {"Cyberpunk saga", "gothic", "", "novel"})
+    void ofEnglish_textThatIsNoListedName_isEmpty(final String text) {
+        assertThat(Genre.ofEnglish(text)).isEmpty();
     }
 
     @Test
-    void toStored_shownUkrainianName_isTheEnglishName() {
-        final Messages messages = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
-
-        assertThat(Genre.toStored("готичний роман", genre -> messages.get(genre.messageKey())))
-                .isEqualTo("Gothic novel");
+    void toStored_shownDisplayNameInAnyCase_isTheEnglishName() {
+        assertThat(Genre.toStored("GOTHIC NOVEL", Genre::english)).isEqualTo("Gothic novel");
     }
 
     @Test
     void toStored_textThatNamesNoGenre_isKeptAsWritten() {
-        assertThat(Genre.toStored("Cosy mystery set in 1920s Kyiv", Genre::english))
-                .isEqualTo("Cosy mystery set in 1920s Kyiv");
+        assertThat(Genre.toStored("Cosy mystery set in a harbour town", Genre::english))
+                .isEqualTo("Cosy mystery set in a harbour town");
     }
 
     @Test
     void toShown_englishName_isTheDisplayNameAndFreeTextIsKept() {
-        final Messages messages = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
-
-        assertThat(Genre.toShown("Gothic novel", genre -> messages.get(genre.messageKey())))
-                .isEqualTo("Готичний роман");
-        assertThat(Genre.toShown("Cosy mystery", genre -> messages.get(genre.messageKey())))
+        assertThat(Genre.toShown("Gothic novel", genre -> "[" + genre.name() + "]"))
+                .isEqualTo("[GOTHIC_NOVEL]");
+        assertThat(Genre.toShown("Cosy mystery", genre -> "[" + genre.name() + "]"))
                 .isEqualTo("Cosy mystery");
     }
 }

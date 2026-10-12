@@ -12,7 +12,7 @@ import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 
 /**
- * What the model suggests for the tone and style of a Book Brief after reading samples of the book. Every field is a
+ * What the model suggests for the tone and style of a Book Brief after reading passages of the book. Every field is a
  * suggestion the person can accept or change; nothing is applied by itself.
  *
  * @param genre the genre in the model's words, or null when it named none
@@ -22,8 +22,11 @@ import ua.bookloom.api.project.Register;
  * @param narrator who tells the story
  * @param narratorGender the first-person narrator's gender, {@link Gender#UNKNOWN} unless a quote the code verified
  *     shows it (a name the narrator is called by, or a word of address)
- * @param evidence the quotes and the agreement of the samples behind each field; never null, empty when the
- *     suggestion was not read from samples, and without the narrator fields once they are held to a set narrator
+ * @param evidence what each field stands on, with its quotes; never null, empty when the suggestion was not read from
+ *     the book, and without the narrator fields once they are held to a set narrator
+ * @param languageProposal the language most of the passages read are written in, as a language tag, when the brief's
+ *     source language is Auto; only a proposal the person may take, never applied; null when a source is chosen or no
+ *     language has a strict majority
  */
 public record BriefSuggestion(
         @Nullable String genre,
@@ -32,7 +35,8 @@ public record BriefSuggestion(
         @Nullable String audience,
         NarratorPerson narrator,
         Gender narratorGender,
-        Map<BriefField, FieldEvidence> evidence) {
+        Map<BriefField, FieldEvidence> evidence,
+        @Nullable String languageProposal) {
 
     private static final Pattern THIRD_PERSON = Pattern.compile("(?iU)third[- ]person|\\bтрет\\p{L}*\\s+особ");
     private static final Pattern FIRST_PERSON = Pattern.compile("(?iU)first[- ]person|\\bперш\\p{L}*\\s+особ");
@@ -44,6 +48,28 @@ public record BriefSuggestion(
         Objects.requireNonNull(narratorGender, "narratorGender");
         Objects.requireNonNull(evidence, "evidence");
         evidence = Map.copyOf(evidence);
+    }
+
+    /**
+     * A suggestion that proposes no source language.
+     *
+     * @param genre the genre, or null when none was decided
+     * @param register the suggested register
+     * @param voiceEra the voice and era phrase, or null
+     * @param audience the likely readers, or null
+     * @param narrator who tells the story
+     * @param narratorGender the first-person narrator's gender
+     * @param evidence what each field stands on
+     */
+    public BriefSuggestion(
+            @Nullable String genre,
+            Register register,
+            @Nullable String voiceEra,
+            @Nullable String audience,
+            NarratorPerson narrator,
+            Gender narratorGender,
+            Map<BriefField, FieldEvidence> evidence) {
+        this(genre, register, voiceEra, audience, narrator, narratorGender, evidence, null);
     }
 
     /**
@@ -113,7 +139,24 @@ public record BriefSuggestion(
                 audience,
                 current.person(),
                 fillsGender ? narratorGender : current.gender(),
-                kept);
+                kept,
+                languageProposal);
+    }
+
+    /**
+     * The narrator this suggestion gives the brief. A gender the code verified from quotes of the book carries those
+     * quotes and the origin {@link Narrator.GenderOrigin#VERIFIED}, so a later step can check them again and the
+     * screen can tell it from the person's choice; any other narrator is the person's, with no quotes.
+     *
+     * @return the narrator to store; never null
+     */
+    public Narrator suggestedNarrator() {
+        final FieldEvidence proof = evidence.get(BriefField.NARRATOR_GENDER);
+        final boolean known = narratorGender == Gender.MALE || narratorGender == Gender.FEMALE;
+        if (!known || proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
+            return new Narrator(narrator, narratorGender);
+        }
+        return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.VERIFIED, proof.quotes());
     }
 
     private static boolean contradicts(final NarratorPerson person, final String voice) {

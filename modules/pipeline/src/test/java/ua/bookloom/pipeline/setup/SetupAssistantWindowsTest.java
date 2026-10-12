@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.ScriptedChatModel;
@@ -54,7 +55,11 @@ class SetupAssistantWindowsTest {
     void open() {
         desk = ReviewFixtures.markdown(tempDir, BriefBooks.story(12, 100));
         model = new ScriptedChatModel();
-        model.answerTimes(MOST_WINDOWS, Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
+        java.util.stream.IntStream.range(0, MOST_WINDOWS)
+                .forEach(index ->
+                        model.answerTo("brief-suggestion", Result.ok(new ChatResponse(REPLY, FinishReason.STOP))));
+        // After the windows, the one synthesis call (15i.B4); its empty answer decides nothing.
+        model.answerTo("brief-synthesis", Result.ok(new ChatResponse("{}", FinishReason.STOP)));
         assistant = new SetupAssistantImpl(
                 desk.projects(),
                 desk.segments(),
@@ -74,8 +79,15 @@ class SetupAssistantWindowsTest {
         return assistant.suggestBrief(desk.projectId(), model, detectedContext, event -> {});
     }
 
-    private List<String> userMessages() {
+    // The windows' calls only; the synthesis call after them reads no passage.
+    private List<ChatRequest> windowRequests() {
         return model.requests().stream()
+                .filter(request -> request.callKind() == CallKind.BRIEF_SUGGESTION)
+                .toList();
+    }
+
+    private List<String> userMessages() {
+        return windowRequests().stream()
                 .map(SetupAssistantWindowsTest::userMessage)
                 .toList();
     }
@@ -102,7 +114,7 @@ class SetupAssistantWindowsTest {
 
         assertThat(suggest(null).isOk()).isTrue();
 
-        assertThat(model.requests()).hasSize(windows);
+        assertThat(windowRequests()).hasSize(windows);
         assertThat(userMessages())
                 .allSatisfy(user ->
                         assertThat(user).containsIgnoringCase("one passage").contains("Passage 1:"))
@@ -117,7 +129,7 @@ class SetupAssistantWindowsTest {
 
         assertThat(assistant.suggestBrief(desk.projectId(), model).isOk()).isTrue();
 
-        assertThat(model.requests()).hasSize(MOST_WINDOWS);
+        assertThat(windowRequests()).hasSize(MOST_WINDOWS);
         assertThat(userMessages())
                 .allSatisfy(
                         user -> assertThat(TokenEstimator.estimate(user, "en")).isBetween(3200, 4300));
@@ -131,8 +143,8 @@ class SetupAssistantWindowsTest {
 
         assertThat(suggest(4096).isOk()).isTrue();
 
-        assertThat(model.requests()).hasSize(MOST_WINDOWS);
-        assertThat(model.requests())
+        assertThat(windowRequests()).hasSize(MOST_WINDOWS);
+        assertThat(windowRequests())
                 .allSatisfy(request -> assertThat(promptTokens(request)).isLessThanOrEqualTo(4096 - REPLY_CAP));
         assertThat(userMessages())
                 .allSatisfy(
@@ -155,7 +167,7 @@ class SetupAssistantWindowsTest {
     void suggestBrief_request_putsEachFieldsEvidenceBeforeItsValueInTheSchemaAndTheExample() {
         assertThat(suggest(null).isOk()).isTrue();
 
-        final ChatRequest request = model.requests().getFirst();
+        final ChatRequest request = windowRequests().getFirst();
         final String schema = request.responseFormat().jsonSchema();
         final String system = request.messages().getFirst().content();
         assertThat(schema.indexOf("\"evidence\"")).isNotNegative().isLessThan(schema.indexOf("\"value\""));
@@ -167,7 +179,7 @@ class SetupAssistantWindowsTest {
     void suggestBrief_sourceLanguageChosen_asksNoLanguage() {
         assertThat(suggest(null).isOk()).isTrue();
 
-        assertThat(model.requests())
+        assertThat(windowRequests())
                 .allSatisfy(request -> assertThat(request.messages())
                         .noneMatch(message -> message.content().contains("\"language\"")));
     }

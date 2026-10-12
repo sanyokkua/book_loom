@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,29 +19,16 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.MetadataKey;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatRequest;
-import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SetupAssistant;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.SourceLanguage;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.heal.SelfHealCalls;
-import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.prompt.CallDescriptor;
-import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -53,22 +37,15 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * Asks the chosen model for the two things a person would otherwise type: the translated book's file name and the
- * tone and style of the Book Brief. The file name is one small call; the brief is one call for each of a few single
- * windows of the book's story ({@link BookSamples}), each answer held to a quote the code finds in its window, and a
- * field is kept only when every window agrees; the narrator's gender is kept only from a quote that shows it by a name
- * the glossary or the first-name list genders, or by a word of address ({@link NarratorGenderEvidence}). Every reply is
- * read leniently, cleaned in code and returned as a proposal, never applied.
+ * tone and style of the Book Brief. The file name is one small call; the brief is a knowledge question, one reading of
+ * each of a few single windows of the story and one synthesis, every field then decided once on a basis the code checks
+ * ({@link BriefSuggester}). Every reply is read leniently, cleaned in code and returned as a proposal, never applied.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SetupAssistantImpl implements SetupAssistant {
 
-    private static final String FB2_ZIP = ".fb2.zip";
     private static final int NAME_TOKENS = 96;
-    // Six fields, each a quote of up to fifteen words, a value and a confidence, the narrator's name and the language.
-    private static final int BRIEF_TOKENS = 512;
-    // The prompt's own text is English whatever the book's language.
-    private static final String PROMPT_LANGUAGE = "en";
     // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
     private static final int MAX_NAME_BYTES = 200;
     private static final Pattern RESERVED = Pattern.compile("(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?");
@@ -118,13 +95,15 @@ public final class SetupAssistantImpl implements SetupAssistant {
         Objects.requireNonNull(progress, "progress");
         log.debug("Brief suggestion requested project={} detectedContext={}", projectId, detectedContext);
         try {
-            return opened(projectId).flatMap(book -> askBrief(book, detectedContext, calls(model, progress, book)));
+            return opened(projectId)
+                    .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
+                            .suggest(book, detectedContext, calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         }
     }
 
-    private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
+    private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final SetupBook book) {
         return new JobModelCalls(
                 onSent -> {
                     onSent.run();
@@ -135,7 +114,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 book.target());
     }
 
-    private Result<Book> opened(final String projectId) {
+    private Result<SetupBook> opened(final String projectId) {
         final Result<Optional<Project>> found = projects.find(projectId);
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error(), "error"));
@@ -149,11 +128,11 @@ public final class SetupAssistantImpl implements SetupAssistant {
                     "Nothing to suggest",
                     "The project must be stored, name a target language and have its book open."));
         }
-        return Result.ok(new Book(project, document, target, openProjects.index(projectId)));
+        return Result.ok(new SetupBook(project, document, target, openProjects.index(projectId)));
     }
 
-    private Result<FileNameSuggestion> askName(final Book book, final ModelCalls calls) {
-        final String stem = stemOf(book.project().source().getFileName().toString());
+    private Result<FileNameSuggestion> askName(final SetupBook book, final ModelCalls calls) {
+        final String stem = book.fileStem();
         final Map<String, String> user = new HashMap<>();
         user.put("fileName", stem);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
@@ -173,14 +152,14 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return new FileNameSuggestion(targets.spell(suggestion.name()), suggestion.authorKeptInSourceScript());
     }
 
-    private Result<String> askFileName(final Book book, final Map<String, String> user, final ModelCalls calls) {
+    private Result<String> askFileName(final SetupBook book, final Map<String, String> user, final ModelCalls calls) {
         return ask(book, PromptName.FILE_NAME, user, NAME_TOKENS, calls).map(this::fileNameFrom);
     }
 
     // A non-Latin target with the author still in Latin letters is asked once more, naming the part; when the second
     // answer fails or keeps the Latin author too, the name is still offered, with the flag the screen can word.
     private FileNameSuggestion checkedAuthor(
-            final Book book, final Map<String, String> user, final String name, final ModelCalls calls) {
+            final SetupBook book, final Map<String, String> user, final String name, final ModelCalls calls) {
         if (!FileNameAuthor.isLeftInAnotherScript(name, book.target())) {
             return new FileNameSuggestion(name, false);
         }
@@ -197,130 +176,22 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return new FileNameSuggestion(second, stillLeft);
     }
 
-    private Result<BriefSuggestion> askBrief(
-            final Book book, final @Nullable Integer detectedContext, final ModelCalls calls) {
-        final QualityDial dial = book.project().brief().dial();
-        final int windowTokens = BookSamples.windowTokens(dial, detectedContext, briefFixedTokens(book));
-        final List<BookSample> windows =
-                BookSamples.of(book.document(), languageOf(book), BookSamples.windowCount(dial), windowTokens);
-        if (windows.isEmpty()) {
-            return Result.err(AppError.of(
-                    ErrorCode.validation, "Nothing to read", "The book has no body text to suggest a style from."));
-        }
-        log.info(
-                "Brief suggestion: {} windows of at most {} tokens, dial={}, source language {}",
-                windows.size(),
-                windowTokens,
-                dial,
-                book.project().brief().sourceLanguage() == null ? "auto" : "chosen");
-        return glossary.all(book.project().id())
-                .flatMap(people ->
-                        askWindows(book, windows, new NarratorGenderEvidence(people, languageOf(book)), calls));
-    }
-
-    // What each window's call spends besides the passage: its system message, its other user text and the reply.
-    private int briefFixedTokens(final Book book) {
-        final ChatRequest bare = briefRequest(book, new BookSample(List.of(), 0));
-        final int prompt = bare.messages().stream()
-                .mapToInt(message -> TokenEstimator.estimate(message.content(), PROMPT_LANGUAGE))
-                .sum();
-        log.debug("Brief call without its passage: {} prompt tokens, reply cap {}", prompt, BRIEF_TOKENS);
-        return prompt + BRIEF_TOKENS;
-    }
-
-    private Result<BriefSuggestion> askWindows(
-            final Book book,
-            final List<BookSample> windows,
-            final NarratorGenderEvidence genders,
-            final ModelCalls calls) {
-        final @Nullable String chosen = book.project().brief().sourceLanguage();
-        final List<@Nullable Map<BriefField, BriefReplies.Answer>> answers = new ArrayList<>();
-        for (int index = 0; index < windows.size(); index++) {
-            final BookSample window = windows.get(index);
-            log.debug("Brief window {} of {}: dialogue {} %", index + 1, windows.size(), window.dialoguePercent());
-            final Result<String> reply = send(briefRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
-            if (reply.isErr()) {
-                return Result.err(Objects.requireNonNull(reply.error(), "error"));
-            }
-            final JsonNode node = json(Objects.requireNonNull(reply.data(), "reply"));
-            answers.add(node == null ? null : BriefReplies.read(node, window, genders));
-            BriefCalls.logLanguage(index, node, chosen);
-        }
-        if (answers.stream().allMatch(Objects::isNull)) {
-            return Result.err(AppError.of(
-                    ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
-        }
-        return Result.ok(combined(book, answers));
-    }
-
-    // The windows' answers combine as the two samples' did until a majority replaces it (15i.B4).
-    private static BriefSuggestion combined(
-            final Book book, final List<@Nullable Map<BriefField, BriefReplies.Answer>> answers) {
-        final BriefSuggestion read = BriefAgreement.combine(answers, answers.size());
-        final BriefSuggestion aligned = read.alignedTo(book.project().brief().narrator());
-        log.info(
-                "Brief suggested from {} windows: kept fields {}, narratorGender={}, voiceDropped={}",
-                answers.size(),
-                BriefCalls.kept(aligned),
-                aligned.narratorGender(),
-                !Objects.equals(aligned.voiceEra(), read.voiceEra()));
-        return aligned;
-    }
-
-    private ChatRequest briefRequest(final Book book, final BookSample window) {
-        final boolean autoSource = book.project().brief().sourceLanguage() == null;
-        final ChatRequest request =
-                requestOf(book, PromptName.BRIEF_SUGGESTION, briefInput(book, window, autoSource), BRIEF_TOKENS);
-        return autoSource ? BriefCalls.withLanguageAsked(request) : request;
-    }
-
-    private static Map<String, String> briefInput(final Book book, final BookSample window, final boolean autoSource) {
-        final Map<String, String> user = new HashMap<>();
-        user.put("sample", window.text());
-        user.put("dialogueShare", Integer.toString(window.dialoguePercent()));
-        if (autoSource) {
-            user.put("askLanguage", "yes");
-        }
-        metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
-        metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        return user;
-    }
-
-    private static @Nullable String languageOf(final Book book) {
-        return SourceLanguage.forAnalysis(book.project().brief(), book.document());
-    }
-
     private Result<String> ask(
-            final Book book,
+            final SetupBook book,
             final PromptName name,
             final Map<String, String> user,
             final int tokens,
             final ModelCalls calls) {
-        return send(requestOf(book, name, user, tokens), name, calls);
+        final SetupCalls setup = setup();
+        return setup.send(setup.requestOf(book, name, user, new OutputLimit(tokens / 2, tokens)), name, calls);
     }
 
-    private ChatRequest requestOf(
-            final Book book, final PromptName name, final Map<String, String> user, final int tokens) {
-        final BookBrief brief = book.project().brief();
-        final CallFrame frame = CallFrame.forBook(brief, book.document(), book.index());
-        final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, frame, user);
-        return ChatRequests.build(name, messages, new OutputLimit(tokens / 2, tokens), false);
-    }
-
-    private Result<String> send(final ChatRequest request, final PromptName name, final ModelCalls calls) {
-        log.debug("Setup call {} sent", name);
-        final Result<ChatResponse> reply =
-                calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.whole(name));
-        if (reply.isErr()) {
-            return Result.err(Objects.requireNonNull(reply.error(), "error"));
-        }
-        final String content = Objects.requireNonNull(reply.data(), "reply").content();
-        log.trace("Setup call {} answered {}", name, content);
-        return Result.ok(content);
+    private SetupCalls setup() {
+        return new SetupCalls(templates, mapper);
     }
 
     private String fileNameFrom(final String reply) {
-        final JsonNode node = json(reply);
+        final JsonNode node = setup().json(reply);
         final String raw =
                 node != null && node.hasNonNull("target") ? node.get("target").asText() : "";
         return cleanFileName(raw);
@@ -349,32 +220,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return RESERVED.matcher(cut).matches() ? cut + "_" : cut;
     }
 
-    private @Nullable JsonNode json(final String reply) {
-        final int from = reply.indexOf('{');
-        final int to = reply.lastIndexOf('}');
-        if (from < 0 || to <= from) {
-            return null;
-        }
-        try {
-            return mapper.readTree(reply.substring(from, to + 1));
-        } catch (java.io.IOException unreadable) {
-            log.debug("Setup reply is not JSON");
-            return null;
-        }
-    }
-
     private static Optional<String> metadata(final Document document, final MetadataKey key) {
         return Optional.ofNullable(document.metadata().get(key.key()))
                 .map(String::strip)
                 .filter(s -> !s.isEmpty());
-    }
-
-    private static String stemOf(final String fileName) {
-        if (fileName.toLowerCase(Locale.ROOT).endsWith(FB2_ZIP)) {
-            return fileName.substring(0, fileName.length() - FB2_ZIP.length());
-        }
-        final int dot = fileName.lastIndexOf('.');
-        return dot > 0 ? fileName.substring(0, dot) : fileName;
     }
 
     private static <T> Result<T> failed(final String what, final Throwable cause) {
@@ -382,10 +231,4 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return Result.err(AppError.of(
                 ErrorCode.internal, "Suggestion failed", "An unexpected failure stopped the suggestion.", null, cause));
     }
-
-    private record Book(
-            Project project,
-            Document document,
-            String target,
-            @Nullable BookIndex index) {}
 }

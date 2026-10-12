@@ -50,6 +50,7 @@ public enum SamplingProfile {
                     FILE_NAME,
                     BRIEF_SUGGESTION,
                     BOOK_KNOWLEDGE,
+                    BRIEF_SYNTHESIS,
                     SUMMARY -> ANALYSIS;
         };
     }

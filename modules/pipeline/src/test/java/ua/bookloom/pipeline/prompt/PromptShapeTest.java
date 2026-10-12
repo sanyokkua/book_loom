@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
@@ -53,7 +54,8 @@ class PromptShapeTest {
             "suspicious-words", "words",
             "brief-suggestion", "genre",
             "term-choice", "terms",
-            "book-knowledge", "known");
+            "book-knowledge", "known",
+            "brief-synthesis", "genre");
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
     // language-rules map replaced the per-language example files.
@@ -89,7 +91,8 @@ class PromptShapeTest {
                 "FILE_NAME",
                 "BRIEF_SUGGESTION",
                 "TERM_CHOICE",
-                "BOOK_KNOWLEDGE"
+                "BOOK_KNOWLEDGE",
+                "BRIEF_SYNTHESIS"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
@@ -151,6 +154,32 @@ class PromptShapeTest {
         assertThat(system(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
                 .contains("known")
                 .containsAnyOf("do not guess", "never guess", "not guess", "not sure", "unsure");
+    }
+
+    // IF the example put the value first, THEN a small model would copy the order and decide before it cites; the
+    // synthesis is also told it may leave a field empty rather than guess (15i.B4).
+    @Test
+    void render_briefSynthesis_exampleReplyCitesItsBasisBeforeEachValueAndAllowsAnEmptyValue() {
+        final JsonNode example = prompt(PromptName.BRIEF_SYNTHESIS)
+                .lines()
+                .filter(line -> line.contains("{") && !line.contains("<"))
+                .map(line -> line.substring(line.indexOf('{')))
+                .map(PromptShapeTest::tree)
+                .filter(node -> node.has("genre"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(example.path("genre").fieldNames()).toIterable().containsExactly("basis", "value");
+        assertThat(example.path("genre").path("basis").has("passages")).isTrue();
+        assertThat(system(PromptName.BRIEF_SYNTHESIS).toLowerCase(java.util.Locale.ROOT))
+                .contains("basis", "passage", "empty");
+    }
+
+    // IF a genre were added to the forty and not to the prompt, THEN the model would never be offered it.
+    @ParameterizedTest
+    @EnumSource(Genre.class)
+    void render_briefSynthesis_listsEveryGenreByItsEnglishName(final Genre genre) {
+        assertThat(system(PromptName.BRIEF_SYNTHESIS)).contains(genre.english());
     }
 
     @Test

@@ -1,6 +1,5 @@
 package ua.bookloom.ui.state;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +20,7 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
@@ -214,21 +214,22 @@ public final class StyleSuggestion {
 
     /** The genre as the list names it when the model named one of the predefined genres, else as free text. */
     static String knownGenre(final String genre) {
-        return Arrays.stream(Genre.values())
-                .map(Genre::english)
-                .filter(english -> english.equalsIgnoreCase(genre.strip()))
-                .findFirst()
-                .orElse(genre.strip());
+        return Genre.ofEnglish(genre).map(Genre::english).orElse(genre.strip());
     }
 
     /**
      * The narrator the suggestion states once it is held to the brief's own ({@link BriefSuggestion#alignedTo}): a
      * narrator the person chose, or answered at Start, is never replaced by a guess, but a first-person narrator with no
-     * gender takes the gender the suggestion proved. The brief's own when the model could not tell.
+     * gender takes the gender the suggestion proved, with the quotes it was verified from and the origin
+     * {@link Narrator.GenderOrigin#VERIFIED}. The brief's own when the model could not tell or said the same.
      */
     static Narrator narratorFor(final BookBrief brief, final BriefSuggestion aligned) {
-        return aligned.narrator() == NarratorPerson.UNSPECIFIED
-                ? brief.narrator()
-                : new Narrator(aligned.narrator(), aligned.narratorGender());
+        if (aligned.narrator() == NarratorPerson.UNSPECIFIED) {
+            return brief.narrator();
+        }
+        final Narrator suggested = aligned.suggestedNarrator();
+        final boolean unchanged = suggested.person() == brief.narrator().person()
+                && suggested.gender() == brief.narrator().gender();
+        return unchanged ? brief.narrator() : suggested;
     }
 }

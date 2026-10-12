@@ -35,7 +35,9 @@ class SetupScoreTest {
     }
 
     // IF the scripted model flips two of the fifteen cases, THEN exactly those two briefs miss, and the report says
-    // 13 of 15 for the register and the narrator and 15 of 15 for the genre and the narrator's gender. The same two
+    // 13 of 15 for the register, 15 of 15 for the genre and the narrator's gender, and 14 of 15 for the narrator: since
+    // 15i.B4 the detector decides the narrator of the one flipped book long enough to count, whatever its windows say.
+    // The same two
     // are also answered the wrong way about what the model knows: the invented weir is "known" (echoed back), the
     // classic whale is "unknown"; the untitled book makes no call and is right.
     @Test
@@ -56,7 +58,7 @@ class SetupScoreTest {
                 .containsExactly(
                         tuple("genre", 15, 15),
                         tuple("register", 13, 15),
-                        tuple("narrator", 13, 15),
+                        tuple("narrator", 14, 15),
                         tuple("narratorGender", 15, 15),
                         tuple("knowledge.invented", 10, 11),
                         tuple("knowledge.classic", 3, 4));
@@ -65,7 +67,7 @@ class SetupScoreTest {
                 .extracting(StageRow::id)
                 .containsExactly("invented-06-thirteenth-weir:knowledge", "classic-moby-dick:knowledge");
         assertThat(score.line())
-                .isEqualTo("genre 15/15 register 13/15 narrator 13/15 narratorGender 15/15"
+                .isEqualTo("genre 15/15 register 13/15 narrator 14/15 narratorGender 15/15"
                         + " knowledge.invented 10/11 knowledge.classic 3/4");
     }
 

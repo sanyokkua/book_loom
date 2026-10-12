@@ -20,6 +20,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
@@ -29,7 +30,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.Genre;
+import ua.bookloom.ui.state.GenreLabels;
 import ua.bookloom.ui.state.StyleSuggestionOutcome;
 
 /**
@@ -314,7 +315,7 @@ final class BriefToneCard {
     }
 
     private String genreName(final Genre genre) {
-        return messages.get(genre.messageKey());
+        return messages.get(GenreLabels.keyOf(genre));
     }
 
     private void genrePicked(final BookBriefViewModel viewModel, final @Nullable String shown) {
