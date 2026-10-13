@@ -94,7 +94,7 @@
         "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week. She kept the coffee habit.",
         "pronoun" : "FEMALE"
       }, {
-        "text" : "Tamsin said the letter was for the guild alone. She did not raise her voice.",
+        "text" : "Tamsin said the letter was for the guild alone. She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
         "pronoun" : "FEMALE"
       }, {
         "text" : "In the district everyone knew Tamsin, and nobody had a bad word for Tamsin.",
@@ -116,7 +116,7 @@
         "text" : "The Guildsmen came to her room on the fourth night. They asked about the letter and did not sit down.",
         "pronoun" : "FEMALE"
       }, {
-        "text" : "She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
+        "text" : "Tamsin said the letter was for the guild alone. She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
         "pronoun" : null
       }, {
         "text" : "Tamsin walked back through the market alone. The Guildsmen watched her pass and did not follow.",
@@ -135,9 +135,6 @@
         "text" : "An Ostrene merchant offered her a seat at his table. The Ostrene always sat near the fire and never near the door.",
         "pronoun" : "FEMALE"
       }, {
-        "text" : "An Ostrene merchant offered her a seat at his table. The Ostrene always sat near the fire and never near the door.",
-        "pronoun" : null
-      }, {
         "text" : "Tamsin ate with the Ostrene and the Velarians together. She noticed that nobody mentioned the guild.",
         "pronoun" : null
       }, {
@@ -154,7 +151,7 @@
     "Velarians" : {
       "count" : 3,
       "windows" : [ {
-        "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week.",
+        "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week. She kept the coffee habit.",
         "pronoun" : null
       }, {
         "text" : "Tamsin ate with the Ostrene and the Velarians together. She noticed that nobody mentioned the guild.",

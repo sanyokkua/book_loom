@@ -111,6 +111,20 @@ class PseudoChatModelTest {
                         + "{\"term\":\"Milton\",\"target\":\"\",\"gender\":\"unknown\"}]}");
     }
 
+    // The term reading answers each numbered window as a name with no pronoun, so a pseudo reading votes no gender.
+    @Test
+    void chat_termReadingFormat_answersEveryWindowAsANameWithNoPronoun() {
+        final ChatResponse response = send(
+                "[Term]\nHale — 4 mentions\n\n[Windows]\n[1] [[Hale]] left.\n\n[2] Then [[Hale]] came back.\nShe smiled.\n",
+                "term-reading");
+
+        assertThat(response.content())
+                .isEqualTo("{\"windows\":["
+                        + "{\"window\":1,\"quote\":\"none\",\"usage\":\"name\",\"kind\":\"other\",\"gender\":\"none\"},"
+                        + "{\"window\":2,\"quote\":\"none\",\"usage\":\"name\",\"kind\":\"other\",\"gender\":\"none\"}],"
+                        + "\"speaking\":false,\"brand\":false}");
+    }
+
     // Summary is always empty and reports no facts.
     @Test
     void chat_summaryFormat_repliesWithEmptyBilingualSummary() {

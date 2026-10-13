@@ -31,8 +31,8 @@
         "text" : "Haldane stood on the bridge of the freighter and watched the barometer fall. He had seen that fall once before.",
         "pronoun" : "MALE"
       }, {
-        "text" : "Mayday, he said again, louder. Haldane repeated the position and the number of souls on board.",
-        "pronoun" : null
+        "text" : "Haldane picked up the radio. \"Mayday, mayday, mayday,\" he said, and gave the ship's name and position.",
+        "pronoun" : "MALE"
       }, {
         "text" : "Haldane set down the radio. He took the wheel and held the bow into the weather.",
         "pronoun" : "MALE"

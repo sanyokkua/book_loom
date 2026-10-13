@@ -190,13 +190,13 @@
     "Reyes" : {
       "count" : 13,
       "windows" : [ {
-        "text" : "Don’t say everywhere ,” Tomas Reyes objected. Say everywhere we have measured .”",
+        "text" : "“Don’t say everywhere ,” Tomas Reyes objected. “Say everywhere we have measured .”",
         "pronoun" : null
       }, {
-        "text" : "Is the Amulet really in the crate?” Reyes asked on the first morning.",
+        "text" : "“Is the Amulet really in the crate?” Reyes asked on the first morning.",
         "pronoun" : null
       }, {
-        "text" : "The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises.",
+        "text" : "The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises. We must have looked strange to it: two people in coats, sitting on folding stools beside a brass weight that swung and swung and never arrived anywhere.",
         "pronoun" : "MALE"
       }, {
         "text" : "When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook.",
@@ -218,10 +218,10 @@
         "text" : "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages.",
         "pronoun" : null
       }, {
-        "text" : "It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before.",
+        "text" : "It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before. When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape.",
         "pronoun" : null
       }, {
-        "text" : "Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that some… He did not laugh, which I took as a sign of how tired he was.",
+        "text" : "Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that somebody would always be watching it. He did not laugh, which I took as a sign of how tired he was.",
         "pronoun" : "MALE"
       } ],
       "pronouns" : {
@@ -284,10 +284,10 @@
         "text" : "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value.",
         "pronoun" : null
       }, {
-        "text" : "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of t… We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us.",
+        "text" : "The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of the ceiling and a floor that was levelled, the plaque says, by a man who did not believe in rushing. We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us.",
         "pronoun" : null
       }, {
-        "text" : "or so the old textbook claimed. 3 The Harrow Vale survey proved it wrong by a few parts in ten thousand.",
+        "text" : "Gravity is identical everywhere on Earth — or so the old textbook claimed. 3 The Harrow Vale survey proved it wrong by a few parts in ten thousand.",
         "pronoun" : null
       } ],
       "pronouns" : {

@@ -40,12 +40,15 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
+    private static final String FORMAT_TERM_READING = "term-reading";
     // One numbered item of a batch draft: <s id="3">text</s>, inside the <Items> block of the user message.
     private static final Pattern BATCH_ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
     // One listed term of a glossary review: "- <term> — <count>× — ...".
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
     // One listed term of a suggestion request: "- <term> — <type>, <gender> ...".
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
+    // One numbered window of a term reading: "[<number>] <text>".
+    private static final Pattern READING_WINDOW = Pattern.compile("(?m)^\\[(\\d{1,6})] ");
 
     private static final String REVIEWER_REPLY = "{\"results\":[]}";
     private static final String SUMMARY_REPLY = "{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}";
@@ -117,6 +120,7 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_SUMMARY -> SUMMARY_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
+            case FORMAT_TERM_READING -> readingReply(source);
             case FORMAT_DRAFT_BATCH -> batchReply(source);
             default -> targetReply(translation);
         };
@@ -176,6 +180,27 @@ public final class PseudoChatModel implements ChatModel {
         }
         log.debug("Pseudo glossary suggestion answered {} terms with no suggestion", suggestions.size());
         return writeValue(Map.of("suggestions", suggestions));
+    }
+
+    // The offline model reads nothing into a window: each one is a name with no pronoun quoted, so no gender is voted.
+    private String readingReply(String source) {
+        final Matcher matcher = READING_WINDOW.matcher(source);
+        final List<Map<String, Object>> windows = new ArrayList<>();
+        while (matcher.find()) {
+            final Map<String, Object> window = new LinkedHashMap<>();
+            window.put("window", Integer.parseInt(matcher.group(1)));
+            window.put("quote", "none");
+            window.put("usage", "name");
+            window.put("kind", "other");
+            window.put("gender", "none");
+            windows.add(window);
+        }
+        log.debug("Pseudo term reading answered {} windows with no pronoun", windows.size());
+        final Map<String, Object> reply = new LinkedHashMap<>();
+        reply.put("windows", windows);
+        reply.put("speaking", false);
+        reply.put("brand", false);
+        return writeValue(reply);
     }
 
     private static Map<String, String> termEntry(String term) {

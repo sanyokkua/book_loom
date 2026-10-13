@@ -33,7 +33,8 @@ class PromptNameTest {
         "SUMMARY,summary,SUMMARY,summary,0.2",
         "SUSPICIOUS_WORDS,suspicious-words,REVIEW,suspicious-words,0.0",
         "BOOK_KNOWLEDGE,book-knowledge,BOOK_KNOWLEDGE,book-knowledge,0.0",
-        "BRIEF_SYNTHESIS,brief-synthesis,BRIEF_SYNTHESIS,brief-synthesis,0.0"
+        "BRIEF_SYNTHESIS,brief-synthesis,BRIEF_SYNTHESIS,brief-synthesis,0.0",
+        "TERM_READING,term-reading,TERM_READING,term-reading,0.0"
     })
     void constants_declared_carryListedValues(
             final PromptName name,
@@ -65,7 +66,8 @@ class PromptNameTest {
         "SUMMARY",
         "SUSPICIOUS_WORDS",
         "BOOK_KNOWLEDGE",
-        "BRIEF_SYNTHESIS"
+        "BRIEF_SYNTHESIS",
+        "TERM_READING"
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {
         assertThatThrownBy(() -> name.temperature(true)).isInstanceOf(IllegalArgumentException.class);

@@ -34,4 +34,11 @@ class SamplingProfileTest {
         assertThat(SamplingProfile.of(PromptName.DIRECTED_FIX).params().topK()).isEqualTo(40);
         assertThat(SamplingProfile.of(PromptName.SUMMARY).params().topK()).isEqualTo(20);
     }
+
+    // 15i.N4: the term reading answers from closed lists and a quote it copies, so it cuts the tail as an analysis
+    // call.
+    @Test
+    void of_termReading_isAnAnalysisCall() {
+        assertThat(SamplingProfile.of(PromptName.TERM_READING)).isEqualTo(SamplingProfile.ANALYSIS);
+    }
 }

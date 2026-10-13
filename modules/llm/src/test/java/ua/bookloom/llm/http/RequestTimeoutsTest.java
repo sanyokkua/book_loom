@@ -89,6 +89,17 @@ class RequestTimeoutsTest {
         assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
     }
 
+    // 15i.N4: a term reading is a small helper call like the name review: two minutes, whatever its windows expect.
+    @ParameterizedTest
+    @CsvSource({"TERM_READING,", "TERM_READING,520", "TERM_READING,120"})
+    void forChat_termReading_isTwoMinutesWhateverTheConfigAndExpectedOutput(
+            CallKind kind, @Nullable Integer expectedOutputTokens) {
+        final ProviderConfig bounded =
+                RequestTimeouts.forChat(config(Duration.ofSeconds(30)), request(kind, expectedOutputTokens));
+
+        assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
+    }
+
     @ParameterizedTest
     @CsvSource({"180,60", "90,60", "30,30"})
     void streamIdle_configuredTimeout_isSixtySecondsOrTheConfiguredTimeoutWhenShorter(

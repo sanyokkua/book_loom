@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
@@ -49,6 +49,10 @@
 # -names.json). One row per model and book: gender % over the characters with five or more mentions, wrong-but-verified
 # genders, type %, the share of person clusters with one gender, spellings per cluster, junk kept, real names lost,
 # recurring terms right, calls and minutes. The per-model timeout defaults to 5400 s, as for sequence.
+# --suite coref (15i.E2 with 15i.N4) sends each invented coreference window (eval/coref/windows.json) as one term-reading
+# call and scores the gender votes the reading keeps (reports end in -coref.json): one row per model with the windows
+# read right, the wrong votes, the abstentions and the wrong-vote rate (the gate is at most 5 %, else that model's votes
+# only break ties).
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -188,6 +192,12 @@ if sys.argv[2] == "names":
             print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
     print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
     sys.exit(0)
+if sys.argv[2] == "coref":
+    print("%-36s %7s %6s %6s %8s %9s" % ("model", "windows", "right", "wrong", "abstain", "wrongVote"))
+    for r in (r for r in reports if r.get("suite") == "coref"):
+        print("%-36s %7d %6d %6d %8d %8.1f%%" % (r["model"], r["windows"], r["right"], r["wrong"], r["abstain"], 100 * r["wrongVoteRate"]))
+    print("(wrongVote: wrong votes / (right + wrong votes); an abstention is neither. The 15i.N4 gate: at most 5 %, else that model's votes only break ties)")
+    sys.exit(0)
 if sys.argv[2] == "recall":
     pct = lambda v: "-" if v is None else "%.0f%%" % (100 * v)
     for r in (r for r in reports if r.get("suite") == "recall"):
@@ -244,7 +254,7 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

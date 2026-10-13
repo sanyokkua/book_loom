@@ -6,6 +6,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.glossary.TermChoiceSchema;
+import ua.bookloom.pipeline.glossary.TermReadingSchema;
 import ua.bookloom.pipeline.setup.BookKnowledgeSchema;
 import ua.bookloom.pipeline.setup.BriefSuggestionSchema;
 import ua.bookloom.pipeline.setup.BriefSynthesisSchema;
@@ -200,6 +201,17 @@ public enum PromptName {
             new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
             new Slots(Set.of("reports"), Set.of("title", "author", "year", "publisher", "description", "knowledge"))),
 
+    /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
+    TERM_READING(
+            "term-reading",
+            CallKind.TERM_READING,
+            "term-reading",
+            TermReadingSchema.SCHEMA,
+            0.0,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("term", "windows"), Set.of())),
+
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
             "prescan",
@@ -353,26 +365,6 @@ public enum PromptName {
     /** The user template's slots. */
     public Slots userSlots() {
         return userSlots;
-    }
-
-    /** The user slots of the batch draft, kept out of the constant so the enum body stays readable. */
-    private static final class BatchSlots {
-
-        static final Slots USER = new Slots(
-                Set.of("items", "source", "target"),
-                Set.of(
-                        "summary",
-                        "glossaryTerms",
-                        "lockedNames",
-                        "suggestedTerms",
-                        "memoryHint",
-                        "lexiconTerms",
-                        "keyTerms",
-                        "characters",
-                        "precedingPairs",
-                        "nextSource",
-                        "itemTokens",
-                        "extraInstruction"));
     }
 
     /**

@@ -77,7 +77,8 @@ public final class RequestTimeouts {
                     FILE_NAME,
                     BRIEF_SUGGESTION,
                     BOOK_KNOWLEDGE,
-                    BRIEF_SYNTHESIS -> HELPER_TIMEOUT;
+                    BRIEF_SYNTHESIS,
+                    TERM_READING -> HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION -> null;
         };
     }

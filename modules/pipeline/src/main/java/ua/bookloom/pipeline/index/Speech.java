@@ -6,17 +6,26 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * Tells speech from narration at a position of a segment: inside a quotation, or in a dash-led line before the second
- * dash (and between the third and fourth, since an interrupted line resumes), the text is spoken.
+ * Tells speech from narration at a position of a segment or a window: inside a quotation, or in a dash-led line before
+ * the second dash (and between the third and fourth, since an interrupted line resumes), the text is spoken. A window
+ * keeps its paragraphs on lines of their own, so a dash-led line of the next paragraph is read as speech there too.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class Speech {
+public final class Speech {
 
     private static final String DASHES = "—―–";
     private static final char STRAIGHT_QUOTE = '"';
 
-    static boolean isNarration(final String text, final int position) {
+    /**
+     * Tells whether a position of a text lies in narration.
+     *
+     * @param text a segment's text or a window's; never null
+     * @param position an offset from 0 to {@code text.length()}
+     * @return {@code true} if the position is outside quotation marks and outside a speaker's dash-led line, {@code
+     *     false} otherwise
+     */
+    public static boolean isNarration(final String text, final int position) {
         return !isQuoted(text, position) && !isDashSpeech(text, position);
     }
 

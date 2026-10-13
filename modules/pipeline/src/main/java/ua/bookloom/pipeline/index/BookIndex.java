@@ -10,6 +10,7 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
@@ -171,11 +172,26 @@ public final class BookIndex {
      * @return the windows in reading order, at most {@code plan.count()}; never null
      */
     public List<Window> windows(final List<Mention> mentions, final WindowPlan plan) {
+        return windows(mentions, plan, mention -> false);
+    }
+
+    /**
+     * Cuts the text around some of the mentions of one name, preferring some mentions within each stretch.
+     *
+     * @param mentions the mentions in reading order; never null
+     * @param plan how many windows, how many neighbouring segments and how many tokens each; never null
+     * @param preferred which mentions to show before a stretch's middle narration mention, such as one the code can
+     *     give a pronoun; never null
+     * @return the windows in reading order, at most {@code plan.count()}; never null
+     */
+    public List<Window> windows(
+            final List<Mention> mentions, final WindowPlan plan, final Predicate<Mention> preferred) {
         Objects.requireNonNull(mentions, "mentions");
         Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(preferred, "preferred");
         log.debug("Windows over {} mentions, plan {}", mentions.size(), plan);
         final WindowCutter cutter = new WindowCutter(data);
-        return WindowPicker.choose(mentions, plan.count()).stream()
+        return WindowPicker.choose(mentions, plan.count(), preferred).stream()
                 .map(mention -> cutter.cut(mention, plan))
                 .toList();
     }

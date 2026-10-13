@@ -6,7 +6,8 @@ package ua.bookloom.pipeline.index;
  * @param mention the mention the window is cut around
  * @param firstOrdinal the first segment that contributes a sentence
  * @param lastOrdinal the last segment that contributes a sentence
- * @param text the kept sentences in reading order
+ * @param text the kept sentences in reading order: those of one segment joined by a space, segments by a line break,
+ *     each with its quotation marks and a speaker's dash, so speech can be told from narration in it
  * @param markStart where the mention starts in {@code text}
  * @param markEnd where it ends in {@code text}, exclusive
  */

@@ -35,6 +35,17 @@ class BookIndexWindowsTest {
         return index.windows(index.mentions(List.of("Ivo"), Case.SENSITIVE), plan);
     }
 
+    // A plan that grows forward first takes the sentence after the mention before the one before it.
+    @Test
+    void windows_budgetForOneNeighbourSentenceGrowingForward_keepsTheOneAfter() {
+        final Window window = windowsOf(trimBook(), new WindowPlan(1, 1, 25, WindowPlan.Growth.FORWARD_FIRST))
+                .getFirst();
+
+        assertThat(window.text()).isEqualTo(IVO_SENTENCE + " " + BOAT);
+        assertThat(window.text().substring(window.markStart(), window.markEnd()))
+                .isEqualTo("Ivo");
+    }
+
     // IF the budget is roomy, THEN the window is the mention's segment and one neighbour each side, whole.
     @Test
     void windows_roomyBudget_holdsTheSegmentAndItsNeighboursWhole() {
@@ -101,6 +112,61 @@ class BookIndexWindowsTest {
         assertThat(window.text().substring(window.markStart(), window.markEnd()))
                 .isEqualTo("Ivo");
         assertThat(window.mention().ordinal()).isBetween(window.firstOrdinal(), window.lastOrdinal());
+    }
+
+    // IF a window joined its paragraphs with a space, THEN a speaker's dash-led line in the next paragraph would read
+    // as
+    // narration: segments are joined by a line break, the sentences of one segment by a space.
+    @Test
+    void windows_neighbouringSegments_areJoinedByALineBreak() {
+        final Window window = windowsOf(trimBook(), new WindowPlan(1, 1, ROOMY)).getFirst();
+
+        assertThat(window.text())
+                .isEqualTo("The first line is quiet and calm. It ends here.\n" + RAIN + " " + IVO_SENTENCE + " " + BOAT
+                        + "\nNobody spoke of it again. The end came soon.");
+    }
+
+    // IF a sentence lost its opening quotation mark, THEN speech after the name would read as narration.
+    @Test
+    void windows_sentenceOpeningWithAQuote_keepsItsQuotationMarks() {
+        final String paragraph = "Ivo stood by the window. “She will come,” said Tovrin. — Not today.";
+        final BookIndex index = narrationBook(paragraph, "— She is late, — Tovrin said.");
+
+        final Window window = windowsOf(index, new WindowPlan(1, 1, ROOMY)).getFirst();
+
+        assertThat(window.text()).isEqualTo(paragraph + "\n— She is late, — Tovrin said.");
+    }
+
+    // IF one sentence ran past the budget, THEN it would fill the window alone, however long: a sentence over the
+    // budget (and over 50 tokens) is cut at word boundaries around the mention, the word before first. 60 tokens are
+    // 208 English characters: 34 words before, 33 after.
+    @Test
+    void windows_sentenceOverTheBudget_isCutAtWordsAroundTheMention() {
+        final BookIndex index = narrationBook("aa ".repeat(200) + "Ivo" + " aa".repeat(200) + ".");
+
+        final Window window = windowsOf(index, new WindowPlan(1, 1, 60)).getFirst();
+
+        assertThat(window.text()).isEqualTo("…" + "aa ".repeat(34) + "Ivo" + " aa".repeat(33) + "…");
+        assertThat(window.text().substring(window.markStart(), window.markEnd()))
+                .isEqualTo("Ivo");
+    }
+
+    // A caller may prefer some mentions (the name review prefers one the code can give a pronoun): the first preferred
+    // mention of a stretch is shown instead of its middle one.
+    @Test
+    void windows_preferredMention_isShownInsteadOfItsStretchsMiddle() {
+        final BookIndex index = tenMentions("NNNNNNNNNN");
+
+        final List<Integer> shown = index
+                .windows(
+                        index.mentions(List.of("Ivo"), Case.SENSITIVE),
+                        new WindowPlan(4, 0, ROOMY),
+                        mention -> mention.ordinal() == 1)
+                .stream()
+                .map(window -> window.mention().ordinal())
+                .toList();
+
+        assertThat(shown).containsExactly(0, 1, 5, 8);
     }
 
     private static BookIndex twoUnits() {

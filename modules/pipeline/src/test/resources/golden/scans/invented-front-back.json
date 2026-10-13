@@ -81,7 +81,7 @@
         "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
         "pronoun" : null
       }, {
-        "text" : "The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
+        "text" : "“Welcome,” said Corvin. “The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
         "pronoun" : "FEMALE"
       }, {
         "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well. He gave Corvin a letter.",
@@ -100,7 +100,7 @@
         "text" : "Ysolde stepped off the boat at Marrow Quay. She looked for Corvin among the crowd.",
         "pronoun" : "FEMALE"
       }, {
-        "text" : "said Corvin. The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
+        "text" : "“Welcome,” said Corvin. “The road to Marrow Quay is long.” Ysolde nodded; she had walked it before.",
         "pronoun" : null
       }, {
         "text" : "O Marrow Quay, O Marrow Quay",
@@ -122,10 +122,7 @@
         "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
         "pronoun" : null
       }, {
-        "text" : "The Lantern Road Corvin met her at the gate. He took Ysolde’s bag and led her up the Lantern Road.",
-        "pronoun" : null
-      }, {
-        "text" : "Corvin lit the lamps along the Lantern Road. Ysolde carried the oil.",
+        "text" : "Corvin lit the lamps along the Lantern Road. Ysolde carried the oil. She did not complain.",
         "pronoun" : null
       } ],
       "pronouns" : {
@@ -138,9 +135,6 @@
     "Pell" : {
       "count" : 3,
       "windows" : [ {
-        "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well.",
-        "pronoun" : null
-      }, {
         "text" : "Mr. Pell, the harbour clerk, waved. Pell knew Ysolde well. He gave Corvin a letter.",
         "pronoun" : null
       }, {

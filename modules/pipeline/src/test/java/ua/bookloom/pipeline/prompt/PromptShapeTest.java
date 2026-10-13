@@ -55,7 +55,8 @@ class PromptShapeTest {
             "brief-suggestion", "genre",
             "term-choice", "terms",
             "book-knowledge", "known",
-            "brief-synthesis", "genre");
+            "brief-synthesis", "genre",
+            "term-reading", "windows");
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
     // language-rules map replaced the per-language example files.
@@ -92,7 +93,8 @@ class PromptShapeTest {
                 "BRIEF_SUGGESTION",
                 "TERM_CHOICE",
                 "BOOK_KNOWLEDGE",
-                "BRIEF_SYNTHESIS"
+                "BRIEF_SYNTHESIS",
+                "TERM_READING"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
@@ -187,6 +189,44 @@ class PromptShapeTest {
         final String user = TEMPLATES.renderUser(PromptName.BOOK_KNOWLEDGE, Map.of("title", "The Lantern Ledger"));
 
         assertThat(user).contains("The Lantern Ledger").doesNotContain("Author");
+    }
+
+    // 15i.N4: the example reply copies the quote before it labels the window, as the schema orders it, and the example
+    // quote holds a third-person pronoun of the narration.
+    @Test
+    void render_termReading_exampleReplyPutsEachQuoteBeforeItsLabels() {
+        final JsonNode example = prompt(PromptName.TERM_READING)
+                .lines()
+                .filter(line -> line.contains("{") && !line.contains("<"))
+                .map(line -> line.substring(line.indexOf('{')))
+                .map(PromptShapeTest::tree)
+                .filter(node -> node.has("windows") && node.path("windows").size() > 0)
+                .findFirst()
+                .orElseThrow();
+        final java.util.List<String> fields = new java.util.ArrayList<>();
+        example.path("windows").get(0).fieldNames().forEachRemaining(fields::add);
+
+        assertThat(fields).containsExactly("window", "quote", "usage", "kind", "gender");
+        assertThat(example.has("speaking")).isTrue();
+        assertThat(example.has("brand")).isTrue();
+    }
+
+    // The reading tells the model what each label means and that a pronoun inside quoted speech is no answer.
+    @Test
+    void render_termReading_namesEveryUsageAndSaysSpeechIsNoEvidence() {
+        final String system = system(PromptName.TERM_READING).toLowerCase(java.util.Locale.ROOT);
+
+        assertThat(system)
+                .contains("part-of-name", "\"word\"", "\"title\"", "speaking", "brand", "none", "[[")
+                .containsAnyOf("inside quoted speech", "inside quotation marks", "in quoted speech");
+    }
+
+    @Test
+    void render_termReading_userCarriesTheTermLineAndTheWindows() {
+        final String user = TEMPLATES.renderUser(
+                PromptName.TERM_READING, Map.of("term", "Arlo — 7 mentions", "windows", "[1] [[Arlo]] sat down."));
+
+        assertThat(user).contains("Arlo — 7 mentions", "[1] [[Arlo]] sat down.").doesNotContain("{{", "}}");
     }
 
     // The draft system is sent with every segment of a book; a small model must still read its last rule.

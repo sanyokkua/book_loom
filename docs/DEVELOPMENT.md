@@ -913,7 +913,10 @@ first-person narrator, a pronoun with no referent, and plain. `CorefScorer` scor
 vote names a pronoun that is not the target's (or fits the target's and another's), right if it has a vote and none is wrong,
 else abstention; a quote not in the window is dropped. The gate is wrong votes at most 5 % of the windows that voted
 (`CorefReport.wrongVoteRate`), per model: above it that model's window votes only break ties. The fixture and scorer are
-tested in the normal gate; `--suite coref` (the model-backed reader and the matrix wiring) arrives with 15i.N4.
+tested in the normal gate. `scripts/eval-matrix.sh --suite coref` (15i.N4, `CorefEvalTest`) reads every window with the
+production term reading (`TermReadingCorefReader`: one `term-reading` call per window, the target marked where it first
+stands) and scores only the votes `TermReadingReplies` keeps; the report (`<model>-coref.json`) and the matrix table give
+per model the windows right, the wrong votes, the abstentions and the wrong-vote rate.
 
 **Stage suites (plan A4).** The model-call stages no other suite reaches are measured through their production classes on
 small invented fixtures (`src/test/resources/eval/stages/*.json`, English and Russian to Ukrainian, no book text), selected

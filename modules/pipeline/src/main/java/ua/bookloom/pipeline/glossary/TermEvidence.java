@@ -3,20 +3,25 @@ package ua.bookloom.pipeline.glossary;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.index.Occurrences;
+import ua.bookloom.pipeline.index.Case;
+import ua.bookloom.pipeline.index.Mention;
 
 /**
  * How a book uses each of a set of terms, for the model's review: every occurrence in any case, and the first
  * sentences that hold it. Counting lower-case uses too is the point, since a word the book mostly writes in lower case
- * is the clearest sign it is not a name.
+ * is the clearest sign it is not a name. The occurrences are the book index's mentions (15i.N4), so a term is found by
+ * the one matching rule every name reader shares.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -28,8 +33,6 @@ final class TermEvidence {
 
     /** An example longer than this is cut, so one long paragraph cannot crowd out the batch. */
     static final int MAX_EXAMPLE_CHARS = 200;
-
-    private static final int MAX_TERM_WORDS = 3;
 
     /**
      * How the book uses one term.
@@ -54,13 +57,11 @@ final class TermEvidence {
             final BookIndex index, final List<Integer> ordinals, final Collection<String> terms) {
         Objects.requireNonNull(index, "index");
         Objects.requireNonNull(terms, "terms");
-        final Map<String, String> termByKey = new HashMap<>();
-        terms.forEach(term -> termByKey.put(keyOf(Occurrences.read(term).words()), term));
+        final Set<Integer> slice = new HashSet<>(ordinals);
         final Map<String, Tally> tallies = new HashMap<>();
-        for (final Occurrences.Read read : index.reads(ordinals)) {
-            final List<Occurrences.Word> words = read.words();
-            for (int start = 0; start < words.size(); start++) {
-                countWindows(read, start, termByKey, tallies);
+        for (final Mention mention : index.mentions(new LinkedHashSet<>(terms), Case.INSENSITIVE)) {
+            if (slice.contains(mention.ordinal())) {
+                tallies.computeIfAbsent(mention.name(), _ -> new Tally()).add(sentenceOf(index, mention));
             }
         }
         final Map<String, Evidence> evidence = new LinkedHashMap<>();
@@ -71,23 +72,8 @@ final class TermEvidence {
         return evidence;
     }
 
-    private static void countWindows(
-            final Occurrences.Read read,
-            final int start,
-            final Map<String, String> termByKey,
-            final Map<String, Tally> tallies) {
-        final List<Occurrences.Word> words = read.words();
-        for (int end = start + 1; end <= Math.min(words.size(), start + MAX_TERM_WORDS); end++) {
-            final String term = termByKey.get(keyOf(words.subList(start, end)));
-            if (term != null) {
-                tallies.computeIfAbsent(term, _ -> new Tally())
-                        .add(read.sentences().get(words.get(start).sentence()));
-            }
-        }
-    }
-
-    private static String keyOf(final List<Occurrences.Word> words) {
-        return String.join(" ", words.stream().map(Occurrences.Word::key).toList());
+    private static String sentenceOf(final BookIndex index, final Mention mention) {
+        return index.reads(List.of(mention.ordinal())).getFirst().sentences().get(mention.sentence());
     }
 
     /** One term's running count and examples. */

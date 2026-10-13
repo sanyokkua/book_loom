@@ -45,5 +45,8 @@ public enum CallKind {
     BOOK_KNOWLEDGE,
 
     /** A setup call deciding the brief's genre, audience and voice from the facts, the knowledge and the readings. */
-    BRIEF_SYNTHESIS
+    BRIEF_SYNTHESIS,
+
+    /** A names call: the model reads one glossary term in windows from across the book (15i.N4). */
+    TERM_READING
 }
