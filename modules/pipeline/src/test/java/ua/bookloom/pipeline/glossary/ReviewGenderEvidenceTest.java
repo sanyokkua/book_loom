@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -75,7 +76,7 @@ class ReviewGenderEvidenceTest {
                 "Wren sang. She smiled."));
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, book, FRAME, POLICY, calls(model));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 
         assertThat(model.requests()).extracting(ChatRequest::callKind).containsExactly(CallKind.SUGGEST_TARGETS);
         assertThat(glossary.all(PROJECT).data())
@@ -105,7 +106,8 @@ class ReviewGenderEvidenceTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdict)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, GlossaryTestSegments.of(List.of(paragraph)), FRAME, POLICY, calls(model));
+        review.review(
+                PROJECT, GlossaryTestSegments.of(List.of(paragraph)), FRAME, POLICY, QualityDial.FAST, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -130,7 +132,7 @@ class ReviewGenderEvidenceTest {
             return reply(kind == CallKind.REVIEW_TERMS ? "{\"verdicts\":[]}" : NO_SUGGESTIONS);
         };
 
-        review.review(PROJECT, GlossaryTestSegments.of(paragraphs), FRAME, POLICY, recording);
+        review.review(PROJECT, GlossaryTestSegments.of(paragraphs), FRAME, POLICY, QualityDial.FAST, recording);
 
         final List<ChatRequest> reviews = asked.stream()
                 .filter(request -> request.callKind() == CallKind.REVIEW_TERMS)
@@ -191,7 +193,7 @@ class ReviewGenderEvidenceTest {
             return reply(kind == CallKind.REVIEW_TERMS ? verdicts : NO_SUGGESTIONS);
         };
 
-        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, calls);
+        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, QualityDial.FAST, calls);
 
         assertThat(kinds).contains(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
@@ -208,7 +210,7 @@ class ReviewGenderEvidenceTest {
             return reply(NO_SUGGESTIONS);
         };
 
-        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, calls);
+        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, QualityDial.FAST, calls);
 
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
@@ -232,7 +234,7 @@ class ReviewGenderEvidenceTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, book, FRAME, POLICY, calls(model));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)

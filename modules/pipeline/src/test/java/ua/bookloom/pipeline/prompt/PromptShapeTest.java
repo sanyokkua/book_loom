@@ -46,17 +46,19 @@ class PromptShapeTest {
             Map.entry("consistency", "target"),
             Map.entry("file-name", "target"));
 
-    private static final Map<String, String> OTHER_REPLY_KEYS = Map.of(
-            "review-terms", "verdicts",
-            "suggest-targets", "suggestions",
-            "summary", "summary",
-            "draft-batch-json", "items",
-            "suspicious-words", "words",
-            "brief-suggestion", "genre",
-            "term-choice", "terms",
-            "book-knowledge", "known",
-            "brief-synthesis", "genre",
-            "term-reading", "windows");
+    private static final Map<String, String> OTHER_REPLY_KEYS = Map.ofEntries(
+            Map.entry("review-terms", "verdicts"),
+            Map.entry("suggest-targets", "suggestions"),
+            Map.entry("summary", "summary"),
+            Map.entry("draft-batch-json", "items"),
+            Map.entry("suspicious-words", "words"),
+            Map.entry("brief-suggestion", "genre"),
+            Map.entry("term-choice", "terms"),
+            Map.entry("book-knowledge", "known"),
+            Map.entry("brief-synthesis", "genre"),
+            Map.entry("term-reading", "windows"),
+            Map.entry("term-tiebreak", "gender"),
+            Map.entry("term-summary", "usage"));
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
     // language-rules map replaced the per-language example files.
@@ -94,7 +96,9 @@ class PromptShapeTest {
                 "TERM_CHOICE",
                 "BOOK_KNOWLEDGE",
                 "BRIEF_SYNTHESIS",
-                "TERM_READING"
+                "TERM_READING",
+                "TERM_TIEBREAK",
+                "TERM_SUMMARY"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {

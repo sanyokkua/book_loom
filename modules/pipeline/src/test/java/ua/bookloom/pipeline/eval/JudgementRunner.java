@@ -90,6 +90,7 @@ final class JudgementRunner {
                         BookSlice.story(prepared.index()),
                         StageFrames.frame(brief, gold.sourceLanguage(), gold.targetLanguage()),
                         brief.names(),
+                        brief.dial(),
                         probe.calls(gold.targetLanguage()));
     }
 

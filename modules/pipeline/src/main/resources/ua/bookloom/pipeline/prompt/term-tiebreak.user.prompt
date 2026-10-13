@@ -1,0 +1,8 @@
+[Term — how often the story writes it and the pronouns the code counted after it outside speech]
+{{term}}
+
+[Windows]
+{{windows}}
+
+Return JSON exactly as:
+{"quote":"<words copied from one window, or none>","gender":"male|female|none"}

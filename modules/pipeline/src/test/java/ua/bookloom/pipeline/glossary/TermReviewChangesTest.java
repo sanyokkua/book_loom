@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -70,6 +71,7 @@ class TermReviewChangesTest {
                                 BOOK,
                                 FRAME,
                                 NamePolicy.TRANSLITERATE,
+                                QualityDial.FAST,
                                 (kind, segment, request) -> model.chat(request))
                         .data())
                 .changes();
@@ -88,7 +90,7 @@ class TermReviewChangesTest {
         final ModelCalls noCalls = (kind, segment, request) -> reply("{}");
 
         final EntryChanges<GlossaryEntry> changes = Objects.requireNonNull(
-                        review.review(PROJECT, BOOK, FRAME, NamePolicy.TRANSLITERATE, noCalls)
+                        review.review(PROJECT, BOOK, FRAME, NamePolicy.TRANSLITERATE, QualityDial.FAST, noCalls)
                                 .data())
                 .changes();
 

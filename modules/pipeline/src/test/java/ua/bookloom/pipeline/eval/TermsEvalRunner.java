@@ -13,6 +13,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -92,14 +93,15 @@ final class TermsEvalRunner {
                 Guice.createInjector(new PersistenceModule()).getInstance(GlossaryRepository.class);
         termsCase.glossary().forEach(held -> glossary.add(entry(held)));
         final int mark = probe.mark();
+        final BookBrief brief = StageFrames.brief(termsCase.source(), termsCase.target());
         final Result<GlossaryReviewReport> reviewed = new TermReview(
                         TEMPLATES, MAPPER, glossary, new SuggestTargets(TEMPLATES, MAPPER))
                 .review(
                         PROJECT,
                         StageFrames.slice(termsCase.sentences()),
                         frameOf(termsCase),
-                        StageFrames.brief(termsCase.source(), termsCase.target())
-                                .names(),
+                        brief.names(),
+                        brief.dial(),
                         probe.calls(termsCase.target()));
         final StageProbe.Counts counts = probe.since(mark);
         final String id = termsCase.id() + ":review";

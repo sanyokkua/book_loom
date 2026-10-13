@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -69,7 +70,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.data())
                 .extracting(GlossaryReviewReport::removed, GlossaryReviewReport::updated)
@@ -101,7 +102,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::removed).isEqualTo(0);
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Well");
@@ -116,7 +117,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        reviewed(calls(model));
 
         assertThat(glossary.all(PROJECT).data()).isEmpty();
     }
@@ -126,7 +127,7 @@ class TermReviewTest {
         heldGlossary();
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"verdicts\":[]}"));
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        reviewed(calls(model));
 
         final ChatRequest request = model.requests().getFirst();
         assertThat(blockLines(request))
@@ -153,7 +154,7 @@ class TermReviewTest {
             return reply(VERDICTS);
         };
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, lockingMeanwhile);
+        reviewed(lockingMeanwhile);
 
         assertThat(glossary.all(PROJECT).data()).contains(locked);
     }
@@ -170,7 +171,7 @@ class TermReviewTest {
                         + "\"gender\":\"unknown\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.error()).isEqualTo(failure);
         assertThat(model.requests()).hasSize(2);
@@ -182,7 +183,7 @@ class TermReviewTest {
         glossary.add(entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true));
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::removed).isEqualTo(0);
         assertThat(model.requests()).isEmpty();
@@ -194,8 +195,7 @@ class TermReviewTest {
         final List<GlossaryEntry> before = glossary.all(PROJECT).data();
         final PseudoChatModel model = new PseudoChatModel(new ObjectMapper());
 
-        final Result<GlossaryReviewReport> report =
-                review.review(PROJECT, BOOK, FRAME, POLICY, (kind, segmentId, request) -> model.chat(request));
+        final Result<GlossaryReviewReport> report = reviewed((kind, segmentId, request) -> model.chat(request));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::entries).isEqualTo(before);
     }
@@ -206,7 +206,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.data())
                 .extracting(
@@ -228,7 +228,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        reviewed(calls(model));
 
         final ChatRequest request = model.requests().getLast();
         assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
@@ -243,7 +243,7 @@ class TermReviewTest {
         heldGlossary();
         final GlossaryEntry typed = entry("p1:hale", "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false);
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, updatingWhileSuggesting(typed));
+        reviewed(updatingWhileSuggesting(typed));
 
         assertThat(glossary.all(PROJECT).data())
                 .contains(entry("p1:hale", "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false));
@@ -256,7 +256,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::suggested).isEqualTo(1);
         assertThat(glossary.all(PROJECT).data())
@@ -273,7 +273,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(VERDICTS)).answer(Result.err(failure));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
         assertThat(report.error()).isEqualTo(failure);
         assertThat(glossary.all(PROJECT).data()).isEqualTo(before);
@@ -289,7 +289,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        reviewed(calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::gender)
@@ -310,7 +310,7 @@ class TermReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+        reviewed(calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -392,5 +392,9 @@ class TermReviewTest {
 
     private static Result<ChatResponse> reply(final String content) {
         return Result.ok(new ChatResponse(Objects.requireNonNull(content), FinishReason.STOP));
+    }
+
+    private Result<GlossaryReviewReport> reviewed(final ModelCalls calls) {
+        return review.review(PROJECT, BOOK, FRAME, POLICY, QualityDial.FAST, calls);
     }
 }

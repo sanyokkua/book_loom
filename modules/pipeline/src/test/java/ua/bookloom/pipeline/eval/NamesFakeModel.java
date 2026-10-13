@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.eval;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -16,6 +17,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.index.Speech;
 import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
@@ -23,7 +25,11 @@ import ua.bookloom.pipeline.prompt.PromptName;
  * the book's {@code model} script says otherwise, for the offline proof of the names suite: the name scan lists every
  * candidate that is not junk, the review gives each gold character its type and gender (citing every window) and calls
  * the gold's junk "not-a-name" with a phrase copied from its first window, the target suggestions are the book's
- * script, and the recurring-term choice follows the gold's {@code recurringTerms} and drops every other word.
+ * script, and the recurring-term choice follows the gold's {@code recurringTerms} and drops every other word. A term
+ * reading (15i.N4) answers every window by the gold too: a junk term is an ordinary word quoted from its window, a gold
+ * name a name of its kind whose gender (the script's, else the gold's) is quoted as a pronoun of that gender standing
+ * in the window's narration, "none" when the window holds none; a tiebreak (15i.N5) answers the gold gender of the
+ * character the call names, quoted the same way.
  */
 final class NamesFakeModel implements ChatModel {
 
@@ -32,6 +38,10 @@ final class NamesFakeModel implements ChatModel {
     private static final Pattern WINDOW_LINE = Pattern.compile("^\\s+\\[\\d+] (.*)$");
     private static final Pattern CHOICE_LINE = Pattern.compile("^- (.+?)(?: · \\d+ uses)?(?: — .*)?$");
     private static final Pattern CANDIDATE_LINE = Pattern.compile("^(.+?) — ");
+    private static final Pattern READING_WINDOW = Pattern.compile("^\\[(\\d+)] (.*)$");
+    private static final List<String> MALE_WORDS = List.of("He", "he", "him", "His", "his", "himself");
+    private static final List<String> FEMALE_WORDS = List.of("She", "she", "Her", "her", "hers", "herself");
+    private static final String NONE = "none";
 
     private final NamesBook book;
     private final Map<String, JudgementGold.Person> characters;
@@ -66,7 +76,132 @@ final class NamesFakeModel implements ChatModel {
         if (format.equals(PromptName.TERM_CHOICE.responseFormatName())) {
             return "{\"terms\":[" + String.join(",", choices(user)) + "]}";
         }
+        if (format.equals(PromptName.TERM_READING.responseFormatName())) {
+            return reading(user);
+        }
+        if (format.equals(PromptName.TERM_TIEBREAK.responseFormatName())) {
+            return tiebreak(user);
+        }
         return "{}";
+    }
+
+    // The reading prompt puts the term on the line after its "[Term …]" header and numbers each window "[n] text",
+    // the term marked [[like this]]; a window may run over several lines and ends at a blank line.
+    private String reading(final String user) {
+        final List<String> lines = user.lines().toList();
+        final int header = indexOfPrefix(lines, "[Term");
+        final String term = header < 0 || header + 1 >= lines.size() ? "" : termOf(lines.get(header + 1));
+        final List<String> answers = new ArrayList<>();
+        windowsOf(lines).forEach((number, text) -> answers.add(windowAnswer(term, number, text)));
+        return "{\"windows\":[" + String.join(",", answers) + "],\"speaking\":false,\"brand\":false}";
+    }
+
+    private static int indexOfPrefix(final List<String> lines, final String prefix) {
+        for (int index = 0; index < lines.size(); index++) {
+            if (lines.get(index).startsWith(prefix)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static String termOf(final String line) {
+        final int dash = line.indexOf(" — ");
+        return (dash < 0 ? line : line.substring(0, dash)).strip();
+    }
+
+    private static Map<Integer, String> windowsOf(final List<String> lines) {
+        final Map<Integer, String> windows = new LinkedHashMap<>();
+        Integer open = null;
+        for (final String line : lines) {
+            final Matcher start = READING_WINDOW.matcher(line);
+            if (line.startsWith("Return JSON")) {
+                break;
+            } else if (start.matches()) {
+                open = Integer.valueOf(start.group(1));
+                windows.put(open, start.group(2));
+            } else if (line.isBlank()) {
+                open = null;
+            } else if (open != null) {
+                windows.merge(open, line, (held, more) -> held + "\n" + more);
+            }
+        }
+        windows.replaceAll((number, text) -> text.replace("[[", "").replace("]]", ""));
+        return windows;
+    }
+
+    private String windowAnswer(final String term, final int number, final String text) {
+        final NamesBook.Verdict said = scripted.get(term);
+        final JudgementGold.Person gold = characters.get(term);
+        if (isJunk(term) || (said != null && said.verdict().equals("not-a-name"))) {
+            return windowJson(number, text.lines().findFirst().orElse("").strip(), "word", "other", NONE);
+        }
+        final String type = said != null ? said.type() : gold == null ? "other" : typeWord(gold.type());
+        final String gender = said != null ? said.gender() : gold == null ? NONE : genderWord(gold.gender());
+        final String quote = pronounIn(text, gender);
+        return windowJson(
+                number,
+                quote,
+                type.equals("title") ? "title" : "name",
+                kindWord(type),
+                quote.equals(NONE) ? NONE : gender);
+    }
+
+    private static String windowJson(
+            final int number, final String quote, final String usage, final String kind, final String gender) {
+        return "{\"window\":%d,\"quote\":\"%s\",\"usage\":\"%s\",\"kind\":\"%s\",\"gender\":\"%s\"}"
+                .formatted(number, escaped(quote), usage, kind, gender);
+    }
+
+    private static String kindWord(final String type) {
+        return switch (type) {
+            case "person" -> "person";
+            case "place" -> "place";
+            case "term" -> "thing";
+            default -> "other";
+        };
+    }
+
+    // The first pronoun of the gender that stands in the narration of the text, quoted alone; "none" when none does.
+    private static String pronounIn(final String text, final String gender) {
+        final List<String> words =
+                switch (gender) {
+                    case "male" -> MALE_WORDS;
+                    case "female" -> FEMALE_WORDS;
+                    default -> List.of();
+                };
+        for (final String line : (Iterable<String>) text.lines()::iterator) {
+            for (final String word : words) {
+                final Matcher found =
+                        Pattern.compile("(?<![\\p{L}])" + word + "(?![\\p{L}])").matcher(line);
+                while (found.find()) {
+                    if (Speech.isNarration(line, found.start())) {
+                        return word;
+                    }
+                }
+            }
+        }
+        return NONE;
+    }
+
+    // The tiebreak names one character: the gold or scripted name the call's text writes most often.
+    private String tiebreak(final String user) {
+        final String term = characters.keySet().stream()
+                .max(Comparator.comparingInt(name -> occurrences(user, name)))
+                .orElse("");
+        final NamesBook.Verdict said = scripted.get(term);
+        final JudgementGold.Person gold = characters.get(term);
+        final String gender = said != null ? said.gender() : gold == null ? NONE : genderWord(gold.gender());
+        final String quote = pronounIn(user, gender);
+        return "{\"gender\":\"%s\",\"quote\":\"%s\"}".formatted(quote.equals(NONE) ? NONE : gender, escaped(quote));
+    }
+
+    private static int occurrences(final String text, final String name) {
+        int count = 0;
+        for (int at = text.indexOf(name); at >= 0; at = text.indexOf(name, at + name.length())) {
+            count++;
+        }
+        return count;
     }
 
     // The review prompt lists "- term — N× — pronouns: …" and its numbered windows beneath, so a phrase can be copied.

@@ -1122,11 +1122,32 @@ letter case, so `KESSEL OPTIK` is junk while `Kessel Optik` is the camera.
 *Committed books* (`src/test/resources/eval/names/*.json`, invented text; each has its gold, the answers a scripted model gives where
 they differ from the gold, and `knownFailure`/`fixedBy` when today's Scan, Review and Translate end wrong): `misattributed-she`
 (a man followed five times by another person's "she"; clean since 15i.N1), `short-and-full-form`, `city-her`, `stray-he`,
-`bartender-mark` (a man called Mark beside "a mark on the wall"; red until 15i.N5), `brand-and-camera` (`Orrin & Vale` and
+`bartender-mark` (a man called Mark beside "a mark on the wall"; clean since 15i.N5), `brand-and-camera` (`Orrin & Vale` and
 `KESSEL OPTIK`/`Kessel Optik`/`Kessels`; red until 15i.N3), `groups-nationalities-converter`, `technical-headings`, `mayday`.
 `NamesRunnerTest` (in `check`) runs each through the runner with a scripted model: a book not marked a known failure must end clean,
 a marked one must still end wrong, so the test fails the day a task fixes it and the flag is dropped. `NamesScoreTest` holds every
 scoring rule to numbers written out by hand.
+
+*How Review decides a read name* (15i.N5): Review and the names pass share one path. A strong pronoun case
+(`PronounGender.Evidence.isStrong`) of a person is decided by the code with no call; of the other open entries, those the
+dial's `NamesPlan` reads go through `term-reading` and `ReadingVerdict`, and the rest through the batched `review-terms`
+call. `ReadingVerdict` turns the readings into a change by rule: a name needs two windows read as `name` (one window of one
+at Fast) and takes the kind most name windows give (person → character, place → place, organisation or thing → term); a
+title majority makes a title, which like a place, an organisation or a thing carries no gender. The gender pools the
+verified votes of the whole cluster in the model's vote mode (`ReadingVotes.modeFor`). Every model is in TIEBREAK today,
+because the coref round (15i.N4, 2026-10-13) found 10 % wrong votes on 26b and 20 % on e4b against a 5 % gate: the code's
+pronoun tally decides wherever it is clear (three or more at 60 %) and is written verified, and with no clear tally votes
+at the thresholds below give only a suggestion; no tiebreak call is made. A model enters DECIDE only after passing the
+coref gate: there two or more verified votes making 75 % verify the gender (three at 80 % under Auto, where the code reads
+no pronoun), fewer are a suggestion; a tally that favours the other gender (three or more at 60 %) keeps its own gender as
+a suggestion; a majority against a dominant tally (three or more at 80 %) costs one `term-tiebreak` call showing both
+sides' windows, whose answer stands only when a window shown holds its quote in the narration with a pronoun of that
+gender — else the gender stays unknown and Start asks. Removal needs two `word` uses whose quote stands in its own window, no `name`
+use, a lower-case share of 0.2 or more in the scan text and an entry nobody typed or gave a gender. At Max a term read in
+two or more calls (or mentioned 30 times) whose calls read it differently gets one `term-summary` call; its reading replaces
+the windows' majority only when its quote stands in a window shown and it is one of the calls' readings. The Scan button
+keeps for the reading a common word the book writes with a capital mid-sentence three times or more (`Mark`), and adds it
+only when the dial's plan reads it; the run's own scans still drop it.
 
 *Book-neutral sources* (15i.E0): no name, quote or passage of a book under test may sit in `modules/*/src` — the committed
 cases above, the tests and the prompts use invented material of the same shape. `BookNeutralSourcesTest` (`:app`) enforces it

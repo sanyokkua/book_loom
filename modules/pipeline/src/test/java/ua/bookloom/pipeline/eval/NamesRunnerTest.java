@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.nio.file.Path;
 import java.util.stream.Stream;
@@ -48,7 +47,8 @@ class NamesRunnerTest {
         assertThat(row.score().isClean()).as(id + " " + row.score().json()).isTrue();
     }
 
-    @ParameterizedTest(name = "{0}")
+    // Since 15i.N5 no committed book is a known failure; the test stays for the next shape a task records as red.
+    @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
     @MethodSource("knownFailureBooks")
     void run_bookMarkedKnownFailure_stillEndsWrong(final String id, final NamesBook book) {
         final NamesRow row = run(book);
@@ -72,21 +72,20 @@ class NamesRunnerTest {
         assertThat(score.genderCorrect()).isEqualTo(2);
     }
 
-    // IF the scan reads the bartender's name as the common word it is also written as, THEN the glossary has no entry
-    // "Mark", so the one real name the gold keeps is lost and the man is scored wrong for gender and type; fixed by
-    // 15i.N5.
+    // IF the scan dropped the bartender's name for the common word it is also written as, THEN the one real name the
+    // gold keeps would be lost and the man scored wrong for gender and type: the name is read in context and kept as a
+    // man, and the common "mark" is no name and no recurring term (15i.N5).
     @Test
-    void run_bartenderMark_theNameMarkIsLostAndOnlyLornaIsScored() {
-        final NamesBook book = NamesBook.byId("bartender-mark");
-        assumeThat(book.knownFailure()).isTrue();
+    void run_bartenderMark_keepsMarkAsAManAndTheCommonMarkIsNoTerm() {
+        final NamesScore score = run(NamesBook.byId("bartender-mark")).score();
 
-        final NamesScore score = run(book).score();
-
-        assertThat(score.lostNames()).containsExactly("Mark");
+        assertThat(score.lostNames()).isEmpty();
         assertThat(score.eligible()).isEqualTo(2);
-        assertThat(score.genderCorrect()).isEqualTo(1);
-        assertThat(score.typeCorrect()).isEqualTo(1);
+        assertThat(score.genderCorrect()).isEqualTo(2);
+        assertThat(score.typeCorrect()).isEqualTo(2);
+        assertThat(score.wrongButVerified()).isZero();
         assertThat(score.junkKept()).isZero();
+        assertThat(score.recurringJunkKept()).isZero();
     }
 
     // IF the short and the full spelling kept their pronouns apart, THEN three "she" and two "she" would each be too

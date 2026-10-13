@@ -34,7 +34,10 @@ class PromptNameTest {
         "SUSPICIOUS_WORDS,suspicious-words,REVIEW,suspicious-words,0.0",
         "BOOK_KNOWLEDGE,book-knowledge,BOOK_KNOWLEDGE,book-knowledge,0.0",
         "BRIEF_SYNTHESIS,brief-synthesis,BRIEF_SYNTHESIS,brief-synthesis,0.0",
-        "TERM_READING,term-reading,TERM_READING,term-reading,0.0"
+        "TERM_READING,term-reading,TERM_READING,term-reading,0.0",
+        // 15i.N5: the tiebreak and the summary are readings of one term, shown and labelled as TERM_READING calls.
+        "TERM_TIEBREAK,term-tiebreak,TERM_READING,term-tiebreak,0.0",
+        "TERM_SUMMARY,term-summary,TERM_READING,term-summary,0.0"
     })
     void constants_declared_carryListedValues(
             final PromptName name,
@@ -67,7 +70,9 @@ class PromptNameTest {
         "SUSPICIOUS_WORDS",
         "BOOK_KNOWLEDGE",
         "BRIEF_SYNTHESIS",
-        "TERM_READING"
+        "TERM_READING",
+        "TERM_TIEBREAK",
+        "TERM_SUMMARY"
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {
         assertThatThrownBy(() -> name.temperature(true)).isInstanceOf(IllegalArgumentException.class);

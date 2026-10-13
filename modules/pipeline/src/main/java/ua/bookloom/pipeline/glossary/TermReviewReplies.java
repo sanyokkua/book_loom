@@ -186,8 +186,14 @@ final class TermReviewReplies {
         return verified;
     }
 
-    // The gender with three or more of the counted pronouns making 60 % or more of them, else null.
-    private static @Nullable Gender favouredBy(final PronounGender.Evidence tally) {
+    /**
+     * The gender the book-wide pronoun tally favours: three or more of the counted pronouns making 60 % or more of
+     * them (15i.N1), which a model's opposite gender may only suggest against.
+     *
+     * @param tally the code's pronoun tally of the name or its cluster
+     * @return the favoured gender, or null when neither side is favoured
+     */
+    static @Nullable Gender favouredBy(final PronounGender.Evidence tally) {
         final int female = tally.female();
         final int male = tally.male();
         final int total = female + male;

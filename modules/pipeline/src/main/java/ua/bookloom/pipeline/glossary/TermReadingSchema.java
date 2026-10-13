@@ -4,8 +4,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * The term reading's structured response schema (15i.N4): per window the quote first, then its labels from closed
- * lists, so the model copies its evidence before it judges and cannot answer outside the lists the code reads.
+ * The term reading's structured response schemas (15i.N4, 15i.N5): the quote first, then its labels from closed lists,
+ * so the model copies its evidence before it judges and cannot answer outside the lists the code reads.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -28,5 +28,28 @@ public final class TermReadingSchema {
             "speaking":{"type":"boolean"},\
             "brand":{"type":"boolean"}},\
             "required":["windows","speaking","brand"],\
+            "additionalProperties":false}""";
+
+    /**
+     * The tiebreak's reply (15i.N5): the narration's words that hold the pronoun referring to the term, quoted from one
+     * window the call showed, then that pronoun's gender, or "none" for both.
+     */
+    public static final String TIEBREAK = """
+            {"type":"object","properties":{\
+            "quote":{"type":"string","maxLength":200},\
+            "gender":{"type":"string","enum":["male","female","none"]}},\
+            "required":["quote","gender"],\
+            "additionalProperties":false}""";
+
+    /**
+     * The summary's reply at Max (15i.N5): the words that show best how the book uses the term, quoted from one window
+     * the call showed, then the usage and the kind they show.
+     */
+    public static final String SUMMARY = """
+            {"type":"object","properties":{\
+            "quote":{"type":"string","maxLength":200},\
+            "usage":{"type":"string","enum":["name","word","part-of-name","title"]},\
+            "kind":{"type":"string","enum":["person","place","organisation","thing","other"]}},\
+            "required":["quote","usage","kind"],\
             "additionalProperties":false}""";
 }

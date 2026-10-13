@@ -95,6 +95,10 @@ class PromptHygieneLintTest {
             Map.entry("terms", "Hale (3 uses) — Hale and Moreau opened the old door."),
             Map.entry("term", "Hale — 7 mentions — pronouns after it: he ×4"),
             Map.entry("windows", "[1] [[Hale]] and Moreau opened the old door.\nHe went in first."),
+            Map.entry(
+                    "calls",
+                    "Call 1 — name, person in 6 of 6 windows\n[1] [[Hale]] opened the old door.\n"
+                            + "Call 2 — name, place in 5 of 6 windows\n[2] They rode into [[Hale]] at dusk."),
             Map.entry("chapterSource", SOURCE),
             Map.entry("chapterTarget", TARGET),
             Map.entry("previousSummary", "Hale searches for his brother."),

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -21,6 +20,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -40,12 +40,14 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
- * The model's review of the glossary, run only when the person asks: each unlocked term with no target is sent with
+ * The model's review of the glossary, run only when the person asks, one path for Review and the names pass (15i.N5):
+ * the unlocked terms with no target that the quality dial's {@link NamesPlan} reads are read in context, one term per
+ * call, and decided by the code from the readings ({@link NameReadings}); every other such term is sent in a batch with
  * how often the book uses it, the pronouns the code read after it and numbered windows from across the book
  * ({@link NameWindows}), and the model says whether it is a name, a term or not a name, its type and gender, and which
- * windows it relied on. A name whose pronouns decide its gender on their own ({@link PronounGender.Evidence#isStrong()})
- * is decided by the code and not sent. Nothing is changed until every batch has answered, so a failed or cancelled call
- * leaves the glossary as it was.
+ * windows it relied on. A batched name whose pronouns decide its gender on their own
+ * ({@link PronounGender.Evidence#isStrong()}) is decided by the code and not sent. Nothing is changed until every call
+ * has answered, so a failed or cancelled call leaves the glossary as it was.
  *
  * <p>Once every verdict is in, the terms that remain are given a suggested target in calls of their own
  * ({@link SuggestTargets}), and verdicts and suggestions are written together.
@@ -56,7 +58,6 @@ import ua.bookloom.util.text.GlossaryKeys;
  * gender takes the model's guess only while it is still {@code OTHER}/{@code UNKNOWN}.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermReview {
 
     /** The most terms one call carries, whatever their size: the schema's cap on the verdicts of one reply. */
@@ -72,14 +73,38 @@ public final class TermReview {
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
     private final SuggestTargets suggestions;
+    private final NameReadings readings;
 
     /**
-     * Reviews the project's glossary with the model.
+     * Builds the review; the reading path is built from the same templates and mapper.
+     *
+     * @param templates the prompt templates; never null
+     * @param mapper the mapper replies are read with; never null
+     * @param glossary where the entries are read and the verdicts written; never null
+     * @param suggestions the target suggestions asked once the verdicts are in; never null
+     */
+    @Inject
+    public TermReview(
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final GlossaryRepository glossary,
+            final SuggestTargets suggestions) {
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.suggestions = Objects.requireNonNull(suggestions, "suggestions");
+        this.readings = new NameReadings(templates, mapper);
+    }
+
+    /**
+     * Reviews the project's glossary with the model at a quality dial: the entries the dial's {@link NamesPlan} reads
+     * are read in context and decided by the code, the rest go to the batched review.
      *
      * @param projectId the project whose glossary is reviewed; never null
      * @param story the book's body segments, where the evidence is read; never null
      * @param frame the run's language pair and style, for the system message; never null
      * @param policy the Book Brief's name policy, which the suggested targets follow; never null
+     * @param dial the project's quality dial, which picks the entries read; never null
      * @param calls the seam every model call goes through; never null
      * @return what was removed, updated and suggested and the glossary after; or the first failed call's or glossary
      *     access's error, with nothing changed by the model's answers
@@ -89,15 +114,17 @@ public final class TermReview {
             final BookSlice story,
             final CallFrame frame,
             final NamePolicy policy,
+            final QualityDial dial,
             final ModelCalls calls) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(policy, "policy");
+        Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(calls, "calls");
         try {
             return glossary.all(projectId)
-                    .flatMap(held -> run(projectId, held, new Inputs(story, frame, policy, calls)));
+                    .flatMap(held -> run(projectId, held, new Inputs(story, frame, policy, dial, calls)));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
@@ -111,21 +138,22 @@ public final class TermReview {
     }
 
     /** What every call of one review is asked with. */
-    private record Inputs(BookSlice story, CallFrame frame, NamePolicy policy, ModelCalls calls) {}
+    private record Inputs(BookSlice story, CallFrame frame, NamePolicy policy, QualityDial dial, ModelCalls calls) {}
 
     private Result<GlossaryReviewReport> run(final String projectId, final List<GlossaryEntry> held, final Inputs in) {
         final List<GlossaryEntry> open =
                 held.stream().filter(TermReview::isOpen).toList();
         log.info(
-                "Glossary review started project={} held={} reviewed={} policy={}",
+                "Glossary review started project={} held={} reviewed={} policy={} dial={}",
                 projectId,
                 held.size(),
                 open.size(),
-                in.policy());
+                in.policy(),
+                in.dial());
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Result<List<Verdict>> verdicts = ask(open, evidenceOf(open, held, in), in.frame(), in.calls());
+        final Result<List<Verdict>> verdicts = verdictsOn(open, held, in);
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
             return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
@@ -138,6 +166,25 @@ public final class TermReview {
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
         }
         return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in);
+    }
+
+    // A strong pronoun case is decided by the code with no call; of the rest, the entries the plan reads are decided
+    // from their readings and the others by the batch. All three give verdicts of one shape.
+    private Result<List<Verdict>> verdictsOn(
+            final List<GlossaryEntry> open, final List<GlossaryEntry> held, final Inputs in) {
+        final Map<String, Evidence> evidence = evidenceOf(open, held, in);
+        final List<Verdict> all = new ArrayList<>();
+        final List<GlossaryEntry> rest = new ArrayList<>();
+        open.forEach(entry -> decidedByCode(entry, evidence).ifPresentOrElse(all::add, () -> rest.add(entry)));
+        log.debug("Glossary review: {} of {} open entries decided by their pronouns", all.size(), open.size());
+        return readings.read(
+                        new NameReadings.Inputs(rest, held, evidence, in.story(), in.frame(), in.dial(), in.calls()))
+                .flatMap(outcome -> ask(outcome.unread(), evidence, in.frame(), in.calls())
+                        .map(batched -> {
+                            all.addAll(outcome.verdicts());
+                            all.addAll(batched);
+                            return all;
+                        }));
     }
 
     // The pronouns after any spelling of a person count for each of them, so the evidence is read over the clusters of

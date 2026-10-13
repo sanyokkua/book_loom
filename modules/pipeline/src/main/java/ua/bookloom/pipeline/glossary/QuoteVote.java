@@ -83,6 +83,21 @@ final class QuoteVote {
         return Gender.UNKNOWN;
     }
 
+    /**
+     * Whether a quote stands in a window: its words in order, as whole words, blanks and apostrophes aside.
+     *
+     * @param quote the model's quote, marks removed; empty when it quoted none
+     * @param windowText the text of the window the quote is said to come from
+     * @return {@code true} if the window holds the quote, {@code false} otherwise or when the quote has no letter
+     */
+    static boolean stands(final String quote, final String windowText) {
+        final String core = EDGES.matcher(quote).replaceAll("");
+        final boolean found =
+                !core.isEmpty() && patternOf(core).matcher(windowText).find();
+        log.debug("Quote of {} characters stands in its window: {}", quote.length(), found);
+        return found;
+    }
+
     private boolean bearsOut(final String text, final int start, final int end, final Gender claimed) {
         final Matcher word = WORD.matcher(text).region(start, end);
         boolean anyWord = false;

@@ -202,15 +202,13 @@ public enum PromptName {
             new Slots(Set.of("reports"), Set.of("title", "author", "year", "publisher", "description", "knowledge"))),
 
     /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
-    TERM_READING(
-            "term-reading",
-            CallKind.TERM_READING,
-            "term-reading",
-            TermReadingSchema.SCHEMA,
-            0.0,
-            null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("term", "windows"), Set.of())),
+    TERM_READING("term-reading", TermReadingSchema.SCHEMA, "windows"),
+
+    /** A tiebreak between the readings' gender and a dominant pronoun tally, both sides' windows shown (15i.N5). */
+    TERM_TIEBREAK("term-tiebreak", TermReadingSchema.TIEBREAK, "windows"),
+
+    /** At Max, one term's disagreeing reading calls summed up in one call (15i.N5). */
+    TERM_SUMMARY("term-summary", TermReadingSchema.SUMMARY, "calls"),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
@@ -290,6 +288,19 @@ public enum PromptName {
     private final @Nullable Double lowerTemperature;
     private final @Nullable Slots systemSlots;
     private final Slots userSlots;
+
+    // A reading of one glossary term (15i.N4, 15i.N5): a term reading at temperature 0, the term and one text slot.
+    PromptName(final String name, final String responseSchema, final String textSlot) {
+        this(
+                name,
+                CallKind.TERM_READING,
+                name,
+                responseSchema,
+                0.0,
+                null,
+                new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+                new Slots(Set.of("term", textSlot), Set.of()));
+    }
 
     PromptName(
             final String resourceBaseName,

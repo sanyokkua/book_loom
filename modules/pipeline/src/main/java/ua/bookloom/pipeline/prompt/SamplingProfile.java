@@ -52,6 +52,8 @@ public enum SamplingProfile {
                     BOOK_KNOWLEDGE,
                     BRIEF_SYNTHESIS,
                     TERM_READING,
+                    TERM_TIEBREAK,
+                    TERM_SUMMARY,
                     SUMMARY -> ANALYSIS;
         };
     }

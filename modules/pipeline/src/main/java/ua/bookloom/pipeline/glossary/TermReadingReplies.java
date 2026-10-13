@@ -103,12 +103,12 @@ final class TermReadingReplies {
     }
 
     // The marks the prompt puts round the term are no part of the book; "none" is no quote.
-    private static String quoteOf(final String raw) {
+    static String quoteOf(final String raw) {
         final String quote = raw.replace(MARK_OPEN, "").replace(MARK_CLOSE, "").strip();
         return NONE.equalsIgnoreCase(quote) ? "" : quote;
     }
 
-    private static Gender genderOf(final String word) {
+    static Gender genderOf(final String word) {
         return switch (word.strip().toLowerCase(Locale.ROOT)) {
             case "male" -> Gender.MALE;
             case "female" -> Gender.FEMALE;
@@ -116,7 +116,7 @@ final class TermReadingReplies {
         };
     }
 
-    private static Usage usageOf(final String word) {
+    static Usage usageOf(final String word) {
         final String wire = word.strip().toLowerCase(Locale.ROOT);
         return Arrays.stream(Usage.values())
                 .filter(usage -> usage != Usage.UNSURE && usage.wire().equals(wire))
@@ -124,7 +124,7 @@ final class TermReadingReplies {
                 .orElse(Usage.UNSURE);
     }
 
-    private static Kind kindOf(final String word) {
+    static Kind kindOf(final String word) {
         final String wire = word.strip().toLowerCase(Locale.ROOT);
         return Arrays.stream(Kind.values())
                 .filter(kind -> kind.wire().equals(wire))

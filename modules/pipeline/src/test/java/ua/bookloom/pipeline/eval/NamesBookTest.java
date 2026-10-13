@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -121,7 +120,6 @@ class NamesBookTest {
     @Test
     void book_knownFailure_namesTheTaskThatFixesIt() {
         assertThat(NamesBook.all().stream().filter(NamesBook::knownFailure))
-                .isNotEmpty()
                 .allSatisfy(book -> assertThat(book.fixedBy()).matches("15i\\.[A-Z]\\d+"));
     }
 
@@ -151,13 +149,11 @@ class NamesBookTest {
                 .isEqualTo("Corin carried the tray to the nurse. She thanked him and went on folding sheets.");
     }
 
-    // The one book red today, with the task that fixes it: a plain word's capital (N5); the she that is not his was
-    // fixed by N1 and the brand written with an ampersand by N3.
+    // No book is red since 15i.N5 read the bartender's name in context: the she that is not his was fixed by N1, the
+    // brand written with an ampersand by N3 and a plain word's capital by N5.
     @Test
-    void books_knownFailures_areTheOneShapeTodaysScanAndReviewGetWrong() {
-        assertThat(NamesBook.all().stream().filter(NamesBook::knownFailure))
-                .extracting(NamesBook::id, NamesBook::fixedBy)
-                .containsExactly(tuple("bartender-mark", "15i.N5"));
+    void books_knownFailures_noneSinceTheNamesAreReadInContext() {
+        assertThat(NamesBook.all().stream().filter(NamesBook::knownFailure)).isEmpty();
     }
 
     // IF either spelling alone were already a strong case, THEN the book would not show why the tallies must be pooled.

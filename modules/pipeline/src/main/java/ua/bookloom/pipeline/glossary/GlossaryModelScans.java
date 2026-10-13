@@ -80,7 +80,12 @@ public final class GlossaryModelScans {
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> termReview.review(
-                        projectId, book.story(), book.frame(), book.names(), calls(model, progress, book)));
+                        projectId,
+                        book.story(),
+                        book.frame(),
+                        book.names(),
+                        book.dial(),
+                        calls(model, progress, book)));
     }
 
     /**

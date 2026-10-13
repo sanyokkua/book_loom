@@ -265,7 +265,8 @@ public final class TermReading {
         return String.join("\n\n", lines);
     }
 
-    private static String marked(final Window window) {
+    /** The window's text with its mention marked as the reading shows it; the text alone when the mark is off. */
+    static String marked(final Window window) {
         final String text = window.text();
         final int start = window.markStart();
         final int end = window.markEnd();

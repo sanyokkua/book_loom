@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -137,7 +138,7 @@ class GenderOriginReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, book, FRAME, POLICY, calls(model));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -157,7 +158,7 @@ class GenderOriginReviewTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
-        review.review(PROJECT, book, FRAME, POLICY, calls(model));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -177,7 +178,7 @@ class GenderOriginReviewTest {
             return reply(NO_SUGGESTIONS);
         };
 
-        review.review(PROJECT, strongBook("Hale", "Rook", "Wren"), FRAME, POLICY, calls);
+        review.review(PROJECT, strongBook("Hale", "Rook", "Wren"), FRAME, POLICY, QualityDial.FAST, calls);
 
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
@@ -200,7 +201,7 @@ class GenderOriginReviewTest {
             return reply(NO_SUGGESTIONS);
         };
 
-        review.review(PROJECT, strongBook("Hale"), FRAME, POLICY, calls);
+        review.review(PROJECT, strongBook("Hale"), FRAME, POLICY, QualityDial.FAST, calls);
 
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())

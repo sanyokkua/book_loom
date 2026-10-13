@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
@@ -162,11 +163,12 @@ public final class GlossaryServiceImpl implements GlossaryService {
             return Result.ok(List.of());
         }
         log.info("Glossary scan started project={}", projectId);
-        final String language = sourceLanguage(projectId, document);
-        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
+        final BookBrief brief = briefOf(projectId);
+        final String language = languageOf(brief, document);
+        final QualityDial dial = brief == null ? null : brief.dial();
+        final Result<List<GlossaryEntry>> added = FrequencyScan.proposals(
                         projectId, story.index(), story.ordinals(), language, glossary)
-                .map(proposals -> GivenNames.seeded(proposals, language))
-                .map(proposals -> PronounGender.seeded(proposals, story.visibleTexts(), language))
+                .map(proposals -> proposals.seededFor(story, language, dial))
                 .flatMap(this::addAll);
         log.info(
                 "Glossary scan finished project={} ok={} entriesAdded={}",
@@ -176,14 +178,16 @@ public final class GlossaryServiceImpl implements GlossaryService {
         return added;
     }
 
-    private @Nullable String sourceLanguage(final String projectId, final Document document) {
-        final String chosen = Optional.ofNullable(projects.find(projectId).data())
-                .flatMap(project -> project.map(Project::brief))
-                .map(BookBrief::sourceLanguage)
-                .orElse(null);
-        final String language = SourceLanguage.forAnalysis(chosen, document);
-        log.debug("Glossary scan project={} analysis language={}", projectId, language);
+    private static @Nullable String languageOf(@Nullable final BookBrief brief, final Document document) {
+        final String language = SourceLanguage.forAnalysis(brief == null ? null : brief.sourceLanguage(), document);
+        log.debug("Glossary analysis language={} dial={}", language, brief == null ? null : brief.dial());
         return language;
+    }
+
+    private @Nullable BookBrief briefOf(final String projectId) {
+        return Optional.ofNullable(projects.find(projectId).data())
+                .flatMap(project -> project.map(Project::brief))
+                .orElse(null);
     }
 
     private Result<GlossaryEntry> addEntry(final GlossaryEntry entry) {
@@ -230,7 +234,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
     // A gender the person chose for one spelling of a name is chosen for the person (15i.N2).
     private Result<GlossaryEntry> shareGender(@Nullable final GlossaryEntry before, final GlossaryEntry stored) {
         final Document document = openProjects.get(stored.projectId());
-        final String language = document == null ? null : sourceLanguage(stored.projectId(), document);
+        final String language = document == null ? null : languageOf(briefOf(stored.projectId()), document);
         return ClusterGender.propagate(glossary, stored, before, language).map(changed -> stored);
     }
 

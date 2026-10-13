@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -68,7 +69,7 @@ class NameClustersReviewTest {
         final BookSlice book = GlossaryTestSegments.of(
                 both(repeated("Dax smiled. She left.", 3), repeated("Dax Orlo smiled. She left.", 3)));
 
-        review.review(PROJECT, book, FRAME, POLICY, answering(Map.of()));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, answering(Map.of()));
 
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
@@ -88,7 +89,13 @@ class NameClustersReviewTest {
         final BookSlice book = GlossaryTestSegments.of(
                 both(repeated("Dax glared. He left.", 1), repeated("Dax Orlo glared. He left.", 3)));
 
-        review.review(PROJECT, book, FRAME, POLICY, answering(Map.of("Dax", "female", "Dax Orlo", "female")));
+        review.review(
+                PROJECT,
+                book,
+                FRAME,
+                POLICY,
+                QualityDial.FAST,
+                answering(Map.of("Dax", "female", "Dax Orlo", "female")));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -107,7 +114,8 @@ class NameClustersReviewTest {
         glossary.add(character("Dax Orlo"));
         final BookSlice book = GlossaryTestSegments.of(repeated("Dax Orlo smiled. She left.", 2));
 
-        review.review(PROJECT, book, FRAME, POLICY, answering(Map.of("Dax", "male", "Dax Orlo", "female")));
+        review.review(
+                PROJECT, book, FRAME, POLICY, QualityDial.FAST, answering(Map.of("Dax", "male", "Dax Orlo", "female")));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -123,7 +131,7 @@ class NameClustersReviewTest {
         glossary.add(character("Dax Orlo").withGender(Gender.FEMALE));
         final BookSlice book = GlossaryTestSegments.of(repeated("Dax Orlo smiled. He left.", 3));
 
-        review.review(PROJECT, book, FRAME, POLICY, answering(Map.of()));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, answering(Map.of()));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -141,7 +149,7 @@ class NameClustersReviewTest {
         glossary.add(character("Mira Venn").withGender(Gender.FEMALE));
         final BookSlice book = GlossaryTestSegments.of(List.of("Venn nodded.", "Arlo Venn left.", "Mira Venn left."));
 
-        review.review(PROJECT, book, FRAME, POLICY, answering(Map.of()));
+        review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, answering(Map.of()));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)

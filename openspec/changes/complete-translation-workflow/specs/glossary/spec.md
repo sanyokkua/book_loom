@@ -420,8 +420,9 @@ its name so the screen does not change under the person's hand.
 WHEN the person presses Review with model on Names & style, the application SHALL decide without the model each
 unlocked open entry whose pronouns alone decide its gender — five or more pronouns the code gives the name outside
 quoted speech (straight quotes included when they pair up) with no other name between, 90 % agreeing — as a person of
-that gender, and SHALL send the chosen model every other unlocked entry with no target or with a target the model
-suggested, in calls cut by a budget of about 5,000 input tokens and at most 40 entries, each with how many times the
+that gender, SHALL read and decide the entries the quality dial's names plan reads as "Decide a read name from its
+readings by code" says, and SHALL send the chosen model every other unlocked entry with no target or with a target the
+model suggested, in calls cut by a budget of about 5,000 input tokens and at most 40 entries, each with how many times the
 book uses it in any case, the code's pronoun tally and numbered windows — four uses (six above 30 uses, two for a
 place), the first and one from each equal stretch of the rest, a narration window whose pronoun the code gives the name
 preferred, each the sentence with one before and one after — and SHALL ask for each a verdict — name, term or not a
@@ -482,6 +483,68 @@ a target is theirs and is never sent.
 - **WHEN** the glossary holds 41 open entries and the second call fails with `ErrorCode.unreachable`, or the person
   presses Stop while a call is out
 - **THEN** the glossary holds the same 41 entries as before
+
+### Requirement: Decide a read name from its readings by code
+
+The review and the names pass SHALL share one path: of the open entries a strong pronoun case does not decide, those
+the quality dial's names plan reads (Fast: a likely character written five times or more; Balanced and Max: any entry
+written three times or more; at most 80) SHALL be read in context, one term per call (`term-reading`), and the code —
+not the model — SHALL decide each from its readings:
+
+- a name SHALL need two windows read as a name (one window of one at Fast) and SHALL take the kind most of its name
+  windows give: a person is a character, a place a place, an organisation or a thing a term; a title majority of two
+  windows or more SHALL make a title; anything else SHALL change nothing;
+- a place, an organisation, a thing and a title SHALL carry no gender, and a gender the person set SHALL never be
+  decided again;
+- the gender SHALL pool the verified votes (a window's pronoun the reading quoted from that window's narration) of every
+  spelling of the person and SHALL follow the model's vote mode: a model whose votes the coreference probe found wrong
+  more than 5 % of the time — every model today (26b 10 %, e4b 20 % on 2026-10-13) — SHALL only break ties: a clear
+  code tally (three or more pronouns making 60 % or more) SHALL decide and be written verified, and with no clear tally
+  two or more votes making 75 % (three at 80 % under Auto) SHALL give a suggestion, never a verified gender; a model
+  that passed the probe SHALL decide: those votes verify the gender unless a tally favouring the other gender keeps its
+  own gender as a suggestion, fewer are a suggestion, and a majority against a tally of three or more at 80 % SHALL
+  earn one `term-tiebreak` call showing both sides' windows, whose gender stands, verified, only when a window shown
+  holds its quote in the narration with a pronoun of that gender, else the gender stays unknown for Start to ask;
+- an entry SHALL be removed only on two ordinary-word uses whose quote stands in the window it answers, no window read
+  as a name, a lower-case share of 0.2 or more in the scanned running text, and an entry nobody typed or gave a gender;
+- at Max a term read in two or more calls (or mentioned 30 times or more) whose calls read it differently SHALL get one
+  `term-summary` call, whose reading replaces the windows' majority only when its quote stands in a window shown and it
+  is one of the calls' own readings.
+
+The Scan button SHALL keep for the reading a capitalised word the book writes with a capital mid-sentence three times or
+more even when it writes it in lower case a fifth of the time or more, and SHALL add it only where the dial's plan reads
+it; the run's own scans SHALL drop it as before.
+
+**Source:** 15i.N5 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01
+(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#term-tiebreak`.
+In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so
+for now they only settle what the book's own pronouns leave open.
+
+#### Scenario: Six windows read a character
+
+- **WHEN** at Balanced the untyped `Brann` is written six times and its one reading call reads every window as a
+  person's name, quoting `He nodded` from each, and the code reads no pronoun after `Brann`
+- **THEN** `Brann` reads character, male (suggested), and no batched review call is sent for it
+
+#### Scenario: A clear tally outweighs the readings
+
+- **WHEN** the readings quote `he` for `Brann` in six windows and the code counts `she` four times after the name
+- **THEN** `Brann` reads female (verified) and no tiebreak call is made
+
+#### Scenario: The bartender is read, the common word removed
+
+- **WHEN** a book writes `Mark` with a capital mid-sentence five times, followed by `he`, and `a mark on the wall`
+  twice, and the dial is Fast
+- **THEN** the Scan button adds `Mark`, the review reads it as a person's name and it stays, male
+- **AND** in a book where `Mark the spot` opens three sentences and `mark` is written in lower case two times in five,
+  three readings of `Mark` as an ordinary word quoting `Mark the spot` remove the entry
+
+#### Scenario: One misread window removes nothing
+
+- **WHEN** one window reads `Mark` as an ordinary word quoting `Mark the spot` and another quotes a phrase its own window
+  does not hold
+- **THEN** `Mark` is not removed
 
 ### Requirement: Suggest target renderings with the model
 
