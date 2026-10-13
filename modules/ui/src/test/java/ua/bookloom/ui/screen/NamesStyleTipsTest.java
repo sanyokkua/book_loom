@@ -71,6 +71,8 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
     })
     void screen_shown_eachActionExplainsItself(final String id, final String tip) throws Exception {
         showWithOneTerm();
+        // Wide enough that Import and Export sit in the toolbar instead of the three-dot menu.
+        showAtSceneSize(1300, 800);
 
         assertThat(TooltipProbe.tipText(required(id))).isEqualTo(expected(tip));
     }
@@ -82,8 +84,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         "1,NAMES_STYLE_COLUMN_TYPE_TIP",
         "2,NAMES_STYLE_COLUMN_TARGET_TIP",
         "3,NAMES_STYLE_COLUMN_GENDER_TIP",
-        "4,NAMES_STYLE_COLUMN_LOCKED_TIP",
-        "5,NAMES_STYLE_COLUMN_FLAGS_TIP"
+        "4,NAMES_STYLE_COLUMN_LOCKED_TIP"
     })
     void table_columnHeader_explainsItsColumn(final int column, final String tip) throws Exception {
         showWithOneTerm();

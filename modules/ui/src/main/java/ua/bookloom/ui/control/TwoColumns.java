@@ -3,7 +3,9 @@ package ua.bookloom.ui.control;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
@@ -45,6 +47,7 @@ public final class TwoColumns extends Region {
     private final Node left;
     private final Node right;
     private final DoubleProperty breakpoint;
+    private final BooleanProperty equalHeights;
     private final StyleableDoubleProperty gap;
     private boolean stacked;
 
@@ -59,6 +62,12 @@ public final class TwoColumns extends Region {
         this.left = Objects.requireNonNull(left, "left");
         this.right = Objects.requireNonNull(right, "right");
         this.breakpoint = new SimpleDoubleProperty(this, "breakpoint", breakpointPx) {
+            @Override
+            protected void invalidated() {
+                requestLayout();
+            }
+        };
+        this.equalHeights = new SimpleBooleanProperty(this, "equalHeights", false) {
             @Override
             protected void invalidated() {
                 requestLayout();
@@ -82,6 +91,16 @@ public final class TwoColumns extends Region {
      */
     public DoubleProperty breakpointProperty() {
         return breakpoint;
+    }
+
+    /**
+     * Whether side-by-side columns are laid out as tall as the taller of the two, for a pair of equal cards; stacked
+     * cards keep their own heights.
+     *
+     * @return the property; {@code false} by default
+     */
+    public BooleanProperty equalHeightsProperty() {
+        return equalHeights;
     }
 
     /**
@@ -128,10 +147,12 @@ public final class TwoColumns extends Region {
         final double columnWidth = columnWidth(inner, stacked);
         final double leftHeight = left.prefHeight(columnWidth);
         final double rightHeight = right.prefHeight(columnWidth);
-        left.resizeRelocate(insets.getLeft(), insets.getTop(), columnWidth, leftHeight);
+        final boolean level = equalHeights.get() && !stacked;
+        final double tallest = Math.max(leftHeight, rightHeight);
+        left.resizeRelocate(insets.getLeft(), insets.getTop(), columnWidth, level ? tallest : leftHeight);
         final double rightX = stacked ? insets.getLeft() : insets.getLeft() + columnWidth + gap.get();
         final double rightY = stacked ? insets.getTop() + leftHeight + gap.get() : insets.getTop();
-        right.resizeRelocate(rightX, rightY, columnWidth, rightHeight);
+        right.resizeRelocate(rightX, rightY, columnWidth, level ? tallest : rightHeight);
     }
 
     @Override

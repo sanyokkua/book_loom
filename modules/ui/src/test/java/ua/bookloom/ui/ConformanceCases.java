@@ -238,28 +238,6 @@ final class ConformanceCases {
                     List.of(
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
-            // The skip note is the info role, light and dark.
-            new Screen(
-                    "NAMES_STYLE",
-                    ViewNames.NAMES_STYLE,
-                    Preparation.GLOSSARY_LISTED,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#names-style-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#names-style-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"),
-                            new Part("#names-style-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#names-style-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            // The scanned term is readable, strong text in the glossary table.
-                            new Part(".glossary-term", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"))),
-            // The Add term card, opened from the glossary card's header over the names screen.
-            new Screen(
-                    "ADD_TERM_DIALOG",
-                    ViewNames.NAMES_STYLE,
-                    Preparation.BOOK_OPENED,
-                    Overlay.ADD_TERM,
-                    List.of(
-                            new Part("#add-term-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#add-term-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             ConformanceResultsCase.RESULTS_DIALOG,
             // Ready to translate: the ready card and the banner in the info role.
             new Screen(
@@ -394,7 +372,9 @@ final class ConformanceCases {
                             SWITCH_TRACK,
                             SWITCH_THUMB)));
 
-    /** Every screen, the import screen's open-book cases included. */
-    static final List<Screen> SCREENS = Stream.concat(BASE.stream(), ImportConformanceCases.SCREENS.stream())
+    /** Every screen, the import screen's open-book cases and the names screen's included. */
+    static final List<Screen> SCREENS = Stream.of(
+                    BASE.stream(), ImportConformanceCases.SCREENS.stream(), NamesStyleConformanceCases.SCREENS.stream())
+            .flatMap(cases -> cases)
             .toList();
 }

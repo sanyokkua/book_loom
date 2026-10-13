@@ -76,32 +76,49 @@ final class GlossaryCells {
         }
     }
 
-    /** The source term with the action that removes its row. */
-    static final class SourceCell extends EntryCell<HBox> {
+    /** The source term, with the chip that marks a row the last operation changed. */
+    static final class TermCell extends EntryCell<HBox> {
 
         private final Label term = new Label();
+        private final Label changed;
+        private final ChangeMarks.Side marks;
 
-        SourceCell(final Messages messages, final NamesStyleViewModel model) {
+        TermCell(final Messages messages, final ChangeMarks.Side marks) {
             super(new HBox(ROW_SPACING));
+            this.marks = marks;
+            changed = ChangedMarks.chip(messages);
             term.getStyleClass().add("glossary-term");
-            final Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-            final Button remove = Tips.installOnHover(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP);
-            remove.getStyleClass().addAll("btn-ghost", "glossary-remove");
-            remove.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_REMOVE));
-            remove.setOnAction(event -> {
-                final GlossaryEntry shown = getItem();
-                if (shown != null) {
-                    model.remove(shown.id());
-                }
-            });
             control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(term, spacer, remove);
+            control().getChildren().addAll(term, changed);
         }
 
         @Override
         void show(final HBox shown, final GlossaryEntry entry) {
             term.setText(entry.term());
+            final boolean marked = marks.isMarked(entry.id());
+            changed.setVisible(marked);
+            changed.setManaged(marked);
+        }
+    }
+
+    /** The action that removes the row, in the table's last column. */
+    static final class RemoveCell extends EntryCell<Button> {
+
+        RemoveCell(final Messages messages, final NamesStyleViewModel model) {
+            super(Tips.installOnHover(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP));
+            control().getStyleClass().addAll("btn-ghost", "glossary-remove");
+            control().setAccessibleText(messages.get(MessageKey.NAMES_STYLE_REMOVE));
+            control().setOnAction(event -> {
+                final GlossaryEntry shown = getItem();
+                if (shown != null) {
+                    model.remove(shown.id());
+                }
+            });
+        }
+
+        @Override
+        void show(final Button shown, final GlossaryEntry entry) {
+            // The button is the same for every row.
         }
     }
 
@@ -124,6 +141,7 @@ final class GlossaryCells {
             super(new HBox(BADGE_SPACING));
             this.model = model;
             field = Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP);
+            field.setPromptText(messages.get(MessageKey.NAMES_STYLE_NO_TARGET));
             badge = Tips.installOnHover(
                     messages,
                     new Label(messages.get(MessageKey.NAMES_STYLE_SUGGESTED_BADGE)),
@@ -183,46 +201,6 @@ final class GlossaryCells {
             badge.setManaged(suggested);
             accept.setVisible(suggested);
             accept.setManaged(suggested);
-        }
-    }
-
-    /** The flags of a row as chips: changed by the last operation, no target, likely junk. Cells log nothing, since they refresh on every scroll. */
-    static final class FlagsCell extends EntryCell<HBox> {
-
-        private final Label noTarget;
-        private final Label junk;
-        private final Label changed;
-        private final ChangeMarks.Side marks;
-
-        FlagsCell(final Messages messages, final ChangeMarks.Side marks) {
-            super(new HBox(BADGE_SPACING));
-            this.marks = marks;
-            changed = ChangedMarks.chip(messages);
-            noTarget = flag(messages, MessageKey.NAMES_STYLE_FLAG_NO_TARGET, MessageKey.NAMES_STYLE_FLAG_NO_TARGET_TIP);
-            junk = flag(messages, MessageKey.NAMES_STYLE_FLAG_JUNK, MessageKey.NAMES_STYLE_FLAG_JUNK_TIP);
-            noTarget.getStyleClass().add("chip-neutral");
-            junk.getStyleClass().add("chip-warn");
-            control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(changed, noTarget, junk);
-        }
-
-        private static Label flag(final Messages messages, final MessageKey text, final MessageKey tip) {
-            final Label chip = Tips.installOnHover(messages, new Label(messages.get(text)), tip);
-            chip.getStyleClass().addAll("chip", "glossary-flag");
-            chip.setMinWidth(Region.USE_PREF_SIZE);
-            return chip;
-        }
-
-        @Override
-        void show(final HBox shown, final GlossaryEntry entry) {
-            setVisibleAndManaged(changed, marks.isMarked(entry.id()));
-            setVisibleAndManaged(noTarget, GlossaryFlags.hasNoTarget(entry));
-            setVisibleAndManaged(junk, GlossaryFlags.isLikelyJunk(entry));
-        }
-
-        private static void setVisibleAndManaged(final Label chip, final boolean on) {
-            chip.setVisible(on);
-            chip.setManaged(on);
         }
     }
 

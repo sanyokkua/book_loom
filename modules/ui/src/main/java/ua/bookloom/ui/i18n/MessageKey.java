@@ -1023,6 +1023,10 @@ public enum MessageKey {
     NAMES_STYLE_EXPORT("namesStyle.export"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_EXPORT}. */
     NAMES_STYLE_EXPORT_TIP("namesStyle.export.tip"),
+    /** Accessible name of the three-dot menu that holds Import and Export while the card is narrow. */
+    NAMES_STYLE_MORE("namesStyle.more"),
+    /** Hover explanation of the control named by {@link #NAMES_STYLE_MORE}. */
+    NAMES_STYLE_MORE_TIP("namesStyle.more.tip"),
     /** Glossary column of the source term. */
     NAMES_STYLE_COLUMN_SOURCE("namesStyle.column.source"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_SOURCE}. */
@@ -1045,22 +1049,16 @@ public enum MessageKey {
     NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
     NAMES_STYLE_COLUMN_LOCKED_TIP("namesStyle.column.locked.tip"),
-    /** Glossary column that flags rows needing a look: no target, likely junk. */
-    NAMES_STYLE_COLUMN_FLAGS("namesStyle.column.flags"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_FLAGS}. */
-    NAMES_STYLE_COLUMN_FLAGS_TIP("namesStyle.column.flags.tip"),
-    /** Chip on a row whose target is empty. */
-    NAMES_STYLE_FLAG_NO_TARGET("namesStyle.flag.noTarget"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_FLAG_NO_TARGET}. */
-    NAMES_STYLE_FLAG_NO_TARGET_TIP("namesStyle.flag.noTarget.tip"),
-    /** Chip on a row whose term looks like printing text or an ordinary word rather than a name. */
-    NAMES_STYLE_FLAG_JUNK("namesStyle.flag.junk"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_FLAG_JUNK}. */
-    NAMES_STYLE_FLAG_JUNK_TIP("namesStyle.flag.junk.tip"),
+    /** Placeholder of a target field that is empty. */
+    NAMES_STYLE_NO_TARGET("namesStyle.noTarget"),
     /** Accessible name of the row's remove action. */
     NAMES_STYLE_REMOVE("namesStyle.remove"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REMOVE}. */
     NAMES_STYLE_REMOVE_TIP("namesStyle.remove.tip"),
+    /** Accessible name of the last column of either table, which has no header text and holds each row's remove cross. */
+    NAMES_STYLE_COLUMN_REMOVE("namesStyle.column.remove"),
+    /** Hover explanation of the control named by {@link #NAMES_STYLE_COLUMN_REMOVE}. */
+    NAMES_STYLE_COLUMN_REMOVE_TIP("namesStyle.column.remove.tip"),
     /** Text shown in place of the glossary rows when the book has no names yet. */
     NAMES_STYLE_EMPTY("namesStyle.empty"),
     /** Text shown in place of the glossary rows when the search matches none of them. */
@@ -1089,30 +1087,36 @@ public enum MessageKey {
     RECURRING_ADD_PROMPT("namesStyle.recurring.add.prompt"),
     /** Hover explanation of the field whose placeholder is {@link #RECURRING_ADD_PROMPT}. */
     RECURRING_ADD_PROMPT_TIP("namesStyle.recurring.add.prompt.tip"),
-    /** Button that adds the typed word or title to the list. */
+    /** Button that opens the card asking for a recurring term. */
     RECURRING_ADD("namesStyle.recurring.add"),
     /** Hover explanation of the control labelled by {@link #RECURRING_ADD}. */
     RECURRING_ADD_TIP("namesStyle.recurring.add.tip"),
+    /** Button that imports recurring terms from a CSV file. */
+    RECURRING_IMPORT("namesStyle.recurring.import"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_IMPORT}. */
+    RECURRING_IMPORT_TIP("namesStyle.recurring.import.tip"),
+    /** Button that exports the recurring terms to a CSV file. */
+    RECURRING_EXPORT("namesStyle.recurring.export"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_EXPORT}. */
+    RECURRING_EXPORT_TIP("namesStyle.recurring.export.tip"),
+    /** Line reported after the recurring terms were written to a CSV file; argument 0 is the file name. */
+    RECURRING_EXPORT_DONE("namesStyle.recurring.export.done"),
+    /** Title of the card that asks for a recurring term. */
+    DIALOG_ADD_RECURRING_TITLE("dialog.addRecurring.title"),
+    /** Line under the title of the card that asks for a recurring term. */
+    DIALOG_ADD_RECURRING_SUBTITLE("dialog.addRecurring.subtitle"),
+    /** Button that adds the typed recurring term. */
+    DIALOG_ADD_RECURRING_CONFIRM("dialog.addRecurring.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_RECURRING_CONFIRM}. */
+    DIALOG_ADD_RECURRING_CONFIRM_TIP("dialog.addRecurring.confirm.tip"),
     /** Header of the source-term column. */
     RECURRING_COLUMN_TERM("namesStyle.recurring.column.term"),
     /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_TERM}. */
     RECURRING_COLUMN_TERM_TIP("namesStyle.recurring.column.term.tip"),
-    /** Header of the rendering column. */
-    RECURRING_COLUMN_RENDERING("namesStyle.recurring.column.rendering"),
-    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_RENDERING}. */
-    RECURRING_COLUMN_RENDERING_TIP("namesStyle.recurring.column.rendering.tip"),
-    /** Header of the column that lists the renderings the drafts used. */
-    RECURRING_COLUMN_SEEN("namesStyle.recurring.column.seen"),
-    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_SEEN}. */
-    RECURRING_COLUMN_SEEN_TIP("namesStyle.recurring.column.seen.tip"),
-    /** Header of the column that holds a recurring term's actions. */
-    RECURRING_COLUMN_ACTIONS("namesStyle.recurring.column.actions"),
-    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_ACTIONS}. */
-    RECURRING_COLUMN_ACTIONS_TIP("namesStyle.recurring.column.actions.tip"),
-    /** Shown in the used column of a term no draft has used yet. */
-    RECURRING_SEEN_NONE("namesStyle.recurring.seen.none"),
-    /** Shown in the used column for a rendering learned from the translated text: the rendering and its support. */
-    RECURRING_SEEN_LEARNED("namesStyle.recurring.seen.learned"),
+    /** Header of the column holding the rendering kept for each term. */
+    RECURRING_COLUMN_TARGET("namesStyle.recurring.column.target"),
+    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_TARGET}. */
+    RECURRING_COLUMN_TARGET_TIP("namesStyle.recurring.column.target.tip"),
     /** Row button that moves a term to the glossary. */
     RECURRING_PROMOTE("namesStyle.recurring.promote"),
     /** Hover explanation of the control labelled by {@link #RECURRING_PROMOTE}. */

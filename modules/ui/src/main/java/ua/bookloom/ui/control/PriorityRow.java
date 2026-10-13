@@ -15,21 +15,33 @@ import org.jspecify.annotations.Nullable;
 /**
  * A row that, when narrower than its parts want, hides whole parts in a set order instead of squeezing every one of
  * them into an unreadable stub. One elastic part gives way first, down to a comfortable width (it ends in an ellipsis);
- * then the droppable parts are hidden, the first named first; whatever is left shrinks only the elastic part further.
+ * then the foldable parts move together into a menu the row shows in their place; then the droppable parts are
+ * hidden, the first named first; whatever is left shrinks only the elastic part further.
  *
  * <p>The owner says whether it wants a droppable part shown through {@link #want}; the row shows it only while it also
  * fits. The row asks its parent for room for every wanted part, so a window made wider again brings the hidden parts
  * back. Nothing is logged here: the row is laid out on every pulse that changes a text in it.
  */
-final class PriorityRow extends HBox {
+public final class PriorityRow extends HBox {
 
     private final List<Node> dropOrder = new ArrayList<>();
     private final Map<Node, Boolean> wanted = new HashMap<>();
     private final Set<Node> dropped = new HashSet<>();
+    private final List<Node> foldable = new ArrayList<>();
+    private @Nullable Node foldMenu;
+    private boolean folded;
     private @Nullable Region elastic;
     private double comfort;
 
-    PriorityRow(final double spacing) {
+    /** What the row shows for the room it has: the parts hidden, and whether the foldable ones sit in the menu. */
+    private record Plan(Set<Node> hidden, boolean folded) {}
+
+    /**
+     * Builds an empty row.
+     *
+     * @param spacing the gap between two shown parts
+     */
+    public PriorityRow(final double spacing) {
         super(spacing);
     }
 
@@ -39,7 +51,7 @@ final class PriorityRow extends HBox {
      * @param part a child of this row whose minimum width is zero
      * @param comfortWidth the width below which hiding other parts is preferred to shrinking it further
      */
-    void elastic(final Region part, final double comfortWidth) {
+    public void elastic(final Region part, final double comfortWidth) {
         elastic = Objects.requireNonNull(part, "part");
         comfort = comfortWidth;
     }
@@ -49,7 +61,7 @@ final class PriorityRow extends HBox {
      *
      * @param parts children of this row
      */
-    void droppable(final Node... parts) {
+    public void droppable(final Node... parts) {
         for (final Node part : parts) {
             dropOrder.add(part);
             wanted.put(part, part.isVisible());
@@ -62,7 +74,7 @@ final class PriorityRow extends HBox {
      * @param part a part named by {@link #droppable}
      * @param shown {@code true} if the owner wants it shown
      */
-    void want(final Node part, final boolean shown) {
+    public void want(final Node part, final boolean shown) {
         // The owner repeats its wish on every refresh; only a change of it may lay the row out again.
         if (Boolean.valueOf(shown).equals(wanted.get(part))) {
             return;
@@ -70,6 +82,23 @@ final class PriorityRow extends HBox {
         wanted.put(part, shown);
         apply(part);
         requestLayout();
+    }
+
+    /**
+     * Names parts that, when the row is too narrow for all of them, leave together and are replaced by a menu that
+     * holds their actions. This happens before any droppable part is hidden, so what a person uses most stays.
+     *
+     * @param menu a child of this row, shown only while the parts are folded away
+     * @param parts children of this row, always wanted
+     */
+    public void fold(final Node menu, final Node... parts) {
+        foldMenu = Objects.requireNonNull(menu, "menu");
+        for (final Node part : parts) {
+            foldable.add(part);
+            wanted.put(part, part.isVisible());
+        }
+        wanted.put(menu, false);
+        apply(menu);
     }
 
     @Override
@@ -100,38 +129,51 @@ final class PriorityRow extends HBox {
 
     @Override
     protected void layoutChildren() {
-        final Set<Node> drop = drops(getWidth() - snappedLeftInset() - snappedRightInset());
-        if (!drop.equals(dropped)) {
+        final Plan plan = plan(getWidth() - snappedLeftInset() - snappedRightInset());
+        if (!plan.hidden().equals(dropped) || plan.folded() != folded) {
             dropped.clear();
-            dropped.addAll(drop);
+            dropped.addAll(plan.hidden());
+            folded = plan.folded();
             dropOrder.forEach(this::apply);
+            foldable.forEach(this::apply);
+            if (foldMenu != null) {
+                apply(foldMenu);
+            }
         }
         super.layoutChildren();
     }
 
-    private Set<Node> drops(final double room) {
+    private Plan plan(final double room) {
+        final Set<Node> hidden = new HashSet<>();
+        boolean fold = false;
+        if (needed(hidden, false) > room && foldMenu != null) {
+            foldable.stream().filter(this::isWanted).forEach(hidden::add);
+            fold = !hidden.isEmpty();
+        }
+        for (final Node part : dropOrder) {
+            if (needed(hidden, fold) <= room) {
+                break;
+            }
+            if (isWanted(part)) {
+                hidden.add(part);
+            }
+        }
+        return new Plan(hidden, fold);
+    }
+
+    private double needed(final Set<Node> hidden, final boolean menuShown) {
         double need = 0;
         int count = 0;
         for (final Node part : getChildren()) {
-            if (isWanted(part)) {
+            final boolean counted = part.equals(foldMenu) ? menuShown : isWanted(part) && !hidden.contains(part);
+            if (counted) {
                 need += part.equals(elastic)
                         ? Math.min(snapSizeX(part.prefWidth(-1)), comfort)
                         : snapSizeX(part.prefWidth(-1));
                 count++;
             }
         }
-        need += gaps(count);
-        final Set<Node> drop = new HashSet<>();
-        for (final Node part : dropOrder) {
-            if (need <= room) {
-                break;
-            }
-            if (isWanted(part)) {
-                drop.add(part);
-                need -= snapSizeX(part.prefWidth(-1)) + snapSpaceX(getSpacing());
-            }
-        }
-        return drop;
+        return need + gaps(count);
     }
 
     private boolean isWanted(final Node part) {
@@ -140,7 +182,8 @@ final class PriorityRow extends HBox {
     }
 
     private void apply(final Node part) {
-        final boolean show = Boolean.TRUE.equals(wanted.get(part)) && !dropped.contains(part);
+        final boolean show =
+                part.equals(foldMenu) ? folded : Boolean.TRUE.equals(wanted.get(part)) && !dropped.contains(part);
         part.setVisible(show);
         part.setManaged(show);
     }

@@ -366,8 +366,15 @@ sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to
 
 ### Requirement: Show the glossary as an editable table on Names & style
 
-The Names & style screen SHALL show the glossary as a table with the columns Source term, Type (character, place,
-term, title or other), Target (editable), Gender (female, male, neuter or unknown) and a Locked switch, an info banner
+The Names & style screen SHALL show the glossary as a table with the columns Term, Type (character, place,
+term, title or other), Target (editable; an empty one shows the placeholder "No target"), Gender (female, male, neuter or
+unknown for a character, "—" for any other type, with "(suggested)" only on a gender that was suggested and not
+confirmed), a Locked switch and a last column, without a header text, that holds the row's remove cross; a row the last
+model operation changed SHALL wear a "Changed" chip in its Term cell, and the "Changed in last run" switch SHALL be
+offered only while some row is marked. The glossary and the Recurring terms are two equal cards built from one widget
+(search, + Add, Scan, Review, Translate, Stop while one runs, Import, Export, the same table look), side by side at a
+content width of 1040 px or more and stacked below it; a card too narrow for its toolbar SHALL fold Import and Export
+into a three-dot menu first, so the toolbar stays on one line at 960 px and at 1024 px. The screen SHALL also show an info banner
 reading `Skip this and the app builds names on the fly as it translates.`, and a large primary Start translation
 button; WHILE no book is open, it SHALL instead report that no book is open with a route to the import screen, and SHALL
 show no table, no scan and no Start translation.
@@ -390,8 +397,8 @@ its name so the screen does not change under the person's hand.
 #### Scenario: A scanned entry appears unlocked
 
 - **WHEN** the scan proposed `Hale`
-- **THEN** its row shows Source term `Hale`, Type `other`, an empty editable Target, Gender `unknown` and the Locked
-  switch off
+- **THEN** its row shows Term `Hale`, Type `other`, an empty editable Target with the placeholder "No target", Gender
+  "—" (it is not a character) and the Locked switch off
 
 #### Scenario: Editing a target and locking it
 
@@ -703,7 +710,7 @@ name could come back in another spelling.
 
 ### Requirement: Sort and search the glossary table
 
-The Names & style table SHALL sort by Source term, Type, Gender or Locked when the person chooses that column's header,
+The Names & style table SHALL sort by Term, Type, Gender or Locked when the person chooses that column's header,
 breaking every tie by the source term, so that storing a change to any other column — a typed target above all — never
 moves its row; and it SHALL offer a search field that shows only the rows whose source term or target contains the
 typed text, ignoring case, and that the Escape key clears.
@@ -947,12 +954,13 @@ times, and a word the book writes both with a capital away from a sentence start
 name nor a function word) at least five times, at most thirty, never a term the glossary or the lexicon already holds. The
 scan SHALL run when a run is prepared and the lexicon is empty, and when the person asks on Names & style ("Find recurring
 terms"); a word that is only ever lower case, such as `pentacle`, is added by hand. Names & style SHALL show the lexicon
-in a "Recurring terms" card under the glossary: each term, the rendering later requests are asked to keep (the person's if
-typed, else the most used verified rendering, else the model's suggestion), the verified renderings with their counts, and
+in a "Recurring terms" card beside or under the glossary: each term and its Target, the rendering later requests are asked
+to keep (the person's if typed, else the learned or most used verified rendering, else the model's suggestion; there is
+no separate column for the renderings the drafts used), and
 the actions to edit the rendering (Enter or leaving the field stores it; clearing it returns to the most used), to
 suggest renderings with the model (the glossary's suggestion call over terms of type term, one model action at a time
-with the name scan and review, needing a chosen model), to add a term by hand (refused with a message when the glossary or
-the list already holds it), to remove a term, and to promote a term to the glossary, which stores it there as an unlocked
+with the name scan and review, needing a chosen model), to add a term by hand (a small card asks for the word; one the glossary or
+the list already holds is refused in the screen's banner), to remove a term, and to promote a term to the glossary, which stores it there as an unlocked
 entry of type term with its established rendering as the target and removes it from the lexicon.
 
 The lexicon SHALL live in memory behind a storage port, like the other project data, and SHALL NOT survive closing the
@@ -1012,7 +1020,8 @@ SHALL be replaced by a person's edit or an import, and a review SHALL NOT ask a 
 rendering that is the source spelling, across scripts, SHALL be refused unless the term is an identifier, and the term kept
 with none. A term moved to the glossary SHALL enter as an unlocked term whose target is a suggestion nobody has confirmed.
 
-The Recurring terms section SHALL import and export its terms as an RFC 4180 CSV file in UTF-8 with the header
+The Recurring terms card SHALL search its terms and renderings and SHALL import and export its terms, through the same file
+dialog seam as the glossary (suggested name `recurring-terms.csv`), as an RFC 4180 CSV file in UTF-8 with the header
 `term,target` (CRLF line ends, a field quoted only when it holds a comma, a quote or a line break, terms sorted, the target
 the established rendering or empty). An import SHALL add the terms the lexicon lacks, give a term without a person's
 rendering the row's rendering, refuse a row whose term the glossary holds, name every malformed line, and import the good

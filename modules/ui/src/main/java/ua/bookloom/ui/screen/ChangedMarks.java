@@ -34,6 +34,7 @@ final class ChangedMarks {
         filter.setId(id);
         filter.getStyleClass().add("btn-ghost");
         filter.setMinWidth(Region.USE_PREF_SIZE);
+        filter.setMaxHeight(Double.MAX_VALUE);
         filter.selectedProperty().bindBidirectional(side.onlyChanged());
         filter.visibleProperty().bind(Bindings.createBooleanBinding(() -> side.size() > 0, side.revision()));
         filter.managedProperty().bind(filter.visibleProperty());

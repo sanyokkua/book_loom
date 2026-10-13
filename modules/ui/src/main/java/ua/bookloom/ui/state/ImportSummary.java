@@ -48,6 +48,11 @@ final class ImportSummary {
                 GlossaryNotice.Level.INFO, messages.get(MessageKey.NAMES_STYLE_EXPORT_DONE, written.getFileName()));
     }
 
+    GlossaryNotice exportedTerms(final Path written) {
+        return new GlossaryNotice(
+                GlossaryNotice.Level.INFO, messages.get(MessageKey.RECURRING_EXPORT_DONE, written.getFileName()));
+    }
+
     private void append(final StringBuilder summary, final MessageKey key, final List<Integer> lines) {
         if (!lines.isEmpty()) {
             final String joined =

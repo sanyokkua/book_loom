@@ -1,7 +1,5 @@
 package ua.bookloom.ui.screen;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -9,7 +7,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -33,7 +30,6 @@ import ua.bookloom.ui.state.RecurringTerms;
 final class RecurringTermsCells {
 
     private static final double ROW_SPACING = 8;
-    private static final String COUNT_SEPARATOR = " · ";
 
     /** A cell holding one control that is filled from the row it shows. */
     abstract static class RowCell<N extends Node> extends TableCell<LexiconEntry, LexiconEntry> {
@@ -88,7 +84,7 @@ final class RecurringTermsCells {
         }
     }
 
-    /** The rendering later requests keep, as a text field that writes on Enter and on losing focus. */
+    /** The target later requests keep, as a text field that writes on Enter and on losing focus. */
     static final class RenderingCell extends RowCell<TextField> {
 
         private final RecurringTerms recurring;
@@ -96,8 +92,9 @@ final class RecurringTermsCells {
         private String syncedText = "";
 
         RenderingCell(final Messages messages, final RecurringTerms recurring) {
-            super(Tips.installOnHover(messages, new TextField(), MessageKey.RECURRING_COLUMN_RENDERING_TIP));
+            super(Tips.installOnHover(messages, new TextField(), MessageKey.RECURRING_COLUMN_TARGET_TIP));
             this.recurring = recurring;
+            control().setPromptText(messages.get(MessageKey.NAMES_STYLE_NO_TARGET));
             control().setOnAction(event -> commit());
             control().focusedProperty().addListener((observed, was, now) -> {
                 if (!now) {
@@ -123,65 +120,48 @@ final class RecurringTermsCells {
         }
     }
 
-    /** What the term was rendered as: the learned rendering with its support, then each reported one with its count. */
-    static final class SeenCell extends RowCell<Label> {
+    /** The row's action that moves it to the glossary. */
+    static final class PromoteCell extends RowCell<Button> {
 
-        private final Messages messages;
-        private final String none;
-
-        SeenCell(final Messages messages) {
-            super(new Label());
-            this.messages = messages;
-            none = messages.get(MessageKey.RECURRING_SEEN_NONE);
-            control().getStyleClass().add("muted");
+        PromoteCell(final Messages messages, final RecurringTerms recurring) {
+            super(Tips.installOnHover(
+                    messages,
+                    new Button(messages.get(MessageKey.RECURRING_PROMOTE)),
+                    MessageKey.RECURRING_PROMOTE_TIP));
+            control().getStyleClass().add("btn-ghost");
+            control().setMinWidth(Region.USE_PREF_SIZE);
+            control().setOnAction(event -> {
+                final LexiconEntry shown = getItem();
+                if (shown != null) {
+                    recurring.promote(shown.term());
+                }
+            });
         }
 
         @Override
-        void show(final Label shown, final LexiconEntry entry) {
-            final Stream<String> learned = Stream.ofNullable(entry.learned())
-                    .map(found -> messages.get(MessageKey.RECURRING_SEEN_LEARNED, found.text(), found.support()));
-            final Stream<String> reported =
-                    entry.renderings().stream().map(rendering -> rendering.text() + " ×" + rendering.count());
-            final String text = Stream.concat(learned, reported).collect(Collectors.joining(COUNT_SEPARATOR));
-            shown.setText(text.isEmpty() ? none : text);
+        void show(final Button shown, final LexiconEntry entry) {
+            // The button is the same for every row.
         }
     }
 
-    /** The row's actions: move it to the glossary, or remove it. */
-    static final class ActionsCell extends RowCell<HBox> {
+    /** The row's action that removes it, in the table's last column. */
+    static final class RemoveCell extends RowCell<Button> {
 
-        ActionsCell(final Messages messages, final RecurringTerms recurring) {
-            super(new HBox(ROW_SPACING));
-            final Button promote = Tips.installOnHover(
-                    messages, new Button(messages.get(MessageKey.RECURRING_PROMOTE)), MessageKey.RECURRING_PROMOTE_TIP);
-            promote.getStyleClass().add("btn-ghost");
-            promote.setMinWidth(Region.USE_PREF_SIZE);
-            promote.setOnAction(event -> act(recurring, true));
-            final Button remove = Tips.installOnHover(messages, new Button("✕"), MessageKey.RECURRING_REMOVE_TIP);
-            remove.getStyleClass().addAll("btn-ghost", "glossary-remove");
-            remove.setAccessibleText(messages.get(MessageKey.RECURRING_REMOVE));
-            remove.setOnAction(event -> act(recurring, false));
-            final Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-            control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(promote, spacer, remove);
-        }
-
-        private void act(final RecurringTerms recurring, final boolean promote) {
-            final LexiconEntry shown = getItem();
-            if (shown == null) {
-                return;
-            }
-            if (promote) {
-                recurring.promote(shown.term());
-            } else {
-                recurring.remove(shown.term());
-            }
+        RemoveCell(final Messages messages, final RecurringTerms recurring) {
+            super(Tips.installOnHover(messages, new Button("✕"), MessageKey.RECURRING_REMOVE_TIP));
+            control().getStyleClass().addAll("btn-ghost", "glossary-remove");
+            control().setAccessibleText(messages.get(MessageKey.RECURRING_REMOVE));
+            control().setOnAction(event -> {
+                final LexiconEntry shown = getItem();
+                if (shown != null) {
+                    recurring.remove(shown.term());
+                }
+            });
         }
 
         @Override
-        void show(final HBox shown, final LexiconEntry entry) {
-            // The buttons are the same for every row.
+        void show(final Button shown, final LexiconEntry entry) {
+            // The button is the same for every row.
         }
     }
 }

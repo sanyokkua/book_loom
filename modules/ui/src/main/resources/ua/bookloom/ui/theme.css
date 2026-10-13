@@ -2227,6 +2227,45 @@
     -fx-text-fill: -color-text;
 }
 
+/* The three-dot menu that holds Import and Export while a term card is narrow: a ghost button and a plain list. */
+.menu-more {
+    -fx-text-fill: -color-text;
+    -fx-padding: 0 4px 0 8px;
+}
+
+.menu-more .label {
+    -fx-text-fill: -color-text;
+}
+
+.menu-more > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+}
+
+.context-menu {
+    -fx-background-color: -color-border, -color-surface;
+    -fx-background-insets: 0, 1px;
+    -fx-background-radius: 8px, 7px;
+    -fx-padding: 4px;
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 5px;
+    -fx-padding: 6px 12px 6px 12px;
+}
+
+.context-menu .menu-item > .label {
+    -fx-text-fill: -color-text;
+}
+
+.context-menu .menu-item:focused {
+    -fx-background-color: -color-selected;
+}
+
+.context-menu .menu-item:focused > .label {
+    -fx-text-fill: -color-text-strong;
+}
+
 /* A target the model suggested and nobody confirmed is slanted and badged until the person accepts it. */
 .glossary-table .text-field:suggested {
     -fx-font-style: italic;

@@ -1,25 +1,12 @@
 package ua.bookloom.ui.screen;
 
 import java.text.Collator;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
-import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.StringProperty;
-import javafx.collections.transformation.FilteredList;
-import javafx.collections.transformation.SortedList;
-import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -27,18 +14,14 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.GlossaryLabels;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
- * Builds the glossary table: Source term, Type, Target, Gender, Locked and Check, each edited in its own cell, and the search
- * field that filters it.
- *
- * <p>A last column flags rows that need a look, "no target" and "likely junk", and sorts the likeliest junk first.
+ * The rows of the Glossary card: Term, Type, Target, Gender, Locked and a last column holding the remove cross, each
+ * edited in its own cell. The card around them is the {@link TermTableCard} the Recurring terms card is built from too.
  *
  * <p>Term, Type, Gender and Locked sort by a header click. Ties are always broken by the term, which no two rows share,
  * so a change to anything but the sorted column — above all a target being typed — never moves its row; a change to
@@ -50,146 +33,117 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryTable {
 
-    private static final double ROW_HEIGHT = 46;
-    private static final double SOURCE_WIDTH = 220;
-    private static final double CHOICE_WIDTH = 140;
-    private static final double TARGET_WIDTH = 260;
+    private static final double TERM_WIDTH = 130;
+    private static final double TYPE_WIDTH = 100;
+    private static final double TARGET_WIDTH = 190;
+    private static final double GENDER_WIDTH = 170;
     private static final double LOCK_WIDTH = 100;
-    private static final double FLAGS_WIDTH = 220;
+    private static final double REMOVE_WIDTH = 40;
+    private static final String NOT_A_CHARACTER = "—";
 
     private static final Comparator<GlossaryEntry> BY_TERM =
             Comparator.comparing(GlossaryEntry::term, Collator.getInstance());
 
-    static TextField search(final Messages messages) {
-        final TextField search = Tips.install(messages, new TextField(), MessageKey.NAMES_STYLE_SEARCH_TIP);
-        search.setId("names-style-search");
-        search.setPromptText(messages.get(MessageKey.NAMES_STYLE_SEARCH));
-        search.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                search.clear();
-                event.consume();
-            }
-        });
-        return search;
-    }
-
-    static TableView<GlossaryEntry> build(
-            final Messages messages, final NamesStyleViewModel model, final StringProperty query) {
-        final FilteredList<GlossaryEntry> filtered = new FilteredList<>(model.rows());
-        final ChangeMarks.Side marks = model.marks().glossary();
-        filtered.predicateProperty()
-                .bind(Bindings.createObjectBinding(
-                        () -> matching(query.get()).and(changedOnly(marks)),
-                        query,
-                        marks.onlyChanged(),
-                        marks.revision()));
-        final SortedList<GlossaryEntry> sorted = new SortedList<>(filtered);
-        final TableView<GlossaryEntry> table = new TableView<>(sorted);
-        sorted.comparatorProperty()
-                .bind(Bindings.createObjectBinding(() -> tieBroken(table.getComparator()), table.comparatorProperty()));
-        // The sorted list follows the table's comparator through the binding above, so a sort always succeeds.
-        table.setSortPolicy(_ -> true);
-        table.setId("names-style-table");
-        table.getStyleClass().add("glossary-table");
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        table.setFixedCellSize(ROW_HEIGHT);
-        table.setPlaceholder(emptyLabel(messages, query));
-        table.setFocusTraversable(false);
-        VBox.setVgrow(table, Priority.ALWAYS);
-        table.getColumns().addAll(columns(messages, model));
-        return table;
-    }
-
-    private static Predicate<GlossaryEntry> changedOnly(final ChangeMarks.Side marks) {
-        return entry -> !marks.onlyChanged().get() || marks.isMarked(entry.id());
-    }
-
-    private static Label emptyLabel(final Messages messages, final StringProperty query) {
-        final Label empty = new Label();
-        empty.getStyleClass().add("glossary-empty");
-        empty.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                query.get() == null || query.get().isBlank()
-                                        ? MessageKey.NAMES_STYLE_EMPTY
-                                        : MessageKey.NAMES_STYLE_EMPTY_FILTERED),
-                        query));
-        return empty;
-    }
-
-    private static Predicate<GlossaryEntry> matching(final @Nullable String query) {
-        final String wanted = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
-        return wanted.isEmpty()
-                ? entry -> true
-                : entry ->
-                        contains(entry.term(), wanted) || (entry.target() != null && contains(entry.target(), wanted));
-    }
-
-    private static boolean contains(final String text, final String wanted) {
-        return text.toLowerCase(Locale.ROOT).contains(wanted);
-    }
-
-    private static @Nullable Comparator<GlossaryEntry> tieBroken(final @Nullable Comparator<GlossaryEntry> chosen) {
-        return chosen == null ? null : chosen.thenComparing(BY_TERM);
+    static TermTableCard.Rows<GlossaryEntry> rows(final Messages messages, final NamesStyleViewModel model) {
+        return new TermTableCard.Rows<>(
+                model.rows(),
+                model.marks().glossary(),
+                GlossaryEntry::id,
+                entry -> Arrays.asList(entry.term(), entry.target()),
+                BY_TERM,
+                columns(messages, model),
+                List.of(model.restorations()));
     }
 
     private static List<TableColumn<GlossaryEntry, GlossaryEntry>> columns(
-            final Messages messages, final NamesStyleViewModel model) {
-        return Stream.concat(names(messages, model).stream(), attributes(messages, model).stream())
-                .toList();
-    }
-
-    private static List<TableColumn<GlossaryEntry, GlossaryEntry>> names(
             final Messages messages, final NamesStyleViewModel model) {
         return List.of(
                 column(
                         messages,
                         MessageKey.NAMES_STYLE_COLUMN_SOURCE,
+                        true,
                         MessageKey.NAMES_STYLE_COLUMN_SOURCE_TIP,
-                        SOURCE_WIDTH,
+                        TERM_WIDTH,
+                        false,
                         BY_TERM,
-                        () -> new GlossaryCells.SourceCell(messages, model)),
+                        () -> new GlossaryCells.TermCell(messages, model.marks().glossary())),
                 column(
                         messages,
                         MessageKey.NAMES_STYLE_COLUMN_TYPE,
+                        true,
                         MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
-                        CHOICE_WIDTH,
+                        TYPE_WIDTH,
+                        true,
                         Comparator.comparing(GlossaryEntry::type),
                         () -> typeCell(messages, model)),
-                column(
-                        messages,
-                        MessageKey.NAMES_STYLE_COLUMN_TARGET,
-                        MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP,
-                        TARGET_WIDTH,
-                        null,
-                        () -> new GlossaryCells.TargetCell(messages, model)));
+                targetColumn(messages, model),
+                genderColumn(messages, model),
+                lockColumn(messages, model),
+                removeColumn(messages, model));
     }
 
-    private static List<TableColumn<GlossaryEntry, GlossaryEntry>> attributes(
+    private static TableColumn<GlossaryEntry, GlossaryEntry> targetColumn(
             final Messages messages, final NamesStyleViewModel model) {
-        return List.of(
-                column(
-                        messages,
-                        MessageKey.NAMES_STYLE_COLUMN_GENDER,
-                        MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
-                        CHOICE_WIDTH,
-                        Comparator.comparing(GlossaryEntry::gender),
-                        () -> genderCell(messages, model)),
-                column(
-                        messages,
-                        MessageKey.NAMES_STYLE_COLUMN_LOCKED,
-                        MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP,
-                        LOCK_WIDTH,
-                        Comparator.comparing(GlossaryEntry::locked),
-                        () -> new GlossaryCells.LockCell(messages, model)),
-                column(
-                        messages,
-                        MessageKey.NAMES_STYLE_COLUMN_FLAGS,
-                        MessageKey.NAMES_STYLE_COLUMN_FLAGS_TIP,
-                        FLAGS_WIDTH,
-                        Comparator.comparingInt(GlossaryFlags::junkScore).reversed(),
-                        () -> new GlossaryCells.FlagsCell(
-                                messages, model.marks().glossary())));
+        return column(
+                messages,
+                MessageKey.NAMES_STYLE_COLUMN_TARGET,
+                true,
+                MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP,
+                TARGET_WIDTH,
+                false,
+                null,
+                () -> new GlossaryCells.TargetCell(messages, model));
+    }
+
+    private static TableColumn<GlossaryEntry, GlossaryEntry> genderColumn(
+            final Messages messages, final NamesStyleViewModel model) {
+        return column(
+                messages,
+                MessageKey.NAMES_STYLE_COLUMN_GENDER,
+                true,
+                MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
+                GENDER_WIDTH,
+                false,
+                Comparator.comparing(GlossaryEntry::gender),
+                () -> genderCell(messages, model));
+    }
+
+    private static TableColumn<GlossaryEntry, GlossaryEntry> lockColumn(
+            final Messages messages, final NamesStyleViewModel model) {
+        return column(
+                messages,
+                MessageKey.NAMES_STYLE_COLUMN_LOCKED,
+                true,
+                MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP,
+                LOCK_WIDTH,
+                true,
+                Comparator.comparing(GlossaryEntry::locked),
+                () -> new GlossaryCells.LockCell(messages, model));
+    }
+
+    private static TableColumn<GlossaryEntry, GlossaryEntry> removeColumn(
+            final Messages messages, final NamesStyleViewModel model) {
+        return column(
+                messages,
+                MessageKey.NAMES_STYLE_COLUMN_REMOVE,
+                false,
+                MessageKey.NAMES_STYLE_COLUMN_REMOVE_TIP,
+                REMOVE_WIDTH,
+                true,
+                null,
+                () -> new GlossaryCells.RemoveCell(messages, model));
+    }
+
+    private static TableColumn<GlossaryEntry, GlossaryEntry> column(
+            final Messages messages,
+            final MessageKey header,
+            final boolean shown,
+            final MessageKey tip,
+            final double width,
+            final boolean fixed,
+            final @Nullable Comparator<GlossaryEntry> order,
+            final Supplier<TableCell<GlossaryEntry, GlossaryEntry>> cell) {
+        return TermTableCard.column(messages, header, shown, tip, width, fixed, order, cell);
     }
 
     private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {
@@ -214,30 +168,14 @@ final class GlossaryTable {
                 model::setGender);
     }
 
+    // Only a character has a gender to settle; a place or a term shows a dash instead of "unknown".
     private static String genderLabel(final Messages messages, final GlossaryEntry entry) {
+        if (entry.type() != TermType.CHARACTER) {
+            return NOT_A_CHARACTER;
+        }
         final String label = GlossaryLabels.gender(messages, entry.gender());
         return entry.genderOrigin() == GenderOrigin.SUGGESTED
                 ? messages.get(MessageKey.NAMES_STYLE_GENDER_SUGGESTED, label)
                 : label;
-    }
-
-    private static TableColumn<GlossaryEntry, GlossaryEntry> column(
-            final Messages messages,
-            final MessageKey caption,
-            final MessageKey tip,
-            final double width,
-            final @Nullable Comparator<GlossaryEntry> order,
-            final Supplier<GlossaryCells.EntryCell<?>> cell) {
-        final TableColumn<GlossaryEntry, GlossaryEntry> column = new TableColumn<>(messages.get(caption));
-        Tips.installOnHeader(messages, column, tip);
-        column.setSortable(order != null);
-        if (order != null) {
-            column.setComparator(order);
-        }
-        column.setReorderable(false);
-        column.setPrefWidth(width);
-        column.setCellValueFactory(features -> new ReadOnlyObjectWrapper<>(features.getValue()));
-        column.setCellFactory(_ -> cell.get());
-        return column;
     }
 }

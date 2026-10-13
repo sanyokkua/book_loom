@@ -259,19 +259,29 @@ are the Import screen's Structure, Segments and Book facts cards, with the same 
 
 ## screen-names-and-style {#screen-names-and-style}
 
-Purpose: review and edit the glossary before or during a run.
+Purpose: review and edit the glossary and the book's recurring terms before or during a run.
+
+The screen holds **two equal cards**, the Glossary and the Recurring terms, each built from the same widget (15i.U5):
+the same toolbar in the same order, the same table look (46 px rows) and the same row cross in the last column. They
+sit side by side when the screen's content is at least 1040 px wide and stack, Glossary above Recurring terms, when it
+is narrower (one child order either way, so Tab reads the same).
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |
 |------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked, Check; Source term, Type, Gender, Locked and Check sort by header, ties by term. Check shows a "No target" chip for an empty target and a "Likely junk" chip for a term the junk rules mark, and sorts the likeliest junk first. Start translation asks "N entries have no target — the model will choose" (listing them) when any entry has no target |
-| Search field           | `TextField`                             | Shows only rows whose term or target contains the text; Escape clears it                           |
-| Model-scan button      | `Button`                                | Runs a model-assisted name scan in addition to the deterministic scan                             |
-| Review with model      | `Button`                                | Asks the model which open rows are names; removes the rest and fills an unset type or gender       |
-| Stop                   | `Button`, shown while a model action runs | Interrupts the model scan or review; nothing is written; a waiting line names the request and attempt |
-| Add term               | `Button` → add-glossary-term dialog     | FR-GLOSS-04; refuses locking a term that has no target                                             |
-| CSV import / export    | `Button`s + `FileChooser`               | Import refuses locking a row that has no target; export writes the current table                  |
+| Glossary table         | `TableView`                             | Columns: Term, Type, Target, Gender, Locked and an unnamed last column holding the row's ✕; Term, Type, Gender and Locked sort by header, ties by term. An empty target shows the placeholder "No target" in its field; Gender reads "—" for a row that is not a character and "(suggested)" follows only a gender the book's pronouns or the first-name list suggested; a row the last model operation changed wears a "Changed" chip in its Term cell. Start translation asks "N entries have no target — the model will choose" (listing them) when any entry has no target |
+| Recurring terms table  | `TableView`                             | Columns: Term, Target (the rendering the run keeps: the person's, else the learned or most used one), an unnamed "→ Glossary" column that moves the term to the glossary, and an unnamed last column holding the ✕. No Used column: a learned rendering is the Target. Same placeholder and "Changed" chip |
+| Search field           | `TextField`                             | Each card's own: shows only rows whose term or target contains the text; Escape clears it         |
+| + Add                  | `Button`                                | Glossary: opens the add-glossary-term dialog (FR-GLOSS-04; refuses locking a term that has no target). Recurring terms: opens a small card for one word or title; a term the glossary or the list holds is refused in the banner above the cards |
+| Scan · Review · Translate | `Button`s                            | Each card's model actions, one model action at a time across both cards; Scan adds, Review removes what is not worth keeping, Translate fills the missing targets |
+| Stop                   | `Button`, shown while a model action runs | Interrupts the action; nothing is written; a waiting line names the request and attempt; shown on both cards |
+| Accept all             | `Button`, Glossary only                 | Shown only while a row holds a suggested target                                                   |
+| Changed in last run    | `ToggleButton`                          | Per card, shown only while some row is marked; keeps the marked rows, so the results dialog's "Show changed" has a way back |
+| Import · Export        | `Button`s + `FileChooser` (`CsvFileChooser`) | Per card, `glossary.csv` and `recurring-terms.csv`. Glossary import refuses locking a row that has no target. When a card is too narrow both fold, before anything else, into one three-dot menu (`<card>-more`) |
 | `Start translation`    | `Button`                                | Starts a new run at the first pending segment when Start is offered (`#start-and-resume`)          |
 | Info banner            | `Label`                                 | `Skip this and the app builds names on the fly as it translates.`                                  |
+
+The toolbar is one line at 960 and 1024 px in English and Ukrainian, also while Stop is shown: Import and Export fold
+into the menu first and the search field narrows after that, so no caption is ever cut.
 
 A **deterministic scan** runs automatically when the screen opens, proposing entries from the book's own text; these
 proposals start **unlocked** (design.md D10). Locking is allowed only for an entry that has a target — the table, Add

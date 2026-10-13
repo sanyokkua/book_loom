@@ -68,7 +68,7 @@ final class ChangeRows {
         final List<String> parts = new ArrayList<>();
         parts.add(
                 entry.target() == null || entry.target().isBlank()
-                        ? messages.get(MessageKey.NAMES_STYLE_FLAG_NO_TARGET)
+                        ? messages.get(MessageKey.NAMES_STYLE_NO_TARGET)
                         : entry.target());
         parts.add(GlossaryLabels.type(messages, entry.type()));
         if (entry.gender() != Gender.UNKNOWN) {

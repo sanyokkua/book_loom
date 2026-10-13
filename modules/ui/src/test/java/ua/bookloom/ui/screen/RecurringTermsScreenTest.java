@@ -56,20 +56,18 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
     private Button promoteButton() {
         return inTable(".button")
                 .map(Button.class::cast)
-                .filter(button -> "To glossary".equals(button.getText()))
+                .filter(button -> "→ Glossary".equals(button.getText()))
                 .findFirst()
                 .orElseThrow();
     }
 
     @Test
-    void card_shown_listsEachTermWithItsEstablishedRenderingAndWhatWasUsed() throws Exception {
+    void card_shown_listsEachTermWithItsEstablishedRendering() throws Exception {
         showCard(MASTER, IMP);
 
         assertThat(labelText("recurring-title")).isEqualTo("Recurring terms");
         assertThat(inTable(".glossary-term").map(node -> ((Label) node).getText()))
                 .contains("master", "imp");
-        assertThat(inTable(".muted").map(node -> ((Label) node).getText()))
-                .contains("господар ×2 · учитель ×1", "not used yet");
         assertThat(renderingOf("господар")).isNotNull();
     }
 
@@ -83,12 +81,13 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
                 .contains("A term the book renders several ways stays blank");
     }
 
+    // The Used column is gone (15i.U5): a learned rendering shows only as the term's Target.
     @Test
-    void card_termWithALearnedRendering_showsItWithItsSupportAndAsTheRendering() throws Exception {
+    void card_termWithALearnedRendering_showsItAsTheTargetAndNoUsedText() throws Exception {
         showCard(IMP.withLearned(new LexiconEntry.Learned("біс", 5, 6)));
 
-        assertThat(inTable(".muted").map(node -> ((Label) node).getText())).contains("біс ×5 (learned from the text)");
         assertThat(renderingOf("біс")).isNotNull();
+        assertThat(inTable(".muted").map(node -> ((Label) node).getText())).isEmpty();
     }
 
     @Test
@@ -146,30 +145,46 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
         assertThat(lexicon.calls()).containsSubsequence("scan(p1)", "scanWithModel(p1)");
     }
 
-    @Test
-    void add_typedTerm_isAddedAndTheFieldCleared() throws Exception {
-        showCard();
-        final TextField typed = (TextField) required("recurring-add-field");
+    private void openAddCard() throws Exception {
+        onFx(() -> button("recurring-add").fire());
+        awaitFx(() -> optional("recurring-add-card") != null);
+    }
 
-        onFx(() -> {
-            typed.setText("pentacle");
-            button("recurring-add").fire();
-        });
+    // IF + Add on this card were a different widget from the Glossary's, THEN the two cards would not be alike; it
+    // opens
+    // a small card for the term, as the Glossary's opens its own.
+    @Test
+    void add_pressed_opensACardAskingForTheTermAndAddsItOnConfirm() throws Exception {
+        showCard();
+
+        openAddCard();
+        onFx(() -> ((TextField) required("recurring-add-term")).setText("pentacle"));
+        onFx(() -> button("recurring-add-confirm").fire());
 
         awaitFx(() -> lexicon.calls().contains("add(pentacle)"));
         awaitFx(() -> table().getItems().size() == 1);
-        assertThat(typed.getText()).isEmpty();
+        awaitFx(() -> optional("recurring-add-card") == null);
+    }
+
+    @Test
+    void add_cancelled_addsNothingAndClosesTheCard() throws Exception {
+        showCard();
+        openAddCard();
+        onFx(() -> ((TextField) required("recurring-add-term")).setText("pentacle"));
+
+        onFx(() -> button("recurring-add-cancel").fire());
+
+        awaitFx(() -> optional("recurring-add-card") == null);
+        assertThat(lexicon.calls()).noneMatch(call -> call.startsWith("add("));
     }
 
     @Test
     void add_aTermAlreadyInTheList_isRefusedInPlaceWithoutAskingTheService() throws Exception {
         showCard(IMP);
-        final TextField typed = (TextField) required("recurring-add-field");
+        openAddCard();
+        onFx(() -> ((TextField) required("recurring-add-term")).setText("IMP"));
 
-        onFx(() -> {
-            typed.setText("IMP");
-            button("recurring-add").fire();
-        });
+        onFx(() -> button("recurring-add-confirm").fire());
 
         awaitFx(() -> "IMP is already in the glossary or the list".equals(labelText("names-style-notice-text")));
         assertThat(lexicon.calls()).noneMatch(call -> call.startsWith("add("));

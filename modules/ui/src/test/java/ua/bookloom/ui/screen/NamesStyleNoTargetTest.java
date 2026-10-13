@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import javafx.scene.Node;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TableView;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
@@ -16,8 +15,9 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * Start translation with glossary entries that have no target asks first, and the table marks the rows that need a
- * look: an empty target, and a term that looks like junk.
+ * Start translation with glossary entries that have no target asks first. The table no longer flags such rows with a
+ * Check column (15i.U5): an empty target shows the "No target" placeholder instead, which {@code TermTableCardTest}
+ * covers.
  */
 class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
@@ -29,8 +29,6 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
             new GlossaryEntry("e3", "p1", "Ashdown", "  ", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry SHOUTED =
             new GlossaryEntry("e4", "p1", "BRANWICK", "Бранвік", TermType.PLACE, Gender.UNKNOWN, false);
-    private static final GlossaryEntry HYPHENATED =
-            new GlossaryEntry("e5", "p1", "Ox-horn", "Волорог", TermType.OTHER, Gender.UNKNOWN, false);
 
     private static final String CARD = "no-target-card";
 
@@ -44,11 +42,6 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
     private boolean isAsking() {
         final Node card = scene.getRoot().lookup("#" + CARD);
         return card != null && card.isVisible() && card.getScene() != null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private TableView<GlossaryEntry> table() {
-        return (TableView<GlossaryEntry>) required("names-style-table");
     }
 
     // IF a start went ahead silently, THEN entries the person forgot would be spelled by the model, differently each
@@ -124,35 +117,8 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
         assertThat(engine.requests()).hasSize(1);
     }
 
-    // IF the likeliest junk were not first under the Check header, THEN a long list would have to be read row by row.
-    @Test
-    void sortByCheck_mixedRows_listsLikelyJunkFirstThenByTerm() throws Exception {
-        showNamesStyle(HAS_TARGET, HYPHENATED, SHOUTED, NO_TARGET);
-
-        onFx(() -> table().getSortOrder().setAll(List.of(table().getColumns().get(5))));
-
-        assertThat(ThemeTestSupport.onFx(() ->
-                        table().getItems().stream().map(GlossaryEntry::term).toList()))
-                .containsExactly("BRANWICK", "Ox-horn", "Edwin", "Pellbury");
-    }
-
-    // IF the chips did not follow the rows, THEN a missing target or a likely junk term would look like any other row.
-    @Test
-    void table_rowsWithAndWithoutFlags_showTheMatchingChips() throws Exception {
-        showNamesStyle(HAS_TARGET, SHOUTED, NO_TARGET);
-
-        assertThat(shownFlags()).containsExactlyInAnyOrder("Likely junk", "No target");
-    }
-
     @SuppressWarnings("unchecked")
     private List<String> listedTerms() {
         return ThemeTestSupport.onFx(() -> List.copyOf(((ListView<String>) required("no-target-list")).getItems()));
-    }
-
-    private List<String> shownFlags() {
-        return ThemeTestSupport.onFx(() -> table().lookupAll(".glossary-flag").stream()
-                .filter(Node::isVisible)
-                .map(chip -> ((javafx.scene.control.Label) chip).getText())
-                .toList());
     }
 }

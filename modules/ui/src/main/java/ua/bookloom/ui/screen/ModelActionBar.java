@@ -89,6 +89,7 @@ final class ModelActionBar {
         bar.setId(card + "-actions");
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setMinWidth(Region.USE_PREF_SIZE);
+        bar.setMaxHeight(Double.MAX_VALUE);
         return bar;
     }
 
@@ -101,8 +102,9 @@ final class ModelActionBar {
         final Button button = Tips.install(messages, new Button(messages.get(caption)), tip);
         button.setId(id);
         button.getStyleClass().add("btn-ghost");
-        // A caption is never cut to an ellipsis: the toolbar wraps the bar onto the next line instead.
+        // A caption is never cut to an ellipsis: the toolbar folds or hides whole parts instead.
         button.setMinWidth(Region.USE_PREF_SIZE);
+        button.setMaxHeight(Double.MAX_VALUE);
         button.setOnAction(event -> {
             log.debug("{} pressed", id);
             onPress.run();

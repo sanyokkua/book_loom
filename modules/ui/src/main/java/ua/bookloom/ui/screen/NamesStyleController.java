@@ -16,6 +16,7 @@ import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.OpenedBook;
@@ -43,6 +44,7 @@ public final class NamesStyleController {
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
     private final ChangeResultsDialog changeResultsDialog;
+    private final CsvFileChooser csvFiles;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -61,6 +63,7 @@ public final class NamesStyleController {
      * @param noTargetDialog the question asked before starting with entries that have no target
      * @param narratorDialog the question asked before starting when the book is told in the first person
      * @param changeResultsDialog the card that lists what each model operation changed
+     * @param csvFiles where the person picks the file an Import or Export of either table uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -75,7 +78,8 @@ public final class NamesStyleController {
             final Toasts toasts,
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
-            final ChangeResultsDialog changeResultsDialog) {
+            final ChangeResultsDialog changeResultsDialog,
+            final CsvFileChooser csvFiles) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -86,6 +90,7 @@ public final class NamesStyleController {
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
         this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
+        this.csvFiles = Objects.requireNonNull(csvFiles, "csvFiles");
     }
 
     @FXML
@@ -109,7 +114,8 @@ public final class NamesStyleController {
                                 toasts,
                                 noTargetDialog,
                                 narratorDialog,
-                                changeResultsDialog)
+                                changeResultsDialog,
+                                csvFiles)
                         .build(book.projectId())
                 : NoBookView.build(messages, navigator);
         body.getChildren().setAll(content);

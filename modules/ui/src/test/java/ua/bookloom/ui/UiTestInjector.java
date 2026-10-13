@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.StepLocks;
@@ -256,7 +257,7 @@ public final class UiTestInjector {
         }
     }
 
-    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the chooser. */
+    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the choosers. */
     private static final class ExportExtrasModule extends AbstractModule {
 
         @Override
@@ -264,6 +265,7 @@ public final class UiTestInjector {
             bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
             bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
             bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
+            bind(CsvFileChooser.class).toInstance(new RecordingCsvChooser());
         }
     }
 

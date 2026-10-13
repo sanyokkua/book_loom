@@ -31,6 +31,7 @@ public final class ScriptedLexiconService implements LexiconService {
     private final List<LexiconEntry> scanFinds = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> suggestions = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> modelFinds = new CopyOnWriteArrayList<>();
+    private final List<LexiconEntry> importFinds = new CopyOnWriteArrayList<>();
     private final List<String> reviewDrops = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError modelScanFailure;
 
@@ -57,6 +58,11 @@ public final class ScriptedLexiconService implements LexiconService {
     /** Makes the next model scan fail with this error after the deterministic scan has already stored its finds. */
     public void modelScanWillFail(final AppError failure) {
         modelScanFailure = failure;
+    }
+
+    /** Names the entries the next CSV import adds. */
+    public void importWillAdd(final LexiconEntry... entries) {
+        importFinds.addAll(List.of(entries));
     }
 
     /** Names the terms the next model review drops. */
@@ -178,7 +184,10 @@ public final class ScriptedLexiconService implements LexiconService {
     @Override
     public Result<GlossaryImportReport> importCsv(final String projectId, final Path source) {
         calls.add("importCsv(" + source.getFileName() + ")");
-        return Result.ok(new GlossaryImportReport(0, List.of(), List.of()));
+        held.addAll(importFinds);
+        final int added = importFinds.size();
+        importFinds.clear();
+        return Result.ok(new GlossaryImportReport(added, List.of(), List.of()));
     }
 
     @Override

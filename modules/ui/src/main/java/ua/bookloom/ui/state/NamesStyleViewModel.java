@@ -113,7 +113,7 @@ public final class NamesStyleViewModel {
                 Objects.requireNonNull(activities, "activities"));
         this.modelRuns = newModelRuns(lexicon, models, settings, messages, activities);
         this.recurring = new RecurringTerms(
-                new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice),
+                new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice, new ImportSummary(messages)),
                 () -> projectId,
                 this::whileCurrent,
                 new RecurringTerms.ModelActions(

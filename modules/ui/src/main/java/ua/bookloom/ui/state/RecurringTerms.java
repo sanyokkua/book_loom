@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -105,6 +106,26 @@ public final class RecurringTerms {
     public void remove(final String term) {
         Objects.requireNonNull(term, "term");
         actions.remove(project.get(), term, current.get());
+    }
+
+    /**
+     * Reads terms and renderings from a CSV file the person chose.
+     *
+     * @param source the file to read
+     */
+    public void importCsv(final Path source) {
+        Objects.requireNonNull(source, "source");
+        actions.importCsv(project.get(), source, current.get());
+    }
+
+    /**
+     * Writes the terms and their renderings to a CSV file the person chose.
+     *
+     * @param destination the file to write
+     */
+    public void exportCsv(final Path destination) {
+        Objects.requireNonNull(destination, "destination");
+        actions.exportCsv(project.get(), destination, current.get());
     }
 
     /** Loads the rows of a project, scanning when it has none; called as the screen opens. */

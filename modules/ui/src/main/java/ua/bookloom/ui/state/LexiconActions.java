@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -26,6 +28,7 @@ import ua.bookloom.ui.i18n.Messages;
  * @param glossaryRows the glossary table's rows, where a promoted term joins and which an add checks for a duplicate
  * @param messages the catalogue a refusal is worded from
  * @param notice the line the screen reports in place
+ * @param summary the wording of an import's or export's result
  */
 @Slf4j
 record LexiconActions(
@@ -34,7 +37,11 @@ record LexiconActions(
         ObservableList<LexiconEntry> rows,
         ObservableList<GlossaryEntry> glossaryRows,
         Messages messages,
-        ObjectProperty<@Nullable GlossaryNotice> notice) {
+        ObjectProperty<@Nullable GlossaryNotice> notice,
+        ImportSummary summary) {
+
+    /** What an import did and the list as it stands afterwards. */
+    private record Imported(GlossaryImportReport report, List<LexiconEntry> all) {}
 
     /** Reads the lexicon and, when it is empty, runs the deterministic scan, as the glossary does for names. */
     void show(final String project, final Consumer<Runnable> whileCurrent) {
@@ -88,6 +95,29 @@ record LexiconActions(
                 "lexicon remove",
                 () -> lexicon.remove(project, term),
                 answer -> whileCurrent.accept(() -> settle("remove", answer, removed -> removeRow(term))));
+    }
+
+    /** Reads a CSV file of terms and renderings, then shows the list as it stands. */
+    void importCsv(final String project, final Path source, final Consumer<Runnable> whileCurrent) {
+        log.debug("importing recurring terms csv {} into project {}", source, project);
+        calls.run(
+                "lexicon import",
+                () -> lexicon.importCsv(project, source)
+                        .flatMap(report -> lexicon.entries(project).map(all -> new Imported(report, all))),
+                answer -> whileCurrent.accept(() -> settle("import", answer, done -> {
+                    rows.setAll(done.all());
+                    notice.set(new GlossaryNotice(GlossaryNotice.Level.INFO, summary.of(done.report())));
+                })));
+    }
+
+    /** Writes the list to a CSV file and reports where. */
+    void exportCsv(final String project, final Path destination, final Consumer<Runnable> whileCurrent) {
+        log.debug("exporting the recurring terms of project {} to {}", project, destination);
+        calls.run(
+                "lexicon export",
+                () -> lexicon.exportCsv(project, destination),
+                answer -> whileCurrent.accept(
+                        () -> settle("export", answer, written -> notice.set(summary.exportedTerms(written)))));
     }
 
     private Result<List<LexiconEntry>> loadOrScan(final String project) {
