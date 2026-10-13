@@ -15,15 +15,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.glossary.IdentityRule;
+import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 
 /**
  * Learns which target word keeps company with a key term, from decided segment pairs and with no model call. A word's
- * stem is its first {@value TargetWords#STEM_LENGTH} letters, which merges its inflections without any language rule. For a term
- * the association of a stem {@code w} is the Dice coefficient {@code 2·c(term,w) / (n(term) + c(w))}: the segments
- * naming the term that carry the stem, over the segments naming the term plus the segments carrying the stem. A word
- * that is everywhere ({@code і}, {@code він}) scores low because {@code c(w)} is large; pointwise mutual information
- * and log-likelihood were measured on a real book and were no better.
+ * stem is its first {@value TargetWords#STEM_LENGTH} letters, which merges its inflections without any language rule.
+ * For a term the association of a stem {@code w} is the Dice coefficient {@code 2·c(term,w) / (n(term) + c(w))}: the
+ * segments naming the term that carry the stem, over the segments naming the term plus the segments carrying the
+ * stem. A word that is everywhere ({@code і}, {@code він}) scores low because {@code c(w)} is large; pointwise mutual
+ * information and log-likelihood were measured on a real book and were no better.
  *
  * <p>A rendering is only established when the evidence is plain: enough segments, a high score and a score at least
  * twice that of any rival stem. A title that is followed by changing surnames, a word with two meanings and a term the
@@ -100,6 +103,8 @@ public final class CooccurrenceLearner {
     private final Vocabulary names = new Vocabulary();
     private final Map<String, Tracked> tracked = new LinkedHashMap<>();
     private final List<String> obliqueEndings;
+    private final @Nullable String sourceTag;
+    private final @Nullable String targetTag;
 
     /** A learner with no language data: every surface form of a stem is as good a dictionary form as another. */
     public CooccurrenceLearner() {
@@ -112,7 +117,21 @@ public final class CooccurrenceLearner {
      * @param obliqueEndings the non-null endings of the target language's oblique forms; empty for no preference
      */
     public CooccurrenceLearner(final List<String> obliqueEndings) {
+        this(obliqueEndings, null, null);
+    }
+
+    /**
+     * A learner that also refuses the term's own spelling across scripts as its rendering (15i.N6's identity rule).
+     *
+     * @param obliqueEndings as above
+     * @param sourceTag the source language tag; {@code null} when not known, which allows the copy
+     * @param targetTag the target language tag; {@code null} when not known, which allows the copy
+     */
+    public CooccurrenceLearner(
+            final List<String> obliqueEndings, @Nullable final String sourceTag, @Nullable final String targetTag) {
         this.obliqueEndings = List.copyOf(Objects.requireNonNull(obliqueEndings, "obliqueEndings"));
+        this.sourceTag = sourceTag;
+        this.targetTag = targetTag;
     }
 
     /**
@@ -247,7 +266,7 @@ public final class CooccurrenceLearner {
             return Optional.empty();
         }
         final List<Scored> ranked = rank(counts, excludedStems(excludedWords));
-        final Optional<Learned> found = gate(counts, ranked);
+        final Optional<Learned> found = gate(counts, ranked).filter(learned -> isNoCopy(term, learned));
         log.debug(
                 "Learner term check: occurrences={} candidates={} established={}",
                 counts.occurrences,
@@ -287,6 +306,10 @@ public final class CooccurrenceLearner {
         return kept
                 ? baseForm(counts, stem).map(base -> new Learned(base, support, counts.occurrences, dice))
                 : Optional.empty();
+    }
+
+    private boolean isNoCopy(final String term, final Learned learned) {
+        return !IdentityRule.refuses(term, learned.rendering(), sourceTag, targetTag, Kept.NOT_KEPT);
     }
 
     private Set<String> excludedStems(final Collection<String> excludedWords) {

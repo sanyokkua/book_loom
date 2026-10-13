@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -19,6 +20,7 @@ import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
+import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.pipeline.index.Window;
@@ -73,7 +75,16 @@ final class NameReadings {
      * @param readings what the calls read of each entry read, by entry id: a speaking name or a brand in any of its
      *     calls is one
      */
-    record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread, Map<String, Reading> readings) {}
+    record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread, Map<String, Reading> readings) {
+
+        /** The ids of the entries the readings decided are proper names: the only verified names (15i.T4). */
+        Set<String> names() {
+            return verdicts.stream()
+                    .filter(verdict -> verdict.kind() == Kind.NAME)
+                    .map(verdict -> verdict.entry().id())
+                    .collect(Collectors.toSet());
+        }
+    }
 
     /**
      * Reads and decides the entries the plan reads.

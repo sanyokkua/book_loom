@@ -57,15 +57,38 @@ public final class TextChecks {
             @Nullable final String sourceLanguage,
             final String targetLanguage,
             final List<String> glossaryPairs) {
+        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, List.of());
+    }
+
+    /**
+     * Runs every deterministic text check on one segment, with the glossary pairs and the terms the glossary keeps as
+     * written, which the Latin-run check leaves alone.
+     *
+     * @param source the source's display text
+     * @param target the candidate's display text, with kept names and protected tokens already out
+     * @param sourceLanguage the source language tag, or {@code null} when none is declared
+     * @param targetLanguage the target language tag
+     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds
+     * @param keptTerms the locked terms whose rendering is their own spelling; never null
+     * @return the findings; empty when the text is clean; never null
+     */
+    public static List<CheckFinding> run(
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs,
+            final List<String> keptTerms) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
+        Objects.requireNonNull(keptTerms, "keptTerms");
         if (NonProse.isLocatorOnly(target)) {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
         }
-        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs);
+        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms);
     }
 
     // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
@@ -74,7 +97,8 @@ public final class TextChecks {
             final String originalTarget,
             @Nullable final String sourceLanguage,
             final String targetLanguage,
-            final List<String> glossaryPairs) {
+            final List<String> glossaryPairs,
+            final List<String> keptTerms) {
         final String source = Identifiers.masked(original);
         final String target = Identifiers.masked(originalTarget);
         final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
@@ -83,7 +107,8 @@ public final class TextChecks {
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
-            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), glossaryPairs));
+            findings.addAll(
+                    LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), glossaryPairs, keptTerms));
         }
         findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
         findings.addAll(AddressMixCheck.find(target, targetLanguage));

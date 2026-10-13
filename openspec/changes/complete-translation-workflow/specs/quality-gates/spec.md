@@ -1383,7 +1383,8 @@ stop word or word the target also writes in lower case, the finding names that w
 of `name-missing`. (3) Blocking `latin-run`: two or more Latin words in a row that the source also holds, left in a
 target written in Cyrillic or Greek that has more letters of its own script than the run has characters (a mostly
 Latin target is the echo, script and language-identity checks' case, and a paragraph already reported as source
-language is not reported twice). (4) Soft `foreign-word`: a whole word of the target that the target language's file
+language is not reported twice); a locked term whose rendering is its own spelling, and a glossary rendering the target
+holds, is a kept original and is not a run (15i.T4). (4) Soft `foreign-word`: a whole word of the target that the target language's file
 lists under `foreignWords` (`тоже>теж`) and the source does not hold is reported with the exact replacement, in the
 word's capitalisation. The soft findings SHALL be fixable by the one directed fix. The whole-book `name-variants`
 audit SHALL count a spelling only in a segment whose source names the term and never when the word is a pronoun, a
@@ -1404,6 +1405,12 @@ that slip in.
 
 - **WHEN** a Ukrainian draft keeps "Daily Courier" from the source
 - **THEN** the draft has a blocking `latin-run` finding
+
+#### Scenario: A kept original is no copied phrase
+
+- **WHEN** a Ukrainian draft keeps "KESSEL OPTIK", a brand the glossary locks as its own spelling, between translated words,
+  and the source holds the same two words
+- **THEN** the draft has no `latin-run` finding, while "Daily Courier" beside it still blocks
 
 #### Scenario: A pronoun is no spelling of a name
 

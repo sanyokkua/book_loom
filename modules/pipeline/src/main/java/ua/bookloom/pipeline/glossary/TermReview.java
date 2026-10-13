@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -138,8 +139,8 @@ public final class TermReview {
         }
     }
 
-    /** The verdicts of a review and what the reading calls read of the entries they decided. */
-    private record Decided(List<Verdict> verdicts, Map<String, Reading> readings) {}
+    /** The verdicts, what the readings read, and the ids the readings decided are names (15i.T4). */
+    private record Decided(List<Verdict> verdicts, Map<String, Reading> readings, Set<String> verified) {}
 
     /** What every call of one review is asked with. */
     private record Inputs(BookSlice story, CallFrame frame, NamePolicy policy, QualityDial dial, ModelCalls calls) {}
@@ -179,7 +180,7 @@ public final class TermReview {
                 in.frame(),
                 in.policy(),
                 in.calls(),
-                new TargetContext(held, decided.readings()));
+                new TargetContext(held, decided.readings(), decided.verified()));
     }
 
     // A strong pronoun case is decided by the code with no call; of the rest, the entries the plan reads are decided
@@ -197,7 +198,7 @@ public final class TermReview {
                         .map(batched -> {
                             all.addAll(outcome.verdicts());
                             all.addAll(batched);
-                            return new Decided(all, outcome.readings());
+                            return new Decided(all, outcome.readings(), outcome.names());
                         }));
     }
 

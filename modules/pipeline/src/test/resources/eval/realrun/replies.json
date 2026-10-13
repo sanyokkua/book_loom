@@ -316,10 +316,10 @@
   "kind": "kept-run",
   "sourceLanguage": null,
   "source": "Nell bought a lens from KESSEL OPTIK on her way home.",
-  "reply": "{\"target\": \"Нелл купила об'єктив у KESSEL OPTIK дорогою додому.\"}",
+  "reply": "{\"target\": \"Нелл купила об'єктив у ⟦g0⟧ дорогою додому.\"}",
   "expect": "ACCEPTED",
-  "knownFailure": true,
-  "fixedBy": "15i.T4",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Nell",
@@ -330,10 +330,10 @@
    },
    {
     "term": "KESSEL OPTIK",
-    "target": null,
+    "target": "KESSEL OPTIK",
     "type": "OTHER",
     "gender": "UNKNOWN",
-    "locked": false
+    "locked": true
    }
   ],
   "rationale": "a brand of two Latin words kept as it is written: the paragraph ships translated around the kept run"
@@ -343,10 +343,10 @@
   "kind": "kept-run",
   "sourceLanguage": "ru",
   "source": "Нелл купила линзу в KESSEL OPTIK по дороге домой.",
-  "reply": "{\"target\": \"Нелл купила лінзу в KESSEL OPTIK дорогою додому.\"}",
+  "reply": "{\"target\": \"Нелл купила лінзу в ⟦g0⟧ дорогою додому.\"}",
   "expect": "ACCEPTED",
-  "knownFailure": true,
-  "fixedBy": "15i.T4",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Нелл",
@@ -357,10 +357,10 @@
    },
    {
     "term": "KESSEL OPTIK",
-    "target": null,
+    "target": "KESSEL OPTIK",
     "type": "OTHER",
     "gender": "UNKNOWN",
-    "locked": false
+    "locked": true
    }
   ],
   "rationale": "ru to uk: the same brand kept between translated words"
@@ -370,17 +370,17 @@
   "kind": "kept-run",
   "sourceLanguage": null,
   "source": "On the train he read the latest Weekly Courier Digest from cover to cover.",
-  "reply": "{\"target\": \"У поїзді він прочитав свіжий Weekly Courier Digest від початку до кінця.\"}",
+  "reply": "{\"target\": \"У поїзді він прочитав свіжий ⟦g0⟧ від початку до кінця.\"}",
   "expect": "ACCEPTED",
-  "knownFailure": true,
-  "fixedBy": "15i.T4",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Weekly Courier Digest",
-    "target": null,
+    "target": "Weekly Courier Digest",
     "type": "TITLE",
     "gender": "UNKNOWN",
-    "locked": false
+    "locked": true
    }
   ],
   "rationale": "a magazine title of three Latin words kept as it is written"

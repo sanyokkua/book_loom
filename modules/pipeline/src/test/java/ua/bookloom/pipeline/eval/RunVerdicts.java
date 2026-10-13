@@ -104,7 +104,13 @@ final class RunVerdicts {
 
     private QaResult qa(final String candidate) {
         final var drafted = new DraftOutcome.Drafted(
-                project.segment(0), runCase.source(), List.of(), candidate, candidate, candidate, null);
+                project.segment(0),
+                runCase.source(),
+                project.mask(0).presentLocked(),
+                candidate,
+                candidate,
+                candidate,
+                null);
         return DraftEvaluation.evaluate(drafted, project.loop());
     }
 }

@@ -1161,8 +1161,8 @@
   "good": "Нелл купила об'єктив у KESSEL OPTIK дорогою додому.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15i.T4",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Nell",
@@ -1173,14 +1173,14 @@
    },
    {
     "term": "KESSEL OPTIK",
-    "target": null,
+    "target": "KESSEL OPTIK",
     "type": "OTHER",
     "gender": "UNKNOWN",
-    "locked": false
+    "locked": true
    }
   ],
   "context": null,
-  "rationale": "a brand of two Latin words the glossary holds with no rendering and no lock, as the names pass left it: the run blocks the paragraph as an untranslated phrase instead of shipping it translated around the kept brand"
+  "rationale": "a brand of two Latin words as the names pass leaves it: its source is its locked target, so the paragraph ships translated around the kept brand"
  },
  {
   "id": "kept-run-magazine-en",
@@ -1190,19 +1190,19 @@
   "good": "У поїзді він прочитав свіжий Weekly Courier Digest від початку до кінця.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15i.T4",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Weekly Courier Digest",
-    "target": null,
+    "target": "Weekly Courier Digest",
     "type": "TITLE",
     "gender": "UNKNOWN",
-    "locked": false
+    "locked": true
    }
   ],
   "context": null,
-  "rationale": "a magazine title of three Latin words kept as it is written, with no rendering in the glossary"
+  "rationale": "a magazine title of three Latin words kept as it is written: locked as its own source by the names pass"
  },
  {
   "id": "kept-run-uuid-en",

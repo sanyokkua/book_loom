@@ -65,7 +65,9 @@ final class GlossaryTranslation {
                         "Glossary translate leaves entry {} alone", asked.get(i).id());
                 continue;
             }
-            final Result<GlossaryEntry> stored = glossary.update(now.withSuggestedTarget(target));
+            final GlossaryEntry suggested = now.withSuggestedTarget(target);
+            final Result<GlossaryEntry> stored =
+                    glossary.update(answered.get(i).locked() ? suggested.withLocked(true) : suggested);
             if (stored.isErr()) {
                 return Result.err(Objects.requireNonNull(stored.error(), "error"));
             }

@@ -42,7 +42,8 @@ final class TextCheckGates {
                         target,
                         input.sourceLanguage(),
                         input.targetLanguage(),
-                        input.glossaryPairs())
+                        input.glossaryPairs(),
+                        keptAsWritten(input))
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());
@@ -53,6 +54,15 @@ final class TextCheckGates {
         characterResult(input, target).ifPresent(results::add);
         wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
+    }
+
+    // A locked term whose rendering is its own spelling is a kept original: the Latin-run check leaves it alone.
+    private static List<String> keptAsWritten(final SoftCheckInput input) {
+        return input.lockedRenderings().stream()
+                .filter(locked ->
+                        locked.term().strip().equals(locked.rendering().strip()))
+                .map(LockedRendering::term)
+                .toList();
     }
 
     // One low note per segment that names every doubtful word; it never blocks, because a real rare word can be

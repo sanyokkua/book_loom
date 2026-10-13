@@ -17,7 +17,8 @@ import ua.bookloom.util.lang.Script;
  * Two or more Latin words in a row that the source also holds, left as they are in a target written in another script
  * («Daily Courier» in a Cyrillic paragraph): the model copied a phrase it should have translated. Blocking. A single
  * Latin word is left alone, as is a target that is mostly Latin (an echo, owned by other checks), since a name or a brand is often kept on purpose. Locked names, kept foreign runs
- * and protected spans are already out of the texts this check reads, and a glossary rendering the target holds is left out here.
+ * and protected spans are already out of the texts this check reads, and a glossary rendering the target holds is left out here, as is a
+ * term the glossary keeps as written (its rendering is its own spelling, 15i.T4).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -34,7 +35,8 @@ final class LatinRunCheck {
             final String source,
             final String target,
             final Optional<Script> targetScript,
-            final List<String> glossaryPairs) {
+            final List<String> glossaryPairs,
+            final List<String> keptTerms) {
         if (targetScript.isEmpty() || !CHECKED.contains(targetScript.get())) {
             log.debug("Latin run check skipped: target script {} is not Cyrillic or Greek", targetScript);
             return List.of();
@@ -42,7 +44,7 @@ final class LatinRunCheck {
         final String lowerSource = source.toLowerCase(Locale.ROOT);
         final long ownLetters = lettersOf(target, targetScript.get());
         final List<CheckFinding> findings = new ArrayList<>();
-        final Matcher runs = RUN.matcher(withoutRenderings(target, glossaryPairs));
+        final Matcher runs = RUN.matcher(withoutRenderings(target, glossaryPairs, keptTerms));
         while (runs.find()) {
             if (lowerSource.contains(runs.group().toLowerCase(Locale.ROOT))
                     && runs.group().length() < ownLetters) {
@@ -59,21 +61,28 @@ final class LatinRunCheck {
 
     // A glossary rendering the glossary itself keeps in Latin (Keep original, or a target equal to the term) is the
     // book's decision, not a copied phrase: it is overwritten by filler of the same length, so the spans keep their
-    // place and a run beside it is still found on its own.
-    private static String withoutRenderings(final String target, final List<String> glossaryPairs) {
-        String result = target;
+    // place and a run beside it is still found on its own. A locked term kept as written is such a rendering whether
+    // or not its pair is listed.
+    private static String withoutRenderings(
+            final String target, final List<String> glossaryPairs, final List<String> keptTerms) {
+        final List<String> renderings = new ArrayList<>(keptTerms);
         for (final String pair : glossaryPairs) {
             final int at = pair.indexOf(ARROW);
-            final String rendering =
-                    at < 0 ? "" : pair.substring(at + ARROW.length()).strip();
-            if (!rendering.isEmpty()) {
-                result = WholeWord.pattern(rendering)
+            renderings.add(at < 0 ? "" : pair.substring(at + ARROW.length()).strip());
+        }
+        String result = target;
+        for (final String rendering : renderings) {
+            if (!rendering.isBlank()) {
+                result = WholeWord.pattern(rendering.strip())
                         .matcher(result)
                         .replaceAll(found -> String.valueOf(FILL).repeat(found.end() - found.start()));
             }
         }
         if (!result.equals(target)) {
-            log.debug("Latin run check left out the glossary's own renderings pairs={}", glossaryPairs.size());
+            log.debug(
+                    "Latin run check left out the glossary's own renderings pairs={} kept={}",
+                    glossaryPairs.size(),
+                    keptTerms.size());
         }
         return result;
     }

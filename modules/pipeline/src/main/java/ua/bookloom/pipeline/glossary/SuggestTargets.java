@@ -155,8 +155,9 @@ public final class SuggestTargets {
             return answered;
         }
         kept.addAll(Objects.requireNonNull(answered.data(), "answered"));
-        log.info("Glossary suggestions finished suggested={} of {}", kept.size(), entries.size());
-        return Result.ok(kept);
+        final List<Suggestion> locked = SuggestionLocks.apply(entries, kept, frame, policy, context);
+        log.info("Glossary suggestions finished suggested={} of {}", locked.size(), entries.size());
+        return Result.ok(locked);
     }
 
     /**

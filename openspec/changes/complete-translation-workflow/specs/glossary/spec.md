@@ -582,7 +582,13 @@ not count a rendering equal to the term across scripts as a learned rendering. A
 only when it is a brand, an identifier or a kept original kept verbatim, or a verified proper name with a checked
 rendering, not marked speaking, in a target whose language file says `namesInflect=false` (English, German, French,
 Spanish, Portuguese); for a target whose names inflect (Ukrainian, Russian, Polish, Czech, Croatian, Slovak, Slovenian
-and any language with no such key) it SHALL stay unlocked guidance held by the name checks. Only after every call has answered, and against each entry as it then stands, it SHALL write a
+and any language with no such key) it SHALL stay unlocked guidance held by the name checks. The rule SHALL be applied
+where the target is written, by every writer of a suggestion (the review's commit, the translate-only action and the
+name scan), so the same name is locked after Review, after Translate and after the scan alike: a brand — an entry any
+of whose readings says `brand` — SHALL get its source as target and be locked even when the model answered nothing or a
+transliteration; under Keep original every entry that is not of type term SHALL get its source as target and be locked;
+and "verified" SHALL mean decided as a name by the in-context readings, never by the batch review or the pronoun count
+alone. Only after every call has answered, and against each entry as it then stands, it SHALL write a
 suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and SHALL NOT write
 the reply's gender (a person's gender is the review's); it SHALL NOT overwrite a target the person typed,
 imported, accepted or locked. The writes SHALL record no deferral. IF any suggestion call fails or the person presses
@@ -635,6 +641,18 @@ inside `Венс`, which reads right and matches nothing.
 
 - **WHEN** `Arlo Venn` reads `Арло Венн` and the model suggests `Вен` for `Venn`
 - **THEN** `Venn` reads `Венн`, and the line sent for `Venn` said `Arlo Venn → Арло Венн, so Venn → Венн`
+
+#### Scenario: A brand is locked as its source
+
+- **WHEN** the reading calls `KESSEL OPTIK` a brand and the model suggests `Кессел Оптік` or nothing
+- **THEN** the entry reads `KESSEL OPTIK`, locked, whatever the policy and target language
+
+#### Scenario: Keep original locks every kept name
+
+- **WHEN** the policy is Keep original and the open entries are a title `Weekly Courier Digest`, an organisation and a
+  term `Amulet`
+- **THEN** the title and the organisation read their sources, locked, after Review, Translate and the name scan alike,
+  and `Amulet` is neither copied nor locked
 
 #### Scenario: Names are locked only where they do not inflect
 

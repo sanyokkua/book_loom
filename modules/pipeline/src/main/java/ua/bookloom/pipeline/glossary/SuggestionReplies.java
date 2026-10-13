@@ -37,12 +37,31 @@ final class SuggestionReplies {
      *
      * @param entry the entry as it was held when the batch was asked
      * @param target the suggested rendering, stripped and never blank
+     * @param basis what is known of the entry that decides whether its rendering is locked as it is written
+     * @param namesInflect whether the target language declines names, which the lock rule weighs
      */
-    record Suggestion(GlossaryEntry entry, String target) {
+    record Suggestion(GlossaryEntry entry, String target, LockRule.Basis basis, boolean namesInflect) {
 
-        /** The entry as it is now with this suggestion written in as a suggested target; nothing else changes. */
+        private static final LockRule.Basis UNKNOWN = new LockRule.Basis(false, false, false, false, false);
+
+        /** A suggestion nothing is known of beyond its entry, so it is never locked. */
+        Suggestion(final GlossaryEntry entry, final String target) {
+            this(entry, target, UNKNOWN, true);
+        }
+
+        /** This suggestion under the facts the lock rule weighs, its entry and target unchanged. */
+        Suggestion locking(final LockRule.Basis facts, final boolean inflects) {
+            return new Suggestion(entry, target, facts, inflects);
+        }
+
+        /**
+         * The entry as it is now with this suggestion written in as a suggested target, locked when the lock rule
+         * says the rendering is final (a brand or a kept name as its source, a verified name where names are not
+         * declined); nothing else changes.
+         */
         GlossaryEntry onto(final GlossaryEntry now) {
-            return now.withSuggestedTarget(target);
+            final GlossaryEntry suggested = now.withSuggestedTarget(target);
+            return LockRule.locks(now.term(), target, basis, namesInflect) ? suggested.withLocked(true) : suggested;
         }
     }
 

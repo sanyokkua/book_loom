@@ -54,7 +54,7 @@ import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.RunStores;
 
-/** Shared real-document and controlled-model setup for translation job acceptance tests. */
+/** Shared real-document and controlled-model setup for job acceptance tests. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TranslationJobTestSupport {
@@ -65,22 +65,24 @@ final class TranslationJobTestSupport {
             Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 
-    /**
-     * A book imported through a real {@code ProjectServiceImpl} over the in-memory repositories, with the deferral
-     * store the run's commits write to, which the job itself never reads.
-     */
+    /** A book imported through a real {@code ProjectServiceImpl} over in-memory repositories, with the deferral store. */
     record TestProject(String id, RunStores stores, DocumentPort documents, DeferralRepository deferrals) {}
 
     static TestProject project(final Path book, final BookBrief brief) {
         return project(UnaryOperator.identity(), book, brief);
     }
 
-    /**
-     * Imports through the injector's own document port, so the inspector and the run share one registry, and hands
-     * the job that port wrapped by {@code decorate}.
-     */
+    /** Imports through the injector's own document port, wrapped by {@code decorate} for the job. */
     static TestProject project(final UnaryOperator<DocumentPort> decorate, final Path book, final BookBrief brief) {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        return project(Guice.createInjector(new DocumentModule(), new PersistenceModule()), decorate, book, brief);
+    }
+
+    /** Imports through the given injector, so a test can reach other services over the same stores. */
+    static TestProject project(
+            final Injector injector,
+            final UnaryOperator<DocumentPort> decorate,
+            final Path book,
+            final BookBrief brief) {
         final DocumentPort documents = decorate.apply(injector.getInstance(DocumentPort.class));
         final RunStores stores = new RunStores(
                 injector.getInstance(ProjectRepository.class),

@@ -77,7 +77,9 @@ final class TermLearning {
         Objects.requireNonNull(stores, "stores");
         this.analysisLanguage = analysisLanguage;
         this.learner = new CooccurrenceLearner(
-                targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage));
+                targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage),
+                analysisLanguage,
+                targetLanguage);
         this.segments = stores.segments();
         this.lexicon = stores.lexicon();
         this.glossary = stores.glossary();
