@@ -28,12 +28,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "rural drama",
-      "genreClass": [
-        "rural",
-        "drama",
-        "pastoral"
-      ],
+      "genre": "Drama",
+      "genreClass": ["drama", "literary fiction"],
       "register": "NEUTRAL",
       "narrator": "FIRST",
       "narratorGender": "FEMALE"

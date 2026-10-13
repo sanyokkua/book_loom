@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.pipeline.QualityDial;
 
 class EvalProvenanceTest {
 
@@ -70,6 +71,15 @@ class EvalProvenanceTest {
                 .extracting("label", "provider", "window", "dial", "brief", "suite")
                 .containsExactly("round 2", "lmstudio", 16384, "BALANCED", "preset=glass-harbour", "realrun");
         assertThat(p.runName()).isEqualTo("20261008-123456-realrun-gemma4_e4b-mlx-round_2");
+    }
+
+    // The judgement suites read a book at Fast unless the env names a dial, so their report says the dial they used.
+    @Test
+    void capture_dialOfTheSuite_isRecordedInsteadOfTheBalancedDefault() {
+        final EvalProvenance p = EvalProvenance.capture(
+                "judgement", "gemma4:e4b-mlx", "", Map.of(), CLOCK, dir, 16384, QualityDial.FAST.name());
+
+        assertThat(p.dial()).isEqualTo("FAST");
     }
 
     // The relevant-pairs gate (15i.T8) compares an `on` and an `off` report, so each says which it was.

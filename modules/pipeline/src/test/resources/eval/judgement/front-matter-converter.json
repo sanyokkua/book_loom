@@ -90,8 +90,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "historical drama",
-      "genreClass": ["historical", "drama", "pastoral"],
+      "genre": "Historical fiction",
+      "genreClass": ["historical fiction", "drama"],
       "register": "NEUTRAL",
       "narrator": "THIRD",
       "narratorGender": "UNKNOWN"

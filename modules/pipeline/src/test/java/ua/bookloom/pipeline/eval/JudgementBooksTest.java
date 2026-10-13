@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -18,6 +19,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
@@ -209,5 +211,19 @@ class JudgementBooksTest {
         assertThat(gold.register()).isNotNull();
         assertThat(gold.narrator()).isNotEqualTo(NarratorPerson.UNSPECIFIED);
         assertThat(gold.narratorGender()).isNotNull();
+    }
+
+    // IF a gold genre were a phrase the synthesis can never answer ("rural drama"), THEN the book's genre could not be
+    // scored: the model holds to the forty names, so the gold is one of them and its class accepts it.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("books")
+    void books_goldGenre_isOneOfTheFortyNamesAndItsClassAcceptsIt(final JudgementBook book) {
+        final JudgementGold.Brief gold = book.gold().brief();
+
+        assertThat(Stream.of(Genre.values()).map(Genre::english).map(name -> name.toLowerCase(Locale.ROOT)))
+                .contains(Objects.requireNonNull(gold.genre()).toLowerCase(Locale.ROOT));
+        assertThat(JudgementGold.isOfClass(gold.genreClass(), gold.genre())).isTrue();
+        assertThat(gold.genreClass()).doesNotContain("fiction", "novel", "literary");
+        assertThat(SynthesisReplies.inClass(gold.genreClass())).isNotNull();
     }
 }

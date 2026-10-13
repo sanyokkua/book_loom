@@ -19,7 +19,8 @@ import ua.bookloom.api.project.NarratorPerson;
 public final class NarratorHints {
 
     /**
-     * Whether the source was found to be told in the first person while the brief neither says the narrator's gender
+     * Whether the source was found to be told in the first person (the pipeline's rule for a mixed book: at
+     * least a quarter of the judged chapters) while the brief neither says the narrator's gender
      * nor says the narrator is third person.
      *
      * @param book the open book, or null when none is open
@@ -29,7 +30,7 @@ public final class NarratorHints {
     public static boolean needsGender(final @Nullable OpenedBook book, final @Nullable BookBrief brief) {
         final NarratorHint hint = book == null ? null : book.narratorHint();
         return hint != null
-                && hint.suggestsFirstPerson()
+                && hint.hasFirstPersonShare()
                 && brief != null
                 && brief.narrator().person() != NarratorPerson.THIRD
                 && brief.narrator().gender() == Gender.UNKNOWN;
@@ -40,12 +41,13 @@ public final class NarratorHints {
      *
      * @param book the open book, or null when none is open
      * @param brief its brief, or null when none is open
-     * @return {@code true} when the brief's narrator is unspecified and the hint says first person or mixed
+     * @return {@code true} when the brief's narrator is unspecified and the hint says first person, or mixed with at least a quarter
+     *     of the judged chapters in the first person
      */
     public static boolean preselectsFirstPerson(final @Nullable OpenedBook book, final @Nullable BookBrief brief) {
         final NarratorHint hint = book == null ? null : book.narratorHint();
         return hint != null
-                && hint.suggestsFirstPerson()
+                && hint.hasFirstPersonShare()
                 && brief != null
                 && brief.narrator().person() == NarratorPerson.UNSPECIFIED;
     }

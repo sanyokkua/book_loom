@@ -17,6 +17,9 @@ import java.util.Objects;
  */
 public record NarratorHint(Person person, double firstPersonShare, List<Integer> chapters, int judgedChapters) {
 
+    /** A mixed book is first person from one first-person chapter in this many judged ones. */
+    private static final int FIRST_PERSON_SHARE_DENOMINATOR = 4;
+
     /** How a book, or a chapter, is narrated. */
     public enum Person {
 
@@ -41,22 +44,15 @@ public record NarratorHint(Person person, double firstPersonShare, List<Integer>
     }
 
     /**
-     * Whether the person should be asked who narrates.
+     * Whether at least a quarter of the judged chapters are told as "I". A third-person novel with a first-person
+     * preface or a character's letter is mixed by chapter, yet its narrator is the third-person one; a book with a
+     * substantial first-person share (alternating narrators, three chapters of eight) has a first-person narrator to ask
+     * about.
      *
-     * @return {@code true} when some narration is in the first person, {@code false} for a third-person book
+     * @return {@code true} for a first-person book and a mixed one whose first-person chapters are at least a quarter of
+     *     the judged ones, {@code false} otherwise
      */
-    public boolean suggestsFirstPerson() {
-        return person != Person.THIRD;
-    }
-
-    /**
-     * Whether at least half of the judged chapters are told as "I". A third-person novel with a first-person preface,
-     * a letter or a character's written account is mixed by chapter, yet its narrator is the third-person one.
-     *
-     * @return {@code true} for a first-person book and a mixed one whose first-person chapters are at least half of the
-     *     judged ones, {@code false} otherwise
-     */
-    public boolean isMostlyFirstPerson() {
-        return person != Person.THIRD && chapters.size() * 2 >= judgedChapters;
+    public boolean hasFirstPersonShare() {
+        return person != Person.THIRD && chapters.size() * FIRST_PERSON_SHARE_DENOMINATOR >= judgedChapters;
     }
 }

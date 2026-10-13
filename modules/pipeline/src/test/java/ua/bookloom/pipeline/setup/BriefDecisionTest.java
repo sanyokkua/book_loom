@@ -115,15 +115,19 @@ class BriefDecisionTest {
 
     // IF the windows outvoted the detector, THEN a letter quoted inside a third-person novel would make it first
     // person: the detector counted every chapter, the windows read a few passages.
-    // A mixed book is first person when at least half of its judged chapters are: alternating narrators need the
-    // narrator rules, while a third-person novel with a first-person preface or a character's letters stays third.
+    // A mixed book is first person when at least a quarter of its judged chapters are: alternating narrators and a book
+    // with a substantial first-person share need the narrator rules, while a third-person novel with a first-person
+    // preface or a character's letters stays third.
     @ParameterizedTest
     @CsvSource({
         "FIRST, 1, 1, FIRST",
         "MIXED, 2, 3, FIRST",
         "MIXED, 2, 4, FIRST",
-        "MIXED, 1, 3, THIRD",
+        "MIXED, 1, 3, FIRST",
+        "MIXED, 1, 4, FIRST",
+        "MIXED, 1, 5, THIRD",
         "MIXED, 5, 24, THIRD",
+        "MIXED, 6, 24, FIRST",
         "MIXED, 1, 40, THIRD",
         "THIRD, 0, 4, THIRD"
     })

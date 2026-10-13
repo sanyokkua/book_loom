@@ -131,7 +131,11 @@ run_one() {
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
     BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT ./gradlew :pipeline:promptEval >"$log" 2>&1 &
   local pid=$!
-  ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
+  # The watchdog holds its own sleep, so ending it must end the sleep too: an orphaned sleep keeps the script's stdout
+  # pipe open until the timeout runs out when the output is piped.
+  ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}" & sleeper=$!
+    trap 'kill "$sleeper" 2>/dev/null; exit 0' TERM
+    wait "$sleeper" && { pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null; } ) &
   local dog=$!
   if ! wait "$pid"; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
@@ -139,6 +143,7 @@ run_one() {
     tail -5 "$log" | sed 's/^/   | /'
   fi
   kill "$dog" 2>/dev/null
+  wait "$dog" 2>/dev/null
   if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1; else ollama stop "$model" >/dev/null 2>&1; fi
 }
 

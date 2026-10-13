@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
 import ua.bookloom.pipeline.prompt.ReasoningPlan;
 
@@ -83,6 +84,20 @@ record EvalProvenance(
         return capture(suite, model, extraLabel, System.getenv(), Clock.systemUTC(), repoRoot(), EvalWindow.window());
     }
 
+    /** As above for a suite that runs at a dial of its own (the judgement suites: Fast unless the env names one). */
+    static EvalProvenance capture(
+            final String suite, final String model, final String extraLabel, final QualityDial dial) {
+        return capture(
+                suite,
+                model,
+                extraLabel,
+                System.getenv(),
+                Clock.systemUTC(),
+                repoRoot(),
+                EvalWindow.window(),
+                Objects.requireNonNull(dial, "dial").name());
+    }
+
     static EvalProvenance capture(
             final String suite,
             final String model,
@@ -91,6 +106,26 @@ record EvalProvenance(
             final Clock clock,
             final Path root,
             final int window) {
+        return capture(
+                suite,
+                model,
+                extraLabel,
+                env,
+                clock,
+                root,
+                window,
+                env.getOrDefault("BOOKLOOM_EVAL_DIAL", "BALANCED").toUpperCase(java.util.Locale.ROOT));
+    }
+
+    static EvalProvenance capture(
+            final String suite,
+            final String model,
+            final String extraLabel,
+            final Map<String, String> env,
+            final Clock clock,
+            final Path root,
+            final int window,
+            final String dial) {
         final String label = joinLabel(env.getOrDefault("BOOKLOOM_EVAL_LABEL", ""), extraLabel);
         final List<String> git = git(root);
         return new EvalProvenance(
@@ -102,7 +137,7 @@ record EvalProvenance(
                 label,
                 "lmstudio".equalsIgnoreCase(env.get("BOOKLOOM_EVAL_PROVIDER")) ? "lmstudio" : "ollama",
                 window,
-                env.getOrDefault("BOOKLOOM_EVAL_DIAL", "BALANCED").toUpperCase(java.util.Locale.ROOT),
+                dial,
                 briefSummary(env),
                 suite,
                 ReasoningPlan.resolve(env, System.getProperty(ReasoningPlan.PROPERTY_NAME))

@@ -44,8 +44,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "romantic drama",
-      "genreClass": ["drama", "romance"],
+      "genre": "Romance",
+      "genreClass": ["romance", "drama"],
       "register": "NEUTRAL",
       "narrator": "FIRST",
       "narratorGender": "UNKNOWN"

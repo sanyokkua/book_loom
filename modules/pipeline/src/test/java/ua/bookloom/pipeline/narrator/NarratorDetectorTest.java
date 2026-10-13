@@ -114,20 +114,30 @@ class NarratorDetectorTest {
         assertThat(hint.person()).isEqualTo(Person.MIXED);
         assertThat(hint.chapters()).containsExactly(2, 4);
         assertThat(hint.judgedChapters()).isEqualTo(4);
-        assertThat(hint.isMostlyFirstPerson()).isTrue();
+        assertThat(hint.hasFirstPersonShare()).isTrue();
     }
 
     // A third-person novel with one first-person chapter (a preface, a letter) is mixed by chapter, but its narrator is
-    // the third-person one: the first-person chapters are fewer than half of those judged.
+    // the third-person one: the first-person chapters are under a quarter of those judged (1 of 5 is 20 %).
     @Test
-    void detect_oneFirstPersonChapterOfThree_isMixedButNotMostlyFirstPerson() {
-        final NarratorHint hint =
-                detect(List.of(FIRST_PERSON, THIRD_PERSON, THIRD_PERSON)).orElseThrow();
+    void detect_oneFirstPersonChapterOfFive_isMixedButHasNoFirstPersonShare() {
+        final NarratorHint hint = detect(List.of(FIRST_PERSON, THIRD_PERSON, THIRD_PERSON, THIRD_PERSON, THIRD_PERSON))
+                .orElseThrow();
 
         assertThat(hint.person()).isEqualTo(Person.MIXED);
         assertThat(hint.chapters()).containsExactly(1);
-        assertThat(hint.judgedChapters()).isEqualTo(3);
-        assertThat(hint.isMostlyFirstPerson()).isFalse();
+        assertThat(hint.judgedChapters()).isEqualTo(5);
+        assertThat(hint.hasFirstPersonShare()).isFalse();
+    }
+
+    @Test
+    void detect_oneFirstPersonChapterOfFour_isMixedWithAFirstPersonShare() {
+        final NarratorHint hint = detect(List.of(FIRST_PERSON, THIRD_PERSON, THIRD_PERSON, THIRD_PERSON))
+                .orElseThrow();
+
+        assertThat(hint.person()).isEqualTo(Person.MIXED);
+        assertThat(hint.judgedChapters()).isEqualTo(4);
+        assertThat(hint.hasFirstPersonShare()).isTrue();
     }
 
     @Test

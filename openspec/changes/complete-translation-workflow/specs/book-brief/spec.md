@@ -485,7 +485,9 @@ were judged) with the open book. A chapter is first person when at least a tenth
 `firstPersonPronouns` (`I`, `я`, `ich`, `je`; a language that drops its subject lists none and gets no hint) and it has at
 least six such sentences; the book is `FIRST` when every judged chapter is, `THIRD` when none is and `MIXED` otherwise.
 The hint SHALL never set the narrator's gender; its only effect on the brief is the preselection of `First person` below,
-which the person can change. WHILE the hint is `FIRST` or `MIXED` and the narrator's gender is not
+which the person can change. WHILE the hint is `FIRST`, or `MIXED` with at least a quarter of its judged chapters first person (the narrator rule of the brief's
+synthesis below; a mixed book with fewer, such as a preface or a letter in a third-person novel, is third person and gets
+no notice, no preselection and no question), and the narrator's gender is not
 chosen and the narrator is not third person, the Tone & style card SHALL show a notice (`The book is narrated in the first
 person — choose the narrator's gender.`, with a hover explanation, in English and Ukrainian), and a narrator still
 `Not stated` SHALL be preselected as `First person` without a gender. WHEN Start translation is pressed (on Names &
@@ -579,7 +581,7 @@ ask one `brief-synthesis` call over the book's facts, the accepted knowledge and
 when the book is unknown and no window read genre, audience or voice, because nothing could stand); it SHALL
 then decide each field once. The register SHALL be kept by a strict majority of the windows read (a window with no verified
 answer, or whose call failed, counts against every value). The narrator's person SHALL be the narrator detector's when it answers — a mixed book
-is first person when at least half of its judged chapters are told as "I" (alternating narrators), else third person
+is first person when at least a quarter of its judged chapters are told as "I" (alternating narrators, or three chapters of eight), else third person
 (a preface, a letter or a character's account inside a third-person novel) — else a strict majority of the windows. The narrator's gender follows the requirement above. The genre
 (one of the 40 listed names), the audience (`adult`, `young adult`, `children`, `general` or `academic`) and the voice /
 era (at most 12 words) SHALL come from the synthesis, each with a basis named before its value, and SHALL stand only when

@@ -194,6 +194,17 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         assertThat(isAsking()).isFalse();
     }
 
+    // The pipeline reads a mixed book with 1 first-person chapter of 40 as third person, so the window does not ask.
+    @Test
+    void start_mixedBookWithOneFirstPersonChapterOfForty_startsWithoutAsking() throws Exception {
+        showNamesStyle(new NarratorHint(NarratorHint.Person.MIXED, 0.02, List.of(1), 40));
+
+        onFx(() -> button("names-style-start").fire());
+
+        job.awaitRunStarted();
+        assertThat(isAsking()).isFalse();
+    }
+
     @Test
     void startAfterAsking_answeredOnce_runsAtOnceTheNextTime() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());

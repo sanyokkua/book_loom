@@ -16,6 +16,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
 import ua.bookloom.pipeline.eval.StageCases.SetupCase;
@@ -111,6 +113,19 @@ class SetupCasesTest {
                         tuple("Moby-Dick; or, The Whale", "Herman Melville", 1851, "known"),
                         tuple("The Adventures of Tom Sawyer", "Mark Twain", 1876, "known"),
                         tuple("Dracula", "Bram Stoker", 1897, "known"));
+    }
+
+    // IF the gold called a third-person narration casual, THEN a model that rightly reads it as neutral would be scored
+    // wrong on the register.
+    @Test
+    void classics_tomSawyer_isThirdPersonWithANeutralRegister() {
+        final SetupCase tom = StageCases.setup().stream()
+                .filter(setupCase -> setupCase.id().equals("classic-tom-sawyer"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(tom.narrator()).isEqualTo(NarratorPerson.THIRD);
+        assertThat(tom.register()).isEqualTo(Register.NEUTRAL);
     }
 
     @Test

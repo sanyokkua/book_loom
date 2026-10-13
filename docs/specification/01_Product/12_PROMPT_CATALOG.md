@@ -641,7 +641,7 @@ The narrator and the gender sheet (15d.10) keep who-is-who out of the model's gu
   `Narrator: third person, outside the story; do not turn the narration into "I".`). An unstated narrator adds nothing, so
   the style sheet and its hash are what they were.
 - **Where the narrator comes from** (15e.14). Detection (`NarratorDetector`, from `firstPersonPronouns` in the source
-  language's file) only suggests: a first-person or mixed book shows a notice on the Book Brief, preselects "first person"
+  language's file) only suggests: a first-person book, or a mixed one with at least a quarter of its judged chapters in the first person, shows a notice on the Book Brief, preselects "first person"
   and asks once at Start translation (`Male` / `Female` / `Not stated — start anyway`); the answer is written to the brief, so
   the line above and the reviewer's gender check (`reviewerChecks` of the target language) then reach every call. The
   hint itself is never sent to a model. Glossary genders seeded from the bundled first-name list are shown as
@@ -1014,7 +1014,7 @@ the field. The genre must be one of the forty names of `ua.bookloom.api.project.
 the voice at most 12 words; anything else, an unsupported value or a failed call leaves the field empty with the
 "uncertain" chip. The other fields need no model call: the register and (when the detector cannot tell) the narrator
 are kept by a strict majority of all K windows, the narrator's person is `NarratorDetector`'s when it answers (a mixed
-book is first person when at least half of its judged chapters are, else third person), and the narrator's gender is kept from verified votes when none contradicts another, one being
+book is first person when at least a quarter of its judged chapters are, else third person), and the narrator's gender is kept from verified votes when none contradicts another, one being
 enough; the brief's `Narrator` then keeps the quotes and the origin `VERIFIED` so a later step can check them again.
 
 **SYSTEM**

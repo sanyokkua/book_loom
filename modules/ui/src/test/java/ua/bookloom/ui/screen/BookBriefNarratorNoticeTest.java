@@ -45,10 +45,38 @@ class BookBriefNarratorNoticeTest extends BookBriefScreenTestBase {
     }
 
     @Test
-    void notice_mixedHint_isShown() throws TimeoutException {
+    void notice_mixedHintWithAQuarterOfTheChaptersInFirstPerson_isShown() throws TimeoutException {
         openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.12, List.of(2, 5), 8));
 
         assertThat(isShown(NOTICE)).isTrue();
+    }
+
+    @Test
+    void notice_mixedHintWithMostChaptersInFirstPerson_preselectsFirstPerson() throws TimeoutException {
+        openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.4, mostChapters(), 24));
+
+        assertThat(brief().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+        assertThat(isShown(NOTICE)).isTrue();
+    }
+
+    @Test
+    void notice_mixedHintWithOneFirstPersonChapterOfForty_isHiddenAndTheBriefIsUntouched() throws TimeoutException {
+        openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.02, List.of(1), 40));
+
+        assertThat(isShown(NOTICE)).isFalse();
+        assertThat(brief().narrator()).isEqualTo(Narrator.unspecified());
+    }
+
+    @Test
+    void notice_mixedHintWithOneFirstPersonChapterOfFive_isHidden() throws TimeoutException {
+        openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.05, List.of(3), 5));
+
+        assertThat(isShown(NOTICE)).isFalse();
+        assertThat(brief().narrator()).isEqualTo(Narrator.unspecified());
+    }
+
+    private static List<Integer> mostChapters() {
+        return List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
     }
 
     @Test

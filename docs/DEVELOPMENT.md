@@ -688,7 +688,7 @@ What each round changed, and why (from the TRACE logs of the earlier round):
   1 and 4. A title of two words or more that is the whole-word start of the other now matches. (b) Narrator: the
   detector calls a book `MIXED` when any judged chapter is first person, and the brief read every mixed book as first
   person; a third-person novel with a first-person preface (1 of 40 chapters) or a few characters' written accounts (5
-  of 24) became `FIRST`. A mixed book is now first person only when at least half of its judged chapters are
+  of 24) became `FIRST`. A mixed book is now first person only when at least a quarter of its judged chapters are (first set at a half, which a fixture of 3 chapters in 8 failed)
   (`NarratorHint.judgedChapters`). (c) Genre and audience: 26b left their `evidence` empty ("empty for a neutral value"),
   so every window's genre and audience were refused and the synthesis had nothing to decide from; the prompt now says
   a genre or an audience is never neutral and needs the passage's own words. Genre on 26b 0 → 6 of 13; but register on
@@ -1136,10 +1136,10 @@ answers pooled.
 ```
 
 `book` is relative to the gold file's directory. `register` is `FORMAL_LITERARY`, `NEUTRAL` or `CASUAL`; `narrator` is `FIRST`,
-`THIRD` or `UNSPECIFIED` (a book whose first-person narration alternates with third-person chapters is `FIRST` when at least half of its judged chapters are first person, else `THIRD`: the book-brief spec's mixed-book rule, 15i.B4); `narratorGender` and a character's `gender` are `MALE`,
+`THIRD` or `UNSPECIFIED` (a book whose first-person narration alternates with third-person chapters is `FIRST` when at least a quarter of its judged chapters are first person, else `THIRD`: the book-brief spec's mixed-book rule, 15i.B4); `narratorGender` and a character's `gender` are `MALE`,
 `FEMALE`, `NEUTER` or `UNKNOWN` (the book never shows it); `type` is `CHARACTER`, `PLACE`, `TERM`, `TITLE` or `OTHER`; `names`
 is `TRANSLATE`, `TRANSLITERATE` or `KEEP_ORIGINAL`. `genreClass` holds lower-case words, any one of which a right genre contains
-(empty: the genre is not scored); `genre`, `voiceEra`, `audience` and `names` are optional and only used when the same file is
+(empty: the genre is not scored; a committed gold's `genre` is one of the forty names the synthesis answers with, and its class never holds a generic word such as `fiction` alone, so every book can be scored); `genre`, `voiceEra`, `audience` and `names` are optional and only used when the same file is
 given to `BOOKLOOM_EVAL_GOLD`, which sizes every other suite's requests for that book's real brief. List each main character
 under the term the book uses most. Three to five books make the set.
 
@@ -1226,7 +1226,7 @@ checkout without the corpus stay green.
 
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
-model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial, brief preset and overrides, suite). Besides `build/reports/promptEval`
+model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial (`BOOKLOOM_EVAL_DIAL`, Balanced when unset; the judgement suites record the dial they ran at, Fast when unset), brief preset and overrides, suite). Besides `build/reports/promptEval`
 (overwritten by the next run) each report is kept as `report.txt` and `report.json` in
 `eval-history/<yyyyMMdd-HHmmss>-<suite>-<model[-label]>/` at the repository root (git-ignored; `BOOKLOOM_EVAL_HISTORY_DIR`
 moves it, `off` disables it; a name that exists gets `-2`). Only what the report holds is written. The JSON carries, where the

@@ -185,7 +185,7 @@ final class SequenceEval {
         }
         final Optional<NarratorHint> hint = NarratorDetector.detect(prepared.document(), fixture.source());
         log.info("Sequence eval narrator hint={} answer={}", hint.orElse(null), detectedGender);
-        if (hint.isEmpty() || !hint.get().suggestsFirstPerson()) {
+        if (hint.isEmpty() || !hint.get().hasFirstPersonShare()) {
             return;
         }
         final Project project = Objects.requireNonNull(

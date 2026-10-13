@@ -45,7 +45,10 @@ class JudgementEvalTest {
 
         final String name = report.model().replaceAll("[^A-Za-z0-9._-]", "_") + "-" + report.suite();
         EvalOutput.write(
-                EvalProvenance.capture(report.suite(), report.model(), ""), name, report.table(), report.json());
+                EvalProvenance.capture(report.suite(), report.model(), "", JudgementRunner.dial()),
+                name,
+                report.table(),
+                report.json());
         log.info("Judgement eval report {}\n{}", name, report.table());
         assertThat(report.books()).as(report.table()).isNotEmpty();
     }

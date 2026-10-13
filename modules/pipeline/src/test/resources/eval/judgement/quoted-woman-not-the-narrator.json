@@ -26,12 +26,8 @@
     "sourceLanguage": "en",
     "targetLanguage": "uk",
     "brief": {
-      "genre": "historical adventure",
-      "genreClass": [
-        "drama",
-        "adventure",
-        "historical"
-      ],
+      "genre": "Adventure",
+      "genreClass": ["adventure", "historical fiction"],
       "register": "NEUTRAL",
       "narrator": "FIRST",
       "narratorGender": "MALE"

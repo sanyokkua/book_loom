@@ -69,9 +69,9 @@ final class BriefDecision {
     }
 
     /**
-     * The narrator's person: the detector's when it answers; a mixed book is first person when at least half of its
-     * judged chapters are told as "I" (alternating narrators need the narrator rules), else third person (a preface, a
-     * letter or a character's account inside a third-person novel); else a strict majority of the windows read.
+     * The narrator's person: the detector's when it answers; a mixed book is first person when at least a quarter
+     * of its judged chapters are told as "I" (alternating narrators need the narrator rules), else third person (a
+     * preface, a letter or a character's account inside a third-person novel); else a strict majority of the windows read.
      *
      * @param detected the detector's reading of the whole book, or null when it could not tell
      * @param windows each window's verified answers, null for an unreadable one
@@ -80,7 +80,7 @@ final class BriefDecision {
     static Decided<NarratorPerson> narrator(
             final @Nullable NarratorHint detected, final List<@Nullable Map<BriefField, Answer>> windows) {
         if (detected != null) {
-            final NarratorPerson person = detected.isMostlyFirstPerson() ? NarratorPerson.FIRST : NarratorPerson.THIRD;
+            final NarratorPerson person = detected.hasFirstPersonShare() ? NarratorPerson.FIRST : NarratorPerson.THIRD;
             log.debug(
                     "Narrator person from the detector: {} with {} of {} judged chapters in the first person, read as {}",
                     detected.person(),
