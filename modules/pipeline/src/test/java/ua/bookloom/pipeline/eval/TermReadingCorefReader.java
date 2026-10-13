@@ -15,7 +15,9 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * The coreference probe's reader backed by the term reading (15i.N4): each window is one call with the target marked
  * where it first stands, and only the votes the reading keeps are claims, so the scorer counts what the code would
- * use. A failed call claims nothing, which the scorer counts as an abstention.
+ * use. A failed call claims nothing, which the scorer counts as an abstention. A vote the model gives while reading the
+ * term as a place, an organisation or a thing is no claim either: the verdict gives such a term no gender (15i.N5), so
+ * the vote never reaches a glossary entry.
  *
  * @param reading the production term reading
  * @param frame the call frame, whose analysis language decides the pronoun check
@@ -37,6 +39,7 @@ record TermReadingCorefReader(TermReading reading, CallFrame frame, ModelCalls c
         }
         return Objects.requireNonNull(read.data()).windows().stream()
                 .filter(answer -> answer.vote() != Gender.UNKNOWN)
+                .filter(answer -> answer.kind() == TermReading.Kind.PERSON)
                 .map(answer -> new CorefClaim(answer.quote(), true))
                 .toList();
     }
