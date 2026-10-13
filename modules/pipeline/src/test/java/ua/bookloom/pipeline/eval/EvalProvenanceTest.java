@@ -82,6 +82,16 @@ class EvalProvenanceTest {
                 .isEqualTo("preset=glass-harbour relevant_pairs=on");
     }
 
+    // The batch-format gate (15i.X1) compares reports of three arms, so each says which format it measured.
+    @Test
+    void capture_batchFormatSwitch_isRecordedInTheBrief() {
+        assertThat(provenance(Map.of("BOOKLOOM_EVAL_BATCH_FORMAT", "markers")).brief())
+                .isEqualTo("batch_format=markers");
+        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_BATCH_FORMAT", "dual"))
+                        .brief())
+                .isEqualTo("preset=glass-harbour batch_format=dual");
+    }
+
     // The thinking plan and the notes arm change what a report measures, so each report says which it ran with.
     @Test
     void capture_nothingSet_recordsThinkingAndNotesOff() {

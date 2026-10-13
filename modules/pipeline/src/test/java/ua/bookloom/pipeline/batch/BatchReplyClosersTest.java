@@ -19,7 +19,7 @@ class BatchReplyClosersTest {
     private static final String T2 = "Він довго нічого не казав.";
 
     private static BatchReply parse(final String reply) {
-        return PARSER.parse(reply, ITEMS, "en", "uk");
+        return PARSER.parse(reply, ITEMS, "en", "uk", BatchFormat.JSON);
     }
 
     private static String entries(final String last) {
@@ -57,7 +57,11 @@ class BatchReplyClosersTest {
         final List<BatchItem> items = List.of(new BatchItem("1", "Use the set {a, b} here."));
 
         final BatchReply result = PARSER.parse(
-                "{\"items\":[{\"id\":\"1\",\"target\":\"Використайте набір {a, b} тут.\"}]}", items, "en", "uk");
+                "{\"items\":[{\"id\":\"1\",\"target\":\"Використайте набір {a, b} тут.\"}]}",
+                items,
+                "en",
+                "uk",
+                BatchFormat.JSON);
 
         assertThat(result.acceptedIds()).containsExactly("1");
     }

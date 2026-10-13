@@ -21,7 +21,7 @@ class BatchReplyShapesTest {
     private static final String T4 = "⟦g0⟧Привіт⟦g1⟧, мій старий друже.";
 
     private static BatchReply parse(final String reply) {
-        return PARSER.parse(reply, ITEMS, "en", "uk");
+        return PARSER.parse(reply, ITEMS, "en", "uk", BatchFormat.JSON);
     }
 
     // IF an entry under another key were ignored, THEN seven good drafts of one real reply would each be redone alone.
@@ -67,7 +67,7 @@ class BatchReplyShapesTest {
                         + "«У них були кредитні картки та годинник.»\"},"
                         + "{\"id\":\"2\",\"target\":\"Він передав мені прозорий конверт із чимось усередині.\"}]}";
 
-        final BatchReply result = PARSER.parse(reply, SPEECH, "en", "uk");
+        final BatchReply result = PARSER.parse(reply, SPEECH, "en", "uk", BatchFormat.JSON);
 
         assertThat(result.outcome("1"))
                 .hasValueSatisfying(outcome -> assertThat(outcome.problems()).contains(ItemProblem.QUOTES));
@@ -80,7 +80,8 @@ class BatchReplyShapesTest {
                 + "«У них були кредитні картки та годинник.»\"},"
                 + "{\"id\":\"2\",\"target\":\"Він передав мені прозорий конверт із чимось усередині.\"}]}";
 
-        assertThat(PARSER.parse(reply, SPEECH, "en", "uk").acceptedIds()).containsExactly("1", "2");
+        assertThat(PARSER.parse(reply, SPEECH, "en", "uk", BatchFormat.JSON).acceptedIds())
+                .containsExactly("1", "2");
     }
 
     // A source that opens a quotation and leaves it open (it runs on in the next paragraph) lets its target stay open.
@@ -89,7 +90,7 @@ class BatchReplyShapesTest {
         final List<BatchItem> open = List.of(new BatchItem("1", "\u201cHe came back at noon and said nothing."));
         final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"«Він повернувся опівдні й нічого не сказав.\"}]}";
 
-        assertThat(PARSER.parse(reply, open, "en", "uk").outcome("1"))
+        assertThat(PARSER.parse(reply, open, "en", "uk", BatchFormat.JSON).outcome("1"))
                 .hasValueSatisfying(outcome -> assertThat(outcome.problems()).isEmpty());
     }
 
@@ -101,7 +102,7 @@ class BatchReplyShapesTest {
         final String reply =
                 "{\"items\": [{\"id\": \"1\", \"target\": \"Вона відчинила двері.\\fВін визирнув надвір.\"}]}";
 
-        final BatchReply parsed = PARSER.parse(reply, items, "en", "uk");
+        final BatchReply parsed = PARSER.parse(reply, items, "en", "uk", BatchFormat.JSON);
 
         assertThat(parsed.outcome("1"))
                 .hasValueSatisfying(outcome -> assertThat(outcome.problems()).isEmpty());

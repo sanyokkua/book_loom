@@ -27,6 +27,7 @@ import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
@@ -165,7 +166,7 @@ public final class EvalProject {
         final List<Segment> unit = new ArrayList<>(chunk);
         unit.addAll(segments(setup.after(), chunk.size()));
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, frame),
+                new BatchPromptBuilder(TEMPLATES, frame, BatchFormat.current()),
                 new BatchReplyParser(MAPPER),
                 calls,
                 frame.sourceLanguage(),

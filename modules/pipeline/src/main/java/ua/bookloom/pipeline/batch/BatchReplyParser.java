@@ -42,23 +42,40 @@ public final class BatchReplyParser {
     }
 
     /**
-     * Reads a reply against the batch it answers.
+     * Reads a reply against the batch it answers, in the given format.
      *
      * @param reply the non-null reply text, as the model sent it
      * @param items the non-null batch items in order; ids unique
      * @param sourceTag the source language tag, or null when unknown, for the length band
      * @param targetTag the non-null target language tag
+     * @param format the non-null format the batch was sent in, which decides how the reply is split into ids
      * @return one outcome per expected id then per extra id; not readable when the reply holds no entry at all
      */
     public BatchReply parse(
-            final String reply, final List<BatchItem> items, @Nullable final String sourceTag, final String targetTag) {
+            final String reply,
+            final List<BatchItem> items,
+            @Nullable final String sourceTag,
+            final String targetTag,
+            final BatchFormat format) {
         Objects.requireNonNull(items, "items");
-        log.debug("Parsing batch reply items={} replyLength={}", items.size(), reply.length());
-        final List<Entry> found = entries.read(reply);
+        Objects.requireNonNull(format, "format");
+        log.debug("Parsing batch reply format={} items={} replyLength={}", format, items.size(), reply.length());
+        final List<Entry> found =
+                format == BatchFormat.MARKERS ? MarkerReplies.read(reply, items) : entries.read(reply);
         if (found.isEmpty()) {
             log.warn("Batch reply held no entry items={}", items.size());
             return BatchReply.unreadable(items.stream().map(BatchItem::id).toList());
         }
+        final BatchReply result = assembled(found, items, sourceTag, targetTag);
+        log.debug("Parsed batch reply accepted={} failing={}", result.acceptedIds(), result.failingIds());
+        return result;
+    }
+
+    private static BatchReply assembled(
+            final List<Entry> found,
+            final List<BatchItem> items,
+            @Nullable final String sourceTag,
+            final String targetTag) {
         final Map<String, List<String>> byId = new HashMap<>();
         final Map<String, Map<String, String>> termsById = new HashMap<>();
         found.forEach(entry -> {
@@ -77,9 +94,7 @@ public final class BatchReplyParser {
                 outcomes.add(new ItemOutcome(id, ItemStatus.EXTRA, texts.getFirst(), List.of()));
             }
         });
-        final BatchReply result = new BatchReply(true, outcomes);
-        log.debug("Parsed batch reply accepted={} failing={}", result.acceptedIds(), result.failingIds());
-        return result;
+        return new BatchReply(true, outcomes);
     }
 
     private static ItemOutcome outcome(

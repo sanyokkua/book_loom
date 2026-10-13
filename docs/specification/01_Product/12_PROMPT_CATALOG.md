@@ -317,6 +317,21 @@ A/B on the e4b and 26b classes at 4, 8, 12 and 16 items): JSON answered every id
 size on both models, while tagged blocks (`<t id="1">…</t>`) were never better and e4b fell to 92% of ids at 8 items, so
 the tagged protocol, its prompts and its parsing were removed.
 
+**Experiment, three batch formats (15i.X1; the losing arms are removed once the measurement decides).** `BatchFormat`
+(`BOOKLOOM_BATCH_FORMAT` or `bookloom.batch.format`: `json`, `markers`, `dual`; default `json`) chooses the prompt pair, the
+response format and the reply reader of every batch call; the call kind, the sampling and the output cap are the same in all three.
+(a) `json` is the batch above. (b) `markers` (`draft-batch-markers.*.prompt`): the items are one passage inside `<Passage>`, each
+starting at `⟦s1⟧`, `⟦s2⟧` … (`BatchMarkers`), the reply is plain text in which each translated item starts at its own marker, no
+response format is sent, no JSON, schema or `terms` wording is in the prompt, and its example is the language file's
+`batchExample` lines (the imperative item included) shown as a marked passage and a marked reply. The reply is split at every marker
+(`⟦S2⟧` and `⟦ s2 ⟧` count; text before the first marker is dropped with a log): an id with no text, a marker written twice or
+after a later one leaves that id `MISSING` (so the `15h.B1` re-ask takes two or more, a single one falls back to its own draft), a
+missing middle marker leaves the item that swallowed its text `MERGED_SUSPECT`, a marker of no expected id is `EXTRA`, a reply with no
+marker (a JSON reply, a refusal) is unreadable. No marker reaches a check or a stored target, so the placeholder gate and the token
+checks see only `⟦gN⟧` tokens. (c) `dual` (`draft-batch-dual.*.prompt`): the same items joined once in `<Passage>`, marked context
+only, followed by `<Items>` as in (a); the reply, schema and response-format name are (a)'s, and the prompt's token count (hence the batch
+fit) includes the repeated passage.
+
 `BatchReplyParser` reads the reply tolerantly (prose or a fence around it, a bare array, a number for an id, a reply cut
 off in its last entry) and names each expected id `OK`, `MISSING` (absent or blank), `DUPLICATE`, `MERGED_SUSPECT` (the
 next id has no text of its own and the text holds both items' tokens, is far longer than one item, or ends as many

@@ -26,6 +26,7 @@ import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -88,7 +89,7 @@ class RelevantPairsBatchTest {
         final SegmentTranslator translator = new SegmentTranslator(
                 gate, calls, BookFormat.TXT, new DraftPromptBuilder(TEMPLATES, FRAME), new DraftReplyParser(MAPPER));
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, FRAME),
+                new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON),
                 new BatchReplyParser(MAPPER),
                 calls,
                 "en",

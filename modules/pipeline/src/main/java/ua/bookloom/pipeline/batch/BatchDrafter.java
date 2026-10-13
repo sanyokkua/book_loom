@@ -20,7 +20,6 @@ import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptBreakdown;
-import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
  * Drafts several consecutive segments in one model call and reads the reply per id. It makes the call and judges the
@@ -154,7 +153,7 @@ public final class BatchDrafter {
                 position);
         final ChatRequest request = request(context, items);
         final CallDescriptor descriptor = new CallDescriptor(
-                PromptName.DRAFT_BATCH_JSON.resourceBaseName(),
+                prompts.format().promptName().resourceBaseName(),
                 position,
                 sources,
                 () -> prompts.sectionsFor(context, items));
@@ -169,7 +168,7 @@ public final class BatchDrafter {
         final List<String> ids = items.stream().map(BatchItem::id).toList();
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
-                : parser.parse(response.content(), items, sourceLanguage, targetLanguage);
+                : parser.parse(response.content(), items, sourceLanguage, targetLanguage, prompts.format());
         return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
     }
 
@@ -255,7 +254,8 @@ public final class BatchDrafter {
      *
      * @param context the non-null read-only context shown with the items
      * @param items the non-null items, at least one
-     * @return the request asking for the batch schema, with the reply capped by the items' size
+     * @return the request, asking for the batch schema unless the format answers in plain text, with the reply capped by the
+     *     items' size
      */
     public ChatRequest request(final BatchContext context, final List<BatchItem> items) {
         return prompts.requestFor(prompts.messagesFor(context, items), items, false);

@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.prompt;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -50,17 +49,19 @@ public enum PromptName {
      * A batch of consecutive segments drafted in one call, answered as one JSON object with an entry per id; the flat
      * schema carries no length limits, because a bounded schema once stalled a structured call on one provider.
      */
-    DRAFT_BATCH_JSON(
-            "draft-batch-json",
-            CallKind.DRAFT,
-            "draft-batch-json",
-            BatchSchema.SCHEMA,
-            0.2,
-            0.1,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("examples", "languageRules", "tokenRules", "noTokenRules", "notesRule")),
-            BatchSlots.USER),
+    DRAFT_BATCH_JSON("draft-batch-json", "draft-batch-json", BatchSchema.SCHEMA, BatchSlots.USER),
+
+    /**
+     * The 15i.X1 marked-passage arm of the batch draft: the items are one passage whose items start at {@code ⟦sN⟧}
+     * markers, answered as plain text with the same markers, so there is no schema and no constrained decoding.
+     */
+    DRAFT_BATCH_MARKERS("draft-batch-markers", "draft-batch-markers", "", BatchSlots.MARKERS_USER),
+
+    /**
+     * The 15i.X1 passage-plus-items arm of the batch draft: the whole passage once as context, then the numbered items,
+     * answered as the JSON of {@link #DRAFT_BATCH_JSON} under its own schema and response-format name.
+     */
+    DRAFT_BATCH_DUAL("draft-batch-dual", "draft-batch-json", BatchSchema.SCHEMA, BatchSlots.DUAL_USER),
 
     /** The correction call after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(
@@ -303,6 +304,11 @@ public enum PromptName {
                 new Slots(Set.of("term", textSlot), Set.of()));
     }
 
+    // A batch draft (15i.X1 has three formats): the draft call kind and temperatures, the batch system slots.
+    PromptName(final String name, final String format, final String schema, final Slots user) {
+        this(name, CallKind.DRAFT, format, schema, 0.2, 0.1, BatchSlots.SYSTEM, user);
+    }
+
     PromptName(
             final String resourceBaseName,
             final CallKind callKind,
@@ -377,24 +383,5 @@ public enum PromptName {
     /** The user template's slots. */
     public Slots userSlots() {
         return userSlots;
-    }
-
-    /**
-     * The slots one template file may use.
-     *
-     * @param required slots the file must contain as {@code {{slot}}}
-     * @param optional slots the file may contain, alone or as a {@code {{#slot}}} block dropped when empty
-     */
-    public record Slots(Set<String> required, Set<String> optional) {
-
-        /** Copies both sets so a declaration can never change after construction. */
-        public Slots {
-            required = Set.copyOf(Objects.requireNonNull(required, "required"));
-            optional = Set.copyOf(Objects.requireNonNull(optional, "optional"));
-        }
-
-        boolean declares(final String slot) {
-            return required.contains(slot) || optional.contains(slot);
-        }
     }
 }

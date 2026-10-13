@@ -943,6 +943,18 @@ item. It measures only; the batch size is chosen by reading the table (the tagge
 dropped after the first A/B, see `12_PROMPT_CATALOG.md#batch-draft`). A run's own draft calls per segment are
 `modelCallsByKind.DRAFT.attempts` over `run.segments` in the report JSON (a batch call and a single-segment fallback each count one).
 
+**Batch format arms (15i.X1, an experiment).** Three ways to send and read a batch sit behind one switch until the
+measurement picks one and the other two are removed. `BOOKLOOM_BATCH_FORMAT` (else the property `bookloom.batch.format`) names
+`json` (the default: numbered items, a JSON reply under the schema), `markers` (one passage whose items start at `⟦s1⟧ … ⟦s8⟧`,
+a plain-text reply with the same markers split by code, no response format) or `dual` (the whole passage once as context, then the
+numbered items, the same JSON reply). In a run it is read when the job starts; in the evals use
+`scripts/eval-matrix.sh --batch-format json|markers|dual` (or `BOOKLOOM_EVAL_BATCH_FORMAT` for a direct `./gradlew :pipeline:promptEval`,
+which the build passes on as the property) so the realrun, sequence, batch and replay suites send and read what that arm's job does; every
+report's provenance says `batch_format=…`. Run all three arms on the same models and suites, one gradle at a time, and compare omissions
+and missing ids, control-code and quote defects, the placeholder gate, WRONG on a fixed 60-segment sample, seconds and calls per segment;
+adopt `markers` or `dual` only if WRONG falls by 2 or more or seconds per segment fall by 10 % with no key metric losing 2 or more (task
+15i.X1). The result and the decision are recorded here when the arms are measured.
+
 **Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
 `ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective
 candidates the reviewer asked to change (thresholds: at least 90% on the e4b class, 95% on the 26b class), `falseAlarmEdits`

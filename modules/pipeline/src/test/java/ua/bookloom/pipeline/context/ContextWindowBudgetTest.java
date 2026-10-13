@@ -17,6 +17,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.batch.BatchContext;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -149,7 +150,7 @@ class ContextWindowBudgetTest {
 
     @Test
     void staticPrefix_batchSystemMessage_fitsTheReservedPrefix() {
-        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME)
+        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON)
                         .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "He left."))))
                 .systemTokens();
 

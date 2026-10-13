@@ -198,6 +198,11 @@ localOnlyTags.forEach { tag ->
             System.getenv("BOOKLOOM_EVAL_RELEVANT_PAIRS")?.takeIf { it.isNotBlank() }?.let {
                 systemProperty("bookloom.relevant.pairs", it)
             }
+            // The batch format (15i.X1) of the arm being measured: `BOOKLOOM_EVAL_BATCH_FORMAT=json|markers|dual` reaches the
+            // code as `bookloom.batch.format`; unset, the property is absent and a run's own default (json) holds.
+            System.getenv("BOOKLOOM_EVAL_BATCH_FORMAT")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.batch.format", it)
+            }
             // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
             // code as the `bookloom.reasoning` property, `BOOKLOOM_EVAL_BATCH_NOTES=on|off` as `bookloom.batch.notes`;
             // unset leaves both off, and an explicit BOOKLOOM_REASONING / BOOKLOOM_BATCH_NOTES still wins.

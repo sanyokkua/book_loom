@@ -29,6 +29,11 @@ public record ReasoningPlan(Set<PromptName> enabled) {
     private static final String OFF = "off";
     private static final String OFF_TOKEN = "off";
 
+    // The batch draft is one call kind in three formats (15i.X1): naming DRAFT_BATCH_JSON turns thinking on in all
+    // three.
+    private static final Set<PromptName> BATCH_ARMS =
+            EnumSet.of(PromptName.DRAFT_BATCH_MARKERS, PromptName.DRAFT_BATCH_DUAL);
+
     public ReasoningPlan {
         Objects.requireNonNull(enabled, "enabled");
         enabled = Collections.unmodifiableSet(
@@ -98,10 +103,11 @@ public record ReasoningPlan(Set<PromptName> enabled) {
      * Whether a call thinks.
      *
      * @param name the call; never null
-     * @return {@code true} if the plan turns thinking on for it
+     * @return {@code true} if the plan turns thinking on for it; a batch format counts as {@code DRAFT_BATCH_JSON}
      */
     public boolean isOn(final PromptName name) {
-        return enabled.contains(Objects.requireNonNull(name, "name"));
+        Objects.requireNonNull(name, "name");
+        return enabled.contains(name) || (BATCH_ARMS.contains(name) && enabled.contains(PromptName.DRAFT_BATCH_JSON));
     }
 
     /**

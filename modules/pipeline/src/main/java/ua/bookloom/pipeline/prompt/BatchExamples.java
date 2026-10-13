@@ -2,10 +2,12 @@ package ua.bookloom.pipeline.prompt;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.pipeline.batch.BatchMarkers;
 
 /**
  * Turns the batch examples of a language file into the few-shot text of the JSON reply. A file states an example once,
@@ -26,13 +28,51 @@ final class BatchExamples {
      * @return the examples as the prompt shows them
      */
     static String render(final String raw) {
+        return renderAll(raw, pairs -> source(pairs) + "\n" + reply(pairs));
+    }
+
+    /**
+     * Renders every example as a marked passage and the same markers in a plain-text reply (the 15i.X1 marked arm).
+     *
+     * @param raw the examples as the language file states them, separated by a blank line; never blank
+     * @return the examples as the marked prompt shows them
+     */
+    static String renderMarked(final String raw) {
+        return renderAll(raw, pairs -> "<Passage>\n" + marked(pairs, 0) + "\n</Passage>\nReply:\n" + marked(pairs, 1));
+    }
+
+    /**
+     * Renders every example as the passage once, then the numbered items and the JSON reply (the 15i.X1 dual arm).
+     *
+     * @param raw the examples as the language file states them, separated by a blank line; never blank
+     * @return the examples as the dual prompt shows them
+     */
+    static String renderDual(final String raw) {
+        return renderAll(
+                raw,
+                pairs -> "<Passage>\n"
+                        + String.join(
+                                "\n\n", pairs.stream().map(pair -> pair[0]).toList())
+                        + "\n</Passage>\n"
+                        + source(pairs)
+                        + "\n"
+                        + reply(pairs));
+    }
+
+    private static String renderAll(final String raw, final Function<List<String[]>, String> one) {
         final List<String> rendered = new ArrayList<>();
         for (final String example : EXAMPLE_SPLIT.splitAsStream(raw).toList()) {
-            final List<String[]> pairs =
-                    example.lines().map(BatchExamples::split).toList();
-            rendered.add(source(pairs) + "\n" + reply(pairs));
+            rendered.add(one.apply(example.lines().map(BatchExamples::split).toList()));
         }
         return String.join(EXAMPLE_SEPARATOR, rendered);
+    }
+
+    private static String marked(final List<String[]> pairs, final int side) {
+        return String.join(
+                "\n\n",
+                IntStream.range(0, pairs.size())
+                        .mapToObj(i -> BatchMarkers.of(String.valueOf(i + 1)) + " " + pairs.get(i)[side])
+                        .toList());
     }
 
     private static String[] split(final String line) {

@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -303,7 +304,7 @@ class RealRunCorpusTest {
         });
         final List<BatchItem> items = project.batch().orElseThrow().items();
         return new BatchReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())
-                .parse(reply.reply(), items, "en", "uk");
+                .parse(reply.reply(), items, "en", "uk", BatchFormat.JSON);
     }
 
     private static String user(final ChatRequest request) {

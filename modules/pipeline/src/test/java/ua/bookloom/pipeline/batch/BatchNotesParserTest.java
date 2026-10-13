@@ -62,7 +62,7 @@ class BatchNotesParserTest {
     }
 
     private static BatchReply parse(final String reply) {
-        return PARSER.parse(reply, ITEMS, "en", "uk");
+        return PARSER.parse(reply, ITEMS, "en", "uk", BatchFormat.JSON);
     }
 
     // IF every entry carries a note before its target, THEN each target is exactly what followed "target", no note in

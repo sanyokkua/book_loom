@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.PromptSection;
-import ua.bookloom.pipeline.prompt.PromptName.Slots;
 
 /**
  * Loads every declared {@code *.prompt} template once and renders it. A template that uses an undeclared slot or lacks
@@ -226,9 +225,12 @@ public final class PromptTemplates {
         if (name.showsNameExamples()) {
             return rules.nameExamples(source, target);
         }
-        return name == PromptName.DRAFT_BATCH_JSON
-                ? BatchExamples.render(rules.batchExamples(source, target))
-                : rules.examples(source, target);
+        return switch (name) {
+            case DRAFT_BATCH_JSON -> BatchExamples.render(rules.batchExamples(source, target));
+            case DRAFT_BATCH_MARKERS -> BatchExamples.renderMarked(rules.batchExamples(source, target));
+            case DRAFT_BATCH_DUAL -> BatchExamples.renderDual(rules.batchExamples(source, target));
+            default -> rules.examples(source, target);
+        };
     }
 
     private static boolean declares(final PromptName name, final String slot) {

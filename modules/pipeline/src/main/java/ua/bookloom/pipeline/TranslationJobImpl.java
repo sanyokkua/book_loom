@@ -30,6 +30,7 @@ import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -315,7 +316,7 @@ final class TranslationJobImpl implements TranslationJob {
         final RollingSummaryKeeper summary = new RollingSummaryKeeper(
                 stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
         final BatchDrafter batch = new BatchDrafter(
-                new BatchPromptBuilder(templates, settings.frame()),
+                new BatchPromptBuilder(templates, settings.frame(), BatchFormat.current()),
                 new BatchReplyParser(mapper),
                 calls,
                 settings.frame().sourceLanguage(),

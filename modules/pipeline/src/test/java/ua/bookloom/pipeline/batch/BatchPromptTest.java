@@ -36,7 +36,8 @@ class BatchPromptTest {
     private static BatchPromptBuilder builder(final String source, final String target) {
         return new BatchPromptBuilder(
                 TEMPLATES,
-                new CallFrame(source, target, StyleSheet.from(BookBrief.defaults(source)), ForeignPassagePolicy.KEEP));
+                new CallFrame(source, target, StyleSheet.from(BookBrief.defaults(source)), ForeignPassagePolicy.KEEP),
+                BatchFormat.JSON);
     }
 
     private static BatchContext fullContext() {
@@ -270,7 +271,8 @@ class BatchPromptTest {
                     .results()
                     .map(item -> new BatchItem(item.group(1), item.group(2)))
                     .toList();
-            assertThat(parser.parse(example.group(2).strip(), items, "en", "uk").isClean())
+            assertThat(parser.parse(example.group(2).strip(), items, "en", "uk", BatchFormat.JSON)
+                            .isClean())
                     .as(example.group())
                     .isTrue();
         });

@@ -9,6 +9,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchContext.Pair;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.context.PromptLint.Facts;
@@ -42,7 +43,7 @@ class BatchPromptHygieneTest {
                 List.of());
 
         final List<ChatMessage> messages =
-                new BatchPromptBuilder(new PromptTemplates(), FRAME).messagesFor(context, ITEMS);
+                new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON).messagesFor(context, ITEMS);
 
         final String chunk =
                 String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());
@@ -73,7 +74,7 @@ class BatchPromptHygieneTest {
                 List.of());
 
         final List<ChatMessage> messages =
-                new BatchPromptBuilder(new PromptTemplates(), FRAME).messagesFor(context, ITEMS);
+                new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON).messagesFor(context, ITEMS);
 
         final String chunk =
                 String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());

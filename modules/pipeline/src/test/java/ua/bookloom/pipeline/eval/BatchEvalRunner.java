@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReply;
@@ -84,7 +85,12 @@ final class BatchEvalRunner {
     private BatchDrafter sizing(final int initialSize) {
         final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), any.frame()), parser, calls, SOURCE, TARGET, initialSize);
+                new BatchPromptBuilder(new PromptTemplates(), any.frame(), BatchFormat.current()),
+                parser,
+                calls,
+                SOURCE,
+                TARGET,
+                initialSize);
     }
 
     BatchEvalRow run(final Batch batch) {
@@ -114,7 +120,7 @@ final class BatchEvalRunner {
             return new Outcome(failed(items.size()), Optional.empty());
         }
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        final BatchReply parsed = parser.parse(response.content(), items, SOURCE, TARGET);
+        final BatchReply parsed = parser.parse(response.content(), items, SOURCE, TARGET, BatchFormat.current());
         return new Outcome(measured(project, items, response, parsed), Optional.of(parsed));
     }
 

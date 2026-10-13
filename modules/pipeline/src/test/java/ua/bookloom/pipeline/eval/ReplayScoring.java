@@ -11,6 +11,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -77,7 +78,8 @@ final class ReplayScoring {
             return new Scored(false, call.sourceTexts().size(), "batch does not fit the window");
         }
         final List<BatchItem> items = prepared.get().items();
-        final BatchReply parsed = BATCH_PARSER.parse(reply, items, call.sourceLanguage(), call.targetLanguage());
+        final BatchReply parsed =
+                BATCH_PARSER.parse(reply, items, call.sourceLanguage(), call.targetLanguage(), BatchFormat.current());
         int accepted = 0;
         for (int i = 0; i < items.size(); i++) {
             final ItemOutcome outcome = parsed.outcome(items.get(i).id()).orElseThrow();

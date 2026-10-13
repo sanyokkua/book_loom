@@ -39,8 +39,15 @@ public enum SamplingProfile {
      */
     public static SamplingProfile of(final PromptName name) {
         return switch (Objects.requireNonNull(name, "name")) {
-            case DRAFT, DRAFT_BATCH_JSON, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION, CONSISTENCY ->
-                TEXT;
+            case DRAFT,
+                    DRAFT_BATCH_JSON,
+                    DRAFT_BATCH_MARKERS,
+                    DRAFT_BATCH_DUAL,
+                    STRUCTURAL_REPAIR,
+                    PLACEHOLDER_REPAIR,
+                    DIRECTED_FIX,
+                    REVISION,
+                    CONSISTENCY -> TEXT;
             case REVIEWER,
                     TERM_CHOICE,
                     PRESCAN,

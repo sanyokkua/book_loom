@@ -42,7 +42,7 @@ class BatchReplyControlCodesTest {
                 new BatchItem("2", "\"He said nothing,\" she wrote for a long while."));
         final String reply = write(Map.of("1", T1, "2", "Він\\u001d довго\\u001e нічого не казав."));
 
-        final BatchReply parsed = PARSER.parse(reply, items, "en", "uk");
+        final BatchReply parsed = PARSER.parse(reply, items, "en", "uk", BatchFormat.JSON);
 
         assertThat(parsed.outcome("2"))
                 .hasValueSatisfying(outcome -> assertThat(outcome.problems()).contains(ItemProblem.CONTROL_CHARACTERS));
@@ -55,7 +55,7 @@ class BatchReplyControlCodesTest {
         final Map<String, String> entries = clean();
         entries.put("2", "\\u001cВін довго нічого не казав.\\u001c");
 
-        final BatchReply reply = PARSER.parse(write(entries), ITEMS, "en", "uk");
+        final BatchReply reply = PARSER.parse(write(entries), ITEMS, "en", "uk", BatchFormat.JSON);
 
         assertThat(reply.outcome("2")).hasValueSatisfying(outcome -> {
             assertThat(outcome.target()).isEqualTo(T2);
@@ -72,12 +72,14 @@ class BatchReplyControlCodesTest {
                 "{\"items\":[{\"id\":\"1\",\"target\":\"\\u001eВін нічого не казав\\u001d, написала вона.\"}]}",
                 items,
                 "en",
-                "uk");
+                "uk",
+                BatchFormat.JSON);
         final BatchReply german = PARSER.parse(
                 "{\"items\":[{\"id\":\"1\",\"target\":\"\\u001eEr sagte nichts\\u001d, schrieb sie.\"}]}",
                 items,
                 "en",
-                "de");
+                "de",
+                BatchFormat.JSON);
 
         assertThat(parsed.outcome("1"))
                 .hasValueSatisfying(

@@ -65,15 +65,28 @@ class PromptShapeTest {
     // language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 720;
     private static final int SYSTEM_BUDGET = 900;
+    // The passage the dual batch arm (15i.X1) shows once more in each example, about 40 tokens.
+    private static final int DUAL_SYSTEM_BUDGET = 980;
     // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.
     private static final int LARGE_SYSTEM_BUDGET = 1230;
 
     @ParameterizedTest
-    @EnumSource(PromptName.class)
+    @EnumSource(
+            value = PromptName.class,
+            names = {"DRAFT_BATCH_MARKERS"},
+            mode = EnumSource.Mode.EXCLUDE)
     void render_everyCall_showsALiteralReplyItsParserReads(final PromptName name) {
         assertThat(hasLiteralReply(prompt(name), replyKey(name)))
                 .as("a literal %s reply in %s", replyKey(name), name)
                 .isTrue();
+    }
+
+    // The marked arm's reply is plain text: its example shows the reply as the items in order, each at its marker.
+    @Test
+    void render_markedBatch_showsAReplyOfMarkedItsAndNoJson() {
+        final String system = system(PromptName.DRAFT_BATCH_MARKERS);
+
+        assertThat(system).containsSubsequence("Reply:\n⟦s1⟧ ", "\n\n⟦s2⟧ ").doesNotContain("JSON", "{\"");
     }
 
     @ParameterizedTest
@@ -117,9 +130,10 @@ class PromptShapeTest {
     @EnumSource(PromptName.class)
     void render_everyCall_keepsItsSystemMessageWithinBudget(final PromptName name) {
         final boolean large = name == PromptName.REVIEWER || name == PromptName.SUGGEST_TARGETS;
+        final int ceiling = name == PromptName.DRAFT_BATCH_DUAL ? DUAL_SYSTEM_BUDGET : SYSTEM_BUDGET;
 
         assertThat(TokenEstimator.estimate(system(name), "en"))
-                .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
+                .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : ceiling);
     }
 
     // IF the brief call invited the model's memory of a famous book, THEN its answer could not be checked against the

@@ -103,6 +103,7 @@ class PromptHygieneLintTest {
             Map.entry("chapterTarget", TARGET),
             Map.entry("previousSummary", "Hale searches for his brother."),
             Map.entry("items", "<s id=\"1\">" + SOURCE + " ⟦g0⟧ ⟦g1⟧</s>"),
+            Map.entry("passage", SOURCE + " ⟦g0⟧ ⟦g1⟧"),
             Map.entry("itemTokens", "1: ⟦g0⟧ ⟦g1⟧"),
             Map.entry("characters", "Hale — a man"),
             Map.entry("precedingPairs", "Source: He left.\nTranslation: Він пішов."),

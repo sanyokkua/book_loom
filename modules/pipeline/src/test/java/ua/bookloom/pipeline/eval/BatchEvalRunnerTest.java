@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -22,6 +23,11 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /** The A/B machinery against scripted models: no real model, so its numbers can be checked by hand. */
 class BatchEvalRunnerTest {
+
+    @AfterEach
+    void clearBatchFormat() {
+        System.clearProperty("bookloom.batch.format");
+    }
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
 
@@ -130,6 +136,30 @@ class BatchEvalRunnerTest {
         assertThat(seen)
                 .singleElement()
                 .satisfies(request -> assertThat(request.responseFormat()).isNotNull());
+    }
+
+    // The batch-format gate (15i.X1) measures each arm through this runner: it sends what the job sends in that arm
+    // (the eval path reads the same property) and reads the reply the way the job reads it.
+    @Test
+    void run_markersFormat_sendsAMarkedPassageWithNoSchemaAndReadsTheMarkedReply() {
+        System.setProperty("bookloom.batch.format", "markers");
+        final List<ChatRequest> seen = new ArrayList<>();
+        final ModelCalls marked = (kind, segmentId, request) -> {
+            seen.add(request);
+            return Result.ok(
+                    new ChatResponse("⟦s1⟧ Один.\n\n⟦s2⟧ Два.\n\n⟦s3⟧ Три.\n\n⟦s4⟧ Чотири.", FinishReason.STOP));
+        };
+
+        final BatchEvalRow row =
+                new BatchEvalRunner(marked).run(BatchEvalCases.batches(4).getFirst());
+
+        assertThat(seen).singleElement().satisfies(request -> {
+            assertThat(request.responseFormat()).isNull();
+            assertThat(request.messages().get(1).content()).contains("⟦s1⟧ ", "⟦s4⟧ ");
+        });
+        assertThat(row.callFailed()).isFalse();
+        assertThat(row.missing()).isZero();
+        assertThat(row.extra()).isZero();
     }
 
     @Test
