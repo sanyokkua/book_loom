@@ -29,7 +29,7 @@ class RelevantPairsSwitchTest {
     @ParameterizedTest
     @CsvSource(
             value = {
-                "null,null,true",
+                "null,null,false",
                 "off,null,false",
                 "OFF,null,false",
                 "on,null,true",
@@ -37,8 +37,8 @@ class RelevantPairsSwitchTest {
                 "null,on,true",
                 "on,off,true",
                 "off,on,false",
-                "maybe,null,true",
-                "null,maybe,true"
+                "maybe,null,false",
+                "null,maybe,false"
             },
             nullValues = "null")
     void resolve_envThenProperty_namesTheSwitch(final String env, final String property, final boolean expected) {

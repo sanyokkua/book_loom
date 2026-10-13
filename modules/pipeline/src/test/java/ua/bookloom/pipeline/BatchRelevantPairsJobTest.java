@@ -16,6 +16,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,6 +57,12 @@ class BatchRelevantPairsJobTest {
 
     @TempDir
     private Path tempDir;
+
+    // The block is off by default since the 15i.T8 round; these runs turn it on unless a case says otherwise.
+    @BeforeEach
+    void switchOn() {
+        System.setProperty("bookloom.relevant.pairs", "on");
+    }
 
     @AfterEach
     void cleanUp() {
