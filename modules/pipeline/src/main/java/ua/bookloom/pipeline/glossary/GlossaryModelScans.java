@@ -23,6 +23,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -47,7 +48,7 @@ public final class GlossaryModelScans {
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
-    private record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
+    record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
 
     Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
@@ -128,6 +129,10 @@ public final class GlossaryModelScans {
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
+        return calls(model, progress, book, ContextBudget.DEFAULT_WINDOW);
+    }
+
+    ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book, final int window) {
         return new JobModelCalls(
                 onSent -> {
                     onSent.run();
@@ -135,10 +140,22 @@ public final class GlossaryModelScans {
                 },
                 progress,
                 clock,
-                book.frame().targetLanguage());
+                book.frame().targetLanguage(),
+                window);
     }
 
-    private Result<Book> book(final String projectId) {
+    /** The names pass's names step: the review's verdicts committed, with no rendering asked yet (15i.N8). */
+    Result<TermReview.Reviewed> decide(final String projectId, final Book book, final ModelCalls calls) {
+        return termReview.decide(projectId, book.story(), book.frame(), book.names(), book.dial(), calls);
+    }
+
+    /** The names pass's translate step: a rendering for each entry, knowing the held glossary and the readings. */
+    Result<List<SuggestionReplies.Suggestion>> suggestFor(
+            final List<GlossaryEntry> entries, final TargetContext context, final Book book, final ModelCalls calls) {
+        return suggestTargets.suggest(entries, book.story(), book.frame(), book.names(), calls, context);
+    }
+
+    Result<Book> book(final String projectId) {
         final Result<Optional<Project>> found = projects.find(projectId);
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error(), "error"));

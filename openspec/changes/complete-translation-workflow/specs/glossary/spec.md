@@ -816,7 +816,9 @@ like a malformed one (see "Lock only an entry that has a target").
 WHEN a scan — the deterministic scan on preparing a run, on opening Names & style or at the end of a chapter, or the
 model scan — finds a term the glossary already holds by its glossary key, the application SHALL keep the existing entry
 unchanged; and the application SHALL NOT let any scan, deterministic or model, propose a term the person removed in this
-session, until the person adds that term again through Add term or a CSV import.
+session, until the person adds that term again through Add term or a CSV import. The same SHALL hold for the recurring
+terms: a term the person removed, or a model dropped in a review, SHALL NOT be added back by the text scan, the model
+scan or the names pass this session, until the person adds it again (15i.N8).
 
 **Source:** FR-GLOSS-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), FR-ALGO-C9
 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`),
@@ -852,6 +854,11 @@ only when the person asks for it").
 
 - **WHEN** the person removed every proposed entry, leaving the glossary empty, and opens Names & style again
 - **THEN** the scan runs and proposes none of the removed terms
+
+#### Scenario: A removed recurring term is not scanned back
+
+- **WHEN** the person removed the recurring term `beacon`, and the model scan reads it as a term used in one sense
+- **THEN** the recurring terms do not hold `beacon`; had the person added it again first, it would stay
 
 #### Scenario: The person can add a removed term back
 
@@ -1041,6 +1048,72 @@ one book to the next in a file.
 
 - **WHEN** a file has the header, a good row, a row with three fields and a row for a term the glossary holds
 - **THEN** one term is imported and the report names the malformed line and the refused line
+
+### Requirement: Prepare names and recurring terms in one pass
+
+WHEN the application prepares names and recurring terms in one pass, it SHALL run the steps the Names & style buttons
+run, in this order, on a private copy of the glossary and of the recurring terms: scan the book for names when the
+glossary is empty (the deterministic scan; the model name scan stays behind its gate), read and decide the names (remove,
+type, gender), read the recurring terms (keep, drop, promote), ask a rendering for every name and recurring term that has
+none, and lock by rule. The names step SHALL NOT ask for any rendering: both tables are read before either is translated.
+A name SHALL be locked, with the rendering it was given, when it is a brand, an identifier or kept as written by the
+name policy (the rendering is its own spelling), or when the pass read it, decided it is a name and not a speaking one,
+and the target language does not decline names and the rendering passed the checks. Before the first model call the
+application SHALL be able to estimate the calls and the minutes of the names step from the dial's plan over the glossary
+as it will stand after its scan: a call takes 3.75–7.5 seconds at Fast, 11.25–18.75 at Balanced and 11.25–22.5 at Max,
+and the minutes are rounded up at both ends.
+
+The pass SHALL write the stored glossary and recurring terms once, after its last step, and SHALL write nothing when
+the person stops it (the calling thread is interrupted, after which no further model call is sent), when a call is
+cancelled, or when a call fails; it SHALL then answer with that error. The pass SHALL NOT change a locked entry, a target
+the person typed, a gender the person chose, a recurring term whose rendering the person typed, or add back a name or a
+term the person removed. A recurring term the person removed, or a model dropped in the pass, SHALL NOT be added back by
+a later scan this session, until the person adds it again.
+
+**Source:** `tasks.md` 15i.N8; `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`. In plain words: one button
+should get from a book to a prepared glossary without five separate presses, and an answer that arrives half-way, or a
+Stop, must not leave half of a result behind; and what the person fixed by hand stays fixed.
+
+#### Scenario: A pass fills both tables and writes them at the end
+
+- **WHEN** the glossary holds the untyped names `Brann`, `Harrowgate` and `Overture`, the recurring terms hold `ferry`,
+  and the model reads `Brann` as a man followed by "he", `Overture` as not a name, `ferry` as an ordinary word and
+  `beacon` as a term
+- **THEN** every model call goes out against the tables as they were, and afterwards `Brann` is a male character with a
+  suggested rendering, `Overture` and `ferry` are gone, and `beacon` is a recurring term with its rendering
+
+#### Scenario: A brand is locked, a name in a language that declines names is not
+
+- **WHEN** the target is Ukrainian and the model reads `Zorbo` as a brand and `Brann` as a person, with the renderings
+  `Zorbo` and `Бранн`
+- **THEN** `Zorbo` is locked with the target `Zorbo` and `Brann` is not locked
+- **AND** with a German target a name read as a name and not a speaking one is locked as well
+
+#### Scenario: A stopped pass changes nothing
+
+- **WHEN** the person presses Stop during the fourth model call
+- **THEN** no fifth call is sent, the pass answers `cancelled`, and neither table has changed
+
+#### Scenario: A failed call changes nothing
+
+- **WHEN** the call that reads the recurring terms fails with `unreachable`
+- **THEN** the pass answers `unreachable` and the glossary and the recurring terms are as they were
+
+#### Scenario: The person's entries are left alone
+
+- **WHEN** the glossary holds a locked `Gatewarden`, a `Marrow Lane` with the person's target and a `Wren` whose
+  female gender the person chose, and the lexicon holds `anvil` with the person's rendering
+- **THEN** after the pass those entries are unchanged, `Wren` is still female, and `anvil` was not asked about
+
+#### Scenario: A removal is remembered
+
+- **WHEN** the person removed the recurring term `gantry` and the model would keep it
+- **THEN** the pass does not add `gantry` back
+
+#### Scenario: The estimate comes before the first call
+
+- **WHEN** five open names are each mentioned at least three times at the Balanced dial
+- **THEN** the estimate is 5 calls and 1 to 2 minutes
 
 ### Requirement: Record the renderings a draft used and keep them consistent
 

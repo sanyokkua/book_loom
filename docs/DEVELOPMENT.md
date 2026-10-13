@@ -1216,6 +1216,26 @@ the windows' majority only when its quote stands in a window shown and it is one
 keeps for the reading a common word the book writes with a capital mid-sentence three times or more (`Mark`), and adds it
 only when the dial's plan reads it; the run's own scans still drop it.
 
+*The names pass* (15i.N8): `NamesPass` (`NamesPassImpl`, `ua.bookloom.pipeline.glossary`) runs the steps the Names & style
+buttons run, in order, on private copies of both tables (`StagedGlossary`, `StagedLexicon`: the glossary's and the
+lexicon's own rules over a copy, with the stored repositories asked only about removals made earlier): the deterministic
+scan when the glossary is empty (`GlossaryServiceImpl.scan`), the names step (`TermReview.decide`: the verdicts of a
+review without its suggestion step), the recurring terms (`LexiconServiceImpl` scan, review of the held terms, model
+scan, so a term a review drops is not read again), the renderings (`NamesTranslation` for the glossary, with the readings
+of the names step; `LexiconService.suggest` for the terms) and the lock (`LockRule`: a brand, an identifier or a name kept
+as written is locked with its own spelling; a name read as a name, not a speaking one, with a checked rendering, is locked
+where the target language does not decline names, `namesInflect=false` in its language file). The stored tables are
+written once, at the end, through `remove`, `update` and `add` (`put` for the lexicon), so a Stop, a cancelled reply or a
+failed call writes nothing; Stop is the calling thread's interrupt, which `StoppableModel` turns into a `cancelled` answer
+before the next call goes out. `estimate` runs the scan on a copy and then `NamesPlan.of` over the open names: calls and
+minutes (`NamesPlan.estimatedMinutes`: the dial's time budget over the 80-term plan, 3.75–7.5 s per call at Fast,
+11.25–18.75 s at Balanced, 11.25–22.5 s at Max, rounded up), an upper bound because a character the pronouns decide is
+counted. The lexicon remembers a removed term for the session as the glossary does (`LexiconRepository.wasRemoved`: set by
+`remove`, cleared by `put` and `record`), which the text scan and the model scan honour. The context window of the pass's
+own calls is the detected one (`ContextBudget.windowFor`); the recurring-term calls of the lexicon service use the default
+window, as the buttons do. Owner-book target: 26b at Balanced within 25 minutes with no wrong verified gender and every gold
+name present (run by the orchestrator).
+
 *Book-neutral sources* (15i.E0): no name, quote or passage of a book under test may sit in `modules/*/src` — the committed
 cases above, the tests and the prompts use invented material of the same shape. `BookNeutralSourcesTest` (`:app`) enforces it
 from the owner's own list, which is never committed because it would name the books: it reads

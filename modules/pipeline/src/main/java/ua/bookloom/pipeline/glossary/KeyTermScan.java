@@ -139,6 +139,7 @@ public final class KeyTermScan {
                     heldTerms.forEach(entry -> held.add(LexiconEntry.keyOf(entry.term())));
                     final List<LexiconEntry> proposals = candidates(index, ordinals, sourceLanguage).stream()
                             .filter(candidate -> !held.contains(LexiconEntry.keyOf(candidate.term())))
+                            .filter(candidate -> !wasRemoved(lexicon, projectId, candidate.term()))
                             .map(candidate -> LexiconEntry.of(projectId, candidate.term()))
                             .toList();
                     log.debug(
@@ -148,6 +149,26 @@ public final class KeyTermScan {
                             held.size());
                     return proposals;
                 }));
+    }
+
+    /**
+     * Whether the lexicon remembers a term as removed this session, by the person or by a model's drop, so a scan
+     * does not add it back.
+     *
+     * @param lexicon where the removals are remembered; never null
+     * @param projectId the project id; never null
+     * @param term the term; never null
+     * @return {@code true} when the term was removed and not stored again since; {@code false} otherwise, including
+     *     when the lexicon cannot answer
+     */
+    public static boolean wasRemoved(final LexiconRepository lexicon, final String projectId, final String term) {
+        final boolean removed =
+                Boolean.TRUE.equals(lexicon.wasRemoved(projectId, term).data());
+        if (removed) {
+            log.debug("Key-term scan skips a term removed this session project={}", projectId);
+            log.trace("Key-term scan skips removed term {}", term);
+        }
+        return removed;
     }
 
     /**

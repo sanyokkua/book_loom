@@ -89,6 +89,11 @@ class LexiconServiceImplTest {
         public Result<Boolean> remove(final String projectId, final String term) {
             return inner.remove(projectId, term);
         }
+
+        @Override
+        public Result<Boolean> wasRemoved(final String projectId, final String term) {
+            return inner.wasRemoved(projectId, term);
+        }
     }
 
     private List<LexiconEntry> held() {

@@ -217,6 +217,7 @@ public final class LexiconServiceImpl implements LexiconService {
                         .map(NameCandidate::term)
                         .filter(term ->
                                 !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
+                        .filter(term -> !KeyTermScan.wasRemoved(lexicon, projectId, term))
                         .toList();
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans

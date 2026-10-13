@@ -48,6 +48,7 @@ final class InMemoryStore {
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, RunRecord>> runsByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
@@ -105,6 +106,14 @@ final class InMemoryStore {
      */
     Map<String, LexiconEntry> lexicon(final String projectId) {
         return lexiconByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Returns the keys of the lexicon terms removed this session, so a scan does not add one back, creating an empty
+     * set on first use.
+     */
+    Set<String> lexiconRemoved(final String projectId) {
+        return lexiconRemovedByProject.computeIfAbsent(projectId, id -> ConcurrentHashMap.newKeySet());
     }
 
     /**

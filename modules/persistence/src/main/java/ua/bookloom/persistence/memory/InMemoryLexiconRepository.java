@@ -45,7 +45,9 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
     public Result<LexiconEntry> put(final LexiconEntry entry) {
         Objects.requireNonNull(entry, "entry");
         try {
-            store.lexicon(entry.projectId()).put(LexiconEntry.keyOf(entry.term()), entry);
+            final String key = LexiconEntry.keyOf(entry.term());
+            store.lexicon(entry.projectId()).put(key, entry);
+            store.lexiconRemoved(entry.projectId()).remove(key);
             log.debug("Lexicon put projectId={} renderings={}", entry.projectId(), entry.distinctRenderings());
             log.trace(
                     "Lexicon put term={} established={}",
@@ -83,6 +85,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
                     .compute(
                             LexiconEntry.keyOf(term),
                             (key, held) -> (held == null ? LexiconEntry.of(projectId, term) : held).seen(rendering));
+            store.lexiconRemoved(projectId).remove(LexiconEntry.keyOf(term));
             log.debug("Lexicon record projectId={} distinct={}", projectId, stored.distinctRenderings());
             log.trace("Lexicon record term={} rendering={}", term, rendering);
             return Result.ok(stored);
@@ -96,9 +99,24 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(term, "term");
         try {
-            final boolean removed = store.lexicon(projectId).remove(LexiconEntry.keyOf(term)) != null;
+            final String key = LexiconEntry.keyOf(term);
+            final boolean removed = store.lexicon(projectId).remove(key) != null;
+            if (removed) {
+                store.lexiconRemoved(projectId).add(key);
+            }
             log.debug("Lexicon remove projectId={} removed={}", projectId, removed);
             return Result.ok(removed);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Boolean> wasRemoved(final String projectId, final String term) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(term, "term");
+        try {
+            return Result.ok(store.lexiconRemoved(projectId).contains(LexiconEntry.keyOf(term)));
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

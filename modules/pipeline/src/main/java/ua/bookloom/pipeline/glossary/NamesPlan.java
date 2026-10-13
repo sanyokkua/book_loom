@@ -44,6 +44,12 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
     private static final WindowPlan MAX_WINDOWS = new WindowPlan(12, 2, 450);
     private static final int FAST_PER_CALL = 4;
     private static final int PER_CALL = 6;
+    private static final long MILLIS_PER_MINUTE = 60_000L;
+    private static final long FAST_LOW_MILLIS = 3_750L;
+    private static final long FAST_HIGH_MILLIS = 7_500L;
+    private static final long SLOW_LOW_MILLIS = 11_250L;
+    private static final long BALANCED_HIGH_MILLIS = 18_750L;
+    private static final long MAX_HIGH_MILLIS = 22_500L;
 
     /** Copies the list and rejects a call that could show no window. */
     public NamesPlan {
@@ -153,6 +159,42 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
         return read.stream()
                 .mapToInt(candidate -> Math.ceilDiv(Math.min(windows.count(), candidate.mentions()), windowsPerCall))
                 .sum();
+    }
+
+    /**
+     * How long the plan's calls take, as a range in whole minutes.
+     *
+     * @param low the fewest minutes, rounded up
+     * @param high the most minutes, rounded up; at least {@code low}
+     */
+    public record Minutes(int low, int high) {}
+
+    /**
+     * Estimates how long the plan's calls take. The dial's time budget (Fast 5–10, Balanced 15–25, Max 30–60 minutes)
+     * is what the plan with the most calls it can make takes, spread over those calls, so a smaller book is told a
+     * shorter time instead of the whole budget.
+     *
+     * @return the fewest and the most whole minutes, each rounded up; zero for a plan that reads nothing
+     */
+    public Minutes estimatedMinutes() {
+        final int calls = estimatedCalls();
+        final Minutes minutes = new Minutes((int) Math.ceilDiv(calls * lowMillisPerCall(), MILLIS_PER_MINUTE), (int)
+                Math.ceilDiv(calls * highMillisPerCall(), MILLIS_PER_MINUTE));
+        log.debug("Names plan {}: {} calls take {}", dial, calls, minutes);
+        return minutes;
+    }
+
+    // A call's seconds at the dial: 3.75 to 7.5 at Fast, 11.25 to 18.75 at Balanced, 11.25 to 22.5 at Max.
+    private long lowMillisPerCall() {
+        return dial == QualityDial.FAST ? FAST_LOW_MILLIS : SLOW_LOW_MILLIS;
+    }
+
+    private long highMillisPerCall() {
+        return switch (dial) {
+            case FAST -> FAST_HIGH_MILLIS;
+            case BALANCED -> BALANCED_HIGH_MILLIS;
+            case MAX -> MAX_HIGH_MILLIS;
+        };
     }
 
     /**

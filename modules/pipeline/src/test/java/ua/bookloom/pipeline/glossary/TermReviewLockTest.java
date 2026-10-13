@@ -231,6 +231,33 @@ class TermReviewLockTest {
                 .containsExactly(tuple("Venn", false));
     }
 
+    // A person the pronouns decided with no call is as verified as one the readings decided, in a review and in the
+    // names pass alike, so where names are not declined the rendering is locked.
+    @Test
+    void review_personDecidedByPronounsWhereNamesDoNotInflect_isLocked() {
+        glossary.add(entry("Wren", TermType.CHARACTER));
+
+        review.review(
+                PROJECT,
+                GlossaryTestSegments.of(List.of(
+                        "Wren sat. She ate.",
+                        "Wren ran. She fell.",
+                        "Wren woke. She yawned.",
+                        "Wren hid. She waited.",
+                        "Wren sang. She smiled.")),
+                EN_DE,
+                NamePolicy.TRANSLITERATE,
+                QualityDial.FAST,
+                model(
+                        readingReply("person", false, false),
+                        "{\"suggestions\":[{\"term\":\"Wren\",\"target\":\"Wren\"}]}"));
+
+        assertThat(formats).doesNotContain(READING, REVIEW);
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::locked)
+                .containsExactly(tuple("Wren", true));
+    }
+
     // A name only the batch judged (written once, never read in context) is not verified, so it is not locked.
     @Test
     void review_nameNobodyReadInContext_staysUnlockedWhereNamesDoNotInflect() {

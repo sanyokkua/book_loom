@@ -60,4 +60,14 @@ public interface LexiconRepository {
      * @return {@code true} when an entry was removed, {@code false} when none held the term
      */
     Result<Boolean> remove(String projectId, String term);
+
+    /**
+     * Reports whether a term was removed this session, compared as the entries are, so a scan does not silently add
+     * back a term the person (or an earlier model decision) removed.
+     *
+     * @param projectId the non-null project id
+     * @param term the non-null term to check
+     * @return {@code true} when the term was removed this session and not stored again since
+     */
+    Result<Boolean> wasRemoved(String projectId, String term);
 }
