@@ -27,8 +27,9 @@ public interface SetupAssistant {
      *
      * @param projectId the project whose book is open
      * @param model the model to ask
-     * @return the suggestion; {@code validation} when the project is not stored or its book is not open; the model's
-     *     own error otherwise
+     * @return the suggestion; {@code validation} when the project is not stored or its book is not open; {@code cancelled}
+     *     when the person stopped any of its calls; the model's own error when every passage's call failed. A failed
+     *     passage among several only counts as a passage with no reading.
      */
     Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model);
 
@@ -46,21 +47,9 @@ public interface SetupAssistant {
     }
 
     /**
-     * As {@link #suggestBrief(String, ChatModel)}, announcing the model call so a screen can show it. An assistant
-     * that shows nothing ignores {@code progress}.
-     *
-     * @param projectId the project whose book is open
-     * @param model the model to ask
-     * @param progress the non-null receiver of each call's snapshot, called on the calling thread
-     * @return as {@link #suggestBrief(String, ChatModel)}
-     */
-    default Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model, Consumer<JobEvent> progress) {
-        return suggestBrief(projectId, model);
-    }
-
-    /**
-     * As {@link #suggestBrief(String, ChatModel, Consumer)}, sizing each passage the model reads to the context window
-     * the model really has. An assistant that reads no passages ignores {@code detectedContext}.
+     * As {@link #suggestBrief(String, ChatModel)}, announcing each model call so a screen can show it and sizing each
+     * passage the model reads to the context window the model really has. An assistant that shows nothing ignores
+     * {@code progress}, and one that reads no passages ignores {@code detectedContext}.
      *
      * @param projectId the project whose book is open
      * @param model the model to ask
@@ -71,6 +60,6 @@ public interface SetupAssistant {
      */
     default Result<BriefSuggestion> suggestBrief(
             String projectId, ChatModel model, @Nullable Integer detectedContext, Consumer<JobEvent> progress) {
-        return suggestBrief(projectId, model, progress);
+        return suggestBrief(projectId, model);
     }
 }

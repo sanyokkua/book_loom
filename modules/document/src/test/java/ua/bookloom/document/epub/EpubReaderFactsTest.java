@@ -113,6 +113,31 @@ class EpubReaderFactsTest {
         assertThat(document.metadata()).containsEntry(MetadataKey.DATE.key(), "1901");
     }
 
+    // IF the package marks which date is the publication (EPUB 2), THEN that one is the year, not an edition date
+    // listed before it.
+    @Test
+    void read_dateMarkedAsPublicationAfterAnEditionDate_keepsThePublicationYear() {
+        final Document document = read("""
+                <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+                  <dc:date opf:event="modification">2015-01-01</dc:date>
+                  <dc:date opf:event="publication">1901-05-05</dc:date>
+                </metadata>""", "marked");
+
+        assertThat(document.metadata()).containsEntry(MetadataKey.DATE.key(), "1901");
+    }
+
+    // IF no date is marked as the publication, THEN the first one stays the book's year.
+    @Test
+    void read_datesMarkedAsOtherEvents_keepsTheYearOfTheFirst() {
+        final Document document = read("""
+                <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+                  <dc:date opf:event="creation">1899-02-02</dc:date>
+                  <dc:date opf:event="modification">2015-01-01</dc:date>
+                </metadata>""", "unmarked");
+
+        assertThat(document.metadata()).containsEntry(MetadataKey.DATE.key(), "1899");
+    }
+
     // IF the package declares neither, THEN the map has neither key.
     @Test
     void read_noDateAndNoPublisher_hasNeitherKey() {

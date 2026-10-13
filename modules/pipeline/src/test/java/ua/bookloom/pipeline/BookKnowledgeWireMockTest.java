@@ -51,7 +51,8 @@ class BookKnowledgeWireMockTest {
                 event -> {},
                 Clock.systemUTC(),
                 "uk");
-        return knowledge.ask(FACTS, STEM, frame, calls);
+        return java.util.Objects.requireNonNull(
+                knowledge.ask(FACTS, STEM, frame, calls).data());
     }
 
     private static JsonNode json(final String body) {

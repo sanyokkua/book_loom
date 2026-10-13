@@ -10,7 +10,7 @@ import java.util.Objects;
  * @param person the narrator's grammatical person
  * @param gender the narrator's gender; {@link Gender#UNKNOWN} when not stated
  * @param genderOrigin who decided the gender, so a later step can tell the person's choice from the code's and
- *     re-check only the latter (15i.B4, 15i.T5)
+ *     re-check only the latter (15i.B4, 15i.T5); {@link GenderOrigin#NONE} exactly when the gender is unknown
  * @param evidence the quotes of the book the gender was verified from, kept so they can be checked again once the
  *     glossary changes; never null, empty for a gender the person set or one nobody knows
  */
@@ -30,25 +30,50 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
         /** A guess nobody has confirmed, shown as "(suggested)". */
         SUGGESTED,
         /** The run counted the narrator's own past-tense forms in the decided translations (15i.T5). */
-        INFERRED
+        INFERRED,
+        /**
+         * The gender is unknown, so nothing decided it and nothing is bound: a person who leaves it unstated has chosen
+         * nothing a later step must respect, and a code step may fill it.
+         */
+        NONE
     }
 
-    /** Rejects a missing part and copies the quotes. */
+    /**
+     * Rejects a missing part and copies the quotes. An unknown gender has no origin and no quotes whatever the caller
+     * passed, and a known one needs an origin: a gender nobody decided cannot be known.
+     */
     public Narrator {
         Objects.requireNonNull(person, "person");
         Objects.requireNonNull(gender, "gender");
         Objects.requireNonNull(genderOrigin, "genderOrigin");
         evidence = List.copyOf(Objects.requireNonNull(evidence, "evidence"));
+        if (gender == Gender.UNKNOWN) {
+            genderOrigin = GenderOrigin.NONE;
+            evidence = List.of();
+        } else if (genderOrigin == GenderOrigin.NONE) {
+            throw new IllegalArgumentException("a known narrator gender needs an origin");
+        }
     }
 
     /**
-     * A narrator the person set, with no quotes behind it.
+     * A narrator the person set, with no quotes behind it; an unknown gender is left without an origin.
      *
      * @param person the narrator's grammatical person
      * @param gender the narrator's gender
      */
     public Narrator(final NarratorPerson person, final Gender gender) {
-        this(person, gender, GenderOrigin.PERSON, List.of());
+        this(person, gender, gender == Gender.UNKNOWN ? GenderOrigin.NONE : GenderOrigin.PERSON, List.of());
+    }
+
+    /**
+     * The same narrator told in another person; the gender keeps its origin and quotes, because only the person
+     * changed.
+     *
+     * @param other the new grammatical person
+     * @return a narrator with {@code other} as its person
+     */
+    public Narrator withPerson(final NarratorPerson other) {
+        return new Narrator(Objects.requireNonNull(other, "other"), gender, genderOrigin, evidence);
     }
 
     /**

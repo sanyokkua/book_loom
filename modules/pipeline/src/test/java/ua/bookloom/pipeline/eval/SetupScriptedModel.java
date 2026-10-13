@@ -105,7 +105,12 @@ final class SetupScriptedModel implements ChatModel {
         final Matcher first = FIRST_PERSON.matcher(user);
         final String register = register(setupCase.register(), wrong);
         final boolean saysFirst = (setupCase.narrator() == NarratorPerson.FIRST) != wrong;
-        return "{" + field("genre", setupCase.genreClass().getFirst(), quote)
+        return "{"
+                + field(
+                        "genre",
+                        SynthesisReplies.readingOf(
+                                setupCase.genreClass(), setupCase.genreClass().getFirst()),
+                        quote)
                 + "," + field("register", register, "neutral".equals(register) ? "" : quote)
                 + "," + field("voice", "plain", quote)
                 + "," + field("audience", "adults", quote)

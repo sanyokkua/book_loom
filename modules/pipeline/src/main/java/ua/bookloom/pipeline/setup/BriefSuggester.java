@@ -37,8 +37,9 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
  * The Book Brief suggestion of one book (15i.B4): what the model knows of the book ({@link BookKnowledge}), one reading
  * of each of K single windows of its story ({@link BookSamples}), each answer held to a quote the code finds in its
  * window, then one synthesis call over the facts, the accepted knowledge and the verified readings; every field is then
- * decided once ({@link BriefDecision}) and says what it stands on. A failed window call fails the suggestion; a failed
- * knowledge question or synthesis only leaves its fields uncertain.
+ * decided once ({@link BriefDecision}) and says what it stands on. A window call that fails counts as a window with no
+ * reading, so the suggestion fails only when every window call failed; a failed knowledge question or synthesis only
+ * leaves its fields uncertain. A call the person stopped ends the suggestion at once, whichever call it was.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -57,8 +58,19 @@ final class BriefSuggester {
     private final BookKnowledge knowledge;
     private final GlossaryRepository glossary;
 
-    /** What the windows read: each window's verified answers and, under Auto, the language it names. */
-    private record Readings(List<@Nullable Map<BriefField, Answer>> answers, List<@Nullable String> languages) {}
+    /** What the windows read: each window's verified answers and, under Auto, the language it names; the calls that failed. */
+    private record Readings(
+            List<@Nullable Map<BriefField, Answer>> answers,
+            List<@Nullable String> languages,
+            List<AppError> failures) {}
+
+    /** What one window's reply gave. */
+    private record Reading(
+            @Nullable Map<BriefField, Answer> answers,
+            @Nullable String language) {}
+
+    /** The synthesis reply, null when the call failed, was skipped or its reply holds no object. */
+    private record Synthesis(@Nullable JsonNode reply) {}
 
     /**
      * Suggests the brief's tone and style.
@@ -66,8 +78,9 @@ final class BriefSuggester {
      * @param book the book
      * @param detectedContext the model's context window in tokens, or null when unknown
      * @param calls the model-call seam
-     * @return the suggestion held to the brief's narrator, or the first window call's error, or a validation error when
-     *     the book has no story to read or no window's reply could be read
+     * @return the suggestion held to the brief's narrator; the first window call's error when every window call failed;
+     *     the {@code cancelled} error of any call the person stopped; a validation error when the book has no story to
+     *     read or no window's reply could be read
      */
     Result<BriefSuggestion> suggest(
             final SetupBook book, final @Nullable Integer detectedContext, final ModelCalls calls) {
@@ -85,10 +98,11 @@ final class BriefSuggester {
                 windowTokens,
                 dial,
                 book.project().brief().sourceLanguage() == null ? "auto" : "chosen");
-        final Knowledge known = knowledge.ask(BookFacts.of(book.document()), book.fileStem(), book.frame(), calls);
-        return glossary.all(book.project().id())
-                .flatMap(people ->
-                        read(book, windows, new NarratorGenderEvidence(people, book.languageOf()), known, calls));
+        return knowledge
+                .ask(BookFacts.of(book.document()), book.fileStem(), book.frame(), calls)
+                .flatMap(known -> glossary.all(book.project().id())
+                        .flatMap(people -> read(
+                                book, windows, new NarratorGenderEvidence(people, book.languageOf()), known, calls)));
     }
 
     // What each window's call spends besides the passage: its system message, its other user text and the reply.
@@ -112,12 +126,25 @@ final class BriefSuggester {
             return Result.err(Objects.requireNonNull(readings.error(), "error"));
         }
         final Readings read = Objects.requireNonNull(readings.data(), "readings");
+        if (read.failures().size() == windows.size()) {
+            log.warn("Brief suggestion fails: every one of {} window calls failed", windows.size());
+            return Result.err(read.failures().getFirst());
+        }
         if (read.answers().stream().allMatch(Objects::isNull)) {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
         }
-        final JsonNode synthesis = synthesize(book, known, read.answers(), calls);
-        return Result.ok(decided(book, read, synthesis, known));
+        final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), calls);
+        if (synthesis.isErr()) {
+            return Result.err(Objects.requireNonNull(synthesis.error(), "error"));
+        }
+        final boolean wholeStory = windows.size() == 1 && windows.getFirst().wholeStory();
+        return Result.ok(decided(
+                book,
+                read,
+                Objects.requireNonNull(synthesis.data(), "synthesis").reply(),
+                known,
+                wholeStory));
     }
 
     private Result<Readings> readWindows(
@@ -125,51 +152,110 @@ final class BriefSuggester {
             final List<BookSample> windows,
             final NarratorGenderEvidence genders,
             final ModelCalls calls) {
-        final @Nullable String chosen = book.project().brief().sourceLanguage();
         final List<@Nullable Map<BriefField, Answer>> answers = new ArrayList<>();
         final List<@Nullable String> languages = new ArrayList<>();
+        final List<AppError> failures = new ArrayList<>();
         for (int index = 0; index < windows.size(); index++) {
             final BookSample window = windows.get(index);
             log.debug("Brief window {} of {}: dialogue {} %", index + 1, windows.size(), window.dialoguePercent());
-            final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
-            if (reply.isErr()) {
-                return Result.err(Objects.requireNonNull(reply.error(), "error"));
+            final Result<Reading> one = readWindow(book, window, genders, calls);
+            if (one.isOk()) {
+                final Reading reading = Objects.requireNonNull(one.data(), "reading");
+                answers.add(reading.answers());
+                languages.add(reading.language());
+                continue;
             }
-            final JsonNode node = setup.json(Objects.requireNonNull(reply.data(), "reply"));
-            answers.add(node == null ? null : BriefReplies.read(node, window, genders));
-            languages.add(
-                    node == null ? null : BriefReplies.language(node, chosen).orElse(null));
+            final AppError error = Objects.requireNonNull(one.error(), "error");
+            if (error.code() == ErrorCode.cancelled) {
+                log.info("Brief suggestion stopped by the person at window {} of {}", index + 1, windows.size());
+                return Result.err(error);
+            }
+            log.warn(
+                    "Brief window {} of {} failed with {}; it counts as a window with no reading",
+                    index + 1,
+                    windows.size(),
+                    error.code());
+            failures.add(error);
+            answers.add(null);
+            languages.add(null);
         }
-        return Result.ok(new Readings(answers, languages));
+        return Result.ok(new Readings(answers, languages, failures));
     }
 
-    // The synthesis reply, or null when the call failed or its reply holds no object: its fields are then uncertain.
-    private @Nullable JsonNode synthesize(
+    private Result<Reading> readWindow(
+            final SetupBook book,
+            final BookSample window,
+            final NarratorGenderEvidence genders,
+            final ModelCalls calls) {
+        final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
+        if (reply.isErr()) {
+            return Result.err(Objects.requireNonNull(reply.error(), "error"));
+        }
+        final @Nullable String chosen = book.project().brief().sourceLanguage();
+        final JsonNode node = setup.json(Objects.requireNonNull(reply.data(), "reply"));
+        return Result.ok(
+                node == null
+                        ? new Reading(null, null)
+                        : new Reading(
+                                BriefReplies.read(node, window, genders),
+                                BriefReplies.language(node, chosen).orElse(null)));
+    }
+
+    // The synthesis reply, or none when the call failed, was not worth making or holds no object: its fields are then
+    // uncertain. Only a call the person stopped is an error.
+    private Result<Synthesis> synthesize(
             final SetupBook book,
             final Knowledge known,
             final List<@Nullable Map<BriefField, Answer>> answers,
             final ModelCalls calls) {
+        if (!known.isKnown() && !readSynthesizedField(answers)) {
+            log.debug("Brief synthesis skipped: the book is unknown and no window read genre, audience or voice");
+            return Result.ok(new Synthesis(null));
+        }
         final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers);
         final ChatRequest request = setup.requestOf(book, PromptName.BRIEF_SYNTHESIS, user, SYNTHESIS_LIMIT);
         final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls);
         if (reply.isErr()) {
-            log.warn("Brief synthesis failed; genre, audience and voice stay uncertain");
-            return null;
+            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            if (error.code() == ErrorCode.cancelled) {
+                log.info("Brief synthesis stopped by the person");
+                return Result.err(error);
+            }
+            log.warn("Brief synthesis failed with {}; genre, audience and voice stay uncertain", error.code());
+            return Result.ok(new Synthesis(null));
         }
         final JsonNode node = setup.json(Objects.requireNonNull(reply.data(), "reply"));
         log.debug("Brief synthesis reply readable: {}", node != null);
-        return node;
+        return Result.ok(new Synthesis(node));
+    }
+
+    // Whether any window gave a reading of genre, audience or voice, the only things a synthesis could stand on.
+    private static boolean readSynthesizedField(final List<@Nullable Map<BriefField, Answer>> answers) {
+        for (final Map<BriefField, Answer> window : answers) {
+            if (window != null && SYNTHESIZED.stream().anyMatch(field -> isRead(window.get(field)))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isRead(final @Nullable Answer answer) {
+        return answer != null && !answer.isNeutral();
     }
 
     private static BriefSuggestion decided(
-            final SetupBook book, final Readings read, final @Nullable JsonNode synthesis, final Knowledge known) {
+            final SetupBook book,
+            final Readings read,
+            final @Nullable JsonNode synthesis,
+            final Knowledge known,
+            final boolean wholeStory) {
         final List<@Nullable Map<BriefField, Answer>> answers = read.answers();
         final NarratorHint detected =
                 NarratorDetector.detect(book.document(), book.languageOf()).orElse(null);
         final Decided<NarratorPerson> person = BriefDecision.narrator(detected, answers);
         final Map<BriefField, Decided<@Nullable String>> synthesized = new EnumMap<>(BriefField.class);
-        SYNTHESIZED.forEach(
-                field -> synthesized.put(field, BriefDecision.synthesized(field, synthesis, known, answers)));
+        SYNTHESIZED.forEach(field ->
+                synthesized.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
         final String language = book.project().brief().sourceLanguage() == null
                 ? BriefDecision.languageProposal(read.languages())
                 : null;

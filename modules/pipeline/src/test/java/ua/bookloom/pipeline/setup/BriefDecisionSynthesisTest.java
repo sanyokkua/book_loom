@@ -93,7 +93,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
                 KNOWS_A_MYSTERY,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isEqualTo("Mystery");
         assertThat(decided.evidence().basis()).isEqualTo(Basis.KNOWLEDGE);
@@ -104,7 +105,11 @@ class BriefDecisionSynthesisTest {
     @Test
     void synthesized_basisKnowledgeButTheBookIsUnknown_isEmptyAndUncertain() {
         final Decided<@Nullable String> decided = BriefDecision.synthesized(
-                BriefField.GENRE, synthesis("genre", true, "", "Mystery"), UNKNOWN, readings(BriefField.GENRE, "x"));
+                BriefField.GENRE,
+                synthesis("genre", true, "", "Mystery"),
+                UNKNOWN,
+                readings(BriefField.GENRE, "x"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -117,7 +122,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
                 KNOWS_A_ROMANCE,
-                readings(BriefField.GENRE, "x"));
+                readings(BriefField.GENRE, "x"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -129,7 +135,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "1,3", "Mystery"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isEqualTo("Mystery");
         assertThat(decided.evidence().basis()).isEqualTo(Basis.PASSAGES);
@@ -145,7 +152,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 KNOWS_A_MYSTERY,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isEqualTo("Mystery");
         assertThat(decided.evidence().isKept()).isTrue();
@@ -158,7 +166,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 KNOWS_A_ROMANCE,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -171,7 +180,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -186,10 +196,56 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "1", "Mystery"),
                 UNKNOWN,
-                windows(says(BriefField.GENRE, "a slow village mystery", Q1)));
+                windows(says(BriefField.GENRE, "a slow village mystery", Q1)),
+                true);
 
         assertThat(decided.value()).isEqualTo("Mystery");
         assertThat(decided.evidence().describe()).isEqualTo("from 1 of 1 passages");
+    }
+
+    // IF a story of one and a half windows read as one window counted as the whole book, THEN one cited reading of a
+    // stretch of it would set the genre alone.
+    @Test
+    void synthesized_oneWindowThatIsNotTheWholeStory_isEmptyAndUncertain() {
+        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+                BriefField.GENRE,
+                synthesis("genre", false, "1", "Mystery"),
+                UNKNOWN,
+                windows(says(BriefField.GENRE, "a slow village mystery", Q1)),
+                false);
+
+        assertThat(decided.value()).isNull();
+        assertThat(decided.evidence().isKept()).isFalse();
+    }
+
+    // IF a cited window counted whatever it read, THEN a "Thriller" could stand on two windows that read "fantasy"
+    // and "romance".
+    @Test
+    void synthesized_citedWindowsThatReadAnotherGenre_doNotSupportTheValue() {
+        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+                BriefField.GENRE,
+                synthesis("genre", false, "1,2", "Thriller"),
+                UNKNOWN,
+                windows(says(BriefField.GENRE, "fantasy", Q1), says(BriefField.GENRE, "romance", Q2), nothing()),
+                false);
+
+        assertThat(decided.value()).isNull();
+        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.evidence().agreeing()).isZero();
+    }
+
+    @Test
+    void synthesized_oneCitedWindowAgreesAndOneDoesNot_countsOnlyTheOneThatAgrees() {
+        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+                BriefField.GENRE,
+                synthesis("genre", false, "1,2", "Mystery"),
+                KNOWS_A_MYSTERY,
+                windows(says(BriefField.GENRE, "a village mystery", Q1), says(BriefField.GENRE, "romance", Q2)),
+                false);
+
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.KNOWLEDGE);
+        assertThat(decided.evidence().quotes()).containsExactly(Q1);
     }
 
     // IF a window with no reading of the field counted, THEN the model could cite any window it was shown.
@@ -199,7 +255,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "1,4", "Mystery"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().agreeing()).isEqualTo(1);
@@ -211,7 +268,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "2,2,9", "Mystery"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "a slow village mystery"));
+                readings(BriefField.GENRE, "a slow village mystery"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().agreeing()).isEqualTo(1);
@@ -224,7 +282,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2,3", "Cyberpunk saga"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "cyberpunk"));
+                readings(BriefField.GENRE, "cyberpunk"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -236,7 +295,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2", "gothic NOVEL"),
                 UNKNOWN,
-                readings(BriefField.GENRE, "a gothic tale"));
+                readings(BriefField.GENRE, "a gothic tale"),
+                false);
 
         assertThat(decided.value()).isEqualTo("Gothic novel");
     }
@@ -248,7 +308,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2", value),
                 UNKNOWN,
-                readings(BriefField.AUDIENCE, "grown readers"));
+                readings(BriefField.AUDIENCE, expected),
+                false);
 
         assertThat(decided.value()).isEqualTo(expected);
     }
@@ -259,7 +320,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2,3", "academic"),
                 UNKNOWN,
-                readings(BriefField.AUDIENCE, "scholars"));
+                readings(BriefField.AUDIENCE, "scholars"),
+                false);
 
         assertThat(decided.value()).isEqualTo("academic");
     }
@@ -271,7 +333,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2,3", value),
                 UNKNOWN,
-                readings(BriefField.AUDIENCE, "grown readers"));
+                readings(BriefField.AUDIENCE, "grown readers"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -285,7 +348,8 @@ class BriefDecisionSynthesisTest {
                 BriefField.VOICE,
                 synthesis("voice", false, "1,2", twelve),
                 UNKNOWN,
-                readings(BriefField.VOICE, "dry and formal"));
+                readings(BriefField.VOICE, "dry and formal"),
+                false);
 
         assertThat(decided.value()).isEqualTo(twelve);
     }
@@ -301,7 +365,8 @@ class BriefDecisionSynthesisTest {
                         "1,2",
                         "a dry formal voice of a late nineteenth century clerk writing long letters"),
                 UNKNOWN,
-                readings(BriefField.VOICE, "dry and formal"));
+                readings(BriefField.VOICE, "dry and formal"),
+                false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();
@@ -311,7 +376,7 @@ class BriefDecisionSynthesisTest {
     @Test
     void synthesized_noReply_isEmptyAndUncertain() {
         final Decided<@Nullable String> decided = BriefDecision.synthesized(
-                BriefField.GENRE, null, KNOWS_A_MYSTERY, readings(BriefField.GENRE, "a slow village mystery"));
+                BriefField.GENRE, null, KNOWS_A_MYSTERY, readings(BriefField.GENRE, "a slow village mystery"), false);
 
         assertThat(decided.value()).isNull();
         assertThat(decided.evidence().isKept()).isFalse();

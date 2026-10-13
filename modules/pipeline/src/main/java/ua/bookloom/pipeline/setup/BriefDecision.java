@@ -28,8 +28,9 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
  * was refused counts against every value; the narrator's person is the detector's when it answers, because it counted
  * every chapter; the narrator's gender is kept from verified votes when none contradicts another, one being enough. The
  * genre, audience and voice come from the one synthesis call and stand only on a basis the code checks: two cited
- * windows with a reading of the field, accepted knowledge of the book that agrees with the value, or one cited window
- * when that knowledge agrees or the whole story was read in that one window. Anything else is empty and uncertain.
+ * windows whose reading of the field says the value, accepted knowledge of the book that agrees with the value, or one
+ * cited window when that knowledge agrees or that one window holds every line of the story. Anything else is empty and
+ * uncertain.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -138,34 +139,38 @@ final class BriefDecision {
      * @param synthesis the synthesis reply, or null when the call failed or its reply could not be read
      * @param knowledge the verdict on what the model knows of the book
      * @param windows each window's verified answers, in passage order, null for an unreadable one
+     * @param wholeStory whether the one window read holds every line of the story, so a single cited reading of it
+     *     stands for the whole book
      * @return the value with its basis, or null and uncertain
      */
     static Decided<@Nullable String> synthesized(
             final BriefField field,
             final @Nullable JsonNode synthesis,
             final Knowledge knowledge,
-            final List<@Nullable Map<BriefField, Answer>> windows) {
+            final List<@Nullable Map<BriefField, Answer>> windows,
+            final boolean wholeStory) {
         final int samples = samples(windows);
         final JsonNode node = synthesis == null ? null : synthesis.get(BriefReplies.wireName(field));
         if (node == null || !node.isObject()) {
             log.debug("Synthesis gave no {}", field);
             return empty(field, uncertain(0, samples));
         }
-        final List<Integer> cited = cited(field, node.path("basis").path("passages"), windows);
         final String value = valid(field, node.path("value").asText(""));
+        final List<Integer> cited = cited(field, value, node.path("basis").path("passages"), windows);
         if (value == null) {
             return empty(field, uncertain(cited.size(), samples));
         }
         final boolean knowledgeCited = node.path("basis").path("knowledge").asBoolean(false);
         final boolean knowledgeAgrees = KnowledgeAgreement.agrees(field, value, knowledge);
         log.debug(
-                "Synthesis {}: cited passages {} of {}, knowledge cited {} agrees {}",
+                "Synthesis {}: cited passages {} of {}, knowledge cited {} agrees {}, whole story {}",
                 field,
                 cited,
                 samples,
                 knowledgeCited,
-                knowledgeAgrees);
-        final Basis basis = basisOf(cited.size(), samples, knowledgeCited, knowledgeAgrees);
+                knowledgeAgrees,
+                wholeStory);
+        final Basis basis = basisOf(cited.size(), wholeStory, knowledgeCited, knowledgeAgrees);
         final FieldEvidence evidence = basis == Basis.UNCERTAIN
                 ? uncertain(cited.size(), samples)
                 : new FieldEvidence(basis, quotesOf(field, cited, windows), cited.size(), samples);
@@ -195,14 +200,14 @@ final class BriefDecision {
     }
 
     private static Basis basisOf(
-            final int cited, final int samples, final boolean knowledgeCited, final boolean knowledgeAgrees) {
+            final int cited, final boolean wholeStory, final boolean knowledgeCited, final boolean knowledgeAgrees) {
         if (cited >= 2) {
             return Basis.PASSAGES;
         }
         if (knowledgeAgrees && (knowledgeCited || cited == 1)) {
             return Basis.KNOWLEDGE;
         }
-        return cited == 1 && samples == 1 ? Basis.PASSAGES : Basis.UNCERTAIN;
+        return cited == 1 && wholeStory ? Basis.PASSAGES : Basis.UNCERTAIN;
     }
 
     // The value in the brief's own words, or null for an empty one or one outside the field's list or length.
@@ -223,17 +228,37 @@ final class BriefDecision {
         return kept;
     }
 
-    // The windows the basis cites, each once and only when it exists and read the field; numbered from one.
+    // The windows the basis cites, each once and only when it exists, read the field and read what the value says
+    // (a window that read "fantasy" cannot support "Thriller"); numbered from one. With no valid value there is
+    // nothing to compare, so the evidence of an empty field still counts the windows that read the field.
     private static List<Integer> cited(
-            final BriefField field, final JsonNode passages, final List<@Nullable Map<BriefField, Answer>> windows) {
+            final BriefField field,
+            final @Nullable String value,
+            final JsonNode passages,
+            final List<@Nullable Map<BriefField, Answer>> windows) {
         final TreeSet<Integer> kept = new TreeSet<>();
         passages.forEach(number -> {
             final int passage = number.asInt(0);
-            if (passage >= 1 && passage <= windows.size() && readingOf(field, windows.get(passage - 1)) != null) {
+            if (passage >= 1 && passage <= windows.size() && says(field, value, windows.get(passage - 1), passage)) {
                 kept.add(passage);
             }
         });
         return List.copyOf(kept);
+    }
+
+    private static boolean says(
+            final BriefField field,
+            final @Nullable String value,
+            final @Nullable Map<BriefField, Answer> window,
+            final int passage) {
+        final Answer reading = readingOf(field, window);
+        if (reading == null) {
+            return false;
+        }
+        final boolean agrees = value == null || KnowledgeAgreement.saysSame(field, value, reading.value());
+        log.debug("Synthesis {}: cited passage {} agrees with the value: {}", field, passage, agrees);
+        log.trace("Synthesis {}: cited passage {} reads '{}'", field, passage, reading.value());
+        return agrees;
     }
 
     private static @Nullable Answer readingOf(final BriefField field, final @Nullable Map<BriefField, Answer> window) {

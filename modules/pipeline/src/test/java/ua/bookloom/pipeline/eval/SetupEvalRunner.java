@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Narrator;
@@ -64,7 +65,7 @@ final class SetupEvalRunner {
             final Prepared prepared = SequenceJobs.importBook(
                     write(setupCase),
                     SequenceJobs.brief(
-                            setupCase.source(), setupCase.target(), QualityDial.FAST, Narrator.unspecified()));
+                            setupCase.source(), setupCase.target(), QualityDial.BALANCED, Narrator.unspecified()));
             final SetupAssistantImpl assistant = new SetupAssistantImpl(
                     prepared.stores().projects(),
                     prepared.stores().segments(),
@@ -74,8 +75,9 @@ final class SetupEvalRunner {
                     new ObjectMapper(),
                     java.time.Clock.systemUTC());
             rows.add(fileName(setupCase, assistant, prepared));
+            final int mark = probe.mark();
             final BriefOutcome brief = brief(setupCase, assistant, prepared);
-            final KnowledgeOutcome knowledge = knowledge(setupCase, prepared);
+            final KnowledgeOutcome knowledge = knowledge(setupCase, prepared, mark);
             observed.add(new SetupScore.Observed(setupCase, brief.suggestion(), knowledge.answer()));
             rows.add(brief.row());
             rows.add(knowledge.row());
@@ -111,22 +113,18 @@ final class SetupEvalRunner {
 
     private record KnowledgeOutcome(StageRow row, String answer) {}
 
-    // The book's own metadata is asked about, as the setup does; a book with no title (or one titled by its file name)
-    // makes no call and is "unknown".
-    private KnowledgeOutcome knowledge(final SetupCase setupCase, final Prepared prepared) {
+    // The brief suggestion asks the production BookKnowledge itself, so the verdict is judged on the reply the probe
+    // recorded for that call: a second question would be a different draw of the model and cost a call. A book with
+    // no title (or one titled by its file name) made no call and is "unknown" for that reason.
+    private KnowledgeOutcome knowledge(final SetupCase setupCase, final Prepared prepared, final int mark) {
         final Document document = Objects.requireNonNull(
                 prepared.stores().openProjects().get(prepared.projectId()), "the imported book is open");
-        final int mark = probe.mark();
         final Knowledge verdict = new BookKnowledge(new PromptTemplates(), new ObjectMapper())
-                .ask(
+                .judge(
                         BookFacts.of(document),
                         setupCase.fileStem(),
-                        StageFrames.frame(
-                                StageFrames.brief(setupCase.source(), setupCase.target()),
-                                setupCase.source(),
-                                setupCase.target()),
-                        probe.calls(setupCase.target()));
-        final StageProbe.Counts counts = probe.since(mark);
+                        probe.replyOf(mark, CallKind.BOOK_KNOWLEDGE).orElse(null));
+        final StageProbe.Counts counts = probe.since(mark, CallKind.BOOK_KNOWLEDGE);
         final String answer = verdict.isKnown() ? "known" : "unknown";
         final String reason =
                 verdict.reason() == null ? "" : " (" + verdict.reason().label() + ")";

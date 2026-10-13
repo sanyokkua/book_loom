@@ -6,18 +6,20 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * What one brief suggestion call reads: a few contiguous passages of the book's story, and the share of their letters
- * that characters speak, measured by the code so the model does not have to guess it.
+ * What one brief suggestion call reads: one contiguous window of the book's story, and the share of its letters that
+ * characters speak, measured by the code so the model does not have to guess it.
  *
- * @param passages the passages in reading order, paragraphs separated by a line break; never null, none blank
- * @param dialoguePercent the share of the passages' letters inside quoted speech or dash dialogue, from 0 to 100
+ * @param passages the window's text, paragraphs separated by a line break; never null, none blank
+ * @param dialoguePercent the share of the letters inside quoted speech or dash dialogue, from 0 to 100
+ * @param wholeStory whether the window holds every line of the story, so one reading of it is the whole book's
  */
-record BookSample(List<String> passages, int dialoguePercent) {
+record BookSample(List<String> passages, int dialoguePercent, boolean wholeStory) {
 
     private static final Pattern SPACES = Pattern.compile("\\s+");
     private static final Pattern ELISION = Pattern.compile("\\.\\.\\.|…");
     private static final Pattern EDGES = Pattern.compile("^[\\s\"'.,;:!?-]+|[\\s\"'.,;:!?-]+$");
     private static final int MAX_PERCENT = 100;
+    private static final String PASSAGE_LABEL = "Passage 1: ";
 
     /** Copies the passages and rejects a share that is no percentage. */
     BookSample {
@@ -27,16 +29,14 @@ record BookSample(List<String> passages, int dialoguePercent) {
         }
     }
 
-    /** The passages as the prompt shows them, each under its number. */
+    /** A window that is not known to hold the whole story. */
+    BookSample(final List<String> passages, final int dialoguePercent) {
+        this(passages, dialoguePercent, false);
+    }
+
+    /** The window as the prompt shows it, under the label the prompt's rules name; empty for no window. */
     String text() {
-        final StringBuilder text = new StringBuilder();
-        for (int index = 0; index < passages.size(); index++) {
-            text.append("Passage ").append(index + 1).append(": ").append(passages.get(index));
-            if (index + 1 < passages.size()) {
-                text.append("\n\n");
-            }
-        }
-        return text.toString();
+        return passages.isEmpty() ? "" : PASSAGE_LABEL + String.join("\n", passages);
     }
 
     /**

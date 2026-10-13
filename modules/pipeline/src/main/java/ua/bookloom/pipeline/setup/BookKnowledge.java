@@ -11,6 +11,8 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -46,10 +48,11 @@ public final class BookKnowledge {
      * @param fileStem the file name without its extension
      * @param frame the call frame
      * @param calls the model-call seam
-     * @return the verdict, "unknown" with its reason when the call is skipped, fails or its answer does not stand;
-     *     never null
+     * @return the verdict, "unknown" with its reason when the call is skipped, fails or its answer does not stand; the
+     *     call's own error only when the person stopped it ({@code cancelled}), which no later step may go on after
      */
-    public Knowledge ask(final BookFacts facts, final String fileStem, final CallFrame frame, final ModelCalls calls) {
+    public Result<Knowledge> ask(
+            final BookFacts facts, final String fileStem, final CallFrame frame, final ModelCalls calls) {
         Objects.requireNonNull(facts, "facts");
         Objects.requireNonNull(fileStem, "fileStem");
         Objects.requireNonNull(frame, "frame");
@@ -57,16 +60,34 @@ public final class BookKnowledge {
         final Reason skipped = BookKnowledgeVerdict.skipReason(facts, fileStem);
         if (skipped != null) {
             log.debug("Book knowledge not asked: {}", skipped.label());
-            return logged(Knowledge.unknown(skipped), null);
+            return Result.ok(logged(Knowledge.unknown(skipped)));
         }
         final Result<ChatResponse> reply = send(facts, frame, calls);
         if (reply.isErr()) {
-            return logged(Knowledge.unknown(Reason.CALL_FAILED), null);
+            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            if (error.code() == ErrorCode.cancelled) {
+                log.info("Book knowledge question stopped by the person");
+                return Result.err(error);
+            }
+            return Result.ok(logged(Knowledge.unknown(Reason.CALL_FAILED)));
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Book knowledge reply: {}", content);
-        final BookKnowledgeReply read = read(content);
-        return logged(BookKnowledgeVerdict.judge(facts, fileStem, read), read);
+        return Result.ok(judge(facts, fileStem, content));
+    }
+
+    /**
+     * Judges an answer the model already gave, without asking again.
+     *
+     * @param facts the book's metadata
+     * @param fileStem the file name without its extension
+     * @param content the model's reply text, or null when the call gave none
+     * @return the verdict; never null
+     */
+    public Knowledge judge(final BookFacts facts, final String fileStem, final @Nullable String content) {
+        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(fileStem, "fileStem");
+        return logged(BookKnowledgeVerdict.judge(facts, fileStem, content == null ? null : read(content)));
     }
 
     private Result<ChatResponse> send(final BookFacts facts, final CallFrame frame, final ModelCalls calls) {
@@ -85,11 +106,12 @@ public final class BookKnowledge {
         return calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.whole(name));
     }
 
-    private static Knowledge logged(final Knowledge knowledge, final @Nullable BookKnowledgeReply read) {
+    private static Knowledge logged(final Knowledge knowledge) {
         final Reason reason = knowledge.reason();
-        if (reason == null) {
-            log.info("Book knowledge: known, confidence {}", read == null ? 0.0 : read.confidence());
-        } else {
+        final BookKnowledgeReply reply = knowledge.reply();
+        if (reply != null) {
+            log.info("Book knowledge: known, confidence {}", reply.confidence());
+        } else if (reason != null) {
             log.info("Book knowledge: unknown, reason {}", reason.label());
         }
         return knowledge;

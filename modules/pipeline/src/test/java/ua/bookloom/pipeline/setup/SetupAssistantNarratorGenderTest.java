@@ -102,9 +102,8 @@ class SetupAssistantNarratorGenderTest {
         assertThat(suggestion.suggestedNarrator())
                 .isEqualTo(new Narrator(
                         NarratorPerson.FIRST, Gender.MALE, Narrator.GenderOrigin.VERIFIED, List.of(VOCATIVE)));
-        assertThat(model.requests())
-                .extracting(ChatRequest::callKind)
-                .containsExactly(CallKind.BRIEF_SUGGESTION, CallKind.BRIEF_SYNTHESIS);
+        // The book is unknown and the window read no genre, audience or voice, so no synthesis is asked.
+        assertThat(model.requests()).extracting(ChatRequest::callKind).containsExactly(CallKind.BRIEF_SUGGESTION);
     }
 
     // The brief's first-person narrator with no gender is filled, not left for the Start question.

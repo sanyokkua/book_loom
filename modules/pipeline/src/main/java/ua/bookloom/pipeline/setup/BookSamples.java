@@ -131,11 +131,18 @@ final class BookSamples {
                 windowTokens);
         final List<Window> placed = placed(lines, languageTag, count, windowTokens);
         final List<BookSample> samples = placed.stream()
-                .map(window -> passage(lines, window))
-                .map(text -> new BookSample(List.of(text), dialoguePercent(text, languageTag)))
+                .map(window -> sampleOf(lines, window, languageTag))
                 .toList();
         log.debug("Book samples of {}: windows {}, dialogue shares {}", document.id(), placed, shares(samples));
         return samples;
+    }
+
+    // A window that starts at the story's first sentence and ends at its last holds the whole story.
+    private static BookSample sampleOf(
+            final List<Line> lines, final Window window, final @Nullable String languageTag) {
+        final String text = passage(lines, window);
+        final boolean whole = window.from() == 0 && window.to() == lines.size();
+        return new BookSample(List.of(text), dialoguePercent(text, languageTag), whole);
     }
 
     // The first window starts at the story's first sentence and the last ends at its last; the others are spread

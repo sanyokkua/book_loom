@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -146,15 +147,19 @@ public record BriefSuggestion(
     /**
      * The narrator this suggestion gives the brief. A gender the code verified from quotes of the book carries those
      * quotes and the origin {@link Narrator.GenderOrigin#VERIFIED}, so a later step can check them again and the
-     * screen can tell it from the person's choice; any other narrator is the person's, with no quotes.
+     * screen can tell it from the person's choice; a known gender with no such proof is only
+     * {@link Narrator.GenderOrigin#SUGGESTED}, never the person's; an unknown gender has no origin.
      *
      * @return the narrator to store; never null
      */
     public Narrator suggestedNarrator() {
         final FieldEvidence proof = evidence.get(BriefField.NARRATOR_GENDER);
         final boolean known = narratorGender == Gender.MALE || narratorGender == Gender.FEMALE;
-        if (!known || proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
+        if (!known) {
             return new Narrator(narrator, narratorGender);
+        }
+        if (proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
+            return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.SUGGESTED, List.of());
         }
         return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.VERIFIED, proof.quotes());
     }

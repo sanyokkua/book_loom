@@ -547,7 +547,8 @@ speech names the narrator (`"Mind the step, Lucy," I said`) — SHALL be no vote
 (`"I'm Lucy," I said`) is one. Any other answer SHALL be the unknown gender. A gender one window proves SHALL be kept
 unless another window proves the other gender, and shown with its quote and the number of proving windows, not as
 uncertain; the brief's narrator SHALL keep the proving quotes and the gender origin `VERIFIED` (the person's own choice
-is `PERSON`), so a later step can check the quotes again. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
+is `PERSON`, a known gender with no proof is `SUGGESTED`, an unknown gender has the origin `NONE`), so a later step can check
+the quotes again. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
 `Male (suggested)` or `Female (suggested)` with a hover explanation in English and Ukrainian until the person changes it;
 a gender the person set is never replaced, a third-person narrator gets none, and with no kept gender the gender stays
 unknown and the Start question asks as before.
@@ -576,21 +577,27 @@ up or a word like "ma'am" — and the gender it proves fills only a gap, marked 
 ### Requirement: Suggest the tone and style from verified readings, one decision per field
 
 WHEN the person asks the model to suggest the tone and style, the application SHALL ask what the model knows of the book
-(`book-knowledge`, accepted only by its echo check), read K single windows of the story (Fast 3, Balanced 4, Max 5, fewer
+(`book-knowledge`, accepted only by its echo check: the title, also by its part before `;` or `:`, and the author, in either name
+order, match the metadata, and the year is no later than five after a metadata year, because that year is often an
+edition's), read K single windows of the story (Fast 3, Balanced 4, Max 5, fewer
 for a short story) with one `brief-suggestion` call each, each answer kept only with a quote found in its window, and then
-ask one `brief-synthesis` call over the book's facts, the accepted knowledge and the windows' verified readings; it SHALL
-then decide each field once. The register SHALL be kept by a strict majority of all K windows (a window with no verified
-answer counts against every value). The narrator's person SHALL be the narrator detector's when it answers — a mixed book
+ask one `brief-synthesis` call over the book's facts, the accepted knowledge and the windows' verified readings (not made
+when the book is unknown and no window read genre, audience or voice, because nothing could stand); it SHALL
+then decide each field once. The register SHALL be kept by a strict majority of the windows read (a window with no verified
+answer, or whose call failed, counts against every value). The narrator's person SHALL be the narrator detector's when it answers — a mixed book
 is first person — else a strict majority of the windows. The narrator's gender follows the requirement above. The genre
 (one of the 40 listed names), the audience (`adult`, `young adult`, `children`, `general` or `academic`) and the voice /
 era (at most 12 words) SHALL come from the synthesis, each with a basis named before its value, and SHALL stand only when
 the basis holds: two cited windows that each had a verified reading of the field, accepted knowledge whose own field
-agrees with the value, or one cited window when that knowledge agrees or the whole story was read in one window; a cited
-window counts once and only when it read the field. Any other field SHALL stay neutral or empty and be shown as
+agrees with the value, or one cited window when that knowledge agrees or the one window holds every line of the story (a story of
+fifteen hundred tokens read in a window of a thousand is not that); a cited window counts once and only when it read
+the field and its reading says the same as the value (a window that read `fantasy` does not support `Thriller`). Any other field SHALL stay neutral or empty and be shown as
 uncertain. Each field SHALL say what it stands on (`from 3 of 4 passages`, `from what the model knows of this book`, the
 detector's count). WHILE the source language is Auto, the language a strict majority of the windows name SHALL be a
-proposal only, never applied to the brief. A failed window call SHALL fail the suggestion; a failed knowledge question or
-synthesis SHALL only leave its fields uncertain.
+proposal only, never applied to the brief. A window call that fails SHALL count as a window with no reading, so the suggestion fails only when
+the person stopped it or every window call failed; a failed knowledge question or synthesis SHALL only leave its
+fields uncertain. A stop by the person during any call, the knowledge question and the synthesis included, SHALL stop
+the suggestion and leave the brief unchanged.
 
 **Source:** FR-BRIEF-02; tasks 15h.G1, 15i.B2–B4; `docs/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`.
 In plain words: one window can be an odd stretch of a book, and a model's memory of a famous title can be wrong, so a
@@ -611,6 +618,21 @@ same as the passages; otherwise the field stays for the person to choose.
 
 - **WHEN** the synthesis names `Mystery` citing one of four windows and the model does not know the book
 - **THEN** the genre stays empty and is shown as uncertain
+
+#### Scenario: A cited window that read another genre is no support
+
+- **WHEN** the synthesis names `Thriller` citing two windows that read `fantasy` and `romance`
+- **THEN** the genre stays empty and is shown as uncertain
+
+#### Scenario: One failed window does not fail the suggestion
+
+- **WHEN** one of four window calls fails and the other three answer
+- **THEN** the suggestion is made from the three, the failed window counting against every majority
+
+#### Scenario: A stop during the synthesis changes nothing
+
+- **WHEN** the person stops the suggestion while the synthesis call is running
+- **THEN** the suggestion ends as cancelled and the brief is unchanged
 
 #### Scenario: Knowledge that agrees keeps the audience
 

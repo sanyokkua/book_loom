@@ -28,6 +28,15 @@ final class SynthesisReplies {
                 .orElse(null);
     }
 
+    /**
+     * What a good offline model's window reads as the genre: the listed genre the synthesis will name, so the code finds
+     * the window's reading and the synthesized value saying the same.
+     */
+    static String readingOf(final List<String> classWords, final String fallback) {
+        final Genre genre = inClass(classWords);
+        return genre == null ? fallback : genre.english();
+    }
+
     /** The synthesis reply naming {@code genre}, or an empty genre when there is none. */
     static String of(final @Nullable Genre genre) {
         return "{" + field("genre", genre == null ? "" : genre.english()) + "," + field("audience", "adult") + ","

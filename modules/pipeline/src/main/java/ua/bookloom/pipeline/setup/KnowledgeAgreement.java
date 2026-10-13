@@ -13,7 +13,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.BriefField;
 
 /**
- * Whether what the model knows of the book says the same as a synthesized value (15i.B4). A cited knowledge proves
+ * Whether what the model knows of the book, or what one window read, says the same as a synthesized value (15i.B4).
+ * A cited knowledge proves
  * nothing by itself: it counts only when the accepted answer's own field holds the value. A genre agrees when every
  * telling word of the listed name stands in the knowledge ("Crime fiction" in "crime novel"); an audience when both
  * read as the same of the five audiences; a voice when half the words of the shorter phrase are shared.
@@ -65,16 +66,27 @@ final class KnowledgeAgreement {
             log.debug("Knowledge has no {} to agree with", field);
             return false;
         }
-        final boolean agrees =
-                switch (field) {
-                    case GENRE -> genreAgrees(value, known);
-                    case AUDIENCE -> value.equals(audienceOf(known));
-                    case VOICE -> voiceAgrees(value, known);
-                    case REGISTER, NARRATOR, NARRATOR_GENDER -> false;
-                };
+        final boolean agrees = saysSame(field, value, known);
         log.debug("Knowledge {} agrees with the synthesis: {}", field, agrees);
         log.trace("Knowledge {} '{}' against '{}'", field, known, value);
         return agrees;
+    }
+
+    /**
+     * Whether a text says the same as a synthesized value, by the field's own matcher.
+     *
+     * @param field genre, audience or voice; any other field never agrees
+     * @param value the synthesized value, already one the brief can hold
+     * @param text what a window's reading or the model's knowledge says of the field
+     * @return {@code true} if the text says the value, {@code false} otherwise
+     */
+    static boolean saysSame(final BriefField field, final String value, final String text) {
+        return switch (field) {
+            case GENRE -> genreAgrees(value, text);
+            case AUDIENCE -> value.equals(audienceOf(text));
+            case VOICE -> voiceAgrees(value, text);
+            case REGISTER, NARRATOR, NARRATOR_GENDER -> false;
+        };
     }
 
     private static boolean genreAgrees(final String genre, final String known) {

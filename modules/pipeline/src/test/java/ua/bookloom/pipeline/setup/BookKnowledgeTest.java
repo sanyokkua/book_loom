@@ -76,7 +76,8 @@ class BookKnowledgeTest {
     }
 
     private Knowledge ask(final BookFacts facts, final String stem) {
-        return knowledge.ask(facts, stem, frame, calls);
+        return java.util.Objects.requireNonNull(
+                knowledge.ask(facts, stem, frame, calls).data());
     }
 
     private String userMessage() {
@@ -249,5 +250,29 @@ class BookKnowledgeTest {
 
         assertThat(result.isKnown()).isFalse();
         assertThat(result.reason()).isEqualTo(Reason.CALL_FAILED);
+    }
+
+    // IF a stop during the question were read as an unknown book, THEN the suggestion would go on to read windows.
+    @Test
+    void ask_callCancelled_isTheCancelledErrorNotAnUnknownBook() {
+        model.answer(Result.err(AppError.of(ErrorCode.cancelled, "Stopped", "The call was stopped.")));
+
+        final Result<Knowledge> result = knowledge.ask(FACTS, STEM, frame, calls);
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(result.error().code()).isEqualTo(ErrorCode.cancelled);
+    }
+
+    @Test
+    void judge_replyAlreadyGiven_isJudgedWithoutAnotherCall() {
+        final Knowledge result = knowledge.judge(FACTS, STEM, KNOWN_REPLY);
+
+        assertThat(result.isKnown()).isTrue();
+        assertThat(model.requests()).isEmpty();
+    }
+
+    @Test
+    void judge_noReply_isUnparsable() {
+        assertThat(knowledge.judge(FACTS, STEM, null).reason()).isEqualTo(Reason.UNPARSABLE);
     }
 }

@@ -26,7 +26,7 @@ public record Knowledge(
         TITLE_MISMATCH("title-mismatch"),
         /** The echoed author does not match the metadata. */
         AUTHOR_MISMATCH("author-mismatch"),
-        /** The year is not within five of the metadata year. */
+        /** The answer's year is missing or more than five after the metadata year. */
         YEAR_MISMATCH("year-mismatch"),
         /** The reply could not be read. */
         UNPARSABLE("unparsable"),

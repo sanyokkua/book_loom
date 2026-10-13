@@ -1,6 +1,6 @@
 {
   "id": "alternating-narrators",
-  "about": "The chapters alternate between a first-person narrator and a third-person account of Petra; the detector reads it as mixed, which the brief takes as first person so the first-person chapters keep the narrator rules (15i.B4), with no gender suggested.",
+  "about": "The chapters alternate between a first-person narrator and a third-person account of Petra; the detector reads it as mixed, which the book-brief spec maps to first person (a mixed book is first person) so the first-person chapters keep the narrator rules (15i.B4), with no gender suggested.",
   "title": "Two Lighthouses",
   "author": "Owen Hale",
   "chapters": [

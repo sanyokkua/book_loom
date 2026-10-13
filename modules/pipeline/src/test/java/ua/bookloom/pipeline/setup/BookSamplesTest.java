@@ -223,6 +223,36 @@ class BookSamplesTest {
                 .containsExactly(0);
     }
 
+    // IF a story of one and a half windows were read as one window and called whole, THEN one cited reading of a
+    // stretch would stand for the whole book.
+    @Test
+    void of_storyFitsOneWindow_isTheWholeStory() {
+        final List<BookSample> samples = BookSamples.of(book(lines(1, 30, 3) + "\n"), "en", 4, 100_000);
+
+        assertThat(samples).hasSize(1);
+        assertThat(samples.getFirst().wholeStory()).isTrue();
+    }
+
+    @Test
+    void of_storyOfOneAndAHalfWindowsReadAsOneWindow_isNotTheWholeStory() {
+        final Document document = book(lines(1, 60, 3) + "\n");
+        final int storyTokens =
+                tokens(BookSamples.of(document, "en", 4, 100_000).getFirst());
+
+        final List<BookSample> samples = BookSamples.of(document, "en", 4, storyTokens * 2 / 3);
+
+        assertThat(samples).hasSize(1);
+        assertThat(samples.getFirst().wholeStory()).isFalse();
+    }
+
+    @Test
+    void of_storyReadInSeveralWindows_noWindowIsTheWholeStory() {
+        final List<BookSample> samples = BookSamples.of(book(chapters(3)), "en", 4, 800);
+
+        assertThat(samples.size()).isGreaterThan(1);
+        assertThat(samples).noneMatch(BookSample::wholeStory);
+    }
+
     // The window text is what the prompt shows under "Passage 1:"; one window is one passage.
     @Test
     void text_oneWindow_isOnePassage() {

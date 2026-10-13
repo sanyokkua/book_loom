@@ -42,13 +42,24 @@ class BriefSuggestionNarratorTest {
                         NarratorPerson.FIRST, Gender.FEMALE, GenderOrigin.VERIFIED, List.of(QUOTE, SECOND)));
     }
 
-    // The person chose male: aligning keeps it, and the narrator it hands back is still the person's, with no quotes.
+    // The person chose male: aligning keeps the male gender but drops the quotes of the female one; a suggestion never
+    // claims the person's origin (the view model keeps the brief's own narrator when it says the same).
     @Test
-    void suggestedNarrator_alignedToAGenderThePersonSet_isThePersonsWithNoQuotes() {
+    void suggestedNarrator_alignedToAGenderThePersonSet_hasNoQuotesAndIsOnlySuggested() {
         final BriefSuggestion aligned = verifiedFemale().alignedTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
 
-        assertThat(aligned.suggestedNarrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
-        assertThat(aligned.suggestedNarrator().genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+        assertThat(aligned.suggestedNarrator())
+                .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.SUGGESTED, List.of()));
+    }
+
+    // IF a gender with no verified quote claimed the person's origin, THEN a later re-check would never touch it.
+    @Test
+    void suggestedNarrator_knownGenderWithNoProof_isSuggestedNotThePersons() {
+        final BriefSuggestion guess = new BriefSuggestion(
+                null, Register.NEUTRAL, null, null, NarratorPerson.FIRST, Gender.FEMALE, Map.of(), null);
+
+        assertThat(guess.suggestedNarrator().genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(guess.suggestedNarrator().evidence()).isEmpty();
     }
 
     // An unknown gender has no quote to keep and nothing to re-check.
@@ -66,6 +77,7 @@ class BriefSuggestionNarratorTest {
 
         assertThat(unknown.suggestedNarrator().gender()).isEqualTo(Gender.UNKNOWN);
         assertThat(unknown.suggestedNarrator().evidence()).isEmpty();
+        assertThat(unknown.suggestedNarrator().genderOrigin()).isEqualTo(GenderOrigin.NONE);
     }
 
     @Test

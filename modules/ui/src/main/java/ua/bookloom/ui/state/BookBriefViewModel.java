@@ -305,8 +305,7 @@ public final class BookBriefViewModel {
         change(
                 "narrator person",
                 person.name(),
-                brief ->
-                        brief.withNarrator(new Narrator(person, brief.narrator().gender())));
+                brief -> brief.withNarrator(brief.narrator().withPerson(person)));
     }
 
     /**

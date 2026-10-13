@@ -32,6 +32,7 @@ final class OpfParser {
 
     private static final Namespace OPF_NS = Namespace.getNamespace("http://www.idpf.org/2007/opf");
     private static final Namespace DC_NS = Namespace.getNamespace("http://purl.org/dc/elements/1.1/");
+    private static final String PUBLICATION_EVENT = "publication";
     private static final String DEFAULT_MEDIA_TYPE = "application/xhtml+xml";
 
     static ParsedOpf parse(byte[] content, String opfPath) {
@@ -44,7 +45,7 @@ final class OpfParser {
                 readTexts(root, "language"),
                 readFirstText(root, "title"),
                 readFirstText(root, "creator"),
-                readFirstText(root, "date"),
+                readPublicationDate(root),
                 readFirstText(root, "publisher"),
                 List.copyOf(manifest.values()),
                 spine,
@@ -186,24 +187,37 @@ final class OpfParser {
      * @return every declared value in document order; empty if the source declares none
      */
     private static List<String> readTexts(Element root, String dcLocalName) {
+        return readElements(root, dcLocalName).stream()
+                .map(Element::getTextTrim)
+                .toList();
+    }
+
+    private static List<Element> readElements(Element root, String dcLocalName) {
         final Element metadata = root.getChild("metadata", OPF_NS);
         if (metadata == null) {
             return List.of();
         }
-        final List<String> direct = textsOf(metadata, dcLocalName);
+        final List<Element> direct = metadata.getChildren(dcLocalName, DC_NS);
         if (!direct.isEmpty()) {
             return direct;
         }
         final Element legacyWrapper = metadata.getChild("dc-metadata", OPF_NS);
-        return legacyWrapper == null ? List.of() : textsOf(legacyWrapper, dcLocalName);
+        return legacyWrapper == null ? List.of() : legacyWrapper.getChildren(dcLocalName, DC_NS);
     }
 
-    private static List<String> textsOf(Element container, String dcLocalName) {
-        final List<String> values = new ArrayList<>();
-        for (final Element el : container.getChildren(dcLocalName, DC_NS)) {
-            values.add(el.getTextTrim());
-        }
-        return values;
+    /**
+     * The date of the book's first publication when the package marks one ({@code opf:event="publication"}, EPUB 2),
+     * else the first {@code dc:date}: an unmarked list may start with an edition or a conversion date, which is no
+     * reason to prefer it but is all there is to go on.
+     */
+    private static @Nullable String readPublicationDate(Element root) {
+        final List<Element> dates = readElements(root, "date");
+        return dates.stream()
+                .filter(date -> PUBLICATION_EVENT.equals(date.getAttributeValue("event", OPF_NS)))
+                .findFirst()
+                .or(() -> dates.stream().findFirst())
+                .map(Element::getTextTrim)
+                .orElse(null);
     }
 
     private static @Nullable String readFirstText(Element root, String dcLocalName) {

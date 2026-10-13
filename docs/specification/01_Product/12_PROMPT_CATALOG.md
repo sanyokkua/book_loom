@@ -899,7 +899,8 @@ What the model knows of the book (`BOOK_KNOWLEDGE`, 15i.B2): one small setup cal
 author alone and asks whether the model really knows it. The answer is **never trusted by itself**: it stands only when
 `known` is true, `confidence` is 0.7 or more, the echoed title and author match the book's metadata (lower case, no
 diacritics, punctuation as a space, a leading "the", "a" or "an" of the title dropped; an edit distance of at most a
-fifth of the longer text) and the year lies within five of a metadata year; every other answer is "unknown" and the log
+fifth of the longer text; a title also by its part before `;` or `:`, an author in either name order) and the year is no
+later than five after a metadata year (the metadata's date is often an edition's, later than the first publication); every other answer is "unknown" and the log
 names the reason (`no-title`, `title-is-file-stem`, `unparsable`, `not-known`, `low-confidence`, `title-mismatch`,
 `author-mismatch`, `year-mismatch`, `call-failed`). No call is made for a book without a title or whose title is its
 file name's stem. The prompt never shows the year or the publisher, so the year the model gives is its own, and its

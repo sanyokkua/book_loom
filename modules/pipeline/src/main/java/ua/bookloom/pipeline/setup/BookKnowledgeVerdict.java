@@ -1,10 +1,13 @@
 package ua.bookloom.pipeline.setup;
 
 import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +16,11 @@ import ua.bookloom.pipeline.setup.Knowledge.Reason;
 
 /**
  * Judges what the model said it knows of the book against the book's own metadata. The answer stands only when the
- * model says it knows the book, is sure enough, and echoes the metadata's title and author and a year near the
- * metadata's: the echo is what shows the answer is about this book, since a model asked about an invented book can
- * still answer with confidence. The first check that fails names the reason.
+ * model says it knows the book, is sure enough, and echoes the metadata's title and author (a title by the part before
+ * its subtitle, an author in either name order) and a year no later than five after the metadata's: the echo is what
+ * shows the answer is about this book, since a model asked about an invented book can still answer with confidence.
+ * The metadata's date is often an edition's or a release's, later than the first publication the model knows, so a
+ * year before it is no mismatch. The first check that fails names the reason.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -25,13 +30,14 @@ public final class BookKnowledgeVerdict {
     /** An answer the model is less sure of than this is a guess. */
     static final double MIN_CONFIDENCE = 0.7;
 
-    /** The most years the answer's year may differ from the metadata's. */
+    /** The most years the answer's year may lie after the metadata's; an earlier answer is the first publication. */
     static final int YEAR_TOLERANCE = 5;
 
     // The edit distance may be a fifth of the longer text; compared as distance * 5 <= length, in integers.
     private static final int EDIT_SHARE_DIVISOR = 5;
     private static final Set<String> ARTICLES = Set.of("the", "a", "an");
     private static final Pattern MARKS = Pattern.compile("\\p{M}+");
+    private static final Pattern SUBTITLE = Pattern.compile("[;:]");
     private static final Pattern NOT_ALPHANUMERIC = Pattern.compile("[^\\p{L}\\p{N}]+");
 
     /**
@@ -79,10 +85,10 @@ public final class BookKnowledgeVerdict {
             log.debug("Knowledge confidence {} is under {}", reply.confidence(), MIN_CONFIDENCE);
             return Reason.LOW_CONFIDENCE;
         }
-        if (!echoes(titleKey(facts.title()), titleKey(reply.title()))) {
+        if (!titleEchoes(facts.title(), reply.title())) {
             return Reason.TITLE_MISMATCH;
         }
-        if (facts.author() != null && !echoes(key(facts.author()), key(reply.author()))) {
+        if (facts.author() != null && !authorEchoes(facts.author(), reply.author())) {
             return Reason.AUTHOR_MISMATCH;
         }
         return yearAgrees(facts.year(), reply.year()) ? null : Reason.YEAR_MISMATCH;
@@ -92,7 +98,32 @@ public final class BookKnowledgeVerdict {
         if (metadata == null) {
             return true;
         }
-        return answered != null && Math.abs(metadata - answered) <= YEAR_TOLERANCE;
+        return answered != null && answered > 0 && answered <= metadata + YEAR_TOLERANCE;
+    }
+
+    // A catalogue may give the title with its subtitle ("Name; or, Another Name") and the model without it, or the
+    // reverse; the part before the first ';' or ':' is then the title both name.
+    private static boolean titleEchoes(final @Nullable String metadata, final @Nullable String echoed) {
+        return echoes(titleKey(metadata), titleKey(echoed))
+                || (!titleKey(mainTitle(metadata)).isEmpty()
+                        && echoes(titleKey(mainTitle(metadata)), titleKey(mainTitle(echoed))));
+    }
+
+    private static @Nullable String mainTitle(final @Nullable String title) {
+        if (title == null) {
+            return null;
+        }
+        final Matcher separator = SUBTITLE.matcher(title);
+        return separator.find() ? title.substring(0, separator.start()) : title;
+    }
+
+    // "Austen, Jane" and "Jane Austen" name one author: the words are compared in either order.
+    private static boolean authorEchoes(final String metadata, final @Nullable String echoed) {
+        return echoes(key(metadata), key(echoed)) || echoes(sortedWords(metadata), sortedWords(echoed));
+    }
+
+    private static String sortedWords(final @Nullable String name) {
+        return Arrays.stream(key(name).split(" ")).sorted().collect(Collectors.joining(" "));
     }
 
     private static boolean echoes(final String metadata, final String echoed) {

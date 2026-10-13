@@ -74,7 +74,11 @@ final class JudgementFakeModel implements ChatModel {
         final Matcher passage = FIRST_PASSAGE.matcher(user);
         final String quote = passage.find() ? passage.group(1).replace("\"", "\\\"") : "";
         final String register = wrong ? "casual" : registerWord(gold.register());
-        return "{" + field("genre", Objects.requireNonNullElse(gold.genre(), ""), quote)
+        return "{"
+                + field(
+                        "genre",
+                        SynthesisReplies.readingOf(gold.genreClass(), Objects.requireNonNullElse(gold.genre(), "")),
+                        quote)
                 + "," + field("register", register, "neutral".equals(register) ? "" : quote)
                 + "," + field("voice", "plain", quote)
                 + "," + field("audience", "adult readers", quote)

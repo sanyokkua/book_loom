@@ -14,7 +14,7 @@ import ua.bookloom.pipeline.setup.Knowledge.Reason;
  * The verdict on what the model says it knows of a book (15i.B2): the answer stands only when the model says it knows
  * the book, is at least 70 % sure, echoes the metadata's title and author (case, diacritics, punctuation and a leading
  * "the", "a" or "an" of the title do not count; at most 20 % of the longer normalised text may differ) and gives a year
- * within five of the metadata year. Every other answer is "unknown" with one named reason. An invented book stands
+ * no later than five after the metadata year (an edition's date is later than the first publication). Every other answer is "unknown" with one named reason. An invented book stands
  * for the metadata throughout; no real book is named.
  */
 class BookKnowledgeVerdictTest {
@@ -187,7 +187,11 @@ class BookKnowledgeVerdictTest {
                 "title|abcdefghijklmn|abcdefghijkXYZ|title-mismatch",
                 "title|abcdefghijkl|abcdefghijklXYZ|stands",
                 "title|abcdefghijk|abcdefghijkXYZ|title-mismatch",
-                "title|The Lantern Ledger|The Lantern Ledger: A Novel|title-mismatch",
+                "title|The Lantern Ledger|The Lantern Ledger: A Novel|stands",
+                "title|Salt-Road to Kellmoor|Salt Road to Kellmoor; or, The Long Way Round|stands",
+                "title|Salt Road to Kellmoor: A Novel|Salt Road to Kellmoor|stands",
+                "title|The Lantern Ledger: A Novel|The Copper Ledger: A Novel|title-mismatch",
+                "title|;Lantern|Lantern Ledger|title-mismatch",
                 "title|The Lantern Ledger|Moby Dick|title-mismatch",
                 "title|The Lantern Ledger|The Copper Ledger of Ash|title-mismatch",
                 "author|Orsolya Venn|orsolya venn|stands",
@@ -199,7 +203,9 @@ class BookKnowledgeVerdictTest {
                 "author|abcdefghijklmno|abcdefghijklXYZ|stands",
                 "author|abcdefghijklmn|abcdefghijkXYZ|author-mismatch",
                 "author|Orsolya Venn|Fenna Aldous|author-mismatch",
-                "author|Orsolya Venn|Venn, Orsolya|author-mismatch"
+                "author|Orsolya Venn|Venn, Orsolya|stands",
+                "author|Venn, Orsolya|Orsolya Venn|stands",
+                "author|Orsolya Venn|Venn, Fenna|author-mismatch"
             })
     void judge_echo_matchesTheMetadataWithinAFifthOfTheLongerText(
             final String field, final String metadata, final String echo, final String expected) {
@@ -250,7 +256,8 @@ class BookKnowledgeVerdictTest {
                 .isEqualTo("author-mismatch");
     }
 
-    // The year may be five off either way: 2009 and 2019 stand, 2008 and 2020 do not.
+    // The metadata's date is often an edition's or a release's, so an earlier year (the first publication) stands;
+    // the answer may be at most five years after it: 2019 stands, 2020 does not.
     @ParameterizedTest
     @CsvSource({
         "2014,stands",
@@ -258,12 +265,13 @@ class BookKnowledgeVerdictTest {
         "2015,stands",
         "2019,stands",
         "2009,stands",
+        "2008,stands",
+        "1923,stands",
         "2020,year-mismatch",
-        "2008,year-mismatch",
-        "1986,year-mismatch",
+        "2031,year-mismatch",
         "0,year-mismatch"
     })
-    void judge_year_standsWithinFiveOfTheMetadataYear(final int echoed, final String expected) {
+    void judge_year_standsWhenNoLaterThanFiveAfterTheMetadataYear(final int echoed, final String expected) {
         assertThat(label(BookKnowledgeVerdict.judge(book(), STEM, reply(true, TITLE, AUTHOR, echoed, 0.9))))
                 .isEqualTo(expected);
     }

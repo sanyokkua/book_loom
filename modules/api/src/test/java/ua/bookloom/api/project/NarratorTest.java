@@ -17,10 +17,41 @@ class NarratorTest {
     private static final String QUOTE = "Thank you, ma'am";
 
     @Test
-    void genderOrigin_values_areThePersonVerifiedSuggestedAndInferredInOrder() {
+    void genderOrigin_values_areThePersonVerifiedSuggestedInferredAndNoneInOrder() {
         assertThat(GenderOrigin.values())
                 .containsExactly(
-                        GenderOrigin.PERSON, GenderOrigin.VERIFIED, GenderOrigin.SUGGESTED, GenderOrigin.INFERRED);
+                        GenderOrigin.PERSON,
+                        GenderOrigin.VERIFIED,
+                        GenderOrigin.SUGGESTED,
+                        GenderOrigin.INFERRED,
+                        GenderOrigin.NONE);
+    }
+
+    // IF an unknown gender claimed the person's origin, THEN a later step would see a choice the person never made and
+    // leave the gender unfilled.
+    @Test
+    void narrator_unknownGender_hasNoOriginWhoeverBuiltIt() {
+        assertThat(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN).genderOrigin())
+                .isEqualTo(GenderOrigin.NONE);
+        assertThat(Narrator.unspecified().genderOrigin()).isEqualTo(GenderOrigin.NONE);
+        assertThat(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, GenderOrigin.PERSON, List.of(QUOTE)))
+                .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+    }
+
+    @Test
+    void narrator_knownGenderWithNoOrigin_isRejected() {
+        assertThatThrownBy(() -> new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.NONE, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // The person changed only who tells the story: the gender's origin and quotes are still true of it.
+    @Test
+    void withPerson_verifiedGender_keepsTheOriginAndTheQuotes() {
+        final Narrator verified =
+                new Narrator(NarratorPerson.FIRST, Gender.FEMALE, GenderOrigin.VERIFIED, List.of(QUOTE));
+
+        assertThat(verified.withPerson(NarratorPerson.THIRD))
+                .isEqualTo(new Narrator(NarratorPerson.THIRD, Gender.FEMALE, GenderOrigin.VERIFIED, List.of(QUOTE)));
     }
 
     // IF a narrator built by a person's choice carried an origin of the code, THEN a later re-check could undo it.
