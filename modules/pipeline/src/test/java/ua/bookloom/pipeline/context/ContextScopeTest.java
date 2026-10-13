@@ -56,7 +56,7 @@ class ContextScopeTest {
         assertThat(assembled.snapshot().glossary())
                 .extracting(SnapshotTerm::term)
                 .containsExactly("Harrow");
-        assertThat(assembled.draftContext().glossaryLines()).containsExactly("Harrow → Герроу (place, unknown)");
+        assertThat(assembled.draftContext().glossaryLines()).containsExactly("Harrow → Герроу (place)");
     }
 
     @Test
@@ -72,9 +72,7 @@ class ContextScopeTest {
 
         assertThat(joined.glossaryLines())
                 .containsExactlyInAnyOrder(
-                        "Corvin → Корвін (place, unknown)",
-                        "Fallow → Феллоу (place, unknown)",
-                        "Harrow → Герроу (place, unknown)");
+                        "Corvin → Корвін (place)", "Fallow → Феллоу (place)", "Harrow → Герроу (place)");
     }
 
     @ParameterizedTest(name = "[{index}] {0} in «{1}» -> {2}")
@@ -136,8 +134,8 @@ class ContextScopeTest {
     @Test
     void replay_overWideSnapshot_shrinksToTheTextBeingTranslated() {
         final List<SnapshotTerm> wide = SIX.stream()
-                .map(entry ->
-                        new SnapshotTerm(entry.term(), entry.target(), entry.type(), entry.gender(), false, false))
+                .map(entry -> new SnapshotTerm(
+                        entry.term(), entry.target(), entry.type(), entry.gender(), false, false, null))
                 .toList();
         final ContextSnapshot snapshot = new ContextSnapshot(
                 List.of("Раніше."),
@@ -152,7 +150,7 @@ class ContextScopeTest {
         final DraftContext replayed =
                 ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, SIX), segment);
 
-        assertThat(replayed.glossaryLines()).containsExactly("Harrow → Герроу (place, unknown)");
+        assertThat(replayed.glossaryLines()).containsExactly("Harrow → Герроу (place)");
         assertThat(replayed.lexiconLines()).containsExactly("master → господар");
         assertThat(replayed.characterLines()).containsExactly("Lyra — female");
         assertThat(replayed.precedingTargets()).containsExactly("Раніше.");

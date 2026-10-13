@@ -180,6 +180,16 @@ class DeferralRegisterTest {
                         "a character known to be female",
                         List.of(entry("Sam", TermType.CHARACTER, Gender.FEMALE)),
                         List.of()),
+                // IF a guessed gender ended the wait, THEN the paragraphs drafted before the verdict would never be
+                // revised once it came (15i.T1).
+                Arguments.of(
+                        "a character whose gender is only suggested",
+                        List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE)),
+                        List.of("Sam")),
+                Arguments.of(
+                        "a character whose gender was verified",
+                        List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN).withInferredGender(Gender.FEMALE)),
+                        List.of()),
                 Arguments.of(
                         "a place of unknown gender",
                         List.of(entry("Harbour", TermType.PLACE, Gender.UNKNOWN)),

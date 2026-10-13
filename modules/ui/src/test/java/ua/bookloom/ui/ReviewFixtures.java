@@ -51,8 +51,8 @@ public final class ReviewFixtures {
         return new ContextSnapshot(
                 List.of("Раніше в тексті."),
                 List.of(
-                        new SnapshotTerm("Gale", "Гейл", TermType.CHARACTER, Gender.MALE, true),
-                        new SnapshotTerm("Baker Street", null, TermType.PLACE, Gender.NEUTER, false)),
+                        new SnapshotTerm("Gale", "Гейл", TermType.CHARACTER, Gender.MALE, true, false, null),
+                        new SnapshotTerm("Baker Street", null, TermType.PLACE, Gender.NEUTER, false, false, null)),
                 List.of(),
                 "Gale returns home.",
                 "Formal, past tense.");

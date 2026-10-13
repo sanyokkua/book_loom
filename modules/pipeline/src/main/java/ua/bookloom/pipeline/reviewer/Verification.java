@@ -75,6 +75,9 @@ public sealed interface Verification {
         /** The edit re-inflects or replaces a glossary rendering. */
         GLOSSARY_RENDERING("the edit changes a glossary rendering", true),
 
+        /** A gender or agreement edit makes the text agree with a gender that was only suggested. */
+        GUESSED_GENDER("the edit follows a gender nobody has confirmed", true),
+
         /** A meaning edit replaces a word with one that shares no stem and is not a glossary rendering. */
         MEANING_SWAP("the edit swaps a word for a different one", false);
 

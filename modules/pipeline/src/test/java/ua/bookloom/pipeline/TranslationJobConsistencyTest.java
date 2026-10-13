@@ -101,7 +101,7 @@ class TranslationJobConsistencyTest {
                 .contains("Hale", "Гейл", "character", "male")
                 .doesNotContain("Baker Street");
         assertThat(snapshotOf(project, "Book.txt:0").glossary())
-                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false));
+                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false, false, null));
     }
 
     @Test

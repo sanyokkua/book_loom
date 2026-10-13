@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.project.Narrator.GenderOrigin;
 
 /**
@@ -99,5 +101,23 @@ class NarratorTest {
     void equals_sameGenderDifferentOrigin_isNotEqual() {
         assertThat(new Narrator(NarratorPerson.FIRST, Gender.FEMALE, GenderOrigin.VERIFIED, List.of(QUOTE)))
                 .isNotEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
+    }
+
+    // IF a narrator gender nobody confirmed were held against the text, THEN a wrong guess shown as "(suggested)"
+    // would be "corrected" into every first-person paragraph (15i.T1).
+    @ParameterizedTest(name = "[{index}] {0} {1} -> {2}")
+    @CsvSource({
+        "PERSON, MALE, true",
+        "PERSON, FEMALE, true",
+        "VERIFIED, MALE, true",
+        "VERIFIED, FEMALE, true",
+        "SUGGESTED, MALE, false",
+        "SUGGESTED, FEMALE, false"
+    })
+    void hasCheckableGender_firstPersonByOrigin_isCheckableOnlyWhenConfirmed(
+            final GenderOrigin origin, final Gender gender, final boolean checkable) {
+        final Narrator narrator = new Narrator(NarratorPerson.FIRST, gender, origin, List.of());
+
+        assertThat(narrator.hasCheckableGender()).isEqualTo(checkable);
     }
 }

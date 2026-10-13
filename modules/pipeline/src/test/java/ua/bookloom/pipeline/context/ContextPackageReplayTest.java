@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
@@ -48,8 +49,7 @@ class ContextPackageReplayTest {
 
         assertThat(replayed).isEqualTo(assembled.draftContext());
         assertThat(replayed.glossaryLines())
-                .containsExactly(
-                        "⟦g0⟧ → Гейл, character, male", "Milton → Мілтон (place, unknown)", "Moreau (character, male)");
+                .containsExactly("⟦g0⟧ → Гейл, character, male", "Milton → Мілтон (place)", "Moreau (character, male)");
         assertThat(replayed.memoryLines())
                 .containsExactly("Hale met Moreau. → Гейл зустрів Моро.", "Hale met Milton. → Гейл зустрів Мілтона.");
         assertThat(replayed.precedingTargets()).containsExactly("Він прийшов.");
@@ -61,7 +61,7 @@ class ContextPackageReplayTest {
         // the snapshot is what was shown; today's glossary is never read
         final ContextSnapshot snapshot = new ContextSnapshot(
                 List.of(),
-                List.of(new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false)),
+                List.of(new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, null)),
                 List.of(),
                 null,
                 "Neutral register.");
@@ -72,5 +72,27 @@ class ContextPackageReplayTest {
 
         assertThat(replayed.glossaryLines()).containsExactly("Hale → Хейл (character, male)");
         assertThat(replayed.summary()).isNull();
+    }
+
+    // IF a snapshot line forgot the gender was only a guess, THEN a retry would show the model the guess as the
+    // person's word (15i.T1).
+    @Test
+    void replay_snapshotWithASuggestedGender_showsItAsLikelyAndAPlaceWithNoGender() {
+        final ContextSnapshot snapshot = new ContextSnapshot(
+                List.of(),
+                List.of(
+                        new SnapshotTerm(
+                                "Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, GenderOrigin.SUGGESTED),
+                        new SnapshotTerm("Milton", "Мілтон", TermType.PLACE, Gender.NEUTER, false, false, null)),
+                List.of(),
+                null,
+                "Neutral register.");
+        final Segment segment = ContextFixtures.segment(0, SOURCE);
+
+        final DraftContext replayed =
+                ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, List.of()), segment);
+
+        assertThat(replayed.glossaryLines())
+                .containsExactly("Hale → Хейл (character, likely male)", "Milton → Мілтон (place)");
     }
 }

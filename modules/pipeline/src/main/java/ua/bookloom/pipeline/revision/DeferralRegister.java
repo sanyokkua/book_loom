@@ -10,7 +10,6 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
@@ -59,13 +58,14 @@ public final class DeferralRegister {
     }
 
     /**
-     * The GENDER_UNKNOWN deferrals a segment leaves: one per character it names whose gender nobody has set yet,
-     * because the words that agree with that character may have to change once the gender is known.
+     * The GENDER_UNKNOWN deferrals a segment leaves: one per character it names whose gender nobody has set or
+     * verified yet (one only suggested counts as not yet known), because the words that agree with that character may
+     * have to change once the gender is known.
      *
      * @param projectId the owning project's id; never null
      * @param segment the decided segment, whose display text is searched; never null
      * @param glossary the glossary the segment was drafted with; never null
-     * @return one deferral per character entry of unknown gender whose term occurs whole-word in a body-text segment
+     * @return one deferral per character entry of unknown or only suggested gender whose term occurs whole-word in a body-text segment
      *     (a heading, title or metadata segment records none), in glossary order;
      *     never null, empty when there is none
      */
@@ -80,7 +80,7 @@ public final class DeferralRegister {
         }
         final String text = DisplayText.of(segment.masked());
         final List<Deferral> deferrals = glossary.stream()
-                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() == Gender.UNKNOWN)
+                .filter(entry -> entry.type() == TermType.CHARACTER && !entry.hasConfirmedGender())
                 .filter(entry -> !entry.term().isBlank())
                 .filter(entry -> WholeWord.pattern(entry.term()).matcher(text).find())
                 .map(entry -> deferral(projectId, segment.id(), DeferralReason.GENDER_UNKNOWN, entry.term()))

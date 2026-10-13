@@ -41,6 +41,7 @@ final class EditGuards {
      * @param edited the text after the edit, masked; never null
      * @param renderings the glossary renderings of the chunk; never null
      * @param functionWords the target language's function words; never null, may be empty
+     * @param guess the genders of the chunk that are only suggested; never null
      * @return why the edit is refused, or empty when it passes every guard
      */
     static Optional<FailureReason> refusal(
@@ -48,10 +49,11 @@ final class EditGuards {
             final String candidate,
             final String edited,
             final Collection<String> renderings,
-            final Set<String> functionWords) {
+            final Set<String> functionWords,
+            final GenderGuess guess) {
         final String before = DisplayText.of(candidate);
         final String after = DisplayText.of(edited);
-        final Optional<FailureReason> reason = firstOf(edit, before, after, renderings, functionWords);
+        final Optional<FailureReason> reason = firstOf(edit, before, after, renderings, functionWords, guess);
         log.debug("Edit guards criterion={} refusal={}", edit.criterion().wire(), reason.orElse(null));
         return reason;
     }
@@ -61,7 +63,8 @@ final class EditGuards {
             final String before,
             final String after,
             final Collection<String> renderings,
-            final Set<String> functionWords) {
+            final Set<String> functionWords,
+            final GenderGuess guess) {
         if (TextChecks.doubledWords(after) > TextChecks.doubledWords(before)) {
             return Optional.of(FailureReason.DOUBLED_WORD);
         }
@@ -82,7 +85,14 @@ final class EditGuards {
         if (edit.criterion() == ReviewCriterion.MEANING && swapsContentWord(edit, renderings, functionWords)) {
             return Optional.of(FailureReason.MEANING_SWAP);
         }
+        if (isGenderEdit(edit.criterion()) && guess.isFavoured(before, after)) {
+            return Optional.of(FailureReason.GUESSED_GENDER);
+        }
         return Optional.empty();
+    }
+
+    private static boolean isGenderEdit(final ReviewCriterion criterion) {
+        return criterion == ReviewCriterion.GENDER || criterion == ReviewCriterion.AGREEMENT;
     }
 
     private static boolean changesCounts(final ReviewCriterion criterion, final String before, final String after) {

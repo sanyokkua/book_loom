@@ -88,10 +88,13 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
     /**
      * Whether the gender check has something to hold a text against.
      *
-     * @return {@code true} for a first-person narrator whose gender is male or female, {@code false} otherwise
+     * @return {@code true} for a first-person narrator whose gender is male or female and not merely suggested,
+     *     {@code false} otherwise
      */
     public boolean hasCheckableGender() {
-        return person == NarratorPerson.FIRST && (gender == Gender.MALE || gender == Gender.FEMALE);
+        return person == NarratorPerson.FIRST
+                && (gender == Gender.MALE || gender == Gender.FEMALE)
+                && genderOrigin != GenderOrigin.SUGGESTED;
     }
 
     /**

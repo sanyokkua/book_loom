@@ -90,7 +90,8 @@ final class ReviewResolver {
                 text -> blockersOf(outcome, text),
                 baseline,
                 renderings(),
-                functionWords());
+                functionWords(),
+                GuessedGenders.of(settings));
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
         final List<QaFinding> findings = withIgnored(
                 edited.reverted() ? revertedFindings(applied) : recordedEdits(applied.applied(), applied.notes()),

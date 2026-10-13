@@ -231,8 +231,7 @@ class RollingSummaryKeeperTest {
         decideAccepted(keeper, "ch01.xhtml", 20, 20);
 
         assertThat(summaries.latest(PROJECT).data())
-                .hasValueSatisfying(
-                        summary -> assertThat(summary.source()).isEqualTo("Milton → Мілтон (place, unknown)"));
+                .hasValueSatisfying(summary -> assertThat(summary.source()).isEqualTo("Milton → Мілтон (place)"));
     }
 
     @Test

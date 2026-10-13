@@ -23,7 +23,7 @@ class OutcomeRecordsTest {
 
     private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
             List.of("Він пішов."),
-            List.of(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true)),
+            List.of(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true, false, null)),
             List.of(),
             null,
             "Neutral, faithful literary prose.");

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.context;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
@@ -52,6 +54,10 @@ class ContextPackageAssemblerTest {
     }
 
     private static Stream<Arguments> termCases() {
+        return Stream.concat(occurrenceCases(), genderLineCases());
+    }
+
+    private static Stream<Arguments> occurrenceCases() {
         return Stream.of(
                 Arguments.of(
                         "only the term in the chunk",
@@ -62,7 +68,7 @@ class ContextPackageAssemblerTest {
                         "an unlocked place with a target",
                         List.of(HALE, MILTON),
                         "Milton was quiet.",
-                        List.of("Milton → Мілтон (place, unknown)")),
+                        List.of("Milton → Мілтон (place)")),
                 Arguments.of(
                         "an entry with no target",
                         List.of(MOREAU),
@@ -82,6 +88,32 @@ class ContextPackageAssemblerTest {
                         List.of("Moreau (character, male)")));
     }
 
+    // Only a character has a gender line, and a guessed gender is worded as likely (15i.T1).
+    private static Stream<Arguments> genderLineCases() {
+        return Stream.of(
+                Arguments.of(
+                        "a place with a gender has no gender line",
+                        List.of(ContextFixtures.entry("Milton", "Мілтон", TermType.PLACE, Gender.NEUTER, false)),
+                        "Milton was quiet.",
+                        List.of("Milton → Мілтон (place)")),
+                Arguments.of(
+                        "a term with a gender has no gender line",
+                        List.of(ContextFixtures.entry("Master", "Майстер", TermType.TERM, Gender.MALE, false)),
+                        "The Master left.",
+                        List.of("Master → Майстер (term)")),
+                Arguments.of(
+                        "a locked place with a gender has no gender line",
+                        List.of(ContextFixtures.entry("Milton", "Мілтон", TermType.PLACE, Gender.NEUTER, true)),
+                        "Milton was quiet.",
+                        List.of("⟦g0⟧ → Мілтон, place")),
+                Arguments.of(
+                        "a character whose gender is only suggested is a likely one",
+                        List.of(ContextFixtures.entry("Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN, false)
+                                .withSuggestedGender(Gender.MALE)),
+                        "Hale opened the door.",
+                        List.of("Hale → Гейл (character, likely male)")));
+    }
+
     @Test
     void assemble_suggestedTarget_isListedApartFromThePersonsRenderings() {
         final GlossaryEntry suggested = HALE.withSuggestedTarget("Гейл");
@@ -91,7 +123,7 @@ class ContextPackageAssemblerTest {
         final ContextPackage context =
                 assemble(chunk, 0, ContextFixtures.inputs(null, 0, glossary, List.of()), ContextFixtures.NO_MEMORY);
 
-        assertThat(context.draftContext().glossaryLines()).containsExactly("Milton → Мілтон (place, unknown)");
+        assertThat(context.draftContext().glossaryLines()).containsExactly("Milton → Мілтон (place)");
         assertThat(context.draftContext().suggestedLines()).containsExactly("Hale → Гейл (character, male)");
         assertThat(context.snapshot().glossary())
                 .extracting(SnapshotTerm::suggested)
@@ -119,7 +151,7 @@ class ContextPackageAssemblerTest {
         final Chunk chunk = ContextFixtures.chunk("It was late.", "Milton was quiet.");
 
         assertThat(glossaryLines(chunk, 0, List.of(MILTON))).isEmpty();
-        assertThat(glossaryLines(chunk, 1, List.of(MILTON))).containsExactly("Milton → Мілтон (place, unknown)");
+        assertThat(glossaryLines(chunk, 1, List.of(MILTON))).containsExactly("Milton → Мілтон (place)");
     }
 
     @Test
@@ -185,10 +217,34 @@ class ContextPackageAssemblerTest {
                 assemble(ContextFixtures.chunk("Hale opened it."), 0, inputs, ContextFixtures.NO_MEMORY);
 
         assertThat(pack.snapshot().glossary())
-                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false));
+                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false, false, null));
         assertThat(pack.snapshot().summary()).isEqualTo("Hale is a detective.");
         assertThat(pack.snapshot().styleSheet()).isEqualTo("Neutral register.");
         assertThat(pack.draftContext().summary()).isEqualTo("Hale is a detective.");
+    }
+
+    // IF the snapshot dropped who decided a gender, THEN a retry with the first draft's context would show a guess as
+    // the person's word (15i.T1).
+    @Test
+    void assemble_snapshot_keepsWhoDecidedEachGender() {
+        final GlossaryEntry suggested = ContextFixtures.entry("Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE);
+        final GlossaryEntry verified = ContextFixtures.entry("Lyra", "Ліра", TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withInferredGender(Gender.FEMALE);
+        final GlossaryEntry person = ContextFixtures.entry("Sam", "Сем", TermType.CHARACTER, Gender.MALE, false);
+
+        final ContextPackage pack = assemble(
+                ContextFixtures.chunk("Hale, Lyra and Sam met."),
+                0,
+                ContextFixtures.inputs(null, 0, List.of(suggested, verified, person), List.of()),
+                ContextFixtures.NO_MEMORY);
+
+        assertThat(pack.snapshot().glossary())
+                .extracting(SnapshotTerm::term, SnapshotTerm::genderOrigin)
+                .containsExactly(
+                        tuple("Hale", GenderOrigin.SUGGESTED),
+                        tuple("Lyra", GenderOrigin.VERIFIED),
+                        tuple("Sam", GenderOrigin.PERSON));
     }
 
     @Test

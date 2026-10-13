@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.context;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +12,7 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
+import ua.bookloom.pipeline.memory.TermFacts;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
@@ -61,8 +61,7 @@ final class InjectedTerms {
      */
     static List<String> lines(final SnapshotTerm entry, final ProtectedMask mask) {
         final String target = entry.target();
-        final String facts = entry.type().name().toLowerCase(Locale.ROOT) + ", "
-                + entry.gender().name().toLowerCase(Locale.ROOT);
+        final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
         if (target == null || target.isBlank()) {
             return List.of(entry.term() + " (" + facts + ")");
         }
@@ -87,6 +86,12 @@ final class InjectedTerms {
 
     private static SnapshotTerm snapshotOf(final GlossaryEntry entry) {
         return new SnapshotTerm(
-                entry.term(), entry.target(), entry.type(), entry.gender(), entry.locked(), entry.isSuggested());
+                entry.term(),
+                entry.target(),
+                entry.type(),
+                entry.gender(),
+                entry.locked(),
+                entry.isSuggested(),
+                entry.genderOrigin());
     }
 }

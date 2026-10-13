@@ -23,6 +23,13 @@ class ContextPackageCharactersTest {
     private static final GlossaryEntry PLACE =
             ContextFixtures.entry("Oxford", "Оксфорд", TermType.PLACE, Gender.NEUTER, false);
 
+    private static final GlossaryEntry LYRA_SUGGESTED = ContextFixtures.entry(
+                    "Lyra", "Ліра", TermType.CHARACTER, Gender.UNKNOWN, false)
+            .withSuggestedGender(Gender.FEMALE);
+    private static final GlossaryEntry LYRA_VERIFIED = ContextFixtures.entry(
+                    "Lyra", "Ліра", TermType.CHARACTER, Gender.UNKNOWN, false)
+            .withInferredGender(Gender.FEMALE);
+
     private static ContextPackage assemble(final String text, final int allowance) {
         return assemble(text, allowance, List.of(LYRA, HALE, NOBODY, PLACE));
     }
@@ -101,5 +108,51 @@ class ContextPackageCharactersTest {
                 ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
 
         assertThat(replayed.characterLines()).containsExactly("Lyra — female", "Hale — male");
+    }
+
+    // IF a guessed gender were listed as a fact, THEN the model and every check after it would treat a first-name
+    // list's guess as the person's word (15i.T1).
+    @Test
+    void assemble_genderOnlySuggested_isListedAsLikely() {
+        final ContextPackage assembled = assemble("Lyra walked to Oxford.", 1000, List.of(LYRA_SUGGESTED, PLACE));
+
+        assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra — likely female");
+        assertThat(assembled.snapshot().characters()).containsExactly("Lyra — likely female");
+    }
+
+    @Test
+    void assemble_genderVerified_isListedAsAFact() {
+        assertThat(assemble("Lyra walked home.", 1000, List.of(LYRA_VERIFIED))
+                        .draftContext()
+                        .characterLines())
+                .containsExactly("Lyra — female");
+    }
+
+    @Test
+    void assemble_genderSetByThePerson_isListedAsAFact() {
+        assertThat(assemble("Lyra walked home.", 1000, List.of(LYRA.withGender(Gender.FEMALE)))
+                        .draftContext()
+                        .characterLines())
+                .containsExactly("Lyra — female");
+    }
+
+    // The glossary line of the same character says "likely" too, or the two lists would disagree about one woman.
+    @Test
+    void assemble_genderOnlySuggested_theGlossaryLineSaysLikelyToo() {
+        final ContextPackage assembled = assemble("Lyra walked home.", 1000, List.of(LYRA_SUGGESTED));
+
+        assertThat(assembled.draftContext().glossaryLines()).containsExactly("Lyra → Ліра (character, likely female)");
+    }
+
+    @Test
+    void replay_snapshotWithALikelySheet_rebuildsTheLikelyLine() {
+        final ContextPackage assembled = assemble("Lyra walked home.", 1000, List.of(LYRA_SUGGESTED));
+        final Segment segment = ContextFixtures.segment(0, "Lyra walked home.");
+
+        final DraftContext replayed =
+                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
+
+        assertThat(replayed.characterLines()).containsExactly("Lyra — likely female");
+        assertThat(replayed.glossaryLines()).containsExactly("Lyra → Ліра (character, likely female)");
     }
 }

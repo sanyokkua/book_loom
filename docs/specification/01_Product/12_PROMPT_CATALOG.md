@@ -602,9 +602,11 @@ The narrator and the gender sheet (15d.10) keep who-is-who out of the model's gu
   and asks once at Start translation (`Male` / `Female` / `Not stated — start anyway`); the answer is written to the brief, so
   the line above and the reviewer's gender check (`reviewerChecks` of the target language) then reach every call. The
   hint itself is never sent to a model. Glossary genders seeded from the bundled first-name list are shown as
-  `suggested` and feed the character sheet like any other gender.
+  `suggested`; they reach the character sheet only as `name — likely gender`, and no check, directed fix or reviewer
+  edit holds a text to a gender that is only suggested (15i.T1).
 - **Character sheet** (draft, batch draft; reviewer). `[Characters in this text — keep their gender and agreement]` and
-  one `name — gender` line for each glossary character of known gender the segment names; in a batch the lines of all the
+  one `name — gender` line (`name — likely gender` for a suggested gender) for each glossary character of known gender the
+  segment names; in a batch the lines of all the
   items, once each, under `[Characters in these items — context only; keep their gender and agreement]`; in the reviewer
   `[Characters in these pairs — who they are]` for the chunk. A tenth of the dynamic allowance (`ContextSection.CHARACTERS`),
   taken before the lexicon; recorded in `ContextSnapshot.characters`.
@@ -761,9 +763,9 @@ Return one JSON object: {"unchanged":true} if nothing needs to change, else {"ta
 | Variable            | Required? | Source / notes                                                                                              |
 |---------------------|-----------|---------------------------------------------------------------------------------------------------------------|
 | `{{previous}}`, `{{next}}` | Optional | The paragraph before and after, as `Source: …` and `Translation: …` lines; dropped at a book edge or when it has no translation yet. |
-| `{{resolvedFacts}}` | Optional  | `- term → target, gender` for every glossary name the three paragraphs hold, at most 40 lines and about 600 tokens. |
+| `{{resolvedFacts}}` | Optional  | `- term → target, gender` (a gender for a character of confirmed gender only) for every glossary name the three paragraphs hold, at most 40 lines and about 600 tokens. |
 | `{{lexiconTerms}}`  | Optional  | `term → rendering` for the recurring terms the three paragraphs name that the glossary does not decide, about 400 tokens. |
-| `{{characters}}`    | Optional  | `name — gender` for each glossary character of known gender they name, about 200 tokens.                    |
+| `{{characters}}`    | Optional  | `name — gender` for each glossary character of confirmed gender they name (a suggested one is left out), about 200 tokens. |
 | `{{summary}}`       | Optional  | The rolling summary in the target language.                                                                 |
 | `{{source}}`, `{{text}}`, `{{tokens}}` | Required / optional | The masked source, the stored masked target and the source's `⟦gN⟧` sequence.        |
 

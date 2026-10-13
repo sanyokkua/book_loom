@@ -848,7 +848,7 @@ not make `відчинив` or `відчинила` agree with it.
 #### Scenario: Only present terms are given
 
 - **WHEN** the glossary holds `Hale`, `Milton` and `Baker Street` and the chunk mentions only `Milton`
-- **THEN** the prompt lists `Milton` → `Мілтон` (place, unknown) and neither `Hale` nor `Baker Street`
+- **THEN** the prompt lists `Milton` → `Мілтон` (place) and neither `Hale` nor `Baker Street`
 
 #### Scenario: A locked name is listed by its placeholder
 
@@ -865,7 +865,7 @@ not make `відчинив` or `відчинила` agree with it.
 
 - **WHEN** `Hale` → `Гейл` (character, male) is suggested and `Milton` → `Мілтон` is the person's, and the chunk mentions
   both
-- **THEN** the prompt lists `Milton → Мілтон (place, unknown)` under the glossary heading and `Hale → Гейл (character,
+- **THEN** the prompt lists `Milton → Мілтон (place)` under the glossary heading and `Hale → Гейл (character,
   male)` under the suggested-renderings heading, and `Hale` is sent as written
 
 #### Scenario: An empty glossary adds nothing

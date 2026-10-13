@@ -30,9 +30,9 @@ class ContextSectionOrderTest extends FxTestBase {
     private static final ContextSnapshot EVERYTHING = new ContextSnapshot(
             List.of("Дощ лив стіною."),
             List.of(
-                    new SnapshotTerm("Ashdown", "Ешдаун", TermType.CHARACTER, Gender.MALE, true),
-                    new SnapshotTerm("Zerubin", "Зерубін", TermType.CHARACTER, Gender.MALE, false),
-                    new SnapshotTerm("Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false, true)),
+                    new SnapshotTerm("Ashdown", "Ешдаун", TermType.CHARACTER, Gender.MALE, true, false, null),
+                    new SnapshotTerm("Zerubin", "Зерубін", TermType.CHARACTER, Gender.MALE, false, false, null),
+                    new SnapshotTerm("Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false, true, null)),
             List.of(new SnapshotTmHit(SnapshotTmHit.TmHitKind.EXACT, "The amulet glowed.", "Амулет світився.")),
             "A djinni is summoned.",
             "Literary, warm.",

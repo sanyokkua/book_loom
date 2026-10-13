@@ -63,10 +63,29 @@ public final class EditVerifier {
             final Set<String> baseline,
             final List<String> renderings,
             final Set<String> functionWords) {
+        return verify(candidate, edit, checker, baseline, renderings, functionWords, GenderGuess.NONE);
+    }
+
+    /**
+     * Verifies one edit as the overload with function words does, also holding a gender or agreement edit to the
+     * genders of the chunk that are only suggested.
+     *
+     * @param guess the suggested genders an edit may not enforce; never null
+     * @return the verification, as above
+     */
+    public Verification verify(
+            final String candidate,
+            final ReviewEdit edit,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings,
+            final Set<String> functionWords,
+            final GenderGuess guess) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edit, "edit");
         Objects.requireNonNull(checker, "checker");
         Objects.requireNonNull(baseline, "baseline");
+        Objects.requireNonNull(guess, "guess");
         final NormalisedText text = NormalisedText.of(candidate);
         final NormalisedText quote = NormalisedText.of(edit.quote());
         final int occurrences = text.count(quote);
@@ -88,10 +107,21 @@ public final class EditVerifier {
         final Verification checked = checkEdited(candidate, edited, checker, baseline);
         // The placeholders and the checks answer first; the guards then hold the result to a stricter standard.
         return checked instanceof Verification.Verified
-                ? EditGuards.refusal(edit, candidate, edited, renderings, functionWords)
-                        .<Verification>map(EditVerifier::failed)
-                        .orElse(checked)
+                ? guarded(checked, edit, candidate, edited, renderings, functionWords, guess)
                 : checked;
+    }
+
+    private static Verification guarded(
+            final Verification checked,
+            final ReviewEdit edit,
+            final String candidate,
+            final String edited,
+            final List<String> renderings,
+            final Set<String> functionWords,
+            final GenderGuess guess) {
+        return EditGuards.refusal(edit, candidate, edited, renderings, functionWords, guess)
+                .<Verification>map(EditVerifier::failed)
+                .orElse(checked);
     }
 
     /**

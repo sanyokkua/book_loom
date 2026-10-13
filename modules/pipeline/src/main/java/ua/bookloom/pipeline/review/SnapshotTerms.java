@@ -23,7 +23,10 @@ final class SnapshotTerms {
                         term.type(),
                         term.gender(),
                         term.locked(),
-                        term.suggested() ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON))
+                        term.suggested() ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON,
+                        term.genderOrigin(),
+                        false,
+                        List.of()))
                 .toList();
     }
 }

@@ -38,12 +38,9 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 
 /**
  * A repair never makes a clean draft worse, and only a gender somebody confirmed is enforced (15i.T1, 15i.T2), seen
- * through a whole run on the scripted model. A case still wrong today sits in {@link KnownRed#until}; the cases
- * without it hold before and after the tasks.
+ * through a whole run on the scripted model.
  */
 class TranslationJobRepairGuardsTest {
-
-    private static final String T1 = "15i.T1";
 
     private static final String RUSSIAN_LETTER = "Я відчинив стары двері.";
     private static final String RIGHT = "Я відчинив старі двері.";
@@ -146,13 +143,11 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        KnownRed.until(T1, "suggested-gender-no-fix", () -> {
-            assertThat(formats(model)).containsExactly(DRAFT);
-            assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
-            assertThat(stored(project, "Book.txt:0").findings())
-                    .extracting(QaFinding::raisedBy)
-                    .doesNotContain("name-gender");
-        });
+        assertThat(formats(model)).containsExactly(DRAFT);
+        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
+        assertThat(stored(project, "Book.txt:0").findings())
+                .extracting(QaFinding::raisedBy)
+                .doesNotContain("name-gender");
     }
 
     // The same woman set by the person is enforced, before and after the task.
@@ -181,14 +176,12 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        KnownRed.until(T1, "suggested-gender-no-reviewer-edit", () -> {
-            assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
-            assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
-            assertThat(stored(project, "Book.txt:0").findings())
-                    .filteredOn(finding -> finding.kind().equals("ignored-edit"))
-                    .singleElement()
-                    .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
-        });
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
+        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
+        assertThat(stored(project, "Book.txt:0").findings())
+                .filteredOn(finding -> finding.kind().equals("ignored-edit"))
+                .singleElement()
+                .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
     }
 
     // The same edit toward a gender the person set is applied, before and after the task.

@@ -14,7 +14,7 @@ import ua.bookloom.api.project.TermType;
 class ContextLineTest {
 
     private static SnapshotTerm term(final String name) {
-        return new SnapshotTerm(name, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return new SnapshotTerm(name, null, TermType.CHARACTER, Gender.UNKNOWN, false, false, null);
     }
 
     @Test

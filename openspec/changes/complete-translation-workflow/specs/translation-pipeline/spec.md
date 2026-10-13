@@ -214,7 +214,7 @@ text unchanged SHALL NOT be announced.
 In plain words: the model forgets earlier chapters, so a short record of who is who travels with every prompt. A
 deterministic summary costs nothing; the model-written one costs a call per chapter, so only the slowest, most careful
 setting pays for it. The deterministic text is the glossary lines and the heading titles: shown as "Running summary" on
-the fixture book it read `Earth (place, neuter)…` followed by chapter titles — not a summary, and the names already
+the fixture book it read `Earth (place)…` followed by chapter titles — not a summary, and the names already
 reach the draft in its glossary block — so it is never presented as one.
 
 #### Scenario: A long chapter refreshes the summary three times
@@ -225,7 +225,7 @@ reach the draft in its glossary block — so it is never presented as one.
 
 #### Scenario: A stored model summary is what a draft is shown
 
-- **WHEN** the latest stored version holds the deterministic text `Earth (place, neuter)` and the model summary
+- **WHEN** the latest stored version holds the deterministic text `Earth (place)` and the model summary
   `Старий чоловік іде до гавані.`
 - **THEN** the next draft's prompt and context snapshot carry `Старий чоловік іде до гавані.` and not the deterministic
   text; with no model summary they carry none and the context panel reads "No summary yet"
@@ -576,13 +576,13 @@ rule.
 ### Requirement: Record deferrals and revise backwards on Max
 
 The system SHALL record a deferral for a segment when the segment contains a
-glossary character whose gender is unknown. WHEN the person changes a glossary term's target, the system SHALL record,
+glossary character whose gender is unknown or only suggested. WHEN the person changes a glossary term's target, the system SHALL record,
 for each decided segment whose target contains the previous target as a whole word, one TERM deferral per changed
 term, only when the entry is locked after the change and had a non-empty target before it. WHERE the dial is Max, after the last segment the system SHALL run a backward
 revision bounded to segments that contain a swept term: it SHALL substitute each locked term's rendering deterministically,
 without a model call — replacing only the previous glossary target the person changed, never a rendering the model chose
 on its own for a term that had no glossary target — and SHALL call the model with the revision call only for a gender deferral whose character now has a
-gender. IF a segment to be changed carries the person's own edit, THEN the system SHALL record a proposal for it and leave
+verified or person-set gender (a gender that is only suggested leaves the deferral open). IF a segment to be changed carries the person's own edit, THEN the system SHALL record a proposal for it and leave
 its target unchanged.
 
 **Source:** FR-ALGO-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-REVIEW-10
@@ -609,6 +609,12 @@ everywhere, and never overwrites what the person wrote by hand.
 - **WHEN** `ch01.xhtml:9` mentions `Sam`, whose gender was `unknown` when it was drafted and is `female` at the revision
   stage
 - **THEN** one revision call is made for `ch01.xhtml:9` and its target is replaced with the revised one
+
+#### Scenario: A suggested gender does not revise, and waits
+
+- **WHEN** `ch01.xhtml:9` mentions `Sam`, whose gender is only suggested as `female`
+- **THEN** a gender deferral is recorded for it, no revision call is made, and the deferral stays open until the gender
+  is verified or set by the person, when the segment is revised
 
 #### Scenario: Two changed terms give two deferrals
 
@@ -1400,7 +1406,10 @@ The application SHALL add one narrator line to the run's style sheet when the br
 ...`, the masculine and gender-less first-person lines, and `Narrator: third person, outside the story ...`), and no
 line, with the style sheet and its hash unchanged, while the narrator is unstated. The application SHALL also give each
 draft, in the single and the batch prompt, a character gender sheet: one `name — gender` line for each glossary
-character of known gender that the segment (for a batch, any of its items) names as a whole word, under
+character of known gender that the segment (for a batch, any of its items) names as a whole word, worded
+`name — likely gender` when the gender is only suggested (nothing is held to a likely gender: only a verified or
+person-set one is enforced by the checks, the directed fixes, the backward revision, the neighbour check and the
+reviewer's edits), under
 `[Characters in this text — keep their gender and agreement]`. The sheet SHALL have a share of its own in the dynamic
 context (`ContextSection.CHARACTERS`, a tenth of what the glossary leaves, taken before the lexicon, the memory, the
 preceding text and the summary), and SHALL be recorded in `ContextSnapshot.characters` so a retry shows the same. The
@@ -1416,6 +1425,13 @@ verb ending from a name, and a character who is not in the scene costs no tokens
 - **WHEN** the glossary holds Lyra (female), Hale (male), Quill (gender unknown) and Oxford (a place) and the segment is
   `Lyra walked to Oxford with Quill.`
 - **THEN** the draft prompt's sheet is exactly `Lyra — female`
+
+#### Scenario: A suggested gender is listed as likely
+
+- **WHEN** `Lyra` is a character whose female gender is only suggested and the segment is `Lyra walked home.`
+- **THEN** the draft prompt's sheet is exactly `Lyra — likely female` and its glossary line reads
+  `Lyra → Ліра (character, likely female)`
+- **AND** a place or a term never gets a gender in its glossary line (`Milton → Мілтон (place)`)
 
 #### Scenario: A short window cuts the sheet before the glossary
 

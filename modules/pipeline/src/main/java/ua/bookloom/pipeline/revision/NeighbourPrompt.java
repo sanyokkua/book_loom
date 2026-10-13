@@ -13,9 +13,9 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.context.InjectedCharacters;
@@ -84,7 +84,7 @@ final class NeighbourPrompt {
         final Map<String, String> user = new HashMap<>();
         user.put("resolvedFacts", facts(inputs, present));
         user.put("lexiconTerms", lexicon(inputs, present));
-        user.put("characters", lines(InjectedCharacters.select(present, inputs.glossary()), CHARACTER_TOKENS));
+        user.put("characters", lines(InjectedCharacters.selectConfirmed(present, inputs.glossary()), CHARACTER_TOKENS));
         user.put("summary", Objects.requireNonNullElse(inputs.context().summary(), ""));
         return user;
     }
@@ -123,9 +123,9 @@ final class NeighbourPrompt {
     }
 
     private static String fact(final GlossaryEntry entry) {
-        final String gender = entry.gender() == Gender.UNKNOWN
-                ? ""
-                : ", " + entry.gender().name().toLowerCase(Locale.ROOT);
+        final String gender = entry.type() == TermType.CHARACTER && entry.hasConfirmedGender()
+                ? ", " + entry.gender().name().toLowerCase(Locale.ROOT)
+                : "";
         return "- " + entry.term() + " → " + entry.target() + gender;
     }
 

@@ -135,6 +135,15 @@ public record GlossaryEntry(
     }
 
     /**
+     * Whether the gender is one the run may hold a text to: the person's or a verified one, not a guess.
+     *
+     * @return {@code true} when the gender is known and not a suggestion, {@code false} otherwise
+     */
+    public boolean hasConfirmedGender() {
+        return gender != Gender.UNKNOWN && genderOrigin != GenderOrigin.SUGGESTED;
+    }
+
+    /**
      * This entry with a target the person chose.
      *
      * @param chosen the person's target, or null to clear it

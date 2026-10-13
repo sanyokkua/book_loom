@@ -64,6 +64,24 @@ public final class EditApplier {
             final Set<String> baseline,
             final List<String> renderings,
             final Set<String> functionWords) {
+        return apply(candidate, edits, checker, baseline, renderings, functionWords, GenderGuess.NONE);
+    }
+
+    /**
+     * Applies the verified edits of one segment, also refusing a gender or agreement edit toward a gender that is only
+     * suggested.
+     *
+     * @param guess the suggested genders an edit may not enforce; never null
+     * @return the edited text and what became of every edit
+     */
+    public EditOutcome apply(
+            final String candidate,
+            final List<ReviewEdit> edits,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings,
+            final Set<String> functionWords,
+            final GenderGuess guess) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edits, "edits");
         String text = candidate;
@@ -81,7 +99,7 @@ public final class EditApplier {
                 noOps++;
                 continue;
             }
-            switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords)) {
+            switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords, guess)) {
                 case Verification.Verified verified -> {
                     text = verified.edited();
                     applied.add(edit);

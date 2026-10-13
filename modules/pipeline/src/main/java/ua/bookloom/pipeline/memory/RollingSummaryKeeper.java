@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -300,12 +299,8 @@ public final class RollingSummaryKeeper {
     private static String line(final GlossaryEntry entry) {
         final String target = entry.target();
         final String rendering = target == null || target.isBlank() ? "" : " → " + target;
-        return "%s%s (%s, %s)"
-                .formatted(
-                        entry.term(),
-                        rendering,
-                        entry.type().name().toLowerCase(Locale.ROOT),
-                        entry.gender().name().toLowerCase(Locale.ROOT));
+        return "%s%s (%s)"
+                .formatted(entry.term(), rendering, TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin()));
     }
 
     private Result<Optional<RollingSummary>> guarded(

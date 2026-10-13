@@ -58,7 +58,7 @@ class RetryDraftTest {
 
     static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
             List.of("Ніч була тиха й темна."),
-            List.of(new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false)),
+            List.of(new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, null)),
             List.of(
                     new SnapshotTmHit(TmHitKind.EXACT, "The night was quiet.", "Ніч була тиха."),
                     new SnapshotTmHit(TmHitKind.CONTEXT, "The monster came.", "Чудовисько прийшло.")),
@@ -124,7 +124,7 @@ class RetryDraftTest {
         assertThat(userMessage(draft))
                 .contains(
                         "Хейл повернувся до замку.",
-                        "monster → потвора (term, neuter)",
+                        "monster → потвора (term)",
                         "The night was quiet. → Ніч була тиха.",
                         "<PreviousTranslations>\nНіч була тиха й темна.\n</PreviousTranslations>")
                 .doesNotContain("→ чудовисько", "Hale →", "The monster came.");
@@ -136,7 +136,7 @@ class RetryDraftTest {
                 SNAPSHOT.precedingTargets(),
                 List.of(
                         SNAPSHOT.glossary().getFirst(),
-                        new SnapshotTerm("monster", "потвора", TermType.TERM, Gender.NEUTER, false)),
+                        new SnapshotTerm("monster", "потвора", TermType.TERM, Gender.NEUTER, false, false, null)),
                 SNAPSHOT.tmHits(),
                 SNAPSHOT.summary(),
                 SNAPSHOT.styleSheet(),

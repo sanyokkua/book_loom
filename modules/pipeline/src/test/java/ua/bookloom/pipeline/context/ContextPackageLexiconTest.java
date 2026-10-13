@@ -65,7 +65,7 @@ class ContextPackageLexiconTest {
         final ContextPackage assembled = assemble("The Master left.", List.of(master), List.of(MASTER), 1000);
 
         assertThat(assembled.draftContext().lexiconLines()).isEmpty();
-        assertThat(assembled.draftContext().glossaryLines()).containsExactly("Master → Майстер (term, unknown)");
+        assertThat(assembled.draftContext().glossaryLines()).containsExactly("Master → Майстер (term)");
     }
 
     // The share is a fifth of what the glossary leaves; the lines that do not fit are cut, the rest keep their room.

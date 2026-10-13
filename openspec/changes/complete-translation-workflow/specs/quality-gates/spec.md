@@ -721,6 +721,13 @@ criterion names, so an edit that does not do what its criterion says is dropped 
 - **THEN** the segment is ACCEPTED as `Він відчинив старі двері.` with one repair round and the edit kept on the record
   as a low finding raised by `reviewer-edit`
 
+#### Scenario: A reviewer's gender edit toward a suggested gender is a low note
+
+- **WHEN** the glossary suggests `Chisel` as female, the sheet reads `Chisel — likely female`, the draft is
+  `Чизел відчинив старі двері.` and the reviewer answers a `gender` edit changing `відчинив` to `відчинила`
+- **THEN** the edit is not applied, one low `ignored-edit` finding is recorded, no directed fix is called and the draft
+  stays; with the gender set by the person the same edit is applied
+
 #### Scenario: A hallucinated quote is ignored
 
 - **WHEN** the reviewer answers an edit whose quote `відімкнув ключем` is not in the candidate
@@ -1220,7 +1227,8 @@ and what it put there.
 
 ### Requirement: Hold a first-person narrator's words to the narrator's gender
 
-The application SHALL, when the brief's narrator is in the first person with a male or female gender and the target
+The application SHALL, when the brief's narrator is in the first person with a male or female gender that the person
+set or the brief verified (a gender shown as "(suggested)" is not held against any text) and the target
 language's file names a gender check with `genderCheck=<name>`, run that check on every candidate and raise a low
 `gender` finding (`raisedBy` `gender`) naming each word that disagrees. A gender check SHALL be a soft check: it never
 fails a hard gate, never blocks acceptance and never flags a segment by itself. The Ukrainian check (`genderCheck=uk`)
@@ -1250,6 +1258,13 @@ repair, never reject.
 
 - **WHEN** the narrator is first-person male and the target is `«Я зачинила двері», — сказала вона.`
 - **THEN** there is no finding, and the same holds for `— Я зачинила двері, — сказала вона.`
+
+#### Scenario: A suggested narrator gender is not enforced
+
+- **WHEN** the narrator is first-person with a male gender that is only suggested and the draft says
+  `Я відчинила старі двері.`
+- **THEN** there is no finding and no directed fix, and a reviewer edit that changes `відчинила` to `відчинив` is
+  ignored with a low `ignored-edit` note and the draft stays
 
 #### Scenario: Third-person text is left alone
 

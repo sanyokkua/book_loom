@@ -17,7 +17,6 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
@@ -157,7 +156,7 @@ final class GenderRevision {
                 return Result.err(Objects.requireNonNull(found.error(), "error"));
             }
             final Optional<GlossaryEntry> known =
-                    Objects.requireNonNull(found.data(), "found").filter(entry -> entry.gender() != Gender.UNKNOWN);
+                    Objects.requireNonNull(found.data(), "found").filter(GlossaryEntry::hasConfirmedGender);
             log.debug("Gender deferral segmentId={} genderKnown={}", segmentId, known.isPresent());
             known.ifPresent(entry -> ready.add(new Known(deferral, entry)));
         }

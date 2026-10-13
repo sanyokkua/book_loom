@@ -13,9 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.NameClusters;
 import ua.bookloom.pipeline.glossary.PronounGender;
@@ -43,7 +45,9 @@ public final class InjectedCharacters {
      *     evidence; null reads no pronoun, so the code gives no gender evidence
      * @return one line per present character of known gender, in glossary order, with the pronouns the text shows
      *     after the name when they agree with its gender ({@code Lyra — female (she ×2)}), a short name folded into its
-     *     full name's line ({@code Danny Vosk (also Danny) — male}); never null, empty when none is present
+     *     full name's line ({@code Danny Vosk (also Danny) — male}), and a gender that was only suggested worded as
+     *     {@code Lyra — likely female} so that nothing holds a text to it (15i.T1); never null, empty when none is
+     *     present
      */
     public static List<String> select(
             final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
@@ -81,6 +85,20 @@ public final class InjectedCharacters {
         return select(segments, glossary, null);
     }
 
+    /**
+     * The sheet for some segments without a line for a gender that was only suggested, for a prompt that asks a model to
+     * change a text and so must not hand it a guess.
+     *
+     * @param segments the segments whose text decides who is present
+     * @param glossary every glossary entry as the run read it
+     * @return the {@link #select(List, List)} lines whose gender is the person's or verified; never null
+     */
+    public static List<String> selectConfirmed(final List<Segment> segments, final List<GlossaryEntry> glossary) {
+        return select(segments, glossary).stream()
+                .filter(line -> !CharacterNames.isLikely(line))
+                .toList();
+    }
+
     // The line a present name is listed on: its cluster's full name when that has a gender and this name has none or
     // the same one, else the name itself; nothing when the line's gender is not known.
     private static Optional<GlossaryEntry> headOf(final GlossaryEntry entry, final NameClusters clusters) {
@@ -103,7 +121,8 @@ public final class InjectedCharacters {
                 .toList();
         final String name =
                 shortNames.isEmpty() ? full.term() : full.term() + " (also " + String.join(", ", shortNames) + ")";
-        final String line = name + " — " + full.gender().name().toLowerCase(Locale.ROOT);
+        final String likely = full.genderOrigin() == GenderOrigin.SUGGESTED ? CharacterNames.LIKELY + " " : "";
+        final String line = name + " — " + likely + full.gender().name().toLowerCase(Locale.ROOT);
         PronounGender.Evidence evidence = PronounGender.of(full.term(), texts, sourceLanguage);
         for (final String shortName : shortNames) {
             evidence = evidence.and(PronounGender.of(shortName, texts, sourceLanguage));
