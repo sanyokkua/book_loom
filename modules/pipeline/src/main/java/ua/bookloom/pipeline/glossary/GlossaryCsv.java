@@ -64,9 +64,9 @@ public final class GlossaryCsv {
         Objects.requireNonNull(entries, "entries");
         final StringBuilder csv = new StringBuilder(HEADER).append(RECORD_END);
         for (final GlossaryEntry entry : entries) {
-            csv.append(quoted(entry.term()))
+            csv.append(CsvRecords.quoted(entry.term()))
                     .append(',')
-                    .append(quoted(entry.target() == null ? "" : entry.target()))
+                    .append(CsvRecords.quoted(entry.target() == null ? "" : entry.target()))
                     .append(',')
                     .append(entry.type().name().toLowerCase(Locale.ROOT))
                     .append(',')
@@ -150,13 +150,6 @@ public final class GlossaryCsv {
             case "false" -> Optional.of(Boolean.FALSE);
             default -> Optional.empty();
         };
-    }
-
-    private static String quoted(final String field) {
-        if (field.indexOf(',') < 0 && field.indexOf('"') < 0 && field.indexOf('\r') < 0 && field.indexOf('\n') < 0) {
-            return field;
-        }
-        return '"' + field.replace("\"", "\"\"") + '"';
     }
 
     // A row never turns a known value into an unknown one: a rescan's file lists a character as "term, unknown"

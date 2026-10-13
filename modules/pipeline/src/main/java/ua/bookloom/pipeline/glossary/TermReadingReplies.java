@@ -134,7 +134,7 @@ final class TermReadingReplies {
 
     // A small model may wrap its object in a code fence or a sentence: the object runs from the first brace to the
     // last.
-    private static @Nullable JsonNode tree(final ObjectMapper mapper, final String reply) {
+    static @Nullable JsonNode tree(final ObjectMapper mapper, final String reply) {
         final int from = reply.indexOf('{');
         final int to = reply.lastIndexOf('}');
         if (from < 0 || to <= from) {

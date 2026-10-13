@@ -24,6 +24,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
+import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
@@ -123,7 +124,7 @@ public final class SequenceJobs {
                 new PreScan(templates, mapper, stores.glossary(), review, suggest),
                 review,
                 suggest,
-                new TermChoice(templates, mapper),
+                new LexiconReading(templates, mapper, new TermChoice(templates, mapper)),
                 Clock.systemUTC());
         return new Names(
                 new GlossaryServiceImpl(

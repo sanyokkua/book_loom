@@ -1,6 +1,6 @@
 {
   "id": "mayday",
-  "about": "'Mayday' is a distress call, said five times in speech and narration, never a person or a place.",
+  "about": "'Mayday' is a distress call, said seven times in speech and narration, never a person or a place: no name, but a recurring term the book uses in one sense.",
   "title": "The Last Watch",
   "author": "Ada Pell",
   "chapters": [
@@ -56,13 +56,19 @@
       "Mayday"
     ],
     "keep": [],
-    "recurringTerms": []
+    "recurringTerms": [
+      {
+        "term": "mayday",
+        "keep": true
+      }
+    ]
   },
   "model": {
     "verdicts": [],
     "targets": {
       "Haldane": "Голдейн",
-      "Sorrel": "Сорел"
+      "Sorrel": "Сорел",
+      "mayday": "мейдей"
     },
     "terms": {}
   },

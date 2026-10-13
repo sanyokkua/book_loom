@@ -8,7 +8,7 @@ import java.util.Objects;
  * The RFC 4180 tokenizer behind the glossary file: it splits text into records of fields and remembers the line each
  * record starts on, because a quoted field may hold line breaks and the person is told which line to fix.
  */
-final class CsvRecords {
+public final class CsvRecords {
 
     /**
      * One record of the file.
@@ -17,9 +17,9 @@ final class CsvRecords {
      * @param fields the record's fields, quotes removed
      * @param terminated {@code false} when a quoted field never closed before the text ended
      */
-    record CsvRecord(int line, List<String> fields, boolean terminated) {
+    public record CsvRecord(int line, List<String> fields, boolean terminated) {
 
-        boolean isBlankLine() {
+        public boolean isBlankLine() {
             return fields.size() == 1 && fields.getFirst().isEmpty();
         }
     }
@@ -35,7 +35,21 @@ final class CsvRecords {
         this.text = text;
     }
 
-    static List<CsvRecord> read(final String text) {
+    /**
+     * Writes one field the way {@link #read} reads it back.
+     *
+     * @param field the field's text; never null
+     * @return the text itself, or in quotes with its quotes doubled when it holds a comma, a quote or a line break
+     */
+    public static String quoted(final String field) {
+        Objects.requireNonNull(field, "field");
+        if (field.indexOf(',') < 0 && field.indexOf('"') < 0 && field.indexOf('\r') < 0 && field.indexOf('\n') < 0) {
+            return field;
+        }
+        return '"' + field.replace("\"", "\"\"") + '"';
+    }
+
+    public static List<CsvRecord> read(final String text) {
         Objects.requireNonNull(text, "text");
         final CsvRecords reader = new CsvRecords(text);
         final List<CsvRecord> records = new ArrayList<>();

@@ -48,5 +48,8 @@ public enum CallKind {
     BRIEF_SYNTHESIS,
 
     /** A names call: the model reads one glossary term in windows from across the book (15i.N4). */
-    TERM_READING
+    TERM_READING,
+
+    /** A recurring-term call: the model chooses which candidate words a translator must render the same way. */
+    TERM_CHOICE
 }

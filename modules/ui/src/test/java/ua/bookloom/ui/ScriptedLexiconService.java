@@ -1,5 +1,6 @@
 package ua.bookloom.ui;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -10,6 +11,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.EntryChanges;
+import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.Gender;
@@ -171,6 +173,18 @@ public final class ScriptedLexiconService implements LexiconService {
     public Result<Boolean> remove(final String projectId, final String term) {
         calls.add("remove(" + term + ")");
         return Result.ok(held.remove(find(term)));
+    }
+
+    @Override
+    public Result<GlossaryImportReport> importCsv(final String projectId, final Path source) {
+        calls.add("importCsv(" + source.getFileName() + ")");
+        return Result.ok(new GlossaryImportReport(0, List.of(), List.of()));
+    }
+
+    @Override
+    public Result<Path> exportCsv(final String projectId, final Path destination) {
+        calls.add("exportCsv(" + destination.getFileName() + ")");
+        return Result.ok(destination);
     }
 
     private LexiconEntry find(final String term) {

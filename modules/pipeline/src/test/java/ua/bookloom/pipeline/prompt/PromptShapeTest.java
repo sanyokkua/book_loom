@@ -57,6 +57,7 @@ class PromptShapeTest {
             Map.entry("book-knowledge", "known"),
             Map.entry("brief-synthesis", "genre"),
             Map.entry("term-reading", "windows"),
+            Map.entry("lexicon-reading", "windows"),
             Map.entry("term-tiebreak", "gender"),
             Map.entry("term-summary", "usage"));
 
@@ -97,6 +98,7 @@ class PromptShapeTest {
                 "BOOK_KNOWLEDGE",
                 "BRIEF_SYNTHESIS",
                 "TERM_READING",
+                "LEXICON_READING",
                 "TERM_TIEBREAK",
                 "TERM_SUMMARY"
             },
@@ -231,6 +233,48 @@ class PromptShapeTest {
                 PromptName.TERM_READING, Map.of("term", "Arlo — 7 mentions", "windows", "[1] [[Arlo]] sat down."));
 
         assertThat(user).contains("Arlo — 7 mentions", "[1] [[Arlo]] sat down.").doesNotContain("{{", "}}");
+    }
+
+    // 15i.N7: the example reply copies the quote before it labels the window, as the schema orders it, and ends with
+    // the term's number of senses and its one rendering.
+    @Test
+    void render_lexiconReading_exampleReplyPutsEachQuoteBeforeItsUsage() {
+        final JsonNode example = prompt(PromptName.LEXICON_READING)
+                .lines()
+                .filter(line -> line.contains("{") && !line.contains("<"))
+                .map(line -> line.substring(line.indexOf('{')))
+                .map(PromptShapeTest::tree)
+                .filter(node -> node.has("windows") && node.path("windows").size() > 0)
+                .findFirst()
+                .orElseThrow();
+        final java.util.List<String> fields = new java.util.ArrayList<>();
+        example.path("windows").get(0).fieldNames().forEachRemaining(fields::add);
+
+        assertThat(fields).containsExactly("window", "quote", "usage");
+        assertThat(example.has("senses")).isTrue();
+        assertThat(example.has("rendering")).isTrue();
+    }
+
+    // IF the model were not told that one rendering must fit every window, THEN it would give the rendering of the
+    // first window; IF it were not told a word of two senses is no term, THEN "bank" would be kept.
+    @Test
+    void render_lexiconReading_asksOneRenderingThatFitsEveryWindowAndNamesEveryUsage() {
+        final String system = system(PromptName.LEXICON_READING).toLowerCase(java.util.Locale.ROOT);
+
+        assertThat(system)
+                .contains("one rendering", "every window", "\"term\"", "\"word\"", "\"name\"", "senses", "[[")
+                .containsAnyOf("two senses", "more than one sense", "different senses");
+    }
+
+    @Test
+    void render_lexiconReading_userCarriesTheTermLineAndTheWindows() {
+        final String user = TEMPLATES.renderUser(
+                PromptName.LEXICON_READING,
+                Map.of("term", "beacon — 5 mentions", "windows", "[1] The [[beacon]] was lit."));
+
+        assertThat(user)
+                .contains("beacon — 5 mentions", "[1] The [[beacon]] was lit.")
+                .doesNotContain("{{", "}}");
     }
 
     // The draft system is sent with every segment of a book; a small model must still read its last rule.

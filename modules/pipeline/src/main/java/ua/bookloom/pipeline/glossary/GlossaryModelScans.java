@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.glossary;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -42,7 +43,7 @@ public final class GlossaryModelScans {
     private final PreScan preScan;
     private final TermReview termReview;
     private final SuggestTargets suggestTargets;
-    private final TermChoice termChoice;
+    private final LexiconReading lexiconReading;
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
@@ -108,21 +109,22 @@ public final class GlossaryModelScans {
     }
 
     /**
-     * Asks the model which of the recurring-term candidates a translator must render consistently; nothing is written.
+     * Reads the recurring-term candidates in context at the project's dial (15i.N7); nothing is written.
      *
-     * @param projectId the non-null project whose book gives each term its example sentence
+     * @param projectId the non-null project whose book gives each term its windows
      * @param terms the non-null candidate terms
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish
-     * @return the model's verdicts as lexicon keys, or the first failed call's error
+     * @return a decision for every term asked, by lexicon key, or the first failed call's error
      */
-    public Result<TermChoice.Choice> chooseTerms(
+    public Result<Map<String, LexiconReading.Decision>> readTerms(
             final String projectId,
             final List<String> terms,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         return book(projectId)
-                .flatMap(book -> termChoice.choose(terms, book.story(), book.frame(), calls(model, progress, book)));
+                .flatMap(book -> lexiconReading.read(
+                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {

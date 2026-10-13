@@ -13,6 +13,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.QualityDial;
 
 /**
  * The names suite's runner (15i.E1) driven offline: Names &amp; style runs over each committed book through the real
@@ -99,6 +100,41 @@ class NamesRunnerTest {
         assertThat(score.genderCorrect()).isEqualTo(3);
         assertThat(score.wrongButVerified()).isZero();
         assertThat(score.clusterRate()).isEqualTo(1.0);
+    }
+
+    // IF the recurring term were read as one more name to drop, THEN the distress call would be lost from the book (it
+    // is
+    // no name, so the glossary drops it); at Balanced the lexicon reads it in its windows, sees one sense in all of
+    // them
+    // and keeps it with the rendering the book will use (15i.N7).
+    @Test
+    void run_maydayAtBalanced_keepsTheDistressCallAsATermWithItsRendering() {
+        final NamesBook book = NamesBook.byId("mayday");
+        final NamesRunner runner = new NamesRunner(new NamesFakeModel(book), QualityDial.BALANCED);
+
+        final NamesRow row = runner.run(book, dir);
+
+        assertThat(row.error()).isNull();
+        assertThat(row.score().recurringKept()).isEqualTo(1);
+        assertThat(row.score().recurringDropped()).isZero();
+        assertThat(row.score().recurringJunkKept()).isZero();
+        assertThat(row.score().junkKept()).isZero();
+        assertThat(runner.lexicon())
+                .filteredOn(entry -> entry.term().equalsIgnoreCase("mayday"))
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.chosen()).isEqualTo("мейдей"));
+    }
+
+    // At Fast the one-sentence batch choice keeps it too, with no rendering written by the choice itself.
+    @Test
+    void run_maydayAtFast_keepsTheDistressCallAsATerm() {
+        final NamesBook book = NamesBook.byId("mayday");
+
+        final NamesRow row = new NamesRunner(new NamesFakeModel(book), QualityDial.FAST).run(book, dir);
+
+        assertThat(row.error()).isNull();
+        assertThat(row.score().recurringKept()).isEqualTo(1);
+        assertThat(row.score().recurringJunkKept()).isZero();
     }
 
     @Test

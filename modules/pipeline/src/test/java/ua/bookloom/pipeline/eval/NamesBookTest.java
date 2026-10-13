@@ -268,4 +268,13 @@ class NamesBookTest {
         assertThat(mentions(book, "Mayday")).isEqualTo(5);
         assertThat(book.gold().junk()).containsExactly("Mayday");
     }
+
+    // 15i.N7: the call is no name but a term the book uses in one sense, so the lexicon keeps it.
+    @Test
+    void mayday_book_goldKeepsTheCallAsARecurringTermWithARendering() {
+        final NamesBook book = NamesBook.byId("mayday");
+
+        assertThat(book.gold().recurringTerms()).containsExactly(new JudgementGold.Recurring("mayday", true));
+        assertThat(book.model().targets()).containsEntry("mayday", "мейдей");
+    }
 }

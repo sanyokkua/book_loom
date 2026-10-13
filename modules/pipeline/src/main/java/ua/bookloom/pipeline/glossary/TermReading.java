@@ -257,7 +257,8 @@ public final class TermReading {
         return line.toString();
     }
 
-    private static String numbered(final List<Window> windows) {
+    /** The windows as the reading shows them: a number, then the text with its mention marked, a blank line between. */
+    static String numbered(final List<Window> windows) {
         final List<String> lines = new ArrayList<>();
         for (int index = 0; index < windows.size(); index++) {
             lines.add("[" + (index + 1) + "] " + marked(windows.get(index)));

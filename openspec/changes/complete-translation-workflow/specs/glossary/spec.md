@@ -970,6 +970,60 @@ while leaving the person free to choose, or to make an entry a hard glossary rul
 - **WHEN** the person types `IMP` in the add field while `imp` is listed
 - **THEN** the line above the glossary says `IMP is already in the glossary or the list` and no term is added
 
+### Requirement: Read recurring terms in context and exchange them as a file
+
+WHEN the person asks the model to find or review recurring terms, the application SHALL read each candidate term in its
+own call at the Balanced and Max quality dials, in numbered windows of the book (3 windows of one paragraph either side at
+Balanced, 4 of two at Max), and decide from the answers by code: a term most counted windows use in one sense is kept, an
+ordinary word (most counted windows) or a word with two senses or more is dropped, a named thing (most counted windows)
+moves to the glossary, and a term nothing readable decided is left as it is. A window SHALL count only when the quote the
+model gave for it stands in that window. At the Fast dial the candidates SHALL go to one batch choice over one example
+sentence each, which keeps or drops and gives no rendering; that call SHALL be labelled "Term choice", not "Name review".
+A failed call SHALL end the action with its error and write nothing.
+
+A kept or moved term SHALL take the one rendering the reading gave for every window, written as the model's rendering: a
+rendering the person typed or imported SHALL NOT be replaced by a reading or by a file import, a rendering a reading wrote
+SHALL be replaced by a person's edit or an import, and a review SHALL NOT ask a term that already has a rendering. A
+rendering that is the source spelling, across scripts, SHALL be refused unless the term is an identifier, and the term kept
+with none. A term moved to the glossary SHALL enter as an unlocked term whose target is a suggestion nobody has confirmed.
+
+The Recurring terms section SHALL import and export its terms as an RFC 4180 CSV file in UTF-8 with the header
+`term,target` (CRLF line ends, a field quoted only when it holds a comma, a quote or a line break, terms sorted, the target
+the established rendering or empty). An import SHALL add the terms the lexicon lacks, give a term without a person's
+rendering the row's rendering, refuse a row whose term the glossary holds, name every malformed line, and import the good
+rows regardless.
+
+**Source:** `tasks.md` 15i.N7; `docs/specification/01_Product/12_PROMPT_CATALOG.md#lexicon-reading`. In plain words: a
+word such as "bank" that means a river's edge in one chapter and a business in another cannot have one rendering, so the
+model is shown the word in its places and the code, not the model, decides; and a series can carry its recurring terms from
+one book to the next in a file.
+
+#### Scenario: A word of one sense is kept with its rendering
+
+- **WHEN** the model reads `beacon` at Balanced, every window quoted from the text uses it as a term, one sense, rendering
+  `маяк`
+- **THEN** the lexicon holds `beacon` with `маяк` as a model-written rendering
+
+#### Scenario: An ordinary or two-sense word is dropped
+
+- **WHEN** the model reads `ferry` and calls most windows "word", or reads `bank` and says the windows show two senses
+- **THEN** the term is not added in a scan and is removed in a review
+
+#### Scenario: A named thing moves to the glossary as a suggestion
+
+- **WHEN** the model reads `signal fire` and calls most windows "name", rendering `Сигнальне Вогнище`
+- **THEN** the glossary holds it as an unlocked term whose target is marked suggested and the lexicon does not
+
+#### Scenario: A person's rendering outranks a model's and a file's
+
+- **WHEN** the lexicon holds `master` with `пан` typed by the person and an import row says `master,володар`
+- **THEN** `master` keeps `пан`; had a reading written `пан`, the import would have replaced it
+
+#### Scenario: An import names the lines it cannot use
+
+- **WHEN** a file has the header, a good row, a row with three fields and a row for a term the glossary holds
+- **THEN** one term is imported and the report names the malformed line and the refused line
+
 ### Requirement: Record the renderings a draft used and keep them consistent
 
 WHEN a batch is drafted, the application SHALL give the model the closed list of the lexicon's key terms the batch's items

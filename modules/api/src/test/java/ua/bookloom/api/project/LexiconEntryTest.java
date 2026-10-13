@@ -97,4 +97,55 @@ class LexiconEntryTest {
         assertThatThrownBy(() -> new LexiconEntry.Learned("господар", 4, 3))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    // 15i.N7: who wrote the chosen rendering decides whether a reading or a file may replace it.
+    @Test
+    void new_chosenWithNoOrigin_isThePersons() {
+        final LexiconEntry typed = entry("", "пан", null);
+
+        assertThat(typed.chosenOrigin()).isEqualTo(RenderingOrigin.PERSON);
+        assertThat(typed.hasPersonsRendering()).isTrue();
+    }
+
+    @Test
+    void new_noChosen_hasNoOrigin() {
+        final LexiconEntry none = entry("господар:2", null, "пан");
+
+        assertThat(none.chosenOrigin()).isNull();
+        assertThat(none.hasPersonsRendering()).isFalse();
+    }
+
+    @Test
+    void withModelRendering_rendering_isChosenButNotThePersons() {
+        final LexiconEntry read = entry("", null, null).withModelRendering("пан");
+
+        assertThat(read.established()).hasValue("пан");
+        assertThat(read.chosenOrigin()).isEqualTo(RenderingOrigin.MODEL);
+        assertThat(read.hasPersonsRendering()).isFalse();
+    }
+
+    @Test
+    void withChosen_overAModelsRendering_makesItThePersons() {
+        final LexiconEntry edited =
+                entry("", null, null).withModelRendering("пан").withChosen("володар");
+
+        assertThat(edited.hasPersonsRendering()).isTrue();
+        assertThat(edited.chosen()).isEqualTo("володар");
+    }
+
+    @Test
+    void withChosen_blank_clearsTheChoiceAndItsOrigin() {
+        final LexiconEntry cleared = entry("", "пан", null).withChosen(" ");
+
+        assertThat(cleared.chosen()).isNull();
+        assertThat(cleared.chosenOrigin()).isNull();
+    }
+
+    @Test
+    void seen_afterAModelsRendering_keepsItsOrigin() {
+        final LexiconEntry seen =
+                entry("", null, null).withModelRendering("пан").seen("господар");
+
+        assertThat(seen.chosenOrigin()).isEqualTo(RenderingOrigin.MODEL);
+    }
 }

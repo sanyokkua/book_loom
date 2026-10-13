@@ -17,13 +17,16 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
+import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
@@ -61,9 +64,15 @@ class LexiconModelActionsTest {
                 new PreScan(templates, mapper, desk.glossary(), review, suggest),
                 review,
                 suggest,
-                new TermChoice(templates, mapper),
+                new LexiconReading(templates, mapper, new TermChoice(templates, mapper)),
                 Clock.systemUTC());
         service = new LexiconServiceImpl(lexicon, desk.glossary(), desk.projects(), desk.openProjects(), scans);
+        // At Fast the one-sentence batch choice decides keep or drop; Balanced and Max read each term in its windows
+        // (LexiconReadingActionsTest).
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data(), "found")
+                .orElseThrow();
+        desk.projects().save(stored.withBrief(stored.brief().withDial(QualityDial.FAST)));
     }
 
     private static Result<ChatResponse> reply(final String json) {

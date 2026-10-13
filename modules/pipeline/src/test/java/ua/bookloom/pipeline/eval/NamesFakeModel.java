@@ -29,7 +29,8 @@ import ua.bookloom.pipeline.prompt.PromptName;
  * reading (15i.N4) answers every window by the gold too: a junk term is an ordinary word quoted from its window, a gold
  * name a name of its kind whose gender (the script's, else the gold's) is quoted as a pronoun of that gender standing
  * in the window's narration, "none" when the window holds none; a tiebreak (15i.N5) answers the gold gender of the
- * character the call names, quoted the same way.
+ * character the call names, quoted the same way. A recurring-term reading (15i.N7) answers a gold term to keep as a term
+ * of one sense with the script's rendering and every other word as an ordinary word.
  */
 final class NamesFakeModel implements ChatModel {
 
@@ -38,6 +39,8 @@ final class NamesFakeModel implements ChatModel {
     private static final Pattern WINDOW_LINE = Pattern.compile("^\\s+\\[\\d+] (.*)$");
     private static final Pattern CHOICE_LINE = Pattern.compile("^- (.+?)(?: · \\d+ uses)?(?: — .*)?$");
     private static final Pattern CANDIDATE_LINE = Pattern.compile("^(.+?) — ");
+    private static final Pattern MARKED = Pattern.compile("\\[\\[(.+?)]]");
+    private static final Pattern WINDOW_NUMBER = Pattern.compile("(?m)^\\[(\\d+)] ");
     private static final Pattern READING_WINDOW = Pattern.compile("^\\[(\\d+)] (.*)$");
     private static final List<String> MALE_WORDS = List.of("He", "he", "him", "His", "his", "himself");
     private static final List<String> FEMALE_WORDS = List.of("She", "she", "Her", "her", "hers", "herself");
@@ -78,6 +81,9 @@ final class NamesFakeModel implements ChatModel {
         }
         if (format.equals(PromptName.TERM_READING.responseFormatName())) {
             return reading(user);
+        }
+        if (format.equals(PromptName.LEXICON_READING.responseFormatName())) {
+            return lexiconReading(user);
         }
         if (format.equals(PromptName.TERM_TIEBREAK.responseFormatName())) {
             return tiebreak(user);
@@ -182,6 +188,30 @@ final class NamesFakeModel implements ChatModel {
             }
         }
         return NONE;
+    }
+
+    // The recurring-term reading (15i.N7): the term is the first marked text of the windows, every window is a numbered
+    // "[n] …" line; a gold term to keep is a term of one sense whose rendering is the script's target, any other word
+    // an ordinary word. The quote is the marked term, which stands in every window it was cut around.
+    private String lexiconReading(final String user) {
+        final Matcher marked = MARKED.matcher(user);
+        final String term = marked.find() ? marked.group(1) : "";
+        final boolean keep = isKept(term);
+        final List<String> answers = new ArrayList<>();
+        for (final Matcher window = WINDOW_NUMBER.matcher(user); window.find(); ) {
+            answers.add("{\"window\":%s,\"quote\":\"%s\",\"usage\":\"%s\"}"
+                    .formatted(window.group(1), escaped(term), keep ? "term" : "word"));
+        }
+        final String rendering = keep ? book.model().targets().getOrDefault(term.toLowerCase(Locale.ROOT), "") : "";
+        return "{\"windows\":[%s],\"senses\":1,\"rendering\":\"%s\"}"
+                .formatted(String.join(",", answers), escaped(rendering));
+    }
+
+    private boolean isKept(final String term) {
+        final Map<String, Boolean> wanted = new LinkedHashMap<>();
+        book.gold().recurringTerms().forEach(gold -> wanted.put(gold.term().toLowerCase(Locale.ROOT), gold.keep()));
+        wanted.putAll(book.model().terms());
+        return wanted.getOrDefault(term.toLowerCase(Locale.ROOT), false);
     }
 
     // The tiebreak names one character: the gold or scripted name the call's text writes most often.

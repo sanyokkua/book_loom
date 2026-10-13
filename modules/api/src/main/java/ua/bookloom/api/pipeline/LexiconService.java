@@ -1,5 +1,6 @@
 package ua.bookloom.api.pipeline;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
@@ -111,4 +112,27 @@ public interface LexiconService {
      * @return {@code true} when an entry was removed, {@code false} when none held the term
      */
     Result<Boolean> remove(String projectId, String term);
+
+    /**
+     * Imports recurring terms and their renderings from an RFC-4180 CSV file with the header {@code term,target}. A
+     * term the lexicon holds without a person's rendering takes the row's rendering (a rendering a model wrote is
+     * replaced, the file being the person's word); a rendering the person typed or imported is never replaced; a new
+     * term is added; a term the glossary holds is refused.
+     *
+     * @param projectId the non-null project id
+     * @param source the non-null CSV file to read
+     * @return what was imported and which lines were malformed or refused, or {@code validation} when the file cannot
+     *     be read
+     */
+    Result<GlossaryImportReport> importCsv(String projectId, Path source);
+
+    /**
+     * Exports the project's lexicon to an RFC-4180 CSV file with the header {@code term,target}, the target being the
+     * established rendering or empty.
+     *
+     * @param projectId the non-null project id
+     * @param destination the non-null CSV file to write
+     * @return the written file's path
+     */
+    Result<Path> exportCsv(String projectId, Path destination);
 }

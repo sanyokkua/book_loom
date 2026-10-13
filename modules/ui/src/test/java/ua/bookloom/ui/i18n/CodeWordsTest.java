@@ -38,6 +38,19 @@ class CodeWordsTest {
                 .isNotEqualTo(unknown);
     }
 
+    // 15i.N7: the recurring-term choice was labelled "Name review"; it has its own words in both languages.
+    @ParameterizedTest(name = "{0} in {1}")
+    @CsvSource({
+        "term_choice, en, Term choice",
+        "term_choice, uk, Вибір термінів",
+        "review_terms, en, Name review",
+        "review_terms, uk, Перевірка імен",
+    })
+    void callKind_termChoiceAndNameReview_readAsDifferentWords(
+            final String kind, final String tag, final String expected) {
+        assertThat(messagesFor(tag).get(MessageKey.RUN_CALL_KIND, kind)).isEqualTo(expected);
+    }
+
     // IF an outcome's reason were shown as its code, THEN a person would read MISSING or reviewer-unavailable.
     @ParameterizedTest(name = "{0} in {1}")
     @CsvSource({

@@ -19,10 +19,14 @@ import org.jspecify.annotations.Nullable;
  * @param projectId the owning project's id
  * @param term the source term as proposed or typed; matched ignoring case
  * @param renderings the verified renderings in the order they were first seen, each with how often it was used
- * @param chosen the rendering the person typed or accepted, or null; it always wins
+ * @param chosen the rendering the person typed, imported or accepted, or one a reading of the term wrote (see
+ *     {@code chosenOrigin}), or null; it outranks every other source
  * @param suggested the model's suggested rendering from the suggestion call, or null; used only while nothing was seen
  * @param learned the rendering the run learned by co-occurrence from the decided segments, or null; it outranks the
  *     reported renderings but never the person's choice
+ * @param chosenOrigin who wrote {@code chosen}; null exactly when {@code chosen} is null, and a chosen rendering
+ *     stated with no origin is {@link RenderingOrigin#PERSON}'s, so hand-made entries keep the person's authority. A
+ *     person's rendering is never replaced by a reading or a file; a model's may be
  */
 public record LexiconEntry(
         String projectId,
@@ -30,7 +34,8 @@ public record LexiconEntry(
         List<Rendering> renderings,
         @Nullable String chosen,
         @Nullable String suggested,
-        @Nullable Learned learned) {
+        @Nullable Learned learned,
+        @Nullable RenderingOrigin chosenOrigin) {
 
     /**
      * One verified rendering and its use count.
@@ -75,6 +80,18 @@ public record LexiconEntry(
         renderings = List.copyOf(Objects.requireNonNull(renderings, "renderings"));
         chosen = blankAsNull(chosen);
         suggested = blankAsNull(suggested);
+        chosenOrigin = chosen == null ? null : Objects.requireNonNullElse(chosenOrigin, RenderingOrigin.PERSON);
+    }
+
+    /** An entry whose chosen rendering, if any, is the person's. */
+    public LexiconEntry(
+            final String projectId,
+            final String term,
+            final List<Rendering> renderings,
+            @Nullable final String chosen,
+            @Nullable final String suggested,
+            @Nullable final Learned learned) {
+        this(projectId, term, renderings, chosen, suggested, learned, null);
     }
 
     /**
@@ -152,17 +169,37 @@ public record LexiconEntry(
         if (!found) {
             next.add(new Rendering(rendering.strip(), 1));
         }
-        return new LexiconEntry(projectId, term, next, chosen, suggested, learned);
+        return new LexiconEntry(projectId, term, next, chosen, suggested, learned, chosenOrigin);
     }
 
     /**
      * This entry with the person's rendering.
      *
      * @param rendering the rendering to keep, or null or blank to clear the choice
-     * @return a copy with the choice set
+     * @return a copy with the choice set, whose origin is {@link RenderingOrigin#PERSON}
      */
     public LexiconEntry withChosen(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned);
+        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.PERSON);
+    }
+
+    /**
+     * This entry with the rendering a reading of the term wrote.
+     *
+     * @param rendering the rendering to keep, or null or blank to clear the choice
+     * @return a copy with the choice set, whose origin is {@link RenderingOrigin#MODEL}
+     */
+    public LexiconEntry withModelRendering(@Nullable final String rendering) {
+        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.MODEL);
+    }
+
+    /**
+     * Whether the chosen rendering is a person's, which no reading and no file may replace.
+     *
+     * @return {@code true} if a rendering is chosen and a person wrote it, {@code false} if none is chosen or a model
+     *     wrote it
+     */
+    public boolean hasPersonsRendering() {
+        return chosen != null && chosenOrigin == RenderingOrigin.PERSON;
     }
 
     /**
@@ -172,7 +209,7 @@ public record LexiconEntry(
      * @return a copy with the suggestion set
      */
     public LexiconEntry withSuggested(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned);
+        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned, chosenOrigin);
     }
 
     /**
@@ -182,7 +219,7 @@ public record LexiconEntry(
      * @return a copy with the learned rendering set
      */
     public LexiconEntry withLearned(@Nullable final Learned learned) {
-        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned);
+        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned, chosenOrigin);
     }
 
     /**

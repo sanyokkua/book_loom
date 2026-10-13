@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
 import com.google.inject.Inject;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +21,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
+import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.BookBrief;
@@ -33,7 +35,6 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.NameCandidate;
-import ua.bookloom.pipeline.glossary.TermChoice;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 
@@ -120,7 +121,7 @@ public final class LexiconServiceImpl implements LexiconService {
                 "promote",
                 projectId,
                 () -> held(projectId, term)
-                        .flatMap(entry -> entry.map(found -> promoteEntry(projectId, found))
+                        .flatMap(entry -> entry.map(found -> decisions().promote(projectId, found))
                                 .orElseGet(() -> unknown(term))));
     }
 
@@ -135,6 +136,21 @@ public final class LexiconServiceImpl implements LexiconService {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(term, "term");
         return guarded("remove", projectId, () -> lexicon.remove(projectId, term));
+    }
+
+    @Override
+    public Result<GlossaryImportReport> importCsv(final String projectId, final Path source) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(source, "source");
+        return guarded("importCsv", projectId, () -> new LexiconFiles(lexicon, glossary).importFrom(projectId, source));
+    }
+
+    @Override
+    public Result<Path> exportCsv(final String projectId, final Path destination) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(destination, "destination");
+        return guarded(
+                "exportCsv", projectId, () -> new LexiconFiles(lexicon, glossary).exportTo(projectId, destination));
     }
 
     private Result<LexiconEntry> restoreEntry(final LexiconEntry entry) {
@@ -204,66 +220,30 @@ public final class LexiconServiceImpl implements LexiconService {
                         .toList();
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
-                .chooseTerms(projectId, candidates, model, progress)
-                .flatMap(choice -> addChosen(projectId, candidates, choice))
+                .readTerms(projectId, candidates, model, progress)
+                .flatMap(decisions -> decisions().addDecided(projectId, candidates, decisions))
                 .flatMap(added -> {
                     log.info("Lexicon model scan project={} added={}", projectId, added);
                     return lexicon.all(projectId);
                 });
     }
 
-    private Result<Integer> addChosen(
-            final String projectId, final List<String> candidates, final TermChoice.Choice choice) {
-        log.info(
-                "Lexicon model scan project={} undecided={}",
-                projectId,
-                choice.undecided().size());
-        final Set<String> kept = choice.kept();
-        int added = 0;
-        for (final String term : candidates) {
-            if (kept.contains(LexiconEntry.keyOf(term))) {
-                final Result<LexiconEntry> stored = lexicon.put(LexiconEntry.of(projectId, term));
-                if (stored.isErr()) {
-                    return Result.err(Objects.requireNonNull(stored.error(), "error"));
-                }
-                added++;
-            }
-        }
-        return Result.ok(added);
-    }
-
     private Result<List<LexiconEntry>> runReview(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return lexicon.all(projectId).flatMap(all -> {
-            // A term with a rendering — typed, verified in a draft or learned from the text — has earned its place.
+            // A term with a rendering — typed, verified in a draft, learned from the text or read — has earned its
+            // place and is not asked.
             final List<LexiconEntry> asked =
                     all.stream().filter(entry -> entry.established().isEmpty()).toList();
             log.info("Lexicon review project={} terms={} asked={}", projectId, all.size(), asked.size());
             return modelScans
-                    .chooseTerms(
-                            projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
-                    .flatMap(choice -> {
-                        log.info(
-                                "Lexicon review project={} undecided={}",
-                                projectId,
-                                choice.undecided().size());
-                        return dropRejected(projectId, asked, choice.dropped());
-                    });
+                    .readTerms(projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
+                    .flatMap(decisions -> decisions().applyReview(projectId, asked, decisions));
         });
     }
 
-    // Only a term the model explicitly answered keep:false goes; one it left out of its answer stays.
-    private Result<List<LexiconEntry>> dropRejected(
-            final String projectId, final List<LexiconEntry> asked, final Set<String> dropped) {
-        for (final LexiconEntry entry : asked) {
-            if (dropped.contains(LexiconEntry.keyOf(entry.term()))) {
-                final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
-                if (removed.isErr()) {
-                    return Result.err(Objects.requireNonNull(removed.error(), "error"));
-                }
-            }
-        }
-        return lexicon.all(projectId);
+    private LexiconDecisions decisions() {
+        return new LexiconDecisions(lexicon, glossary);
     }
 
     private Result<Set<String>> heldKeys(final String projectId) {
@@ -339,24 +319,6 @@ public final class LexiconServiceImpl implements LexiconService {
                     ErrorCode.validation, "Duplicate term", "'" + term + "' is already in the glossary or the list."));
         }
         return lexicon.put(LexiconEntry.of(projectId, term));
-    }
-
-    private Result<GlossaryEntry> promoteEntry(final String projectId, final LexiconEntry entry) {
-        final String rendering = entry.established().orElse(null);
-        final Result<GlossaryEntry> added = glossary.add(new GlossaryEntry(
-                GlossaryIds.of(projectId, entry.term()),
-                projectId,
-                entry.term(),
-                rendering,
-                TermType.TERM,
-                Gender.UNKNOWN,
-                false));
-        if (added.isErr()) {
-            return added;
-        }
-        final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
-        log.info("Lexicon term promoted project={} hadRendering={}", projectId, rendering != null);
-        return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), "error")) : added;
     }
 
     private Result<Optional<LexiconEntry>> held(final String projectId, final String term) {

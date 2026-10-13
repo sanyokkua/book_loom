@@ -80,7 +80,7 @@ class TermChoiceTest {
         assertThat(ok(verdicts).dropped()).containsExactly("table");
         final String user = model.requests().getFirst().messages().get(1).content();
         assertThat(user).contains("- pentacle · 2 uses — \"The master drew the pentacle on the floor.\"");
-        assertThat(model.requests().getFirst().callKind()).isEqualTo(CallKind.REVIEW_TERMS);
+        assertThat(model.requests().getFirst().callKind()).isEqualTo(CallKind.TERM_CHOICE);
     }
 
     // IF the model could add words of its own, THEN the lexicon would fill with whatever it invented.
@@ -133,9 +133,9 @@ class TermChoiceTest {
         assertThat(model.requests()).hasSize(3);
         assertThat(events)
                 .containsExactly(
-                        new BatchStarted(CallKind.REVIEW_TERMS, 1, 3),
-                        new BatchStarted(CallKind.REVIEW_TERMS, 2, 3),
-                        new BatchStarted(CallKind.REVIEW_TERMS, 3, 3));
+                        new BatchStarted(CallKind.TERM_CHOICE, 1, 3),
+                        new BatchStarted(CallKind.TERM_CHOICE, 2, 3),
+                        new BatchStarted(CallKind.TERM_CHOICE, 3, 3));
     }
 
     private static String verdictsJson(final int from, final int to, final IntPredicate keep) {

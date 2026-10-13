@@ -110,7 +110,7 @@ public final class TermChoice {
         for (int index = 0; index < batches; index++) {
             final List<String> batch =
                     terms.subList(index * BATCH_SIZE, Math.min(terms.size(), (index + 1) * BATCH_SIZE));
-            calls.announce(new BatchStarted(CallKind.REVIEW_TERMS, index + 1, batches));
+            calls.announce(new BatchStarted(CallKind.TERM_CHOICE, index + 1, batches));
             final Result<Choice> answered = runBatch(batch, evidence, system, calls);
             if (answered.isErr()) {
                 return answered;
@@ -191,8 +191,8 @@ public final class TermChoice {
         final ChatRequest request =
                 ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false);
         log.trace("Term choice messages {}", messages);
-        final Result<ChatResponse> reply = calls.callAbout(
-                CallKind.REVIEW_TERMS, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
+        final Result<ChatResponse> reply =
+                calls.callAbout(CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn("Term choice batch of {} failed code={}", batch.size(), error.code());

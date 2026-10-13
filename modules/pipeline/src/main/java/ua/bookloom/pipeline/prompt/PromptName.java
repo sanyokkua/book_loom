@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.glossary.LexiconReadingSchema;
 import ua.bookloom.pipeline.glossary.TermChoiceSchema;
 import ua.bookloom.pipeline.glossary.TermReadingSchema;
 import ua.bookloom.pipeline.setup.BookKnowledgeSchema;
@@ -143,10 +144,10 @@ public enum PromptName {
                     Set.of("source", "text"),
                     Set.of("resolvedFacts", "previous", "next", "lexiconTerms", "characters", "summary", "tokens"))),
 
-    /** The choice among recurring words the Recurring terms section asks for: keep or drop, a batch of candidates a call. */
+    /** The Fast dial's choice among recurring words (15i.N7): keep or drop, a batch of candidates a call. */
     TERM_CHOICE(
             "term-choice",
-            CallKind.REVIEW_TERMS,
+            CallKind.TERM_CHOICE,
             "term-choice",
             TermChoiceSchema.SCHEMA,
             0.1,
@@ -204,6 +205,9 @@ public enum PromptName {
     /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
     TERM_READING("term-reading", TermReadingSchema.SCHEMA, "windows"),
 
+    /** The reading of one recurring term in numbered windows from across the book (15i.N7); one term per call. */
+    LEXICON_READING("lexicon-reading", LexiconReadingSchema.SCHEMA, "windows"),
+
     /** A tiebreak between the readings' gender and a dominant pronoun tally, both sides' windows shown (15i.N5). */
     TERM_TIEBREAK("term-tiebreak", TermReadingSchema.TIEBREAK, "windows"),
 
@@ -253,10 +257,7 @@ public enum PromptName {
                     Set.of("styleSheet", "foreignPassageRule", "examples", "languageRules")),
             new Slots(Set.of("terms"), Set.of())),
 
-    /**
-     * The optional garbled-word check: a batch of finished target texts, answered with the words that are
-     * not real words, each with the phrase that holds it; sampled at zero because the answer must repeat.
-     */
+    /** The optional garbled-word check: finished target texts answered with the words that are not real words. */
     SUSPICIOUS_WORDS(
             "suspicious-words",
             CallKind.REVIEW,

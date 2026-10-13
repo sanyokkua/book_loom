@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Names;
@@ -28,9 +29,21 @@ import ua.bookloom.pipeline.SequenceJobs.Prepared;
 final class NamesRunner {
 
     private final StageProbe probe;
+    private final QualityDial dial;
+    private List<LexiconEntry> lexicon = List.of();
 
     NamesRunner(final ChatModel model) {
+        this(model, QualityDial.FAST);
+    }
+
+    NamesRunner(final ChatModel model, final QualityDial dial) {
         this.probe = new StageProbe(Objects.requireNonNull(model, "model"));
+        this.dial = Objects.requireNonNull(dial, "dial");
+    }
+
+    /** The recurring terms the last run ended with, renderings included. */
+    List<LexiconEntry> lexicon() {
+        return lexicon;
     }
 
     /**
@@ -69,20 +82,19 @@ final class NamesRunner {
         final long started = System.nanoTime();
         final int mark = probe.mark();
         final Prepared prepared = SequenceJobs.importBook(
-                file,
-                SequenceJobs.brief(
-                        gold.sourceLanguage(), gold.targetLanguage(), QualityDial.FAST, Narrator.unspecified()));
+                file, SequenceJobs.brief(gold.sourceLanguage(), gold.targetLanguage(), dial, Narrator.unspecified()));
         final Names names = SequenceJobs.names(prepared);
         final String id = prepared.projectId();
         final String failed = firstFailure(bookId, names, id);
         if (failed != null) {
             return new NamesRow(bookId, null, failed);
         }
+        lexicon = names.lexicon().entries(id).data();
         final NamesScore score = NamesScore.of(
                 gold,
                 paragraphs.apply(prepared),
                 names.glossary().entries(id).data(),
-                names.lexicon().entries(id).data(),
+                lexicon,
                 probe.since(mark).calls(),
                 Duration.ofNanos(System.nanoTime() - started));
         log.info("Names eval {} done: {}", bookId, score.json());

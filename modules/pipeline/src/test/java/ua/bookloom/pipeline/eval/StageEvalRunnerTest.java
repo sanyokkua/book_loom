@@ -116,7 +116,7 @@ class StageEvalRunnerTest {
                 .extracting(StageRow::id)
                 .contains("terms-en-uk-everyday-vs-jargon:choice", "terms-en-uk-everyday-vs-jargon:review");
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
-        assertThat(system(firstOf(runner.probe(), CallKind.REVIEW_TERMS)))
+        assertThat(system(firstOf(runner.probe(), CallKind.TERM_CHOICE)))
                 .isEqualTo(new PromptTemplates()
                         .renderSystem(
                                 PromptName.TERM_CHOICE, StageFrames.frame(StageFrames.brief("en", "uk"), "en", "uk"))
