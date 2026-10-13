@@ -1346,6 +1346,30 @@ set-but-missing directory is a hard failure. The last recorded corpus run is in
 - A `:ui` test that shows a stage extends `FxTestBase`, not TestFX's `ApplicationTest`: the same lifecycle, but it
   waits for the FX thread and two real pulses instead of sleeping ([below](#test-speed)).
 
+### Thinking per call and the notes arm (15i.X2) {#x2-arms}
+
+Published studies find that thinking does not help translation itself, so every call asks the model not to think, as it
+always did. Two switches let the eval measure where that is wrong; neither changes a run that does not set them.
+
+| Switch | Meaning | Eval wiring |
+|---|---|---|
+| `BOOKLOOM_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` (else `-Dbookloom.reasoning`) | the named `PromptName` calls think (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property) | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
+| `BOOKLOOM_BATCH_NOTES=on\|off` (else `-Dbookloom.batch.notes`, default off) | the batch draft writes a one-line `notes` string before each `target` (hard phrases and idioms); the code reads it only to log it at TRACE and never validates or stores it | `BOOKLOOM_EVAL_BATCH_NOTES`, `scripts/eval-matrix.sh --batch-notes on` |
+
+A call that thinks sends Ollama `think:true` and LM Studio `reasoning_effort:"medium"`, and its output cap grows by 1,024
+tokens for the reasoning (a gpt-oss model gets that room once, thinking or not); the Ollama runaway line guard is sized
+from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` and `batchNotes`.
+
+```bash
+scripts/eval-matrix.sh --suite realrun --reasoning "REVIEWER=on" --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx"
+scripts/eval-matrix.sh --suite batch --batch-notes on --models "ollama:gemma4:e4b-mlx"
+scripts/eval-matrix.sh --suite names --reasoning "TERM_READING=on,TERM_TIEBREAK=on,BRIEF_SYNTHESIS=on"
+```
+
+Compare each arm with the same suite without the switch: a call kind turns on only where its target moves by 2+ with its
+time up by at most 30 %. The measured table goes here when the round is run. The live request shape of both dialects is
+checked by `chat_thinkingOn_isAcceptedAndStillAnswers` in `OllamaLiveTest` and `LmStudioLiveTest` (`./gradlew liveLocal`).
+
 ### Test speed and the focused loop {#test-speed}
 
 The cadence: **while coding**, `scripts/test-focused.sh`; **once before each commit**, the changed module's full

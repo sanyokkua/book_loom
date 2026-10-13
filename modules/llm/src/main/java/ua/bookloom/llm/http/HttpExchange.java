@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -62,12 +63,13 @@ public final class HttpExchange {
      * @param maxLines the most lines read before the reply is cut as a runaway and returned marked
      *     {@link HttpReply#cut()}, the connection closed so the provider stops generating; {@link Long#MAX_VALUE} for
      *     no bound
+     * @param counted whether a line counts against {@code maxLines}, so reasoning text can be left out of the bound
      * @return the status, headers and every line of the body, each followed by a newline; or a {@code timeout} error
      *     for a reply that stalled or ran past its limit, {@code cancelled} for an interrupted caller, and the transport
      *     failure's own code otherwise
      */
     public Result<HttpReply> postStreamed(
-            ProviderConfig config, String path, String body, Duration idle, long maxLines) {
+            ProviderConfig config, String path, String body, Duration idle, long maxLines, Predicate<String> counted) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(body, "body");
@@ -89,13 +91,14 @@ public final class HttpExchange {
         }
         final URI endpoint = endpoint(config.baseUrl(), path);
         try {
-            return streamed(config, endpoint, body, idle, maxLines);
+            return streamed(config, endpoint, body, idle, maxLines, counted);
         } catch (RuntimeException failure) {
             return Result.err(HttpErrorMapper.map(failure, config, null, "POST", endpoint.getPath()));
         }
     }
 
-    private Result<HttpReply> streamed(ProviderConfig config, URI endpoint, String body, Duration idle, long maxLines) {
+    private Result<HttpReply> streamed(
+            ProviderConfig config, URI endpoint, String body, Duration idle, long maxLines, Predicate<String> counted) {
         final StreamedLines lines = new StreamedLines();
         final AtomicReference<HttpResponse.@Nullable ResponseInfo> head = new AtomicReference<>();
         final long started = nanoTime.getAsLong();
@@ -110,7 +113,8 @@ public final class HttpExchange {
                 lines.exchangeFailed(failure);
             }
         });
-        final StreamedLines.Outcome outcome = lines.collect(idle, config.requestTimeout(), started, nanoTime, maxLines);
+        final StreamedLines.Outcome outcome =
+                lines.collect(idle, config.requestTimeout(), started, nanoTime, maxLines, counted);
         return replyOf(outcome, config, endpoint, lines, exchange, head);
     }
 

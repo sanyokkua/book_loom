@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
+import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Shapes a provider-neutral {@link ChatRequest} into the JSON body an OpenAI-compatible server expects. */
 @Slf4j
@@ -27,6 +28,9 @@ final class OpenAiRequestMapper {
 
     /** The {@code reasoning_effort} that turns reasoning off; a request that leaves reasoning alone omits the field. */
     static final String REASONING_OFF = "none";
+
+    /** The {@code reasoning_effort} a call that thinks asks for: the server's usual middle level. */
+    static final String REASONING_ON = "medium";
 
     private final ProviderConfig config;
     private final ObjectMapper mapper;
@@ -85,9 +89,9 @@ final class OpenAiRequestMapper {
                     false,
                     request.temperature(),
                     responseFormat,
-                    request.maxOutputTokens(),
+                    maxTokens(request),
                     request.seed(),
-                    Boolean.FALSE.equals(request.reasoningEnabled()) ? REASONING_OFF : null,
+                    reasoningEffort(request.reasoningEnabled()),
                     request.samplingOrNone().topP(),
                     request.samplingOrNone().topK(),
                     request.samplingOrNone().minP(),
@@ -96,6 +100,19 @@ final class OpenAiRequestMapper {
         } catch (JsonProcessingException failure) {
             return Result.err(serializationFailure.apply(modelId, failure));
         }
+    }
+
+    private static @Nullable Integer maxTokens(ChatRequest request) {
+        return Boolean.TRUE.equals(request.reasoningEnabled())
+                ? ReasoningHeadroom.raise(request.maxOutputTokens())
+                : request.maxOutputTokens();
+    }
+
+    private static @Nullable String reasoningEffort(@Nullable Boolean reasoningEnabled) {
+        if (reasoningEnabled == null) {
+            return null;
+        }
+        return reasoningEnabled ? REASONING_ON : REASONING_OFF;
     }
 
     private OpenAiChatRequest.Message toOpenAiMessage(ChatMessage message) {

@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -26,6 +27,28 @@ import ua.bookloom.llm.http.HttpExchange;
 @Tag("liveLocal")
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_LIVE_LMSTUDIO_URL", matches = ".+")
 class LmStudioLiveTest {
+
+    // The thinking request shape (15i.X2): a call with thinking on is accepted by the real server and still answers
+    // inside the cap it was given plus the room for its reasoning.
+    @Test
+    void chat_thinkingOn_isAcceptedAndStillAnswers() {
+        final Result<ChatResponse> result = client().chat(
+                        modelId(),
+                        new ChatRequest(
+                                List.of(new ChatMessage(ChatRole.USER, "Answer with the single word: yes")),
+                                0.0,
+                                null,
+                                true,
+                                8192,
+                                null,
+                                200,
+                                null,
+                                CallKind.DRAFT))
+                .result();
+
+        final String content = responseContent(result);
+        assertThat(content).isNotBlank().doesNotContain("<think>").doesNotContain("</think>");
+    }
 
     private static final String MODEL_ENV = "BOOKLOOM_LIVE_LMSTUDIO_MODEL";
     private static final String DEFAULT_MODEL = "google/gemma-4-e4b";

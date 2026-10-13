@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -33,6 +34,7 @@ import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
+import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Speaks Ollama's native chat dialect so request fields and provider errors retain their intended meaning. */
 @Slf4j
@@ -47,6 +49,10 @@ public final class OllamaClient implements ProviderClient {
 
     /** Lines a streamed reply may add past that, for the final part and the envelope around a short cap. */
     private static final int RUNAWAY_MARGIN_LINES = 64;
+
+    private static final String THINKING_FIELD = "\"thinking\":\"";
+    private static final String EMPTY_THINKING_FIELD = "\"thinking\":\"\"";
+    private static final String EMPTY_CONTENT_FIELD = "\"content\":\"\"";
 
     private final ProviderConfig config;
     private final HttpExchange exchange;
@@ -190,7 +196,7 @@ public final class OllamaClient implements ProviderClient {
         final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
                 request.temperature(),
                 request.contextWindow(),
-                withReasoningHeadroom(modelId, request.maxOutputTokens()),
+                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
                 request.seed(),
                 request.samplingOrNone().topP(),
                 request.samplingOrNone().topK(),
@@ -209,8 +215,6 @@ public final class OllamaClient implements ProviderClient {
      * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
      * reasoning, so "reasoning off" is asked of it as its lowest level.
      */
-    private static final int GPT_OSS_REASONING_HEADROOM = 1024;
-
     static @Nullable Object thinkControl(final String modelId, final @Nullable Boolean reasoningEnabled) {
         if (Boolean.FALSE.equals(reasoningEnabled)
                 && modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
@@ -219,12 +223,21 @@ public final class OllamaClient implements ProviderClient {
         return reasoningEnabled;
     }
 
-    /** A gpt-oss model reasons even at its lowest level, and that text counts against the cap the answer needs. */
-    static @Nullable Integer withReasoningHeadroom(final String modelId, final @Nullable Integer cap) {
-        if (cap == null || !modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
+    /**
+     * The cap the server is given: a call that thinks needs room for it on any model, and a gpt-oss model reasons even
+     * at its lowest level, so it gets the room whether or not thinking was asked for (once, never twice).
+     */
+    static @Nullable Integer withReasoningHeadroom(
+            final String modelId, final @Nullable Integer cap, final @Nullable Boolean reasoningEnabled) {
+        if (!needsReasoningRoom(modelId, reasoningEnabled)) {
             return cap;
         }
-        return cap + GPT_OSS_REASONING_HEADROOM;
+        return ReasoningHeadroom.raise(cap);
+    }
+
+    private static boolean needsReasoningRoom(final String modelId, final @Nullable Boolean reasoningEnabled) {
+        return Boolean.TRUE.equals(reasoningEnabled)
+                || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss");
     }
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
@@ -243,22 +256,43 @@ public final class OllamaClient implements ProviderClient {
      * stop — a reflect call once streamed 9,664 lines until the three-minute timeout. Cut there, it is read as a
      * reply that finished for length.
      */
-    static long maxLines(ChatRequest request) {
-        final @Nullable Integer bound =
-                request.maxOutputTokens() != null ? request.maxOutputTokens() : request.contextWindow();
+    static long maxLines(String modelId, ChatRequest request) {
+        final @Nullable Integer cap =
+                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
+        final @Nullable Integer bound = cap != null ? cap : request.contextWindow();
         final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;
         log.debug(
-                "Runaway guard maxOutputTokens={} contextWindow={} maxLines={}",
+                "Runaway guard maxOutputTokens={} contextWindow={} reasoning={} maxLines={}",
                 request.maxOutputTokens(),
                 request.contextWindow(),
+                request.reasoningEnabled(),
                 lines);
         return lines;
+    }
+
+    /**
+     * A thinking call streams its reasoning as lines with an empty {@code content}; they are the room the server was
+     * given, not the answer running away, so only the other lines count against the bound.
+     */
+    private static Predicate<String> countedLines(ChatRequest request) {
+        return Boolean.TRUE.equals(request.reasoningEnabled()) ? line -> !isThinkingLine(line) : line -> true;
+    }
+
+    private static boolean isThinkingLine(String line) {
+        return line.contains(THINKING_FIELD)
+                && !line.contains(EMPTY_THINKING_FIELD)
+                && line.contains(EMPTY_CONTENT_FIELD);
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
         final Result<HttpReply> response = exchange.postStreamed(
-                chatConfig, CHAT_PATH, body, RequestTimeouts.streamIdle(config), maxLines(request));
+                chatConfig,
+                CHAT_PATH,
+                body,
+                RequestTimeouts.streamIdle(config),
+                maxLines(modelId, request),
+                countedLines(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }

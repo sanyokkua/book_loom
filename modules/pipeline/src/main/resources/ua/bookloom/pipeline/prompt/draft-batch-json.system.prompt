@@ -34,4 +34,8 @@ Examples (an <Items> block, then Reply = your whole answer):
 {{examples}}
 
 {{/examples}}
+{{#notesRule}}
+Before each "target", write a "notes" string: one short line naming any hard phrase, idiom or ambiguity in that item and how you will render it, or an empty string when there is none. The entry reads {"id":"1","notes":"...","target":"..."}. Notes are never part of the translation.
+
+{{/notesRule}}
 Output ONLY the JSON object {"items":[{"id":"1","target":"..."}]}, one entry per item: no commentary, markdown, code fences or explanations.

@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
+import ua.bookloom.pipeline.prompt.ReasoningPlan;
 
 /**
  * Where a prompt-eval report came from, so two reports can be compared knowing what changed between them: the code
@@ -35,6 +37,8 @@ import java.util.stream.Stream;
  * @param dial the quality dial
  * @param brief the brief preset or file and the overrides, {@code defaults} when none
  * @param suite the suite name
+ * @param reasoning the thinking plan of the run, {@code off} or the calls that are on (15i.X2)
+ * @param batchNotes whether the batch draft asked for a note before each target, {@code on} or {@code off} (15i.X2)
  */
 record EvalProvenance(
         String timestamp,
@@ -47,7 +51,9 @@ record EvalProvenance(
         int window,
         String dial,
         String brief,
-        String suite) {
+        String suite,
+        String reasoning,
+        String batchNotes) {
 
     static final String UNKNOWN = "unknown";
     private static final String PROMPT_DIR = "modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt";
@@ -68,6 +74,8 @@ record EvalProvenance(
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(suite, "suite");
+        Objects.requireNonNull(reasoning, "reasoning");
+        Objects.requireNonNull(batchNotes, "batchNotes");
     }
 
     /** Provenance of the run in this process: the clock, the checkout and the {@code BOOKLOOM_EVAL_*} settings. */
@@ -96,7 +104,10 @@ record EvalProvenance(
                 window,
                 env.getOrDefault("BOOKLOOM_EVAL_DIAL", "BALANCED").toUpperCase(java.util.Locale.ROOT),
                 briefSummary(env),
-                suite);
+                suite,
+                ReasoningPlan.resolve(env, System.getProperty(ReasoningPlan.PROPERTY_NAME))
+                        .token(),
+                BatchNotesSwitch.resolve(env, System.getProperty(BatchNotesSwitch.PROPERTY_NAME)) ? "on" : "off");
     }
 
     /** The directory name of this run in the history: {@code yyyyMMdd-HHmmss-suite-model[-label]}. */
@@ -119,6 +130,8 @@ record EvalProvenance(
         fields.put("dial", dial);
         fields.put("brief", brief);
         fields.put("suite", suite);
+        fields.put("reasoning", reasoning);
+        fields.put("batchNotes", batchNotes);
         try {
             return new ObjectMapper().writeValueAsString(fields);
         } catch (JsonProcessingException e) {

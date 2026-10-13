@@ -9,8 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
+import ua.bookloom.pipeline.prompt.BatchSchema;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -26,6 +29,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  */
 @Slf4j
 public final class BatchPromptBuilder {
+
+    /** Room for one note of the notes arm: a short line naming a hard phrase and how it will be rendered. */
+    private static final int NOTE_TOKENS_PER_ITEM = 32;
 
     private static final Pattern LOCKED_LINE = Pattern.compile("^(?:[A-Za-z0-9_.:-]+: )?⟦g");
 
@@ -62,7 +68,7 @@ public final class BatchPromptBuilder {
                 context.nextSource() != null,
                 context.characters().size());
         final String system = templates
-                .renderSystem(PromptName.DRAFT_BATCH_JSON, frame, PromptTemplates.tokenGate(hasTokens(items)))
+                .renderSystem(PromptName.DRAFT_BATCH_JSON, frame, systemGates(items))
                 .strip();
         final String user = templates
                 .renderUser(PromptName.DRAFT_BATCH_JSON, userValues(context, items))
@@ -82,11 +88,7 @@ public final class BatchPromptBuilder {
      */
     public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
         Objects.requireNonNull(context, "context");
-        return templates.sectionsOf(
-                PromptName.DRAFT_BATCH_JSON,
-                frame,
-                PromptTemplates.tokenGate(hasTokens(items)),
-                userValues(context, items));
+        return templates.sectionsOf(PromptName.DRAFT_BATCH_JSON, frame, systemGates(items), userValues(context, items));
     }
 
     /**
@@ -99,9 +101,39 @@ public final class BatchPromptBuilder {
      */
     public ChatRequest requestFor(
             final List<ChatMessage> messages, final List<BatchItem> items, final boolean lowerTemperature) {
-        final OutputLimit limit = OutputLimit.forBatch(
+        final boolean notes = BatchNotesSwitch.isOn();
+        final OutputLimit sized = OutputLimit.forBatch(
                 items.stream().map(BatchItem::masked).toList(), frame.sourceLanguage(), frame.targetLanguage());
-        return ChatRequests.build(PromptName.DRAFT_BATCH_JSON, messages, limit, lowerTemperature);
+        final OutputLimit limit = notes ? withNotes(sized, items.size()) : sized;
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT_BATCH_JSON, messages, limit, lowerTemperature);
+        log.debug("Batch request items={} notes={} cap={}", items.size(), notes, limit.capTokens());
+        return notes ? withNotesSchema(request) : request;
+    }
+
+    private Map<String, String> systemGates(final List<BatchItem> items) {
+        final Map<String, String> gates = new HashMap<>(PromptTemplates.tokenGate(hasTokens(items)));
+        gates.putAll(PromptTemplates.notesGate(BatchNotesSwitch.isOn()));
+        return gates;
+    }
+
+    /** Each note is a short line the reply carries besides the translation, so the output limit grows by one per item. */
+    private static OutputLimit withNotes(final OutputLimit limit, final int itemCount) {
+        final int room = NOTE_TOKENS_PER_ITEM * itemCount;
+        return new OutputLimit(limit.expectedTokens() + room, limit.capTokens() + room);
+    }
+
+    private static ChatRequest withNotesSchema(final ChatRequest request) {
+        return new ChatRequest(
+                request.messages(),
+                request.temperature(),
+                new ResponseFormat(PromptName.DRAFT_BATCH_JSON.responseFormatName(), BatchSchema.SCHEMA_WITH_NOTES),
+                request.reasoningEnabled(),
+                request.contextWindow(),
+                request.expectedOutputTokens(),
+                request.maxOutputTokens(),
+                request.seed(),
+                request.callKind(),
+                request.sampling());
     }
 
     private static boolean hasTokens(final List<BatchItem> items) {

@@ -198,6 +198,15 @@ localOnlyTags.forEach { tag ->
             System.getenv("BOOKLOOM_EVAL_RELEVANT_PAIRS")?.takeIf { it.isNotBlank() }?.let {
                 systemProperty("bookloom.relevant.pairs", it)
             }
+            // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
+            // code as the `bookloom.reasoning` property, `BOOKLOOM_EVAL_BATCH_NOTES=on|off` as `bookloom.batch.notes`;
+            // unset leaves both off, and an explicit BOOKLOOM_REASONING / BOOKLOOM_BATCH_NOTES still wins.
+            System.getenv("BOOKLOOM_EVAL_REASONING")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.reasoning", it)
+            }
+            System.getenv("BOOKLOOM_EVAL_BATCH_NOTES")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.batch.notes", it)
+            }
         }
 
         if (tag in neverUpToDateTags) {

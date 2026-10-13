@@ -326,6 +326,15 @@ every id. Only a failing id falls back to a single-segment draft; every other se
 through the same quality loop as a single draft. A segment kept as it is, an auxiliary text, a translation-memory reuse
 and a segment larger than the chunk budget are never in a batch.
 
+**Notes arm (experimental, 15i.X2).** With `BOOKLOOM_BATCH_NOTES=on` (else `bookloom.batch.notes`; off by default, the eval
+sets it from `BOOKLOOM_EVAL_BATCH_NOTES`) the system message adds a paragraph asking for a one-line `notes` string before
+each `target` (a hard phrase, an idiom, how it will be rendered; empty when none), the schema is `BatchSchema.SCHEMA_WITH_NOTES`
+(`id`, `notes`, `target`, `terms`; `notes` optional, so a reply without it stays valid) and the output cap grows by 32 tokens
+per item. `BatchEntries` reads the note only to drop it: it is logged at TRACE, never validated, stored or read as part of
+a target, and the cut-reply salvage accepts `"id","notes","target"`. With the switch off the prompt and the schema are
+byte-for-byte today's. It stays an experiment until the eval shows it moves quality; the thinking switch for any call is
+`BOOKLOOM_REASONING` (`docs/DEVELOPMENT.md#x2-arms`).
+
 ### related-pairs {#related-pairs}
 
 The batch draft may show up to two accepted pairs from earlier in the book that name the same glossary names and recurring

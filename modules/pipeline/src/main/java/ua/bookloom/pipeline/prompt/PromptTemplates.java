@@ -47,6 +47,7 @@ public final class PromptTemplates {
     private static final String LANGUAGE_RULES = "languageRules";
     private static final String TOKEN_RULES = "tokenRules";
     private static final String NO_TOKEN_RULES = "noTokenRules";
+    private static final String NOTES_RULE = "notesRule";
     private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
@@ -126,9 +127,19 @@ public final class PromptTemplates {
                 : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
     }
 
+    /**
+     * The system slot that adds the notes paragraph to the batch draft's rules (the 15i.X2 experiment).
+     *
+     * @param notes whether the batch asks for a note before each target
+     * @return never null; the slot value to pass as {@code extra}
+     */
+    public static Map<String, String> notesGate(final boolean notes) {
+        return Map.of(NOTES_RULE, notes ? GATE_OPEN : "");
+    }
+
     /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
     static boolean isRuleGate(final String slot) {
-        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot);
+        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot) || NOTES_RULE.equals(slot);
     }
 
     /**

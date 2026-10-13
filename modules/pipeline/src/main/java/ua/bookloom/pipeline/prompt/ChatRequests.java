@@ -24,7 +24,7 @@ public final class ChatRequests {
      * @param messages the conversation; never null
      * @param limit the expected completion length and its cap, or null when the call states no expected output
      * @param lowerTemperature whether a retry asks for the name's lower temperature
-     * @return the request, with reasoning off, the effective context size, the output limit and the name's call kind,
+     * @return the request, with reasoning off unless the {@link ReasoningPlan} turns it on for this call, the effective context size, the output limit and the name's call kind,
      *     which chooses the call's timeout, and the sampling controls of the current {@link SamplingMode}; no
      *     response format when the call's schema is empty
      */
@@ -40,13 +40,15 @@ public final class ChatRequests {
                 PromptBreakdown.of(messages).describe());
         final SamplingMode mode = SamplingMode.current();
         log.debug("Sampling call={} mode={}", name.callKind(), mode.token());
+        final boolean thinks = ReasoningPlan.current().isOn(name);
+        log.debug("Reasoning call={} thinking={}", name.callKind(), thinks);
         return new ChatRequest(
                 messages,
                 name.temperature(lowerTemperature),
                 name.responseSchema().isEmpty()
                         ? null
                         : new ResponseFormat(name.responseFormatName(), name.responseSchema()),
-                false,
+                thinks,
                 TokenBudget.EFFECTIVE_CONTEXT,
                 limit == null ? null : limit.expectedTokens(),
                 limit == null ? null : limit.capTokens(),

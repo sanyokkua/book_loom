@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
@@ -70,11 +71,18 @@ final class StreamedLines implements Flow.Subscriber<String> {
      * @param startedNanos when the request was sent, on {@code nanoTime}'s scale
      * @param nanoTime the clock the waits are measured with
      * @param maxLines the most lines read before the reply is cut as a runaway; {@link Long#MAX_VALUE} for no bound
+     * @param counted whether a line counts against {@code maxLines}; a line it rejects is still kept in the body
      * @return the lines joined by newlines; the lines read so far when {@code maxLines} was reached; or the failure
      *     that ended the wait: an {@link HttpTimeoutException} for a stall or an overrun, an
      *     {@link InterruptedException} for an interrupt, else the exchange's own failure
      */
-    Outcome collect(Duration idle, Duration limit, long startedNanos, LongSupplier nanoTime, long maxLines) {
+    Outcome collect(
+            Duration idle,
+            Duration limit,
+            long startedNanos,
+            LongSupplier nanoTime,
+            long maxLines,
+            Predicate<String> counted) {
         final StringBuilder body = new StringBuilder();
         long lines = 0;
         while (true) {
@@ -84,7 +92,9 @@ final class StreamedLines implements Flow.Subscriber<String> {
             switch (signal) {
                 case Signal.Line line -> {
                     body.append(line.text()).append('\n');
-                    lines++;
+                    if (counted.test(line.text())) {
+                        lines++;
+                    }
                     if (lines >= maxLines) {
                         log.warn("Streamed reply cut as a runaway lines={} maxLines={}", lines, maxLines);
                         return new Outcome.Cut(body.toString());
