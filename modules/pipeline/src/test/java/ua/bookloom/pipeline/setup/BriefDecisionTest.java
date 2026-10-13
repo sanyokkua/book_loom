@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,18 +115,36 @@ class BriefDecisionTest {
 
     // IF the windows outvoted the detector, THEN a letter quoted inside a third-person novel would make it first
     // person: the detector counted every chapter, the windows read a few passages.
+    // A mixed book is first person when at least half of its judged chapters are: alternating narrators need the
+    // narrator rules, while a third-person novel with a first-person preface or a character's letters stays third.
     @ParameterizedTest
-    @CsvSource({"FIRST, FIRST", "MIXED, FIRST", "THIRD, THIRD"})
+    @CsvSource({
+        "FIRST, 1, 1, FIRST",
+        "MIXED, 2, 3, FIRST",
+        "MIXED, 2, 4, FIRST",
+        "MIXED, 1, 3, THIRD",
+        "MIXED, 5, 24, THIRD",
+        "MIXED, 1, 40, THIRD",
+        "THIRD, 0, 4, THIRD"
+    })
     void narrator_detectorAnswers_isTheDetectorsPersonWhateverTheWindowsSay(
-            final NarratorHint.Person detected, final NarratorPerson expected) {
+            final NarratorHint.Person detected,
+            final int firstPersonChapters,
+            final int judged,
+            final NarratorPerson expected) {
         final List<@Nullable Map<BriefField, Answer>> windows = windows(
                 says(BriefField.NARRATOR, "unspecified", ""),
                 says(BriefField.NARRATOR, "unspecified", ""),
                 says(BriefField.NARRATOR, "unspecified", ""),
                 says(BriefField.NARRATOR, "unspecified", ""));
 
-        final Decided<NarratorPerson> decided =
-                BriefDecision.narrator(new NarratorHint(detected, 0.5, List.of(1)), windows);
+        final Decided<NarratorPerson> decided = BriefDecision.narrator(
+                new NarratorHint(
+                        detected,
+                        0.5,
+                        IntStream.rangeClosed(1, firstPersonChapters).boxed().toList(),
+                        judged),
+                windows);
 
         assertThat(decided.value()).isEqualTo(expected);
         assertThat(decided.evidence().basis()).isEqualTo(Basis.MEASURED);
@@ -134,7 +153,7 @@ class BriefDecisionTest {
     @Test
     void narrator_detectorSaysThirdAndEveryWindowSaysFirst_isThird() {
         final Decided<NarratorPerson> decided = BriefDecision.narrator(
-                new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of()),
+                new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of(), 4),
                 windows(
                         says(BriefField.NARRATOR, "first", Q1),
                         says(BriefField.NARRATOR, "first", Q2),

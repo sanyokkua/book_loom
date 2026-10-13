@@ -41,6 +41,8 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 @Slf4j
 final class JudgementRunner {
 
+    static final String DIAL_ENV = "BOOKLOOM_EVAL_DIAL";
+
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -54,13 +56,24 @@ final class JudgementRunner {
         return probe;
     }
 
+    /**
+     * The dial the judgement suites read a book at: {@code BOOKLOOM_EVAL_DIAL} when set (the 15i.B4 gate times the
+     * suggestion at Balanced), else Fast, as every judgement round before it ran.
+     */
+    static QualityDial dial() {
+        final String dial = System.getenv(DIAL_ENV);
+        return dial == null || dial.isBlank()
+                ? QualityDial.FAST
+                : QualityDial.valueOf(dial.strip().toUpperCase(Locale.ROOT));
+    }
+
     /** The model's judgement of the book at {@code book}, whose gold names its languages and main characters. */
     Judgement judge(final String id, final Path book, final JudgementGold gold) {
         Objects.requireNonNull(book, "book");
         Objects.requireNonNull(gold, "gold");
         log.info("Judgement eval book={} source={} target={}", id, gold.sourceLanguage(), gold.targetLanguage());
-        final BookBrief brief = SequenceJobs.brief(
-                gold.sourceLanguage(), gold.targetLanguage(), QualityDial.FAST, Narrator.unspecified());
+        final BookBrief brief =
+                SequenceJobs.brief(gold.sourceLanguage(), gold.targetLanguage(), dial(), Narrator.unspecified());
         final Prepared prepared = SequenceJobs.importBook(book, brief);
         final int mark = probe.mark();
         final Result<BriefSuggestion> suggested = assistant(prepared).suggestBrief(prepared.projectId(), probe);

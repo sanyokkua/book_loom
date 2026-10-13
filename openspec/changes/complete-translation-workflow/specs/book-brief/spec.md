@@ -480,8 +480,8 @@ uses it.
 
 WHEN a book is opened, the application SHALL read its running text outside quotes and dialogue, chapter by chapter
 (a heading or a body unit starts a chapter), and SHALL keep a `NarratorHint` (the person `FIRST`, `THIRD` or `MIXED`,
-the share of narration sentences with the first-person subject pronoun, and the first-person chapters) with the open
-book. A chapter is first person when at least a tenth of its narration sentences contain the source language's
+the share of narration sentences with the first-person subject pronoun, the first-person chapters and how many chapters
+were judged) with the open book. A chapter is first person when at least a tenth of its narration sentences contain the source language's
 `firstPersonPronouns` (`I`, `я`, `ich`, `je`; a language that drops its subject lists none and gets no hint) and it has at
 least six such sentences; the book is `FIRST` when every judged chapter is, `THIRD` when none is and `MIXED` otherwise.
 The hint SHALL never set the narrator's gender; its only effect on the brief is the preselection of `First person` below,
@@ -573,12 +573,14 @@ WHEN the person asks the model to suggest the tone and style, the application SH
 (`book-knowledge`, accepted only by its echo check: the title, also by its part before `;` or `:`, and the author, in either name
 order, match the metadata, and the year is no later than five after a metadata year, because that year is often an
 edition's), read K single windows of the story (Fast 3, Balanced 4, Max 5, fewer
-for a short story) with one `brief-suggestion` call each, each answer kept only with a quote found in its window, and then
+for a short story) with one `brief-suggestion` call each, each answer kept only with a quote found in its window (a register's quote in the window's narration, outside the
+characters' speech; a genre or an audience never without a quote), and then
 ask one `brief-synthesis` call over the book's facts, the accepted knowledge and the windows' verified readings (not made
 when the book is unknown and no window read genre, audience or voice, because nothing could stand); it SHALL
 then decide each field once. The register SHALL be kept by a strict majority of the windows read (a window with no verified
 answer, or whose call failed, counts against every value). The narrator's person SHALL be the narrator detector's when it answers — a mixed book
-is first person — else a strict majority of the windows. The narrator's gender follows the requirement above. The genre
+is first person when at least half of its judged chapters are told as "I" (alternating narrators), else third person
+(a preface, a letter or a character's account inside a third-person novel) — else a strict majority of the windows. The narrator's gender follows the requirement above. The genre
 (one of the 40 listed names), the audience (`adult`, `young adult`, `children`, `general` or `academic`) and the voice /
 era (at most 12 words) SHALL come from the synthesis, each with a basis named before its value, and SHALL stand only when
 the basis holds: two cited windows that each had a verified reading of the field, accepted knowledge whose own field

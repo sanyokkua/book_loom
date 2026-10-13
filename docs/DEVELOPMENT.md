@@ -653,6 +653,60 @@ The 10 % rule (15h.C5): the shared style and language block is moved to the fron
 cache it) only when `prefill:` is over 10 % for the dominant kinds on the 26b model. The code does not reorder; run a
 book on 26b, read the line and decide.
 
+### 15i brief prediction {#15i-brief}
+
+The 15i.B4 gate round (2026-10-13, Ollama, `gemma4:e4b-mlx` and `gemma4:26b-mlx`, 16k window, server sampling) ran
+`scripts/eval-matrix.sh --suite setup|stability|gold` with `BOOKLOOM_EVAL_BOOK=all`: **setup** is the 15 committed
+setup cases (8 invented title/author pairs, 4 public-domain classics, a book with no metadata and two plain cases);
+**books** is the 9 committed judgement books (stability suite, seed 1 of 3) plus the owner's four gold books ("owner
+book 1–4", `BOOKLOOM_CORPUS_DIR`, Fast dial as every judgement round before). A cell is cases right of cases scored.
+The baseline is 15h.G1's two samples of three windows (`25cd1699`); "after B4" is the merged 15i.B2–B4 code
+(`166f44f9`) before this round.
+
+| model | arm | setup genre | setup register | setup narrator | knowledge: invented unknown | knowledge: classics known | books genre | books register | books narrator | books narrator gender | genre of the six |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| e4b | baseline | 1/15 | 9/15 | 13/15 | 11/11 | 4/4 | 0/13 | 12/13 | 11/13 | 8/13 | 0/6 |
+| e4b | after B4 | 3/15 | 11/15 | 14/15 | 11/11 | 4/4 | 1/13 | 7/13 | 11/13 | 9/13 | 1/6 |
+| e4b | round 1 | 5/15 | 10/15 | 15/15 | 11/11 | 4/4 | 1/13 | 6/13 | 13/13 | 9/13 | 1/6 |
+| e4b | round 2 | 7/15 | 10/15 | 15/15 | 11/11 | 4/4 | 3/13 | 13/13 | 13/13 | 9/13 | 2/6 |
+| 26b | baseline | 1/15 | 9/15 | 15/15 | 11/11 | 4/4 | 0/13 | 12/13 | 11/13 | 9/13 | 0/6 |
+| 26b | after B4 | 7/15 | 7/15 | 14/15 | 11/11 | 4/4 | 0/13 | 13/13 | 11/13 | 9/13 | 0/6 |
+| 26b | round 1 | 8/15 | 11/15 | 15/15 | 11/11 | 4/4 | 6/13 | 8/13 | 13/13 | 9/13 | 4/6 |
+| 26b | round 2 | 8/15 | 11/15 | 15/15 | 11/11 | 4/4 | 6/13 | 12/13 | 13/13 | 9/13 | 4/6 |
+
+"Knowledge: invented unknown" counts the 8 invented books and the three other cases that must stay unknown; the 15i.B2
+gate (unknown on 7 of 8 invented books, the 4 classics known) holds on both models in every arm. "Genre of the six" is
+the gate's set: the four owner books and the two judgement books whose gold genre is itself one of the 40 names
+(`female-narrator-address`, a gothic novel, and `straight-quoted-speech`, an adventure); the other seven judgement
+books are short invented vignettes whose gold ("rural drama", "pastoral drama", "historical drama") no listed genre
+name says, so they are scored but not part of the gate.
+
+What each round changed, and why (from the TRACE logs of the earlier round):
+
+- **Round 1.** (a) Knowledge title: a store's title carries the series ("… (Series Volume 1) (Series Trilogy)") or an
+  edition word (", Complete"); 26b echoed the bare title and the answer was refused as `title-mismatch` on owner books
+  1 and 4. A title of two words or more that is the whole-word start of the other now matches. (b) Narrator: the
+  detector calls a book `MIXED` when any judged chapter is first person, and the brief read every mixed book as first
+  person; a third-person novel with a first-person preface (1 of 40 chapters) or a few characters' written accounts (5
+  of 24) became `FIRST`. A mixed book is now first person only when at least half of its judged chapters are
+  (`NarratorHint.judgedChapters`). (c) Genre and audience: 26b left their `evidence` empty ("empty for a neutral value"),
+  so every window's genre and audience were refused and the synthesis had nothing to decide from; the prompt now says
+  a genre or an audience is never neutral and needs the passage's own words. Genre on 26b 0 → 6 of 13; but register on
+  26b fell 13 → 8, because the windows now quoted characters' speech ("Close the gate…", "…ma'am?") as `casual`.
+- **Round 2.** Register is the narration's: the prompt says so and names what makes narration formal or casual, and
+  `BriefReplies` keeps a register reading only when its quote stands outside the characters' speech
+  (`BookSample.holdsInNarration`). e4b had called plain narration "formal" on seven books (books register 6 → 13); 26b
+  books register 8 → 12. The genre and audience evidence may not be the title or the author (e4b quoted the metadata's
+  title, which the code refused): e4b genre 1 → 3 of 13 books, 5 → 7 setup cases.
+
+No third round was needed: against the baseline no field lost a case on either model, and every target moved by 2+.
+
+Time per suggestion (first knowledge call to the decided brief, from the logs, 26b, owner books 1–4): Fast 37–51 s
+(mean 42 s); **Balanced (`BOOKLOOM_EVAL_DIAL=BALANCED`, 4 windows of 2.5k tokens) 59–73 s (mean 64 s)**, under the 90 s
+gate; the Balanced run also kept genre, register and narrator right on all four owner books. The narrator's gender stays
+unknown on owner books 1 and 2, whose gold is male: no window found a line where someone names or addresses the
+narrator that the code could verify, which is the intended refusal, not a miss to tune away.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
@@ -1039,7 +1093,8 @@ BOOKLOOM_EVAL_SUITE=stability BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_
 `stability` reads one committed fixture book (`BOOKLOOM_EVAL_BOOK`: an id below or `all`; default `front-matter-converter`) once
 per seed (`BOOKLOOM_EVAL_SEEDS`, comma-separated; each call is sent with that sampling seed). `gold` reads every
 `<name>.gold.json` directly under `BOOKLOOM_CORPUS_DIR` (absolute path) and opens the book each names; it is skipped when the
-directory is unset. Both are `promptEval`-tagged (`JudgementEvalTest`), never in `check`. Reports:
+directory is unset. Both read a book at the Fast dial unless `BOOKLOOM_EVAL_DIAL` names another (the 15i.B4 gate times
+the suggestion at `BALANCED`). Both are `promptEval`-tagged (`JudgementEvalTest`), never in `check`. Reports:
 `build/reports/promptEval/<model>-stability.{txt,json}` (or `-gold`) and the history; the matrix table prints each model's
 lowest agreement and mean accuracy, then every `book:field` per model as agreement/accuracy and the agreement of all models'
 answers pooled.
@@ -1069,7 +1124,7 @@ answers pooled.
 ```
 
 `book` is relative to the gold file's directory. `register` is `FORMAL_LITERARY`, `NEUTRAL` or `CASUAL`; `narrator` is `FIRST`,
-`THIRD` or `UNSPECIFIED` (a book whose first-person narration alternates with third-person chapters is `FIRST`: the book-brief spec maps a mixed book to first person, 15i.B4); `narratorGender` and a character's `gender` are `MALE`,
+`THIRD` or `UNSPECIFIED` (a book whose first-person narration alternates with third-person chapters is `FIRST` when at least half of its judged chapters are first person, else `THIRD`: the book-brief spec's mixed-book rule, 15i.B4); `narratorGender` and a character's `gender` are `MALE`,
 `FEMALE`, `NEUTER` or `UNKNOWN` (the book never shows it); `type` is `CHARACTER`, `PLACE`, `TERM`, `TITLE` or `OTHER`; `names`
 is `TRANSLATE`, `TRANSLITERATE` or `KEEP_ORIGINAL`. `genreClass` holds lower-case words, any one of which a right genre contains
 (empty: the genre is not scored); `genre`, `voiceEra`, `audience` and `names` are optional and only used when the same file is

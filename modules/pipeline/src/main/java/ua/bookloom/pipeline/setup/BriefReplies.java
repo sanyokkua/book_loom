@@ -17,7 +17,8 @@ import ua.bookloom.util.lang.LanguageTags;
 /**
  * Reads one sample's brief suggestion reply and keeps only the answers the sample supports. A neutral answer (a
  * neutral register, no narrator, an unknown gender, an empty phrase) needs no proof; any other needs a quote the code
- * finds in the sample it was given and a confidence of at least {@value #MIN_CONFIDENCE}, or it is no answer at all.
+ * finds in the sample it was given (a register's in the narration, outside the characters' speech) and a confidence of
+ * at least {@value #MIN_CONFIDENCE}, or it is no answer at all.
  * The narrator's gender needs more: its quote must show the gender in words the code can check
  * ({@link NarratorGenderEvidence}), which then decide it; a gender that does not is the neutral unknown, because the
  * sample showed nothing the code could verify.
@@ -123,8 +124,14 @@ final class BriefReplies {
             final BriefField field, final Answer answer, final JsonNode node, final BookSample sample) {
         final String quote = node.isObject() ? text(node.get("evidence")) : "";
         final double confidence = confidence(node);
-        final boolean found = sample.holds(quote);
-        log.debug("Brief reply {} confidence={} quoteFound={}", field, confidence, found);
+        // A register is the narration's: a line a character speaks shows how that character talks, not the book.
+        final boolean found = field == BriefField.REGISTER ? sample.holdsInNarration(quote) : sample.holds(quote);
+        log.debug(
+                "Brief reply {} confidence={} quoteFound={} narrationOnly={}",
+                field,
+                confidence,
+                found,
+                field == BriefField.REGISTER);
         log.trace("Brief reply {} value '{}' quote '{}'", field, answer.value(), quote);
         if (!found || confidence < MIN_CONFIDENCE) {
             log.warn(

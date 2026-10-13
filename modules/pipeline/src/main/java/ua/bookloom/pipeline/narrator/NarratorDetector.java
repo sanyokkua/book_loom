@@ -144,7 +144,7 @@ public final class NarratorDetector {
                 : first.size() == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
         final int sentences = tallies.stream().mapToInt(Tally::sentences).sum();
         final int firstPerson = tallies.stream().mapToInt(Tally::firstPerson).sum();
-        final NarratorHint hint = new NarratorHint(person, (double) firstPerson / sentences, first);
+        final NarratorHint hint = new NarratorHint(person, (double) firstPerson / sentences, first, judged);
         log.info(
                 "Narrator detected person={} firstPersonShare={} firstPersonChapters={} judged={}",
                 person,

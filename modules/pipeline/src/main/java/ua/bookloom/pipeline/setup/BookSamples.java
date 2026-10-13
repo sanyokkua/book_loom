@@ -142,7 +142,7 @@ final class BookSamples {
             final List<Line> lines, final Window window, final @Nullable String languageTag) {
         final String text = passage(lines, window);
         final boolean whole = window.from() == 0 && window.to() == lines.size();
-        return new BookSample(List.of(text), dialoguePercent(text, languageTag), whole);
+        return new BookSample(List.of(text), dialoguePercent(text, languageTag), whole, languageTag);
     }
 
     // The first window starts at the story's first sentence and the last ends at its last; the others are spread

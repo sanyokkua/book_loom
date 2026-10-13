@@ -17,7 +17,7 @@ import ua.bookloom.pipeline.setup.Knowledge.Reason;
 /**
  * Judges what the model said it knows of the book against the book's own metadata. The answer stands only when the
  * model says it knows the book, is sure enough, and echoes the metadata's title and author (a title by the part before
- * its subtitle, an author in either name order) and a year no later than five after the metadata's: the echo is what
+ * its subtitle or as the whole-word start of the other, an author in either name order) and a year no later than five after the metadata's: the echo is what
  * shows the answer is about this book, since a model asked about an invented book can still answer with confidence.
  * The metadata's date is often an edition's or a release's, later than the first publication the model knows, so a
  * year before it is no mismatch. The first check that fails names the reason.
@@ -32,6 +32,9 @@ public final class BookKnowledgeVerdict {
 
     /** The most years the answer's year may lie after the metadata's; an earlier answer is the first publication. */
     static final int YEAR_TOLERANCE = 5;
+
+    /** A title found at the start of the other must have at least this many words, so one common word is no echo. */
+    static final int MIN_PREFIX_WORDS = 2;
 
     // The edit distance may be a fifth of the longer text; compared as distance * 5 <= length, in integers.
     private static final int EDIT_SHARE_DIVISOR = 5;
@@ -102,11 +105,29 @@ public final class BookKnowledgeVerdict {
     }
 
     // A catalogue may give the title with its subtitle ("Name; or, Another Name") and the model without it, or the
-    // reverse; the part before the first ';' or ':' is then the title both name.
+    // reverse; the part before the first ';' or ':' is then the title both name. A store's title may also carry the
+    // series in brackets or an edition word after a comma ("Name (Series Book 1)", "Name, Complete"), so a title of two
+    // words or more found whole at the start of the other names the same book.
     private static boolean titleEchoes(final @Nullable String metadata, final @Nullable String echoed) {
         return echoes(titleKey(metadata), titleKey(echoed))
                 || (!titleKey(mainTitle(metadata)).isEmpty()
-                        && echoes(titleKey(mainTitle(metadata)), titleKey(mainTitle(echoed))));
+                        && echoes(titleKey(mainTitle(metadata)), titleKey(mainTitle(echoed))))
+                || startsWithWholeTitle(titleKey(metadata), titleKey(echoed));
+    }
+
+    private static boolean startsWithWholeTitle(final String metadata, final String echoed) {
+        final boolean metadataShorter = metadata.length() <= echoed.length();
+        final String shorter = metadataShorter ? metadata : echoed;
+        final String longer = metadataShorter ? echoed : metadata;
+        final boolean enoughWords = shorter.split(" ").length >= MIN_PREFIX_WORDS;
+        final boolean prefix = enoughWords && (longer.equals(shorter) || longer.startsWith(shorter + " "));
+        log.trace(
+                "Title prefix check: shorter='{}' longer='{}' enoughWords={} matches={}",
+                shorter,
+                longer,
+                enoughWords,
+                prefix);
+        return prefix;
     }
 
     private static @Nullable String mainTitle(final @Nullable String title) {

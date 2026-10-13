@@ -147,7 +147,7 @@ public final class BookFixtures {
 
     /** A hint that says a book is told in the first person throughout. */
     public static NarratorHint firstPersonHint() {
-        return new NarratorHint(NarratorHint.Person.FIRST, 0.31, List.of(1, 2, 3));
+        return new NarratorHint(NarratorHint.Person.FIRST, 0.31, List.of(1, 2, 3), 3);
     }
 
     /** The book the specification's first scenario opens: project {@code p1}, an EPUB in English, three nodes, nine segments. */

@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 
 /**
  * What one brief suggestion call reads: one contiguous window of the book's story, and the share of its letters that
@@ -12,10 +15,17 @@ import java.util.regex.Pattern;
  * @param passages the window's text, paragraphs separated by a line break; never null, none blank
  * @param dialoguePercent the share of the letters inside quoted speech or dash dialogue, from 0 to 100
  * @param wholeStory whether the window holds every line of the story, so one reading of it is the whole book's
+ * @param languageTag the source language whose quote marks tell the characters' speech from the narration, or null for
+ *     the general table
  */
-record BookSample(List<String> passages, int dialoguePercent, boolean wholeStory) {
+record BookSample(
+        List<String> passages,
+        int dialoguePercent,
+        boolean wholeStory,
+        @Nullable String languageTag) {
 
     private static final Pattern SPACES = Pattern.compile("\\s+");
+    private static final Pattern LINES = Pattern.compile("\\R");
     private static final Pattern ELISION = Pattern.compile("\\.\\.\\.|…");
     private static final Pattern EDGES = Pattern.compile("^[\\s\"'.,;:!?-]+|[\\s\"'.,;:!?-]+$");
     private static final int MAX_PERCENT = 100;
@@ -29,9 +39,14 @@ record BookSample(List<String> passages, int dialoguePercent, boolean wholeStory
         }
     }
 
-    /** A window that is not known to hold the whole story. */
+    /** A window that is not known to hold the whole story, its speech told by the general quote marks. */
     BookSample(final List<String> passages, final int dialoguePercent) {
-        this(passages, dialoguePercent, false);
+        this(passages, dialoguePercent, false, null);
+    }
+
+    /** A window whose speech is told by the general quote marks. */
+    BookSample(final List<String> passages, final int dialoguePercent, final boolean wholeStory) {
+        this(passages, dialoguePercent, wholeStory, null);
     }
 
     /** The window as the prompt shows it, under the label the prompt's rules name; empty for no window. */
@@ -50,7 +65,29 @@ record BookSample(List<String> passages, int dialoguePercent, boolean wholeStory
      */
     boolean holds(final String quote) {
         Objects.requireNonNull(quote, "quote");
-        final String haystack = normalized(String.join("\n", passages));
+        return holds(passages, quote);
+    }
+
+    /**
+     * Whether a quote is the narrator's own words in this sample, as {@link #holds(String)} finds them once every
+     * character's speech is blanked: a register is the narration's, and a line of dialogue says how a character talks.
+     *
+     * @param quote the model's quote; may be blank
+     * @return {@code true} if every part of the quote is found in the narration, {@code false} for a blank quote, one
+     *     the passages do not hold or one that is (partly) a character's speech
+     */
+    boolean holdsInNarration(final String quote) {
+        Objects.requireNonNull(quote, "quote");
+        final List<String> narration = passages.stream()
+                .map(passage -> LINES.splitAsStream(passage)
+                        .map(line -> NarratorDetector.narration(line, languageTag))
+                        .collect(Collectors.joining("\n")))
+                .toList();
+        return holds(narration, quote);
+    }
+
+    private static boolean holds(final List<String> texts, final String quote) {
+        final String haystack = normalized(String.join("\n", texts));
         int from = 0;
         boolean anyPart = false;
         for (final String raw : ELISION.splitAsStream(quote).toList()) {

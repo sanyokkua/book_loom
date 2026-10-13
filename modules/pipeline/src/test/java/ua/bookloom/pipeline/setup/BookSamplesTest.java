@@ -287,4 +287,28 @@ class BookSamplesTest {
 
         assertThat(sample.holds(quote)).isFalse();
     }
+
+    // A register is the narration's: the narrator's line is found, a line a character speaks (in curly, straight or
+    // dash dialogue, on its own line of the window or beside narration) is not, and neither is a quote half in speech.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "The docking lights of the station.|true",
+                "she said, and waited|true",
+                "I lit a cigarette|false",
+                "Mind the rope, sir|false",
+                "Close the gate|false",
+                "a cigarette,” she said|false"
+            })
+    void holdsInNarration_quote_isFoundOnlyOutsideTheCharactersSpeech(final String quote, final boolean expected) {
+        final BookSample sample = new BookSample(List.of("""
+                        “I lit a cigarette,” she said, and waited – again.
+                        "Mind the rope, sir."
+                        — Close the gate.
+                        The docking lights of the station."""), 40, false, "en");
+
+        assertThat(sample.holdsInNarration(quote)).isEqualTo(expected);
+        assertThat(sample.holds(quote)).isTrue();
+    }
 }

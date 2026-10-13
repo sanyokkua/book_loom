@@ -851,7 +851,9 @@ to what the model's window leaves: the window the provider reported (at most 16,
 its other user text, the 512-token reply cap and a 500-token safety margin (`ContextBudget.SAFETY_MARGIN`); a story too
 short for that many windows is read in fewer, at least one. Each field is a short chain of thought inside the JSON: its
 `evidence` (a quote of at most 15 words) comes **before** its `value`, so the model names what it saw before it labels it.
-The code holds every quote to its window and every non-neutral answer to a confidence of 0.5 or more; the narrator's
+The code holds every quote to its window (a register's quote to the window's narration, outside the characters' speech,
+since a line a character says shows how that character talks) and every non-neutral answer to a confidence of 0.5 or
+more; a genre or an audience always needs its quote (15i.B4 gate); the narrator's
 gender needs a name or word of address the code can gender itself, and a name or word of address the narrator says to
 someone else (`"Mind the step, Lucy," I said`, read from the attribution beside the quoted speech) is no vote — only the
 narrator's own introduction (`"I'm Lucy"`) is. The windows' verified answers are then decided once per field
@@ -867,11 +869,11 @@ You read one passage of a book, with its metadata, and say how it should be tran
 
 Answer only from what this one passage shows; other passages are read separately. When it does not show the answer, choose the neutral option.
 
-Each field is an object with three parts in this order: "evidence", a short quote of at most 15 words copied exactly from the passage that shows the value, empty for a neutral value (find the words first); "value", what those words show; and "confidence" from 0 to 1.
+Each field is an object with three parts in this order: "evidence", a short quote of at most 15 words copied exactly from the passage that shows the value (find the words first); "value", what those words show; and "confidence" from 0 to 1. Evidence is empty only for a neutral value: register "neutral", narrator "unspecified", narratorGender "unknown", an empty voice. A genre or an audience is never neutral: its evidence is the passage's own words that show it best (a setting, an object, an event, a way of speaking), copied exactly, never the title or the author; a genre or an audience with empty evidence is thrown away.
 
 Fields:
 - genre: the genre in English, one or two words (for example "science fiction", "historical novel").
-- register: "formal" for elevated literary language, "casual" for conversational language, otherwise "neutral". The dialogue share says how much of the passage is spoken by characters.
+- register: the language of the narration, not of the characters' speech (the dialogue share says how much of the passage is spoken by characters): "formal" only when the narration's own words are elevated or old-fashioned (bookish or rare words, long ornate sentences, ceremonious phrasing); "casual" only when the narration itself is slangy or chatty (asides to the reader, spoken turns of phrase); otherwise "neutral", however literary or serious the story. Its evidence is a line of narration, never words a character says.
 - voice: one short English phrase on the narrator's voice and the era of the language; empty when nothing stands out.
 - audience: the likely readers in one short English phrase (for example "adult readers").
 - narrator: "first" when a character tells the story as "I", "third" when it is told from outside, otherwise "unspecified".
@@ -920,7 +922,7 @@ What the model knows of the book (`BOOK_KNOWLEDGE`, 15i.B2): one small setup cal
 author alone and asks whether the model really knows it. The answer is **never trusted by itself**: it stands only when
 `known` is true, `confidence` is 0.7 or more, the echoed title and author match the book's metadata (lower case, no
 diacritics, punctuation as a space, a leading "the", "a" or "an" of the title dropped; an edit distance of at most a
-fifth of the longer text; a title also by its part before `;` or `:`, an author in either name order) and the year is no
+fifth of the longer text; a title also by its part before `;` or `:` or, at two words or more, as the whole-word start of the other — a series in brackets or ", Complete" after it — an author in either name order) and the year is no
 later than five after a metadata year (the metadata's date is often an edition's, later than the first publication); every other answer is "unknown" and the log
 names the reason (`no-title`, `title-is-file-stem`, `unparsable`, `not-known`, `low-confidence`, `title-mismatch`,
 `author-mismatch`, `year-mismatch`, `call-failed`). No call is made for a book without a title or whose title is its
@@ -988,7 +990,7 @@ the field. The genre must be one of the forty names of `ua.bookloom.api.project.
 the voice at most 12 words; anything else, an unsupported value or a failed call leaves the field empty with the
 "uncertain" chip. The other fields need no model call: the register and (when the detector cannot tell) the narrator
 are kept by a strict majority of all K windows, the narrator's person is `NarratorDetector`'s when it answers (a mixed
-book is first person), and the narrator's gender is kept from verified votes when none contradicts another, one being
+book is first person when at least half of its judged chapters are, else third person), and the narrator's gender is kept from verified votes when none contradicts another, one being
 enough; the brief's `Narrator` then keeps the quotes and the origin `VERIFIED` so a later step can check them again.
 
 **SYSTEM**

@@ -31,7 +31,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
                 BOOK,
                 Result.ok(BookFixtures.withNarratorHint(
                         BookFixtures.frankensteinImport(),
-                        new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of()))));
+                        new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of(), 4))));
         openImport();
         openBook(BOOK);
         chooseTarget();

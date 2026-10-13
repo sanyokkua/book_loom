@@ -46,14 +46,14 @@ class BookBriefNarratorNoticeTest extends BookBriefScreenTestBase {
 
     @Test
     void notice_mixedHint_isShown() throws TimeoutException {
-        openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.12, List.of(2, 5)));
+        openWith(new NarratorHint(NarratorHint.Person.MIXED, 0.12, List.of(2, 5), 8));
 
         assertThat(isShown(NOTICE)).isTrue();
     }
 
     @Test
     void notice_thirdPersonHint_isHiddenAndTheBriefIsUntouched() throws TimeoutException {
-        openWith(new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of()));
+        openWith(new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of(), 4));
 
         assertThat(isShown(NOTICE)).isFalse();
         assertThat(brief().narrator()).isEqualTo(Narrator.unspecified());

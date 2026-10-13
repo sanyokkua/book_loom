@@ -69,8 +69,9 @@ final class BriefDecision {
     }
 
     /**
-     * The narrator's person: the detector's when it answers, a mixed book read as first person because a first-person
-     * part needs the narrator rules; else a strict majority of the windows read.
+     * The narrator's person: the detector's when it answers; a mixed book is first person when at least half of its
+     * judged chapters are told as "I" (alternating narrators need the narrator rules), else third person (a preface, a
+     * letter or a character's account inside a third-person novel); else a strict majority of the windows read.
      *
      * @param detected the detector's reading of the whole book, or null when it could not tell
      * @param windows each window's verified answers, null for an unreadable one
@@ -79,12 +80,13 @@ final class BriefDecision {
     static Decided<NarratorPerson> narrator(
             final @Nullable NarratorHint detected, final List<@Nullable Map<BriefField, Answer>> windows) {
         if (detected != null) {
-            final NarratorPerson person =
-                    switch (detected.person()) {
-                        case FIRST, MIXED -> NarratorPerson.FIRST;
-                        case THIRD -> NarratorPerson.THIRD;
-                    };
-            log.debug("Narrator person from the detector: {} read as {}", detected.person(), person);
+            final NarratorPerson person = detected.isMostlyFirstPerson() ? NarratorPerson.FIRST : NarratorPerson.THIRD;
+            log.debug(
+                    "Narrator person from the detector: {} with {} of {} judged chapters in the first person, read as {}",
+                    detected.person(),
+                    detected.chapters().size(),
+                    detected.judgedChapters(),
+                    person);
             final FieldEvidence measured = new FieldEvidence(Basis.MEASURED, List.of(), 0, samples(windows));
             logged(BriefField.NARRATOR, person, measured);
             return new Decided<>(person, measured);

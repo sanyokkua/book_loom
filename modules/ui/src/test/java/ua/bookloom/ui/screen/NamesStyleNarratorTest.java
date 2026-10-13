@@ -186,7 +186,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
 
     @Test
     void start_thirdPersonBook_startsWithoutAsking() throws Exception {
-        showNamesStyle(new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of()));
+        showNamesStyle(new NarratorHint(NarratorHint.Person.THIRD, 0.0, List.of(), 4));
 
         onFx(() -> button("names-style-start").fire());
 

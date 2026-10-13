@@ -162,7 +162,9 @@ class BookKnowledgeVerdictTest {
     // Normalisation: case, diacritics, punctuation and a leading article of the title do not count. The boundary rows
     // use a ten-letter text (2 of 10 = 20 % stands, 3 of 10 = 30 % does not), a fifteen-letter text (3 of 15 = exactly
     // 20 % stands) and a fourteen-letter text (3 of 14 = 21.4 % does not), a longer echo (3 inserted letters on 12 is
-    // 3 of 15 = 20 %, on 11 it is 3 of 14), and the share is taken of the LONGER normalised text.
+    // 3 of 15 = 20 %, on 11 it is 3 of 14), and the share is taken of the LONGER normalised text. A title of two words
+    // or more found whole at the start of the other (a store's series brackets, ", Complete") also stands; one word, or
+    // a prefix that ends inside a word, does not.
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
@@ -194,6 +196,13 @@ class BookKnowledgeVerdictTest {
                 "title|;Lantern|Lantern Ledger|title-mismatch",
                 "title|The Lantern Ledger|Moby Dick|title-mismatch",
                 "title|The Lantern Ledger|The Copper Ledger of Ash|title-mismatch",
+                "title|The Lantern Ledger (Ledger Cycle Book 1) (The Ledger Cycle)|The Lantern Ledger|stands",
+                "title|The Lantern Ledger, Complete|The Lantern Ledger|stands",
+                "title|The Lantern Ledger|The Lantern Ledger (Ledger Cycle, Volume One)|stands",
+                "title|Lantern Ledger and Other Tales of the Northern Marches|Lantern Ledger|stands",
+                "title|Ledger (Ledger Cycle Book 1) (The Ledger Cycle)|Ledger|title-mismatch",
+                "title|The Lantern (Ledger Cycle Book 1) (The Ledger Cycle)|The Lantern|title-mismatch",
+                "title|Lantern Led (Ledger Cycle Book 1) (The Ledger Cycle)|Lantern Ledger|title-mismatch",
                 "author|Orsolya Venn|orsolya venn|stands",
                 "author|Orsolya Venn|Orsolya Venn.|stands",
                 "author|Zoë Brandt-Åske|Zoe Brandt Aske|stands",
