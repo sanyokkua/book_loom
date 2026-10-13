@@ -8,7 +8,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
@@ -18,7 +17,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.io.TempDir;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookStats;
@@ -31,7 +29,6 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.state.StructureSegmentRow;
 
 /**
@@ -112,35 +109,6 @@ abstract class ImportBookTestBase extends StructureScreenTestBase {
         openBook(source);
     }
 
-    /** Gives the window the whole headless screen's corner and the scene this size, for sizes beyond 1000 pixels. */
-    void showAtSceneSize(final double width, final double height) {
-        interact(() -> {
-            scene.getWindow().setX(0);
-            scene.getWindow().setY(0);
-        });
-        resizeScene(width, height);
-        awaitLayout();
-    }
-
-    /** Lets the pulse that lays the resized scene out run. */
-    void awaitLayout() {
-        onFx(() -> {});
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
-    /** Where the node with this id is in the scene. */
-    Bounds boundsOf(final String id) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node node = required(id);
-            return node.localToScene(node.getBoundsInLocal());
-        });
-    }
-
-    /** Whether the {@link TwoColumns} with this id laid its columns out stacked the last time. */
-    boolean isStacked(final String id) {
-        return ThemeTestSupport.onFx(() -> ((TwoColumns) required(id)).isStacked());
-    }
-
     /** The label texts at or below the nodes with these ids whose text contains {@code fragment}, ignoring case. */
     List<String> labelsContaining(final String fragment, final String... rootIds) {
         return ThemeTestSupport.onFx(() -> {
@@ -161,19 +129,6 @@ abstract class ImportBookTestBase extends StructureScreenTestBase {
         if (node instanceof Parent parent) {
             parent.getChildrenUnmodifiable().forEach(child -> collectLabels(child, lower, found));
         }
-    }
-
-    /** Whether the node with this id is a descendant of the node with the other id. */
-    boolean isInside(final String id, final String ancestorId) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node ancestor = required(ancestorId);
-            for (Node walk = required(id); walk != null; walk = walk.getParent()) {
-                if (walk.equals(ancestor)) {
-                    return true;
-                }
-            }
-            return false;
-        });
     }
 
     @SuppressWarnings("unchecked")

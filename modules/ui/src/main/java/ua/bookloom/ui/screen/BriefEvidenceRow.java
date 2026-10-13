@@ -15,8 +15,8 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * The line under one suggested Book Brief field: the book's words the model quoted for it and how many of the samples
- * agree, or an "uncertain" chip when they did not, so the person sees why a field was filled or left alone. Hidden
+ * The line under one suggested Book Brief field: the book's words the model quoted for it and how many of the passages
+ * it read agree, or an "uncertain" chip when they did not, so the person sees why a field was filled or left alone. Hidden
  * while the field holds nothing the suggestion wrote.
  */
 @Slf4j
@@ -70,7 +70,7 @@ final class BriefEvidenceRow {
         // The card shows the brief on every keystroke; only a new evidence line is worth a log line.
         if (!text.equals(line.getText())) {
             log.debug(
-                    "brief evidence of {}: basis {}, {} of {} samples agree, {} quotes",
+                    "brief evidence of {}: basis {}, {} of {} passages agree, {} quotes",
                     field,
                     evidence.basis(),
                     evidence.agreeing(),

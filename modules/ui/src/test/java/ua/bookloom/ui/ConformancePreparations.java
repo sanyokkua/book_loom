@@ -19,6 +19,9 @@ import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.BookPlan;
+import ua.bookloom.api.pipeline.BriefField;
+import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
@@ -27,8 +30,11 @@ import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
+import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -38,6 +44,7 @@ import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
@@ -76,6 +83,8 @@ final class ConformancePreparations {
             case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
             case GLOSSARY_LISTED -> listAGlossary();
+            case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
+            case BRIEF_SUGGESTED -> suggestTheBrief();
         }
     }
 
@@ -126,6 +135,42 @@ final class ConformancePreparations {
                 new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
                         .withSuggestedTarget("Віктор"))));
         openABook();
+    }
+
+    // A diary that declares no language: the brief's source is Auto.
+    private void openABookWithoutLanguage() throws TimeoutException {
+        final Path source = Path.of("Diary.txt");
+        projects.on(source, Result.ok(BookFixtures.declaringNoLanguage("diary", BookFormat.TXT, 1)));
+        openAndAwait(source, ImportState.Detected.class);
+    }
+
+    // The model answers for the diary: a genre it could not support, and the language it read the passages in.
+    private void suggestTheBrief() throws TimeoutException {
+        openABookWithoutLanguage();
+        final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
+        onFx(() -> {
+            injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b");
+            return null;
+        });
+        ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
+                .answersBrief(Result.ok(new BriefSuggestion(
+                        "Diary",
+                        Register.NEUTRAL,
+                        null,
+                        null,
+                        NarratorPerson.UNSPECIFIED,
+                        Gender.UNKNOWN,
+                        Map.of(BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 4)),
+                        "en")));
+        onFx(() -> {
+            brief.styleSuggestion().ask();
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> brief.styleSuggestion().languageProposal().get() != null));
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void refuseABook() throws TimeoutException {

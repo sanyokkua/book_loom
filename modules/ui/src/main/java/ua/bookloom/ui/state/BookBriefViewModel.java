@@ -168,6 +168,14 @@ public final class BookBriefViewModel {
     }
 
     /**
+     * Chooses Auto as the source language: the brief names none and the model identifies the language from the text.
+     * Nothing changes, and nothing is saved, when the source already is Auto.
+     */
+    public void setSourceAuto() {
+        change("source language", "auto", brief -> brief.withLanguages(null, brief.targetLanguage()));
+    }
+
+    /**
      * Chooses the target language.
      *
      * @param tag a normalized language tag

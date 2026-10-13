@@ -40,8 +40,8 @@ language the book's content documents declare; and where the book declares no la
 content documents that declare one agree, that content language.
 
 WHERE the book declares no language and its content documents give no majority, or declares a code the application
-cannot name, the screen SHALL start with the source language **Auto** (no source language chosen), SHALL say that the
-book does not declare one, and SHALL keep `Continue` available once a target language is chosen: under Auto the model
+cannot name, the screen SHALL start with the source language **Auto** (no source language chosen; the first entry of the source list,
+"Auto — the model identifies it"), SHALL say that the model will identify it, and SHALL keep `Continue` available once a target language is chosen: under Auto the model
 identifies the source language and the code uses generic rules, assuming no language (ADR-0042).
 
 **Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-IMPORT-03
@@ -71,7 +71,7 @@ default: it is Auto, and a run with a wrong chosen source language is worse than
 #### Scenario: A book that declares nothing is Auto
 
 - **WHEN** a plain-text book declaring no language is open and `uk` is chosen as the target
-- **THEN** no source language is chosen (Auto), the screen says the book does not declare one, and `Continue` is
+- **THEN** no source language is chosen (Auto), the screen says the model will identify it, and `Continue` is
   available
 - **AND** after `English` is chosen as the source, `Continue` stays available
 

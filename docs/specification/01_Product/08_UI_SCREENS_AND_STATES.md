@@ -207,15 +207,31 @@ Requirements: FR-IMPORT-01..07. P6 reference: Import and each import state.
 
 Purpose: capture the Book Brief.
 
-| Section              | Control                                                                                                    | JavaFX control                                            | Requirement              |
+| Column and section    | Control                                                                                                    | JavaFX control                                            | Requirement              |
 |-----------------------|--------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|--------------------------|
-| Languages             | source and target, both editable and searchable over the same 34 languages                                   | two searchable `ComboBox`es                                   | FR-BRIEF-01              |
-| Tone & style          | genre (searchable free-text field over the forty genres), register, voice/era, audience                       | searchable `TextField`/`ComboBox`, `ComboBox`s                | FR-BRIEF-02, FR-BRIEF-03 |
-| Translation policies  | name, foreign-passage (keep-as-is / translate / translate+note), footnote, unit policies, faithful↔natural slider | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch`, `Slider`      | FR-BRIEF-04..07          |
-| Also translate        | ToC/navigation labels (also governs page titles), image alt-text, book metadata title/author (also governs the description), frontmatter values | four `ToggleSwitch`es                                          | FR-BRIEF-04, FR-DOC      |
-| Quality vs speed      | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                    | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
+| Left: Languages       | source (led by **Auto — the model identifies it**) and target, both editable and searchable over the same 34 languages; the model's "Looks like English — Use it" proposal under an Auto source | two searchable `ComboBox`es, a `Label` and a `Button`        | FR-BRIEF-01              |
+| Left: Translation policies | name, foreign-passage (keep-as-is / translate / translate+note), footnote, unit policies, faithful↔natural slider | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch`, `Slider`      | FR-BRIEF-04..07          |
+| Left: Also translate  | ToC/navigation labels (also governs page titles), image alt-text, book metadata title/author (also governs the description), frontmatter values | four `ToggleSwitch`es                                          | FR-BRIEF-04, FR-DOC      |
+| Left: Quality vs speed | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                   | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
+| Right: Tone & style (predicted) | the Suggest button, then genre (searchable free-text field over the forty genres), register, voice/era, audience, narrator and narrator gender, each with its basis line | `Button`, searchable `TextField`/`ComboBox`, `ComboBox`s, `Label`s | FR-BRIEF-02, FR-BRIEF-03 |
 
-Both the source and the target language are editable and searchable over the same 34-language list; the source is
+The screen has two columns (`TwoColumns`, breakpoint 700 px of content width): the **left** holds what the person
+decides and the model never touches, the **right** holds what the model predicts. The columns sit side by side from
+700 px and stack below that, left above right (at the 960 px minimum window), and Tab walks the left
+column, the right column, then the footer in both layouts. Each predicted field shows its basis under it when the
+suggestion wrote it: "3 of 4 passages" (a plural form of the count of passages read), "“quote” · 2 of 3 passages",
+"From what the model knows of this book" or "Counted over the whole book"; a field nothing supported shows the
+"? Uncertain" chip beside "1 of 4 passages" and keeps the value it had.
+
+**Auto.** The source list begins with **Auto — the model identifies it**, which is chosen for a book that declares no
+language the application can name and which the person can choose over a declared one; the target list has no Auto
+entry. Under Auto the screen says the model will identify the language, `Continue` needs only a target language, and
+after Suggest the language most passages read as is offered as "Looks like English" beside a **Use it** button, which
+sets the source language and nothing else; the proposal is never applied without the click and is shown only while the
+source is Auto.
+
+Both the source and the target language are editable and searchable over the same 34-language list (the source also
+holds Auto, first); the source is
 preselected from the normalized declaration on the detected-file card or, when an EPUB's content documents disagree,
 from their majority. Choosing the same language for both is refused with `The source and target languages are the
 same.` There is no destination card on this screen — the save path and overwrite switch live on the Export screen

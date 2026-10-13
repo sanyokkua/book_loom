@@ -43,6 +43,8 @@ public final class StyleSuggestion {
             new ReadOnlyObjectWrapper<>(StyleSuggestionOutcome.NONE);
     private final ReadOnlyObjectWrapper<Map<BriefField, FieldEvidence>> evidence =
             new ReadOnlyObjectWrapper<>(Map.of());
+    // Held only while the brief's source was Auto when the answer came; the person takes it with "Use it" or never.
+    private final ReadOnlyObjectWrapper<@Nullable String> languageProposal = new ReadOnlyObjectWrapper<>(null);
     // The brief right after the suggestion was written, so a field the person has changed since shows no evidence.
     private @Nullable BookBrief applied;
 
@@ -74,6 +76,16 @@ public final class StyleSuggestion {
     /** The evidence of the last suggestion's fields; empty before any and after the book changed. */
     public ReadOnlyObjectProperty<Map<BriefField, FieldEvidence>> evidence() {
         return evidence.getReadOnlyProperty();
+    }
+
+    /**
+     * The language the last suggestion found the passages written in, offered while the brief's source is Auto. It is
+     * a proposal the person takes with "Use it"; it is never written into the brief.
+     *
+     * @return a read-only property holding a language tag, or {@code null} when there is none to offer
+     */
+    public ReadOnlyObjectProperty<@Nullable String> languageProposal() {
+        return languageProposal.getReadOnlyProperty();
     }
 
     /**
@@ -124,6 +136,7 @@ public final class StyleSuggestion {
         log.debug("the style suggestion's evidence is forgotten: the open book changed");
         applied = null;
         evidence.set(Map.of());
+        languageProposal.set(null);
     }
 
     /** Asks the model, and writes its answer into the brief of the book that is open when it arrives. */
@@ -178,7 +191,17 @@ public final class StyleSuggestion {
                 "the style suggestion wrote the brief; evidence for {}",
                 aligned.evidence().keySet());
         evidence.set(aligned.evidence());
+        holdLanguageProposal(suggestion, before);
         outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.DONE));
+    }
+
+    // A source the person or the file named is never second-guessed: the proposal is held for an Auto source only.
+    private void holdLanguageProposal(final BriefSuggestion suggestion, final @Nullable BookBrief before) {
+        final boolean auto = before != null && before.sourceLanguage() == null;
+        final String proposed = auto ? suggestion.languageProposal() : null;
+        log.debug("the language proposal is {}: source is Auto {}", proposed == null ? "not held" : "held", auto);
+        log.trace("the language proposal is '{}'", proposed);
+        languageProposal.set(proposed);
     }
 
     // The fields the model filled replace the brief's; one it left empty keeps what the person wrote, and the policies,

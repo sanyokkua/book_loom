@@ -6,8 +6,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -15,6 +13,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -23,7 +22,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
- * The brief as it is drawn while a book is open: the five live cards and the footer that moves around the workflow.
+ * The brief as it is drawn while a book is open: the five live cards in two columns and the footer that moves around the workflow.
  *
  * <p>Split from the controller because the controller's other job is swapping this for the no-book state. The cards
  * write a person's choice into the view model, and the view model's brief is written back into the cards, so each card
@@ -34,8 +33,8 @@ import ua.bookloom.ui.state.WorkflowProgress;
 @Slf4j
 final class BriefView {
 
-    private static final double COLUMN_SPACING = 14;
-    private static final double COLUMN_WIDTH = 300;
+    // The content width, in px, below which two columns of cards would be squeezed until their controls are cut.
+    private static final double STACK_BELOW = 700;
     private static final double CARD_SPACING = 14;
 
     private final Messages messages;
@@ -88,16 +87,17 @@ final class BriefView {
     private Node build() {
         final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.BRIEF_SUBTITLE), "muted");
         subtitle.setId("brief-subtitle");
-        final VBox left = column(languages.node(), tone.node());
-        final VBox right = column(policies.node(), also.node(), quality.node());
-        return new VBox(CARD_SPACING, subtitle, new HBox(COLUMN_SPACING, left, right), footer);
+        final VBox left = column("brief-column-left", languages.node(), policies.node(), also.node(), quality.node());
+        final VBox right = column("brief-column-right", tone.node());
+        final TwoColumns columns = new TwoColumns(left, right, STACK_BELOW);
+        columns.setId("brief-columns");
+        return new VBox(CARD_SPACING, subtitle, columns, footer);
     }
 
-    private static VBox column(final Node... cards) {
+    // The person's decisions on the left, which the model never touches; what it predicts on the right.
+    private static VBox column(final String id, final Node... cards) {
         final VBox column = new VBox(CARD_SPACING, cards);
-        column.setPrefWidth(COLUMN_WIDTH);
-        column.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(column, Priority.ALWAYS);
+        column.setId(id);
         return column;
     }
 

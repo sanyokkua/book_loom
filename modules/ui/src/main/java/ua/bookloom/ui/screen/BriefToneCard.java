@@ -36,7 +36,7 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 /**
  * The Tone &amp; style card: a genre box that suggests the forty predefined genres and also takes free text, the
  * register, the free-text narrative voice and audience, and who narrates (the person and, for a first-person narrator, the
- * gender). Under each field the model suggested, its evidence: the book's words it quoted and how many samples agree,
+ * gender). Under each field the model suggested, its evidence: the book's words it quoted and how many passages agree,
  * or an "uncertain" chip.
  *
  * <p>The person sees a predefined genre in the interface language while the brief holds its English name, because the

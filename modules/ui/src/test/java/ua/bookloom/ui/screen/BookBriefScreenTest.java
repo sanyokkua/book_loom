@@ -96,11 +96,12 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF a book declaring nothing were shown with a guessed language, THEN the screen would state a fact nobody knows;
     // IF Auto blocked Continue, THEN the person would have to guess one.
     @Test
-    void source_bookDeclaringNothing_isEmptySaysSoAndLeavesContinueOpenForAuto() throws TimeoutException {
+    void source_bookDeclaringNothing_isAutoSaysSoAndLeavesContinueOpen() throws TimeoutException {
         openBookThenShowBrief(Path.of("Diary.txt"), BookFixtures.declaringNoLanguage("diary", BookFormat.TXT, 1));
         onFx(() -> briefModel().setTargetLanguage("uk"));
 
-        assertThat(box("brief-source").getCommitted()).isNull();
+        assertThat(brief().sourceLanguage()).isNull();
+        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Auto — the model identifies it");
         assertThat(isShown("brief-source-undeclared")).isTrue();
         assertThat(button("brief-continue").isDisabled()).isFalse();
 
@@ -111,14 +112,16 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(button("brief-continue").isDisabled()).isFalse();
     }
 
-    // IF the two lists differed or were cut short, THEN a language could be a source and not a target.
+    // IF the two lists differed or were cut short, THEN a language could be a source and not a target; the source list
+    // is the target's with Auto in front.
     @Test
-    void boxes_bookOpened_bothHoldTheSameThirtyFourLanguages() throws TimeoutException {
+    void boxes_bookOpened_bothHoldTheSameThirtyFourLanguagesAndTheSourceAlsoAuto() throws TimeoutException {
         openFrankensteinThenShowBrief();
 
-        assertThat(box("brief-source").getItems()).hasSize(34);
-        assertThat(box("brief-target").getItems())
-                .containsExactlyElementsOf(box("brief-source").getItems());
+        assertThat(box("brief-source").getItems()).hasSize(35);
+        assertThat(box("brief-target").getItems()).hasSize(34);
+        assertThat(box("brief-source").getItems().subList(1, 35))
+                .containsExactlyElementsOf(box("brief-target").getItems());
         assertThat(box("brief-target").getCommitted()).isNull();
     }
 
@@ -273,12 +276,12 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         awaitFx(() -> isShown("brief-evidence-register"));
 
         assertThat(((Label) required("brief-evidence-register")).getText())
-                .isEqualTo("“Hold on, man” · 2 of 2 samples agree");
+                .isEqualTo("“Hold on, man” · 2 of 2 passages");
         assertThat(isShown("brief-evidence-register-uncertain")).isFalse();
         assertThat(isShown("brief-evidence-genre-uncertain")).isTrue();
         assertThat(((Label) required("brief-evidence-genre-uncertain")).getText())
                 .isEqualTo("? Uncertain");
-        assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("1 of 2 samples agrees");
+        assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("1 of 2 passages");
         assertThat(isShown("brief-evidence-voice")).isFalse();
     }
 
@@ -331,7 +334,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(((Label) required("brief-tone-narrator-gender-suggested")).getText())
                 .isEqualTo("Male (suggested)");
         assertThat(((Label) required("brief-evidence-narrator-gender")).getText())
-                .isEqualTo("“Hold on tight, Ray” · 1 of 2 samples agrees");
+                .isEqualTo("“Hold on tight, Ray” · 1 of 2 passages");
         assertThat(isShown("brief-evidence-narrator-gender-uncertain")).isFalse();
 
         onFx(() -> briefModel().setNarratorGender(Gender.FEMALE));

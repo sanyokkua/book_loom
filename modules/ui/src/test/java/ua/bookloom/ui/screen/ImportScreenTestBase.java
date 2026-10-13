@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
@@ -18,6 +19,7 @@ import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportState;
@@ -107,5 +109,47 @@ abstract class ImportScreenTestBase extends ShellTestBase {
         if (node instanceof Parent parent) {
             parent.getChildrenUnmodifiable().forEach(child -> collectIds(child, prefix, ids));
         }
+    }
+
+    /** Gives the window the whole headless screen's corner and the scene this size, for sizes beyond 1000 pixels. */
+    void showAtSceneSize(final double width, final double height) {
+        interact(() -> {
+            scene.getWindow().setX(0);
+            scene.getWindow().setY(0);
+        });
+        resizeScene(width, height);
+        awaitLayout();
+    }
+
+    /** Lets the pulse that lays the resized scene out run. */
+    void awaitLayout() {
+        onFx(() -> {});
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Where the node with this id is in the scene. */
+    Bounds boundsOf(final String id) {
+        return ThemeTestSupport.onFx(() -> {
+            final Node node = required(id);
+            return node.localToScene(node.getBoundsInLocal());
+        });
+    }
+
+    /** Whether the {@link TwoColumns} with this id laid its columns out stacked the last time. */
+    boolean isStacked(final String id) {
+        return ThemeTestSupport.onFx(() -> ((TwoColumns) required(id)).isStacked());
+    }
+
+    /** Whether the node with this id is a descendant of the node with the other id. */
+    boolean isInside(final String id, final String ancestorId) {
+        return ThemeTestSupport.onFx(() -> {
+            final Node ancestor = required(ancestorId);
+            for (Node walk = required(id); walk != null; walk = walk.getParent()) {
+                if (walk.equals(ancestor)) {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 }

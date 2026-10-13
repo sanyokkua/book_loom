@@ -639,7 +639,15 @@ public enum MessageKey {
     BRIEF_SOURCE_LABEL("brief.source.label"),
     /** Hover explanation of the control labelled by {@link #BRIEF_SOURCE_LABEL}. */
     BRIEF_SOURCE_LABEL_TIP("brief.source.label.tip"),
-    /** Shown in place of the source language when the book declares none. */
+    /** The first entry of the source list: no language is named and the model identifies it from the text. */
+    BRIEF_SOURCE_AUTO("brief.source.auto"),
+    /** The model's read of an Auto source, with the language's name as its argument. */
+    BRIEF_SOURCE_PROPOSAL("brief.source.proposal"),
+    /** Button that takes the proposed source language. */
+    BRIEF_SOURCE_USE("brief.source.use"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_SOURCE_USE}. */
+    BRIEF_SOURCE_USE_TIP("brief.source.use.tip"),
+    /** Note under the source box while the source is Auto. */
     BRIEF_SOURCE_UNDECLARED("brief.source.undeclared"),
     /** Label of the target-language picker. */
     BRIEF_TARGET_LABEL("brief.target.label"),

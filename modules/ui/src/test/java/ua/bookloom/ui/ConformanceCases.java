@@ -61,7 +61,9 @@ final class ConformanceCases {
         RUN_STARTED,
         REVIEW_SELECTED,
         BOOK_REPORTED,
-        GLOSSARY_LISTED
+        GLOSSARY_LISTED,
+        BOOK_WITHOUT_LANGUAGE,
+        BRIEF_SUGGESTED
     }
 
     /**
@@ -199,7 +201,35 @@ final class ConformanceCases {
                             new Part("#brief-languages-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#brief-languages-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#brief-quality-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#brief-aux-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+                            new Part("#brief-aux-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#brief-policies-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            // The predicted Tone & style is the right column's one card, drawn like the decisions.
+                            new Part("#brief-tone-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#brief-tone-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            new Screen(
+                    "BOOK_BRIEF_AUTO_SOURCE",
+                    ViewNames.BOOK_BRIEF,
+                    Preparation.BOOK_WITHOUT_LANGUAGE,
+                    Overlay.NONE,
+                    List.of(new Part("#brief-source-undeclared", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
+            // After the model's suggestion: a field nothing supported wears the warning chip, in both themes; and the
+            // model's language proposal under an Auto source reads as a hint beside its button.
+            new Screen(
+                    "BOOK_BRIEF_SUGGESTED",
+                    ViewNames.BOOK_BRIEF,
+                    Preparation.BRIEF_SUGGESTED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part(
+                                    "#brief-evidence-genre-uncertain",
+                                    Kind.BACKGROUND,
+                                    "warn-bg",
+                                    "#f6ecd8",
+                                    "#3a3327"),
+                            new Part("#brief-evidence-genre-uncertain", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"),
+                            new Part("#brief-evidence-genre-uncertain", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"),
+                            new Part("#brief-evidence-genre", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            new Part("#brief-source-proposal-text", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "BOOK_BRIEF_NO_BOOK",
                     ViewNames.BOOK_BRIEF,
