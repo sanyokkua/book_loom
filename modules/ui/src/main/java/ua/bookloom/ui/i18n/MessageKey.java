@@ -25,10 +25,6 @@ public enum MessageKey {
     NAV_BRIEF("nav.brief"),
     /** Hover explanation of the control labelled by {@link #NAV_BRIEF}. */
     NAV_BRIEF_TIP("nav.brief.tip"),
-    /** Navigation entry and breadcrumb of the structure screen. */
-    NAV_STRUCTURE("nav.structure"),
-    /** Hover explanation of the control labelled by {@link #NAV_STRUCTURE}. */
-    NAV_STRUCTURE_TIP("nav.structure.tip"),
     /** Navigation entry and breadcrumb of the names-and-style screen. */
     NAV_NAMES_AND_STYLE("nav.namesAndStyle"),
     /** Hover explanation of the control labelled by {@link #NAV_NAMES_AND_STYLE}. */
@@ -820,21 +816,13 @@ public enum MessageKey {
     NOBOOK_OPEN("nobook.open"),
     /** Hover explanation of the control labelled by {@link #NOBOOK_OPEN}. */
     NOBOOK_OPEN_TIP("nobook.open.tip"),
-    /** Heading of the structure screen. */
-    STRUCTURE_TITLE("structure.title"),
     /** Title shown for a structure node the book gives none. */
     STRUCTURE_UNTITLED("structure.untitled"),
-    /** Total of translatable segments beneath the list; argument 0 is the count, passed as an Integer. */
-    STRUCTURE_TOTAL("structure.total"),
     /**
      * The segments a run translates, beneath the total: argument 0 the book-text segments, 1 the other texts (titles,
      * image descriptions, contents, book details), 2 their sum, each an Integer.
      */
     STRUCTURE_RUN_TOTAL("structure.runTotal"),
-    /** Button that moves on from the structure screen to the next available step. */
-    STRUCTURE_CONTINUE("structure.continue"),
-    /** Hover explanation of the control labelled by {@link #STRUCTURE_CONTINUE}. */
-    STRUCTURE_CONTINUE_TIP("structure.continue.tip"),
     /** Heading of the card holding the structure tree. */
     STRUCTURE_READING_ORDER("structure.readingOrder"),
     /** Hover explanation of the control labelled by {@link #STRUCTURE_READING_ORDER}. */
@@ -921,10 +909,6 @@ public enum MessageKey {
     STRUCTURE_KIND_NAV_LABEL("structure.kind.nav_label"),
     /** Caption of the translatable-segment count in the statistics card. */
     STRUCTURE_STAT_SEGMENTS("structure.stat.segments"),
-    /** Caption of the word count in the statistics card. */
-    STRUCTURE_STAT_WORDS("structure.stat.words"),
-    /** The estimated word count; argument 0 is the rounded count, passed as an Integer. */
-    STRUCTURE_STAT_WORDS_VALUE("structure.stat.wordsValue"),
     /** Caption of the image count in the statistics card. */
     STRUCTURE_STAT_IMAGES("structure.stat.images"),
     /** Caption of the code-block count in the statistics card. */
@@ -981,7 +965,7 @@ public enum MessageKey {
     NAMES_STYLE_SKIP("namesStyle.skip"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_SKIP}. */
     NAMES_STYLE_SKIP_TIP("namesStyle.skip.tip"),
-    /** Button that returns from names and style to the structure screen. */
+    /** Button that returns from names and style to the book brief. */
     NAMES_STYLE_BACK("namesStyle.back"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_BACK}. */
     NAMES_STYLE_BACK_TIP("namesStyle.back.tip"),

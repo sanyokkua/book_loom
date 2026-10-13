@@ -5,12 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.ViewNames;
 
 /**
- * The reading-order tree and the segment browser on the import screen, reused from the structure screen with the same
- * ids: picking a part in the tree lists its segments, picking a segment shows its text below the list.
+ * The reading-order tree and the segment browser on the import screen, with the ids of the structure screen they
+ * replaced: picking a part in the tree lists its segments, picking a segment shows its text below the list.
  */
 class ImportStructureScreenTest extends ImportBookTestBase {
 
@@ -77,7 +75,7 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         assertThat(segmentRows()).containsExactly(List.of("ch1 · p04", "Paragraph", "Third paragraph.", "2/2"));
     }
 
-    // IF the old Structure screen's own footer were copied onto Import, THEN there would be two ways to go on.
+    // IF the former Structure screen's own footer were copied onto Import, THEN there would be two ways to go on.
     @Test
     void footer_bookOpened_holdsOnlyImportsCancelAndContinue() throws TimeoutException {
         openFactsBook();
@@ -86,18 +84,6 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         assertThat(isShown("import-continue")).isTrue();
         assertThat(optional("structure-continue")).isNull();
         assertThat(optional("structure-back")).isNull();
-    }
-
-    // IF the Structure step stopped working before it is removed (15i.U3), THEN a person could reach a broken screen.
-    @Test
-    void structureStep_bookOpened_stillShowsItsOwnScreen() throws TimeoutException {
-        openFactsBook();
-
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
-
-        assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.STRUCTURE);
-        assertThat(isShown("structure-tree")).isTrue();
-        assertThat(isShown("structure-continue")).isTrue();
     }
 
     // IF opening the book left the tree and the checks asking for the same project twice, THEN the work would be done

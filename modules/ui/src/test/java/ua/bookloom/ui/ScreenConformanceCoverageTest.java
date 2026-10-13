@@ -24,7 +24,8 @@ class ScreenConformanceCoverageTest {
                         "SETTINGS",
                         "IMPORT",
                         "BOOK_BRIEF",
-                        "STRUCTURE",
+                        "IMPORT_DETECTED",
+                        "IMPORT_CHECKED",
                         "NAMES_STYLE",
                         "TRANSLATING",
                         "EXPORT",
@@ -47,7 +48,7 @@ class ScreenConformanceCoverageTest {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        assertThat(available).hasSize(7);
+        assertThat(available).hasSize(6);
         assertThat(covered).containsAll(available);
     }
 }

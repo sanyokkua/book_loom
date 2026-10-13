@@ -1173,7 +1173,7 @@ go.
 
 ### Requirement: Show the book's structure as a titled tree
 
-The structure screen SHALL present the book's structure as a nested tree in reading order, titled from the book's own
+The import screen SHALL, once a book is open, present the book's structure as a nested tree in reading order, titled from the book's own
 navigation, each node carrying a count pill of the translatable segments that fall under it, and SHALL report the
 book's total segment count.
 
@@ -1181,18 +1181,17 @@ The tree SHALL show only the book's reading-order content: the auxiliary text (m
 titles, alternative text, frontmatter values) SHALL NOT appear as a node and SHALL NOT be counted in the total. A node
 that has no title SHALL be shown as `Untitled`.
 
-The screen SHALL be read-only: it SHALL NOT offer to include or exclude a unit, nor to change anything about the
-book. Its `Back` action SHALL return to the Book Brief and its `Continue` action SHALL open Names & style.
+The tree SHALL be read-only: it SHALL NOT offer to include or exclude a unit, nor to change anything about the
+book. The import screen's own `Continue` is the only way on; the structure has no step of its own since 15i.U3.
 
 **Source:** FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
 In plain words: this is where a person checks the application understood their book before spending hours on it —
 an EPUB that opened with three segments instead of five thousand is visible here in a second. Now that the book's
 own table of contents, section titles and headings are read, the screen can show chapters by name and nested the
 way the book nests them, instead of a flat list of file paths. The auxiliary text is left out of the tree because it
 is not part of the reading order; counting it would make the chapter numbers not add up to what a reader sees. The
-screen stays read-only because nothing downstream reads a translate-or-preserve choice, and Names & style is now a
-real screen, so it is the next step.
+tree stays read-only because nothing downstream reads a translate-or-preserve choice.
 
 #### Scenario: Chapters are listed by their navigation titles
 
@@ -1209,7 +1208,7 @@ real screen, so it is the next step.
 
 #### Scenario: The counts add up to the reported total
 
-- **WHEN** the structure screen reports a total of `1240` segments
+- **WHEN** the import screen reports a total of `1240` segments
 - **THEN** the counts of the top-level nodes sum to `1240`
 
 #### Scenario: Auxiliary text is not a node
@@ -1223,14 +1222,9 @@ real screen, so it is the next step.
 - **WHEN** a Markdown book whose first paragraph comes before its first heading `# Chapter 1` is open
 - **THEN** the tree's first top-level node reads `Untitled` and the second reads `Chapter 1`
 
-#### Scenario: Continue leads to Names & style
+#### Scenario: Nothing in the tree can be changed
 
-- **WHEN** `Continue` is pressed on the structure screen
-- **THEN** the Names & style screen is shown
-
-#### Scenario: Nothing on the screen can be changed
-
-- **WHEN** the structure screen is shown for an open book
+- **WHEN** the import screen is shown for an open book
 - **THEN** no control offers to include, exclude, rename or reorder a unit
 
 ### Requirement: Produce a book's auxiliary text as translatable segments
@@ -1990,25 +1984,25 @@ to respect.
 
 ### Requirement: Show the book's statistics beside its structure
 
-The structure screen SHALL show, beside the tree, a statistics card reading: `Translatable segments`, `Words` (prefixed
+The import screen SHALL show, beside the book's details, a facts card reading: `Translatable segments`, `Words` (prefixed
 with `~`), `Images (kept as-is)`, `Code blocks` with the note `preserved — never translated`, `Embedded fonts`,
 `Verse / poetry` (reading `none` when zero), `Footnotes · tables`, and `Inline formatting` listing the protected
 kinds followed by `→ protected`.
 
 **Source:** FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
-In plain words: the structure screen is the last look before the long part begins, so it shows what will be
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
+In plain words: the import screen is the last look before the long part begins, so it shows what will be
 translated and what will be carried through untouched, in the words the reference drawing uses.
 
 #### Scenario: The card reads the book's statistics
 
-- **WHEN** the EPUB of 1,240 segments, 78,214 words, 7 images and italics and quotes is open on the structure screen
+- **WHEN** the EPUB of 1,240 segments, 78,214 words, 7 images and italics and quotes is open on the import screen
 - **THEN** the card reads `1,240`, `~78,000`, `7`, `0` with `preserved — never translated`, `0`, `none`, `0 · 0` and
   `italics, quotes → protected`
 
 ### Requirement: Show the round-trip and resource checks beside the structure
 
-WHEN the structure screen is shown for an open book, the system SHALL run a round-trip check in the background — the
+WHEN the import screen is shown for an open book, the system SHALL run a round-trip check in the background — the
 source opened afresh and written with zero edits, then compared with the source — and SHALL show it as running until
 it ends, then either `Round-trip check passed — structure & text preserved` or
 `Round-trip check failed — structure not preserved` naming what differed, the two segment counts when they differ.
@@ -2020,10 +2014,10 @@ identifiers.
 WHERE any body segment is estimated at more tokens than the chunk budget of 1,200 tokens, the screen SHALL show a
 warning naming how many segments exceed it and saying they will be split by sentence and re-joined.
 
-Neither check SHALL block `Continue`.
+Neither check SHALL block the import screen's `Continue`.
 
 **Source:** FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`,
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`,
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, DD-43
 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`).
 In plain words: the golden tests prove the writer on fixtures; this check proves it on the person's actual book,
@@ -2033,7 +2027,7 @@ handled in pieces. The checks inform rather than block, because a person may sti
 
 #### Scenario: A faithful book passes both checks
 
-- **WHEN** `Frankenstein.epub` is open and the structure screen is shown
+- **WHEN** `Frankenstein.epub` is open and the import screen is shown
 - **THEN** after the background check ends the screen shows `Round-trip check passed — structure & text preserved`
   and `All image / font / link IDs preserved`
 

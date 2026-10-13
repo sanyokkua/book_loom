@@ -26,7 +26,6 @@ class StepAvailabilityTest {
     @ParameterizedTest
     @CsvSource({
         "BOOK_BRIEF",
-        "STRUCTURE",
         "NAMES_STYLE",
         "TRANSLATING",
         "EXPORT",
@@ -50,7 +49,6 @@ class StepAvailabilityTest {
         openBook("en", null);
 
         assertThat(availability.lockReason(ViewNames.BOOK_BRIEF)).isEmpty();
-        assertThat(availability.lockReason(ViewNames.STRUCTURE)).contains(MessageKey.NAV_LOCKED_NO_LANGUAGES);
         assertThat(availability.lockReason(ViewNames.NAMES_STYLE)).contains(MessageKey.NAV_LOCKED_NO_LANGUAGES);
         assertThat(availability.lockReason(ViewNames.TRANSLATING)).contains(MessageKey.NAV_LOCKED_NO_LANGUAGES);
         assertThat(availability.lockReason(ViewNames.EXPORT)).isEmpty();

@@ -14,8 +14,8 @@ import ua.bookloom.ui.ViewNames;
 /**
  * Which workflow steps the person has completed, so the navigation can mark them.
  *
- * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed. Three
- * steps (the brief, the structure and the export) have no state of their own, so their actions say so through
+ * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed. Two
+ * steps (the brief and the export) have no state of their own, so their actions say so through
  * {@link #markDone}; those marks belong to the open project and are dropped when it changes or clears. The
  * set is touched on the FX Application Thread only.
  *

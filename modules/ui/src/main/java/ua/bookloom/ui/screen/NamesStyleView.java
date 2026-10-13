@@ -42,7 +42,7 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 /**
  * The names and style screen's content for an open book: the line reported in place, the glossary card with the
  * table and the four actions of its header, the note that the step can be skipped, and the footer that goes back to
- * the structure or starts the run.
+ * the brief or starts the run.
  *
  * <p>The forward action follows the run controls Translating offers: Start translation asks
  * {@link TranslatingViewModel#start()} when a start is offered, Resume the run continues a paused or stopped run, and
@@ -271,7 +271,7 @@ final class NamesStyleView {
                         messages.get(MessageKey.NAMES_STYLE_BACK),
                         messages.get(MessageKey.NAMES_STYLE_BACK_TIP),
                         "btn-ghost",
-                        () -> navigator.navigate(ViewNames.STRUCTURE)),
+                        () -> navigator.navigate(ViewNames.BOOK_BRIEF)),
                 new StepFooter.Action(
                         "names-style-start",
                         messages.get(MessageKey.NAMES_STYLE_START),

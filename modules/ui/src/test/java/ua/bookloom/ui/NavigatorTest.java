@@ -161,8 +161,7 @@ class NavigatorTest extends FxTestBase {
     @ParameterizedTest
     @CsvSource({
         "IMPORT, BOOK_BRIEF",
-        "BOOK_BRIEF, STRUCTURE",
-        "STRUCTURE, NAMES_STYLE",
+        "BOOK_BRIEF, NAMES_STYLE",
         "NAMES_STYLE, TRANSLATING",
         "TRANSLATING, EXPORT",
     })
@@ -211,7 +210,7 @@ class NavigatorTest extends FxTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"BOOK_BRIEF", "STRUCTURE", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
+            names = {"BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
     void navigate_noBook_isRefusedWithAnInfoToastNamingTheReason(final ViewNames locked) {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
         final RecordingToasts toasts = new RecordingToasts();

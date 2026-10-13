@@ -83,18 +83,15 @@ class AppShellNavigationTest extends ShellTestBase {
     }
 
     @Test
-    void navigation_briefStructureAndRunStarted_marksThoseStepsButNotTranslatingOrExport() throws TimeoutException {
+    void navigation_briefAndRunStarted_marksThoseStepsButNotTranslatingOrExport() throws TimeoutException {
         // IF translating were marked while the run is only started, THEN a running book would look finished.
         openBook();
         final WorkflowProgress progress = injector.getInstance(WorkflowProgress.class);
-        onFx(() -> {
-            progress.markDone(ViewNames.BOOK_BRIEF);
-            progress.markDone(ViewNames.STRUCTURE);
-        });
+        onFx(() -> progress.markDone(ViewNames.BOOK_BRIEF));
         injector.getInstance(StateMirror.class).publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(doneEntryIds()).containsExactly("nav-import", "nav-book-brief", "nav-structure", "nav-names-style");
+        assertThat(doneEntryIds()).containsExactly("nav-import", "nav-book-brief", "nav-names-style");
     }
 
     @Test

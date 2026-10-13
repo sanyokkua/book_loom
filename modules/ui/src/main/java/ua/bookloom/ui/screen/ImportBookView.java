@@ -20,8 +20,8 @@ import ua.bookloom.ui.state.StructureSegmentsViewModel;
 
 /**
  * What the import screen holds under the drop zone for an open book: the details beside the facts, then the structure
- * beside its segments. The structure parts are the structure screen's own, built by the same classes, so that screen
- * can go (15i.U3) without this one changing.
+ * beside its segments. The structure screen they came from is gone (15i.U3): the cards keep its ids, so the tests and the
+ * conformance cases that named them still do.
  *
  * <p>Each pair is a {@link TwoColumns}, so a narrow window stacks the second card under the first with no change to
  * the order Tab walks. Showing a book starts its background checks, and Continue is never held back by them.
@@ -87,7 +87,7 @@ final class ImportBookView {
         final VBox card = new VBox(
                 CARD_SPACING,
                 title,
-                new StructureStatsCard(messages, numbers).rows(stats, false),
+                new StructureStatsCard(messages, numbers).rows(stats),
                 checkRows.runTotalLine(listing.totalSegments()),
                 checkRows);
         card.setId("import-facts-card");

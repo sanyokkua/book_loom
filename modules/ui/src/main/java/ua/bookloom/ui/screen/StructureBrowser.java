@@ -75,10 +75,9 @@ final class StructureBrowser {
      *
      * @param listing the structure to draw
      * @param projectId the project whose segments a picked part lists
-     * @param below nodes that go under the tree inside the card, such as a total
      * @return the card, id {@code structure-card}
      */
-    VBox treeCard(final StructureListing listing, final String projectId, final Node... below) {
+    VBox treeCard(final StructureListing listing, final String projectId) {
         Objects.requireNonNull(listing, "listing");
         Objects.requireNonNull(projectId, "projectId");
         log.debug(
@@ -89,7 +88,6 @@ final class StructureBrowser {
         heading.getStyleClass().add("card-title");
         Tips.install(messages, heading, MessageKey.STRUCTURE_READING_ORDER_TIP);
         final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots(), projectId));
-        card.getChildren().addAll(below);
         card.setId("structure-card");
         card.getStyleClass().add("card");
         return card;

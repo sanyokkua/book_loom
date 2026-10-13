@@ -19,24 +19,16 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * What the structure screen tests share, on top of the import screen's scripted port and lookups: showing the screen
- * afresh (always from another view, because navigating to the current one is refused), opening a book and then
- * showing it, and reading rows back from the cells the tree actually rendered rather than from its model.
+ * What the tests of the import screen's structure parts share, on top of the import screen's scripted port and lookups:
+ * opening a book, and reading rows back from the cells the tree actually rendered rather than from its model.
  */
 abstract class StructureScreenTestBase extends ImportScreenTestBase {
 
-    /** Shows the structure screen afresh, the way a person arrives from another screen. */
-    void showStructure() {
-        onFx(() -> shell.activate(ViewNames.IMPORT));
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
-    }
-
-    /** Opens {@code imported} from {@code source} through the import screen's view model, then shows the screen. */
+    /** Opens {@code imported} from {@code source} on the import screen, which then shows its structure. */
     void openBookThenShowStructure(final Path source, final ImportedBook imported) throws TimeoutException {
         projects.on(source, Result.ok(imported));
         openImport();
         openBook(source);
-        showStructure();
     }
 
     /** The tree the screen draws its rows in. */

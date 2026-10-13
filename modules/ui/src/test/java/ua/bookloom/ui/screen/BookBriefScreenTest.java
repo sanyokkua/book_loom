@@ -220,13 +220,14 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF Continue were not wired to the workflow, THEN a person who has briefed the run could not go on; and
     // IF it did not mark the step, THEN the navigation would never show the brief as done.
     @Test
-    void continueControl_bothLanguagesChosen_movesToStructureAndMarksTheBriefDone() throws TimeoutException {
+    void continueControl_bothLanguagesChosen_movesToNamesAndStyleAndMarksTheBriefDone() throws TimeoutException {
         openFrankensteinThenShowBrief();
         onFx(() -> briefModel().setTargetLanguage("uk"));
 
+        assertThat(button("brief-continue").getText()).isEqualTo("Continue to names & style");
         onFx(() -> button("brief-continue").fire());
 
-        assertThat(currentView()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(currentView()).isEqualTo(ViewNames.NAMES_STYLE);
         assertThat(ThemeTestSupport.onFx(() ->
                         injector.getInstance(WorkflowProgress.class).done().contains(ViewNames.BOOK_BRIEF)))
                 .isTrue();

@@ -23,7 +23,7 @@ toolbar-actions area, a content host, a busy layer, a modal host with scrim, and
 |--------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Window / stage     | `Stage` + root `BorderPane`       | `.root` carries theme tokens                                                                                                                         |
 | Title bar          | `HBox`                            | Product name, then the run status (only while a run exists, `#title-bar-run-status`), then the theme toggle                                          |
-| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (six numbered steps, `#workflow-navigation`) and Application groups; 236 px wide, scrolls vertically when the window is short               |
+| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (five numbered steps, `#workflow-navigation`) and Application groups; 236 px wide, scrolls vertically when the window is short               |
 | Breadcrumb         | `Label`/`Breadcrumbs`-style bar   | Reflects current screen                                                                                                                              |
 | Toolbar actions    | `ToolBar` / `HBox` of `Button`    | Context actions per screen                                                                                                                           |
 | Theme toggle       | `ToggleButton`                    | **2-state light↔dark quick-toggle** only; the tri-state selector including `system` lives in Settings → Appearance (`07_SETTINGS.md#appearance-tab`) |
@@ -91,15 +91,15 @@ re-enters at the first pending segment rather than mid-chunk.
 
 ### Workflow navigation {#workflow-navigation}
 
-The left navigation's **WORKFLOW** group numbers its six steps — **1 Import, 2 Book Brief, 3 Structure, 4 Names &
-style, 5 Translating, 6 Export** — each showing a done mark once its work is complete, under an uppercase heading.
+The left navigation's **WORKFLOW** group numbers its five steps — **1 Import, 2 Book Brief, 3 Names &
+style, 4 Translating, 5 Export** — each showing a done mark once its work is complete, under an uppercase heading.
 The **APPLICATION** group (also an uppercase heading) lists Settings and Projects. Only **Projects** is an inert
 entry in this build: it is listed but has no screen yet, so "Continue" skips it. Every workflow step — Import, Book
-Brief, Structure, Names & style, Translating, Export — has a live screen; the Review entry from the mockup is gone,
+Brief, Names & style, Translating, Export — has a live screen; the Review entry from the mockup is gone,
 because review is a panel inside Translating, not a step of its own.
 
-**Step gating.** A step opens only when what it needs exists. Import and Settings are always open. Book Brief, Structure,
-Names & style, Translating and Export are **locked** while no book is open (`Open a book first`); Structure, Names &
+**Step gating.** A step opens only when what it needs exists. Import and Settings are always open. Book Brief,
+Names & style, Translating and Export are **locked** while no book is open (`Open a book first`); Names &
 style and Translating are also locked while the source or target language is unset or the two are the same (`Choose the
 languages in Book Brief`). Export needs only a book, because a stopped or running book can be exported at any time. A locked entry is
 drawn muted (`nav-item-locked`) but stays clickable: the click is refused and an information toast gives the reason, and
@@ -133,7 +133,10 @@ This build departs from the mockup on purpose, each for a stated reason:
   on Import (ADR-0037).
 - **The `primes system prompt` and `Slower · Max-quality` notes** — notes for the mockup's reader; the consistency
   pass runs on any quality dial setting chosen from Export.
-- **The per-node formatting pills on Structure** — formatting is reported for the whole book in the statistics card,
+- **The Structure step** — the mockup draws the book's structure as step 3 with a screen of its own; since 15i.U3 the
+  Import screen shows the reading-order tree, its segments and the book's facts, so the workflow has five steps and
+  Book Brief leads straight to Names & style (the mockup's step numbers 3 to 6 read 3 to 5 here).
+- **The per-node formatting pills on the structure tree** — formatting is reported for the whole book in the statistics card,
   not per node.
 - **Toasts naming no requirement** — the mockup's toast text is illustrative; this document is the binding toast
   contract.
@@ -173,14 +176,15 @@ Purpose: open a book, confirm what was detected and read the book's structure be
 | Cover                    | `ImageView` or a neutral placeholder  | Shows the book's cover image when the format carries one, else a neutral placeholder                                                                           |
 | Book details card        | card of key/value rows (`Label`s)     | Rows, in order: file; format with its version (e.g. `EPUB 2.0`); `Title · Author`; declared language written `English (en)`; chapters · `~words`; DRM `none` (a card exists only for a readable book, and the inspection names an encryption scheme only for a protected one) |
 | Book facts card          | one card: a `GridPane` of figures, the run total and the check rows | Titled `Book facts`. Translatable segments; images (kept as-is); code blocks with their "preserved" note; embedded fonts; verse lines; footnotes · tables; inline formatting; then the round-trip and identifier checks and, when a segment is larger than one chunk, the warning that it will be split. The checks run once the book is open, off the FX thread, and never hold Continue back. Each figure is shown by exactly one card: the words and chapters are on the details card, the segment total is the tree's own count |
-| Structure card           | `TreeView`                            | The reading-order tree with a count pill per part; the first part with segments is picked |
-| Segments card            | search `TextField`, kind `ComboBox`, `ListView`, preview | The picked part's segments, the list above and the picked segment's text below; the same browser as the Structure screen |
+| Structure card           | `TreeView` (virtualized)              | The reading-order tree, nested and titled from the book's own navigation (its ToC/nav document); a count pill per node shows its segment count; a node with no title reads `Untitled`. Rows have one fixed height (34 px): a long title ends in an ellipsis and is its own hover text. Read-only: nothing offers to include, exclude, rename or reorder a part. Picking a node lists its unit's segments; a grouping node with no unit lists its descendants' units; the first node with a unit is picked on opening |
+| Segments card            | search `TextField`, kind `ComboBox`, `ListView` (virtualized, fixed 34 px rows), read-only reading pane | The picked part's source segments in reading order with no model call, so it works before a model is chosen; the list above and the picked segment's text below. Header `N segments · M chunks (planned)`. A row shows: locator (`ch1 · p02`), kind chip, the text on one ellipsised line, the token estimate, a `kept as is` chip for a segment a run copies unchanged (numeral, scene break, lone letter) or a `kept as source` chip for an auxiliary kind the brief's *Also translate* switches leave untranslated, and a planned-chunk badge `n/m` (tint alternates per chunk; the first row of each chunk has a rule above it). The chunk is the plan `ProjectService.plan` computes (same packing, current brief and dial), not a promise: the real run drafts in token-budgeted batches that may differ at the edges. A search field keeps rows whose text or locator contains the typed text (case-insensitive); a kind choice keeps one kind; `Showing K of N` appears while a filter hides rows. Picking a row opens the whole text in the reading pane with locator, kind, tokens and chunk, each formatting token as a chip. States: nothing picked, loading, listing failed (`The segments could not be listed.`), part without segments, filter without a match. The listing is asked again when a brief save finishes |
 | Continue / Cancel        | `Button`s                              | `Continue to Book Brief` leads to the Book Brief; `Cancel` discards the import                                                                                  |
 
 Layout of a detected book, top to bottom: the compact drop zone; the details card beside the facts card; the structure
 card beside the segments card; the footer. Each pair is a `TwoColumns` control (`ui.control`): side by side while the
 content is at least 760 px wide, else stacked with the first card above the second, in the same order for Tab and
-for a reader. The Structure step stays until it is folded into this screen (15i.U3).
+for a reader. Since 15i.U3 there is no Structure step: this screen is where the structure is read, and its Continue
+leads to the Book Brief, whose Continue leads to Names & style.
 
 States (`#importState`), all decided by the inspection the application performs on open (ADR-0039):
 
@@ -231,20 +235,11 @@ P6 reference: Book Brief with its sections, including the "Also translate" group
 
 ## screen-structure {#screen-structure}
 
-Purpose: show the parsed reading order and the book's structural health, and let the person walk through every segment the app cut the book into, read-only.
-
-| Control                     | JavaFX control            | Behaviour                                                                                                                        |
-|-------------------------------|------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Structure tree                | `TreeView` (virtualized)     | Nested, titled from the book's own navigation (its ToC/nav document); a count pill per node shows its segment count; a node with no title reads `Untitled`. Rows have one fixed height (34 px): a long title ends in an ellipsis and is its own hover text. Picking a node lists its unit's segments below; a grouping node with no unit lists its descendants' units; the first node with a unit is picked on opening |
-| Segment browser               | `ListView` (virtualized, fixed 34 px rows), `TextField`, `ComboBox`, read-only reading pane | In a card under the tree and the side cards, listing the picked part's source segments in reading order with no model call, so it works before a model is chosen. Header `N segments · M chunks (planned)`. A row shows: locator (`ch1 · p02`), kind chip, the text on one ellipsised line, the token estimate, a `kept as is` chip for a segment a run copies unchanged (numeral, scene break, lone letter) or a `kept as source` chip for an auxiliary kind the brief's *Also translate* switches leave untranslated, and a planned-chunk badge `n/m` (tint alternates per chunk; the first row of each chunk has a rule above it). The chunk is the plan `ProjectService.plan` computes (same packing, current brief and dial), not a promise: the real run drafts in token-budgeted batches that may differ at the edges. A search field keeps rows whose text or locator contains the typed text (case-insensitive); a kind choice keeps one kind; `Showing K of N` appears while a filter hides rows. Picking a row opens the whole text in the reading pane below with locator, kind, tokens and chunk, each formatting token as a chip. States: nothing picked, loading, listing failed (`The segments could not be listed.`), part without segments, filter without a match. The listing is asked again when a brief save finishes |
-| Statistics card                | `Label`s / stat tiles        | Eight rows beside the tree: total segments, chapters/sections, words, images, fonts, footnotes, cross-references, auxiliary units |
-| Round-trip / resource checks   | banner(s)                    | Background checks run beside the structure; a failed round-trip shows `Round-trip check failed — structure not preserved`; missing resource ids show `IDs missing after the round trip:` followed by their list. A failed check never blocks Continue |
-| Oversized-segment warning      | banner                       | Warns when a segment exceeds the chunking limit                                                                                  |
-| Back / Continue                | `Button`s                    | Back returns to the Book Brief; Continue leads to Names & style                                                                  |
-
-With no book open the screen shows the same no-book state as the Book Brief.
-
-Requirements: FR-DOC-01, FR-DOC-08. P6 reference: Structure found / Reading order.
+Folded into **Import** (`#screen-import`) in 15i.U3: there is no Structure screen, step or navigation entry. The
+reading-order tree, the segment browser, the book's facts and the round-trip, resource-id and oversized-segment checks
+are the Import screen's Structure, Segments and Book facts cards, with the same behaviour and element ids
+(`structure-*`). A failed check never blocks Continue. The departure from the mockup is listed under
+`#shell-departures`.
 
 ## screen-names-and-style {#screen-names-and-style}
 
@@ -347,7 +342,7 @@ Purpose: choose the destination and export the translated book.
 | Format                       | read-only `Label`                 | The book's original format (EPUB/FB2/MD/TXT) — export is same-format only; there is **no format chooser** (DD-30, FR-EXPORT-01)          |
 | Also export (side files)     | three `CheckBox`es (live)         | Glossary / bilingual copy / quality report (FR-EXPORT-05) — each produces its file when checked                                          |
 | Final consistency pass       | `ToggleSwitch` (live)             | FR-EXPORT-06 — runs the consistency pass on export at any quality dial setting                                                           |
-| Checks                       | banner(s)                         | The round-trip and resource checks carried over from Structure, re-shown here before writing                                             |
+| Checks                       | banner(s)                         | The round-trip and resource checks carried over from the Import screen, re-shown here before writing                                             |
 | Counts                       | stat tiles                        | Accepted, flagged, pending, and kept-as-source, named apart                                                                              |
 | `Export book`                | `Button`                          | Writes the book; **unavailable while a run of this project is translating**                                                              |
 | Open folder                  | `Button`                          | Shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows (an exit code of 1 still counts as success), `xdg-open` on its folder on Linux |

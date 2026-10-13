@@ -52,19 +52,19 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("names-style-subtitle")).startsWith("The scan lists the names and terms");
         assertThat(labelText("names-style-banner-text"))
                 .isEqualTo("Skip this and the app builds names on the fly as it translates.");
-        assertThat(button("names-style-back").getText()).isEqualTo("Back to Structure");
+        assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
         assertThat(button("names-style-start").getText()).isEqualTo("Start translation");
     }
 
-    // IF Back did not lead to Structure, THEN the step could not be left backwards.
+    // IF Back did not lead to the Book Brief, THEN the step could not be left backwards.
     @Test
-    void backControl_shown_movesToTheStructureScreen() throws Exception {
+    void backControl_shown_movesToTheBookBriefScreen() throws Exception {
         openBookOnly();
         showNamesStyle();
 
         onFx(() -> button("names-style-back").fire());
 
-        assertThat(currentView()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(currentView()).isEqualTo(ViewNames.BOOK_BRIEF);
     }
 
     // IF a start with no model still reached the engine, THEN a run would begin on nothing.

@@ -62,16 +62,6 @@ class ViewNamesTest extends FxTestBase {
                 .isNotNull();
     }
 
-    // IF the structure constant pointed at a misspelt path, THEN navigating to it would load nothing. (Its file is no
-    // longer a placeholder: it names a controller that only the application's injector can supply.)
-    @Test
-    void resource_structure_isItsFxmlFileAndTheConstantIsAvailable() {
-        assertThat(ViewNames.STRUCTURE.resource()).hasValue("/ua/bookloom/ui/screen/structure.fxml");
-        assertThat(ViewNames.STRUCTURE.isAvailable()).isTrue();
-        assertThat(ViewNames.class.getResource("/ua/bookloom/ui/screen/structure.fxml"))
-                .isNotNull();
-    }
-
     // IF the names and style constant pointed at a misspelt path, THEN navigating to it would load nothing.
     @Test
     void resource_namesStyle_isItsFxmlFileAndTheConstantIsAvailable() {
@@ -109,7 +99,6 @@ class ViewNamesTest extends FxTestBase {
         "PROJECTS, NAV_PROJECTS",
         "IMPORT, NAV_IMPORT",
         "BOOK_BRIEF, NAV_BRIEF",
-        "STRUCTURE, NAV_STRUCTURE",
         "NAMES_STYLE, NAV_NAMES_AND_STYLE",
         "TRANSLATING, NAV_TRANSLATING",
         "EXPORT, NAV_EXPORT",
@@ -124,10 +113,9 @@ class ViewNamesTest extends FxTestBase {
     @CsvSource({
         "IMPORT, 1",
         "BOOK_BRIEF, 2",
-        "STRUCTURE, 3",
-        "NAMES_STYLE, 4",
-        "TRANSLATING, 5",
-        "EXPORT, 6",
+        "NAMES_STYLE, 3",
+        "TRANSLATING, 4",
+        "EXPORT, 5",
     })
     void step_workflowConstant_isItsPositionInTheWorkflow(final ViewNames view, final int expected) {
         assertThat(view.step()).isEqualTo(OptionalInt.of(expected));
@@ -147,7 +135,7 @@ class ViewNamesTest extends FxTestBase {
     @CsvSource(
             delimiter = '|',
             value = {
-                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF STRUCTURE NAMES_STYLE TRANSLATING EXPORT",
+                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF NAMES_STYLE TRANSLATING EXPORT",
                 "APPLICATION | SETTINGS",
             })
     void group_everyConstant_belongsToExactlyItsGroupInReadingOrder(final NavGroup group, final String expected) {
@@ -162,13 +150,6 @@ class ViewNamesTest extends FxTestBase {
         // IF the order changed, THEN the generated navigation column and "next step" would follow the wrong sequence.
         assertThat(Arrays.stream(ViewNames.values()).map(ViewNames::name))
                 .containsExactly(
-                        "PROJECTS",
-                        "IMPORT",
-                        "BOOK_BRIEF",
-                        "STRUCTURE",
-                        "NAMES_STYLE",
-                        "TRANSLATING",
-                        "EXPORT",
-                        "SETTINGS");
+                        "PROJECTS", "IMPORT", "BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT", "SETTINGS");
     }
 }

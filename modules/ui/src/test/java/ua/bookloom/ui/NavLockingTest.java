@@ -29,7 +29,7 @@ class NavLockingTest extends ShellTestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"nav-book-brief", "nav-structure", "nav-names-style", "nav-translating", "nav-export"})
+    @ValueSource(strings = {"nav-book-brief", "nav-names-style", "nav-translating", "nav-export"})
     void navigation_noBook_lockedEntriesCarryTheStyleAndSayOpenABookFirst(final String id) {
         // IF the column did not follow the lock, THEN every step would look available with no book open.
         final Button entry = (Button) required(id);
@@ -63,7 +63,7 @@ class NavLockingTest extends ShellTestBase {
 
         assertThat(required("nav-book-brief").getStyleClass()).doesNotContain(LOCKED);
         assertThat(required("nav-export").getStyleClass()).doesNotContain(LOCKED);
-        assertThat(required("nav-structure").getStyleClass()).contains(LOCKED);
+        assertThat(required("nav-names-style").getStyleClass()).contains(LOCKED);
         assertThat(TooltipProbe.tipText(required("nav-translating"))).isEqualTo("Choose the languages in Book Brief");
     }
 
@@ -116,9 +116,9 @@ class NavLockingTest extends ShellTestBase {
         show(ViewNames.BOOK_BRIEF);
 
         press("brief-continue");
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
 
-        press("structure-back");
+        press("names-style-back");
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
     }
 }

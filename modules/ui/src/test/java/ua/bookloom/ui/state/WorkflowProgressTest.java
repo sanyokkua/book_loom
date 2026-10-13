@@ -122,7 +122,7 @@ class WorkflowProgressTest extends FxTestBase {
     @Test
     void marks_bookChanged_dropTheExplicitOnes() {
         open("en", "uk");
-        interact(() -> progress.markDone(ViewNames.STRUCTURE));
+        interact(() -> progress.markDone(ViewNames.BOOK_BRIEF));
         interact(project::clear);
 
         assertThat(progress.done()).isEmpty();

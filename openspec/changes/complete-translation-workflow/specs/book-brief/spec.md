@@ -7,27 +7,20 @@
 WHILE no book is open, the book-brief screen SHALL report that a book has not been opened yet and SHALL offer a
 route to the import screen, and SHALL NOT present an empty brief.
 
-The structure screen SHALL report the same state on the same condition.
-
 **Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-01
 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
-In plain words: the navigation is always live, so a person can open the brief or the structure before opening any
-book — and both screens are built entirely out of one. An empty brief with greyed-out pickers looks broken; saying
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`.
+In plain words: the navigation is always live, so a person can open the brief before opening any
+book — and the screen is built entirely out of one. An empty brief with greyed-out pickers looks broken; saying
 "open a book first" and offering the way there is the same number of controls and tells the truth. The export
-screen already has this state; these two are the other screens that need a book and lacked it.
+screen already has this state; the brief is another screen that needs a book and lacked it. (The structure is no
+screen of its own since the import screen shows it, so it needs no such state.)
 
 #### Scenario: The brief with no book open
 
 - **WHEN** the book-brief screen is opened and no book has been opened
 - **THEN** it reports that no book is open and offers a route to the import screen
 - **AND** no language, tone, policy, "Also translate" or quality control is presented
-
-#### Scenario: The structure screen with no book open
-
-- **WHEN** the structure screen is opened and no book has been opened
-- **THEN** it reports that no book is open and offers a route to the import screen
 
 #### Scenario: Opening a book leaves the state
 

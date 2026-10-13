@@ -157,9 +157,8 @@ Each workflow screen SHALL end with a footer holding a backward action on the le
 
 - the import screen: Cancel, which returns the screen to its empty drop area, and "Continue to Book Brief", available
   once a book is open — except that a refused book's footer holds only "Choose another file";
-- the book brief: Back to the import screen, and Continue to the structure screen;
-- the structure screen: Back to the book brief, and Continue to names and style;
-- names and style: Back to the structure screen, and "Start translation";
+- the book brief: Back to the import screen, and Continue to names and style;
+- names and style: Back to the book brief, and "Start translation";
 - the translating screen: Back to names and style, and Next to the export screen;
 - the export screen: Back to the translating screen, and Next shown unavailable, because export is the last step.
 
@@ -174,7 +173,7 @@ rather than leaving the application, because the projects screen it leads to in 
 
 - **WHEN** the book brief is shown
 - **THEN** its footer holds Back on the left and Continue on the right
-- **AND** Continue shows the structure screen
+- **AND** Continue shows the names and style screen
 
 #### Scenario: Cancel clears the import screen
 
@@ -386,12 +385,12 @@ a fixed floor, so the application does the same, and refuses a window too small 
 The navigation column SHALL present its entries in two named groups — the workflow and the application — with each
 group heading shown in capital letters, and SHALL number the workflow entries in the order they are worked through.
 
-The workflow group SHALL list an entry for projects with no number, then six numbered entries: importing a book, the
-book brief, the structure, names and style, translating, and export. It SHALL list no review entry, because review
+The workflow group SHALL list an entry for projects with no number, then five numbered entries: importing a book, the
+book brief, names and style, translating, and export. It SHALL list no review entry, because review
 happens inside the translating screen.
 
 The navigation SHALL mark each workflow step the person has completed with a done mark: importing once a book is open;
-the book brief and the structure once the person has continued from them; names and style once a run has started;
+the book brief once the person has continued from it; names and style once a run has started;
 translating once the run has finished; export once a book has been written.
 
 The navigation SHALL mark exactly one entry as the current one, and that mark SHALL follow the screen being
@@ -405,7 +404,10 @@ screens, and the done marks tell a returning one how far they got. One highlight
 on screen, is what stops the navigation from lying after a jump. There are two groups and not the reference rendering's
 three because the third group there lists the mockup's specimen sheets, which are drawings for the designer and not
 screens a person can use. The reference also numbers a separate review queue; review now lives beside the run it
-reviews, so that step is gone and export becomes step six.
+reviews, so that step is gone and export becomes step five. The structure is no step of its own either: the import
+screen shows the reading-order tree, its segments and the book's facts (15i.U3), so a person reads how the book was
+cut on the screen where they opened it. The reference rendering draws the structure as step three, which the build
+departs from on purpose (`08_UI_SCREENS_AND_STATES.md#shell-departures`).
 
 #### Scenario: The navigation has exactly two groups
 
@@ -417,15 +419,15 @@ reviews, so that step is gone and export becomes step six.
 #### Scenario: The workflow entries are numbered in order
 
 - **WHEN** the navigation column is read
-- **THEN** its workflow group lists, in order, an entry for projects with no number, then entries numbered 1 to 6 for
-  importing a book, the book brief, the structure, names and style, translating, and export
+- **THEN** its workflow group lists, in order, an entry for projects with no number, then entries numbered 1 to 5 for
+  importing a book, the book brief, names and style, translating, and export
 - **AND** no entry names a review queue
 
 #### Scenario: Completed steps carry a done mark
 
-- **WHEN** `Frankenstein.epub` is open, the person has continued from the book brief and the structure, and a run has
+- **WHEN** `Frankenstein.epub` is open, the person has continued from the book brief, and a run has
   started
-- **THEN** importing, the book brief, the structure and names and style carry a done mark
+- **THEN** importing, the book brief and names and style carry a done mark
 - **AND** translating and export do not
 
 #### Scenario: The current entry follows the screen
@@ -457,14 +459,14 @@ of them ever will (see "Match the reference rendering").
 
 #### Scenario: An unavailable entry cannot be opened
 
-- **WHEN** the projects entry is activated while the structure screen is shown
-- **THEN** the screen area still shows the structure screen and the projects entry is not marked current
+- **WHEN** the projects entry is activated while the book brief is shown
+- **THEN** the screen area still shows the book brief and the projects entry is not marked current
 
 #### Scenario: The unavailable entries are still listed
 
 - **WHEN** the navigation column is read
 - **THEN** the projects entry is present and marked unavailable
-- **AND** it is the only entry marked unavailable; the settings entry and the six numbered workflow entries are not
+- **AND** it is the only entry marked unavailable; the settings entry and the five numbered workflow entries are not
 
 #### Scenario: An inert entry has no screen behind it
 
@@ -537,7 +539,8 @@ SHALL be stated by a requirement that gives its reason. The deviations stated ar
 - the `primes system prompt` note and the `Slower · Max-quality` note are not shown, because they are notes for the
   mockup's own reader; the consistency pass this build runs happens on any quality dial, started from Export;
 - the structure tree's per-node formatting pills are not shown, because formatting is reported once for the whole
-  book, in its statistics card, not per node;
+  book, in the facts card, not per node;
+- the structure is not a step of its own, because the import screen shows it (the reference draws it as step three);
 - a transient message never carries the name of the requirement it demonstrates, unlike the reference's toast
   specimens, which are labelled that way for the person reading the mockup.
 
@@ -612,7 +615,7 @@ available entry SHALL remain reachable from the navigation column at any time.
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`,
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, and translation-pipeline's "Start a
 run and report its progress".
-In plain words: names and style now has a screen, so continuing from the structure lands there, and its Start
+In plain words: names and style now has a screen, so continuing from the book brief lands there, and its Start
 translation — where the reference draws it — starts the run and takes the person to watch it. The translating screen
 keeps its own start for a person who arrived by the navigation, and it is also where a start with something missing is
 explained. Start and Resume read as the same idea from the workflow's point of view — both put the person in front of a
@@ -629,10 +632,10 @@ requirement only fixes which controls may start a run and what starting and resu
 draws. The last sentence about reachability says the numbering is a suggested order, not a wizard: the navigation is
 always live.
 
-#### Scenario: Continuing from the structure screen skips the inert step
+#### Scenario: Continuing from the book brief skips the inert step
 
-- **WHEN** a person continues from the structure screen, which is step three
-- **THEN** names and style, which is step four and no longer inert, is shown and its navigation entry is marked current
+- **WHEN** a person continues from the book brief, which is step two
+- **THEN** names and style, which is step three and no longer inert, is shown and its navigation entry is marked current
 - **AND** no step is skipped, because the only inert entry, projects, comes before step one
 
 #### Scenario: Start translation starts the run
@@ -669,7 +672,7 @@ always live.
 #### Scenario: A screen is reachable without walking the workflow
 
 - **WHEN** a book has been opened and the settings entry is activated directly from the navigation column
-- **THEN** the settings screen is shown, without the brief or the structure screen having been visited
+- **THEN** the settings screen is shown, without the brief having been visited
 
 ### Requirement: Show the quality dial and review mode in the title bar
 

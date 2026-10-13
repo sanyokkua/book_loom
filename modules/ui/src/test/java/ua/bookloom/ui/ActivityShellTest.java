@@ -113,7 +113,7 @@ class ActivityShellTest extends ShellTestBase {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
         beginScan();
 
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
+        onFx(() -> shell.activate(ViewNames.IMPORT));
 
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
     }
@@ -124,9 +124,9 @@ class ActivityShellTest extends ShellTestBase {
         onFx(() -> shell.activate(ViewNames.SETTINGS));
         onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.MODEL_LISTING, null));
 
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
+        onFx(() -> shell.activate(ViewNames.IMPORT));
 
         assertThat(isShown("leave-card")).isFalse();
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
     }
 }

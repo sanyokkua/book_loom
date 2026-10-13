@@ -168,7 +168,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "SETTINGS"})
+            names = {"IMPORT", "BOOK_BRIEF", "SETTINGS"})
     void startControl_everyOtherWorkflowScreen_hasNone(final ViewNames view) throws TimeoutException {
         readyToStart();
         onFx(() -> shell.activate(ViewNames.EXPORT));

@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
 import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.BookStats.Formatting;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -16,8 +15,8 @@ import ua.bookloom.ui.state.StructureStatistics;
 
 /**
  * The statistics that state what will be translated and what is carried through untouched, each value addressable as
- * {@code structure-stat-<row>}: in a card of their own beside the tree, or as the counts of the import screen's facts
- * card, which leaves out the words because the book details already show them.
+ * {@code structure-stat-<row>}, as the counts of the import screen's facts card. The words are not among them because
+ * the book details already show them.
  */
 final class StructureStatsCard {
 
@@ -34,25 +33,11 @@ final class StructureStatsCard {
         this.numbers = Objects.requireNonNull(numbers, "numbers");
     }
 
-    Node build(final BookStats stats) {
-        final VBox card = new VBox(rows(stats, true));
-        card.setId("structure-stats-card");
-        card.getStyleClass().add("card");
-        return card;
-    }
-
-    /** The rows alone, to be put in a card the caller owns; call once per instance. */
-    Node rows(final BookStats stats, final boolean withWords) {
+    /** The rows, to be put in a card the caller owns; call once per instance. */
+    Node rows(final BookStats stats) {
         Objects.requireNonNull(stats, "stats");
         final StructureStatistics figures = new StructureStatistics(stats);
         row("segments", MessageKey.STRUCTURE_STAT_SEGMENTS, numbers.format(stats.segments()), "stats-value-strong");
-        if (withWords) {
-            row(
-                    "words",
-                    MessageKey.STRUCTURE_STAT_WORDS,
-                    messages.get(MessageKey.STRUCTURE_STAT_WORDS_VALUE, figures.approximateWords()),
-                    "stats-value");
-        }
         row("images", MessageKey.STRUCTURE_STAT_IMAGES, numbers.format(stats.images()), "stats-value");
         row("code", MessageKey.STRUCTURE_STAT_CODE, numbers.format(stats.codeBlocks()), "stats-value");
         codeNote();

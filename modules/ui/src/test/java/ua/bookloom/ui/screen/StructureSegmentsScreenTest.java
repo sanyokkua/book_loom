@@ -27,7 +27,7 @@ import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.StructureSegmentRow;
 
 /**
- * The structure screen's segment browser, read from the real scene: picking a chapter lists its segments with their
+ * The segment browser on the import screen, read from the real scene: picking a chapter lists its segments with their
  * chunk badges, picking a row shows its whole text, the filters narrow the list, and the rows have one fixed height.
  */
 class StructureSegmentsScreenTest extends StructureScreenTestBase {

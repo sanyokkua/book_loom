@@ -23,12 +23,11 @@ import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
- * The statistics card and the checks card beside the structure tree, read from the real scene: the eight rows, the
- * round trip running, passed and failed, the identifiers it names, the chunk-budget warning, and that no check ever
- * holds back Continue.
+ * The statistics and the checks the import screen shows beside the structure tree, read from the real scene: the
+ * rows, the round trip running, passed and failed, the identifiers it names, the chunk-budget warning, and that no
+ * check ever holds back Continue.
  */
 class StructureChecksScreenTest extends StructureScreenTestBase {
 
@@ -50,7 +49,7 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
     }
 
     private boolean continueDisabled() {
-        return ThemeTestSupport.onFx(() -> button("structure-continue").isDisabled());
+        return ThemeTestSupport.onFx(() -> button("import-continue").isDisabled());
     }
 
     private void showChecked(final RoundTripReport report, final BookPlan plan) throws TimeoutException {
@@ -88,13 +87,12 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         assertThat(isShown("structure-run-total")).isFalse();
     }
 
-    // IF the card misread a figure, THEN the person would judge the book by numbers it does not have.
+    // IF the facts misread a figure, THEN the person would judge the book by numbers it does not have.
     @Test
-    void statisticsCard_frankenstein_readsTheEightRowsInTheReferenceWords() throws TimeoutException {
+    void statistics_frankenstein_readsTheFactsInTheReferenceWords() throws TimeoutException {
         openBookThenShowStructure(dir.resolve("book.epub"), frankenstein());
 
         assertThat(labelText("structure-stat-segments")).isEqualTo("1,240");
-        assertThat(labelText("structure-stat-words")).isEqualTo("~78,000");
         assertThat(labelText("structure-stat-images")).isEqualTo("7");
         assertThat(labelText("structure-stat-code")).isEqualTo("0");
         assertThat(labelText("structure-stat-codeNote")).isEqualTo("preserved — never translated");
@@ -147,25 +145,13 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
 
     // IF a failed check blocked Continue, THEN a person who wants a partial result could not go on.
     @Test
-    void continueControl_failedCheck_isStillAvailableAndOpensNamesAndStyle() throws TimeoutException {
+    void continueControl_failedCheck_isStillAvailableAndOpensTheBookBrief() throws TimeoutException {
         showChecked(new RoundTripReport(false, false, List.of("img-7"), 1240, 1239), plan());
 
         assertThat(continueDisabled()).isFalse();
-        onFx(() -> button("structure-continue").fire());
+        onFx(() -> button("import-continue").fire());
 
-        assertThat(currentView()).isEqualTo(ViewNames.NAMES_STYLE);
-    }
-
-    // IF Continue did not mark the step, THEN the navigation would never show it done.
-    @Test
-    void continueControl_bookOpened_marksTheStructureStepDone() throws TimeoutException {
-        showChecked(FAITHFUL, plan());
-
-        onFx(() -> button("structure-continue").fire());
-
-        assertThat(ThemeTestSupport.onFx(() ->
-                        injector.getInstance(WorkflowProgress.class).done().contains(ViewNames.STRUCTURE)))
-                .isTrue();
+        assertThat(currentView()).isEqualTo(ViewNames.BOOK_BRIEF);
     }
 
     // IF one oversized segment gave no warning, THEN the person would not know why a paragraph is translated in pieces.

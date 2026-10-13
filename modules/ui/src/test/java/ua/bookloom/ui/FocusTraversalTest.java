@@ -36,7 +36,6 @@ class FocusTraversalTest extends ConformanceTestBase {
             "IMPORT_DETECTED",
             "IMPORT_CHECKED",
             "BOOK_BRIEF",
-            "STRUCTURE",
             "NAMES_STYLE",
             "TRANSLATING_RUNNING",
             "TRANSLATING_REVIEW",

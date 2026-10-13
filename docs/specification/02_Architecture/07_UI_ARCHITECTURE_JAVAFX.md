@@ -141,7 +141,7 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
 
 ## navigation {#navigation}
 
-- **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`, `STRUCTURE`,
+- **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`,
   `NAMES_STYLE`, `TRANSLATING`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. Only
   `PROJECTS` carries none in this build: it is the one inert entry, and `Navigator.nextAvailableStep` skips it. The
   review panel is reached from inside `TRANSLATING`, not through its own `ViewNames` constant.
