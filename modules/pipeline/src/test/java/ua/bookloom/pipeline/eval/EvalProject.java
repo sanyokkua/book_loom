@@ -29,6 +29,7 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -136,6 +137,17 @@ public final class EvalProject {
         return of(setup, calls, window, EvalBrief.of(setup.sourceLanguage(), setup.targetLanguage(), System.getenv()));
     }
 
+    private static RunSettings settingsOf(final BookBrief brief, final CallFrame frame, final int window) {
+        return new RunSettings(
+                PROJECT,
+                ReviewMode.UNATTENDED,
+                DialParameters.of(brief.dial()),
+                frame,
+                brief.names(),
+                window,
+                RelevantPairsSwitch.isOn());
+    }
+
     /** A project whose brief is given instead of read from the environment; the case's narrator still applies. */
     static EvalProject of(final Setup setup, final ModelCalls calls, final int window, final BookBrief chosen) {
         Objects.requireNonNull(setup, "setup");
@@ -148,8 +160,7 @@ public final class EvalProject {
                 brief.foreignPassages(),
                 setup.bookLanguage(),
                 brief.narrator());
-        final RunSettings settings = new RunSettings(
-                PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window);
+        final RunSettings settings = settingsOf(brief, frame, window);
         final List<Segment> chunk = segments(setup.chunk(), 0);
         final List<Segment> unit = new ArrayList<>(chunk);
         unit.addAll(segments(setup.after(), chunk.size()));
@@ -345,7 +356,7 @@ public final class EvalProject {
             earlier.add(
                     new EarlierPair(segment(i, all.get(i).source()), all.get(i).target()));
         }
-        return requests.batch(slots, unit, earlier, context.summary());
+        return requests.batch(slots, unit, earlier, List.of(), context.summary());
     }
 
     /** The request of a prepared batch's one call. */

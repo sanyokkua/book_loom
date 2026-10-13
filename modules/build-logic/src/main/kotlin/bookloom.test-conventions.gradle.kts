@@ -192,6 +192,12 @@ localOnlyTags.forEach { tag ->
             // The eval measures one sampling mode at a time: `BOOKLOOM_EVAL_SAMPLING=server|tuned`, default server,
             // reaches the code as the `bookloom.sampling` property (an explicit BOOKLOOM_SAMPLING still wins).
             systemProperty("bookloom.sampling", System.getenv("BOOKLOOM_EVAL_SAMPLING") ?: "server")
+            // The relevant-pairs block (15i.T8) is measured on and off: `BOOKLOOM_EVAL_RELEVANT_PAIRS=on|off` reaches the
+            // code as the `bookloom.relevant.pairs` property; unset leaves the run's default (an explicit
+            // BOOKLOOM_RELEVANT_PAIRS still wins).
+            System.getenv("BOOKLOOM_EVAL_RELEVANT_PAIRS")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.relevant.pairs", it)
+            }
         }
 
         if (tag in neverUpToDateTags) {

@@ -98,6 +98,10 @@ class TermLearningJobTest {
             return Result.ok(new ChatResponse(reply, FinishReason.STOP));
         }
 
+        private static boolean isTranslating(final String user, final String source) {
+            return user.contains(">" + source + "</s>") || user.contains("<Text>\n" + source + "\n</Text>");
+        }
+
         private static String shown(final String user) {
             final Matcher matcher = SHOWN.matcher(user);
             return matcher.find() ? matcher.group(1) : "";
@@ -108,9 +112,10 @@ class TermLearningJobTest {
             return Objects.requireNonNull(TARGETS.get(source)).formatted(word);
         }
 
+        // A source shown only as a related earlier pair (15i.T8) is not being translated there.
         private boolean namesRenderingFor(final String source) {
             return requests.stream()
-                    .filter(request -> userMessage(request).contains(source))
+                    .filter(request -> isTranslating(userMessage(request), source))
                     .anyMatch(request -> userMessage(request).contains(ESTABLISHED_LINE));
         }
     }

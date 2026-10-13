@@ -36,14 +36,49 @@ class BatchPromptHygieneTest {
                         List.of("Hale → Гейл (character, male)", "1: ⟦g0⟧ → Зерубін, person, male"),
                         List.of("He left. → Він пішов.")),
                 List.of(new Pair("He left.", "Він пішов."), new Pair("It was late.", "Було пізно.")),
+                List.of(),
                 "She smiled.",
-                List.of("Hale — male"));
+                List.of("Hale — male"),
+                List.of());
 
         final List<ChatMessage> messages =
                 new BatchPromptBuilder(new PromptTemplates(), FRAME).messagesFor(context, ITEMS);
 
         final String chunk =
                 String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());
+        assertThat(PromptLint.violations(
+                        String.join(
+                                "\n",
+                                messages.stream().map(ChatMessage::content).toList()),
+                        new Facts(chunk, List.of(), List.of())))
+                .isEmpty();
+    }
+
+    // IF the prompt also carries related earlier pairs, THEN it still holds no filler, no repeated line and no
+    // placeholder.
+    @Test
+    void messagesFor_relatedEarlierPairsBesideThePreviousPairs_passTheLint() {
+        final BatchContext context = new BatchContext(
+                new DraftContext(
+                        List.of(),
+                        "Hale searches for his brother.",
+                        List.of("Hale → Гейл (character, male)"),
+                        List.of()),
+                List.of(new Pair("It was late.", "Було пізно.")),
+                List.of(
+                        new Pair("Hale kept the key.", "Гейл тримав ключ."),
+                        new Pair("Moreau saw it.", "Моро це побачив.")),
+                "She smiled.",
+                List.of("Hale — male"),
+                List.of());
+
+        final List<ChatMessage> messages =
+                new BatchPromptBuilder(new PromptTemplates(), FRAME).messagesFor(context, ITEMS);
+
+        final String chunk =
+                String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());
+        assertThat(String.join("\n", messages.stream().map(ChatMessage::content).toList()))
+                .contains("Гейл тримав ключ.", "Моро це побачив.");
         assertThat(PromptLint.violations(
                         String.join(
                                 "\n",

@@ -106,6 +106,7 @@ class PromptHygieneLintTest {
             Map.entry("itemTokens", "1: ⟦g0⟧ ⟦g1⟧"),
             Map.entry("characters", "Hale — a man"),
             Map.entry("precedingPairs", "Source: He left.\nTranslation: Він пішов."),
+            Map.entry("relevantPairs", "Source: Hale kept the key.\nTranslation: Гейл тримав ключ."),
             Map.entry("nextSource", "He came back."),
             Map.entry("year", "1945"),
             Map.entry("publisher", "Secker and Warburg"),

@@ -31,6 +31,7 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     private static final double DYNAMIC_SHARE = 0.4;
     private static final double LEXICON_SHARE = 0.2;
     private static final double CHARACTER_SHARE = 0.1;
+    private static final double RELEVANT_SHARE = 0.25;
 
     /** Rejects a window that is not positive, a negative reservation or a ratio that is not positive. */
     public ContextBudget {
@@ -87,6 +88,17 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
      */
     public static int characterAllowance(final int allowance) {
         return (int) Math.min(allowance, Math.ceil(allowance * CHARACTER_SHARE));
+    }
+
+    /**
+     * What a batch's relevant earlier pairs may take of the dynamic allowance: a quarter, the same as the next source,
+     * so the block can never crowd out the previous pairs, which have half.
+     *
+     * @param allowance the dynamic context's allowance in tokens
+     * @return the block's share, never above the allowance
+     */
+    public static int relevantAllowance(final int allowance) {
+        return (int) Math.min(allowance, Math.ceil(allowance * RELEVANT_SHARE));
     }
 
     /** The source tokens a batch may hold so that it and its reply fit what the window leaves. */

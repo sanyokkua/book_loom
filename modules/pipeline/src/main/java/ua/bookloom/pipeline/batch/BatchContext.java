@@ -13,6 +13,8 @@ import ua.bookloom.pipeline.prompt.PromptHygiene;
  *
  * @param draft the summary, glossary, memory and suggestion parts; its preceding targets are not used
  * @param precedingPairs the chapter's last decided pairs, oldest first; two or three
+ * @param relevantPairs up to two accepted pairs from earlier in the book that share the most of the batch's names and
+ *     recurring terms, best first, none of them among the preceding pairs (15i.T8)
  * @param nextSource the masked source of the segment after the batch, or null at the end of the unit
  * @param characters one line per character present in the batch, with the gender the glossary knows
  * @param keyTerms the recurring key terms the batch's items name — the closed list the model reports renderings for
@@ -20,18 +22,10 @@ import ua.bookloom.pipeline.prompt.PromptHygiene;
 public record BatchContext(
         DraftContext draft,
         List<Pair> precedingPairs,
+        List<Pair> relevantPairs,
         @Nullable String nextSource,
         List<String> characters,
         List<String> keyTerms) {
-
-    /** A context that asks for no key-term renderings. */
-    public BatchContext(
-            final DraftContext draft,
-            final List<Pair> precedingPairs,
-            @Nullable final String nextSource,
-            final List<String> characters) {
-        this(draft, precedingPairs, nextSource, characters, List.of());
-    }
 
     /** One decided segment shown as context. */
     public record Pair(String source, String target) {
@@ -47,6 +41,7 @@ public record BatchContext(
     public BatchContext {
         Objects.requireNonNull(draft, "draft");
         precedingPairs = List.copyOf(Objects.requireNonNull(precedingPairs, "precedingPairs"));
+        relevantPairs = List.copyOf(Objects.requireNonNull(relevantPairs, "relevantPairs"));
         nextSource = PromptHygiene.cleanText(nextSource);
         characters = PromptHygiene.clean(Objects.requireNonNull(characters, "characters"));
         keyTerms = PromptHygiene.clean(Objects.requireNonNull(keyTerms, "keyTerms"));
@@ -54,6 +49,6 @@ public record BatchContext(
 
     /** A context with nothing beyond the items. */
     public static BatchContext empty() {
-        return new BatchContext(DraftContext.empty(), List.of(), null, List.of());
+        return new BatchContext(DraftContext.empty(), List.of(), List.of(), null, List.of(), List.of());
     }
 }

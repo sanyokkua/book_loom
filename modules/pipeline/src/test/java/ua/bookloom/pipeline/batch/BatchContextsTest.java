@@ -22,6 +22,7 @@ class BatchContextsTest {
                         context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Зерубін, person, male"),
                         context("Hale searches.", "Hale → Гейл (character, male)", "⟦g0⟧ → Зерубін, person, male")),
                 List.of(),
+                List.of(),
                 "",
                 List.of());
 
@@ -37,15 +38,49 @@ class BatchContextsTest {
     @Test
     void of_summaryOnlyOnALaterItem_isTaken() {
         final BatchContext joined = BatchContexts.of(
-                List.of("1", "2"), List.of(context(null), context("Later summary.")), List.of(), "", List.of());
+                List.of("1", "2"),
+                List.of(context(null), context("Later summary.")),
+                List.of(),
+                List.of(),
+                "",
+                List.of());
 
         assertThat(joined.draft().summary()).isEqualTo("Later summary.");
     }
 
     @Test
     void of_contextsNotMatchingTheIds_isRejected() {
-        assertThatThrownBy(
-                        () -> BatchContexts.of(List.of("1", "2"), List.of(context(null)), List.of(), null, List.of()))
+        assertThatThrownBy(() -> BatchContexts.of(
+                        List.of("1", "2"), List.of(context(null)), List.of(), List.of(), null, List.of()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // IF a batch has relevant earlier pairs, THEN they ride beside the previous pairs, apart and in the given order.
+    @Test
+    void of_relevantPairs_areCarriedApartFromThePrecedingPairsInTheGivenOrder() {
+        final BatchContext joined = BatchContexts.of(
+                List.of("1"),
+                List.of(context(null)),
+                List.of(new BatchContext.Pair("It rained.", "Ішов дощ.")),
+                List.of(
+                        new BatchContext.Pair("Ann met Bea.", "Енн зустріла Беа."),
+                        new BatchContext.Pair("Ann ran.", "Енн побігла.")),
+                "Next.",
+                List.of());
+
+        assertThat(joined.precedingPairs()).containsExactly(new BatchContext.Pair("It rained.", "Ішов дощ."));
+        assertThat(joined.relevantPairs())
+                .containsExactly(
+                        new BatchContext.Pair("Ann met Bea.", "Енн зустріла Беа."),
+                        new BatchContext.Pair("Ann ran.", "Енн побігла."));
+    }
+
+    @Test
+    void of_withoutRelevantPairs_hasNone() {
+        final BatchContext joined =
+                BatchContexts.of(List.of("1"), List.of(context(null)), List.of(), List.of(), null, List.of());
+
+        assertThat(joined.relevantPairs()).isEmpty();
+        assertThat(BatchContext.empty().relevantPairs()).isEmpty();
     }
 }

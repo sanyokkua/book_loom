@@ -71,12 +71,17 @@ final class PrecedingTargets {
     private Result<Optional<String>> maskedTargetOf(final String segmentId, final ChunkDrafts drafts) {
         final Optional<SegmentRecord> held = pending.held(segmentId);
         if (held.isPresent()) {
-            return Result.ok(present(effective(held.get())));
+            return Result.ok(targetOf(held.get()));
         }
         if (drafts.isUndecided(segmentId)) {
             return Result.ok(present(drafts.maskedTarget(segmentId)));
         }
-        return segments.find(projectId, segmentId).map(found -> found.flatMap(record -> present(effective(record))));
+        return segments.find(projectId, segmentId).map(found -> found.flatMap(PrecedingTargets::targetOf));
+    }
+
+    /** The record's masked target as the person last left it, else the machine's; empty when it has none to show. */
+    static Optional<String> targetOf(final SegmentRecord record) {
+        return present(effective(record));
     }
 
     private static @Nullable String effective(final SegmentRecord record) {

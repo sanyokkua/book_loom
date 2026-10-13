@@ -34,7 +34,6 @@ import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.lexicon.Lexicon;
@@ -299,8 +298,7 @@ final class TranslationJobImpl implements TranslationJob {
                 frame.targetLanguage(),
                 window,
                 SegmentLocators.of(run.document()));
-        final RunSettings settings = new RunSettings(
-                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names(), window);
+        final RunSettings settings = RunSettings.forRun(request, brief, frame, window);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(chunkRunner(run, settings, sinks, calls), revision, settings, sinks, calls);
     }
@@ -328,8 +326,8 @@ final class TranslationJobImpl implements TranslationJob {
                 settings,
                 stores,
                 sinks,
-                SegmentLocators.of(run.document()),
-                run.index());
+                run.index(),
+                run.document());
     }
 
     private JobBoundaries boundaries() {

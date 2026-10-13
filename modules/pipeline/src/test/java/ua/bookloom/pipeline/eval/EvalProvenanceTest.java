@@ -72,6 +72,16 @@ class EvalProvenanceTest {
         assertThat(p.runName()).isEqualTo("20261008-123456-realrun-gemma4_e4b-mlx-round_2");
     }
 
+    // The relevant-pairs gate (15i.T8) compares an `on` and an `off` report, so each says which it was.
+    @Test
+    void capture_relevantPairsSwitch_isRecordedInTheBrief() {
+        assertThat(provenance(Map.of("BOOKLOOM_EVAL_RELEVANT_PAIRS", "off")).brief())
+                .isEqualTo("relevant_pairs=off");
+        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_RELEVANT_PAIRS", "on"))
+                        .brief())
+                .isEqualTo("preset=glass-harbour relevant_pairs=on");
+    }
+
     @Test
     void within_report_putsProvenanceFirstAndStaysJson() throws IOException {
         final String json = provenance(Map.of()).within("{\"suite\":\"words\",\"recall\":1.0}");

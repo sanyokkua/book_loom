@@ -123,6 +123,7 @@ public final class BatchPromptBuilder {
         values.put("lexiconTerms", String.join("\n", draft.lexiconLines()));
         values.put("keyTerms", String.join(", ", context.keyTerms()));
         values.put("characters", String.join("\n", context.characters()));
+        values.put("relevantPairs", pairs(context.relevantPairs()));
         values.put("precedingPairs", pairs(context.precedingPairs()));
         values.put("nextSource", context.nextSource() == null ? "" : context.nextSource());
         return values;

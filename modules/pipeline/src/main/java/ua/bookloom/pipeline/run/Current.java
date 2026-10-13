@@ -18,4 +18,20 @@ record Current(
         PromptRequests requests,
         LoopSettings loop,
         SegmentTranslator translator,
-        int budget) {}
+        int budget) {
+
+    /** The chunk's start: nothing drafted or batched yet, the context, loop and draft step the prompts hold. */
+    static Current of(
+            final WorkList work, final List<WorkItem> items, final PromptRequests requests, final int budget) {
+        return new Current(
+                work,
+                items,
+                new ChunkDrafts(),
+                new ChunkBatches(),
+                requests.context(),
+                requests,
+                requests.loopSettings(),
+                requests.translator(),
+                budget);
+    }
+}

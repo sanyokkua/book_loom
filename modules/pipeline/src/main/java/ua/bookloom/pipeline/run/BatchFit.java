@@ -83,6 +83,32 @@ final class BatchFit {
         return kept;
     }
 
+    /**
+     * The best of the relevant pairs that fit their share of the allowance, best first; a pair too long for what is
+     * left is passed over and a shorter one after it may still stay.
+     */
+    List<BatchContext.Pair> capRelevant(final List<BatchContext.Pair> pairs) {
+        final int room = ContextBudget.relevantAllowance(allowance);
+        final List<BatchContext.Pair> kept = new ArrayList<>();
+        int tokens = 0;
+        for (final BatchContext.Pair pair : pairs) {
+            final int cost = TokenEstimator.estimate(
+                            pair.source(), settings.frame().sourceLanguage())
+                    + TokenEstimator.estimate(pair.target(), settings.frame().targetLanguage());
+            if (tokens + cost <= room) {
+                tokens += cost;
+                kept.add(pair);
+            }
+        }
+        log.debug(
+                "Capped the relevant pairs offered={} kept={} tokens={} room={}",
+                pairs.size(),
+                kept.size(),
+                tokens,
+                room);
+        return kept;
+    }
+
     /** The next source when it fits its share of the allowance, else null. */
     @Nullable
     String capNext(@Nullable final String nextSource) {
@@ -95,13 +121,26 @@ final class BatchFit {
         return fits ? nextSource : null;
     }
 
+    /** The context without its relevant earlier pairs, the first optional part to go when the window is short. */
+    static BatchContext withoutRelevant(final BatchContext context) {
+        return new BatchContext(
+                context.draft(),
+                context.precedingPairs(),
+                List.of(),
+                context.nextSource(),
+                context.characters(),
+                context.keyTerms());
+    }
+
     /** The context with only what a locked name and the unit's story need: glossary lines and the summary. */
     static BatchContext lean(final BatchContext context) {
         final DraftContext draft = context.draft();
         return new BatchContext(
                 new DraftContext(List.of(), draft.summary(), draft.glossaryLines(), List.of()),
                 List.of(),
+                List.of(),
                 null,
+                List.of(),
                 List.of());
     }
 

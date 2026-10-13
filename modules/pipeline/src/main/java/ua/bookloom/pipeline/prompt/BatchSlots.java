@@ -21,6 +21,7 @@ final class BatchSlots {
                     "lexiconTerms",
                     "keyTerms",
                     "characters",
+                    "relevantPairs",
                     "precedingPairs",
                     "nextSource",
                     "itemTokens",

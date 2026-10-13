@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -151,6 +152,18 @@ final class ChunkContext {
                 .filter(entry -> !heldByGlossary(entry))
                 .toList();
         return Lexicon.termsIn(open, textsOf(segments));
+    }
+
+    /**
+     * The glossary names and recurring terms the given segments name: what an earlier segment must share to be a
+     * related pair of a batch. A name is each entry's term and its aliases, a recurring term one the glossary does not
+     * hold.
+     */
+    List<String> sharedTermsIn(final List<Segment> segments) {
+        return Stream.concat(
+                        GlossaryNames.terms(occurringIn(segments, glossary)).stream(), keyTermsIn(segments).stream())
+                .distinct()
+                .toList();
     }
 
     /**

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -27,6 +28,7 @@ import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
+import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
  * Takes each unit's pending segments through chunks, in document order (design D4a). With the reviewer on, a chunk's
@@ -67,21 +69,22 @@ public final class ChunkRunner {
      * @param settings the non-null brief and review mode of the run
      * @param stores the non-null stores the glossary and earlier decisions are read from
      * @param sinks the non-null places every decision goes
-     * @param locators the non-null locator of every segment of the opened book
      * @param index the non-null index of the book the run started with, which a later close or import cannot change
+     * @param document the non-null book the index was built from, whose segments are located and offered as pairs
      */
     public ChunkRunner(
             final RunSteps steps,
             final RunSettings settings,
             final RunStores stores,
             final RunSinks sinks,
-            final Map<String, SegmentLocator> locators,
-            final BookIndex index) {
+            final BookIndex index,
+            final Document document) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
+        final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
         final String analysis = settings.frame().analysisLanguage();
@@ -92,8 +95,15 @@ public final class ChunkRunner {
                 settings.frame().styleSheet().text(),
                 FixedLabels.forPair(
                         settings.frame().sourceLanguage(), settings.frame().targetLanguage()));
-        this.batches =
-                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
+        this.batches = new BatchStage(
+                steps.batch(),
+                settings,
+                memory,
+                preceding,
+                BatchRelevance.of(settings, stores.segments(), sinks.pending(), index, document),
+                calls,
+                followUp::summary,
+                steps.calls());
         this.learning = new TermLearning(
                 stores, settings.projectId(), analysis, settings.frame().targetLanguage());
     }
@@ -171,16 +181,7 @@ public final class ChunkRunner {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
         }
         final PromptRequests requests = Objects.requireNonNull(read.data(), "requests");
-        final Current current = new Current(
-                work,
-                items,
-                new ChunkDrafts(),
-                new ChunkBatches(),
-                requests.context(),
-                requests,
-                requests.loopSettings(),
-                requests.translator(),
-                budget);
+        final Current current = Current.of(work, items, requests, budget);
         final Optional<RunEnd> end =
                 settings.dial().hasReviewer() ? reviewedChunk(current, items) : unreviewedChunk(current, items);
         if (end.isPresent()) {

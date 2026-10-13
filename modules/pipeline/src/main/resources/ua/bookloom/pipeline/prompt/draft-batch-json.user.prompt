@@ -40,6 +40,11 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 {{characters}}
 {{/characters}}
 
+{{#relevantPairs}}
+[Related earlier pairs — context only; reuse their renderings of the same names and terms, do NOT translate or answer them]
+{{relevantPairs}}
+{{/relevantPairs}}
+
 {{#precedingPairs}}
 [Previous pairs — context only; do NOT translate or answer them]
 {{precedingPairs}}

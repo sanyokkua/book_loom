@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.batch.BatchContext.Pair;
@@ -42,8 +43,10 @@ class BatchPromptTest {
         return new BatchContext(
                 new DraftContext(List.of(), "Hale searches.", List.of("Hale → Гейл (character, male)"), List.of()),
                 List.of(new Pair("He left.", "Він пішов.")),
+                List.of(),
                 "She smiled.",
-                List.of("Hale — male"));
+                List.of("Hale — male"),
+                List.of());
     }
 
     @Test
@@ -57,6 +60,87 @@ class BatchPromptTest {
                 .contains("She smiled.", "<s id=\"1\">She opened the door.</s>", "<s id=\"2\">1881</s>")
                 .contains("[Immutable tokens per item", "3: ⟦g0⟧ ⟦g1⟧")
                 .doesNotContain("1: ⟦g", "2: ⟦g", "{{", "}}");
+    }
+
+    private static final BatchContext.Pair RELATED_ONE =
+            new BatchContext.Pair("Ann kept the key.", "Енн тримала ключ.");
+    private static final BatchContext.Pair RELATED_TWO = new BatchContext.Pair("Bea opened it.", "Беа відчинила її.");
+
+    private static BatchContext withRelatedPairs() {
+        return new BatchContext(
+                DraftContext.empty(),
+                List.of(new Pair("He left.", "Він пішов.")),
+                List.of(RELATED_ONE, RELATED_TWO),
+                null,
+                List.of(),
+                List.of());
+    }
+
+    // IF the context holds relevant earlier pairs, THEN the prompt shows them under their own heading as
+    // source/translation pairs, best first, before the chapter's previous pairs and the items.
+    @Test
+    void messagesFor_relevantPairs_areShownUnderTheirOwnHeadingBeforeThePreviousPairs() {
+        final String user = builder("en", "uk")
+                .messagesFor(withRelatedPairs(), ITEMS)
+                .get(1)
+                .content();
+
+        assertThat(user)
+                .contains("[Related earlier pairs — context only; reuse their renderings of the same names and terms,"
+                        + " do NOT translate or answer them]")
+                .containsSubsequence(
+                        "[Related earlier pairs",
+                        "Source: Ann kept the key.\nTranslation: Енн тримала ключ.\n\n"
+                                + "Source: Bea opened it.\nTranslation: Беа відчинила її.",
+                        "[Previous pairs",
+                        "Source: He left.\nTranslation: Він пішов.",
+                        "<Items>")
+                .doesNotContain("{{", "}}");
+    }
+
+    @Test
+    void messagesFor_noRelevantPairs_leavesTheBlockOut() {
+        final String user =
+                builder("en", "uk").messagesFor(fullContext(), ITEMS).get(1).content();
+
+        assertThat(user).contains("[Previous pairs").doesNotContain("Related earlier pairs");
+    }
+
+    // The system rules already say the previous pairs are context only; the related ones must be named there too, in
+    // both the token and the tokenless variant of the rules.
+    @Test
+    void messagesFor_systemRules_nameTheRelatedEarlierPairsAsContextOnly() {
+        final List<BatchItem> plain = List.of(new BatchItem("1", "She opened the door."), new BatchItem("2", "1881"));
+
+        assertThat(builder("en", "uk")
+                        .messagesFor(withRelatedPairs(), ITEMS)
+                        .getFirst()
+                        .content())
+                .contains("Related earlier pairs");
+        assertThat(builder("en", "uk")
+                        .messagesFor(withRelatedPairs(), plain)
+                        .getFirst()
+                        .content())
+                .contains("Related earlier pairs");
+    }
+
+    // The shown call (what the person reads in the live panel) lists the block as its own section.
+    @Test
+    void sectionsFor_relevantPairs_listTheBlockAsItsOwnSection() {
+        final List<PromptSection> sections = builder("en", "uk").sectionsFor(withRelatedPairs(), ITEMS);
+
+        assertThat(sections)
+                .filteredOn(section -> section.slot().equals("relevantPairs"))
+                .singleElement()
+                .satisfies(section -> {
+                    assertThat(section.heading()).startsWith("[Related earlier pairs");
+                    assertThat(section.lines())
+                            .contains(
+                                    "Source: Ann kept the key.",
+                                    "Translation: Енн тримала ключ.",
+                                    "Source: Bea opened it.",
+                                    "Translation: Беа відчинила її.");
+                });
     }
 
     @Test
@@ -83,6 +167,7 @@ class BatchPromptTest {
     void messagesFor_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
         final BatchContext context = new BatchContext(
                 new DraftContext(List.of(), null, List.of(), List.of(), List.of(), List.of("master → господар")),
+                List.of(),
                 List.of(),
                 null,
                 List.of(),
@@ -115,7 +200,8 @@ class BatchPromptTest {
                 .content();
 
         assertThat(user)
-                .doesNotContain("[Book so far", "[Glossary", "[Characters", "[Previous pairs", "[Next item")
+                .doesNotContain(
+                        "[Book so far", "[Glossary", "[Characters", "[Previous pairs", "[Related earlier", "[Next item")
                 .doesNotContain("[Immutable tokens", "(none");
     }
 

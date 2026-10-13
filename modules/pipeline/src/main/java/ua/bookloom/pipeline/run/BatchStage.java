@@ -49,6 +49,7 @@ final class BatchStage {
     private final RunSettings settings;
     private final MemoryReuse memory;
     private final PrecedingTargets preceding;
+    private final BatchRelevance relevance;
     private final RoutedCalls calls;
     private final Supplier<@Nullable String> summary;
     private final ModelCalls notes;
@@ -60,6 +61,7 @@ final class BatchStage {
      * @param settings the non-null run settings
      * @param memory the non-null memory side of the run, whose lookups decide which segments a reuse takes
      * @param preceding the non-null reader of the chapter's earlier targets
+     * @param relevance the non-null finder of the accepted earlier pairs that share a batch's names
      * @param calls the non-null router a batch call goes through
      * @param summary the rolling summary as it stands, or null while there is none
      * @param notes the non-null seam a batch item's adoption or fallback is noted on, so the shown call says it
@@ -69,6 +71,7 @@ final class BatchStage {
             final RunSettings settings,
             final MemoryReuse memory,
             final PrecedingTargets preceding,
+            final BatchRelevance relevance,
             final RoutedCalls calls,
             final Supplier<@Nullable String> summary,
             final ModelCalls notes) {
@@ -76,6 +79,7 @@ final class BatchStage {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.memory = Objects.requireNonNull(memory, "memory");
         this.preceding = Objects.requireNonNull(preceding, "preceding");
+        this.relevance = Objects.requireNonNull(relevance, "relevance");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.summary = Objects.requireNonNull(summary, "summary");
         this.notes = Objects.requireNonNull(notes, "notes");
@@ -359,8 +363,14 @@ final class BatchStage {
                 .map(candidate -> new PromptRequests.BatchSlot(
                         candidate.segment(), candidate.mask(), candidate.offer().lookup()))
                 .toList();
-        return preceding
-                .earlierPairs(unit, first.segment(), current.requests().batchPairCount(), current.drafts())
-                .map(earlier -> current.requests().batch(slots, unit, earlier, summary.get()));
+        final Result<List<EarlierPair>> earlier =
+                preceding.earlierPairs(unit, first.segment(), current.requests().batchPairCount(), current.drafts());
+        if (earlier.isErr()) {
+            return Result.err(Objects.requireNonNull(earlier.error(), "error"));
+        }
+        final List<EarlierPair> before = Objects.requireNonNull(earlier.data(), "earlier");
+        return relevance
+                .choose(current, batch.stream().map(Candidate::segment).toList(), before)
+                .map(related -> current.requests().batch(slots, unit, before, related, summary.get()));
     }
 }

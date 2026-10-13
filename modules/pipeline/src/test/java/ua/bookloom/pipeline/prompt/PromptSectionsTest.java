@@ -44,6 +44,28 @@ class PromptSectionsTest {
                 .containsExactly("glossaryTerms", "characters", "precedingPairs", "nextSource", "items");
     }
 
+    // The related earlier pairs come before the chapter's previous pairs: the farther context first, the nearest last.
+    @Test
+    void userSectionsOf_batchDraftWithRelevantPairs_listsThemBeforeThePreviousPairs() {
+        final Map<String, String> values = new HashMap<>(batchValues());
+        values.put("relevantPairs", "Source: Ann kept the key.\nTranslation: Енн тримала ключ.");
+
+        final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.DRAFT_BATCH_JSON, values);
+
+        assertThat(sections)
+                .extracting(PromptSection::slot)
+                .containsExactly(
+                        "glossaryTerms", "characters", "relevantPairs", "precedingPairs", "nextSource", "items");
+        assertThat(sections)
+                .filteredOn(section -> section.slot().equals("relevantPairs"))
+                .singleElement()
+                .extracting(PromptSection::heading, PromptSection::origin)
+                .containsExactly(
+                        "[Related earlier pairs — context only; reuse their renderings of the same names and terms,"
+                                + " do NOT translate or answer them]",
+                        PromptSection.Origin.USER);
+    }
+
     @Test
     void userSectionsOf_blockWithAHeading_holdsTheHeadingApartFromTheLinesAsSent() {
         final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.DRAFT_BATCH_JSON, batchValues());
