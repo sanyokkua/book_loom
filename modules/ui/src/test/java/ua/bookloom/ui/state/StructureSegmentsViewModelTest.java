@@ -18,6 +18,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.SegmentPreview;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedProjectService;
 
@@ -180,5 +181,47 @@ class StructureSegmentsViewModelTest extends FxTestBase {
                 () -> stateOf(viewModel) instanceof StructureSegments.Loaded loaded && loaded.chunks() == 2);
 
         assertThat(projects.segmentCalls()).containsExactly("p1/u1", "p1/u1");
+    }
+
+    private void showUnlessShown(final StructureSegmentsViewModel viewModel, final BookBrief brief, final String unit) {
+        onFx(() -> {
+            viewModel.showUnlessShown("p1", List.of(unit), brief);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF a screen built again for the same book listed its first part again, THEN returning to it would re-plan the
+    // chunks of a chapter already on show.
+    @Test
+    void showUnlessShown_sameUnitsAndBrief_listsOnce() throws TimeoutException {
+        projects.onSegments("u1", Result.ok(List.of(preview("a", 1, 1))));
+        final StructureSegmentsViewModel viewModel = viewModel();
+        showUnlessShown(viewModel, BookBrief.defaults("en"), "u1");
+        awaitLoaded(viewModel);
+
+        showUnlessShown(viewModel, BookBrief.defaults("en"), "u1");
+
+        assertThat(projects.segmentCalls()).containsExactly("p1/u1");
+        assertThat(stateOf(viewModel)).isInstanceOf(StructureSegments.Loaded.class);
+    }
+
+    // IF a changed brief or a pick elsewhere kept the old listing, THEN the chunk badges would disagree with the run.
+    @Test
+    void showUnlessShown_anotherBriefOrAPickInBetween_listsAgain() throws TimeoutException {
+        projects.onSegments("u1", Result.ok(List.of(preview("a", 1, 1))));
+        projects.onSegments("u2", Result.ok(List.of(preview("b", 1, 1))));
+        final StructureSegmentsViewModel viewModel = viewModel();
+        showUnlessShown(viewModel, BookBrief.defaults("en"), "u1");
+        awaitLoaded(viewModel);
+        showUnlessShown(viewModel, BookBrief.defaults("de"), "u1");
+        awaitLoaded(viewModel);
+        show(viewModel, "u2");
+        awaitLoaded(viewModel);
+
+        showUnlessShown(viewModel, BookBrief.defaults("de"), "u1");
+        awaitLoaded(viewModel);
+
+        assertThat(projects.segmentCalls()).containsExactly("p1/u1", "p1/u1", "p1/u2", "p1/u1");
     }
 }

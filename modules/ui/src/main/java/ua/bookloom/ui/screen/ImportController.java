@@ -10,11 +10,15 @@ import java.util.Optional;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
+import javafx.geometry.HPos;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.stage.FileChooser;
 import lombok.extern.slf4j.Slf4j;
@@ -27,17 +31,23 @@ import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.LanguageWarning;
+import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.StructureChecksViewModel;
+import ua.bookloom.ui.state.StructureSegmentsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The import screen: a drop zone and a file picker that both hand a file to the view model, and the area below them
- * that shows what the view model made of it.
+ * that shows what the view model made of it. Once a book is open the drop zone shrinks to one line and the area holds
+ * the book's details and facts and its structure with the segments of the part picked in it.
  *
  * <p>The view model outlives this controller, so it is observed through a weak listener held by the field below; the
  * browse button's handler captures this controller and keeps it reachable for as long as the screen is on show.
@@ -46,6 +56,9 @@ import ua.bookloom.ui.state.WorkflowProgress;
 public final class ImportController {
 
     private static final String DROPZONE_ACTIVE = "dropzone-active";
+    private static final String DROPZONE_COMPACT = "dropzone-compact";
+    private static final double DROPZONE_COLUMN_GAP = 12;
+    private static final double DROPZONE_ROW_GAP = 8;
 
     private final ImportViewModel viewModel;
     private final ImportGuard guard;
@@ -55,10 +68,21 @@ public final class ImportController {
     private final ConfirmDialog confirm;
     private final WorkflowProgress progress;
     private final StateMirror mirror;
+    private final CurrentProject project;
+    private final ImportBookView bookView;
     private final ChangeListener<ImportState> onState = (observed, was, now) -> show(now);
 
     @FXML
-    private Pane dropzone;
+    private GridPane dropzone;
+
+    @FXML
+    private Label dropzoneGlyph;
+
+    @FXML
+    private Label dropzoneTitle;
+
+    @FXML
+    private Label dropzoneOr;
 
     @FXML
     private Button browseButton;
@@ -78,6 +102,10 @@ public final class ImportController {
      * @param confirm the question asked before Cancel drops a project that holds work
      * @param progress the steps already done, which tell whether the project holds work
      * @param mirror the run's state, since a run that began is work too
+     * @param project the open book, whose structure the screen shows beside its details
+     * @param checks the background checks the facts card reports
+     * @param segments the listing of the picked part's segments
+     * @param brief the brief, whose finished save makes the segment listing stale
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -90,7 +118,11 @@ public final class ImportController {
             final LanguageNames names,
             final ConfirmDialog confirm,
             final WorkflowProgress progress,
-            final StateMirror mirror) {
+            final StateMirror mirror,
+            final CurrentProject project,
+            final StructureChecksViewModel checks,
+            final StructureSegmentsViewModel segments,
+            final BookBriefViewModel brief) {
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -99,6 +131,8 @@ public final class ImportController {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.names = Objects.requireNonNull(names, "names");
+        this.project = Objects.requireNonNull(project, "project");
+        this.bookView = new ImportBookView(messages, checks, segments, brief);
     }
 
     /**
@@ -193,7 +227,25 @@ public final class ImportController {
 
     private void show(final ImportState state) {
         log.debug("showing import state {}", state.getClass().getSimpleName());
+        arrangeDropzone(state instanceof ImportState.Detected);
         stateHost.getChildren().setAll(nodesFor(state));
+    }
+
+    // One grid holds the four parts in both shapes, so the drop target, its handlers and its focus order do not change
+    // when an open book asks for the room: the full box stacks the parts, the compact one lays them on a line.
+    private void arrangeDropzone(final boolean compact) {
+        log.debug("the drop zone is {}", compact ? "one line, since a book is open" : "the full box");
+        final List<Node> parts = List.of(dropzoneGlyph, dropzoneTitle, dropzoneOr, browseButton);
+        for (int index = 0; index < parts.size(); index++) {
+            GridPane.setConstraints(
+                    parts.get(index), compact ? index : 0, compact ? 0 : index, 1, 1, HPos.CENTER, VPos.CENTER);
+        }
+        dropzone.setHgap(compact ? DROPZONE_COLUMN_GAP : 0);
+        dropzone.setVgap(compact ? 0 : DROPZONE_ROW_GAP);
+        dropzone.getStyleClass().remove(DROPZONE_COMPACT);
+        if (compact) {
+            dropzone.getStyleClass().add(DROPZONE_COMPACT);
+        }
     }
 
     private List<Node> nodesFor(final ImportState state) {
@@ -215,7 +267,14 @@ public final class ImportController {
         if (warning != null) {
             nodes.add(ImportViews.warning(messages, names, warning));
         }
-        nodes.add(ImportCardView.card(messages, names, detected.card()));
+        final Node details = ImportCardView.card(messages, names, detected.card());
+        final OpenedBook book = project.book().get();
+        if (book == null) {
+            log.debug("no book is open behind the detected state; only its details are shown");
+            nodes.add(details);
+        } else {
+            nodes.addAll(bookView.build(details, book));
+        }
         nodes.add(detectedFooter());
         return nodes;
     }

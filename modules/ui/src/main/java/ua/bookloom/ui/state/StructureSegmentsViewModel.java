@@ -16,6 +16,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.SegmentPreview;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -37,6 +38,7 @@ public final class StructureSegmentsViewModel {
     private long generation;
     private @Nullable String shownProject;
     private List<String> shownUnits = List.of();
+    private @Nullable BookBrief shownBrief;
 
     /**
      * Receives the collaborators the injector owns.
@@ -72,6 +74,7 @@ public final class StructureSegmentsViewModel {
         final long ticket = ++generation;
         shownProject = projectId;
         shownUnits = List.copyOf(unitIds);
+        shownBrief = null;
         log.debug("listing the segments of project {} units {} (run {})", projectId, unitIds, ticket);
         if (unitIds.isEmpty()) {
             state.set(new StructureSegments.Idle());
@@ -90,6 +93,31 @@ public final class StructureSegmentsViewModel {
         }
     }
 
+    /**
+     * Lists the segments of some units unless exactly these, under this brief, are on show or on their way. A screen
+     * that is built again for the same book calls this, so that returning to it does not read the units again; a
+     * listing made by any other call, or under another brief, is asked for again.
+     *
+     * @param projectId the stored project
+     * @param unitIds the units to list in reading order; none leaves the list idle
+     * @param brief the brief as it stands now, which decides the chunks, or {@code null} when none is known
+     */
+    public void showUnlessShown(final String projectId, final List<String> unitIds, final @Nullable BookBrief brief) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(unitIds, "unitIds");
+        final StructureSegments now = state.get();
+        final boolean answered = now instanceof StructureSegments.Loaded || now instanceof StructureSegments.Loading;
+        if (answered
+                && projectId.equals(shownProject)
+                && unitIds.equals(shownUnits)
+                && Objects.equals(brief, shownBrief)) {
+            log.debug("the segments of project {} units {} are already on show", projectId, unitIds);
+            return;
+        }
+        show(projectId, unitIds);
+        shownBrief = brief;
+    }
+
     /** Asks again for what is on show, as the brief it follows has changed. */
     public void refresh() {
         final String project = shownProject;
@@ -104,6 +132,7 @@ public final class StructureSegmentsViewModel {
         generation++;
         shownProject = null;
         shownUnits = List.of();
+        shownBrief = null;
         state.set(new StructureSegments.Idle());
     }
 

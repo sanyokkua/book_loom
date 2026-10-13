@@ -4,12 +4,14 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.RoundTripReport;
@@ -21,32 +23,58 @@ import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 
 /**
- * The card beside the tree that reports the background checks: the round trip, the identifiers and, when a segment is
- * larger than one chunk, the warning that it will be split.
+ * The rows that report the background checks: the round trip, the identifiers and, when a segment is larger than one
+ * chunk, the warning that it will be split. A card of its own holds them on the structure screen; the facts card holds
+ * them among the counts on the import screen.
  *
- * <p>The card redraws its rows whenever the view model publishes, and holds the listener itself, so that the weak
- * registration on the long-lived view model lets both go when the screen does. It never touches Continue: a check
+ * <p>The rows redraw whenever the view model publishes, and hold the listener themselves, so that the weak
+ * registration on the long-lived view model lets both go when the screen does. They never touch Continue: a check
  * informs and does not block.
  */
 @Slf4j
-final class StructureChecksCard extends VBox {
+final class StructureChecksRows extends VBox {
 
     private static final double ROW_SPACING = 12;
     private static final double GLYPH_SPACING = 10;
     private static final String WARNING_GLYPH = "⚠";
 
+    private final StructureChecksViewModel checks;
     private final Messages messages;
     private final NumberFormat numbers;
     private final ChangeListener<StructureChecks> onChecks = (observed, was, now) -> render(now);
 
-    StructureChecksCard(final StructureChecksViewModel checks, final Messages messages, final NumberFormat numbers) {
+    StructureChecksRows(final StructureChecksViewModel checks, final Messages messages, final NumberFormat numbers) {
         super(ROW_SPACING);
+        this.checks = Objects.requireNonNull(checks, "checks");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.numbers = Objects.requireNonNull(numbers, "numbers");
-        setId("structure-checks-card");
-        getStyleClass().add("card");
         checks.state().addListener(new WeakChangeListener<>(onChecks));
         render(checks.state().get());
+    }
+
+    // Translating starts its remaining count from every segment a run translates, which is more than the tree's book
+    // text whenever the brief also translates titles, image descriptions, contents or book details; this line says so.
+    Label runTotalLine(final int bookText) {
+        log.debug("building the run-total line over {} segment(s) of book text", bookText);
+        final Label line = new Label();
+        line.setId("structure-run-total");
+        line.getStyleClass().add("muted");
+        line.setWrapText(true);
+        line.setMinHeight(Region.USE_PREF_SIZE);
+        line.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> checks.state().get() instanceof StructureChecks.Finished finished
+                                        && finished.runSegments() > bookText
+                                ? messages.get(
+                                        MessageKey.STRUCTURE_RUN_TOTAL,
+                                        bookText,
+                                        finished.runSegments() - bookText,
+                                        finished.runSegments())
+                                : "",
+                        checks.state()));
+        line.visibleProperty().bind(line.textProperty().isNotEmpty());
+        line.managedProperty().bind(line.visibleProperty());
+        return line;
     }
 
     private void render(final StructureChecks state) {

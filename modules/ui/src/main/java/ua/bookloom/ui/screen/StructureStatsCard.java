@@ -15,8 +15,9 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureStatistics;
 
 /**
- * The card beside the tree that states what will be translated and what is carried through untouched: the book's
- * statistics in eight rows, each value addressable as {@code structure-stat-<row>}.
+ * The statistics that state what will be translated and what is carried through untouched, each value addressable as
+ * {@code structure-stat-<row>}: in a card of their own beside the tree, or as the counts of the import screen's facts
+ * card, which leaves out the words because the book details already show them.
  */
 final class StructureStatsCard {
 
@@ -34,14 +35,24 @@ final class StructureStatsCard {
     }
 
     Node build(final BookStats stats) {
+        final VBox card = new VBox(rows(stats, true));
+        card.setId("structure-stats-card");
+        card.getStyleClass().add("card");
+        return card;
+    }
+
+    /** The rows alone, to be put in a card the caller owns; call once per instance. */
+    Node rows(final BookStats stats, final boolean withWords) {
         Objects.requireNonNull(stats, "stats");
         final StructureStatistics figures = new StructureStatistics(stats);
         row("segments", MessageKey.STRUCTURE_STAT_SEGMENTS, numbers.format(stats.segments()), "stats-value-strong");
-        row(
-                "words",
-                MessageKey.STRUCTURE_STAT_WORDS,
-                messages.get(MessageKey.STRUCTURE_STAT_WORDS_VALUE, figures.approximateWords()),
-                "stats-value");
+        if (withWords) {
+            row(
+                    "words",
+                    MessageKey.STRUCTURE_STAT_WORDS,
+                    messages.get(MessageKey.STRUCTURE_STAT_WORDS_VALUE, figures.approximateWords()),
+                    "stats-value");
+        }
         row("images", MessageKey.STRUCTURE_STAT_IMAGES, numbers.format(stats.images()), "stats-value");
         row("code", MessageKey.STRUCTURE_STAT_CODE, numbers.format(stats.codeBlocks()), "stats-value");
         codeNote();
@@ -57,10 +68,7 @@ final class StructureStatsCard {
                 MessageKey.STRUCTURE_STAT_FORMATTING,
                 formatting(figures.protectedFormatting()),
                 "stats-value");
-        final VBox card = new VBox(grid);
-        card.setId("structure-stats-card");
-        card.getStyleClass().add("card");
-        return card;
+        return grid;
     }
 
     private void row(final String name, final MessageKey caption, final String value, final String valueClass) {

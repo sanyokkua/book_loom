@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -38,6 +39,8 @@ public final class StructureChecksViewModel {
     private final ReadOnlyObjectWrapper<StructureChecks> state =
             new ReadOnlyObjectWrapper<>(new StructureChecks.Running());
     private long generation;
+    private @Nullable String checkedProject;
+    private @Nullable BookBrief checkedBrief;
 
     /**
      * Receives the collaborators the injector owns.
@@ -62,6 +65,27 @@ public final class StructureChecksViewModel {
      */
     public ReadOnlyObjectProperty<StructureChecks> state() {
         return state.getReadOnlyProperty();
+    }
+
+    /**
+     * Starts the checks of a project unless they were already asked for this project under this brief and either are
+     * running or gave an answer. A screen that shows the book calls this, so that moving between the screens that show
+     * the checks does not read the whole book again; a changed brief, which moves the run total and the chunk budget, or
+     * a check that could not run, asks again.
+     *
+     * @param projectId the stored project to check
+     * @param brief the brief as it stands now, or {@code null} when none is known
+     */
+    public void ensure(final String projectId, final @Nullable BookBrief brief) {
+        Objects.requireNonNull(projectId, "projectId");
+        final boolean unavailable = state.get() instanceof StructureChecks.Finished finished && !finished.hasReport();
+        if (projectId.equals(checkedProject) && Objects.equals(brief, checkedBrief) && !unavailable) {
+            log.debug("the structure checks of project {} stand: same brief, already asked", projectId);
+            return;
+        }
+        checkedProject = projectId;
+        checkedBrief = brief;
+        run(projectId);
     }
 
     /**

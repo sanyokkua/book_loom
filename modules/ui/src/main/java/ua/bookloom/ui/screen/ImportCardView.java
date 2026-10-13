@@ -23,7 +23,11 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookCard;
 
-/** The card that reports an opened book: its cover or a placeholder beside the rows the inspection could fill. */
+/**
+ * The card that reports what identifies an opened book: its cover or a placeholder beside the rows the inspection could
+ * fill. Every count the translation depends on is in the facts card beside it, so none is repeated here except the
+ * chapters, which this card owns together with the words.
+ */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -33,7 +37,6 @@ final class ImportCardView {
 
     private static final double SECTION_SPACING = 6;
     private static final double CARD_SPACING = 16;
-    private static final double CARD_MAX_WIDTH = 720;
     private static final double COVER_WIDTH = 110;
     private static final double COVER_HEIGHT = 150;
     private static final int WORD_ROUNDING = 1000;
@@ -49,8 +52,7 @@ final class ImportCardView {
         final HBox box = new HBox(CARD_SPACING, cover(messages, card.cover()), rows);
         box.setId("import-card");
         box.setAlignment(Pos.TOP_LEFT);
-        box.getStyleClass().add("card");
-        box.setMaxWidth(CARD_MAX_WIDTH);
+        box.getStyleClass().addAll("card", "import-details");
         return box;
     }
 
@@ -99,11 +101,13 @@ final class ImportCardView {
                     messages.get(MessageKey.IMPORT_CARD_LANGUAGE),
                     language(messages, names, declared, Locale.ENGLISH)));
         }
-        rows.addAll(sizeRows(messages, card));
+        rows.addAll(chaptersAndDrm(messages, card));
         return rows;
     }
 
-    private static List<Node> sizeRows(final Messages messages, final BookCard card) {
+    // A card exists only for a readable book, and the inspection names an encryption scheme only for a protected one,
+    // so "none" is the true fact here and not a placeholder for a missing link.
+    private static List<Node> chaptersAndDrm(final Messages messages, final BookCard card) {
         final Label none = new Label(messages.get(MessageKey.IMPORT_DRM_NONE));
         none.getStyleClass().addAll("chip", "chip-ok");
         return List.of(
@@ -114,10 +118,6 @@ final class ImportCardView {
                                 MessageKey.IMPORT_CARD_CHAPTERS_WORDS,
                                 card.chapters(),
                                 approximateWords(card.words()))),
-                ImportViews.keyValue(
-                        "import-row-media",
-                        messages.get(MessageKey.IMPORT_CARD_MEDIA),
-                        messages.get(MessageKey.IMPORT_CARD_MEDIA_COUNTS, card.images(), card.fonts())),
                 ImportViews.keyValueNode("import-row-drm", messages.get(MessageKey.IMPORT_CARD_DRM), none));
     }
 

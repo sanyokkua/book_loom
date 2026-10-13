@@ -34,6 +34,7 @@ class FocusTraversalTest extends ConformanceTestBase {
     private static final int MAX_PRESSES = 400;
     private static final Set<String> SCREENS = Set.of(
             "IMPORT_DETECTED",
+            "IMPORT_CHECKED",
             "BOOK_BRIEF",
             "STRUCTURE",
             "NAMES_STYLE",

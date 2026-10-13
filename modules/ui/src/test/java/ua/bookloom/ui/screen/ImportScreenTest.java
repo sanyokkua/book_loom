@@ -50,7 +50,7 @@ class ImportScreenTest extends ImportScreenTestBase {
                         null,
                         null,
                         null,
-                        List.of("file", "format", "chapters", "media", "drm"),
+                        List.of("file", "format", "chapters", "drm"),
                         List.of("titleAuthor", "declaredLang")),
                 Arguments.of(
                         "notes.md",
@@ -58,7 +58,7 @@ class ImportScreenTest extends ImportScreenTestBase {
                         null,
                         null,
                         null,
-                        List.of("file", "format", "chapters", "media", "drm"),
+                        List.of("file", "format", "chapters", "drm"),
                         List.of("titleAuthor", "declaredLang")),
                 Arguments.of(
                         "titled.md",
@@ -66,7 +66,7 @@ class ImportScreenTest extends ImportScreenTestBase {
                         null,
                         "Dune",
                         null,
-                        List.of("file", "format", "titleAuthor", "chapters", "media", "drm"),
+                        List.of("file", "format", "titleAuthor", "chapters", "drm"),
                         List.of("declaredLang")));
     }
 
@@ -106,7 +106,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     // IF the card omitted a row the parse carries, showed one it does not, or offered no way on, THEN the screen would
     // misreport the book.
     @Test
-    void card_enBookOpened_showsEverySevenRowsAndContinueAndNoRefusal() throws TimeoutException {
+    void card_enBookOpened_showsEverySixRowsAndContinueAndNoRefusal() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
@@ -121,7 +121,6 @@ class ImportScreenTest extends ImportScreenTestBase {
                         "import-row-titleAuthor",
                         "import-row-declaredLang",
                         "import-row-chapters",
-                        "import-row-media",
                         "import-row-drm");
         assertThat(optional("import-continue")).isNotNull();
         assertThat(button("import-continue").isDisable()).isFalse();
@@ -140,7 +139,6 @@ class ImportScreenTest extends ImportScreenTestBase {
                 "titleAuthor | Frankenstein · Mary Shelley",
                 "declaredLang | English (en)",
                 "chapters | 11 · ~78,000 words",
-                "media | 7 · 0",
                 "drm | none"
             })
     void card_enBookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {

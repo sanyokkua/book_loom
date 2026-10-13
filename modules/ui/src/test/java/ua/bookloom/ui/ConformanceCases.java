@@ -1,6 +1,7 @@
 package ua.bookloom.ui;
 
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -87,7 +88,7 @@ final class ConformanceCases {
             new Part("#export-aux-consistency .thumb", Kind.BACKGROUND, "toggle-thumb", "#ffffff", "#ffffff");
 
     /** One entry per screen; a later screen task adds exactly one line here. */
-    static final List<Screen> SCREENS = List.of(
+    private static final List<Screen> BASE = List.of(
             new Screen(
                     "SHELL",
                     null,
@@ -157,14 +158,6 @@ final class ConformanceCases {
                     List.of(
                             new Part("#import-dropzone", Kind.BACKGROUND, "sand-soft", "#f2e9db", "#3a3a37"),
                             new Part("#import-dropzone", Kind.BORDER, "sand-strong", "#dcc4a3", "#6d5f4a"))),
-            new Screen(
-                    "IMPORT_DETECTED",
-                    ViewNames.IMPORT,
-                    Preparation.BOOK_OPENED,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#import-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#import-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             new Screen(
                     "IMPORT_REFUSED",
                     ViewNames.IMPORT,
@@ -394,4 +387,8 @@ final class ConformanceCases {
                             BOX_EDGE,
                             SWITCH_TRACK,
                             SWITCH_THUMB)));
+
+    /** Every screen, the import screen's open-book cases included. */
+    static final List<Screen> SCREENS = Stream.concat(BASE.stream(), ImportConformanceCases.SCREENS.stream())
+            .toList();
 }

@@ -1548,6 +1548,20 @@
     -fx-font-size: 26px;
 }
 
+/* Once a book is open the zone is one line: the structure below it needs the room, and Browse stays in reach. */
+.dropzone-compact {
+    -fx-padding: 10px 16px 10px 16px;
+}
+
+.dropzone-compact .dropzone-glyph {
+    -fx-font-size: 16px;
+}
+
+/* The details card shares a row with the facts, so its keys give up part of their width to the values. */
+.import-details .kv-key {
+    -fx-min-width: 112px;
+}
+
 .cover-placeholder {
     -fx-background-color: -color-surface-2;
     -fx-background-radius: 6px;

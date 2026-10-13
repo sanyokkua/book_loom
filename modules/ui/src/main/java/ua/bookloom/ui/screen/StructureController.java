@@ -1,9 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
@@ -12,14 +10,12 @@ import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookProfile;
-import ua.bookloom.api.document.BookStats;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.StructureChecksViewModel;
-import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -34,8 +30,6 @@ import ua.bookloom.ui.state.WorkflowProgress;
  */
 @Slf4j
 public final class StructureController {
-
-    private static final BookStats EMPTY_STATS = new BookStats(0, 0, 0, 0, 0, 0, 0, 0, Set.of());
 
     private final CurrentProject project;
     private final Messages messages;
@@ -97,10 +91,7 @@ public final class StructureController {
 
     private Node structureOf(final OpenedBook book) {
         final BookProfile profile = book.profile();
-        final StructureListing listing =
-                profile == null ? new StructureListing(List.of()) : StructureListing.of(profile);
-        final BookStats stats = profile == null ? EMPTY_STATS : profile.stats();
         return new StructureView(messages, navigator, progress, checks, segments, brief)
-                .build(listing, stats, book.projectId());
+                .build(StructureBrowser.listingOf(profile), StructureBrowser.statsOf(profile), book.projectId());
     }
 }

@@ -32,8 +32,7 @@ abstract class ImportScreenTestBase extends ShellTestBase {
     static final long WAIT_SECONDS = 10;
 
     /** The rows a card may ever carry; any other {@code import-row-*} node would be a figure the parse does not have. */
-    static final List<String> CARD_ROWS =
-            List.of("file", "format", "titleAuthor", "declaredLang", "chapters", "media", "drm");
+    static final List<String> CARD_ROWS = List.of("file", "format", "titleAuthor", "declaredLang", "chapters", "drm");
 
     final ScriptedProjectService projects = new ScriptedProjectService();
     final RecordingReplaceRunPrompt prompt = new RecordingReplaceRunPrompt();

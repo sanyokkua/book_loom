@@ -20,6 +20,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedReviewDesk;
@@ -195,5 +196,57 @@ class StructureChecksViewModelTest extends FxTestBase {
         run(viewModel, "p1");
 
         assertThat(stateOf(viewModel)).isEqualTo(new StructureChecks.Finished(null, 0));
+    }
+
+    private void ensure(final StructureChecksViewModel viewModel, final String projectId, final BookBrief brief) {
+        onFx(() -> {
+            viewModel.ensure(projectId, brief);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF showing the checks again for the same book under the same brief read the whole book again, THEN moving between
+    // the screens that show them would repeat the slowest work of an import.
+    @Test
+    void ensure_sameProjectAndBriefTwice_checksOnce() {
+        projects.onRoundTrip(Result.ok(PRESERVED));
+        projects.onPlan(Result.ok(planWith()));
+        final StructureChecksViewModel viewModel = viewModel();
+
+        ensure(viewModel, "p1", BookBrief.defaults("en"));
+        ensure(viewModel, "p1", BookBrief.defaults("en"));
+
+        assertThat(projects.roundTripProjects()).containsExactly("p1");
+        assertThat(stateOf(viewModel)).isEqualTo(new StructureChecks.Finished(PRESERVED, 0));
+    }
+
+    // IF a changed brief or another book kept the old answer, THEN the run total and the chunk warning would describe
+    // a run that no longer matches the choices.
+    @Test
+    void ensure_anotherBriefOrProject_checksAgain() {
+        projects.onRoundTrip(Result.ok(PRESERVED));
+        projects.onPlan(Result.ok(planWith()));
+        final StructureChecksViewModel viewModel = viewModel();
+
+        ensure(viewModel, "p1", BookBrief.defaults("en"));
+        ensure(viewModel, "p1", BookBrief.defaults("de"));
+        ensure(viewModel, "p2", BookBrief.defaults("de"));
+
+        assertThat(projects.roundTripProjects()).containsExactly("p1", "p1", "p2");
+    }
+
+    // IF a check that could not run were never retried, THEN one failure would stand until another book was opened.
+    @Test
+    void ensure_lastCheckCouldNotRun_asksAgain() {
+        projects.onRoundTrip(Result.err(AppError.of(ErrorCode.internal, "Broken", "The check failed.")));
+        projects.onPlan(Result.ok(planWith()));
+        final StructureChecksViewModel viewModel = viewModel();
+        ensure(viewModel, "p1", BookBrief.defaults("en"));
+        projects.onRoundTrip(Result.ok(PRESERVED));
+
+        ensure(viewModel, "p1", BookBrief.defaults("en"));
+
+        assertThat(stateOf(viewModel)).isEqualTo(new StructureChecks.Finished(PRESERVED, 0));
     }
 }

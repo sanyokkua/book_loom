@@ -1,32 +1,21 @@
 package ua.bookloom.ui.screen;
 
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javafx.beans.binding.Bindings;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookStats;
-import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
@@ -34,10 +23,11 @@ import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The structure screen's content for an open book: the tree of the book's own structure with the segment total beneath
- * it and, beside it, the segment browser of the part picked in the tree, the statistics and the background checks beside it, and the Back and Continue actions under them.
+ * it, the statistics and the background checks beside it, the segment browser of the part picked in the tree under
+ * them, and the Back and Continue actions. The tree and the browser are {@link StructureBrowser}'s, which the import
+ * screen shows too until this screen goes (15i.U3).
  *
- * <p>The tree is a {@link TreeView} because it virtualizes its rows: a book with thousands of units materialises only
- * the cells the viewport shows. The screen is read-only, and Continue is never held back by a check.
+ * <p>The screen is read-only, and Continue is never held back by a check.
  */
 @Slf4j
 final class StructureView {
@@ -46,16 +36,14 @@ final class StructureView {
     private static final double SCREEN_SPACING = 14;
     private static final double COLUMN_SPACING = 14;
     private static final double SIDE_WIDTH = 420;
-    private static final double TREE_MIN_HEIGHT = 204;
 
     private final Messages messages;
     private final Navigator navigator;
     private final WorkflowProgress progress;
     private final StructureChecksViewModel checks;
-    private final StructureSegmentsViewModel segments;
+    private final BookBriefViewModel brief;
+    private final StructureBrowser browser;
     private final NumberFormat numbers;
-    // The weak listener on the brief's save state needs a strong reference, since the brief outlives this view.
-    private final ChangeListener<Boolean> onBriefSaved;
 
     StructureView(
             final Messages messages,
@@ -68,13 +56,8 @@ final class StructureView {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.checks = Objects.requireNonNull(checks, "checks");
-        this.segments = Objects.requireNonNull(segments, "segments");
-        this.onBriefSaved = (observed, was, now) -> {
-            if (was && !now) {
-                segments.refresh();
-            }
-        };
-        Objects.requireNonNull(brief, "brief").saving().addListener(new WeakChangeListener<>(onBriefSaved));
+        this.brief = Objects.requireNonNull(brief, "brief");
+        this.browser = new StructureBrowser(messages, segments, brief);
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
     }
 
@@ -85,109 +68,26 @@ final class StructureView {
                 "showing {} top-level node(s), {} segments in total",
                 listing.roots().size(),
                 listing.totalSegments());
-        checks.run(projectId);
-        final VBox side = new VBox(
-                CARD_SPACING,
-                new StructureStatsCard(messages, numbers).build(stats),
-                new StructureChecksCard(checks, messages, numbers));
+        checks.ensure(projectId, brief.brief().get());
+        final StructureChecksRows checkRows = new StructureChecksRows(checks, messages, numbers);
+        final VBox checksCard = new VBox(checkRows);
+        checksCard.setId("structure-checks-card");
+        checksCard.getStyleClass().add("card");
+        final VBox side = new VBox(CARD_SPACING, new StructureStatsCard(messages, numbers).build(stats), checksCard);
         side.setPrefWidth(SIDE_WIDTH);
         side.setMinWidth(SIDE_WIDTH);
-        final Node treeCard = card(listing, projectId);
+        final Node treeCard =
+                browser.treeCard(listing, projectId, total(listing), checkRows.runTotalLine(listing.totalSegments()));
         HBox.setHgrow(treeCard, Priority.ALWAYS);
         final HBox columns = new HBox(COLUMN_SPACING, treeCard, side);
-        return new VBox(SCREEN_SPACING, columns, segmentsCard(), actions());
+        return new VBox(SCREEN_SPACING, columns, browser.segmentsCard(), actions());
     }
 
-    private Node card(final StructureListing listing, final String projectId) {
-        final Label heading = new Label(messages.get(MessageKey.STRUCTURE_READING_ORDER));
-        heading.getStyleClass().add("card-title");
-        Tips.install(messages, heading, MessageKey.STRUCTURE_READING_ORDER_TIP);
+    private Label total(final StructureListing listing) {
         final Label total = new Label(messages.get(MessageKey.STRUCTURE_TOTAL, listing.totalSegments()));
         total.setId("structure-total");
         total.getStyleClass().add("muted");
-        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots(), projectId), total, runTotal(listing));
-        card.setId("structure-card");
-        card.getStyleClass().add("card");
-        return card;
-    }
-
-    private Node segmentsCard() {
-        final Label heading = new Label(messages.get(MessageKey.STRUCTURE_SEGMENTS_TITLE));
-        heading.getStyleClass().add("card-title");
-        Tips.install(messages, heading, MessageKey.STRUCTURE_SEGMENTS_TITLE_TIP);
-        final VBox card = new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages));
-        card.setId("structure-segments-card");
-        card.getStyleClass().add("card");
-        return card;
-    }
-
-    // Translating starts its remaining count from every segment a run translates, which is more than the tree's book
-    // text whenever the brief also translates titles, image descriptions, contents or book details; this line says so.
-    private Label runTotal(final StructureListing listing) {
-        final int bookText = listing.totalSegments();
-        final Label line = new Label();
-        line.setId("structure-run-total");
-        line.getStyleClass().add("muted");
-        line.setWrapText(true);
-        line.setMinHeight(Region.USE_PREF_SIZE);
-        line.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> checks.state().get() instanceof StructureChecks.Finished finished
-                                        && finished.runSegments() > bookText
-                                ? messages.get(
-                                        MessageKey.STRUCTURE_RUN_TOTAL,
-                                        bookText,
-                                        finished.runSegments() - bookText,
-                                        finished.runSegments())
-                                : "",
-                        checks.state()));
-        line.visibleProperty().bind(line.textProperty().isNotEmpty());
-        line.managedProperty().bind(line.visibleProperty());
-        return line;
-    }
-
-    private TreeView<StructureNode> tree(final List<StructureNode> roots, final String projectId) {
-        final TreeItem<StructureNode> root = new TreeItem<>();
-        roots.forEach(node -> root.getChildren().add(itemOf(node)));
-        final TreeView<StructureNode> tree = new TreeView<>(root);
-        tree.setId("structure-tree");
-        tree.getStyleClass().add("structure-tree");
-        tree.setShowRoot(false);
-        tree.setEditable(false);
-        tree.setCellFactory(view -> new StructureNodeCell(messages, numbers));
-        VBox.setVgrow(tree, Priority.ALWAYS);
-        tree.setMinHeight(TREE_MIN_HEIGHT);
-        tree.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> picked(projectId, now));
-        segments.clear();
-        firstWithUnits(root).ifPresent(tree.getSelectionModel()::select);
-        return tree;
-    }
-
-    private void picked(final String projectId, final @Nullable TreeItem<StructureNode> item) {
-        final List<String> units = item == null ? List.of() : StructureListing.unitsOf(item.getValue());
-        log.debug("structure node picked, {} unit(s) to list", units.size());
-        segments.show(projectId, units);
-    }
-
-    private static Optional<TreeItem<StructureNode>> firstWithUnits(final TreeItem<StructureNode> parent) {
-        for (final TreeItem<StructureNode> child : parent.getChildren()) {
-            if (!StructureListing.unitsOf(child.getValue()).isEmpty()) {
-                return Optional.of(child);
-            }
-            final Optional<TreeItem<StructureNode>> deeper = firstWithUnits(child);
-            if (deeper.isPresent()) {
-                return deeper;
-            }
-        }
-        return Optional.empty();
-    }
-
-    // Expanded so that the chapters a person recognises are visible without opening each part.
-    private static TreeItem<StructureNode> itemOf(final StructureNode node) {
-        final TreeItem<StructureNode> item = new TreeItem<>(node);
-        node.children().forEach(child -> item.getChildren().add(itemOf(child)));
-        item.setExpanded(true);
-        return item;
+        return total;
     }
 
     private Node actions() {

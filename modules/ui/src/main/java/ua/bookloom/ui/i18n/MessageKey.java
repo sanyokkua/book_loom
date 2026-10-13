@@ -553,10 +553,8 @@ public enum MessageKey {
     IMPORT_CARD_CHAPTERS("import.card.chapters"),
     /** Chapters and approximate words; argument 0 is the chapter count and argument 1 the already formatted word figure. */
     IMPORT_CARD_CHAPTERS_WORDS("import.card.chaptersWords"),
-    /** Label of the row counting images and fonts. */
-    IMPORT_CARD_MEDIA("import.card.media"),
-    /** Images and fonts; argument 0 is the image count and argument 1 the font count. */
-    IMPORT_CARD_MEDIA_COUNTS("import.card.mediaCounts"),
+    /** Heading of the card that holds the book's counts and its checks. */
+    IMPORT_FACTS_TITLE("import.facts.title"),
     /** Label of the row saying whether the book is DRM-protected. */
     IMPORT_CARD_DRM("import.card.drm"),
     /** Value of the DRM row of a book that is not encrypted. */

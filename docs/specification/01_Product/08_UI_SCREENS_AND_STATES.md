@@ -165,14 +165,22 @@ Requirements: FR-NOTIF-05. P6 reference: Projects and Projects-empty.
 
 ## screen-import {#screen-import}
 
-Purpose: open a book and confirm the detected-file card.
+Purpose: open a book, confirm what was detected and read the book's structure before going on.
 
 | Control                 | JavaFX control                       | Behaviour                                                                                                                                                       |
 |--------------------------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Drop zone / file picker | drag-drop target + `FileChooser`      | FR-IMPORT-02                                                                                                                                                    |
+| Drop zone / file picker | drag-drop target (`GridPane`) + `FileChooser` | FR-IMPORT-02. Browse files… is the Open action. The full box while no book is open, a refused file, a DRM-blocked book or a cancelled import is shown; once a book is open the box is one line (style class `dropzone-compact`: glyph, title, "or" and Browse on one row) and still accepts drops |
 | Cover                    | `ImageView` or a neutral placeholder  | Shows the book's cover image when the format carries one, else a neutral placeholder                                                                           |
-| Detected file card       | card of key/value rows (`Label`s)     | Rows, in order: file; format with its version (e.g. `EPUB 2.0`); `Title · Author`; declared language written `English (en)`; chapters · `~words`; images · fonts; DRM `none` |
+| Book details card        | card of key/value rows (`Label`s)     | Rows, in order: file; format with its version (e.g. `EPUB 2.0`); `Title · Author`; declared language written `English (en)`; chapters · `~words`; DRM `none` (a card exists only for a readable book, and the inspection names an encryption scheme only for a protected one) |
+| Book facts card          | one card: a `GridPane` of figures, the run total and the check rows | Titled `Book facts`. Translatable segments; images (kept as-is); code blocks with their "preserved" note; embedded fonts; verse lines; footnotes · tables; inline formatting; then the round-trip and identifier checks and, when a segment is larger than one chunk, the warning that it will be split. The checks run once the book is open, off the FX thread, and never hold Continue back. Each figure is shown by exactly one card: the words and chapters are on the details card, the segment total is the tree's own count |
+| Structure card           | `TreeView`                            | The reading-order tree with a count pill per part; the first part with segments is picked |
+| Segments card            | search `TextField`, kind `ComboBox`, `ListView`, preview | The picked part's segments, the list above and the picked segment's text below; the same browser as the Structure screen |
 | Continue / Cancel        | `Button`s                              | `Continue to Book Brief` leads to the Book Brief; `Cancel` discards the import                                                                                  |
+
+Layout of a detected book, top to bottom: the compact drop zone; the details card beside the facts card; the structure
+card beside the segments card; the footer. Each pair is a `TwoColumns` control (`ui.control`): side by side while the
+content is at least 760 px wide, else stacked with the first card above the second, in the same order for Tab and
+for a reader. The Structure step stays until it is folded into this screen (15i.U3).
 
 States (`#importState`), all decided by the inspection the application performs on open (ADR-0039):
 
