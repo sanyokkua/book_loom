@@ -176,10 +176,23 @@ public final class PreScan {
             final ModelCalls calls) {
         return fresh(projectId, proposals, NameHygiene.occurrencesIn(story.visibleTexts()), frame.analysisLanguage())
                 .flatMap(fresh -> confirmed(fresh, story, frame, calls))
-                .flatMap(confirmed ->
-                        suggestions.suggestOnto(seeded(confirmed, story, frame), story, frame, policy, calls))
+                .flatMap(
+                        confirmed -> suggested(projectId, seeded(confirmed, story, frame), story, frame, policy, calls))
                 .map(suggested -> noteWithoutTarget(suggested, policy))
                 .flatMap(this::addAll);
+    }
+
+    // The suggestions know the glossary the new names join, so a new spelling of a person agrees with the held ones.
+    private Result<List<GlossaryEntry>> suggested(
+            final String projectId,
+            final List<GlossaryEntry> confirmed,
+            final BookSlice story,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls) {
+        return glossary.all(projectId)
+                .flatMap(held -> suggestions.suggestOnto(
+                        confirmed, story, frame, policy, calls, new TargetContext(held, Map.of())));
     }
 
     private static List<GlossaryEntry> seeded(

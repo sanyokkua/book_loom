@@ -1,17 +1,12 @@
 package ua.bookloom.pipeline.prompt;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -77,7 +72,7 @@ public final class LanguageRules implements LanguageSupport {
     LanguageRules(final PromptTemplates.ResourceLoader loader, final boolean genericOnly) {
         this.loader = Objects.requireNonNull(loader, "loader");
         this.genericOnly = genericOnly;
-        this.generic = load(GENERIC, DIRECTORY + GENERIC + SUFFIX);
+        this.generic = LanguageFile.load(GENERIC, DIRECTORY + GENERIC + SUFFIX, loader);
         for (final String key : GENERIC_REQUIRED) {
             if (generic.get(key) == null) {
                 throw new IllegalStateException(DIRECTORY + GENERIC + SUFFIX + " lacks key '" + key + "'");
@@ -303,6 +298,35 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
+     * Whether a target language declines proper names, from its {@code namesInflect} key (15i.N6).
+     *
+     * @param targetTag the non-null target language tag
+     * @return {@code false} only when the language's file says {@code namesInflect=false}
+     */
+    public boolean namesInflect(final String targetTag) {
+        return !"false".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, "targetTag"), "namesInflect"));
+    }
+
+    /**
+     * The letter table of a target language, from its {@code translit} key, rows written {@code source>letters}
+     * ({@code sh>ш}): the letters a transliteration of a source word that opens so may open with.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the table; never null, empty when the language lists none
+     */
+    public Map<String, List<String>> translit(final String targetTag) {
+        final Map<String, List<String>> table = new HashMap<>();
+        for (final String row : wordsOf(targetTag, "translit")) {
+            final int arrow = row.indexOf('>');
+            if (arrow > 0 && arrow < row.length() - 1) {
+                final List<String> letters = List.of(row.substring(arrow + 1).split(""));
+                table.put(row.substring(0, arrow).toLowerCase(Locale.ROOT), letters);
+            }
+        }
+        return Map.copyOf(table);
+    }
+
+    /**
      * The voiced and voiceless consonant pairs of a target language, from its {@code voicingPairs} key, so the audit can
      * tell two spellings of one name (Майлз, Майлс) apart from two names without hard-coding a language.
      *
@@ -357,27 +381,7 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     private LanguageFile fileOf(final String name, final String resource) {
-        return files.computeIfAbsent(resource, ignored -> load(name, resource));
-    }
-
-    private LanguageFile load(final String name, final String resource) {
-        final Properties properties = new Properties();
-        try (InputStream stream = loader.open(resource)) {
-            if (stream == null) {
-                log.debug("No language file {}", resource);
-                return new LanguageFile(name, Map.of());
-            }
-            try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-                properties.load(reader);
-            }
-        } catch (IOException cause) {
-            throw new IllegalStateException(resource + " could not be read", cause);
-        }
-        final Map<String, String> values = new HashMap<>();
-        properties.forEach(
-                (key, value) -> values.put(key.toString(), value.toString().strip()));
-        log.debug("Loaded language file {} with {} keys", resource, values.size());
-        return new LanguageFile(name, values);
+        return files.computeIfAbsent(resource, ignored -> LanguageFile.load(name, resource, loader));
     }
 
     private static @Nullable InputStream openBundled(final String fileName) {

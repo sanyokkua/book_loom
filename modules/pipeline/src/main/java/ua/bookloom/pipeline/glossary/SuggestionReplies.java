@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,36 @@ final class SuggestionReplies {
         }
     }
 
+    /** How a rendering stands before the script rules are applied to it. */
+    enum Standing {
+        /** The rendering is right as written, whatever its script: a brand or an identifier kept verbatim. */
+        VERBATIM,
+        /** The script rules decide. */
+        OPEN,
+        /** A copy of the source across scripts: refused and asked once more. */
+        COPY,
+        /** It does not open as the name transliterates: refused and asked once more. */
+        LETTERS
+    }
+
+    /**
+     * What one reply held.
+     *
+     * @param kept the suggestions that stand
+     * @param refused the renderings refused for a copy or for the letter table, each with the entry it was for; the
+     *     caller asks about them once more
+     */
+    record Replies(List<Suggestion> kept, List<Refusal> refused) {}
+
+    /**
+     * A rendering the reply gave and the rules refused.
+     *
+     * @param entry the entry as it was held when the batch was asked
+     * @param rendering the refused rendering
+     * @param why {@link Standing#COPY} or {@link Standing#LETTERS}
+     */
+    record Refusal(GlossaryEntry entry, String rendering, Standing why) {}
+
     /**
      * Reads a reply against the batch it answers.
      *
@@ -63,26 +94,57 @@ final class SuggestionReplies {
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
             @Nullable final Script targetScript) {
+        return read(mapper, replyText, batch, sourceScript, targetScript, (_, _) -> Standing.OPEN)
+                .kept();
+    }
+
+    /**
+     * Reads a reply against the batch it answers, and sets aside the renderings the rules refuse for a retry.
+     *
+     * @param mapper the mapper the tolerant reader uses
+     * @param replyText the model's reply
+     * @param batch the batch's entries by their {@link GlossaryKeys} key
+     * @param sourceScript the script a target must not hold a letter of; null when any script is acceptable
+     * @param targetScript the script every letter of a target must belong to; null when it is not known
+     * @param standing how a usable rendering stands for its entry: a {@link Standing#VERBATIM} one skips the script
+     *     rules, a refused one is returned in {@link Replies#refused()}
+     * @return the suggestions kept and the renderings refused; both empty when the reply is unreadable
+     */
+    static Replies read(
+            final ObjectMapper mapper,
+            final String replyText,
+            final Map<String, GlossaryEntry> batch,
+            @Nullable final Script sourceScript,
+            @Nullable final Script targetScript,
+            final BiFunction<GlossaryEntry, String, Standing> standing) {
         final JsonNode suggestions = JsonReplies.tolerant(mapper, replyText)
                 .map(root -> root.path("suggestions"))
                 .orElse(null);
         if (suggestions == null || !suggestions.isArray()) {
             log.debug("Suggestion reply holds no suggestions array; read as no suggestions");
-            return List.of();
+            return new Replies(List.of(), List.of());
         }
         final List<Suggestion> kept = new ArrayList<>();
+        final List<Refusal> refused = new ArrayList<>();
         for (final JsonNode node : suggestions) {
-            suggestionOf(node, batch, sourceScript, targetScript).ifPresent(kept::add);
+            final Optional<Suggestion> read = suggestionOf(node, batch, sourceScript, targetScript, standing, refused);
+            read.ifPresent(kept::add);
         }
-        log.debug("Suggestion reply read: {} kept of {}", kept.size(), suggestions.size());
-        return kept;
+        log.debug(
+                "Suggestion reply read: {} kept, {} refused for a retry, of {}",
+                kept.size(),
+                refused.size(),
+                suggestions.size());
+        return new Replies(kept, refused);
     }
 
     private static Optional<Suggestion> suggestionOf(
             final JsonNode node,
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
-            @Nullable final Script targetScript) {
+            @Nullable final Script targetScript,
+            final BiFunction<GlossaryEntry, String, Standing> standing,
+            final List<Refusal> refused) {
         final String term = node.path("term").asText("");
         final GlossaryEntry entry = batch.get(GlossaryKeys.of(term));
         if (entry == null) {
@@ -90,7 +152,15 @@ final class SuggestionReplies {
             return Optional.empty();
         }
         final String target = LookAlikes.repaired(node.path("target").asText("").strip());
-        final String refusal = refusal(target, sourceScript, targetScript);
+        final String shape = shapeRefusal(target);
+        final Standing stands = shape != null ? Standing.OPEN : standing.apply(entry, target);
+        if (stands == Standing.COPY || stands == Standing.LETTERS) {
+            log.debug("Suggestion refused for a retry: {}", stands);
+            log.trace("Suggestion refused for term '{}' target '{}': {}", term, target, stands);
+            refused.add(new Refusal(entry, target, stands));
+            return Optional.empty();
+        }
+        final String refusal = stands == Standing.VERBATIM ? shape : refusal(target, sourceScript, targetScript);
         if (refusal != null) {
             log.debug("Suggestion dropped: {}", refusal);
             log.trace("Suggestion dropped for term '{}' target '{}': {}", term, target, refusal);
@@ -99,8 +169,8 @@ final class SuggestionReplies {
         return Optional.of(new Suggestion(entry, target));
     }
 
-    private static @Nullable String refusal(
-            final String target, @Nullable final Script sourceScript, @Nullable final Script targetScript) {
+    // What no glossary can hold, whatever the script.
+    private static @Nullable String shapeRefusal(final String target) {
         if (target.isEmpty()) {
             return "no suggestion";
         }
@@ -110,8 +180,14 @@ final class SuggestionReplies {
         if (target.indexOf('⟦') >= 0 || target.indexOf('⟧') >= 0) {
             return "holds a placeholder token";
         }
-        if (target.length() > MAX_TARGET_CHARS) {
-            return "longer than " + MAX_TARGET_CHARS + " characters";
+        return target.length() > MAX_TARGET_CHARS ? "longer than " + MAX_TARGET_CHARS + " characters" : null;
+    }
+
+    private static @Nullable String refusal(
+            final String target, @Nullable final Script sourceScript, @Nullable final Script targetScript) {
+        final String shape = shapeRefusal(target);
+        if (shape != null) {
+            return shape;
         }
         if (sourceScript != null && hasLetterIn(target, sourceScript)) {
             return "a letter still in the source's script";

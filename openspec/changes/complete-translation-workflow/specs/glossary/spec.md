@@ -550,8 +550,9 @@ for now they only settle what the book's own pronouns leave open.
 
 WHEN the model review or the model scan has its verdicts, the application SHALL, in the same action, send the entries
 that remain open — unlocked, with no target or with a target the model suggested — to a separate suggestion call, at
-most 20 per call, each with its type, its gender when known and one sentence of the book that holds it (cut at 120
-characters), and SHALL ask for each a target in its dictionary form and a gender under a strict schema
+most 20 per call, each with its type, its gender when known, `speaking name` and `brand` when the term reading says so,
+what the glossary already renders of its person (`Arlo Venn → Арло Венн, so Venn → Венн`, for a spelling of a person whose
+full name has a rendering) and up to two sentences of the book that hold it (each cut at 120 characters), and SHALL ask for each a target in its dictionary form and a gender under a strict schema
 (`{"suggestions":[{"term","target","gender"}]}`, at most 20 items, a target at most 80 characters, `""` meaning no
 suggestion). The system message SHALL state the Book Brief's name policy: Translate asks for the natural
 target-language equivalent a published translation would print, transliterating only a name with none; Transliterate
@@ -563,7 +564,25 @@ an entry that is not of type term and SHALL suggest its source spelling as its t
 asked about, to be translated by meaning. The application SHALL keep a suggestion only for a term of its batch, on one
 line, without a placeholder token, at most 80 characters, and — under Transliterate when the source and target scripts
 differ — with no letter left in the source's script once a Latin look-alike inside a Cyrillic word (`Вeнс`) is put back
-as its Cyrillic twin. Only after every call has answered, and against each entry as it then stands, it SHALL write a
+as its Cyrillic twin. UNDER Transliterate, for an entry that is not of type term and whose reading does not call it a
+speaking name, the application SHALL refuse a rendering whose words do not each open as the matching source word
+transliterates, by the `translit` letter table of the target's language file (the opening letter or digraph of the source
+word, the longest key first, against the opening letter of the rendering's word; words split at spaces and hyphens and
+equal in number; a word the table has no row for is not judged; an empty table judges nothing); UNDER every policy it
+SHALL refuse a rendering equal to the term, ignoring case and outer space, when the source and target scripts differ,
+unless the entry is a brand, an identifier (one token holding a letter and a digit) or kept as written, which is kept
+even though its letters are in the source's script. The application SHALL ask once more, in one further call per batch
+that carries only the refused names and names each refused rendering, about the renderings refused by the letter table
+or by the identity rule and about no other refusal; a rendering refused a second time SHALL leave its entry without a
+target, and a failed further call SHALL return its error. The renderings of one person's spellings SHALL agree word by
+word: a spelling SHALL take the word the full name's rendering has in its place, the full name's rendering being the one
+the glossary holds or else the one asked in the same batch, and a full name asked about SHALL take the words of a held
+rendering of one of its spellings. The one identity rule SHALL also be applied by the term-mapping check, which SHALL
+not count a rendering equal to the term across scripts as a learned rendering. A rendering SHALL be locked by rule
+only when it is a brand, an identifier or a kept original kept verbatim, or a verified proper name with a checked
+rendering, not marked speaking, in a target whose language file says `namesInflect=false` (English, German, French,
+Spanish, Portuguese); for a target whose names inflect (Ukrainian, Russian, Polish, Czech, Croatian, Slovak, Slovenian
+and any language with no such key) it SHALL stay unlocked guidance held by the name checks. Only after every call has answered, and against each entry as it then stands, it SHALL write a
 suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and SHALL NOT write
 the reply's gender (a person's gender is the review's); it SHALL NOT overwrite a target the person typed,
 imported, accepted or locked. The writes SHALL record no deferral. IF any suggestion call fails or the person presses
@@ -598,8 +617,29 @@ inside `Венс`, which reads right and matches nothing.
 
 #### Scenario: A copied name is no transliteration
 
-- **WHEN** the policy is Transliterate and the model answers `Hale` for `Hale`
-- **THEN** `Hale` keeps no target, while under Translate the same answer is kept
+- **WHEN** the policy is Transliterate and the model answers `Hale` for `Hale`, and `Hale` again to the second ask
+- **THEN** `Hale` keeps no target, while for English to German the same answer is kept
+
+#### Scenario: A rendering that does not open as the name sounds is asked again
+
+- **WHEN** the policy is Transliterate, the target is Ukrainian and the model answers `Карло` for `Arlo` and `Венн`
+  for `Venn`, and then `Арло` for `Arlo`
+- **THEN** the second call carries only `Arlo`, with `Карло` named as refused, and `Arlo` reads `Арло`, `Venn` `Венн`
+
+#### Scenario: A brand or an identifier is kept as written
+
+- **WHEN** the model answers `KESSEL OPTIK` for a brand `KESSEL OPTIK` and `ZX-81` for `ZX-81`, English to Ukrainian
+- **THEN** both are kept with no further call
+
+#### Scenario: A person's spellings agree
+
+- **WHEN** `Arlo Venn` reads `Арло Венн` and the model suggests `Вен` for `Venn`
+- **THEN** `Venn` reads `Венн`, and the line sent for `Venn` said `Arlo Venn → Арло Венн, so Venn → Венн`
+
+#### Scenario: Names are locked only where they do not inflect
+
+- **WHEN** `Venn` is a verified proper name, not speaking, rendered `Venn` and checked
+- **THEN** it is locked when the target is English and stays unlocked guidance when the target is Ukrainian
 
 #### Scenario: Keep original needs no call for a name
 

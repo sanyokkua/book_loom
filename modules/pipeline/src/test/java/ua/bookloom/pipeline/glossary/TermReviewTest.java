@@ -223,7 +223,7 @@ class TermReviewTest {
     }
 
     @Test
-    void review_suggestionRequest_listsTheSurvivorsWithTheirVerdictsTypeAndOneSentence() {
+    void review_suggestionRequest_listsTheSurvivorsWithTheirVerdictsTypeAndTwoSentences() {
         heldGlossary();
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
@@ -234,7 +234,7 @@ class TermReviewTest {
         assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
         assertThat(termLines(request))
                 .containsExactly(
-                        "- Hale — person, male — \"Well, Hale said.\"",
+                        "- Hale — person, male — \"Well, Hale said.\" — \"We met Hale today.\"",
                         "- Moreau — person, female — \"Moreau smiled.\"");
     }
 

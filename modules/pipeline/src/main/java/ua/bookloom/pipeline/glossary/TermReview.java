@@ -29,6 +29,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
+import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -137,6 +138,9 @@ public final class TermReview {
         }
     }
 
+    /** The verdicts of a review and what the reading calls read of the entries they decided. */
+    private record Decided(List<Verdict> verdicts, Map<String, Reading> readings) {}
+
     /** What every call of one review is asked with. */
     private record Inputs(BookSlice story, CallFrame frame, NamePolicy policy, QualityDial dial, ModelCalls calls) {}
 
@@ -153,24 +157,34 @@ public final class TermReview {
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Result<List<Verdict>> verdicts = verdictsOn(open, held, in);
+        final Result<Decided> verdicts = verdictsOn(open, held, in);
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
             return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
         }
-        final List<Verdict> answered = Objects.requireNonNull(verdicts.data(), "verdicts");
-        final Result<List<Suggestion>> suggested = suggestions.suggest(
-                ReviewCommit.survivors(open, answered), in.story(), in.frame(), in.policy(), in.calls());
+        final Decided decided = Objects.requireNonNull(verdicts.data(), "verdicts");
+        final Result<List<Suggestion>> suggested = suggest(open, held, decided, in);
         if (suggested.isErr()) {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
         }
-        return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in);
+        return commit(projectId, decided.verdicts(), Objects.requireNonNull(suggested.data(), "suggestions"), in);
+    }
+
+    private Result<List<Suggestion>> suggest(
+            final List<GlossaryEntry> open, final List<GlossaryEntry> held, final Decided decided, final Inputs in) {
+        return suggestions.suggest(
+                ReviewCommit.survivors(open, decided.verdicts()),
+                in.story(),
+                in.frame(),
+                in.policy(),
+                in.calls(),
+                new TargetContext(held, decided.readings()));
     }
 
     // A strong pronoun case is decided by the code with no call; of the rest, the entries the plan reads are decided
     // from their readings and the others by the batch. All three give verdicts of one shape.
-    private Result<List<Verdict>> verdictsOn(
+    private Result<Decided> verdictsOn(
             final List<GlossaryEntry> open, final List<GlossaryEntry> held, final Inputs in) {
         final Map<String, Evidence> evidence = evidenceOf(open, held, in);
         final List<Verdict> all = new ArrayList<>();
@@ -183,7 +197,7 @@ public final class TermReview {
                         .map(batched -> {
                             all.addAll(outcome.verdicts());
                             all.addAll(batched);
-                            return all;
+                            return new Decided(all, outcome.readings());
                         }));
     }
 

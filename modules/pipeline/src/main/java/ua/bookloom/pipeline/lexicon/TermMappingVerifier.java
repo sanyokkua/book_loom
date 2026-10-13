@@ -11,7 +11,10 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.glossary.IdentityRule;
+import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 
 /**
  * Checks the {@code terms} a model reported for one translated item, so only what the text proves is counted. A pair
@@ -87,6 +90,31 @@ public final class TermMappingVerifier {
             final String source,
             final String target,
             final List<String> alternations) {
+        return verify(claimed, keyTerms, source, target, alternations, null, null);
+    }
+
+    /**
+     * Keeps the pairs a text proves and the one identity rule allows (15i.N6): a rendering that is the term itself,
+     * across the two languages' scripts, is a leftover and no rendering to learn.
+     *
+     * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
+     * @param keyTerms the non-null closed list the model was asked about
+     * @param source the non-null item's source text, tokens removed
+     * @param target the non-null item's translated text, tokens removed
+     * @param alternations the non-null groups of letters a stem's last letter swaps among before a suffix; empty for a
+     *     language with no data
+     * @param sourceTag the source language tag; null when it is not known, which leaves the identity rule silent
+     * @param targetTag the target language tag; null when it is not known, which leaves the identity rule silent
+     * @return the verified pairs, each named by the spelling of the key-term list; never null, empty when none holds
+     */
+    public static List<Pair> verify(
+            final Map<String, String> claimed,
+            final List<String> keyTerms,
+            final String source,
+            final String target,
+            final List<String> alternations,
+            @Nullable final String sourceTag,
+            @Nullable final String targetTag) {
         Objects.requireNonNull(claimed, "claimed");
         Objects.requireNonNull(alternations, "alternations");
         Objects.requireNonNull(keyTerms, "keyTerms");
@@ -97,6 +125,7 @@ public final class TermMappingVerifier {
         for (final Map.Entry<String, String> claim : claimed.entrySet()) {
             listed(keyTerms, claim.getKey())
                     .filter(term -> TermMatch.occursIn(term, source))
+                    .filter(term -> isNotACopy(term, claim.getValue(), sourceTag, targetTag))
                     .filter(term -> renderingHolds(claim.getValue(), targetWords, alternations))
                     .ifPresentOrElse(
                             term -> verified.add(new Pair(term, claim.getValue().strip())),
@@ -107,6 +136,18 @@ public final class TermMappingVerifier {
         }
         log.trace("Term pairs verified {} of {}", verified.size(), claimed.size());
         return verified;
+    }
+
+    private static boolean isNotACopy(
+            final String term,
+            final String rendering,
+            @Nullable final String sourceTag,
+            @Nullable final String targetTag) {
+        final boolean isCopy = IdentityRule.refuses(term, rendering, sourceTag, targetTag, Kept.NOT_KEPT);
+        if (isCopy) {
+            log.debug("Term pair dropped: the rendering is the source spelling across scripts");
+        }
+        return !isCopy;
     }
 
     private static Optional<String> listed(final List<String> keyTerms, final String claimedTerm) {

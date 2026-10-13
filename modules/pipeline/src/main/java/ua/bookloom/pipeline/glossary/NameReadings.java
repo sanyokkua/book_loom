@@ -70,8 +70,10 @@ final class NameReadings {
      *
      * @param verdicts the code's verdicts on the entries read
      * @param unread the open entries the plan does not read, for the batched review, in glossary order
+     * @param readings what the calls read of each entry read, by entry id: a speaking name or a brand in any of its
+     *     calls is one
      */
-    record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread) {}
+    record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread, Map<String, Reading> readings) {}
 
     /**
      * Reads and decides the entries the plan reads.
@@ -153,7 +155,25 @@ final class NameReadings {
         final List<GlossaryEntry> unread =
                 in.open().stream().filter(entry -> !read.contains(entry.id())).toList();
         log.info("Names reading finished decided={} left for the batch={}", decided.size(), unread.size());
-        return Result.ok(new Outcome(decided, unread));
+        return Result.ok(new Outcome(decided, unread, readingsOf(plan, byId)));
+    }
+
+    private static Map<String, Reading> readingsOf(final NamesPlan plan, final Map<String, List<ReadCall>> byId) {
+        final Map<String, Reading> readings = new LinkedHashMap<>();
+        for (final Candidate candidate : plan.read()) {
+            final GlossaryEntry entry = candidate.entry();
+            final List<Reading> calls = byId.getOrDefault(entry.id(), List.of()).stream()
+                    .map(ReadCall::reading)
+                    .toList();
+            readings.put(
+                    entry.id(),
+                    new Reading(
+                            entry.term(),
+                            List.of(),
+                            calls.stream().anyMatch(Reading::speaking),
+                            calls.stream().anyMatch(Reading::brand)));
+        }
+        return readings;
     }
 
     private static List<ReadCall> memberCalls(

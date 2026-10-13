@@ -345,7 +345,10 @@ final class BatchStage {
                 outcome.terms(),
                 keyTerms,
                 Tokens.replace(candidate.mask().maskedText(), " "),
-                Tokens.replace(outcome.target(), " "));
+                Tokens.replace(outcome.target(), " "),
+                List.of(),
+                settings.frame().sourceLanguage(),
+                settings.frame().targetLanguage());
         log.debug(
                 "Batch item reported {} terms, {} verified segmentId={}",
                 outcome.terms().size(),

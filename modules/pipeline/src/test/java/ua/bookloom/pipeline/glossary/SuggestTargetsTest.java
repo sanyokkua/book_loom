@@ -76,7 +76,9 @@ class SuggestTargetsTest {
     @ParameterizedTest
     @CsvSource({"TRANSLITERATE,'Milton,Amulet'", "TRANSLATE,'Milton,Amulet'"})
     void suggest_policy_keepsWhatTheRuleAllows(final NamePolicy policy, final String kept) {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(REPLY));
+        // Hale -> Hale is a refused copy, which is asked once more (15i.N6); the second reply holds nothing.
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(REPLY)).answer(reply("{\"suggestions\":[]}"));
 
         final Result<List<Suggestion>> suggested =
                 suggest.suggest(List.of(HALE, MILTON, AMULET), BOOK, FRAME, policy, calls(model));

@@ -28,10 +28,10 @@ class IdentityRenderingTest {
     // established rendering.
     @Test
     void verify_claimOfTheSourceWordAsItsOwnRendering_isDropped() {
-        final List<TermMappingVerifier.Pair> pairs =
-                TermMappingVerifier.verify(Map.of("data", "data"), KEY_TERMS, SOURCE, KEPT_LATIN);
+        final List<TermMappingVerifier.Pair> pairs = TermMappingVerifier.verify(
+                Map.of("data", "data"), KEY_TERMS, SOURCE, KEPT_LATIN, List.of(), "en", "uk");
 
-        KnownRed.until(T4, "claim-data-to-data", () -> assertThat(pairs).isEmpty());
+        assertThat(pairs).isEmpty();
     }
 
     @Test
