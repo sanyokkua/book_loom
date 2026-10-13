@@ -21,8 +21,8 @@ class RelevantPairsSwitchTest {
     }
 
     @Test
-    void default_untilTheGateDecides_isOn() {
-        assertThat(RelevantPairsSwitch.DEFAULT).isTrue();
+    void default_afterTheGateFailed_isOff() {
+        assertThat(RelevantPairsSwitch.DEFAULT).isFalse();
     }
 
     // The environment wins over the property; a value that is neither on nor off keeps the default.

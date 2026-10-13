@@ -18,8 +18,11 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RelevantPairsSwitch {
 
-    /** What a run uses when nothing is set, until the eval gate decides. */
-    public static final boolean DEFAULT = true;
+    /**
+     * What a run uses when nothing is set: off, since the 15i.T8 round (2026-10-13, e4b) moved LTCR-1 by 0.4 points
+     * against the 2 the gate asked and cost 17 % more seconds per segment against the 5 % it allowed.
+     */
+    public static final boolean DEFAULT = false;
 
     static final String ENV_NAME = "BOOKLOOM_RELEVANT_PAIRS";
     static final String PROPERTY_NAME = "bookloom.relevant.pairs";
