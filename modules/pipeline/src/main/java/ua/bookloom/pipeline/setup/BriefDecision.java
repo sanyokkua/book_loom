@@ -108,7 +108,8 @@ final class BriefDecision {
      *
      * @param person the narrator's decided person; a third-person narrator has no gender to give
      * @param windows each window's verified answers, null for an unreadable one
-     * @return the gender with every vote's quote, or unknown and uncertain
+     * @return the gender with every vote's quote, or unknown and uncertain, holding then the quotes that name the
+     *     narrator by a name nobody could verify yet
      */
     static Decided<Gender> narratorGender(
             final NarratorPerson person, final List<@Nullable Map<BriefField, Answer>> windows) {
@@ -124,7 +125,9 @@ final class BriefDecision {
                 votes.stream().filter(vote -> FEMALE.equals(vote.value())).count();
         log.debug("Narrator gender votes: {} of {} windows, {} female", votes.size(), samples, female);
         if (votes.isEmpty() || (female > 0 && female < votes.size())) {
-            final FieldEvidence doubt = uncertain((int) Math.max(female, votes.size() - female), samples);
+            final FieldEvidence doubt = pending(
+                    uncertain((int) Math.max(female, votes.size() - female), samples),
+                    answersOf(BriefField.NARRATOR_GENDER, windows));
             logged(BriefField.NARRATOR_GENDER, Gender.UNKNOWN, doubt);
             return new Decided<>(Gender.UNKNOWN, doubt);
         }
@@ -132,6 +135,18 @@ final class BriefDecision {
         final FieldEvidence proof = new FieldEvidence(Basis.PASSAGES, quotesOf(votes), votes.size(), samples);
         logged(BriefField.NARRATOR_GENDER, gender, proof);
         return new Decided<>(gender, proof);
+    }
+
+    // An uncertain gender keeps the quotes that name the narrator by a name nobody could verify yet (15i.T5).
+    private static FieldEvidence pending(final FieldEvidence doubt, final List<Answer> answers) {
+        final List<String> quotes = answers.stream()
+                .filter(Answer::isNeutral)
+                .map(Answer::quote)
+                .filter(quote -> !quote.isBlank())
+                .distinct()
+                .toList();
+        log.debug("Narrator gender pending quotes: {}", quotes.size());
+        return new FieldEvidence(doubt.basis(), quotes, doubt.agreeing(), doubt.samples());
     }
 
     /**

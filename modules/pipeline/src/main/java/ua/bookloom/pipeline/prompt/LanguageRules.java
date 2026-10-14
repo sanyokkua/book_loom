@@ -2,14 +2,15 @@ package ua.bookloom.pipeline.prompt;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -207,10 +208,7 @@ public final class LanguageRules implements LanguageSupport {
 
     /** The suggestion call's example, chosen like {@link #examples}. */
     String nameExamples(@Nullable final String sourceTag, final String targetTag) {
-        return pick(sourceTag, targetTag, NAME_EXAMPLE, file -> {
-            final String text = file.get(NAME_EXAMPLE);
-            return text == null ? "" : text;
-        });
+        return pick(sourceTag, targetTag, NAME_EXAMPLE, file -> Objects.requireNonNullElse(file.get(NAME_EXAMPLE), ""));
     }
 
     private String pick(
@@ -315,15 +313,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the table; never null, empty when the language lists none
      */
     public Map<String, List<String>> translit(final String targetTag) {
-        final Map<String, List<String>> table = new HashMap<>();
-        for (final String row : wordsOf(targetTag, "translit")) {
-            final int arrow = row.indexOf('>');
-            if (arrow > 0 && arrow < row.length() - 1) {
-                final List<String> letters = List.of(row.substring(arrow + 1).split(""));
-                table.put(row.substring(0, arrow).toLowerCase(Locale.ROOT), letters);
-            }
-        }
-        return Map.copyOf(table);
+        return TranslitRows.table(wordsOf(targetTag, "translit"));
     }
 
     /**
@@ -358,6 +348,12 @@ public final class LanguageRules implements LanguageSupport {
      */
     public Set<String> firstPersonPronouns(final String languageTag) {
         return Set.copyOf(wordsOf(languageTag, "firstPersonPronouns"));
+    }
+
+    /** The {@code firstPersonPast} pattern (groups {@code female}, {@code male}) of a language, if it has one. */
+    public Optional<Pattern> firstPersonPast(final String languageTag) {
+        final String value = targetValue(Objects.requireNonNull(languageTag, "languageTag"), "firstPersonPast");
+        return value == null || value.isBlank() ? Optional.empty() : Optional.of(Pattern.compile(value));
     }
 
     // The whitespace-separated words of a language file's key, as written; empty when the language lacks the key.

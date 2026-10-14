@@ -201,6 +201,17 @@ final class BookSamples {
         return samples.stream().map(BookSample::dialoguePercent).toList();
     }
 
+    /**
+     * Every body paragraph of the book as display text, in reading order.
+     *
+     * @param document the opened book
+     * @return the paragraphs; never null, empty when the book has no body text
+     */
+    static List<String> paragraphs(final Document document) {
+        Objects.requireNonNull(document, "document");
+        return chapters(document).stream().flatMap(List::stream).toList();
+    }
+
     private static List<List<String>> chapters(final Document document) {
         final List<List<String>> chapters = new ArrayList<>();
         for (final Unit unit : document.units()) {

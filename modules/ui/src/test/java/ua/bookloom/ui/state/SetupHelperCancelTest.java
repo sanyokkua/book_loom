@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
+import ua.bookloom.api.project.Narrator;
 
 /** Stopping a model proposal interrupts the call it waits on and still answers the caller once, as cancelled. */
 class SetupHelperCancelTest extends ExportViewModelTestBase {
@@ -79,6 +80,11 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
 
         @Override
         public Result<BriefSuggestion> suggestBrief(final String projectId, final ChatModel model) {
+            throw new UnsupportedOperationException("not asked");
+        }
+
+        @Override
+        public Result<Narrator> recheckNarrator(final String projectId) {
             throw new UnsupportedOperationException("not asked");
         }
     }

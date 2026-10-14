@@ -542,8 +542,10 @@ speech names the narrator (`"Mind the step, Lucy," I said`) — SHALL be no vote
 (`"I'm Lucy," I said`) is one. Any other answer SHALL be the unknown gender. A gender one window proves SHALL be kept
 unless another window proves the other gender, and shown with its quote and the number of proving windows, not as
 uncertain; the brief's narrator SHALL keep the proving quotes and the gender origin `VERIFIED` (the person's own choice
-is `PERSON`, a known gender with no proof is `SUGGESTED`, an unknown gender has the origin `NONE`), so a later step can check
-the quotes again. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
+is `PERSON`, a known gender with no proof is `SUGGESTED`, the run's own count of the narrator's words is `INFERRED`, an
+unknown gender has the origin `NONE`), so a later step can check the quotes again. A quote that calls the narrator by a name
+nobody knows yet (the quote is in the sample, the name stands in it, the narrator does not say it to someone else) proves
+nothing now and SHALL be kept on the narrator, with the gender still unknown, as a pending quote. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
 `Male (suggested)` or `Female (suggested)` with a hover explanation in English and Ukrainian until the person changes it;
 a gender the person set is never replaced, a third-person narrator gets none, and with no kept gender the gender stays
 unknown and the Start question asks as before.
@@ -568,6 +570,39 @@ up or a word like "ma'am" — and the gender it proves fills only a gap, marked 
 
 - **WHEN** a window holds `"Mind the step, Lucy," I said` and the model answers `female` with the name `Lucy`
 - **THEN** that window gives no gender vote
+
+### Requirement: Check the narrator's pending quotes again after the names, before asking who narrates
+
+`SetupAssistant.recheckNarrator(projectId)` SHALL make no model call and write nothing: for a first-person narrator of
+unknown gender it SHALL check each pending quote against the glossary as Names & style left it, and SHALL return the
+narrator with that gender and the origin `VERIFIED` (the proving quotes kept) when a name in a pending quote is a glossary
+character of confirmed gender (the person's or verified, never a suggestion) and the narrator does not say that quote to
+someone else; in every other case, and for a narrator whose gender is set, inferred or suggested, or a third-person one, it
+SHALL return the narrator as it is, and it SHALL answer a `validation` error when the project is not stored or its book is
+not open. WHEN Start translation is about to ask "Who narrates?" it SHALL run the re-check first and, when it verified a
+gender, store it through the Book Brief and start without asking; WHEN the re-check fails or verifies nothing, it SHALL ask
+as before. Start SHALL NOT re-check a book it would not ask about.
+
+**Source:** FR-BRIEF-02; tasks 15i.T5.
+In plain words: the model may point at "Hold on tight, Brindle" before anybody knows Brindle is a woman; once the names
+pass or the person has said so, the same quote proves the narrator's gender, and nobody is asked what the book already
+says.
+
+#### Scenario: A pending vocative is verified by the names pass
+
+- **WHEN** the brief's narrator is first person with the pending quote `Hold on tight, Brindle`, the glossary now holds
+  `Brindle` as a female character the person set, and Start translation is pressed
+- **THEN** the narrator is stored as female with the origin `VERIFIED` and the run starts without the question
+
+#### Scenario: A suggestion is no proof
+
+- **WHEN** the glossary holds `Brindle` as female only suggested
+- **THEN** the re-check returns the narrator unchanged and Start translation asks who narrates
+
+#### Scenario: A name the narrator says to someone else is no proof
+
+- **WHEN** the pending quote is `Mind the step, Brindle` and the book has `"Mind the step, Brindle," I said`
+- **THEN** the re-check returns the narrator unchanged
 
 ### Requirement: Suggest the tone and style from verified readings, one decision per field
 

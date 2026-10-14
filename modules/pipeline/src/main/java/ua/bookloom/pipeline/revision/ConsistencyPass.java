@@ -315,7 +315,9 @@ public final class ConsistencyPass {
     private static List<GenderWait> awaitingGender(final List<Deferral> open) {
         final Map<String, Set<String>> byCharacter = new HashMap<>();
         open.stream()
-                .filter(deferral -> deferral.reason() == DeferralReason.GENDER_UNKNOWN && deferral.waitingOn() != null)
+                .filter(deferral -> deferral.reason() == DeferralReason.GENDER_UNKNOWN
+                        && deferral.waitingOn() != null
+                        && !DeferralRegister.NARRATOR.equals(deferral.waitingOn()))
                 .forEach(deferral -> byCharacter
                         .computeIfAbsent(Objects.requireNonNull(deferral.waitingOn()), name -> new HashSet<>())
                         .add(deferral.segmentId()));

@@ -6,6 +6,7 @@ import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,6 +28,8 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -101,6 +104,26 @@ public final class SetupAssistantImpl implements SetupAssistant {
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         }
+    }
+
+    @Override
+    public Result<Narrator> recheckNarrator(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        log.debug("Narrator re-check requested project={}", projectId);
+        try {
+            return opened(projectId).flatMap(book -> glossary.all(projectId).map(people -> rechecked(book, people)));
+        } catch (Throwable cause) {
+            return failed("narrator re-check", cause);
+        }
+    }
+
+    private static Narrator rechecked(final SetupBook book, final List<GlossaryEntry> people) {
+        final Narrator held = book.project().brief().narrator();
+        if (held.evidence().isEmpty()) {
+            return held;
+        }
+        final BookSample whole = new BookSample(BookSamples.paragraphs(book.document()), 0, true, book.languageOf());
+        return NarratorRecheck.of(held, people, whole, book.languageOf());
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final SetupBook book) {

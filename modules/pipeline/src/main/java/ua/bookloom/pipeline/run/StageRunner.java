@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.run;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -36,6 +37,7 @@ public final class StageRunner {
     private final RunSettings settings;
     private final RunSinks sinks;
     private final ModelCalls calls;
+    private final NarratorStage narrator;
 
     /**
      * Creates the stage sequence of one run.
@@ -45,18 +47,21 @@ public final class StageRunner {
      * @param settings the non-null brief and review mode of the run
      * @param sinks the non-null places every decision and event goes
      * @param calls the non-null model-call seam of the run, the one the translation stage calls through
+     * @param narrator the non-null count of the narrator's own forms, run once translation has ended
      */
     public StageRunner(
             final ChunkRunner chunks,
             final ConsistencyPass revision,
             final RunSettings settings,
             final RunSinks sinks,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final NarratorStage narrator) {
         this.chunks = Objects.requireNonNull(chunks, "chunks");
         this.revision = Objects.requireNonNull(revision, "revision");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.narrator = Objects.requireNonNull(narrator, "narrator");
     }
 
     /**
@@ -69,7 +74,7 @@ public final class StageRunner {
         Objects.requireNonNull(work, "work");
         log.debug("Translation job stage change stage={} project={}", JobStage.TRANSLATE, settings.projectId());
         sinks.emit().accept(new StageStarted(JobStage.TRANSLATE, work.currentTranslationProgress()));
-        final RunEnd translated = chunks.run(work);
+        final RunEnd translated = narratorSettled(chunks.run(work));
         final boolean revises = settings.dial().backwardRevision();
         log.debug(
                 "Translation stage ended project={} end={} dialRevisesBackwards={}",
@@ -80,6 +85,20 @@ public final class StageRunner {
             return translated;
         }
         return revise(work);
+    }
+
+    // The narrator's gender is counted over what translation decided, before backward revision needs it; a failed run
+    // is left as it ended, and a storage error of the count ends a run that otherwise completed.
+    private RunEnd narratorSettled(final RunEnd translated) {
+        if (translated.state() == JobState.FAILED) {
+            return translated;
+        }
+        final Optional<AppError> failed = narrator.settle();
+        if (failed.isPresent() && translated.state() == JobState.COMPLETED) {
+            log.warn("The narrator count failed to store: {}", failed.get().code());
+            return RoutedCalls.failedBy(failed.get());
+        }
+        return translated;
     }
 
     // The pass reads the stored records, so the decided prefix is committed before it starts.

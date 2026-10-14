@@ -12,7 +12,8 @@ import java.util.Objects;
  * @param genderOrigin who decided the gender, so a later step can tell the person's choice from the code's and
  *     re-check only the latter (15i.B4, 15i.T5); {@link GenderOrigin#NONE} exactly when the gender is unknown
  * @param evidence the quotes of the book the gender was verified from, kept so they can be checked again once the
- *     glossary changes; never null, empty for a gender the person set or one nobody knows
+ *     glossary changes; while the gender is unknown they are pending evidence, quotes that call the narrator by a name
+ *     nobody knew yet (15i.T5). Never null, empty for a gender the person set
  */
 public record Narrator(NarratorPerson person, Gender gender, GenderOrigin genderOrigin, List<String> evidence) {
 
@@ -39,8 +40,8 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
     }
 
     /**
-     * Rejects a missing part and copies the quotes. An unknown gender has no origin and no quotes whatever the caller
-     * passed, and a known one needs an origin: a gender nobody decided cannot be known.
+     * Rejects a missing part and copies the quotes. An unknown gender has no origin whatever the caller passed, and a
+     * known one needs an origin: a gender nobody decided cannot be known.
      */
     public Narrator {
         Objects.requireNonNull(person, "person");
@@ -49,7 +50,6 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
         evidence = List.copyOf(Objects.requireNonNull(evidence, "evidence"));
         if (gender == Gender.UNKNOWN) {
             genderOrigin = GenderOrigin.NONE;
-            evidence = List.of();
         } else if (genderOrigin == GenderOrigin.NONE) {
             throw new IllegalArgumentException("a known narrator gender needs an origin");
         }
@@ -88,8 +88,8 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
     /**
      * Whether the gender check has something to hold a text against.
      *
-     * @return {@code true} for a first-person narrator whose gender is male or female and not merely suggested,
-     *     {@code false} otherwise
+     * @return {@code true} for a first-person narrator whose gender is male or female and not merely suggested (set,
+     *     verified or inferred), {@code false} otherwise
      */
     public boolean hasCheckableGender() {
         return person == NarratorPerson.FIRST

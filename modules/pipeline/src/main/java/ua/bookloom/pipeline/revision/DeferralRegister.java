@@ -27,6 +27,12 @@ import ua.bookloom.pipeline.WholeWord;
 public final class DeferralRegister {
 
     /**
+     * What a gender deferral on the narrator's own words waits on, in place of a glossary character's term (15i.T5);
+     * it cannot be a term, so no glossary entry is ever mistaken for the narrator.
+     */
+    public static final String NARRATOR = "⟦narrator⟧";
+
+    /**
      * The TERM deferrals a glossary edit leaves on segments that were decided with the previous rendering. Nothing is
      * written; the caller stores what this returns.
      *
@@ -91,6 +97,25 @@ public final class DeferralRegister {
                 glossary.size(),
                 deferrals.size());
         deferrals.forEach(DeferralRegister::logRecorded);
+        return deferrals;
+    }
+
+    /**
+     * The GENDER_UNKNOWN deferrals the segments holding the minority gender's forms of an inferred narrator leave: one
+     * per segment, waiting on {@link #NARRATOR}, so backward revision re-renders them once the narrator's gender is
+     * checkable (15i.T5).
+     *
+     * @param projectId the owning project's id; never null
+     * @param segmentIds the ids of the segments whose narrator forms disagree with the inferred gender; never null
+     * @return one deferral per segment id, in the given order; never null, empty when none is given
+     */
+    public static List<Deferral> narratorGender(final String projectId, final List<String> segmentIds) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(segmentIds, "segmentIds");
+        final List<Deferral> deferrals = segmentIds.stream()
+                .map(segmentId -> deferral(projectId, segmentId, DeferralReason.GENDER_UNKNOWN, NARRATOR))
+                .toList();
+        log.debug("Narrator gender deferrals project={} segments={}", projectId, deferrals.size());
         return deferrals;
     }
 

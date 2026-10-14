@@ -1399,12 +1399,46 @@ hand, and a language nobody has written rules for is translated with general adv
 - **WHEN** `BOOKLOOM_EVAL_RULES=generic` is set and the section for English to Ukrainian is built
 - **THEN** it holds the generic rules and no Ukrainian, English or pair rule
 
+### Requirement: Infer an unstated first-person narrator's gender from the decided translations
+
+WHEN translation has ended (completed or stopped) and the brief's first-person narrator has no gender, or one only
+suggested, the application SHALL count the narrator's own «I + past-tense verb» forms in the decided targets of the
+segments whose source narration (outside quotes and dialogue) holds the source language's first-person pronoun, with the
+target language file's `firstPersonPast` pattern (named groups `female` and `male`; a language without it infers nothing),
+read outside quotes and dialogue. WHEN there are at least 20 such segments and at least 8 forms and one gender holds at
+least 80 % of the forms (inclusive), the application SHALL store the narrator as first person with that gender and the
+origin `INFERRED` (an unspecified person becomes first person only when the narrator detector reads the book as first
+person), log the forms, the agreeing forms and the gender at INFO, and leave one `GENDER_UNKNOWN` deferral waiting on
+the narrator (`DeferralRegister.NARRATOR`) on each segment holding a form of the other gender; backward revision SHALL
+re-render those segments against the narrator's gender like those of a character. A narrator the person set, the brief
+verified or the run inferred, and a third-person narrator, SHALL never be replaced; a merely suggested gender SHALL be,
+because the decided targets are stronger evidence than an unverified guess, and the replacement SHALL be logged at INFO.
+The count asks no model.
+
+**Source:** FR-QA-01, ADR-0038; tasks 15f.A4, 15i.T5.
+In plain words: when nobody could say whether the narrator is a man or a woman, the translations themselves usually do:
+most «я пішов» against a few «я пішла» says the narrator is a man and the few are slips, while a woman's book that is
+only 70 % feminine is left unknown rather than corrected into the wrong gender.
+
+#### Scenario: A man's book with two feminine slips
+
+- **WHEN** a first-person book of 24 segments has the narrator unset, 22 masculine and 2 feminine «я + verb» forms are in
+  the decided targets, and the dial revises backwards
+- **THEN** the narrator is stored as male with the origin `INFERRED` and the two segments are re-rendered in the masculine
+
+#### Scenario: Seventy per cent is not enough
+
+- **WHEN** 7 of 10 forms are feminine
+- **THEN** the narrator stays unknown and nothing is re-rendered
+
 ### Requirement: Tell the model who narrates and who is present
 
 The application SHALL add one narrator line to the run's style sheet when the brief names a narrator person
 (`Narrator: first person, female. Write the narrator's own "I" verbs, adjectives and participles in the feminine form
 ...`, the masculine and gender-less first-person lines, and `Narrator: third person, outside the story ...`), and no
-line, with the style sheet and its hash unchanged, while the narrator is unstated. The application SHALL also give each
+line, with the style sheet and its hash unchanged, while the narrator is unstated. A gender the person set, the brief
+verified or the run inferred SHALL be stated and ordered as above; a gender only suggested SHALL read `likely male` or
+`likely female` and order no form, because nothing is held to a guess. The application SHALL also give each
 draft, in the single and the batch prompt, a character gender sheet: one `name — gender` line for each glossary
 character of known gender that the segment (for a batch, any of its items) names as a whole word, worded
 `name — likely gender` when the gender is only suggested (nothing is held to a likely gender: only a verified or

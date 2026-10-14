@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.DeferralRepository;
@@ -18,6 +19,7 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -25,7 +27,8 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * The model half of backward revision: a segment that waits on characters whose gender is now known is re-rendered by
  * one revision call, however many of its characters are known, and a segment whose characters are all still unknown is
- * left alone. A person-edited segment is revised from the proposal already waiting on it, so a swept term and a gender
+ * left alone. A deferral on the narrator ({@link DeferralRegister#NARRATOR}) is known once the brief's narrator has a
+ * checkable gender. A person-edited segment is revised from the proposal already waiting on it, so a swept term and a gender
  * fix arrive in one proposal. An answer for a segment that changed while its call waited is discarded and the call is
  * made once more from the segment as it reads now.
  */
@@ -121,7 +124,7 @@ final class GenderRevision {
             final List<Deferral> open,
             final ModelCalls calls,
             final PassTally tally) {
-        final Result<List<Known>> known = known(inputs.projectId(), segmentId, waiting);
+        final Result<List<Known>> known = known(inputs, segmentId, waiting);
         if (known.isErr()) {
             return Result.err(Objects.requireNonNull(known.error(), "error"));
         }
@@ -146,29 +149,43 @@ final class GenderRevision {
                 .flatMap(revised -> store(inputs, segmentId, base, ready, revised, tally));
     }
 
-    private Result<List<Known>> known(final String projectId, final String segmentId, final List<Deferral> waiting) {
+    private Result<List<Known>> known(final PassInputs inputs, final String segmentId, final List<Deferral> waiting) {
         final List<Known> ready = new ArrayList<>();
         for (final Deferral deferral : waiting) {
-            final String character = deferral.waitingOn();
-            final Result<Optional<GlossaryEntry>> found =
-                    character == null ? Result.ok(Optional.empty()) : glossary.findByTerm(projectId, character);
-            if (found.isErr()) {
-                return Result.err(Objects.requireNonNull(found.error(), "error"));
+            final Result<Optional<String>> fact = DeferralRegister.NARRATOR.equals(deferral.waitingOn())
+                    ? Result.ok(narratorFact(inputs.frame().narrator()))
+                    : characterFact(inputs.projectId(), deferral.waitingOn());
+            if (fact.isErr()) {
+                return Result.err(Objects.requireNonNull(fact.error(), "error"));
             }
-            final Optional<GlossaryEntry> known =
-                    Objects.requireNonNull(found.data(), "found").filter(GlossaryEntry::hasConfirmedGender);
+            final Optional<String> known = Objects.requireNonNull(fact.data(), "fact");
             log.debug("Gender deferral segmentId={} genderKnown={}", segmentId, known.isPresent());
-            known.ifPresent(entry -> ready.add(new Known(deferral, entry)));
+            known.ifPresent(line -> ready.add(new Known(deferral, line)));
         }
         return Result.ok(ready);
     }
 
-    private static String facts(final List<Known> ready) {
-        return ready.stream().map(GenderRevision::fact).collect(Collectors.joining("\n"));
+    private Result<Optional<String>> characterFact(final String projectId, final @Nullable String character) {
+        final Result<Optional<GlossaryEntry>> found =
+                character == null ? Result.ok(Optional.empty()) : glossary.findByTerm(projectId, character);
+        return found.map(
+                entry -> entry.filter(GlossaryEntry::hasConfirmedGender).map(GenderRevision::fact));
     }
 
-    private static String fact(final Known known) {
-        final GlossaryEntry entry = known.entry();
+    // The narrator's own «I» words follow the narrator's gender once it is set, verified or inferred; a suggested or
+    // unknown one gives nothing to revise by.
+    private static Optional<String> narratorFact(final Narrator narrator) {
+        return narrator.hasCheckableGender()
+                ? Optional.of("- the narrator (the \"I\" of the narration): "
+                        + narrator.gender().name().toLowerCase(Locale.ROOT))
+                : Optional.empty();
+    }
+
+    private static String facts(final List<Known> ready) {
+        return ready.stream().map(Known::fact).collect(Collectors.joining("\n"));
+    }
+
+    private static String fact(final GlossaryEntry entry) {
         final String target = entry.target();
         final String rendering = target == null || target.isBlank() ? "" : " (" + target + ")";
         return "- " + entry.term() + rendering + ": " + entry.gender().name().toLowerCase(Locale.ROOT);
@@ -206,6 +223,6 @@ final class GenderRevision {
                 });
     }
 
-    /** A gender deferral whose character now has a gender, with that character's entry. */
-    private record Known(Deferral deferral, GlossaryEntry entry) {}
+    /** A gender deferral whose character, or whose narrator, now has a gender, with the fact it is revised by. */
+    private record Known(Deferral deferral, String fact) {}
 }

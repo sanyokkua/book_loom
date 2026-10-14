@@ -195,6 +195,17 @@ public final class StyleSuggestion {
         outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.DONE));
     }
 
+    /**
+     * Stores a narrator the code settled, such as the one the Start re-check verified (15i.T5), with its origin and
+     * quotes; the person's own choices go through the brief's narrator setters.
+     *
+     * @param narrator the narrator to hold
+     */
+    public void adoptNarrator(final Narrator narrator) {
+        Objects.requireNonNull(narrator, "narrator");
+        change.accept("narrator re-check", brief -> brief.withNarrator(narrator));
+    }
+
     // A source the person or the file named is never second-guessed: the proposal is held for an Auto source only.
     private void holdLanguageProposal(final BriefSuggestion suggestion, final @Nullable BookBrief before) {
         final boolean auto = before != null && before.sourceLanguage() == null;
@@ -244,7 +255,8 @@ public final class StyleSuggestion {
      * The narrator the suggestion states once it is held to the brief's own ({@link BriefSuggestion#alignedTo}): a
      * narrator the person chose, or answered at Start, is never replaced by a guess, but a first-person narrator with no
      * gender takes the gender the suggestion proved, with the quotes it was verified from and the origin
-     * {@link Narrator.GenderOrigin#VERIFIED}. The brief's own when the model could not tell or said the same.
+     * {@link Narrator.GenderOrigin#VERIFIED}; one with no gender takes the pending quotes the suggestion kept
+     * (15i.T5). The brief's own when the model could not tell or said the same.
      */
     static Narrator narratorFor(final BookBrief brief, final BriefSuggestion aligned) {
         if (aligned.narrator() == NarratorPerson.UNSPECIFIED) {
@@ -252,7 +264,15 @@ public final class StyleSuggestion {
         }
         final Narrator suggested = aligned.suggestedNarrator();
         final boolean unchanged = suggested.person() == brief.narrator().person()
-                && suggested.gender() == brief.narrator().gender();
+                && suggested.gender() == brief.narrator().gender()
+                && !holdsNewPendingQuotes(brief.narrator(), suggested);
         return unchanged ? brief.narrator() : suggested;
+    }
+
+    // A narrator of unknown gender takes the quotes the suggestion could not verify yet; Start checks them again.
+    private static boolean holdsNewPendingQuotes(final Narrator held, final Narrator suggested) {
+        return held.gender() == Gender.UNKNOWN
+                && !suggested.evidence().isEmpty()
+                && !suggested.evidence().equals(held.evidence());
     }
 }

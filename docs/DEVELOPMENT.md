@@ -707,6 +707,28 @@ gate; the Balanced run also kept genre, register and narrator right on all four 
 unknown on owner books 1 and 2, whose gold is male: no window found a line where someone names or addresses the
 narrator that the code could verify, which is the intended refusal, not a miss to tune away.
 
+### 15i narrator's gender, in order {#15i-narrator}
+
+The narrator's gender is never taken from a model's word alone (15i.T5, which also closes 15f.A4). In order: (1) the brief's
+verified evidence (15i.B4: a name or a word of address the code checks); a quote that calls the narrator by a name nobody knows
+yet is kept on `Narrator.evidence` as a *pending* quote, with the gender unknown; (2) `SetupAssistant.recheckNarrator`
+(`NarratorRecheck`, no model, no write) checks the pending quotes against the glossary as Names & style left it, with the same
+filter as the brief (a name the narrator says to someone else proves nothing), and a glossary character of confirmed gender
+(the person's or verified, not a suggestion) makes the narrator that gender, `VERIFIED`; (3) Start runs the re-check only when
+it is about to ask "Who narrates?" and stores a verified result through the Book Brief, a failed re-check asks as before; (4)
+still unknown when translation ends (`NarratorStage`, after the last chunk, before backward revision): the targets of the
+segments whose source narration holds «I» are read with the target language's `firstPersonPast` pattern (`uk.properties`, one
+regex with the named groups `female` and `male`) outside quotes and dialogue; with at least 20 such segments, 8 forms and 80 % of
+them (inclusive) agreeing the narrator is stored as first person with the origin `INFERRED`, logged at INFO (forms, agreeing,
+gender), and each segment holding a form of the other gender gets a `GENDER_UNKNOWN` deferral waiting on
+`DeferralRegister.NARRATOR`, which `GenderRevision` re-renders against the narrator at Max (the stored narrator is read when
+the pass starts). A merely `SUGGESTED` gender is replaced by an inferred one, since the decided targets are stronger evidence
+than an unverified guess; a person-set, verified, inferred or third-person narrator never is. The style sheet states a
+person-set, verified or inferred gender and orders its form; a suggested one reads "likely male/female" and orders none.
+The count runs once, after translation: a gender found during a run reaches the checks and the drafts of the *next* run
+(the run's call frame is built once), and the window's brief is refreshed by the next Start, whose re-check returns the stored
+narrator.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

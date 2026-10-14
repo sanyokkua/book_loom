@@ -101,21 +101,58 @@ final class NarratorGenderEvidence {
         return NarratorSpeech.isToAnother(sample.passages(), quote, name, firstPersonPronouns);
     }
 
+    /**
+     * Whether the name the model read stands in its quote, so the quote can be checked against the glossary later.
+     *
+     * @param quote the quote, already found in the sample
+     * @param name the narrator's name the model read from it; blank when it named none
+     * @return {@code true} if the name's words stand together in the quote, {@code false} otherwise and for a blank name
+     */
+    boolean isNamedIn(final String quote, final String name) {
+        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(name, "name");
+        final List<String> nameWords = words(name);
+        return !nameWords.isEmpty() && contains(words(quote), nameWords);
+    }
+
+    /**
+     * The gender of the glossary person a name stands for, with nothing from the first-name lists: what the Start
+     * re-check may trust.
+     *
+     * @param quote the quote, already found in the book
+     * @param name a name from the quote
+     * @return the gender when the name is in the quote and names glossary people of one gender only, empty otherwise
+     */
+    Optional<Gender> glossaryGenderOf(final String quote, final String name) {
+        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(name, "name");
+        final List<String> nameWords = words(name);
+        if (nameWords.isEmpty() || !contains(words(quote), nameWords)) {
+            return Optional.empty();
+        }
+        final Set<Gender> genders = glossaryGenders(name, nameWords);
+        return genders.size() == 1 ? Optional.of(genders.iterator().next()) : Optional.empty();
+    }
+
     private Optional<Gender> byName(final List<String> quoteWords, final String name) {
         final List<String> nameWords = words(name);
         if (nameWords.isEmpty() || !contains(quoteWords, nameWords)) {
             log.debug("The narrator's name is not in its quote");
             return Optional.empty();
         }
-        final Set<Gender> glossary = people.stream()
-                .filter(entry -> namedBy(entry, name, nameWords))
-                .map(GlossaryEntry::gender)
-                .collect(Collectors.toSet());
+        final Set<Gender> glossary = glossaryGenders(name, nameWords);
         if (!glossary.isEmpty()) {
             log.debug("The narrator's name matches glossary people of genders {}", glossary);
             return glossary.size() == 1 ? Optional.of(glossary.iterator().next()) : Optional.empty();
         }
         return GivenNames.genderOf(name, languageTag);
+    }
+
+    private Set<Gender> glossaryGenders(final String name, final List<String> nameWords) {
+        return people.stream()
+                .filter(entry -> namedBy(entry, name, nameWords))
+                .map(GlossaryEntry::gender)
+                .collect(Collectors.toSet());
     }
 
     // A person is named by the whole term ("Lena Brightwater") or by one word of it ("Lena").

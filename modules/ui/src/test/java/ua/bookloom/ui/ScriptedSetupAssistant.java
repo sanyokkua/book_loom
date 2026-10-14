@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
+import ua.bookloom.api.project.Narrator;
 
 /** A setup assistant whose answers a test sets, and which records the projects it was asked about. */
 public final class ScriptedSetupAssistant implements SetupAssistant {
@@ -22,6 +23,8 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
 
     private Result<FileNameSuggestion> fileName = cast();
     private Result<BriefSuggestion> brief = cast();
+    private Result<Narrator> recheck = cast();
+    private final List<String> rechecked = new ArrayList<>();
     private final List<String> asked = new ArrayList<>();
     private final List<@Nullable Integer> detectedContexts = new ArrayList<>();
 
@@ -48,6 +51,17 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
         return this;
     }
 
+    /** Sets what the narrator re-check answers; unscripted, it fails, which the window must survive. */
+    public ScriptedSetupAssistant answersRecheck(final Result<Narrator> answer) {
+        this.recheck = answer;
+        return this;
+    }
+
+    /** The project ids whose narrator was re-checked, in order. */
+    public List<String> rechecked() {
+        return List.copyOf(rechecked);
+    }
+
     /** The project ids a suggestion was asked for, in order. */
     public List<String> asked() {
         return List.copyOf(asked);
@@ -66,6 +80,12 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
             final Consumer<JobEvent> progress) {
         detectedContexts.add(detectedContext);
         return suggestBrief(projectId, model);
+    }
+
+    @Override
+    public Result<Narrator> recheckNarrator(final String projectId) {
+        rechecked.add(projectId);
+        return recheck;
     }
 
     @Override

@@ -50,6 +50,7 @@ import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
+import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
 import ua.bookloom.pipeline.run.RunAudit;
@@ -301,7 +302,13 @@ final class TranslationJobImpl implements TranslationJob {
                 SegmentLocators.of(run.document()));
         final RunSettings settings = RunSettings.forRun(request, brief, frame, window);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
-        return new StageRunner(chunkRunner(run, settings, sinks, calls), revision, settings, sinks, calls);
+        return new StageRunner(
+                chunkRunner(run, settings, sinks, calls),
+                revision,
+                settings,
+                sinks,
+                calls,
+                new NarratorStage(stores, sinks, run.document(), settings));
     }
 
     private ChunkRunner chunkRunner(

@@ -17,8 +17,11 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -52,6 +55,7 @@ public final class NarratorDialog {
     private final CurrentProject project;
     private final BookBriefViewModel brief;
     private final CharacterGendersDialog genders;
+    private final SetupAssistant assistant;
     // Touched on the FX thread only, like every dialog; holds the books the question has been answered for.
     private final Set<String> answered = new HashSet<>();
 
@@ -63,6 +67,7 @@ public final class NarratorDialog {
      * @param project the holder of the open book, whose narrator hint and brief decide whether to ask
      * @param brief the view model the chosen narrator is written through
      * @param genders the question about characters without a gender, asked after the narrator's
+     * @param assistant the port that re-checks the narrator's stored quotes before the question is asked
      */
     @Inject
     public NarratorDialog(
@@ -70,12 +75,14 @@ public final class NarratorDialog {
             final Messages messages,
             final CurrentProject project,
             final BookBriefViewModel brief,
-            final CharacterGendersDialog genders) {
+            final CharacterGendersDialog genders,
+            final SetupAssistant assistant) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.project = Objects.requireNonNull(project, "project");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.genders = Objects.requireNonNull(genders, "genders");
+        this.assistant = Objects.requireNonNull(assistant, "assistant");
     }
 
     /**
@@ -96,6 +103,10 @@ public final class NarratorDialog {
             start.run();
             return;
         }
+        if (isVerifiedByRecheck(book.projectId())) {
+            startWhenSaved(start);
+            return;
+        }
         log.debug("asking who narrates before starting project {}", book.projectId());
         final Label text = new Label(messages.get(MessageKey.DIALOG_NARRATOR_TEXT));
         text.setWrapText(true);
@@ -103,6 +114,20 @@ public final class NarratorDialog {
         final DialogPane card = card(new VBox(text));
         wire(card, book.projectId(), start);
         modalHost.show(card, false);
+    }
+
+    // The glossary may have learned the name the brief's quote calls the narrator by since the brief was suggested; the
+    // check calls no model, and a failed one only means the question is asked (15i.T5).
+    private boolean isVerifiedByRecheck(final String projectId) {
+        final Result<Narrator> checked = assistant.recheckNarrator(projectId);
+        final Narrator narrator = checked.data();
+        if (checked.isErr() || narrator == null || narrator.gender() == Gender.UNKNOWN) {
+            log.debug("the narrator re-check verified nothing for project {} (failed {})", projectId, checked.isErr());
+            return false;
+        }
+        log.info("the narrator re-check verified {} for project {}", narrator.gender(), projectId);
+        brief.styleSuggestion().adoptNarrator(narrator);
+        return true;
     }
 
     private boolean mustAsk(final OpenedBook book, final @Nullable BookBrief current) {

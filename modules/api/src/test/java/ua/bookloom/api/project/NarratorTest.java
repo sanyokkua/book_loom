@@ -36,8 +36,36 @@ class NarratorTest {
         assertThat(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN).genderOrigin())
                 .isEqualTo(GenderOrigin.NONE);
         assertThat(Narrator.unspecified().genderOrigin()).isEqualTo(GenderOrigin.NONE);
-        assertThat(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, GenderOrigin.PERSON, List.of(QUOTE)))
-                .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+        assertThat(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, GenderOrigin.PERSON, List.of(QUOTE))
+                        .genderOrigin())
+                .isEqualTo(GenderOrigin.NONE);
+    }
+
+    // IF an unknown gender dropped the quotes it was tried from, THEN a name that becomes a verified glossary person
+    // later (15i.T5) could never be matched to the narrator: the quote is held as pending evidence.
+    @Test
+    void narrator_unknownGenderWithQuotes_keepsThePendingQuotes() {
+        final Narrator pending = new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, GenderOrigin.NONE, List.of(QUOTE));
+
+        assertThat(pending.evidence()).containsExactly(QUOTE);
+        assertThat(pending.genderOrigin()).isEqualTo(GenderOrigin.NONE);
+        assertThat(pending.hasCheckableGender()).isFalse();
+        assertThat(pending).isNotEqualTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+    }
+
+    // INFERRED is the run's own count of the narrator's words (15i.T5): enforced like a verified gender, so the
+    // minority slips are revised and later drafts are held to it; a guess nobody confirmed is still not.
+    @ParameterizedTest(name = "[{index}] {0} {1} {2} -> {3}")
+    @CsvSource({
+        "FIRST, INFERRED, MALE, true",
+        "FIRST, INFERRED, FEMALE, true",
+        "THIRD, INFERRED, MALE, false",
+        "FIRST, SUGGESTED, MALE, false"
+    })
+    void hasCheckableGender_inferredOrigin_isCheckableLikeAVerifiedOne(
+            final NarratorPerson person, final GenderOrigin origin, final Gender gender, final boolean checkable) {
+        assertThat(new Narrator(person, gender, origin, List.of()).hasCheckableGender())
+                .isEqualTo(checkable);
     }
 
     @Test

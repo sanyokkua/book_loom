@@ -21,7 +21,8 @@ import ua.bookloom.util.lang.LanguageTags;
  * at least {@value #MIN_CONFIDENCE}, or it is no answer at all.
  * The narrator's gender needs more: its quote must show the gender in words the code can check
  * ({@link NarratorGenderEvidence}), which then decide it; a gender that does not is the neutral unknown, because the
- * sample showed nothing the code could verify.
+ * sample showed nothing the code could verify, but a quote that calls the narrator by a name keeps that quote with the
+ * unknown, as pending evidence for a later check against the glossary.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -114,10 +115,17 @@ final class BriefReplies {
         log.trace("Brief reply narrator gender name '{}' quote '{}'", name, answer.quote());
         if (gender.isEmpty()) {
             log.warn("Brief reply narrator gender {} is not shown by a name or a word of address", answer.value());
-            return Optional.empty();
+            return narratorGender.isNamedIn(answer.quote(), name) ? Optional.of(pending(answer)) : Optional.empty();
         }
         log.debug("Brief reply narrator gender {} proven as {}", answer.value(), gender.get());
         return gender.map(word -> new Answer(word, answer.quote()));
+    }
+
+    // A quote that names the narrator by a name the glossary does not know yet proves nothing now; it is kept so the
+    // names pass can prove it later (15i.T5).
+    private static Answer pending(final Answer answer) {
+        log.debug("Brief reply narrator gender stays pending on a quote that names the narrator");
+        return new Answer(UNKNOWN.value(), answer.quote());
     }
 
     private static Optional<Answer> supported(

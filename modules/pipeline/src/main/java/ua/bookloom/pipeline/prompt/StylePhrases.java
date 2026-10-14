@@ -76,10 +76,19 @@ final class StylePhrases {
         return switch (narrator.person()) {
             case UNSPECIFIED -> "";
             case THIRD -> properties.getProperty("narrator.third");
-            case FIRST ->
-                properties.getProperty("narrator.first."
-                        + (isStated(narrator.gender()) ? narrator.gender().name() : "UNKNOWN"));
+            case FIRST -> properties.getProperty("narrator.first." + firstPersonKey(narrator));
         };
+    }
+
+    // A suggested gender is a guess nobody confirmed: it is told as "likely" and orders no form, as the checks do not
+    // hold the text to it either (15i.T5).
+    private static String firstPersonKey(final Narrator narrator) {
+        if (!isStated(narrator.gender())) {
+            return "UNKNOWN";
+        }
+        return narrator.genderOrigin() == Narrator.GenderOrigin.SUGGESTED
+                ? "LIKELY_" + narrator.gender().name()
+                : narrator.gender().name();
     }
 
     private static boolean isStated(final Gender gender) {
@@ -112,6 +121,8 @@ final class StylePhrases {
                                 "narrator.third",
                                 "narrator.first.MALE",
                                 "narrator.first.FEMALE",
+                                "narrator.first.LIKELY_MALE",
+                                "narrator.first.LIKELY_FEMALE",
                                 "narrator.first.UNKNOWN"))
                 .forEach(key -> {
                     if (properties.getProperty(Objects.requireNonNull(key)) == null) {

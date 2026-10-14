@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.project.Narrator;
 
 /**
  * The model's help with the setup of a translation, before any segment is translated: it reads the opened book and
@@ -32,6 +33,17 @@ public interface SetupAssistant {
      *     passage among several only counts as a passage with no reading.
      */
     Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model);
+
+    /**
+     * Checks the narrator quotes the brief stored against the glossary as it stands now, with no model call and no
+     * write: a quote that names the narrator by a glossary character of confirmed gender (the person's or verified,
+     * never a suggestion) makes the narrator's gender verified (15i.T5).
+     *
+     * @param projectId the project whose book is open and whose brief holds the narrator
+     * @return the narrator after the check, equal to the stored one when nothing changed; {@code validation} when the
+     *     project is not stored or its book is not open
+     */
+    Result<Narrator> recheckNarrator(String projectId);
 
     /**
      * As {@link #suggestFileName(String, ChatModel)}, announcing the model call so a screen can show it. An assistant

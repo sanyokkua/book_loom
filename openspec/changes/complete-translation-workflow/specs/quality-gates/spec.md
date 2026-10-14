@@ -1228,7 +1228,8 @@ and what it put there.
 ### Requirement: Hold a first-person narrator's words to the narrator's gender
 
 The application SHALL, when the brief's narrator is in the first person with a male or female gender that the person
-set or the brief verified (a gender shown as "(suggested)" is not held against any text) and the target
+set, the brief verified or the run inferred from the narrator's own forms (a gender shown as "(suggested)" is not held
+against any text) and the target
 language's file names a gender check with `genderCheck=<name>`, run that check on every candidate and raise a low
 `gender` finding (`raisedBy` `gender`) naming each word that disagrees. A gender check SHALL be a soft check: it never
 fails a hard gate, never blocks acceptance and never flags a segment by itself. The Ukrainian check (`genderCheck=uk`)

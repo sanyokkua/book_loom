@@ -109,8 +109,9 @@ public record BriefSuggestion(
      * read it from the text, is never contradicted by a guess. The narrator and its gender are the set ones, and a
      * voice note that names the other grammatical person ("third-person limited" for a first-person book) is dropped.
      * One gap is filled: a first-person narrator whose gender is unknown takes the gender this suggestion holds, with
-     * its evidence, because that gender stands on a quote the code verified and the screen marks it as suggested. The
-     * evidence of a field that is no longer the model's goes with it.
+     * its evidence, because that gender stands on a quote the code verified and the screen marks it as suggested; when
+     * the suggestion holds none, it takes the pending quotes it kept (15i.T5). The evidence of a field that is no
+     * longer the model's goes with it.
      *
      * @param current the brief's narrator now; {@link Narrator#unspecified()} when nothing is set
      * @return this suggestion when the brief names no narrator person, else the aligned one
@@ -127,7 +128,7 @@ public record BriefSuggestion(
         final Map<BriefField, FieldEvidence> kept = new EnumMap<>(BriefField.class);
         kept.putAll(evidence);
         kept.remove(BriefField.NARRATOR);
-        if (!fillsGender) {
+        if (!fillsGender && !holdsPendingFor(current)) {
             kept.remove(BriefField.NARRATOR_GENDER);
         }
         if (contradicts) {
@@ -144,11 +145,23 @@ public record BriefSuggestion(
                 languageProposal);
     }
 
+    // Pending quotes only wait for a first-person narrator whose gender nobody knows.
+    private boolean holdsPendingFor(final Narrator current) {
+        final FieldEvidence proof = evidence.get(BriefField.NARRATOR_GENDER);
+        return current.person() == NarratorPerson.FIRST
+                && current.gender() == Gender.UNKNOWN
+                && narratorGender == Gender.UNKNOWN
+                && proof != null
+                && !proof.isKept()
+                && !proof.quotes().isEmpty();
+    }
+
     /**
      * The narrator this suggestion gives the brief. A gender the code verified from quotes of the book carries those
      * quotes and the origin {@link Narrator.GenderOrigin#VERIFIED}, so a later step can check them again and the
      * screen can tell it from the person's choice; a known gender with no such proof is only
-     * {@link Narrator.GenderOrigin#SUGGESTED}, never the person's; an unknown gender has no origin.
+     * {@link Narrator.GenderOrigin#SUGGESTED}, never the person's; an unknown gender has no origin, but keeps the
+     * quotes that call the narrator by a name nobody knew yet, to be checked again once the glossary knows it (15i.T5).
      *
      * @return the narrator to store; never null
      */
@@ -156,7 +169,8 @@ public record BriefSuggestion(
         final FieldEvidence proof = evidence.get(BriefField.NARRATOR_GENDER);
         final boolean known = narratorGender == Gender.MALE || narratorGender == Gender.FEMALE;
         if (!known) {
-            return new Narrator(narrator, narratorGender);
+            final List<String> pending = proof == null || proof.isKept() ? List.of() : proof.quotes();
+            return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.NONE, pending);
         }
         if (proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
             return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.SUGGESTED, List.of());

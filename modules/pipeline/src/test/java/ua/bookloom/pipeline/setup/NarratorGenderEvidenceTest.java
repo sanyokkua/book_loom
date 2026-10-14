@@ -89,6 +89,8 @@ class NarratorGenderEvidenceTest {
         assertThat(answer).isEqualTo(new Answer("unknown", ""));
     }
 
+    // The code cannot gender the name now, but the quote does call the narrator by it: it is kept as pending evidence
+    // (15i.T5) for the check against the glossary at Start, and the gender stays unknown.
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
@@ -96,13 +98,19 @@ class NarratorGenderEvidenceTest {
                 // Neither in the glossary nor on the first-name list.
                 "Zorbu, wake up|Zorbu",
                 // Ray is left off the list on purpose, and the glossary's Ray is a place, not a person.
-                "Hold on tight, Ray|Ray",
-                // A listed name that is not in the quote.
-                "Hold on tight, Ray|Nora"
+                "Hold on tight, Ray|Ray"
             })
-    void read_nameTheCodeCannotGender_leavesTheGenderUnknown(final String quote, final String name)
+    void read_nameTheCodeCannotGender_leavesTheGenderUnknownWithThePendingQuote(final String quote, final String name)
             throws JsonProcessingException {
         final Answer answer = read("male", quote, name, ENGLISH, english(RAY_PLACE));
+
+        assertThat(answer).isEqualTo(new Answer("unknown", quote));
+    }
+
+    // A listed name that is not in the quote proves nothing and is nothing to check later either.
+    @Test
+    void read_nameNotInTheQuote_leavesTheGenderUnknownWithNoQuote() throws JsonProcessingException {
+        final Answer answer = read("male", "Hold on tight, Ray", "Nora", ENGLISH, english(RAY_PLACE));
 
         assertThat(answer).isEqualTo(new Answer("unknown", ""));
     }

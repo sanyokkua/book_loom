@@ -11,7 +11,8 @@ import java.util.Objects;
  *
  * @param basis what the field stands on
  * @param quotes the book's own words behind the value, each found in the passage it came from; never null, empty for a
- *     neutral value, which needs no quote, and for an uncertain field
+ *     neutral value, which needs no quote, and for an uncertain field, except the narrator's gender, whose quotes then
+ *     are pending evidence: they name the narrator by a name the glossary does not know yet (15i.T5)
  * @param agreeing how many passages support the value, or for an uncertain field the most that supported any one
  *     value; from zero to {@code samples}
  * @param samples how many passages were read; at least one

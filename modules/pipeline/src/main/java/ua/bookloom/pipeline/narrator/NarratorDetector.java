@@ -217,6 +217,23 @@ public final class NarratorDetector {
     }
 
     /**
+     * Whether a paragraph's own narration, outside quotes and dialogue, has the language's first-person pronoun.
+     *
+     * @param paragraph a non-null paragraph, masked or display text
+     * @param languageTag the source language's tag, or null when it is not known
+     * @return {@code true} if the narration holds a first-person pronoun, {@code false} otherwise, and always when the
+     *     language lists no pronoun
+     */
+    public static boolean isFirstPerson(final String paragraph, @Nullable final String languageTag) {
+        Objects.requireNonNull(paragraph, "paragraph");
+        if (languageTag == null) {
+            return false;
+        }
+        final Set<String> pronouns = LanguageRules.bundled().firstPersonPronouns(languageTag);
+        return !pronouns.isEmpty() && hasFirstPerson(narration(paragraph, languageTag), pronouns);
+    }
+
+    /**
      * The paragraph with every character's speech blanked, so what is left is the narrator's. The language's own quote
      * marks and a dash dialogue are blanked by {@link QuotedSpans}; straight quotes cannot be told from their closing
      * twin there, so they are paired here, and an unclosed one blanks the rest.
