@@ -1040,6 +1040,34 @@ and missing ids, control-code and quote defects, the placeholder gate, WRONG on 
 adopt `markers` or `dual` only if WRONG falls by 2 or more or seconds per segment fall by 10 % with no key metric losing 2 or more (task
 15i.X1). The result and the decision are recorded here when the arms are measured.
 
+**15i.X1 batch format (measured 2026-10-13/14, tree 690ce998, relevant pairs off).** Suites through `scripts/eval-matrix.sh
+--batch-format <arm>` (realrun `--stability 3`, sequence `--narrator unset`, replay of the Oct 10 trace, fast mode, 40 cases);
+the 300-segment run is `:app:translate` on a public-domain novel (EPUB, en→uk, Balanced, names transliterated,
+`--stop-after 300`). realrun counts only the draft, batch and repair groups (the reviewer groups do not depend on the format).
+
+| model | arm | realrun draft | sequence flagged | seq. fallbacks | seq. calls/seg | seq. s/seg | LTCR-1 | replay pass | 300: flagged | 300: missing ids | 300: calls/seg | 300: s/seg |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| e4b | json | 67/73 | 9 | 17 (5.2 %) | 0.38 | 4.11 | 92.9 % | 78 % | 3 | 5 (one cut reply, re-asked) | 0.30 | 1.60 |
+| e4b | markers | 66/73 | 7 | 10 (3.0 %) | 0.36 | 3.60 | 92.4 % | 83 % | 4 | 0 | 0.30 | 1.32 |
+| e4b | dual | 65/73 | 10 | 19 (5.8 %) | 0.39 | 3.81 | 92.7 % | 78 % | 3 | 0 | 0.31 | 1.46 |
+| 26b | json | 66/73 | 9 | 11 (3.1 %) | 0.44 | 5.05 | 74.7 % | 80 % | 4 | 5 (one cut reply, re-asked) | 0.32 | 1.96 |
+| 26b | markers | 67/73 | 9 | 5 (1.5 %) | 0.38 | 4.97 | 85.7 % | 78 % | 5 | 0 (one merge suspect) | 0.35 | 2.30 |
+| 26b | dual | not run | not run | not run | not run | not run | not run | not run | 5 | 0 | 0.32 | 2.24 |
+
+In every arm and model: no leaked protocol, no control-code residue, no ASCII quotes and no unbalanced « » in the export,
+no placeholder-gate failure in the export (one `TOKENS` item problem per markers run, repaired before acceptance), realrun
+truncated 0. The `exit=1` of every 300-segment run is Gradle reporting the command's exit code 3, a partial export
+by design under `--stop-after`; all six runs decided 300 segments and wrote their book.
+
+**Decision: json stays the default; the decision is pending the owner.** Speed alone cannot adopt an arm: markers is
+18 % faster on e4b in the 300-segment run (12 % in the sequence suite) but 17 % slower on 26b (sequence 2 % faster), so the
+models disagree and the rule keeps json; dual is never 10 % faster on both. The Opus-graded WRONG on the fixed 60-segment
+sample and the 26b dual suites were not run (the eval queue's budget ran out), so a quality gain of 2+ WRONG cannot be
+ruled in or out. The three arms stay in the code behind `BOOKLOOM_BATCH_FORMAT` (default `json`) until that grading is done.
+Rerun what is missing: `scripts/eval-matrix.sh --models ollama:gemma4:26b-mlx --batch-format dual --suite realrun --stability 3`
+(then `--suite sequence --narrator unset` and the replay suite), and grade the six exports with the sample rule: `<p>` blocks
+of 8+ source words translated in all six books, 60 picked evenly by position, letters shuffled per segment.
+
 **Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
 `ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective
 candidates the reviewer asked to change (thresholds: at least 90% on the e4b class, 95% on the 26b class), `falseAlarmEdits`
