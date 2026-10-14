@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
@@ -11,8 +12,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * The one tolerant reader of a model's JSON reply. Jackson reads the first JSON value and ignores any prose after
- * it, which is what models add; the draft reply stays strict in {@link DraftReplyParser} because it must tell a
- * malformed reply from a plain-text one.
+ * it, which is what models add, and takes a raw control character inside a string (a tab the model copied from the
+ * book into a quote; 15i.N gate), which strict JSON refuses; the draft reply stays strict in {@link DraftReplyParser}
+ * because it must tell a malformed reply from a plain-text one.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -29,7 +31,9 @@ public final class JsonReplies {
         Objects.requireNonNull(mapper, "mapper");
         Objects.requireNonNull(replyText, "replyText");
         try {
-            final JsonNode root = mapper.readTree(replyText);
+            final JsonNode root = mapper.reader()
+                    .with(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+                    .readTree(replyText);
             return root == null || root.isMissingNode() ? Optional.empty() : Optional.of(root);
         } catch (JsonProcessingException ignored) {
             return Optional.empty();

@@ -103,4 +103,21 @@ class SuggestionRepliesTest {
                 .extracting(Suggestion::target)
                 .containsExactly("Гейл-Мак'Грегор");
     }
+
+    // A brand kept as written is locked by rule: its rendering is final, but the suggested gender the person never
+    // confirmed stays a suggestion (15i review).
+    @Test
+    void onto_brandLockedByRule_keepsASuggestedGenderSuggested() {
+        final GlossaryEntry held = new GlossaryEntry(
+                        "p:orrel", "p", "Orrel", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE);
+
+        final GlossaryEntry written = new Suggestion(held, "Orrel")
+                .locking(new LockRule.Basis(true, false, false, false, true), true)
+                .onto(held);
+
+        assertThat(written.locked()).isTrue();
+        assertThat(written.target()).isEqualTo("Orrel");
+        assertThat(written.genderOrigin()).isEqualTo(ua.bookloom.api.project.GenderOrigin.SUGGESTED);
+    }
 }

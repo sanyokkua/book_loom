@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
@@ -16,7 +15,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.ReadingCounts.Read;
 import ua.bookloom.pipeline.glossary.ReadingVotes.GenderCall;
-import ua.bookloom.pipeline.glossary.ReadingVotes.VoteMode;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.glossary.TermReading.Usage;
 import ua.bookloom.pipeline.glossary.TermReading.WindowReading;
@@ -28,11 +26,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * The code decides a glossary term from its readings (15i.N5): kind and type by the majority of the window votes, the
- * gender of its cluster from the verified votes against the book's pronoun tally, a removal only on quoted ordinary-word
- * uses of a word the book also writes in lower case; a tiebreak call where the readings oppose a dominant tally, and at
- * Max a summary call where a term's calls disagree. The model only reads; every rule that turns its readings into a
- * change is here, in code. How far the gender votes count is the model's {@link ReadingVotes.VoteMode}: until a model
- * passes the coreference gate its votes only break ties.
+ * gender of its cluster from the verified votes against the book's pronoun tally ({@link ReadingVotes}), a removal only
+ * on quoted ordinary-word uses of a word the book also writes in lower case, and at Max a summary call where a term's
+ * calls disagree. The model only reads; every rule that turns its readings into a change is here, in code.
  */
 @Slf4j
 final class ReadingVerdict {
@@ -49,20 +45,16 @@ final class ReadingVerdict {
     static final int SUMMARY_MIN_MENTIONS = 30;
 
     private final VerdictCalls asked;
-    private final VoteMode mode;
 
     /**
      * Builds the verdict service.
      *
-     * @param templates the prompt templates of the tiebreak and summary calls; never null
-     * @param mapper the mapper their replies are read with; never null
-     * @param mode what the readings' votes may do for the model they came from ({@link ReadingVotes#modeFor}); never
-     *     null
+     * @param templates the prompt templates of the summary call; never null
+     * @param mapper the mapper its replies are read with; never null
      */
-    ReadingVerdict(final PromptTemplates templates, final ObjectMapper mapper, final VoteMode mode) {
+    ReadingVerdict(final PromptTemplates templates, final ObjectMapper mapper) {
         this.asked = new VerdictCalls(
                 Objects.requireNonNull(templates, "templates"), Objects.requireNonNull(mapper, "mapper"));
-        this.mode = Objects.requireNonNull(mode, "mode");
     }
 
     /**
@@ -126,11 +118,9 @@ final class ReadingVerdict {
      *
      * @param kind a name, a term, not a name, or no opinion
      * @param type the type the readings show; {@link TermType#OTHER} when they show none
-     * @param gender the gender decided; {@link Gender#UNKNOWN} when none, or while a tiebreak is still to be asked
+     * @param gender the gender decided; {@link Gender#UNKNOWN} when none
      * @param origin {@link GenderOrigin#VERIFIED} or {@link GenderOrigin#SUGGESTED}; null exactly when the gender is
      *     unknown
-     * @param needsTiebreak whether the readings' majority opposes a dominant code tally, so the gender waits for one
-     *     tiebreak call
      * @param quote the ordinary-word use a removal stands on; empty for any other decision
      */
     record Decision(
@@ -138,25 +128,16 @@ final class ReadingVerdict {
             TermType type,
             Gender gender,
             @Nullable GenderOrigin origin,
-            boolean needsTiebreak,
-            String quote) {
-
-        /** The decision with the gender the tiebreak settled: verified, or unknown when nothing bore it out. */
-        Decision settled(final Gender settled) {
-            return new Decision(
-                    kind, type, settled, settled == Gender.UNKNOWN ? null : GenderOrigin.VERIFIED, false, quote);
-        }
-    }
+            String quote) {}
 
     /**
      * Decides a term from its readings alone, with no call.
      *
      * @param facts the readings and what the code knows; never null
-     * @param mode what the readings' votes may do; never null
      * @return the decision; never null
      */
-    static Decision decide(final Facts facts, final VoteMode mode) {
-        return decide(facts, null, mode);
+    static Decision decide(final Facts facts) {
+        return decide(facts, null);
     }
 
     /**
@@ -164,12 +145,10 @@ final class ReadingVerdict {
      *
      * @param facts the readings and what the code knows; never null
      * @param summary the reading a summary call settled on; null when none was asked or it was not borne out
-     * @param mode what the readings' votes may do; never null
      * @return the decision; never null
      */
-    static Decision decide(final Facts facts, @Nullable final Read summary, final VoteMode mode) {
+    static Decision decide(final Facts facts, @Nullable final Read summary) {
         Objects.requireNonNull(facts, "facts");
-        Objects.requireNonNull(mode, "mode");
         final List<WindowReading> own = ReadingCounts.readings(facts.calls());
         final Read read = summary != null ? summary : ReadingCounts.majority(own);
         final long names = ReadingCounts.uses(own, Usage.NAME);
@@ -186,11 +165,11 @@ final class ReadingVerdict {
                 facts.lowerShare());
         if (isNotAName(facts, names, wordQuotes.size())) {
             final Decision removed =
-                    new Decision(Kind.NOT_A_NAME, TermType.OTHER, Gender.UNKNOWN, null, false, wordQuotes.getFirst());
+                    new Decision(Kind.NOT_A_NAME, TermType.OTHER, Gender.UNKNOWN, null, wordQuotes.getFirst());
             log.debug("Reading verdict for entry {}: not a name", facts.entry().id());
             return removed;
         }
-        return typed(facts, read, names, mode);
+        return typed(facts, read, names);
     }
 
     // A removal stands on two quoted ordinary-word uses, no name use, a word the book also writes in lower case and an
@@ -213,7 +192,7 @@ final class ReadingVerdict {
         return removes;
     }
 
-    private static Decision typed(final Facts facts, @Nullable final Read read, final long names, final VoteMode mode) {
+    private static Decision typed(final Facts facts, @Nullable final Read read, final long names) {
         final boolean enough = names >= MIN_NAME_USES
                 || (facts.dial() == QualityDial.FAST && names == 1 && ReadingCounts.shown(facts.calls()) == 1);
         final Usage usage = read == null ? Usage.UNSURE : read.usage();
@@ -230,27 +209,25 @@ final class ReadingVerdict {
             kind = Kind.UNSURE;
             type = TermType.OTHER;
         }
-        final GenderCall gender = genderOf(facts, type, mode);
-        return logged(
-                facts, new Decision(kind, type, gender.gender(), gender.origin(), gender.needsTiebreak(), ""), enough);
+        final GenderCall gender = genderOf(facts, type);
+        return logged(facts, new Decision(kind, type, gender.gender(), gender.origin(), ""), enough);
     }
 
     private static Decision logged(final Facts facts, final Decision decision, final boolean enough) {
         log.debug(
-                "Reading verdict for entry {}: {} {} gender={} origin={} tiebreak={} (name uses enough: {})",
+                "Reading verdict for entry {}: {} {} gender={} origin={} (name uses enough: {})",
                 facts.entry().id(),
                 decision.kind(),
                 decision.type(),
                 decision.gender(),
                 decision.origin(),
-                decision.needsTiebreak(),
                 enough);
         return decision;
     }
 
     // Places, organisations, things and titles carry no gender, whatever pronoun follows them; the person's own gender
     // is never decided again. One person, one gender: the votes of every spelling count together.
-    private static GenderCall genderOf(final Facts facts, final TermType decided, final VoteMode mode) {
+    private static GenderCall genderOf(final Facts facts, final TermType decided) {
         final GlossaryEntry entry = facts.entry();
         final boolean person =
                 decided == TermType.CHARACTER || (decided == TermType.OTHER && entry.type() == TermType.CHARACTER);
@@ -258,7 +235,7 @@ final class ReadingVerdict {
             log.debug("Reading verdict for entry {}: no gender decided (person {})", entry.id(), person);
             return GenderCall.NONE;
         }
-        return ReadingVotes.genderOf(facts, mode);
+        return ReadingVotes.genderOf(facts);
     }
 
     private static TermType typeOf(final TermReading.Kind kind) {
@@ -271,8 +248,7 @@ final class ReadingVerdict {
     }
 
     /**
-     * Decides a term from its readings, asking a summary call at Max where its calls disagree and a tiebreak call where
-     * the readings oppose a dominant code tally.
+     * Decides a term from its readings, asking a summary call at Max where its calls disagree.
      *
      * @param facts the readings and what the code knows; never null
      * @param frame the run's language pair and analysis language; never null
@@ -286,48 +262,19 @@ final class ReadingVerdict {
         final List<Read> reads = ReadingCounts.callReads(facts.calls());
         final boolean summarise = needsSummary(facts, reads);
         log.debug(
-                "Reading verdict for entry {}: {} calls, {} member calls, dial {}, votes {}, summary {}",
+                "Reading verdict for entry {}: {} calls, {} member calls, dial {}, summary {}",
                 facts.entry().id(),
                 facts.calls().size(),
                 facts.memberCalls().size(),
                 facts.dial(),
-                mode,
                 summarise);
         final Result<Optional<Read>> summary =
                 summarise ? asked.summary(facts, reads, frame, calls) : Result.ok(Optional.empty());
         if (summary.isErr()) {
             return Result.err(Objects.requireNonNull(summary.error(), "error"));
         }
-        final Decision decided =
-                decide(facts, Objects.requireNonNull(summary.data(), "summary").orElse(null), mode);
-        if (!decided.needsTiebreak()) {
-            return Result.ok(decided);
-        }
-        return tiebreak(facts, decided, frame, calls);
-    }
-
-    private Result<Decision> tiebreak(
-            final Facts facts, final Decision decided, final CallFrame frame, final ModelCalls calls) {
-        final List<ReadCall> cluster = facts.clusterCalls();
-        final Gender readers = ReadingCounts.votes(cluster, Gender.MALE) > ReadingCounts.votes(cluster, Gender.FEMALE)
-                ? Gender.MALE
-                : Gender.FEMALE;
-        final Gender code = facts.evidence().pronouns().dominant().orElseThrow();
-        final Result<Gender> settled = asked.tiebreak(facts, readers, code, frame, calls);
-        if (settled.isErr()) {
-            final AppError error = Objects.requireNonNull(settled.error(), "error");
-            log.debug(
-                    "Reading verdict for entry {}: the tiebreak failed code={}",
-                    facts.entry().id(),
-                    error.code());
-            return Result.err(error);
-        }
-        final Gender gender = Objects.requireNonNull(settled.data(), "settled");
-        log.debug(
-                "Reading verdict for entry {}: the tiebreak settled {}",
-                facts.entry().id(),
-                gender);
-        return Result.ok(decided.settled(gender));
+        return Result.ok(
+                decide(facts, Objects.requireNonNull(summary.data(), "summary").orElse(null)));
     }
 
     // Only at Max, only for a term read in two or more calls or mentioned often, and only when its calls disagree.

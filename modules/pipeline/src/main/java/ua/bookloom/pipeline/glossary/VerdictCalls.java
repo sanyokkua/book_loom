@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,7 +17,6 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.pipeline.glossary.ReadingCounts.Read;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
@@ -33,24 +31,19 @@ import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * The two calls a reading verdict may add (15i.N5), both one term per call and labelled as term readings: the tiebreak,
- * which shows the windows where the readings found one pronoun beside those where the code counted the other, and the
- * summary at Max, which shows what each disagreeing call read. Neither answer decides by assertion: a tiebreak gender
- * stands only when a window the call showed holds its quote in the narration with a pronoun of that gender, and a
- * summary only when its quote stands in a window shown and it chose one of the readings the calls gave.
+ * The call a reading verdict may add (15i.N5), one term per call and labelled as a term reading: the summary at Max,
+ * which shows what each disagreeing call read. Its answer does not decide by assertion: it stands only when its quote
+ * stands in a window shown and it chose one of the readings the calls gave. (The tiebreak between the readings and a
+ * dominant code tally returns with the first model whose votes pass the coreference gate; 15i review.)
  */
 @Slf4j
 final class VerdictCalls {
-
-    /** The most windows each side of a tiebreak shows. */
-    static final int SIDE_WINDOWS = 3;
 
     /** The most windows a summary shows of each call. */
     static final int SUMMARY_WINDOWS = 2;
 
     // A quote of a few words and one or two labels, and the braces besides; twice that as the cap.
     private static final OutputLimit LIMIT = new OutputLimit(60, 120);
-    private static final String NONE = "none";
 
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
@@ -58,42 +51,6 @@ final class VerdictCalls {
     VerdictCalls(final PromptTemplates templates, final ObjectMapper mapper) {
         this.templates = Objects.requireNonNull(templates, "templates");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-    }
-
-    /**
-     * Asks which pronoun refers to the term when the readings and a dominant code tally disagree.
-     *
-     * @param facts the term's readings and the code's evidence; never null
-     * @param readers the gender the readings' majority voted for; never null
-     * @param code the gender the code's tally holds dominant; never null
-     * @param frame the run's language pair; never null
-     * @param calls the seam the call goes through; never null
-     * @return the gender a window the call showed bears out, else {@link Gender#UNKNOWN}; or the failed call's error
-     */
-    Result<Gender> tiebreak(
-            final Facts facts, final Gender readers, final Gender code, final CallFrame frame, final ModelCalls calls) {
-        final List<String> shown = new ArrayList<>();
-        final List<String> lines = new ArrayList<>();
-        lines.add("Reader side — a " + word(readers) + " pronoun quoted for the term");
-        facts.clusterCalls().stream()
-                .flatMap(call -> quotedWindows(call, readers).stream())
-                .filter(side -> !shown.contains(side.text()))
-                .limit(SIDE_WINDOWS)
-                .forEach(
-                        side -> lines.add(numbered(shown, side.text(), side.text()) + "\n    quoted: " + side.quote()));
-        lines.add("Code side — a " + word(code) + " pronoun counted after the term");
-        facts.evidence().windows().stream()
-                .filter(window -> window.pronoun() == code && !shown.contains(window.text()))
-                .limit(SIDE_WINDOWS)
-                .forEach(window -> lines.add(numbered(shown, window.text(), window.text())));
-        log.debug(
-                "Tiebreak for entry {}: readers {} against code {}, {} windows shown",
-                facts.entry().id(),
-                readers,
-                code,
-                shown.size());
-        return ask(PromptName.TERM_TIEBREAK, facts, "windows", String.join("\n", lines), frame, calls)
-                .map(reply -> settled(reply, shown, facts));
     }
 
     /**
@@ -130,17 +87,6 @@ final class VerdictCalls {
                 shown.size());
         return ask(PromptName.TERM_SUMMARY, facts, "calls", String.join("\n", lines), frame, calls)
                 .map(reply -> chosen(reply, shown, reads, facts));
-    }
-
-    /** A window of the readers' side with the words its reading quoted. */
-    private record Quoted(String text, String quote) {}
-
-    private static List<Quoted> quotedWindows(final ReadCall call, final Gender gender) {
-        return call.reading().windows().stream()
-                .filter(reading -> reading.vote() == gender)
-                .map(reading ->
-                        new Quoted(call.windows().get(reading.number() - 1).text(), reading.quote()))
-                .toList();
     }
 
     // Numbers a window in the order shown and remembers its plain text, which a quote is checked against.
@@ -196,27 +142,6 @@ final class VerdictCalls {
                 + (tally.isEmpty() ? "" : " — pronouns after it: " + tally);
     }
 
-    private Gender settled(final String reply, final List<String> shown, final Facts facts) {
-        final JsonNode root = JsonReplies.tolerant(mapper, reply).orElse(null);
-        if (root == null) {
-            log.debug(
-                    "Tiebreak reply for entry {} could not be read: the gender stays unknown",
-                    facts.entry().id());
-            return Gender.UNKNOWN;
-        }
-        final String quote = TermReadingReplies.quoteOf(root.path("quote").asText(""));
-        final Gender claimed = TermReadingReplies.genderOf(root.path("gender").asText(""));
-        final QuoteVote votes = QuoteVote.of(facts.analysisLanguage());
-        final boolean borneOut = shown.stream().anyMatch(text -> votes.vote(quote, claimed, text) == claimed);
-        log.debug(
-                "Tiebreak for entry {}: claimed {} borne out by a window shown: {}",
-                facts.entry().id(),
-                claimed,
-                borneOut && claimed != Gender.UNKNOWN);
-        log.trace("Tiebreak quote for {}: {}", facts.entry().term(), quote);
-        return borneOut ? claimed : Gender.UNKNOWN;
-    }
-
     private Optional<Read> chosen(
             final String reply, final List<String> shown, final List<Read> reads, final Facts facts) {
         final JsonNode root = JsonReplies.tolerant(mapper, reply).orElse(null);
@@ -249,9 +174,5 @@ final class VerdictCalls {
             words.add(read.kind().wire());
         }
         return String.join(", ", words);
-    }
-
-    private static String word(final Gender gender) {
-        return gender == Gender.UNKNOWN ? NONE : gender.name().toLowerCase(Locale.ROOT);
     }
 }

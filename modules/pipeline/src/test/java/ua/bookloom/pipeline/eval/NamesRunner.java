@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SequenceJobs;
@@ -90,15 +91,17 @@ final class NamesRunner {
             return new NamesRow(bookId, null, failed);
         }
         lexicon = names.lexicon().entries(id).data();
+        final List<String> text = paragraphs.apply(prepared);
+        final List<GlossaryEntry> glossary = names.glossary().entries(id).data();
         final NamesScore score = NamesScore.of(
                 gold,
-                paragraphs.apply(prepared),
-                names.glossary().entries(id).data(),
+                text,
+                glossary,
                 lexicon,
                 probe.since(mark).calls(),
                 Duration.ofNanos(System.nanoTime() - started));
         log.info("Names eval {} done: {}", bookId, score.json());
-        return new NamesRow(bookId, score, null);
+        return new NamesRow(bookId, score, NamesDiagnostics.of(gold, text, glossary, lexicon, score), null);
     }
 
     private @Nullable String firstFailure(final String bookId, final Names names, final String id) {

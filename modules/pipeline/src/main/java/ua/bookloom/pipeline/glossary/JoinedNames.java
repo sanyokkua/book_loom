@@ -144,7 +144,7 @@ final class JoinedNames {
                 .distinct()
                 .filter(form -> !form.equals(term))
                 .toList();
-        log.debug("Joined name {} is written joined {} times", term, joins.size());
+        log.debug("Joined name is written joined {} times", joins.size());
         log.trace("Joined name {}: {}", term, sentence);
         pairs.add(new Pair(
                 new NameCandidate(term, joins.size(), sentence, others), Set.copyOf(first.halves()), mentions));

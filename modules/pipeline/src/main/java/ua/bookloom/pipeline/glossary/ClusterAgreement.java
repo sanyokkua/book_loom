@@ -14,14 +14,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 
 /**
  * The renderings of one person's spellings agree word by word (15i.N6): {@code Arlo Venn → Арло Венн} makes
  * {@code Venn → Венн}, whichever of the two the glossary already holds or the call is asking about. A held rendering
- * is the person's or an earlier suggestion and stands; between two asked spellings the full name's is the cluster's
- * chosen rendering. Words are the runs between spaces and hyphens, and a spelling is aligned only when its rendering
- * has as many words as its term.
+ * binds only when the person chose it, never an earlier suggestion nobody confirmed; between two asked spellings the
+ * full name's is the cluster's chosen rendering. Words are the runs between spaces and hyphens, and a spelling is
+ * aligned only when its rendering has as many words as its term. Beyond one cluster, one word of a person's name has
+ * one rendering in every person's name ({@code Wren} of {@code Tam Wren} and of {@code Tamsin Wren}).
  */
 @Slf4j
 final class ClusterAgreement {
@@ -30,10 +33,13 @@ final class ClusterAgreement {
 
     private final NameClusters clusters;
     private final Map<String, String> held;
+    private final Map<String, String> heldWords;
 
-    private ClusterAgreement(final NameClusters clusters, final Map<String, String> held) {
+    private ClusterAgreement(
+            final NameClusters clusters, final Map<String, String> held, final Map<String, String> heldWords) {
         this.clusters = clusters;
         this.held = held;
+        this.heldWords = heldWords;
     }
 
     /**
@@ -50,13 +56,21 @@ final class ClusterAgreement {
         final Set<String> askedIds = new HashSet<>();
         asked.forEach(entry -> askedIds.add(entry.id()));
         final Map<String, String> targets = new HashMap<>();
+        final Map<String, String> words = new HashMap<>();
         for (final GlossaryEntry entry : heldEntries) {
             final String target = entry.target();
-            if (!askedIds.contains(entry.id()) && target != null && !target.isBlank()) {
+            // Only the person's rendering binds: an earlier suggestion nobody confirmed is no cluster's (15i review).
+            if (!askedIds.contains(entry.id())
+                    && entry.origin() == TargetOrigin.PERSON
+                    && target != null
+                    && !target.isBlank()) {
                 targets.put(entry.id(), target.strip());
+                if (entry.type() == TermType.CHARACTER) {
+                    learnWords(entry.term(), target.strip(), words);
+                }
             }
         }
-        return new ClusterAgreement(clusters, Map.copyOf(targets));
+        return new ClusterAgreement(clusters, Map.copyOf(targets), Map.copyOf(words));
     }
 
     /**
@@ -105,7 +119,57 @@ final class ClusterAgreement {
             }
             aligned.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(suggestion.entry(), target));
         }
-        return aligned;
+        return withSharedWords(aligned);
+    }
+
+    // One word of a person's name has one rendering across every person's name (15i.N gate): two anchors of one
+    // person ("Tam Wren", "Tamsin Wren") or a family share a surname, which no cluster joins. A held rendering of the
+    // word wins, else the first suggestion that renders it; a rendering with another number of words is left alone.
+    private List<Suggestion> withSharedWords(final List<Suggestion> suggestions) {
+        final Map<String, String> words = new HashMap<>(heldWords);
+        final List<Suggestion> agreed = new ArrayList<>();
+        for (final Suggestion suggestion : suggestions) {
+            final GlossaryEntry entry = suggestion.entry();
+            if (entry.type() != TermType.CHARACTER) {
+                agreed.add(suggestion);
+                continue;
+            }
+            final String target = sharedWordsOf(entry.term(), suggestion.target(), words);
+            if (!target.equals(suggestion.target())) {
+                log.debug("Shared-word agreement changed the target of entry {}", entry.id());
+                log.trace("Shared-word agreement: {} → {}", suggestion.target(), target);
+            }
+            learnWords(entry.term(), target, words);
+            agreed.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(entry, target));
+        }
+        return agreed;
+    }
+
+    private static String sharedWordsOf(final String term, final String target, final Map<String, String> words) {
+        final List<String> source = wordsOf(term);
+        final List<int[]> spans = spansOf(target);
+        if (source.size() != spans.size()) {
+            return target;
+        }
+        final StringBuilder written = new StringBuilder(target);
+        for (int word = spans.size() - 1; word >= 0; word--) {
+            final String known = words.get(source.get(word));
+            if (known != null) {
+                written.replace(spans.get(word)[0], spans.get(word)[1], known);
+            }
+        }
+        return written.toString();
+    }
+
+    // Each word of a name whose rendering has as many words, kept as the first rendering seen of it.
+    private static void learnWords(final String term, final String target, final Map<String, String> words) {
+        final List<String> source = wordsOf(term);
+        final List<int[]> spans = spansOf(target);
+        if (source.size() == spans.size()) {
+            for (int word = 0; word < spans.size(); word++) {
+                words.putIfAbsent(source.get(word), target.substring(spans.get(word)[0], spans.get(word)[1]));
+            }
+        }
     }
 
     private String agreed(final GlossaryEntry entry, final String target, final Map<String, String> asked) {

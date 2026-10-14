@@ -52,7 +52,7 @@ final class CaseVariants {
         final List<String> aliases = new ArrayList<>();
         group.stream().filter(tally -> !tally.equals(base)).forEach(tally -> aliases.add(tally.term()));
         final int count = group.stream().mapToInt(NameCandidate::count).sum();
-        log.debug("Name candidate {} folds {} case variants into one, count {}", base.term(), aliases.size(), count);
+        log.debug("Name candidate folds {} case variants into one, count {}", aliases.size(), count);
         log.trace("Name candidate {} has the case variants {}", base.term(), aliases);
         return new NameCandidate(base.term(), count, base.firstSentence(), aliases);
     }

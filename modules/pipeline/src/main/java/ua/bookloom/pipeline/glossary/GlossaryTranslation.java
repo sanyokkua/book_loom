@@ -67,7 +67,7 @@ final class GlossaryTranslation {
             }
             final GlossaryEntry suggested = now.withSuggestedTarget(target);
             final Result<GlossaryEntry> stored =
-                    glossary.update(answered.get(i).locked() ? suggested.withLocked(true) : suggested);
+                    glossary.update(answered.get(i).locked() ? suggested.withRuleLock() : suggested);
             if (stored.isErr()) {
                 return Result.err(Objects.requireNonNull(stored.error(), "error"));
             }

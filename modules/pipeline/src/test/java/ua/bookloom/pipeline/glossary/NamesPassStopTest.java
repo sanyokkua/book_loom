@@ -103,15 +103,17 @@ class NamesPassStopTest extends NamesPassTestBase {
         assertThat(model.requests()).isZero();
     }
 
-    // Before the first call the pass says what the dial's plan will read: five terms (the book names each at least
-    // three times) in one call each, about one to two minutes at Balanced.
+    // Before the first call the pass says what it will send (15i review: every call, not the names reading alone):
+    // five names read in one call each and one review batch for the sixth open name, seven calls for the recurring
+    // words, and two rendering batches each for names and terms with their re-asks — 17 calls, four to six minutes
+    // at Balanced's 11.25-18.75 s a call.
     @Test
-    void estimate_seededBookAtBalanced_isFiveCallsAndOneToTwoMinutes() {
+    void estimate_seededBookAtBalanced_isSeventeenCallsAndFourToSixMinutes() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         final Result<NamesEstimate> estimate = fixture.pass().estimate(PROJECT);
 
-        assertThat(estimate.data()).isEqualTo(new NamesEstimate(5, 1, 2));
+        assertThat(estimate.data()).isEqualTo(new NamesEstimate(17, 4, 6));
     }
 
     @Test

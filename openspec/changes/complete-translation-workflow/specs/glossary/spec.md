@@ -506,12 +506,14 @@ not the model — SHALL decide each from its readings:
 - the gender SHALL pool the verified votes (a window's pronoun the reading quoted from that window's narration) of every
   spelling of the person and SHALL follow the model's vote mode: a model whose votes the coreference probe found wrong
   more than 5 % of the time — every model today (26b 10 %, e4b 20 % on 2026-10-13) — SHALL only break ties: a clear
-  code tally (three or more pronouns making 60 % or more) SHALL decide and be written verified, and with no clear tally
-  two or more votes making 75 % (three at 80 % under Auto) SHALL give a suggestion, never a verified gender; a model
-  that passed the probe SHALL decide: those votes verify the gender unless a tally favouring the other gender keeps its
-  own gender as a suggestion, fewer are a suggestion, and a majority against a tally of three or more at 80 % SHALL
-  earn one `term-tiebreak` call showing both sides' windows, whose gender stands, verified, only when a window shown
-  holds its quote in the narration with a pronoun of that gender, else the gender stays unknown for Start to ask;
+  code tally (three or more pronouns making 60 % or more) SHALL decide, written verified only when the verified votes
+  agree with it and as a suggestion otherwise, and with no clear tally two or more votes making 75 % (three at 80 % under
+  Auto), or two or more pieces of evidence (votes and pronouns together) all of one gender, SHALL give a suggestion,
+  never a verified gender; the tally SHALL count a name's own uses only: a use that ends a longer name is the longer
+  name's, a use after a gendered form of address counts that form unless the surname follows both genders' forms, and a
+  name opening with such a form has its gender; each window and quote SHALL count once however many spellings' calls
+  show it; a mode in which a passing model's votes decide, with a `term-tiebreak` call against a dominant tally, SHALL
+  return with the first model that passes the probe and is not built until then;
 - an entry SHALL be removed only on two ordinary-word uses whose quote stands in the window it answers, no window read
   as a name, a lower-case share of 0.2 or more in the scanned running text, and an entry nobody typed or gave a gender;
 - at Max a term read in two or more calls (or mentioned 30 times or more) whose calls read it differently SHALL get one
@@ -524,7 +526,7 @@ it; the run's own scans SHALL drop it as before.
 
 **Source:** 15i.N5 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01
 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#term-tiebreak`.
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`.
 In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so
 for now they only settle what the book's own pronouns leave open.
 
@@ -537,7 +539,7 @@ for now they only settle what the book's own pronouns leave open.
 #### Scenario: A clear tally outweighs the readings
 
 - **WHEN** the readings quote `he` for `Brann` in six windows and the code counts `she` four times after the name
-- **THEN** `Brann` reads female (verified) and no tiebreak call is made
+- **THEN** `Brann` reads female (suggested, since no vote agrees) and no tiebreak call is made
 
 #### Scenario: The bartender is read, the common word removed
 
@@ -584,7 +586,9 @@ or by the identity rule and about no other refusal; a rendering refused a second
 target, and a failed further call SHALL return its error. The renderings of one person's spellings SHALL agree word by
 word: a spelling SHALL take the word the full name's rendering has in its place, the full name's rendering being the one
 the glossary holds or else the one asked in the same batch, and a full name asked about SHALL take the words of a held
-rendering of one of its spellings. The one identity rule SHALL also be applied by the term-mapping check, which SHALL
+rendering of one of its spellings. Beyond one person, a word of a character's name SHALL have one rendering in every
+character's name whose rendering has as many words: the glossary's rendering of the word, else the first one a call
+gives (a surname two full names share, which no cluster joins). The one identity rule SHALL also be applied by the term-mapping check, which SHALL
 not count a rendering equal to the term across scripts as a learned rendering. A rendering SHALL be locked by rule
 only when it is a brand, an identifier or a kept original kept verbatim, or a verified proper name with a checked
 rendering, not marked speaking, in a target whose language file says `namesInflect=false` (English, German, French,
@@ -1012,6 +1016,9 @@ ordinary word (most counted windows) or a word with two senses or more is droppe
 moves to the glossary, and a term nothing readable decided is left as it is. A window SHALL count only when the quote the
 model gave for it stands in that window. At the Fast dial the candidates SHALL go to one batch choice over one example
 sentence each, which keeps or drops and gives no rendering; that call SHALL be labelled "Term choice", not "Name review".
+The model scan's candidates SHALL be the book's 300 most frequent words that are no stop word and no held term; at
+Balanced and Max its 30 most frequent SHALL be read each in its own call, and the others only where that batch choice
+keeps them, a word it drops being dropped and one it leaves out left undecided.
 A failed call SHALL end the action with its error and write nothing.
 
 A kept or moved term SHALL take the one rendering the reading gave for every window, written as the model's rendering: a

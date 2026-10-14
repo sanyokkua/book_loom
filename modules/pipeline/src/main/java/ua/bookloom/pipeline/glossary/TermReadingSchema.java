@@ -31,17 +31,6 @@ public final class TermReadingSchema {
             "additionalProperties":false}""";
 
     /**
-     * The tiebreak's reply (15i.N5): the narration's words that hold the pronoun referring to the term, quoted from one
-     * window the call showed, then that pronoun's gender, or "none" for both.
-     */
-    public static final String TIEBREAK = """
-            {"type":"object","properties":{\
-            "quote":{"type":"string","maxLength":200},\
-            "gender":{"type":"string","enum":["male","female","none"]}},\
-            "required":["quote","gender"],\
-            "additionalProperties":false}""";
-
-    /**
      * The summary's reply at Max (15i.N5): the words that show best how the book uses the term, quoted from one window
      * the call showed, then the usage and the kind they show.
      */

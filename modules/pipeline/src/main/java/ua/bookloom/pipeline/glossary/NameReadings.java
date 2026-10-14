@@ -43,8 +43,7 @@ final class NameReadings {
 
     NameReadings(final PromptTemplates templates, final ObjectMapper mapper) {
         this.reading = new TermReading(templates, mapper);
-        // The review does not know which model answers, and no model has passed the coreference gate yet.
-        this.verdicts = new ReadingVerdict(templates, mapper, ReadingVotes.modeFor(null));
+        this.verdicts = new ReadingVerdict(templates, mapper);
     }
 
     /**
@@ -211,6 +210,7 @@ final class NameReadings {
                 decision.type(),
                 decision.gender(),
                 decision.quote(),
-                decision.origin() == GenderOrigin.VERIFIED);
+                decision.origin() == GenderOrigin.VERIFIED,
+                true);
     }
 }

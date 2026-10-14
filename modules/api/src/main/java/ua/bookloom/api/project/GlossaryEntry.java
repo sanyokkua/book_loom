@@ -23,8 +23,9 @@ import org.jspecify.annotations.Nullable;
  * @param locked whether the term's rendering is locked against automatic revision
  * @param origin who chose the target; {@link TargetOrigin#PERSON} unless the entry is unlocked and has a target
  * @param genderOrigin who or what the known gender came from (15i.N0); null exactly when the gender is
- *     {@link Gender#UNKNOWN}. A known gender stated with no origin is {@link GenderOrigin#PERSON}'s, and a lock turns a
- *     {@link GenderOrigin#SUGGESTED} gender into the person's because a lock confirms what the entry holds
+ *     {@link Gender#UNKNOWN}. A known gender stated with no origin is {@link GenderOrigin#PERSON}'s; the person's lock
+ *     ({@link #withLocked(boolean)}) turns a {@link GenderOrigin#SUGGESTED} gender into the person's because it
+ *     confirms what the entry holds, while a rule's lock ({@link #withRuleLock()}) confirms nothing
  * @param genderSeedTried whether the first-name list was already consulted for this entry, or the person set its
  *     gender (even back to {@link Gender#UNKNOWN}); an entry with this flag is never seeded again
  * @param aliases the other spellings the name scan folded into the term (a plural, a one-letter misspelling), which
@@ -56,7 +57,7 @@ public record GlossaryEntry(
         if (locked || target == null || target.isBlank()) {
             origin = TargetOrigin.PERSON;
         }
-        genderOrigin = originOf(gender, locked, genderOrigin);
+        genderOrigin = originOf(gender, genderOrigin);
         aliases = List.copyOf(Objects.requireNonNull(aliases, "aliases"));
     }
 
@@ -81,7 +82,7 @@ public record GlossaryEntry(
                 gender,
                 locked,
                 origin,
-                suggestedOrigin(genderSuggested),
+                suggestedOrigin(genderSuggested && !locked),
                 genderSeedTried,
                 List.of());
     }
@@ -202,6 +203,28 @@ public record GlossaryEntry(
                 gender,
                 lock,
                 lock ? TargetOrigin.PERSON : origin,
+                lock && genderOrigin == GenderOrigin.SUGGESTED ? GenderOrigin.PERSON : genderOrigin,
+                genderSeedTried,
+                aliases);
+    }
+
+    /**
+     * This entry locked by a rule of the code (a brand or a name kept as written, a checked name where names are not
+     * declined): the rendering is fixed, but nothing the person did not see is confirmed, so a suggested gender stays a
+     * suggestion. Only the person's lock ({@link #withLocked(boolean)}) confirms the gender.
+     *
+     * @return a locked copy with the gender origin kept
+     */
+    public GlossaryEntry withRuleLock() {
+        return new GlossaryEntry(
+                id,
+                projectId,
+                term,
+                target,
+                type,
+                gender,
+                true,
+                TargetOrigin.PERSON,
                 genderOrigin,
                 genderSeedTried,
                 aliases);
@@ -321,14 +344,10 @@ public record GlossaryEntry(
         return suggested ? GenderOrigin.SUGGESTED : null;
     }
 
-    private static @Nullable GenderOrigin originOf(
-            final Gender gender, final boolean locked, @Nullable final GenderOrigin stated) {
+    private static @Nullable GenderOrigin originOf(final Gender gender, @Nullable final GenderOrigin stated) {
         if (gender == Gender.UNKNOWN) {
             return null;
         }
-        if (stated == null || (locked && stated == GenderOrigin.SUGGESTED)) {
-            return GenderOrigin.PERSON;
-        }
-        return stated;
+        return stated == null ? GenderOrigin.PERSON : stated;
     }
 }

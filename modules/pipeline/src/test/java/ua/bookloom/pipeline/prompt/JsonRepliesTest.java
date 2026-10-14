@@ -24,4 +24,12 @@ class JsonRepliesTest {
     void tolerant_textThatIsNotJson_isEmpty(final String reply) {
         assertThat(JsonReplies.tolerant(mapper, reply)).isEmpty();
     }
+
+    // A model copies a quote from the book with its tab; strict JSON refuses the raw control character (15i.N gate).
+    @Test
+    void tolerant_rawTabInsideAString_isRead() {
+        assertThat(JsonReplies.tolerant(new ObjectMapper(), "{\"quote\":\"grab her and put\t\",\"usage\":\"name\"}"))
+                .hasValueSatisfying(
+                        root -> assertThat(root.path("usage").asText()).isEqualTo("name"));
+    }
 }

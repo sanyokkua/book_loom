@@ -39,8 +39,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
  * The review runs one path for every entry (15i.N5): an entry the dial's {@link NamesPlan} reads is read in context
- * ({@code term-reading}, one term per call) and decided by the code from the readings, with a {@code term-tiebreak}
- * where the readings oppose a dominant tally; every other open entry goes to the batched {@code review-terms} call. A
+ * ({@code term-reading}, one term per call) and decided by the code from the readings; every other open entry goes
+ * to the batched {@code review-terms} call. A
  * recording model answers each call by its response format; the book is invented.
  */
 class TermReviewReadingTest {
@@ -52,7 +52,6 @@ class TermReviewReadingTest {
     private static final Pattern LISTED_TERM = Pattern.compile("^- (.+?) — ", Pattern.MULTILINE);
     private static final String READING = "term-reading";
     private static final String REVIEW = "review-terms";
-    private static final String TIEBREAK = "term-tiebreak";
     private static final String HE_NODDED = "Brann met Tove. He nodded.";
     private static final String SHE_LEFT = "Brann smiled. She left.";
 
@@ -106,10 +105,10 @@ class TermReviewReadingTest {
     }
 
     /**
-     * A model that answers each call by its response format: a reading with the given reply, a tiebreak with the given
-     * reply, a review batch with "a name, other, no gender" for each listed term, and no target suggestions.
+     * A model that answers each call by its response format: a reading with the given reply, a review batch with "a
+     * name, other, no gender" for each listed term, and no target suggestions.
      */
-    private ModelCalls model(final String reading, final String tiebreak) {
+    private ModelCalls model(final String reading) {
         return (kind, segmentId, request) -> {
             final String format = formatOf(request);
             kinds.add(kind);
@@ -118,7 +117,6 @@ class TermReviewReadingTest {
             return reply(
                     switch (format) {
                         case READING -> reading;
-                        case TIEBREAK -> tiebreak;
                         case REVIEW -> reviewReply(request.messages().getLast().content());
                         default -> "{\"suggestions\":[]}";
                     });
@@ -173,7 +171,7 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.BALANCED,
-                model(readingReply("name", "person", "He nodded", "male"), "{}"));
+                model(readingReply("name", "person", "He nodded", "male")));
 
         assertThat(callsByFormat()).containsEntry(READING, 1L).containsEntry(REVIEW, 1L);
         assertThat(usersOf(READING))
@@ -189,6 +187,29 @@ class TermReviewReadingTest {
         assertThat(kinds).contains(CallKind.TERM_READING, CallKind.REVIEW_TERMS);
     }
 
+    // A pronoun seed made the word a character ("he" after it four times: its neighbour's); the readings' type replaces
+    // the seeded one and takes its gender away (15i.N gate: a city and a spell ended as men).
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}/{1} -> {2}")
+    @org.junit.jupiter.params.provider.CsvSource({"name,place,PLACE", "title,other,TITLE", "name,thing,TERM"})
+    void review_seededCharacterTheReadingsTypeOtherwise_takesTheirTypeAndNoGender(
+            final String usage, final String kind, final TermType type) {
+        glossary.add(entry("Varnholt", TermType.CHARACTER).withSuggestedGender(Gender.MALE));
+        final BookSlice book = GlossaryTestSegments.of(days(repeated("Varnholt stood there. He waited.", 4)));
+
+        review.review(
+                PROJECT,
+                book,
+                FRAME,
+                POLICY,
+                QualityDial.BALANCED,
+                model(readingReply(usage, kind, "Varnholt stood there", "none")));
+
+        assertThat(formats).contains(READING);
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::gender)
+                .containsExactly(tuple("Varnholt", type, Gender.UNKNOWN));
+    }
+
     // The decision is the code's from the readings. No model has passed the coreference gate, so its votes only break
     // ties: with no pronoun the code reads after the name, six verified "he" make the character a man, suggested.
     @Test
@@ -202,7 +223,7 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.BALANCED,
-                model(readingReply("name", "person", "He nodded", "male"), "{}"));
+                model(readingReply("name", "person", "He nodded", "male")));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(
@@ -222,7 +243,7 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.FAST,
-                model(readingReply("name", "person", "He nodded", "male"), "{}"));
+                model(readingReply("name", "person", "He nodded", "male")));
 
         assertThat(formats).doesNotContain(READING);
         assertThat(usersOf(REVIEW)).singleElement().asString().contains("- Brann — ");
@@ -247,16 +268,17 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.BALANCED,
-                model(readingReply("word", "other", "Mark the spot", "none"), "{}"));
+                model(readingReply("word", "other", "Mark the spot", "none")));
 
         assertThat(glossary.all(PROJECT).data()).isEmpty();
         assertThat(formats).doesNotContain(REVIEW);
     }
 
     // The readings say "he" (after another name) and the code reads "she" ×4 after the name. Votes only break ties
-    // for every model today (15i.N4 coref round), so the clear tally stands, verified, and no tiebreak call is made.
+    // for every model today (15i.N4 coref round), so the clear tally stands and no tiebreak call is made; no vote
+    // agrees with it, so it is a suggestion (15i.N gate).
     @Test
-    void review_readingsAgainstADominantTally_askNoTiebreakAndTheTallyStandsVerified() {
+    void review_readingsAgainstADominantTally_askNoTiebreakAndTheTallyStandsSuggested() {
         glossary.add(entry("Brann", TermType.CHARACTER));
 
         review.review(
@@ -265,19 +287,17 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.BALANCED,
-                model(
-                        readingReply("name", "person", "He nodded", "male"),
-                        "{\"gender\":\"female\",\"quote\":\"She left\"}"));
+                model(readingReply("name", "person", "He nodded", "male")));
 
-        assertThat(formats).contains(READING).doesNotContain(TIEBREAK);
+        assertThat(formats).contains(READING);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple("Brann", Gender.FEMALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple("Brann", Gender.FEMALE, GenderOrigin.SUGGESTED));
     }
 
     // The person's gender is never re-decided: the same tie costs no call and the person's "male" stays.
     @Test
-    void review_personSetGenderInATie_isUntouchedAndAsksNoTiebreak() {
+    void review_personSetGenderInATie_isUntouched() {
         glossary.add(entry("Brann", TermType.CHARACTER).withGender(Gender.MALE));
 
         review.review(
@@ -286,11 +306,8 @@ class TermReviewReadingTest {
                 FRAME,
                 POLICY,
                 QualityDial.BALANCED,
-                model(
-                        readingReply("name", "person", "He nodded", "male"),
-                        "{\"gender\":\"female\",\"quote\":\"She left\"}"));
+                model(readingReply("name", "person", "He nodded", "male")));
 
-        assertThat(formats).doesNotContain(TIEBREAK);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(tuple("Brann", Gender.MALE, GenderOrigin.PERSON));

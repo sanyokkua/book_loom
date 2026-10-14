@@ -91,8 +91,10 @@ class SuggestTargetsClusterTest {
         assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Арло Венн");
     }
 
+    // A surname two people share joins neither person's cluster, but one word of a person's name has one rendering in
+    // every name (15i.N gate): the family's surname is spelled alike, and nobody's first name is touched.
     @Test
-    void suggest_namesOfDifferentPeople_areNeverAlignedToEachOther() {
+    void suggest_surnameOfTwoPeople_joinsNeitherButTakesTheirSharedSpelling() {
         final GlossaryEntry otherVenn = entry("Mira Venn", TermType.CHARACTER, Gender.FEMALE, null);
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(says("Arlo Venn", "Арло Венн", "Mira Venn", "Міра Венн", "Venn", "Вен"));
@@ -102,6 +104,7 @@ class SuggestTargetsClusterTest {
 
         assertThat(suggested.data())
                 .extracting(s -> s.entry().term(), Suggestion::target)
-                .contains(tuple("Venn", "Вен"));
+                .containsExactly(
+                        tuple("Arlo Venn", "Арло Венн"), tuple("Mira Venn", "Міра Венн"), tuple("Venn", "Венн"));
     }
 }

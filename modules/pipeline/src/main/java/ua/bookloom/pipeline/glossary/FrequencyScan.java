@@ -40,7 +40,8 @@ import ua.bookloom.util.text.JunkRules;
  * wall"). A word on the language's bundled stop-word list never starts or joins a name.
  * A capitalised word at a sentence start counts when the book writes it with a capital mid-sentence at least
  * {@link #CREDIT_MIN_MID_SENTENCE} times, so a name that often opens a sentence is not undercounted, and a single word
- * that mostly occurs inside a longer name ({@code Garrick} of {@code Garrick Ashdown}) is not proposed on its own.
+ * that mostly occurs inside a longer name ({@code Garrick} of {@code Garrick Ashdown}) is not proposed on its own,
+ * unless the book writes it alone {@link #ALIAS_MIN_ALONE} times or more.
  * Spellings that differ only in letter case are folded first ({@link CaseVariants}); the list ends with the
  * {@link CandidateTriage}, which drops heading-only names and joins a written pair.
  */
@@ -66,6 +67,13 @@ public final class FrequencyScan {
 
     /** A single word standing alone less than this share of its occurrences is part of a longer name. */
     static final double ALIAS_STANDALONE_LIMIT = 0.4;
+
+    /**
+     * A single word the book writes alone at least this often is a name of its own whatever its share, since a
+     * segment that writes it alone needs it in the glossary (15i.N gate: a first name written alone 34 times beside
+     * 76 uses of the full name).
+     */
+    static final int ALIAS_MIN_ALONE = 10;
 
     /**
      * Counts the capitalised words and runs of some of the book's segments, read from the book's index.
@@ -240,6 +248,14 @@ public final class FrequencyScan {
                 .toList();
         final int inside = longer.stream().mapToInt(NameCandidate::count).sum();
         final double standalone = (double) tally.count() / (tally.count() + inside);
+        if (inside > 0 && standalone < ALIAS_STANDALONE_LIMIT && tally.count() >= ALIAS_MIN_ALONE) {
+            log.debug("Name candidate kept: inside a longer name mostly, but alone {} times", tally.count());
+            log.trace(
+                    "Name candidate {} kept beside {}",
+                    tally.term(),
+                    longer.getFirst().term());
+            return true;
+        }
         if (inside > 0 && standalone < ALIAS_STANDALONE_LIMIT) {
             log.debug(
                     "Name candidate {} dropped: part of {}, alone {} of the time",

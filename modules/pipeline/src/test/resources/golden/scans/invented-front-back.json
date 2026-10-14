@@ -143,7 +143,7 @@
       } ],
       "pronouns" : {
         "female" : [ ],
-        "male" : [ ],
+        "male" : [ "mr" ],
         "femaleObject" : [ ],
         "maleObject" : [ ]
       }
@@ -206,7 +206,7 @@
     },
     "Pell" : {
       "female" : [ ],
-      "male" : [ ],
+      "male" : [ "mr" ],
       "femaleObject" : [ ],
       "maleObject" : [ ]
     }

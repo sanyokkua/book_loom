@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.glossary;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -76,6 +77,14 @@ public final class LexiconReading {
     private static final WindowPlan FAST_PLAN = new WindowPlan(1, 0, 150);
     private static final WindowPlan BALANCED_PLAN = new WindowPlan(3, 1, 300);
     private static final WindowPlan MAX_PLAN = new WindowPlan(4, 2, 450);
+
+    /** How many of the book's most frequent words a model scan considers. */
+    public static final int SCAN_POOL = 300;
+
+    // A model scan reads this many of its most frequent candidates in windows before the batch choice narrows the
+    // rest: none at Fast (the batch decides), 30 at Balanced, 60 at Max.
+    private static final int BALANCED_READ_FIRST = 30;
+    private static final int MAX_READ_FIRST = 60;
     // A reply is a quote of a few words and a label per window, the sense count and one rendering.
     private static final int BASE_TOKENS = 48;
     private static final int TOKENS_PER_WINDOW = 64;
@@ -85,6 +94,21 @@ public final class LexiconReading {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final TermChoice termChoice;
+
+    /**
+     * How many of a model scan's most frequent candidates the dial reads one by one before the batch choice narrows the
+     * rest.
+     *
+     * @param dial the quality dial; never null
+     * @return 0 at Fast, 30 at Balanced, 60 at Max
+     */
+    public static int readFirst(final QualityDial dial) {
+        return switch (Objects.requireNonNull(dial, "dial")) {
+            case FAST -> 0;
+            case BALANCED -> BALANCED_READ_FIRST;
+            case MAX -> MAX_READ_FIRST;
+        };
+    }
 
     /**
      * The windows the dial reads for a term.
@@ -130,6 +154,66 @@ public final class LexiconReading {
                 "Lexicon reading finished decided={}",
                 result.isOk() ? Objects.requireNonNull(result.data()).size() : 0);
         return result;
+    }
+
+    /**
+     * Reads the candidates of a model scan, which are many and mostly ordinary words: at Fast as {@link #read}; at
+     * Balanced and Max the {@link #readFirst} most frequent are read in windows as {@link #read} does, and the rest of
+     * the pool only where the batch choice ({@link TermChoice}) keeps them, so a wide pool reaches the book's rarer
+     * terms of craft for a call per ten words while no word read before is left to the batch's coarser verdict (the
+     * batch dropped a distress call the reading keeps; 15i.N gate).
+     *
+     * @param terms the candidate words; never null
+     * @param story the slice of the book to read; never null
+     * @param dial the quality dial; never null
+     * @param frame the run's language pair; never null
+     * @param calls the seam every model call goes through; never null
+     * @return a decision for every candidate, by {@code LexiconEntry.keyOf(term)}: the reading's for a word read,
+     *     {@link Verdict#DROP} for one the choice drops and {@link Verdict#UNDECIDED} for the rest; or the first failed
+     *     call's error, in which case nothing is decided
+     */
+    public Result<Map<String, Decision>> scan(
+            final List<String> terms,
+            final BookSlice story,
+            final QualityDial dial,
+            final CallFrame frame,
+            final ModelCalls calls) {
+        Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(dial, "dial");
+        if (dial == QualityDial.FAST) {
+            return read(terms, story, dial, frame, calls);
+        }
+        log.info("Lexicon scan reading started dial={} candidates={}", dial, terms.size());
+        final List<String> first = terms.subList(0, Math.min(terms.size(), readFirst(dial)));
+        final List<String> rest = terms.subList(first.size(), terms.size());
+        return termChoice.choose(rest, story, frame, calls).flatMap(choice -> {
+            final List<String> chosen = new ArrayList<>(first);
+            rest.stream()
+                    .filter(term -> choice.kept().contains(LexiconEntry.keyOf(term)))
+                    .forEach(chosen::add);
+            log.info(
+                    "Lexicon scan reading: {} read first, the batch choice kept {} of the other {}",
+                    first.size(),
+                    chosen.size() - first.size(),
+                    rest.size());
+            return readInWindows(chosen, story, planOf(dial), frame, calls)
+                    .map(read -> decisionsOf(terms, read, choice));
+        });
+    }
+
+    // A word read has its reading's decision; one the batch dropped is dropped, the rest undecided.
+    private static Map<String, Decision> decisionsOf(
+            final List<String> terms, final Map<String, Decision> read, final TermChoice.Choice choice) {
+        final Map<String, Decision> decisions = new LinkedHashMap<>();
+        for (final String term : terms) {
+            final String key = LexiconEntry.keyOf(term);
+            decisions.putIfAbsent(
+                    key,
+                    read.getOrDefault(
+                            key,
+                            choice.dropped().contains(key) ? new Decision(Verdict.DROP, null) : Decision.undecided()));
+        }
+        return decisions;
     }
 
     private Result<Map<String, Decision>> readByChoice(

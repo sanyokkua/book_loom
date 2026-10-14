@@ -58,7 +58,6 @@ class PromptShapeTest {
             Map.entry("brief-synthesis", "genre"),
             Map.entry("term-reading", "windows"),
             Map.entry("lexicon-reading", "windows"),
-            Map.entry("term-tiebreak", "gender"),
             Map.entry("term-summary", "usage"));
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
@@ -112,7 +111,6 @@ class PromptShapeTest {
                 "BRIEF_SYNTHESIS",
                 "TERM_READING",
                 "LEXICON_READING",
-                "TERM_TIEBREAK",
                 "TERM_SUMMARY"
             },
             mode = EnumSource.Mode.EXCLUDE)

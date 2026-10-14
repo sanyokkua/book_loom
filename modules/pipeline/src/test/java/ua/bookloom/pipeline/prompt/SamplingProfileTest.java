@@ -42,14 +42,13 @@ class SamplingProfileTest {
         assertThat(SamplingProfile.of(PromptName.TERM_READING)).isEqualTo(SamplingProfile.ANALYSIS);
     }
 
-    // 15i.N5: the tiebreak and the summary answer from closed lists and a copied quote, as the reading does; so does
-    // the
-    // recurring term's reading (15i.N7).
+    // 15i.N5: the summary answers from closed lists and a copied quote, as the reading does; so does the recurring
+    // term's reading (15i.N7).
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"TERM_TIEBREAK", "TERM_SUMMARY", "LEXICON_READING"})
-    void of_termTiebreakAndSummary_areAnalysisCalls(final PromptName name) {
+            names = {"TERM_SUMMARY", "LEXICON_READING"})
+    void of_termSummaryAndLexiconReading_areAnalysisCalls(final PromptName name) {
         assertThat(SamplingProfile.of(name)).isEqualTo(SamplingProfile.ANALYSIS);
     }
 }

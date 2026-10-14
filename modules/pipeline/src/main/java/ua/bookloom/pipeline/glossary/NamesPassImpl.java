@@ -5,7 +5,6 @@ import com.google.inject.Inject;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +34,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
-import ua.bookloom.pipeline.glossary.NamesPlan.Minutes;
 import ua.bookloom.pipeline.glossary.TermReview.Reviewed;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -159,27 +157,22 @@ public final class NamesPassImpl implements NamesPass {
                 }));
     }
 
-    // The plan of the open names, so an empty glossary is estimated from what its scan would hold.
-    private static NamePlanView planOf(final Stage stage) {
+    // The calls of the whole pass over the open names, so an empty glossary is estimated from what its scan would hold.
+    private static NamesEstimate estimateOf(final Stage stage) {
         final List<GlossaryEntry> open =
                 stage.names().entries().stream().filter(TermReview::isOpen).toList();
-        final NamesPlan plan = NamesPlan.of(
-                stage.book().dial(), NamesPlan.candidates(open, stage.book().story()));
-        return new NamePlanView(plan.estimatedCalls(), plan.estimatedMinutes());
-    }
-
-    private record NamePlanView(int calls, Minutes minutes) {}
-
-    private static NamesEstimate estimateOf(final Stage stage) {
-        final NamePlanView view = planOf(stage);
+        final NamesEstimate estimate = NamesPassEstimate.of(
+                open,
+                stage.book().story(),
+                stage.book().dial(),
+                stage.book().frame().analysisLanguage());
         log.debug(
                 "Names estimate project={} calls={} minutes={}-{}",
                 stage.projectId(),
-                view.calls(),
-                view.minutes().low(),
-                view.minutes().high());
-        return new NamesEstimate(
-                view.calls(), view.minutes().low(), view.minutes().high());
+                estimate.calls(),
+                estimate.minutesLow(),
+                estimate.minutesHigh());
+        return estimate;
     }
 
     private Result<NamesPassReport> execute(final Run run) {
@@ -202,14 +195,14 @@ public final class NamesPassImpl implements NamesPass {
     }
 
     private static void logEstimate(final Stage stage, final int scanned) {
-        final NamePlanView view = planOf(stage);
+        final NamesEstimate estimate = estimateOf(stage);
         log.info(
-                "Names pass project={} scanned={} plan: about {} reading calls, {}-{} min",
+                "Names pass project={} scanned={} plan: about {} calls, {}-{} min",
                 stage.projectId(),
                 scanned,
-                view.calls(),
-                view.minutes().low(),
-                view.minutes().high());
+                estimate.calls(),
+                estimate.minutesLow(),
+                estimate.minutesHigh());
     }
 
     // The recurring terms: the held ones without a rendering are read first, so a term the model drops is not asked
@@ -287,59 +280,7 @@ public final class NamesPassImpl implements NamesPass {
 
     private Result<Boolean> store(
             final String projectId, final EntryChanges<GlossaryEntry> names, final EntryChanges<LexiconEntry> terms) {
-        final Result<Boolean> storedNames = storeNames(projectId, names);
-        return storedNames.isErr() ? storedNames : storeTerms(projectId, terms);
-    }
-
-    private Result<Boolean> storeNames(final String projectId, final EntryChanges<GlossaryEntry> names) {
-        for (final EntryChanges.Removal<GlossaryEntry> removal : names.removed()) {
-            final Result<Boolean> done =
-                    glossary.remove(projectId, removal.entry().id());
-            if (done.isErr()) {
-                return done;
-            }
-        }
-        for (final EntryChanges.Change<GlossaryEntry> change : names.changed()) {
-            final Result<GlossaryEntry> done = glossary.update(change.after());
-            if (done.isErr()) {
-                return failed(done);
-            }
-        }
-        for (final GlossaryEntry added : names.added()) {
-            final Result<GlossaryEntry> done = glossary.add(added);
-            if (done.isErr()) {
-                return failed(done);
-            }
-        }
-        return Result.ok(true);
-    }
-
-    private Result<Boolean> storeTerms(final String projectId, final EntryChanges<LexiconEntry> terms) {
-        for (final EntryChanges.Removal<LexiconEntry> removal : terms.removed()) {
-            final Result<Boolean> done =
-                    lexicon.remove(projectId, removal.entry().term());
-            if (done.isErr()) {
-                return done;
-            }
-        }
-        for (final LexiconEntry entry : changedAndAdded(terms)) {
-            final Result<LexiconEntry> done = lexicon.put(entry);
-            if (done.isErr()) {
-                return failed(done);
-            }
-        }
-        return Result.ok(true);
-    }
-
-    private static List<LexiconEntry> changedAndAdded(final EntryChanges<LexiconEntry> terms) {
-        final List<LexiconEntry> entries = new ArrayList<>();
-        terms.changed().forEach(change -> entries.add(change.after()));
-        entries.addAll(terms.added());
-        return entries;
-    }
-
-    private static <A, B> Result<B> failed(final Result<A> result) {
-        return Result.err(Objects.requireNonNull(result.error(), "error"));
+        return new NamesPassStore(glossary, lexicon, segments, deferrals).store(projectId, names, terms);
     }
 
     // Stop interrupts the calling thread: a step does not start once it has, and a call in a step is refused.

@@ -128,12 +128,13 @@ class NamesScoreTest {
     void of_charactersMentionedFiveTimes_countGenderCorrectAndWrongButVerified() {
         final NamesScore score = score();
 
-        // Eligible: Dax Orlo, Dax, Ysolde, Ysa, Valtern, Perpetua. Right: Dax Orlo. Wrong with a verified (unsuggested)
-        // gender: Dax and Valtern; Ysolde's wrong gender is only suggested, and Ysa and Perpetua have no entry.
-        assertThat(score.eligible()).isEqualTo(6);
+        // Eligible: Dax Orlo, Dax, Ysolde, Ysa, Perpetua (the place Valtern carries no gender). Right: Dax Orlo. Wrong
+        // with a verified (unsuggested) gender: Dax; Ysolde's wrong gender is only suggested, and Ysa and Perpetua have
+        // no entry.
+        assertThat(score.eligible()).isEqualTo(5);
         assertThat(score.genderCorrect()).isEqualTo(1);
-        assertThat(score.wrongButVerified()).isEqualTo(2);
-        assertThat(score.genderAccuracy()).isEqualTo(1.0 / 6);
+        assertThat(score.wrongButVerified()).isEqualTo(1);
+        assertThat(score.genderAccuracy()).isEqualTo(1.0 / 5);
     }
 
     @Test
@@ -156,7 +157,7 @@ class NamesScoreTest {
     }
 
     @Test
-    void of_clusterTargets_countDistinctFirstWordsOfTheName() {
+    void of_clusterTargets_countTheMostRenderingsOfOneSourceWord() {
         final NamesScore score = score();
 
         // dax: "Дакс Орло" and "Декс" are two spellings of the name; ysolde: one.
@@ -289,10 +290,57 @@ class NamesScoreTest {
     @Test
     void json_score_isTheNumbersWithClusterIdsSortedAndRatesToThreeDecimals() {
         assertThat(score().json())
-                .isEqualTo("{\"eligible\":6,\"genderCorrect\":1,\"wrongButVerified\":2,\"genderAccuracy\":0.167,"
+                .isEqualTo("{\"eligible\":5,\"genderCorrect\":1,\"wrongButVerified\":1,\"genderAccuracy\":0.2,"
                         + "\"typeCorrect\":3,\"typeScored\":7,\"typeAccuracy\":0.429,\"clusters\":2,"
                         + "\"clustersWithOneGender\":1,\"clusterRate\":0.5,\"spellings\":{\"dax\":2,\"ysolde\":1},"
                         + "\"junkKept\":1,\"realNamesLost\":3,\"recurringKept\":1,\"recurringDropped\":1,"
                         + "\"recurringJunkKept\":1,\"calls\":12,\"minutes\":1.5}");
+    }
+
+    @Test
+    void diagnostics_ofTheSameRun_listTheCasesBehindTheCounts() {
+        final NamesDiagnostics cases = NamesDiagnostics.of(GOLD, BOOK, glossary(), lexicon(), score());
+
+        assertThat(cases.wrongGender())
+                .extracting(NamesDiagnostics.Miss::term, NamesDiagnostics.Miss::got, NamesDiagnostics.Miss::isVerified)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Dax", Gender.FEMALE, true),
+                        org.assertj.core.groups.Tuple.tuple("Ysolde", Gender.MALE, false),
+                        org.assertj.core.groups.Tuple.tuple("Ysa", Gender.UNKNOWN, false),
+                        org.assertj.core.groups.Tuple.tuple("Perpetua", Gender.UNKNOWN, false));
+        assertThat(cases.junkKept()).containsExactly("Mayday");
+        assertThat(cases.recurringKept()).containsExactly("bankers");
+        assertThat(cases.recurringDropped()).containsExactly("guild");
+        assertThat(cases.recurringJunkKept()).containsExactly("mark");
+        assertThat(cases.spellings().get("dax")).containsExactly("Dax Orlo → Dax Orlo → Дакс Орло", "Dax → Dax → Декс");
+        assertThat(cases.json().get("wrongVerified").toString()).isEqualTo("[\"Dax\"]");
+    }
+
+    @Test
+    void of_shortAndFullFormsRenderedAlike_isOneSpellingAndAStrayWordMakesTwo() {
+        final JudgementGold gold = new JudgementGold(
+                null,
+                "en",
+                "uk",
+                GOLD.brief(),
+                List.of(
+                        new JudgementGold.Person("Dax Orlo", TermType.CHARACTER, Gender.MALE, "dax"),
+                        new JudgementGold.Person("Dax", TermType.CHARACTER, Gender.MALE, "dax"),
+                        new JudgementGold.Person("Orlo", TermType.CHARACTER, Gender.MALE, "dax"),
+                        new JudgementGold.Person("Ysolde", TermType.CHARACTER, Gender.FEMALE, "ysolde"),
+                        new JudgementGold.Person("Ysolde Hale", TermType.CHARACTER, Gender.FEMALE, "ysolde")),
+                List.of(),
+                List.of(),
+                List.of());
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Dax Orlo", "Дакс Орло", TermType.CHARACTER, Gender.MALE, false),
+                entry("Dax", "Дакс", TermType.CHARACTER, Gender.MALE, false),
+                entry("Orlo", "Орло", TermType.CHARACTER, Gender.MALE, false),
+                entry("Ysolde", "Ізольда", TermType.CHARACTER, Gender.FEMALE, false),
+                entry("Ysolde Hale", "Ізольд Гейл", TermType.CHARACTER, Gender.FEMALE, false));
+
+        final NamesScore score = NamesScore.of(gold, BOOK, glossary, List.of(), 0, Duration.ZERO);
+
+        assertThat(score.spellings()).containsOnly(Map.entry("dax", 1), Map.entry("ysolde", 2));
     }
 }

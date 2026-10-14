@@ -46,6 +46,9 @@ record NamesReport(String model, List<NamesRow> rows) {
                     throw new UncheckedIOException(e);
                 }
             }
+            if (row.diagnostics() != null) {
+                book.set("diagnostics", row.diagnostics().json());
+            }
         }
         return root.toString();
     }

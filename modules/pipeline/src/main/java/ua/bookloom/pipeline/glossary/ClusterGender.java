@@ -149,7 +149,7 @@ final class ClusterGender {
         }
         return switch (rank) {
             case PERSON -> current.withGender(gender);
-            case VERIFIED -> current.withInferredGender(gender);
+            case VERIFIED -> ReviewCommit.verified(current, gender);
             case SUGGESTED -> current.withSuggestedGender(gender);
         };
     }

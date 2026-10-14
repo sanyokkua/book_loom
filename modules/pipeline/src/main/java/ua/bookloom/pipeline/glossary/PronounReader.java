@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.pipeline.checks.QuotedSpans;
+import ua.bookloom.pipeline.prompt.GenderedTitles;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.Pronouns;
 
@@ -19,6 +21,12 @@ import ua.bookloom.pipeline.prompt.Pronouns;
  * blanked when the paragraph's straight quotes pair up, since a speaker's {@code he} is about somebody else, and the
  * narrator's own first-person pronoun ({@code I}) is no other name. An object or possessive form seen on the way is
  * kept apart, as weaker evidence ({@link PronounGender.Evidence}).
+ *
+ * <p>A use is the name's own only when it stands alone (15i.N gate): a use that ends a longer name, a capitalised word
+ * that is no stop word right before it ({@code Corin Vale}), is the longer name's and is not read; a use after a form
+ * of address that shows a gender ({@code Mrs. Vale}, language file {@code femaleTitles}/{@code maleTitles}) carries
+ * that form as its evidence instead of a pronoun, and so does every use of a name that opens with such a form
+ * ({@code Widow Brisk}).
  */
 final class PronounReader {
 
@@ -28,17 +36,29 @@ final class PronounReader {
     private static final Pattern TOKEN = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ]*|[.!?…]+");
     private static final Pattern TERMINATOR = Pattern.compile("[.!?…]+");
     private static final Pattern SPACES = Pattern.compile("\\s+");
+    private static final int LOOK_BACK = 40;
+    // The word right before a use, joined to it by blanks only: a capitalised one makes a longer name.
+    private static final Pattern WORD_BEFORE = Pattern.compile("(\\p{L}[\\p{L}\\p{M}'’ʼ]*\\.?)\\p{Zs}+$");
+    // What opens a sentence: the text's start or a closing mark, with any quotation mark or bracket after it.
+    private static final Pattern SENTENCE_OPENING = Pattern.compile("(?:^|[.!?…][\"'”’»)\\]]*)[\\s\"'“‘«(]*$");
 
     private final Pattern name;
     private final String probe;
     private final Tables tables;
     private final String language;
+    private final @Nullable Pronoun opening;
 
-    private PronounReader(final Pattern name, final String probe, final Tables tables, final String language) {
+    private PronounReader(
+            final Pattern name,
+            final String probe,
+            final Tables tables,
+            final String language,
+            final @Nullable Pronoun opening) {
         this.name = name;
         this.probe = probe;
         this.tables = tables;
         this.language = language;
+        this.opening = opening;
     }
 
     /**
@@ -56,7 +76,19 @@ final class PronounReader {
         if (tables.isEmpty()) {
             return null;
         }
-        return new PronounReader(namePattern(term), probeOf(term), tables, language);
+        return new PronounReader(namePattern(term), probeOf(term), tables, language, openingTitle(term, language));
+    }
+
+    // A name of two words or more that opens with a gendered form of address has that gender at every use.
+    private static @Nullable Pronoun openingTitle(final String term, final String language) {
+        final List<String> words = SPACES.splitAsStream(term.strip()).toList();
+        if (words.size() < 2) {
+            return null;
+        }
+        final String first = words.getFirst();
+        return GenderedTitles.genderOf(first, language)
+                .map(gender -> new Pronoun(first.toLowerCase(Locale.ROOT), gender, 0))
+                .orElse(null);
     }
 
     /**
@@ -74,9 +106,19 @@ final class PronounReader {
      * @param start where the name starts in the text
      * @param subject the first subject pronoun after it, or null when none can be its
      * @param object the first object or possessive form after it and before any subject pronoun, or null
+     * @param title the gendered form of address before the use or opening the name, its end the name's end; null
+     *     when there is none, and then the pronouns are read
      */
     record Mention(
-            int start, @Nullable Pronoun subject, @Nullable Pronoun object) {
+            int start,
+            @Nullable Pronoun subject,
+            @Nullable Pronoun object,
+            @Nullable Pronoun title) {
+
+        /** A use with no form of address. */
+        Mention(final int start, @Nullable final Pronoun subject, @Nullable final Pronoun object) {
+            this(start, subject, object, null);
+        }
 
         /**
          * The pronoun this mention gives its name: the subject pronoun, else the object form.
@@ -130,6 +172,19 @@ final class PronounReader {
     }
 
     List<Mention> read(final String text) {
+        return read(text, word -> false);
+    }
+
+    /**
+     * Reads the uses of the name in one text.
+     *
+     * @param text the text
+     * @param namedElsewhere whether a capitalised word that opens a sentence right before a use is a name the book
+     *     writes with a capital inside a sentence too ({@code Corin} of {@code Corin Vale}), so the use ends a longer
+     *     name; a word it rejects ({@code Later}) joins nothing
+     * @return the uses that are the name's own, in order; never null
+     */
+    List<Mention> read(final String text, final Predicate<String> namedElsewhere) {
         if (!text.contains(probe)) {
             return List.of();
         }
@@ -137,9 +192,55 @@ final class PronounReader {
         final List<Mention> mentions = new ArrayList<>();
         final Matcher mention = name.matcher(narration);
         while (mention.find()) {
-            mentions.add(mentionAfter(narration, mention.start(), mention.end()));
+            final Mention use = useAt(text, narration, mention.start(), mention.end(), namedElsewhere);
+            if (use != null) {
+                mentions.add(use);
+            }
         }
         return mentions;
+    }
+
+    // The use as its own: with the form of address that shows its gender, else with the pronouns after it; null when
+    // it ends a longer name. The word before is read in the text itself, where blanked speech leaves no gap to cross;
+    // a capitalised word that opens a sentence may be any word ("Later Vale left"), so it makes a longer name only
+    // when the book also writes it with a capital inside a sentence.
+    private @Nullable Mention useAt(
+            final String text,
+            final String narration,
+            final int start,
+            final int end,
+            final Predicate<String> namedElsewhere) {
+        if (opening != null) {
+            return new Mention(start, null, null, new Pronoun(opening.word(), opening.gender(), end));
+        }
+        final int from = Math.max(0, start - LOOK_BACK);
+        final Matcher before = WORD_BEFORE.matcher(text.substring(from, start));
+        if (before.find()) {
+            final String word = before.group(1);
+            final Gender titled = GenderedTitles.genderOf(word, language).orElse(null);
+            if (titled != null) {
+                return new Mention(start, null, null, new Pronoun(bare(word), titled, end));
+            }
+            final boolean opensSentence = SENTENCE_OPENING
+                    .matcher(text.substring(0, from + before.start(1)))
+                    .find();
+            if (isNameWord(word) && (!opensSentence || namedElsewhere.test(word))) {
+                return null;
+            }
+        }
+        return mentionAfter(narration, start, end);
+    }
+
+    // A capitalised word that ends no sentence, is no stop word and is not the narrator's "I" joins the use to it.
+    private boolean isNameWord(final String word) {
+        return Character.isUpperCase(word.codePointAt(0))
+                && !word.endsWith(".")
+                && !tables.firstPerson().contains(word)
+                && !StopWords.of(language).contains(word.toLowerCase(Locale.ROOT));
+    }
+
+    private static String bare(final String title) {
+        return title.toLowerCase(Locale.ROOT).replaceAll("\\.$", "");
     }
 
     // The first pronoun of the rest of this sentence and the next one, unless a capitalised word that does not open

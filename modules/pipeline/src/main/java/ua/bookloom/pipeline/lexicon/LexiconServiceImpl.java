@@ -34,6 +34,7 @@ import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.NameCandidate;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -53,7 +54,9 @@ public final class LexiconServiceImpl implements LexiconService {
     private final ProjectRepository projects;
     private final OpenProjects openProjects;
     private final GlossaryModelScans modelScans;
-    private static final int MAX_CANDIDATES = 120;
+    // The model scan's pool of frequent words: the batch choice narrows it before any reading (15i.N gate), so it can
+    // reach the book's rarer terms of craft (a few hundred places down by count) for about a call per ten words.
+    private static final int MAX_CANDIDATES = LexiconReading.SCAN_POOL;
 
     @Override
     public Result<List<LexiconEntry>> entries(final String projectId) {
@@ -221,7 +224,7 @@ public final class LexiconServiceImpl implements LexiconService {
                         .toList();
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
-                .readTerms(projectId, candidates, model, progress)
+                .scanTerms(projectId, candidates, model, progress)
                 .flatMap(decisions -> decisions().addDecided(projectId, candidates, decisions))
                 .flatMap(added -> {
                     log.info("Lexicon model scan project={} added={}", projectId, added);
@@ -231,15 +234,31 @@ public final class LexiconServiceImpl implements LexiconService {
 
     private Result<List<LexiconEntry>> runReview(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        return lexicon.all(projectId).flatMap(all -> {
-            // A term with a rendering — typed, verified in a draft, learned from the text or read — has earned its
-            // place and is not asked.
-            final List<LexiconEntry> asked =
-                    all.stream().filter(entry -> entry.established().isEmpty()).toList();
-            log.info("Lexicon review project={} terms={} asked={}", projectId, all.size(), asked.size());
-            return modelScans
-                    .readTerms(projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
-                    .flatMap(decisions -> decisions().applyReview(projectId, asked, decisions));
+        return lexicon.all(projectId)
+                .flatMap(all -> glossaryKeys(projectId).flatMap(names -> {
+                    // A term with a rendering — typed, verified in a draft, learned from the text or read — has earned
+                    // its
+                    // place and is not asked, and neither is a term the glossary holds (15i review).
+                    final List<LexiconEntry> asked = all.stream()
+                            .filter(entry -> entry.established().isEmpty())
+                            .filter(entry -> !names.contains(LexiconEntry.keyOf(entry.term())))
+                            .toList();
+                    log.info("Lexicon review project={} terms={} asked={}", projectId, all.size(), asked.size());
+                    return modelScans
+                            .readTerms(
+                                    projectId,
+                                    asked.stream().map(LexiconEntry::term).toList(),
+                                    model,
+                                    progress)
+                            .flatMap(decisions -> decisions().applyReview(projectId, asked, decisions));
+                }));
+    }
+
+    private Result<Set<String>> glossaryKeys(final String projectId) {
+        return glossary.all(projectId).map(names -> {
+            final Set<String> keys = new HashSet<>();
+            names.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
+            return keys;
         });
     }
 

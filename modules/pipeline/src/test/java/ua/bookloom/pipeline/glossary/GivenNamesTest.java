@@ -28,7 +28,10 @@ class GivenNamesTest {
         "Оксана,uk,FEMALE",
         "Сергей,ru,MALE",
         "Анна,ru,FEMALE",
-        "Mary,en-GB,FEMALE"
+        "Mary,en-GB,FEMALE",
+        "Johnny Brandle,en,MALE",
+        "Jeff,en,MALE",
+        "Becky,en,FEMALE"
     })
     void genderOf_listedFirstName_isTheListedGender(final String term, final String language, final Gender expected) {
         assertThat(GivenNames.genderOf(term, language)).contains(expected);

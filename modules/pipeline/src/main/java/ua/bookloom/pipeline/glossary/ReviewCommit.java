@@ -226,6 +226,13 @@ final class ReviewCommit {
      * or a thing takes no gender from the review.
      */
     static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
+        if (isSeededPersonReadOtherwise(now, verdict)) {
+            log.debug(
+                    "Glossary review: entry {} was a character by its pronouns only, the readings make it {}",
+                    now.id(),
+                    verdict.type());
+            return now.withType(verdict.type()).withGender(Gender.UNKNOWN);
+        }
         final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
         if (typed.type() != TermType.CHARACTER || verdict.gender() == Gender.UNKNOWN) {
             return typed;
@@ -246,8 +253,22 @@ final class ReviewCommit {
         return replaces ? verified(typed, verdict.gender()) : typed;
     }
 
-    // A verified verdict stands as a verified gender even where it agrees with the suggestion it replaces.
-    private static GlossaryEntry verified(final GlossaryEntry entry, final Gender gender) {
+    // A pronoun seed types a word a character from the "he" that follows it, often a neighbour's; the in-context
+    // readings' majority is the stronger evidence, so their place, term or title replaces that type and the seeded
+    // gender goes (15i.N gate). A type and gender anybody confirmed stay.
+    private static boolean isSeededPersonReadOtherwise(final GlossaryEntry now, final Verdict verdict) {
+        return verdict.read()
+                && !now.locked()
+                && now.type() == TermType.CHARACTER
+                && now.genderOrigin() == GenderOrigin.SUGGESTED
+                && verdict.type() != TermType.CHARACTER
+                && verdict.type() != TermType.OTHER;
+    }
+
+    // A verified verdict stands as a verified gender even where it agrees with the suggestion it replaces; the
+    // cluster's
+    // reconciliation upgrades its members the same way.
+    static GlossaryEntry verified(final GlossaryEntry entry, final Gender gender) {
         return new GlossaryEntry(
                 entry.id(),
                 entry.projectId(),

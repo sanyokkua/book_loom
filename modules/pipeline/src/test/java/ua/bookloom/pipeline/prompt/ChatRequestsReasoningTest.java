@@ -43,9 +43,9 @@ class ChatRequestsReasoningTest {
                 .isFalse();
     }
 
-    // The arms the eval measures are told apart: a term reading and its tiebreak share a call kind, not a plan entry.
+    // The arms the eval measures are told apart: a term reading and its summary share a call kind, not a plan entry.
     @Test
-    void build_planNamesTheTermReading_leavesTheTiebreakAndTheBriefOff() {
+    void build_planNamesTheTermReading_leavesTheSummaryOff() {
         System.setProperty(ReasoningPlan.PROPERTY_NAME, "TERM_READING=on,BRIEF_SYNTHESIS=on");
 
         assertThat(ChatRequests.build(PromptName.TERM_READING, MESSAGES, null, false)
@@ -54,7 +54,7 @@ class ChatRequestsReasoningTest {
         assertThat(ChatRequests.build(PromptName.BRIEF_SYNTHESIS, MESSAGES, null, false)
                         .reasoningEnabled())
                 .isTrue();
-        assertThat(ChatRequests.build(PromptName.TERM_TIEBREAK, MESSAGES, null, false)
+        assertThat(ChatRequests.build(PromptName.TERM_SUMMARY, MESSAGES, null, false)
                         .reasoningEnabled())
                 .isFalse();
     }

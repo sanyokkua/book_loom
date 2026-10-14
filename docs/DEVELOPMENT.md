@@ -1257,7 +1257,13 @@ BOOKLOOM_CORPUS_DIR=/abs/books scripts/eval-matrix.sh --suite names     # the co
 it runs too, its mentions counted in the book's story text. The report is `build/reports/promptEval/<model>-names.{txt,json}` and the
 history; the matrix prints, per model and book, gender % over the eligible characters, wrong-but-verified, type %, the share of
 person clusters with one gender, spellings per cluster (1 is ideal), junk kept, names lost, recurring terms right, calls and minutes.
-It measures and asserts no floor.
+It measures and asserts no floor. The books are read at `BOOKLOOM_EVAL_DIAL` (Balanced by default; before 15i's names gate the
+suite read every book at Fast whatever its report said). Gender is scored over gold persons only (type `CHARACTER`, five or more
+mentions): a place, a thing or a title carries no gender. A cluster's spellings are counted word by word: each source word of a
+member whose rendering has as many words is paired with the rendering's word in its place, and the cluster counts the most
+renderings one source word got. Each book's JSON also carries a `diagnostics` object (`NamesDiagnostics`) with the cases behind
+the numbers: each wrong gender with its origin, the wrong types, the lost names, each cluster's renderings, the junk kept, the
+recurring terms per gold decision, the other lexicon terms and the whole final glossary.
 
 The names gold extends the gold file above with these keys (the older code ignores them): `characters[].cluster` (the id shared by
 every written form of one person, such as "Dax" and "Dax Orlo"; absent for a name of its own), `junk[]` (terms a scan must not leave
@@ -1281,15 +1287,17 @@ dial's `NamesPlan` reads go through `term-reading` and `ReadingVerdict`, and the
 call. `ReadingVerdict` turns the readings into a change by rule: a name needs two windows read as `name` (one window of one
 at Fast) and takes the kind most name windows give (person → character, place → place, organisation or thing → term); a
 title majority makes a title, which like a place, an organisation or a thing carries no gender. The gender pools the
-verified votes of the whole cluster in the model's vote mode (`ReadingVotes.modeFor`). Every model is in TIEBREAK today,
+verified votes of the whole cluster (`ReadingVotes`), each window and quote counted once. The votes only break ties,
 because the coref round (15i.N4, 2026-10-13) found 10 % wrong votes on 26b and 20 % on e4b against a 5 % gate: the code's
-pronoun tally decides wherever it is clear (three or more at 60 %) and is written verified, and with no clear tally votes
-at the thresholds below give only a suggestion; no tiebreak call is made. A model enters DECIDE only after passing the
-coref gate: there two or more verified votes making 75 % verify the gender (three at 80 % under Auto, where the code reads
-no pronoun), fewer are a suggestion; a tally that favours the other gender (three or more at 60 %) keeps its own gender as
-a suggestion; a majority against a dominant tally (three or more at 80 %) costs one `term-tiebreak` call showing both
-sides' windows, whose answer stands only when a window shown holds its quote in the narration with a pronoun of that
-gender — else the gender stays unknown and Start asks. Removal needs two `word` uses whose quote stands in its own window, no `name`
+pronoun tally decides wherever it is clear (three or more at 60 %), written verified only where the cluster's verified votes
+agree with it and suggested otherwise, and with no clear tally votes at the thresholds below give only a suggestion, as do two
+or more pieces of evidence, votes and pronouns together, all one gender's; no tiebreak call is made. The tally reads a name's own
+uses (15i.N names gate): a use that ends a longer name (`Corin Vale` for `Vale`; a capitalised word opening the sentence
+counts only when the book also writes it with a capital inside a sentence) is not read, a use after a gendered form of address
+(`Mrs.`, `Miss`, `Aunt`, `Widow`; language file `femaleTitles`/`maleTitles`) counts that form instead of a pronoun unless the
+surname is written after both genders' forms (a family name), and a name that opens with one has its gender. A mode in
+which a model's votes decide, with a `term-tiebreak` call against a dominant tally, returns with the first model that passes
+the coref gate; until then it is not built (removed as dead code in the 15i review). Removal needs two `word` uses whose quote stands in its own window, no `name`
 use, a lower-case share of 0.2 or more in the scan text and an entry nobody typed or gave a gender. At Max a term read in
 two or more calls (or mentioned 30 times) whose calls read it differently gets one `term-summary` call; its reading replaces
 the windows' majority only when its quote stands in a window shown and it is one of the calls' readings. The Scan button
@@ -1323,6 +1331,63 @@ from the owner's own list, which is never committed because it would name the bo
 and fails with every `path:line: token` that holds one as a whole word in a text file (java, kt, properties, prompt, txt, json,
 md, fxml, css, xml, csv). It is skipped by a JUnit assumption when the variable is unset or the file is absent, so CI and a
 checkout without the corpus stay green.
+
+<a id="15i-names-gate"></a>**15i names gate (2026-10-13/14).** Three rounds of the names suite at Balanced on the owner's four books ("owner
+book 1–4": three novels and a short story) and the committed fixtures, 26b and e4b
+(`gemma4:26b-mlx`, `gemma4:e4b-mlx`, Ollama). Before the rounds the measurement itself was fixed: the suite had read every
+book at Fast while its report said Balanced; it now reads at the reported dial, scores gender over gold persons only, counts
+spellings word by word and writes the cases behind each number (`diagnostics`). The owner-local gold was corrected where the
+book proves it wrong (four rules, each entry with its quote in `GOLD-CORRECTIONS.md` beside the gold): a title form the scan
+cannot make (`Mr.`, `Mrs.`, `Miss` + surname: the glossary holds the surname, the title carries the gender), a name the book
+never writes alone, a place given a gender, and a surname whose lone uses are one titled woman's. Every number below is
+rescored against that corrected gold (persons with five or more mentions), r0 included. Round r0 is the code before the gate
+(1202c719); r1 adds the agreement rule, the title-aware tally, the ten-lone-uses scan rule and the seeded-type rule; r2 adds the
+one-sided weak evidence, the first-name diminutives and the model scan's batch pre-filter; r3 replaces that pre-filter with
+"read the 30 most frequent, narrow the rest", adds the shared-word agreement and the tolerant reader's raw tab. (e4b r1 already
+ran with r2's pre-filter and diminutives; its terms column moved with them.)
+
+| Round | Model | Gender, persons ≥5 (books 1 / 2 / 3 / 4) | Wrong verified | Type | Lost | Spellings (max) | Terms kept (1 / 2 / 3 / 4) | Term junk kept | Minutes (1 / 2 / 3 / 4) |
+|---|---|---|---|---|---|---|---|---|---|
+| r0 | 26b | 39/50 / 6/8 / 32/42 / 32/40 | 4 | 149/188 | 24 | 1 | 3/23 / 5/13 / 0/21 / 4/26 | 4 | 28.8 / 11.0 / 18.0 / 22.9 |
+| r0 | e4b | 40/50 / 5/8 / 30/42 / 31/40 | 4 | 144/188 | 24 | 2 | 2/23 / 1/13 / 0/21 / 0/26 | 0 | 24.7 / 9.7 / 16.3 / 20.4 |
+| r1 | 26b | 40/50 / 5/8 / 36/42 / 36/40 | 0 | 160/188 | 19 | 2 | 3/23 / 5/13 / 0/21 / 3/26 | 4 | 28.2 / 10.7 / 16.3 / 22.4 |
+| r1 | e4b | 41/50 / 5/8 / 37/42 / 37/40 | 0 | 155/188 | 19 | 2 | 3/23 / 1/13 / 0/21 / 1/26 | 0 | 24.3 / 5.7 / 15.9 / 18.7 |
+| r2 | 26b | 42/50 / 6/8 / 38/42 / 38/40 | 0 | 160/188 | 19 | 2 | 10/23 / 5/13 / 2/21 / 4/26 | 0 | 21.7 / 5.7 / 11.8 / 16.9 |
+| r2 | e4b | 42/50 / 5/8 / 38/42 / 37/40 | 0 | 155/188 | 19 | 2 | 3/23 / 0/13 / 0/21 / 1/26 | 0 | 23.6 / 5.7 / 15.5 / 18.7 |
+| r3 | 26b | 42/50 / 7/8 / 38/42 / 38/40 | 0 | 161/188 | 19 | 1 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 24.0 / 6.9 / 12.1 / 16.9 |
+| r3 | e4b | 42/50 / 5/8 / 38/42 / 37/40 | 0 | 155/188 | 19 | 1 | 3/23 / 0/13 / 0/21 / 1/26 | 0 | 22.0 / 6.3 / 14.6 / 18.1 |
+
+What moved, by case: the agreement rule took every wrong verified gender away (a demon written "it" with a neighbour's "he"
+four times; a title and a family surname); the title-aware tally gave the bare surname of a married couple its husband's gender
+instead of the wife's (429 uses, 195 after `Mr.`/`Mrs.`) and gave `Widow …`, `Mr. …` and family surnames their gender; the
+ten-lone-uses rule brought back five first names and surnames (one written alone 34 times), all with the right gender; the
+seeded-type rule turned seven places, spells and objects a "he" had made characters back into places and terms (type
++7 on owner book 1); the weak evidence and the diminutives gave seven minor characters a suggested gender (and two plural group words of a junk fixture one too); the batch
+pre-filter, reading the 300 most frequent words, took owner book 1's recurring terms from 3 to 11 kept and cut 4–7 minutes per
+book on 26b; the tolerant reader recovered a heroine whose reading reply held a tab; the shared-word rule made the spellings
+1 (a person written with two first names, two anchors, had two renderings of the surname).
+
+Gates after r3. N1 met (wrong verified 4 → 0 on 26b, 4 → 0 on e4b). N5 not met: gender 84 / 88 / 90 / 95 % on 26b (95 %
+wanted), 84 / 63 / 90 / 93 % on e4b (90 % wanted); no wrong verified gender and the bartender kept, but the junk fixtures still
+keep their junk (a plural group, a nationality and a converter's name read as persons; `KESSEL`'s plural); time within the
+budget (owner book 1, the longest, 24 min on 26b). N6 met on 26b (spellings 1) and e4b has no literal name. N7 not met: on 26b
+correct keep/drop decisions rose from 34 to 46 and "Mayday" is kept, but three terms the per-term reading kept are now dropped
+by the batch choice (two on owner book 4, one on owner book 2); on e4b +1 only. N3's triage loses no gold name on the owner
+books (every lost name is lost by the longer-name rule or a connector phrase, not by triage). What remains: persons the book
+gives no pronoun or title (a narrator in the first person, pet names, minor surnames) stay unknown, since the reading's
+pronoun answer is "none" and no other evidence exists; names written alone only two or three times are dropped as part of
+their full names; the junk fixtures; reading more of the pool word by word (`READ_FIRST` 120 would keep the three dropped
+terms at about 4 more minutes per book).
+
+*Review fixes folded in after the rounds (2026-10-14, not re-measured; each tested):* a rule's lock (`GlossaryEntry.withRuleLock`)
+keeps a suggested gender suggested — only the person's lock confirms it; a clear tally is verified only where verified votes agree
+and none opposes it; a cluster's calls that show one window twice count its quote once; the cluster's verified gender upgrades a
+member suggested the same gender; only a rendering the person chose binds a cluster's other spellings; the DECIDE vote mode, the
+tiebreak call and its prompt were removed as unreachable; the names pass's estimate (`NamesPassEstimate`) counts every call it
+sends (names reading, batched review, Max summaries, recurring terms, renderings and their re-asks), its store
+(`NamesPassStore`) records the term deferrals a locked rendering change leaves on decided segments and puts both tables back when
+a write fails half-way, and a promotion of a term the glossary already holds only takes it out of the lexicon. Of these, only
+the agreement and pooling rules can move the gate numbers (verified to suggested only, so wrong-verified can only fall).
 
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
@@ -1475,7 +1540,7 @@ from that grown cap and does not count the thinking lines. The report's provenan
 ```bash
 scripts/eval-matrix.sh --suite realrun --reasoning "REVIEWER=on" --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx"
 scripts/eval-matrix.sh --suite batch --batch-notes on --models "ollama:gemma4:e4b-mlx"
-scripts/eval-matrix.sh --suite names --reasoning "TERM_READING=on,TERM_TIEBREAK=on,BRIEF_SYNTHESIS=on"
+scripts/eval-matrix.sh --suite names --reasoning "TERM_READING=on,TERM_SUMMARY=on,BRIEF_SYNTHESIS=on"
 ```
 
 Compare each arm with the same suite without the switch: a call kind turns on only where its target moves by 2+ with its

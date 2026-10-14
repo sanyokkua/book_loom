@@ -18,10 +18,11 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.TermType;
 
 /**
- * What Names &amp; style left of a book, scored against its gold (15i.E1): the gender of every character the book
- * mentions at least {@link #MIN_MENTIONS} times (a wrong gender with the origin verified is "wrong but verified",
+ * What Names &amp; style left of a book, scored against its gold (15i.E1): the gender of every person (a gold entry of
+ * type {@link TermType#CHARACTER}) the book mentions at least {@link #MIN_MENTIONS} times (a wrong gender with the origin verified is "wrong but verified",
  * the worst kind), the type of every gold character, whether the written forms of one person (a gold cluster id)
  * agree on one gender and one spelling of the name, the junk a scan left, the real names it lost and the recurring
  * terms it kept and dropped.
@@ -31,11 +32,12 @@ import ua.bookloom.api.project.LexiconEntry;
  * keep} term) is lost when no entry holds it as its term or an alias, compared without case, and a name that is both
  * a character and a keep term counts once. Junk is kept when a glossary entry has exactly the junk term as its term
  * (same case, so the real "Kessel Optik" is not the junk "KESSEL OPTIK"). The gender, type and cluster of a gold
- * character are read from the entry that holds its name as its term or, failing that, as an alias, like the lost names. A cluster's spelling is the first word of an
- * entry's target, without case; a cluster with two or more members is consistent when its entries hold at most one
+ * character are read from the entry that holds its name as its term or, failing that, as an alias, like the lost names. A cluster's spellings are counted word by word: each source word
+ * of an entry whose target has as many words is paired with the target's word in its place, without case, and the
+ * cluster counts the most renderings one source word got; a cluster with two or more members is consistent when its entries hold at most one
  * known gender. A gender is "verified" when its origin is {@link GenderOrigin#VERIFIED} (15i.N0).
  *
- * @param eligible the gold characters with {@link #MIN_MENTIONS} or more mentions
+ * @param eligible the gold persons with {@link #MIN_MENTIONS} or more mentions
  * @param genderCorrect how many of them ended with the gold gender
  * @param wrongButVerified how many of them ended with a known gender that is not the gold one and whose origin is
  *     verified
@@ -74,6 +76,7 @@ record NamesScore(
 
     private static final double MILLIS_PER_MINUTE = 60_000.0;
     private static final int ROUNDING_DIGITS = 3;
+    private static final Pattern WORD_BREAK = Pattern.compile("[\\s-]+");
 
     /** Copies the spellings and the lost names. */
     NamesScore {
@@ -209,7 +212,7 @@ record NamesScore(
         for (final JudgementGold.Person person : gold.characters()) {
             final GlossaryEntry entry = byTerm.get(lower(person.term()));
             typeOk += entry != null && entry.type() == person.type() ? 1 : 0;
-            if (mentions(text, person.term()) < MIN_MENTIONS) {
+            if (!isGendered(person, text)) {
                 continue;
             }
             eligible++;
@@ -219,6 +222,15 @@ record NamesScore(
         return new int[] {eligible, correct, verified, typeOk};
     }
 
+    /**
+     * Whether a gold entry is scored for gender: a person ({@link TermType#CHARACTER}) the book mentions {@link
+     * #MIN_MENTIONS} times or more. A place, a thing or a title carries no gender (15i.N5), so its gold gender scores
+     * nothing; whether it was kept and typed right is the lost and type counts'.
+     */
+    static boolean isGendered(final JudgementGold.Person person, final String text) {
+        return person.type() == TermType.CHARACTER && mentions(text, person.term()) >= MIN_MENTIONS;
+    }
+
     private static boolean isWrongButVerified(final GlossaryEntry entry, final JudgementGold.Person person) {
         return entry != null
                 && entry.gender() != person.gender()
@@ -226,7 +238,8 @@ record NamesScore(
                 && entry.genderOrigin() == GenderOrigin.VERIFIED;
     }
 
-    private static int mentions(final String text, final String term) {
+    /** The whole-word, case-sensitive occurrences of {@code term} in {@code text}. */
+    static int mentions(final String text, final String term) {
         final var matcher = Pattern.compile("(?<![\\p{L}\\p{N}])" + Pattern.quote(term) + "(?![\\p{L}\\p{N}])")
                 .matcher(text);
         int found = 0;
@@ -259,21 +272,44 @@ record NamesScore(
                 <= 1;
     }
 
+    // A cluster's spellings are counted word by word (15i.N6): each source word of a member whose rendering has as many
+    // words as its term (words split at spaces and hyphens) is paired with the rendering's word in its place, and the
+    // cluster counts the most renderings any one source word got. "Arlo Venn → Арло Венн" and "Venn → Венн" are one
+    // spelling; "Venn → Вен" beside them makes two. A cluster whose renderings never align counts one.
     private static Map<String, Integer> spellingsOf(
             final Map<String, List<JudgementGold.Person>> clusters, final Map<String, GlossaryEntry> byTerm) {
         final Map<String, Integer> spelled = new TreeMap<>();
         clusters.forEach((id, members) -> {
-            final long distinct = entriesOf(members, byTerm).stream()
-                    .map(GlossaryEntry::target)
-                    .filter(target -> target != null && !target.isBlank())
-                    .map(target -> lower(target.strip().split("\\s+", 2)[0]))
+            final List<GlossaryEntry> rendered = entriesOf(members, byTerm).stream()
+                    .filter(entry -> entry.target() != null && !entry.target().isBlank())
                     .distinct()
-                    .count();
-            if (distinct > 0) {
-                spelled.put(id, (int) distinct);
+                    .toList();
+            if (!rendered.isEmpty()) {
+                spelled.put(id, mostRenderingsOfOneWord(rendered));
             }
         });
         return spelled;
+    }
+
+    private static int mostRenderingsOfOneWord(final List<GlossaryEntry> rendered) {
+        final Map<String, Set<String>> byWord = new HashMap<>();
+        for (final GlossaryEntry entry : rendered) {
+            final List<String> source = wordsOf(entry.term());
+            final List<String> target = wordsOf(Objects.requireNonNull(entry.target(), "target"));
+            if (source.size() == target.size()) {
+                for (int word = 0; word < source.size(); word++) {
+                    byWord.computeIfAbsent(source.get(word), key -> new HashSet<>())
+                            .add(target.get(word));
+                }
+            }
+        }
+        return Math.max(1, byWord.values().stream().mapToInt(Set::size).max().orElse(1));
+    }
+
+    private static List<String> wordsOf(final String name) {
+        return Stream.of(WORD_BREAK.split(lower(name.strip())))
+                .filter(word -> !word.isEmpty())
+                .toList();
     }
 
     private static List<String> lostNames(final JudgementGold gold, final List<GlossaryEntry> glossary) {

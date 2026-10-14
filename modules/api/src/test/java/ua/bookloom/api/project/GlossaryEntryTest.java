@@ -82,6 +82,23 @@ class GlossaryEntryTest {
         assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
     }
 
+    // A lock the code sets by rule (a brand, a kept original) fixes the rendering but confirms nothing the person did
+    // not
+    // see: a suggested gender stays a suggestion (15i review).
+    @Test
+    void withRuleLock_suggestedGender_locksTheRenderingAndKeepsTheGenderSuggested() {
+        final GlossaryEntry seeded = new GlossaryEntry(
+                        "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE)
+                .withSuggestedTarget("John");
+
+        final GlossaryEntry locked = seeded.withRuleLock();
+
+        assertThat(locked.locked()).isTrue();
+        assertThat(locked.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(locked.withLocked(true).genderOrigin()).isEqualTo(GenderOrigin.PERSON);
+    }
+
     @Test
     void new_unknownGender_isNeverMarkedAsSuggested() {
         final GlossaryEntry entry = new GlossaryEntry(

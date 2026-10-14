@@ -4,6 +4,7 @@ import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.time.Clock;
 import java.time.Duration;
@@ -67,14 +68,25 @@ final class NamesPassFixture {
     }
 
     final StepClock clock = new StepClock();
-    final Injector injector = Guice.createInjector(
-            new DocumentModule(),
-            new PersistenceModule(),
-            Modules.override(new PipelineModule())
-                    .with(binder -> binder.bind(Clock.class).toInstance(clock)),
-            new ReviewModeTestModule());
-    final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
-    final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
+    final Injector injector;
+    final GlossaryRepository glossary;
+    final LexiconRepository lexicon;
+
+    NamesPassFixture() {
+        this(binder -> {});
+    }
+
+    /** A fixture whose stores the given module may replace, as a test of a failing store does. */
+    NamesPassFixture(final Module stores) {
+        injector = Guice.createInjector(
+                new DocumentModule(),
+                Modules.override(new PersistenceModule()).with(stores),
+                Modules.override(new PipelineModule())
+                        .with(binder -> binder.bind(Clock.class).toInstance(clock)),
+                new ReviewModeTestModule());
+        glossary = injector.getInstance(GlossaryRepository.class);
+        lexicon = injector.getInstance(LexiconRepository.class);
+    }
 
     NamesPass pass() {
         return injector.getInstance(NamesPass.class);

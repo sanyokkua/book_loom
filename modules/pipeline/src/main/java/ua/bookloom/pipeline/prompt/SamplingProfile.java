@@ -60,7 +60,6 @@ public enum SamplingProfile {
                     BRIEF_SYNTHESIS,
                     TERM_READING,
                     LEXICON_READING,
-                    TERM_TIEBREAK,
                     TERM_SUMMARY,
                     SUMMARY -> ANALYSIS;
         };

@@ -63,9 +63,28 @@ final class TermReviewReplies {
      *     is another
      * @param genderVerified whether a window the model cited shows the gender by a pronoun the code gives the name;
      *     false for {@link Gender#UNKNOWN}
+     * @param read whether the type comes from the in-context readings' majority (15i.N5), which may correct a type a
+     *     pronoun seed gave, rather than from one batched guess
      */
     record Verdict(
-            GlossaryEntry entry, Kind kind, TermType type, Gender gender, String evidence, boolean genderVerified) {
+            GlossaryEntry entry,
+            Kind kind,
+            TermType type,
+            Gender gender,
+            String evidence,
+            boolean genderVerified,
+            boolean read) {
+
+        /** A verdict of the batched review or of the code, whose type corrects no type already held. */
+        Verdict(
+                final GlossaryEntry entry,
+                final Kind kind,
+                final TermType type,
+                final Gender gender,
+                final String evidence,
+                final boolean genderVerified) {
+            this(entry, kind, type, gender, evidence, genderVerified, false);
+        }
 
         /**
          * The verdict the code reaches with no model, from a strong pronoun case: a name, a person, the gender shown.
@@ -85,7 +104,7 @@ final class TermReviewReplies {
          * @return a copy with the type set
          */
         Verdict withType(final TermType changed) {
-            return new Verdict(entry, kind, changed, gender, evidence, genderVerified);
+            return new Verdict(entry, kind, changed, gender, evidence, genderVerified, read);
         }
     }
 

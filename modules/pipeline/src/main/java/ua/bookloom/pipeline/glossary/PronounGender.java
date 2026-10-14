@@ -1,10 +1,14 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -235,9 +239,34 @@ public final class PronounGender {
             log.trace("Pronoun evidence skipped term={} language={}: no pronoun table", term, languageTag);
             return new Evidence(List.of(), List.of());
         }
+        final List<Mention> uses = new ArrayList<>();
+        final Predicate<String> namedElsewhere = namedInsideASentence(texts);
+        texts.forEach(text -> uses.addAll(reader.read(text, namedElsewhere)));
+        // A surname written after both a man's and a woman's form of address is a family's: those uses are the
+        // titled people's, not the bare name's.
+        final long titledGenders = uses.stream()
+                .map(Mention::title)
+                .filter(Objects::nonNull)
+                .map(Pronoun::gender)
+                .distinct()
+                .count();
+        final boolean family = titledGenders > 1;
         final Tally tally = new Tally();
-        texts.forEach(text -> reader.read(text).forEach(tally::add));
+        uses.stream().filter(use -> use.title() == null || !family).forEach(tally::add);
+        log.trace("Pronoun evidence for {}: {} uses, family name {}", term, uses.size(), family);
         return tally.evidence();
+    }
+
+    // Whether the book writes a word with a capital after a lower-case word or a comma, as only a name is written;
+    // asked only of the few words that open a sentence right before a use, and remembered.
+    private static Predicate<String> namedInsideASentence(final List<String> texts) {
+        final String book = String.join("\n", texts);
+        final Map<String, Boolean> asked = new HashMap<>();
+        return word -> asked.computeIfAbsent(
+                word,
+                key -> Pattern.compile("[\\p{Ll},;:]\\p{Zs}+" + Pattern.quote(key) + "(?![\\p{L}\\p{M}])")
+                        .matcher(book)
+                        .find());
     }
 
     /** The running lists of one name's pronouns. */
@@ -248,6 +277,11 @@ public final class PronounGender {
         }
 
         void add(final Mention mention) {
+            final Pronoun title = mention.title();
+            if (title != null) {
+                (title.gender() == Gender.FEMALE ? female : male).add(title.word());
+                return;
+            }
             final Pronoun subject = mention.subject();
             final Pronoun object = mention.object();
             if (subject != null) {

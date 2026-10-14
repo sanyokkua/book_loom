@@ -128,6 +128,26 @@ public final class GlossaryModelScans {
                         terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
+    /**
+     * Reads the candidates of a lexicon model scan at the project's dial ({@link LexiconReading#scan}).
+     *
+     * @param projectId the project; never null
+     * @param terms the candidate words; never null
+     * @param model the model to ask; never null
+     * @param progress where each call is announced; never null
+     * @return a decision for every candidate, or the book's or the first failed call's error
+     */
+    public Result<Map<String, LexiconReading.Decision>> scanTerms(
+            final String projectId,
+            final List<String> terms,
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
+        log.debug("Lexicon model scan reading project={} candidates={}", projectId, terms.size());
+        return book(projectId)
+                .flatMap(book -> lexiconReading.scan(
+                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
+    }
+
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
         return calls(model, progress, book, ContextBudget.DEFAULT_WINDOW);
     }

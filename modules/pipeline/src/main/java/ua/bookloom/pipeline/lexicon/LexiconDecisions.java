@@ -103,9 +103,19 @@ final class LexiconDecisions {
         return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), "error")) : added;
     }
 
-    // The glossary holds a named thing as a term; the rendering is a suggestion unless a person wrote it.
+    // The glossary holds a named thing as a term; the rendering is a suggestion unless a person wrote it. A term the
+    // glossary already holds stays as it is there: moving it only takes it out of the lexicon (15i review).
     private Result<GlossaryEntry> addToGlossary(
             final String projectId, final String term, @Nullable final String rendering, final boolean isModels) {
+        final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(projectId, term);
+        if (held.isErr()) {
+            return Result.err(Objects.requireNonNull(held.error(), "error"));
+        }
+        final Optional<GlossaryEntry> found = Objects.requireNonNull(held.data(), "held");
+        if (found.isPresent()) {
+            log.debug("Lexicon promote project={}: the glossary already holds the term, nothing added", projectId);
+            return Result.ok(found.get());
+        }
         return glossary.add(new GlossaryEntry(
                 GlossaryIds.of(projectId, term),
                 projectId,

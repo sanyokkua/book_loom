@@ -82,10 +82,8 @@ final class CandidateTriage {
         if (pair.candidate().count() >= minCount && isNotOutsideTheStory(index, pair.candidate(), pair.mentions())) {
             remaining.add(pair.candidate());
         } else {
-            log.debug(
-                    "Joined name {} not proposed: {} uses",
-                    pair.candidate().term(),
-                    pair.candidate().count());
+            log.debug("Joined name not proposed: {} uses", pair.candidate().count());
+            log.trace("Joined name not proposed: {}", pair.candidate().term());
         }
     }
 

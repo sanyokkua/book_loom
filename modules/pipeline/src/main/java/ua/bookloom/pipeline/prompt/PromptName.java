@@ -210,9 +210,6 @@ public enum PromptName {
     /** The reading of one recurring term in numbered windows from across the book (15i.N7); one term per call. */
     LEXICON_READING("lexicon-reading", LexiconReadingSchema.SCHEMA, "windows"),
 
-    /** A tiebreak between the readings' gender and a dominant pronoun tally, both sides' windows shown (15i.N5). */
-    TERM_TIEBREAK("term-tiebreak", TermReadingSchema.TIEBREAK, "windows"),
-
     /** At Max, one term's disagreeing reading calls summed up in one call (15i.N5). */
     TERM_SUMMARY("term-summary", TermReadingSchema.SUMMARY, "calls"),
 

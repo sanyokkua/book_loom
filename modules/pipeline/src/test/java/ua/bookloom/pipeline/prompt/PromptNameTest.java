@@ -38,8 +38,7 @@ class PromptNameTest {
         // 15i.N7: the recurring term's reading is a reading of one term in windows; its batch choice has its own kind.
         "LEXICON_READING,lexicon-reading,TERM_READING,lexicon-reading,0.0",
         "TERM_CHOICE,term-choice,TERM_CHOICE,term-choice,0.1",
-        // 15i.N5: the tiebreak and the summary are readings of one term, shown and labelled as TERM_READING calls.
-        "TERM_TIEBREAK,term-tiebreak,TERM_READING,term-tiebreak,0.0",
+        // 15i.N5: the summary is a reading of one term, shown and labelled as a TERM_READING call.
         "TERM_SUMMARY,term-summary,TERM_READING,term-summary,0.0"
     })
     void constants_declared_carryListedValues(
@@ -75,7 +74,6 @@ class PromptNameTest {
         "BRIEF_SYNTHESIS",
         "TERM_READING",
         "LEXICON_READING",
-        "TERM_TIEBREAK",
         "TERM_SUMMARY"
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {

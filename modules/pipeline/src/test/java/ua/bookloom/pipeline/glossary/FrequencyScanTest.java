@@ -204,6 +204,24 @@ class FrequencyScanTest {
                 .containsExactly(tuple("Ember", List.of("Embers")));
     }
 
+    // A first name mostly written inside its full name is still a name of its own when the book writes it alone often
+    // enough (15i.N gate: a narrator's brother written alone 34 times was lost); written alone a few times it is only
+    // part of the longer name.
+    @ParameterizedTest(name = "alone {0} times -> {1}")
+    @CsvSource(
+            value = {"10;Orrel Danby,Orrel", "3;Orrel Danby"},
+            delimiter = ';')
+    void candidates_firstNameMostlyInsideItsFullName_isProposedWhenOftenAlone(final int alone, final String expected) {
+        final List<String> lines = new ArrayList<>(copies("Then Orrel Danby sang.", 30));
+        lines.addAll(copies("Then Orrel left.", alone));
+
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(String.join(",", terms)).isEqualTo(expected);
+    }
+
     private static List<String> namesAndRuns() {
         final List<String> lines = new ArrayList<>(copies("We saw Hale at the door.", 5));
         lines.addAll(copies("They walked to Baker Street later.", 3));

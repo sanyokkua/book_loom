@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import lombok.AccessLevel;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.QualityDial;
 
 /**
  * The names suite (15i.E1): Names &amp; style end to end on the committed failure books
@@ -33,7 +35,9 @@ final class NamesSuites {
     static NamesReport run(
             final String modelId, final ChatModel model, final Path workDir, final Map<String, String> env) {
         Objects.requireNonNull(modelId, "modelId");
-        final NamesRunner runner = new NamesRunner(model);
+        final QualityDial dial = dial(env);
+        log.info("Names eval {} at dial {}", modelId, dial);
+        final NamesRunner runner = new NamesRunner(model, dial);
         final List<NamesRow> rows = new ArrayList<>();
         for (final NamesBook book : books(env.get(BOOK_ENV))) {
             rows.add(runner.run(book, workDirFor(workDir, book.id())));
@@ -41,7 +45,7 @@ final class NamesSuites {
         final String corpus = env.getOrDefault(CORPUS_ENV, "");
         if (!corpus.isBlank()) {
             for (final Path file : JudgementSuites.goldFiles(Path.of(corpus))) {
-                rows.add(goldRow(file, model));
+                rows.add(goldRow(file, model, dial));
             }
         }
         log.info("Names eval {} ran {} books", modelId, rows.size());
@@ -56,11 +60,22 @@ final class NamesSuites {
         }
     }
 
-    private static NamesRow goldRow(final Path file, final ChatModel model) {
+    /**
+     * The dial the books are read at: {@code BOOKLOOM_EVAL_DIAL} when set, else Balanced, the dial the report's
+     * provenance names (the suite ran at Fast before, whatever the provenance said).
+     */
+    static QualityDial dial(final Map<String, String> env) {
+        final String dial = env.get(JudgementRunner.DIAL_ENV);
+        return dial == null || dial.isBlank()
+                ? QualityDial.BALANCED
+                : QualityDial.valueOf(dial.strip().toUpperCase(Locale.ROOT));
+    }
+
+    private static NamesRow goldRow(final Path file, final ChatModel model, final QualityDial dial) {
         final JudgementGold gold = JudgementGold.read(file);
         final String book = Objects.requireNonNull(gold.book(), () -> "no \"book\" in " + file);
         final String id = file.getFileName().toString().replace(JudgementSuites.GOLD_SUFFIX, "");
-        return new NamesRunner(model).run(id, file.getParent().resolve(book), gold);
+        return new NamesRunner(model, dial).run(id, file.getParent().resolve(book), gold);
     }
 
     /** The committed books a {@code BOOKLOOM_EVAL_BOOK} value names; all of them when it is unset or {@code all}. */

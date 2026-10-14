@@ -63,7 +63,7 @@ public final class TermChoice {
         }
     }
 
-    private static final int BATCH_SIZE = 10;
+    static final int BATCH_SIZE = 10;
     private static final int UNIFORM_MIN = 6;
     private static final int TOKENS_PER_VERDICT = 24;
     private static final int BASE_TOKENS = 96;

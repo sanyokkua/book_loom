@@ -186,6 +186,33 @@ class LexiconReadingActionsTest {
                 });
     }
 
+    // A term the glossary already holds is no recurring term to read (15i review): the review sends no call about it,
+    // and moving it to the glossary only takes it out of the lexicon instead of failing on the duplicate.
+    @Test
+    void review_termTheGlossaryHolds_isNotAskedAndAPromotionOnlyRemovesIt() {
+        desk.glossary()
+                .add(new GlossaryEntry(
+                        desk.projectId() + ":pentacle",
+                        desk.projectId(),
+                        "Pentacle",
+                        "Пентакль",
+                        ua.bookloom.api.project.TermType.TERM,
+                        ua.bookloom.api.project.Gender.UNKNOWN,
+                        false));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
+        readings.put("pentacle", reading("pentacle", "name", 1, "Пентаграма"));
+
+        assertThat(service.review(desk.projectId(), model, event -> {}).isOk()).isTrue();
+        assertThat(requests)
+                .noneMatch(request -> request.messages().getLast().content().contains("[[pentacle]]"));
+
+        assertThat(service.promote(desk.projectId(), "pentacle").isOk()).isTrue();
+        assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
+        assertThat(desk.glossary().all(desk.projectId()).data())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.target()).isEqualTo("Пентакль"));
+    }
+
     // An unreadable reading decides nothing: the term is neither added nor does the scan fail.
     @Test
     void scanWithModel_balancedUnreadableReading_addsNothingAndDoesNotFail() {

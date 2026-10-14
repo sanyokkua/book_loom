@@ -3,9 +3,12 @@ package ua.bookloom.pipeline.glossary;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -102,9 +105,17 @@ final class ReadingCounts {
 
     /** How many windows of some calls vote for a gender: a vote the reading kept because its quote bears it out. */
     static int votes(final List<ReadCall> calls, final Gender gender) {
-        return (int) readings(calls).stream()
-                .filter(reading -> reading.vote() == gender)
-                .count();
+        // The calls of a cluster's spellings may show one window twice: a quote in one paragraph votes once.
+        final Set<String> seen = new HashSet<>();
+        for (final ReadCall call : calls) {
+            for (final WindowReading reading : call.reading().windows()) {
+                if (reading.vote() == gender) {
+                    seen.add(call.windows().get(reading.number() - 1).firstOrdinal() + "\u0000"
+                            + reading.quote().strip().toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+        return seen.size();
     }
 
     /**

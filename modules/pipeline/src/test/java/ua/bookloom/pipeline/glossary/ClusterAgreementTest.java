@@ -60,4 +60,40 @@ class ClusterAgreementTest {
                 .extracting(Suggestion::target)
                 .containsExactly("Вен");
     }
+
+    // Two full names of one family, or two anchors of one person, share a surname no cluster joins (15i.N gate): the
+    // held rendering of the word wins, then the first suggestion that renders it; a place keeps its own.
+    @Test
+    void align_surnameSharedAcrossFullNames_takesOneRenderingEverywhere() {
+        final GlossaryEntry mira = entry("Mira Venn", TermType.CHARACTER, Gender.FEMALE, "Міра Венн");
+        final GlossaryEntry arlo = entry("Arlo Venn", TermType.CHARACTER, Gender.MALE, null);
+        final GlossaryEntry tam = entry("Tam Wren", TermType.CHARACTER, Gender.MALE, null);
+        final GlossaryEntry tamsin = entry("Tamsin Wren", TermType.CHARACTER, Gender.MALE, null);
+        final GlossaryEntry street = entry("Venn Street", TermType.PLACE, Gender.UNKNOWN, null);
+        final List<GlossaryEntry> held = List.of(mira, arlo, tam, tamsin, street);
+        final ClusterAgreement agreement =
+                ClusterAgreement.over(NameClusters.of(held, null, "en"), held, List.of(arlo, tam, tamsin, street));
+
+        assertThat(agreement.align(List.of(
+                        new Suggestion(arlo, "Арло Вен"),
+                        new Suggestion(tam, "Там Рен"),
+                        new Suggestion(tamsin, "Тамсін Ренн"),
+                        new Suggestion(street, "Вен-стріт"))))
+                .extracting(Suggestion::target)
+                .containsExactly("Арло Венн", "Там Рен", "Тамсін Рен", "Вен-стріт");
+    }
+
+    // Only the person's rendering binds the other spellings (15i review): an earlier suggestion nobody confirmed is not
+    // the cluster's rendering, so a spelling asked now keeps the call's own answer.
+    @Test
+    void align_fullNameWithOnlyASuggestedRendering_bindsNothing() {
+        final List<GlossaryEntry> held = List.of(FULL.withTarget(null).withSuggestedTarget("Арло Вен"), SURNAME);
+        final ClusterAgreement agreement =
+                ClusterAgreement.over(NameClusters.of(held, null, "en"), held, List.of(SURNAME));
+
+        assertThat(agreement.align(List.of(new Suggestion(SURNAME, "Венн"))))
+                .extracting(Suggestion::target)
+                .containsExactly("Венн");
+        assertThat(agreement.statementFor(SURNAME)).isEmpty();
+    }
 }

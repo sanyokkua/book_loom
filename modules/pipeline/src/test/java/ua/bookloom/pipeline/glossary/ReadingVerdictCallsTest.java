@@ -11,9 +11,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -32,7 +29,6 @@ import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
-import ua.bookloom.pipeline.glossary.ReadingVotes.VoteMode;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.glossary.TermReading.Usage;
 import ua.bookloom.pipeline.glossary.TermReading.WindowReading;
@@ -44,17 +40,16 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
- * The calls the verdict may add to a term's readings (15i.N5): one {@code term-tiebreak} call, under the
- * {@link CallKind#TERM_READING} kind, when the readings' majority opposes a dominant code tally, showing the quotes of
- * both sides, whose answer decides only when the windows bear it out; and at Max one {@code term-summary} call when a
- * term's reading calls disagree. Every other decision costs no call. The model is scripted; the text is invented.
+ * The call the verdict may add to a term's readings (15i.N5): at Max one {@code term-summary} call, under the
+ * {@link CallKind#TERM_READING} kind, when a term's reading calls disagree. Every other decision costs no call, a
+ * majority against the code's tally included (no model's votes passed the coreference gate, so the tally stands). The
+ * model is scripted; the text is invented.
  */
 class ReadingVerdictCallsTest {
 
     private static final String PROJECT = "p1";
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-    private static final String TIEBREAK = "term-tiebreak";
     private static final String SUMMARY = "term-summary";
     private static final String HE_TEXT = "Brann waved from the cart. He left before noon.";
     private static final String SHE_TEXT = "Brann waved from the cart. She left before noon.";
@@ -63,9 +58,7 @@ class ReadingVerdictCallsTest {
     private static final String PERSON_TEXT = "Brann bowed to the crowd at the gate.";
     private static final String PLACE_TEXT = "They rode into Brann at dusk, tired and wet.";
 
-    // The tiebreak belongs to the deciding mode, for a model that passed the coreference gate.
-    private final ReadingVerdict verdicts =
-            new ReadingVerdict(new PromptTemplates(), new ObjectMapper(), VoteMode.DECIDE);
+    private final ReadingVerdict verdicts = new ReadingVerdict(new PromptTemplates(), new ObjectMapper());
     private final List<CallKind> kinds = new ArrayList<>();
 
     /** One window as it was shown and as the reading kept its answer. */
@@ -138,7 +131,7 @@ class ReadingVerdictCallsTest {
                 tally(4, 0));
     }
 
-    /** Three verified "he" votes in one call against the code's she ×4: a tiebreak case. */
+    /** Three verified "he" votes in one call against the code's she ×4. */
     private static Facts tiebreakCase(final GlossaryEntry entry) {
         return new Facts(
                 entry,
@@ -191,87 +184,19 @@ class ReadingVerdictCallsTest {
         return Objects.requireNonNull(result.data(), "decision");
     }
 
-    // --- the tiebreak ------------------------------------------------------------------------------------------------
+    // --- no call ----------------------------------------------------------------------------------------------------
 
-    // IF the tiebreak showed only one side, THEN the model would be asked to agree with itself: the call carries the
-    // readings' "he" quotes and the code's "she" windows, and it is one call of the term-reading kind.
+    // The same majority against the code's she ×4 costs no call, and the tally stands, as a suggestion, since no vote
+    // agrees with it (15i.N gate).
     @Test
-    void verdict_majorityAgainstADominantTally_sendsOneTiebreakShowingBothSidesQuotes() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo(TIEBREAK, reply("{\"gender\":\"none\",\"quote\":\"none\"}"));
-
-        verdicts.verdict(tiebreakCase(untyped()), FRAME, calls(model));
-
-        assertThat(kinds).containsExactly(CallKind.TERM_READING);
-        assertThat(model.requests()).singleElement().satisfies(request -> {
-            assertThat(format(request)).isEqualTo(TIEBREAK);
-            assertThat(request.callKind()).isEqualTo(CallKind.TERM_READING);
-            assertThat(user(request))
-                    .contains("He left before noon")
-                    .contains("She smiled at the dog")
-                    .contains("She lit the lamp");
-        });
-    }
-
-    // Every model today only breaks ties with its votes (15i.N4 coref round): the same majority against the code's she
-    // ×4
-    // costs no call, and the tally stands, verified.
-    @Test
-    void verdict_tieBreakingVotesAgainstADominantTally_sendNoCallAndTheTallyStands() {
+    void verdict_votesAgainstADominantTally_sendNoCallAndTheTallyStands() {
         final ScriptedChatModel model = new ScriptedChatModel();
-        final ReadingVerdict tieBreaking =
-                new ReadingVerdict(new PromptTemplates(), new ObjectMapper(), VoteMode.TIEBREAK);
 
-        final Decision decision = decided(tieBreaking.verdict(tiebreakCase(untyped()), FRAME, calls(model)));
+        final Decision decision = decided(verdicts.verdict(tiebreakCase(untyped()), FRAME, calls(model)));
 
         assertThat(model.requests()).isEmpty();
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
-    }
-
-    // The tiebreak's answer decides when a window it was shown holds its quote, in the narration, with a pronoun of
-    // the gender it names.
-    @Test
-    void verdict_tiebreakAnswerTheWindowsBearOut_decidesTheGenderAsVerified() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(TIEBREAK, reply("{\"gender\":\"female\",\"quote\":\"She smiled at the dog\"}"));
-
-        final Decision decision = decided(verdicts.verdict(tiebreakCase(untyped()), FRAME, calls(model)));
-
-        assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
-    }
-
-    // IF an answer nothing bears out decided, THEN the model would win the tie by assertion: the gender stays unknown,
-    // to be asked at Start (15h.A3).
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(
-            strings = {
-                "{\"gender\":\"female\",\"quote\":\"She danced all night\"}",
-                "{\"gender\":\"male\",\"quote\":\"She smiled at the dog\"}",
-                "{\"gender\":\"none\",\"quote\":\"none\"}",
-                "I would say she is a woman."
-            })
-    void verdict_tiebreakAnswerNotBorneOut_leavesTheGenderUnknown(final String answer) {
-        final ScriptedChatModel model = new ScriptedChatModel().answerTo(TIEBREAK, reply(answer));
-
-        final Decision decision = decided(verdicts.verdict(tiebreakCase(untyped()), FRAME, calls(model)));
-
-        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
-        assertThat(decision.origin()).isNull();
-        assertThat(model.requests()).hasSize(1);
-    }
-
-    // Stop means stop: a cancelled tiebreak ends the verdict with the cancellation, not with a guess.
-    @Test
-    void verdict_tiebreakCancelled_returnsTheCancellation() {
-        final AppError cancelled = AppError.of(ErrorCode.cancelled, "Cancelled", "The person stopped the review.");
-        final ScriptedChatModel model = new ScriptedChatModel().answerTo(TIEBREAK, Result.err(cancelled));
-
-        final Result<Decision> result = verdicts.verdict(tiebreakCase(untyped()), FRAME, calls(model));
-
-        assertThat(result.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
     }
 
     @Test
@@ -313,7 +238,7 @@ class ReadingVerdictCallsTest {
     }
 
     @Test
-    void verdict_personSetGender_sendsNoTiebreak() {
+    void verdict_personSetGender_sendsNoCall() {
         final ScriptedChatModel model = new ScriptedChatModel();
         final GlossaryEntry person = untyped().withType(TermType.CHARACTER).withGender(Gender.MALE);
 

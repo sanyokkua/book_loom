@@ -89,12 +89,12 @@ class GlossaryEntryGenderOriginTest {
         assertThat(withOrigin(Gender.FEMALE, false, stated).genderOrigin()).isEqualTo(stated);
     }
 
-    // A lock confirms what the entry holds, as it does today for a suggested gender; a gender already verified by the
-    // book stays verified.
+    // A locked record says nothing of who locked it; only the person's lock (withLocked) confirms a suggestion, so a
+    // rule's lock leaves it suggested (15i review); a gender already verified by the book stays verified.
     @Test
-    void new_lockedEntryWithASuggestedGender_isThePersons() {
+    void new_lockedEntryWithASuggestedGender_keepsItSuggested() {
         assertThat(withOrigin(Gender.FEMALE, true, GenderOrigin.SUGGESTED).genderOrigin())
-                .isEqualTo(GenderOrigin.PERSON);
+                .isEqualTo(GenderOrigin.SUGGESTED);
     }
 
     @Test

@@ -32,33 +32,29 @@ import ua.bookloom.pipeline.glossary.ReadingFixtures.Answer;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
-import ua.bookloom.pipeline.glossary.ReadingVotes.VoteMode;
 import ua.bookloom.pipeline.glossary.TermReading.Usage;
 
 /**
  * The code decides a term from its readings with no call (15i.N5): kind and type by the majority of the window votes
- * (a name needs two {@code name} uses, one of one at Fast); a gender verified at two or more verified votes making 75 %
- * (three at 80 % under Auto), pooled over the cluster and not opposed by a favoured tally, else suggested; a majority
- * against a dominant tally waits for a tiebreak; places, organisations, things and titles carry no gender; not a name
+ * (a name needs two {@code name} uses, one of one at Fast); votes only break ties (15i.N4): two or more verified votes making 75 %
+ * (three at 80 % under Auto) or two one-sided pieces of evidence suggest a gender with no clear tally, pooled over the
+ * cluster, and a clear tally decides, verified only where the votes agree; places, organisations, things and titles
+ * carry no gender; not a name
  * only on two quoted ordinary-word uses, no name use, a lower-case share of 0.2 or more and an entry never typed or
  * gendered. The windows and readings are invented and built by hand, as {@link TermReadingReplies} would leave them.
  */
 class ReadingVerdictTest {
 
-    // The rules below are the deciding mode's, for a model that passed the coreference gate; the tie-breaking mode
-    // every model gets today has its own section at the end.
-    private static final VoteMode DECIDE = VoteMode.DECIDE;
-
     private static Decision decide(final List<Answer> answers) {
-        return ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, QualityDial.BALANCED, "en"), DECIDE);
+        return ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, QualityDial.BALANCED, "en"));
     }
 
     private static Decision decide(final List<Answer> answers, final PronounGender.Evidence tally) {
-        return ReadingVerdict.decide(facts(untyped(), answers, tally, 0.0, QualityDial.BALANCED, "en"), DECIDE);
+        return ReadingVerdict.decide(facts(untyped(), answers, tally, 0.0, QualityDial.BALANCED, "en"));
     }
 
     private static Decision decideWord(final GlossaryEntry entry, final List<Answer> answers, final double share) {
-        return ReadingVerdict.decide(facts(entry, answers, NO_TALLY, share, QualityDial.BALANCED, "en"), DECIDE);
+        return ReadingVerdict.decide(facts(entry, answers, NO_TALLY, share, QualityDial.BALANCED, "en"));
     }
 
     // --- kind and type -----------------------------------------------------------------------------------------------
@@ -112,7 +108,7 @@ class ReadingVerdictTest {
             final TermType type) {
         final List<Answer> answers = answers(times(names, name(TermReading.Kind.PERSON)), times(unsure, unsure()));
 
-        final Decision decision = ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, dial, "en"), DECIDE);
+        final Decision decision = ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, dial, "en"));
 
         assertThat(decision.kind()).isEqualTo(kind);
         assertThat(decision.type()).isEqualTo(type);
@@ -122,43 +118,46 @@ class ReadingVerdictTest {
 
     // Verified at two or more verified votes making 75 % or more; under Auto, where the code reads no pronoun of its
     // own, three at 80 %. Anything less is a suggestion of the majority's gender.
+    // With no pronoun of the code's own, votes never verify (15i.N4): at the thresholds, or as two pieces of one-sided
+    // evidence, they suggest; a single vote or votes both ways give nothing.
     @ParameterizedTest(name = "{0} male, {1} female, language {2} -> {3} {4}")
-    @CsvSource({
-        "2,0,en,MALE,VERIFIED",
-        "0,2,en,FEMALE,VERIFIED",
-        "3,1,en,MALE,VERIFIED",
-        "1,0,en,MALE,SUGGESTED",
-        "2,1,en,MALE,SUGGESTED",
-        "3,0,,MALE,VERIFIED",
-        "4,1,,MALE,VERIFIED",
-        "2,0,,MALE,SUGGESTED",
-        "3,1,,MALE,SUGGESTED"
-    })
-    void decide_verifiedVotes_verifyTheGenderOnlyAtTheThreshold(
+    @CsvSource(
+            value = {
+                "2,0,en,MALE,SUGGESTED",
+                "0,2,en,FEMALE,SUGGESTED",
+                "3,1,en,MALE,SUGGESTED",
+                "1,0,en,UNKNOWN,NONE",
+                "2,1,en,UNKNOWN,NONE",
+                "3,0,,MALE,SUGGESTED",
+                "4,1,,MALE,SUGGESTED",
+                "2,0,,MALE,SUGGESTED",
+                "3,1,,UNKNOWN,NONE"
+            },
+            nullValues = "NONE")
+    void decide_votesWithNoTally_onlySuggestAGender(
             final int male,
             final int female,
             @Nullable final String language,
             final Gender gender,
-            final GenderOrigin origin) {
+            @Nullable final GenderOrigin origin) {
         final List<Answer> answers = answers(
                 times(male, voting(Gender.MALE)),
                 times(female, voting(Gender.FEMALE)),
                 times(2, name(TermReading.Kind.PERSON)));
 
         final Decision decision =
-                ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, QualityDial.BALANCED, language), DECIDE);
+                ReadingVerdict.decide(facts(untyped(), answers, NO_TALLY, 0.0, QualityDial.BALANCED, language));
 
         assertThat(decision.gender()).isEqualTo(gender);
         assertThat(decision.origin()).isEqualTo(origin);
-        assertThat(decision.needsTiebreak()).isFalse();
     }
 
     // One person, one gender (15i.N2): the short name's one vote and the full name's one vote are two votes of one
-    // person, so together they verify what neither verifies alone.
+    // person, so together they suggest what neither suggests alone.
     @Test
-    void decide_oneVoteHereAndOneInAClusterMember_poolIntoAVerifiedGender() {
+    void decide_oneVoteHereAndOneInAClusterMember_poolIntoASuggestedGender() {
         final ReadCall own = call("Brann", List.of(voting(Gender.MALE), name(TermReading.Kind.PERSON)));
-        final ReadCall member = call("Brann Holt", List.of(voting(Gender.MALE), name(TermReading.Kind.PERSON)));
+        final ReadCall member = call("Brann Holt", List.of(name(TermReading.Kind.PERSON), voting(Gender.MALE)));
         final Facts facts = new Facts(
                 untyped(),
                 List.of(own),
@@ -168,10 +167,10 @@ class ReadingVerdictTest {
                 QualityDial.BALANCED,
                 "en");
 
-        final Decision decision = ReadingVerdict.decide(facts, DECIDE);
+        final Decision decision = ReadingVerdict.decide(facts);
 
         assertThat(decision.gender()).isEqualTo(Gender.MALE);
-        assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
+        assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
     }
 
     // IF the windows outvoted a book whose pronouns favour the other gender (three or more at 60 % or more, 15i.N1),
@@ -183,53 +182,38 @@ class ReadingVerdictTest {
 
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
         assertThat(decision.origin()).isEqualTo(GenderOrigin.SUGGESTED);
-        assertThat(decision.needsTiebreak()).isFalse();
-    }
-
-    // A majority of the windows against a tally of three or more at 80 %: neither side decides alone, the gender
-    // waits for one tiebreak call.
-    @Test
-    void decide_majorityAgainstADominantTally_waitsForATiebreakWithNoGender() {
-        final Decision decision =
-                decide(answers(times(3, voting(Gender.MALE)), List.of(name(TermReading.Kind.PERSON))), tally(4, 0));
-
-        assertThat(decision.needsTiebreak()).isTrue();
-        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
-        assertThat(decision.origin()).isNull();
     }
 
     @Test
-    void decide_votesAgreeWithADominantTally_areVerifiedWithNoTiebreak() {
+    void decide_votesAgreeWithADominantTally_areVerified() {
         final Decision decision =
                 decide(answers(times(2, voting(Gender.FEMALE)), List.of(name(TermReading.Kind.PERSON))), tally(4, 0));
 
         assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
         assertThat(decision.origin()).isEqualTo(GenderOrigin.VERIFIED);
-        assertThat(decision.needsTiebreak()).isFalse();
     }
 
     // IF a place's or a ship's "he" gave it a gender, THEN a city would be agreed with as a man; places,
-    // organisations and things carry no gender and cost no tiebreak, whatever the votes and the tally say.
+    // organisations and things carry no gender, whatever the votes and the tally say.
     @ParameterizedTest(name = "{0}")
     @CsvSource({"PLACE", "ORGANISATION", "THING"})
-    void decide_votesOnANonPerson_giveNoGenderAndNoTiebreak(final TermReading.Kind kind) {
+    void decide_votesOnANonPerson_giveNoGender(final TermReading.Kind kind) {
         final Decision decision = decide(times(3, votingAs(kind)), tally(4, 0));
 
         assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
         assertThat(decision.origin()).isNull();
-        assertThat(decision.needsTiebreak()).isFalse();
     }
 
-    // The person's gender is never re-decided, so it never costs a tiebreak call either.
+    // The person's gender is never re-decided.
     @Test
-    void decide_personSetGenderAgainstVotesAndTally_needsNoTiebreak() {
+    void decide_personSetGenderAgainstVotesAndTally_decidesNoGender() {
         final GlossaryEntry person = entry("Brann", TermType.CHARACTER).withGender(Gender.FEMALE);
         final List<Answer> answers = answers(times(3, voting(Gender.MALE)), List.of(name(TermReading.Kind.PERSON)));
 
         final Decision decision =
-                ReadingVerdict.decide(facts(person, answers, tally(4, 0), 0.0, QualityDial.BALANCED, "en"), DECIDE);
+                ReadingVerdict.decide(facts(person, answers, tally(4, 0), 0.0, QualityDial.BALANCED, "en"));
 
-        assertThat(decision.needsTiebreak()).isFalse();
+        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
     }
 
     // --- not a name --------------------------------------------------------------------------------------------------

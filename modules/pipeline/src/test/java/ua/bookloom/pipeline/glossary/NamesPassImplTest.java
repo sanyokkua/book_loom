@@ -44,6 +44,7 @@ class NamesPassImplTest extends NamesPassTestBase {
     }
 
     // Names are typed, gendered by the book's pronouns and given a suggested target; a word that is no name is gone.
+    // The pseudo model quotes no pronoun, so the pronouns' gender is a suggestion (15i.N gate).
     @Test
     void run_seededBook_typesGendersAndTargetsTheNamesAndRemovesWhatIsNoName() {
         seeded("uk", NamePolicy.TRANSLITERATE);
@@ -63,7 +64,12 @@ class NamesPassImplTest extends NamesPassTestBase {
                         GlossaryEntry::origin,
                         GlossaryEntry::locked)
                 .containsExactly(
-                        TermType.CHARACTER, Gender.MALE, GenderOrigin.VERIFIED, "Бранн", TargetOrigin.SUGGESTED, false);
+                        TermType.CHARACTER,
+                        Gender.MALE,
+                        GenderOrigin.SUGGESTED,
+                        "Бранн",
+                        TargetOrigin.SUGGESTED,
+                        false);
         assertThat(held("Harrowgate"))
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::target, GlossaryEntry::locked)
                 .containsExactly(TermType.PLACE, Gender.UNKNOWN, "Гарроугейт", false);

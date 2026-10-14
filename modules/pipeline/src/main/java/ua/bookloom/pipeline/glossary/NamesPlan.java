@@ -138,7 +138,8 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(story, "story");
         final List<Mention> mentions = mentionsOf(entry, story, new HashSet<>(story.ordinals()));
-        log.debug("Names plan windows of {}: {} mentions, plan {}", entry.term(), mentions.size(), windows);
+        log.debug("Names plan windows of entry {}: {} mentions, plan {}", entry.id(), mentions.size(), windows);
+        log.trace("Names plan windows of {}", entry.term());
         return story.index().windows(mentions, windows);
     }
 
@@ -177,19 +178,30 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
      * @return the fewest and the most whole minutes, each rounded up; zero for a plan that reads nothing
      */
     public Minutes estimatedMinutes() {
-        final int calls = estimatedCalls();
-        final Minutes minutes = new Minutes((int) Math.ceilDiv(calls * lowMillisPerCall(), MILLIS_PER_MINUTE), (int)
-                Math.ceilDiv(calls * highMillisPerCall(), MILLIS_PER_MINUTE));
+        return minutesFor(dial, estimatedCalls());
+    }
+
+    /**
+     * How long a number of calls takes at a dial, at the per-call time of its names reading.
+     *
+     * @param dial the quality dial; never null
+     * @param calls the calls; not negative
+     * @return the fewest and the most whole minutes, each rounded up; zero for no call
+     */
+    public static Minutes minutesFor(final QualityDial dial, final int calls) {
+        Objects.requireNonNull(dial, "dial");
+        final Minutes minutes = new Minutes((int) Math.ceilDiv(calls * lowMillisPerCall(dial), MILLIS_PER_MINUTE), (int)
+                Math.ceilDiv(calls * highMillisPerCall(dial), MILLIS_PER_MINUTE));
         log.debug("Names plan {}: {} calls take {}", dial, calls, minutes);
         return minutes;
     }
 
     // A call's seconds at the dial: 3.75 to 7.5 at Fast, 11.25 to 18.75 at Balanced, 11.25 to 22.5 at Max.
-    private long lowMillisPerCall() {
+    private static long lowMillisPerCall(final QualityDial dial) {
         return dial == QualityDial.FAST ? FAST_LOW_MILLIS : SLOW_LOW_MILLIS;
     }
 
-    private long highMillisPerCall() {
+    private static long highMillisPerCall(final QualityDial dial) {
         return switch (dial) {
             case FAST -> FAST_HIGH_MILLIS;
             case BALANCED -> BALANCED_HIGH_MILLIS;

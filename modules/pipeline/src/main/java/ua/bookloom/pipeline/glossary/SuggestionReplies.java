@@ -61,7 +61,7 @@ final class SuggestionReplies {
          */
         GlossaryEntry onto(final GlossaryEntry now) {
             final GlossaryEntry suggested = now.withSuggestedTarget(target);
-            return LockRule.locks(now.term(), target, basis, namesInflect) ? suggested.withLocked(true) : suggested;
+            return LockRule.locks(now.term(), target, basis, namesInflect) ? suggested.withRuleLock() : suggested;
         }
     }
 

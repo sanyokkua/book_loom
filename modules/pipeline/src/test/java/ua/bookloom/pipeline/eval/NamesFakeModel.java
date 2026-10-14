@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,8 +27,7 @@ import ua.bookloom.pipeline.prompt.PromptName;
  * script, and the recurring-term choice follows the gold's {@code recurringTerms} and drops every other word. A term
  * reading (15i.N4) answers every window by the gold too: a junk term is an ordinary word quoted from its window, a gold
  * name a name of its kind whose gender (the script's, else the gold's) is quoted as a pronoun of that gender standing
- * in the window's narration, "none" when the window holds none; a tiebreak (15i.N5) answers the gold gender of the
- * character the call names, quoted the same way. A recurring-term reading (15i.N7) answers a gold term to keep as a term
+ * in the window's narration, "none" when the window holds none. A recurring-term reading (15i.N7) answers a gold term to keep as a term
  * of one sense with the script's rendering and every other word as an ordinary word.
  */
 final class NamesFakeModel implements ChatModel {
@@ -84,9 +82,6 @@ final class NamesFakeModel implements ChatModel {
         }
         if (format.equals(PromptName.LEXICON_READING.responseFormatName())) {
             return lexiconReading(user);
-        }
-        if (format.equals(PromptName.TERM_TIEBREAK.responseFormatName())) {
-            return tiebreak(user);
         }
         return "{}";
     }
@@ -212,26 +207,6 @@ final class NamesFakeModel implements ChatModel {
         book.gold().recurringTerms().forEach(gold -> wanted.put(gold.term().toLowerCase(Locale.ROOT), gold.keep()));
         wanted.putAll(book.model().terms());
         return wanted.getOrDefault(term.toLowerCase(Locale.ROOT), false);
-    }
-
-    // The tiebreak names one character: the gold or scripted name the call's text writes most often.
-    private String tiebreak(final String user) {
-        final String term = characters.keySet().stream()
-                .max(Comparator.comparingInt(name -> occurrences(user, name)))
-                .orElse("");
-        final NamesBook.Verdict said = scripted.get(term);
-        final JudgementGold.Person gold = characters.get(term);
-        final String gender = said != null ? said.gender() : gold == null ? NONE : genderWord(gold.gender());
-        final String quote = pronounIn(user, gender);
-        return "{\"gender\":\"%s\",\"quote\":\"%s\"}".formatted(quote.equals(NONE) ? NONE : gender, escaped(quote));
-    }
-
-    private static int occurrences(final String text, final String name) {
-        int count = 0;
-        for (int at = text.indexOf(name); at >= 0; at = text.indexOf(name, at + name.length())) {
-            count++;
-        }
-        return count;
     }
 
     // The review prompt lists "- term — N× — pronouns: …" and its numbered windows beneath, so a phrase can be copied.

@@ -62,7 +62,7 @@ class ReasoningPlanTest {
                 " draft_batch_json = ON |null|DRAFT_BATCH_JSON|true",
                 "draft-batch-json=on|null|DRAFT_BATCH_JSON|true",
                 "null|TERM_READING=on|TERM_READING|true",
-                "null|TERM_READING=on|TERM_TIEBREAK|false",
+                "null|TERM_READING=on|TERM_SUMMARY|false",
                 "DRAFT_BATCH_JSON=on|TERM_READING=on|TERM_READING|false",
                 "DRAFT_BATCH_JSON=on|TERM_READING=on|DRAFT_BATCH_JSON|true",
                 "DRAFT_BATCH_JSON=on,TERM_READING=on,BRIEF_SYNTHESIS=on|null|BRIEF_SYNTHESIS|true",
