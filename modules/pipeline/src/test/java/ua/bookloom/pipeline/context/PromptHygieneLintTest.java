@@ -63,7 +63,6 @@ class PromptHygieneLintTest {
             Map.entry("memoryHint", "He left. → Він пішов."),
             Map.entry("precedingTargets", "Один."),
             Map.entry("followingTarget", "Три."),
-            Map.entry("wholeParagraph", "Hello. It was a fine day."),
             Map.entry("previous", "Двері були відчинені."),
             Map.entry("fileName", "George Orwell. Animal Farm. 1945"),
             Map.entry("title", "Animal Farm"),

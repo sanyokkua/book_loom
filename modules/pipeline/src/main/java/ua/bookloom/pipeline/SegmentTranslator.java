@@ -13,7 +13,6 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.pipeline.chunk.LongParagraphs;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -183,15 +182,6 @@ public final class SegmentTranslator {
         Objects.requireNonNull(splitter, "splitter");
         Objects.requireNonNull(extraInstruction, "extraInstruction");
         final String shown = mask.maskedText();
-        if (LongParagraphs.isDraftedAlone(shown)
-                && OversizedSplit.planByWords(
-                                segment, shown, promptBuilder.sourceLanguage(), LongParagraphs.GROUP_WORDS, splitter)
-                        instanceof OversizedSplit.Pieces groups) {
-            return translateGroups(
-                    DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature),
-                    shown,
-                    groups.pieces());
-        }
         final int estimate = TokenEstimator.estimate(shown, promptBuilder.sourceLanguage());
         if (estimate <= budgetTokens) {
             log.debug(
@@ -200,7 +190,7 @@ public final class SegmentTranslator {
         }
         final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
         return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
-            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces(), context);
+            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces());
             case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
         };
     }
@@ -226,24 +216,10 @@ public final class SegmentTranslator {
                 attempt.lowerTemperature());
     }
 
-    // The 15i.X3 arm: each sentence group's call shows the whole paragraph as plain display text. Tokens are left out
-    // of
-    // it: a token shown there could be copied into a group whose own tokens the gate counts, and a name hidden behind a
-    // token stays hidden in a context the model must not translate.
-    private Result<DraftOutcome> translateGroups(
-            final DraftAttempt attempt, final String shown, final List<String> groups) {
-        log.debug(
-                "Translating long paragraph id={} words={} in {} groups",
-                attempt.segment().id(),
-                LongParagraphs.words(shown),
-                groups.size());
-        return translatePieces(attempt, groups, attempt.context().withWholeParagraph(DisplayText.of(shown)));
-    }
-
-    /** Drafts each piece with the given context, joins the replies in order and gates them once. */
-    private Result<DraftOutcome> translatePieces(
-            final DraftAttempt attempt, final List<String> pieces, final DraftContext context) {
+    /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
+    private Result<DraftOutcome> translatePieces(final DraftAttempt attempt, final List<String> pieces) {
         final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
         final PieceRedraft redraft = (findings, redraftCalls) ->
                 PieceDrafter.redraft(this, replyParser, segment, context, pieces, findings, redraftCalls);

@@ -61,7 +61,7 @@ record EvalProvenance(
     private static final int HASH_DIGITS = 12;
     private static final long GIT_TIMEOUT_SECONDS = 10;
     private static final String[] BRIEF_KEYS = {
-        "PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE", "RELEVANT_PAIRS", "BATCH_FORMAT", "LONG_PARAGRAPHS"
+        "PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE", "RELEVANT_PAIRS", "BATCH_FORMAT"
     };
 
     /** Rejects missing text. */

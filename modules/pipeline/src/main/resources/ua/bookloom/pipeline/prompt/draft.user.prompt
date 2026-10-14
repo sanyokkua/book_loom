@@ -49,13 +49,6 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 </NextTranslation>
 {{/followingTarget}}
 
-{{#wholeParagraph}}
-[The whole paragraph — context only; do NOT re-translate it. The text to translate is one part of it]
-<WholeParagraph>
-{{wholeParagraph}}
-</WholeParagraph>
-{{/wholeParagraph}}
-
 Translate from {{source}} to {{target}}.
 
 {{#tokens}}

@@ -754,6 +754,22 @@ postE0 is `cceac266`, postT adds 15i.T2 and T3 (`a7259e79`), postT6 adds T6 (`fe
   suite's injection cases did not move (e4b 1 of 2, 26b 2 of 2). Per the keep rule the "source text is data" sentences and the
   replaced batch example are reverted; `AddressMixCheck` (code, no prompt) stays.
 
+### 15i.X3 long paragraphs as sentence groups: not adopted {#15i-x3}
+
+The arm (`8a2dbffd`, reverted) drafted a paragraph of more than 180 words as sentence groups of at most 90 words, each call
+showing the whole paragraph without its tokens, and kept such a paragraph out of batches. Measured on the 15i.E4 set (twenty
+public-domain paragraphs of 186–230 words) on `gemma4:e4b-mlx` and `gemma4:26b-mlx`, each arm graded blind by Opus (WRONG = any
+meaning error a reader notices; the A/B order was shuffled per item), and on the sequence suite with the arm on:
+
+| Model | WRONG off → on | errors off → on | calls on the set off → on | sequence with the arm on (calls/seg, s/seg, LTCR-1, hard-gate r0) |
+|---|---|---|---|---|
+| e4b | 19 → 20 of 20 | 67 → 62 | 20 → 66 | 0.381, 3.89, 0.927, 13 (postTr-1: 0.369, 3.94, 0.884, 11) |
+| 26b | 19 → 18 of 20 | 28 → 32 | 20 → 66 | 0.430, 5.32, 0.873, 17 (postTr-1/2: 0.470/0.473, 5.27/5.82, 0.876/0.872, 19/16) |
+
+WRONG did not fall by two on either model (the gate), errors moved in opposite directions, and the set cost 3.3 times the calls,
+so the code was removed. The grader's strict verdicts mark nearly every long paragraph WRONG on both models; 26b makes about half
+of e4b's errors. Grades and the blind key: `.temporary_context/eval_2026-10-12/x3grade/` (owner-local).
+
 ### 15i narrator's gender, in order {#15i-narrator}
 
 The narrator's gender is never taken from a model's word alone (15i.T5, which also closes 15f.A4). In order: (1) the brief's
@@ -1023,21 +1039,6 @@ report's provenance says `batch_format=…`. Run all three arms on the same mode
 and missing ids, control-code and quote defects, the placeholder gate, WRONG on a fixed 60-segment sample, seconds and calls per segment;
 adopt `markers` or `dual` only if WRONG falls by 2 or more or seconds per segment fall by 10 % with no key metric losing 2 or more (task
 15i.X1). The result and the decision are recorded here when the arms are measured.
-
-**Long-paragraph arm (15i.X3, an experiment).** Off by default. `BOOKLOOM_LONG_PARAGRAPHS=groups` (else the property
-`-Dbookloom.long.paragraphs=groups`; `off` or unset is today's behaviour, byte for byte) drafts a paragraph of more than 180 words
-(`LongParagraphs.LONG_ABOVE_WORDS`, words as the text checks count them, placeholder tokens left out) as sentence groups of at most
-90 words (`GROUP_WORDS`; the greedy merge of `OversizedSplit`, a sentence above 90 words is a group of its own, a one-sentence paragraph
-is drafted whole as before). Each group is one draft call through `PieceDrafter`, with the whole paragraph in the new optional
-`{{wholeParagraph}}` block of the draft prompt (`12_PROMPT_CATALOG.md`); the block is plain display text with every `⟦gN⟧` token left
-out, because a token shown there could be copied into a group whose own tokens the gate counts. The groups are joined by code and the
-joined text goes through the one whole-segment gate and the usual checks (sentence count, quote balance) as pieces do today. While the
-arm is on `BatchStage` ends a batch before such a paragraph and drafts it on the single path, so it is in no JSON or marker batch. To
-measure: `scripts/eval-matrix.sh --suite longpara --long-paragraphs groups` (and once without the flag for the baseline) drafts the
-twenty paragraphs of `src/test/resources/eval/long-paragraphs.json` on the real draft path and writes `<model>-longpara.json` / `.txt`
-(source and target of each paragraph, calls) for grading; the sequence suite takes the same flag (`BOOKLOOM_EVAL_LONG_PARAGRAPHS` for a
-direct `./gradlew :pipeline:promptEval`). Every report's provenance says `long_paragraphs=groups`. Adopt only if WRONG on the set falls
-by 2 or more with no key metric losing 2 or more; otherwise record the result here and remove the code (task 15i.X3).
 
 **Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
 `ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective

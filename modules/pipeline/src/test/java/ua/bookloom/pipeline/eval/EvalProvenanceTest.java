@@ -102,16 +102,6 @@ class EvalProvenanceTest {
                 .isEqualTo("preset=glass-harbour batch_format=dual");
     }
 
-    // The long-paragraph gate (15i.X3) compares the groups arm with today's, so each report says which it measured.
-    @Test
-    void capture_longParagraphsSwitch_isRecordedInTheBrief() {
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_LONG_PARAGRAPHS", "groups")).brief())
-                .isEqualTo("long_paragraphs=groups");
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_BATCH_FORMAT", "dual", "BOOKLOOM_EVAL_LONG_PARAGRAPHS", "groups"))
-                        .brief())
-                .isEqualTo("batch_format=dual long_paragraphs=groups");
-    }
-
     // The thinking plan and the notes arm change what a report measures, so each report says which it ran with.
     @Test
     void capture_nothingSet_recordsThinkingAndNotesOff() {

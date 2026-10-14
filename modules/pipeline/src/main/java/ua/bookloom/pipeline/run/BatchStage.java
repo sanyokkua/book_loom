@@ -22,7 +22,6 @@ import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
-import ua.bookloom.pipeline.chunk.LongParagraphs;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
@@ -132,9 +131,9 @@ final class BatchStage {
     private List<Candidate> gather(final Current current, final Candidate first) {
         final int budget = current.budget();
         int tokens = cost(first);
-        if (tokens > budget || isDraftedAlone(first)) {
+        if (tokens > budget) {
             log.debug(
-                    "Segment {} is above the chunk budget={} or drafted as groups: drafted on its own",
+                    "Segment {} is above the chunk budget={}: drafted on its own",
                     first.segment().id(),
                     budget);
             return List.of();
@@ -146,24 +145,13 @@ final class BatchStage {
             if (next == null) {
                 continue;
             }
-            if (isDraftedAlone(next) || tokens + cost(next) > budget) {
+            if (tokens + cost(next) > budget) {
                 break;
             }
             tokens += cost(next);
             batch.add(next);
         }
         return batch;
-    }
-
-    // A long paragraph the 15i.X3 arm drafts as sentence groups is in no batch: it needs its own calls.
-    private static boolean isDraftedAlone(final Candidate candidate) {
-        final boolean isAlone = LongParagraphs.isDraftedAlone(candidate.mask().maskedText());
-        if (isAlone) {
-            log.debug(
-                    "Segment {} is a long paragraph drafted as groups: kept out of batches",
-                    candidate.segment().id());
-        }
-        return isAlone;
     }
 
     private int cost(final Candidate candidate) {

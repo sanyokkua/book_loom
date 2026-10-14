@@ -19,8 +19,6 @@ import org.jspecify.annotations.Nullable;
  * @param characterLines one {@code name — gender} line per character of the segment whose gender the glossary knows
  * @param followingTarget the next segment's target as plain text, or null when it has none; a run drafts ahead of the
  *     next segment and never has one, a retry shows the one the book holds by then
- * @param wholeParagraph the paragraph a sentence group belongs to as plain display text, or null when the draft is not a
- *     group (the 15i.X3 arm); it carries no placeholder token, so no group can copy another group's token
  */
 public record DraftContext(
         List<String> precedingTargets,
@@ -30,8 +28,7 @@ public record DraftContext(
         List<String> suggestedLines,
         List<String> lexiconLines,
         List<String> characterLines,
-        @Nullable String followingTarget,
-        @Nullable String wholeParagraph) {
+        @Nullable String followingTarget) {
 
     /**
      * Rejects null entries and makes the context immutable at the prompt boundary, leaving out empty and
@@ -46,29 +43,6 @@ public record DraftContext(
         lexiconLines = PromptHygiene.clean(Objects.requireNonNull(lexiconLines, "lexiconLines"));
         characterLines = PromptHygiene.clean(Objects.requireNonNull(characterLines, "characterLines"));
         followingTarget = PromptHygiene.cleanText(followingTarget);
-        wholeParagraph = PromptHygiene.cleanText(wholeParagraph);
-    }
-
-    /** A context that is not a sentence group of a longer paragraph, as every draft but the 15i.X3 arm's. */
-    public DraftContext(
-            final List<String> precedingTargets,
-            @Nullable final String summary,
-            final List<String> glossaryLines,
-            final List<String> memoryLines,
-            final List<String> suggestedLines,
-            final List<String> lexiconLines,
-            final List<String> characterLines,
-            @Nullable final String followingTarget) {
-        this(
-                precedingTargets,
-                summary,
-                glossaryLines,
-                memoryLines,
-                suggestedLines,
-                lexiconLines,
-                characterLines,
-                followingTarget,
-                null);
     }
 
     /** A context with no following target, as every draft of a run has. */
@@ -98,27 +72,7 @@ public record DraftContext(
                 suggestedLines,
                 lexiconLines,
                 characterLines,
-                target,
-                wholeParagraph);
-    }
-
-    /**
-     * The same context for one sentence group of a longer paragraph, which it shows whole.
-     *
-     * @param paragraph the whole paragraph as plain display text with no placeholder token, or null for none
-     * @return the context with that paragraph
-     */
-    public DraftContext withWholeParagraph(@Nullable final String paragraph) {
-        return new DraftContext(
-                precedingTargets,
-                summary,
-                glossaryLines,
-                memoryLines,
-                suggestedLines,
-                lexiconLines,
-                characterLines,
-                followingTarget,
-                paragraph);
+                target);
     }
 
     /** A context with no character sheet. */

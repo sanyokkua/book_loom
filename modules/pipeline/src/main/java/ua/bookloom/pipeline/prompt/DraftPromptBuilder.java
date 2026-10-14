@@ -257,7 +257,6 @@ public final class DraftPromptBuilder {
             final String extraInstruction) {
         final String summary = context.summary();
         final String following = context.followingTarget();
-        final String whole = context.wholeParagraph();
         return Map.ofEntries(
                 Map.entry("source", source),
                 Map.entry("target", target),
@@ -272,7 +271,6 @@ public final class DraftPromptBuilder {
                 Map.entry("characters", String.join("\n", context.characterLines())),
                 Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
                 Map.entry("followingTarget", following == null ? "" : following),
-                Map.entry("wholeParagraph", whole == null ? "" : whole),
                 Map.entry("extraInstruction", extraInstruction));
     }
 

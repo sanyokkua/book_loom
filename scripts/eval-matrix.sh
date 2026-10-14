@@ -61,10 +61,6 @@
 # --batch-format (15i.X1, an experiment) chooses how a batch is sent and answered: json = numbered items and a JSON reply (the
 # default), markers = one passage marked ⟦s1⟧ … with a plain-text reply and no schema, dual = the passage as context beside
 # the numbered items with a JSON reply. It reaches the code as BOOKLOOM_EVAL_BATCH_FORMAT and each report's provenance names it.
-# --long-paragraphs groups (15i.X3, an experiment) drafts a paragraph of more than 180 words as sentence groups of at most 90 words, each
-# call showing the whole paragraph; unset or off is today's behaviour. It reaches the code as BOOKLOOM_EVAL_LONG_PARAGRAPHS and each
-# report's provenance names it. --suite longpara drafts the 20 public-domain paragraphs of eval/long-paragraphs.json on the real draft
-# path and writes each source and target (reports end in -longpara.json) for grading.
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -82,7 +78,6 @@ NARRATOR=unset
 NARRATOR_GENDER=male
 RELEVANT_PAIRS=""
 BATCH_FORMAT=
-LONG_PARAGRAPHS=""
 REASONING=""
 BATCH_NOTES=""
 DEFAULT_CONTEXT=16384
@@ -105,9 +100,6 @@ while [ $# -gt 0 ]; do
     --relevant-pairs) RELEVANT_PAIRS=$2; shift 2 ;;
     --batch-format)
       case "$2" in json|markers|dual) BATCH_FORMAT=$2 ;; *) echo "--batch-format takes json, markers or dual" >&2; exit 2 ;; esac
-      shift 2 ;;
-    --long-paragraphs)
-      case "$2" in groups|off) LONG_PARAGRAPHS=$2 ;; *) echo "--long-paragraphs takes groups or off" >&2; exit 2 ;; esac
       shift 2 ;;
     --reasoning) REASONING=$2; shift 2 ;;
     --batch-notes) BATCH_NOTES=$2; shift 2 ;;
@@ -137,7 +129,7 @@ run_one() {
   log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT BOOKLOOM_EVAL_LONG_PARAGRAPHS=$LONG_PARAGRAPHS ./gradlew :pipeline:promptEval >"$log" 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT ./gradlew :pipeline:promptEval >"$log" 2>&1 &
   local pid=$!
   # The watchdog holds its own sleep, so ending it must end the sleep too: an orphaned sleep keeps the script's stdout
   # pipe open until the timeout runs out when the output is piped.
@@ -222,12 +214,6 @@ if sys.argv[2] == "names":
                 continue
             print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
     print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
-    sys.exit(0)
-if sys.argv[2] == "longpara":
-    print("%-36s %6s %10s %6s %9s" % ("model", "groups", "paragraphs", "calls", "calls/par"))
-    for r in (r for r in reports if r.get("suite") == "longpara"):
-        print("%-36s %6s %10d %6d %9.1f" % (r["model"], "on" if r["groups"] else "off", len(r["paragraphs"]), r["calls"], r["calls"] / max(1, len(r["paragraphs"]))))
-    print("(the sources and targets to grade are in the report JSON: paragraphs[].source / .target)")
     sys.exit(0)
 if sys.argv[2] == "coref":
     print("%-36s %7s %6s %6s %8s %9s" % ("model", "windows", "right", "wrong", "abstain", "wrongVote"))

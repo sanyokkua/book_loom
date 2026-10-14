@@ -203,11 +203,6 @@ localOnlyTags.forEach { tag ->
             System.getenv("BOOKLOOM_EVAL_BATCH_FORMAT")?.takeIf { it.isNotBlank() }?.let {
                 systemProperty("bookloom.batch.format", it)
             }
-            // The long-paragraph arm (15i.X3): `BOOKLOOM_EVAL_LONG_PARAGRAPHS=groups|off` reaches the code as
-            // `bookloom.long.paragraphs`; unset, the property is absent and the run's own default (off) holds.
-            System.getenv("BOOKLOOM_EVAL_LONG_PARAGRAPHS")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.long.paragraphs", it)
-            }
             // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
             // code as the `bookloom.reasoning` property, `BOOKLOOM_EVAL_BATCH_NOTES=on|off` as `bookloom.batch.notes`;
             // unset leaves both off, and an explicit BOOKLOOM_REASONING / BOOKLOOM_BATCH_NOTES still wins.
