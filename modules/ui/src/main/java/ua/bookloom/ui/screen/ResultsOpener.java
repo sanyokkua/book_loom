@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
@@ -9,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.state.ChangeMarks;
+import ua.bookloom.ui.state.ChangeOperation;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
@@ -25,14 +28,23 @@ final class ResultsOpener {
 
     private static final String KEY = "names-style-results-listener";
 
+    private static List<ChangeMarks.Side> sidesOf(final ChangeOperation operation, final ChangeMarks marks) {
+        final List<ChangeMarks.Side> sides = new ArrayList<>();
+        if (operation.isAboutNames()) {
+            sides.add(marks.glossary());
+        }
+        if (operation.isAboutTerms()) {
+            sides.add(marks.terms());
+        }
+        return sides;
+    }
+
     static void attach(final Node screen, final NamesStyleViewModel names, final ChangeResultsDialog dialog) {
         final ChangeListener<@Nullable ChangeResults> onResults = (observed, was, now) -> {
             if (now != null) {
-                final ChangeMarks.Side side = now.operation().isAboutTerms()
-                        ? names.marks().terms()
-                        : names.marks().glossary();
+                final List<ChangeMarks.Side> sides = sidesOf(now.operation(), names.marks());
                 log.debug("opening the results of {}", now.operation());
-                dialog.show(now, () -> side.onlyChanged().set(side.size() > 0));
+                dialog.show(now, () -> sides.forEach(side -> side.onlyChanged().set(side.size() > 0)));
             }
         };
         screen.getProperties().put(KEY, onResults);

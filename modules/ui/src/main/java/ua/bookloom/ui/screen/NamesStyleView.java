@@ -27,6 +27,7 @@ import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.GlossaryNotice;
@@ -56,6 +57,7 @@ final class NamesStyleView {
     private final Navigator navigator;
     private final TranslatingViewModel translating;
     private final NamesStyleViewModel glossary;
+    private final BookBriefViewModel brief;
     private final ModalHost modalHost;
     private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
@@ -68,6 +70,7 @@ final class NamesStyleView {
             final Navigator navigator,
             final TranslatingViewModel translating,
             final NamesStyleViewModel glossary,
+            final BookBriefViewModel brief,
             final ModalHost modalHost,
             final Toasts toasts,
             final NoTargetDialog noTargetDialog,
@@ -78,6 +81,7 @@ final class NamesStyleView {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.brief = Objects.requireNonNull(brief, "brief");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
@@ -96,7 +100,8 @@ final class NamesStyleView {
                 MessageKey.NAMES_STYLE_SKIP_TIP);
         final TwoColumns cards = new TwoColumns(glossaryCard(), recurringCard(), STACK_BELOW);
         cards.equalHeightsProperty().set(true);
-        final VBox screen = new VBox(SCREEN_SPACING, noticeBanner(), cards, skip, footer());
+        final VBox screen = new VBox(
+                SCREEN_SPACING, noticeBanner(), AutoNamesBar.build(messages, glossary, brief), cards, skip, footer());
         ResultsOpener.attach(screen, glossary, changeResultsDialog);
         return screen;
     }

@@ -15,7 +15,9 @@ public enum ChangeOperation {
     /** The recurring terms' review with the model. */
     TERM_REVIEW(MessageKey.RESULTS_OP_TERM_REVIEW),
     /** The model's suggestion of a rendering for each recurring term. */
-    TERM_TRANSLATE(MessageKey.RESULTS_OP_TERM_TRANSLATE);
+    TERM_TRANSLATE(MessageKey.RESULTS_OP_TERM_TRANSLATE),
+    /** The one autonomous pass that prepares both tables; its results hold a Names and a Recurring terms section. */
+    AUTO_NAMES(MessageKey.RESULTS_OP_AUTO_NAMES);
 
     private final MessageKey label;
 
@@ -33,11 +35,29 @@ public enum ChangeOperation {
     }
 
     /**
-     * Whether the operation works on the recurring terms rather than the glossary.
+     * Whether the operation works on the glossary.
      *
-     * @return {@code true} for the term operations, {@code false} for the name operations
+     * @return {@code true} for the name operations and the automatic pass, {@code false} for the term operations
+     */
+    public boolean isAboutNames() {
+        return this != TERM_SCAN && this != TERM_REVIEW && this != TERM_TRANSLATE;
+    }
+
+    /**
+     * Whether the operation works on the recurring terms.
+     *
+     * @return {@code true} for the term operations and the automatic pass, {@code false} for the name operations
      */
     public boolean isAboutTerms() {
-        return this == TERM_SCAN || this == TERM_REVIEW || this == TERM_TRANSLATE;
+        return this == AUTO_NAMES || !isAboutNames();
+    }
+
+    /**
+     * Whether the results list a section per table, because the operation changed both.
+     *
+     * @return {@code true} for the automatic pass, {@code false} for the others
+     */
+    public boolean isSectioned() {
+        return this == AUTO_NAMES;
     }
 }

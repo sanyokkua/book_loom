@@ -24,6 +24,7 @@ import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.ScriptedLexiconService;
+import ua.bookloom.ui.ScriptedNamesPass;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -54,6 +55,7 @@ class NamesStyleViewModelTest extends FxTestBase {
         vm = onFx(() -> new NamesStyleViewModel(
                 glossary,
                 new ScriptedLexiconService(),
+                new ScriptedNamesPass(),
                 models,
                 settings,
                 new DirectExecutor(),

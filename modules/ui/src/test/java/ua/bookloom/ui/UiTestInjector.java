@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -104,6 +105,7 @@ public final class UiTestInjector {
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
         private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
         private ScriptedLexiconService lexicon = new ScriptedLexiconService();
+        private ScriptedNamesPass namesPass = new ScriptedNamesPass();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
@@ -174,6 +176,12 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link NamesPass} is, so the test can script the estimate and the pass it is answered. */
+        public Builder namesPass(final ScriptedNamesPass value) {
+            namesPass = Objects.requireNonNull(value, "namesPass");
+            return this;
+        }
+
         /** What the graph's {@link ReviewDesk} is, so the test can script the counts and the queue it is answered. */
         public Builder reviewDesk(final ScriptedReviewDesk value) {
             desk = Objects.requireNonNull(value, "desk");
@@ -215,7 +223,10 @@ public final class UiTestInjector {
         public Injector build() {
             final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), scriptedPorts(prompt), open));
+                    .with(
+                            new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
+                            scriptedPorts(prompt),
+                            open));
         }
 
         private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
@@ -274,16 +285,19 @@ public final class UiTestInjector {
 
         private final GlossaryService glossary;
         private final LexiconService lexicon;
+        private final NamesPass namesPass;
         private final ReviewDesk desk;
         private final ReviewMode reviewMode;
 
         ReviewPortsModule(
                 final GlossaryService glossary,
                 final LexiconService lexicon,
+                final NamesPass namesPass,
                 final ReviewDesk desk,
                 final ReviewMode reviewMode) {
             this.glossary = glossary;
             this.lexicon = lexicon;
+            this.namesPass = namesPass;
             this.desk = desk;
             this.reviewMode = reviewMode;
         }
@@ -292,6 +306,7 @@ public final class UiTestInjector {
         protected void configure() {
             bind(GlossaryService.class).toInstance(glossary);
             bind(LexiconService.class).toInstance(lexicon);
+            bind(NamesPass.class).toInstance(namesPass);
             bind(ReviewDesk.class).toInstance(desk);
             bind(ReviewMode.class).toInstance(reviewMode);
         }

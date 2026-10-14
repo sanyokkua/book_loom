@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
@@ -28,6 +29,7 @@ import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.ScriptedLexiconService;
+import ua.bookloom.ui.ScriptedNamesPass;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -62,15 +64,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         settings = injector.getInstance(SettingsViewModel.class);
         tracker = injector.getInstance(ActivityTracker.class);
         messages = injector.getInstance(Messages.class);
-        vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                ScriptedChatModelFactory.ok(),
-                settings,
-                new DirectExecutor(),
-                messages,
-                tracker,
-                () -> "new"));
+        vm = newViewModel(new DirectExecutor());
         glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
         run(() -> vm.show(PROJECT));
         interact(() -> settings.model().set("gemma3:12b"));
@@ -179,9 +173,21 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         assertThat(shown.rows()).isEmpty();
     }
 
+    private NamesStyleViewModel newViewModel(final ExecutorService executor) {
+        return onFx(() -> new NamesStyleViewModel(
+                glossary,
+                lexicon,
+                new ScriptedNamesPass(),
+                ScriptedChatModelFactory.ok(),
+                settings,
+                executor,
+                messages,
+                tracker,
+                () -> "new"));
+    }
+
     private NamesStyleViewModel viewModelOver(final HeldExecutor executor) {
-        final NamesStyleViewModel model = onFx(() -> new NamesStyleViewModel(
-                glossary, lexicon, ScriptedChatModelFactory.ok(), settings, executor, messages, tracker, () -> "new"));
+        final NamesStyleViewModel model = newViewModel(executor);
         glossary.willAnswer(Result.ok(List.of(WELL)));
         run(() -> model.show(PROJECT));
         return model;

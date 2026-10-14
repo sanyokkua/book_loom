@@ -56,19 +56,8 @@ final class ChangeLog {
     }
 
     void names(final ChangeOperation operation, final EntryChanges<GlossaryEntry> changes) {
-        final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
-        changes.added().forEach(entry -> {
-            items.add(new ChangeResults.Item(rows.added(entry), reverts.removeName(entry)));
-            marks.glossary().mark(entry.id());
-        });
-        changes.removed()
-                .forEach(removal ->
-                        items.add(new ChangeResults.Item(rows.removed(removal), reverts.addName(removal.entry()))));
-        changes.changed().forEach(change -> {
-            items.add(new ChangeResults.Item(rows.changed(change), reverts.setNameBack(change)));
-            marks.glossary().mark(change.after().id());
-        });
+        nameItems(new ChangeRows(messages), items, changes);
         publish(operation, items);
     }
 
@@ -81,8 +70,50 @@ final class ChangeLog {
      */
     void terms(
             final ChangeOperation operation, final List<LexiconEntry> found, final EntryChanges<LexiconEntry> changes) {
+        final List<ChangeResults.Item> items = new ArrayList<>();
+        termItems(new ChangeRows(messages), items, found, changes);
+        publish(operation, items);
+    }
+
+    /**
+     * Publishes the changes of an operation that changed both tables as one list, the names first; the rows are
+     * numbered across both so that each is reverted alone.
+     *
+     * @param operation the operation
+     * @param names what it did to the glossary
+     * @param terms what it did to the recurring terms
+     */
+    void both(
+            final ChangeOperation operation,
+            final EntryChanges<GlossaryEntry> names,
+            final EntryChanges<LexiconEntry> terms) {
         final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
+        nameItems(rows, items, names);
+        termItems(rows, items, List.of(), terms);
+        publish(operation, items);
+    }
+
+    private void nameItems(
+            final ChangeRows rows, final List<ChangeResults.Item> items, final EntryChanges<GlossaryEntry> changes) {
+        changes.added().forEach(entry -> {
+            items.add(new ChangeResults.Item(rows.added(entry), reverts.removeName(entry)));
+            marks.glossary().mark(entry.id());
+        });
+        changes.removed()
+                .forEach(removal ->
+                        items.add(new ChangeResults.Item(rows.removed(removal), reverts.addName(removal.entry()))));
+        changes.changed().forEach(change -> {
+            items.add(new ChangeResults.Item(rows.changed(change), reverts.setNameBack(change)));
+            marks.glossary().mark(change.after().id());
+        });
+    }
+
+    private void termItems(
+            final ChangeRows rows,
+            final List<ChangeResults.Item> items,
+            final List<LexiconEntry> found,
+            final EntryChanges<LexiconEntry> changes) {
         found.forEach(entry -> addTerm(items, rows.addedTerm(entry, ChangeOrigin.TEXT), entry));
         changes.added().forEach(entry -> addTerm(items, rows.addedTerm(entry, ChangeOrigin.MODEL), entry));
         changes.removed()
@@ -92,7 +123,6 @@ final class ChangeLog {
             items.add(new ChangeResults.Item(rows.changedTerm(change), reverts.restoreTerm(change)));
             marks.terms().mark(LexiconEntry.keyOf(change.after().term()));
         });
-        publish(operation, items);
     }
 
     private void addTerm(final List<ChangeResults.Item> items, final ChangeRow row, final LexiconEntry entry) {

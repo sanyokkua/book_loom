@@ -3,11 +3,16 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.NamesPassReport;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -23,6 +28,9 @@ final class ModelAnswers {
     /** The recurring terms after an action: what its text step found, what its model step did and all of them now. */
     record Terms(List<LexiconEntry> found, EntryChanges<LexiconEntry> changes, List<LexiconEntry> all) {}
 
+    /** What the automatic pass did, with both tables as it left them. */
+    record AutoNames(NamesPassReport report, List<GlossaryEntry> glossary, List<LexiconEntry> terms) {}
+
     private final GlossaryModelRuns.Screen screen;
     private final GlossaryCalls calls;
 
@@ -34,6 +42,34 @@ final class ModelAnswers {
     Result<ModelAnswers.Terms> terms(
             final String project, final List<LexiconEntry> found, final EntryChanges<LexiconEntry> changes) {
         return screen.lexicon().entries(project).map(all -> new Terms(found, changes, all));
+    }
+
+    // The pass writes both tables itself, so they are read again before anything is shown.
+    Result<AutoNames> prepare(
+            final String project,
+            final ChatModel model,
+            final @Nullable Integer detectedContext,
+            final Consumer<JobEvent> progress) {
+        return screen.namesPass()
+                .run(project, model, detectedContext, progress)
+                .flatMap(report -> screen.glossary()
+                        .entries(project)
+                        .flatMap(names ->
+                                screen.lexicon().entries(project).map(terms -> new AutoNames(report, names, terms))));
+    }
+
+    void autoPrepared(final ChangeOperation operation, final AutoNames answer) {
+        final NamesPassReport report = answer.report();
+        log.info(
+                "automatic names: {} calls in {}; {} glossary rows and {} recurring terms now",
+                report.calls(),
+                report.elapsed(),
+                answer.glossary().size(),
+                answer.terms().size());
+        screen.rows().setAll(answer.glossary());
+        screen.lexiconRows().setAll(answer.terms());
+        info(screen.messages().get(MessageKey.NAMES_STYLE_AUTO_DONE, report.calls()));
+        screen.changes().both(operation, report.names(), report.terms());
     }
 
     void termsChanged(final ChangeOperation operation, final Terms answer, final int changed, final MessageKey line) {

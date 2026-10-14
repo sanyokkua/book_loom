@@ -6,14 +6,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.application.Platform;
-import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -30,6 +29,7 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -37,7 +37,7 @@ import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The model actions of both cards of the names and style screen — scan, review and translate of the names and of the
- * recurring terms — as the screen runs them: one at a time,
+ * recurring terms — and the automatic pass over both, as the screen runs them: one at a time,
  * with the chosen model, a waiting line that counts the requests and, while targets are suggested, the batches, and a stop that interrupts the request in flight. A
  * stopped action changes nothing, since the service writes only after every request has answered. Neither starts while
  * other model work runs ({@link ActivityTracker}); each registers itself while it runs, so the title bar can name and
@@ -61,6 +61,8 @@ final class GlossaryModelRuns {
      *
      * @param glossary the port the scan and review call
      * @param lexicon the port the suggestion of recurring-term renderings calls
+     * @param namesPass the port that prepares both tables in one pass
+     * @param detection asks the provider for a chosen model's context length, off the FX thread
      * @param models where the chosen model is built
      * @param settings where the chosen provider and model are read
      * @param messages the catalogue the lines are worded from
@@ -74,6 +76,8 @@ final class GlossaryModelRuns {
     record Screen(
             GlossaryService glossary,
             LexiconService lexicon,
+            NamesPass namesPass,
+            Function<ModelSelection, Optional<Integer>> detection,
             ChatModelFactory models,
             SettingsViewModel settings,
             Messages messages,
@@ -88,8 +92,7 @@ final class GlossaryModelRuns {
     private final GlossaryCalls calls;
     private final ModelAnswers answers;
     private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
-    private final ReadOnlyStringWrapper blockedReason = new ReadOnlyStringWrapper("");
-    private final ObjectBinding<@Nullable ActivityKind> blocker;
+    private final ModelBlock block;
     private @Nullable Future<?> running;
     private ActivityTracker.@Nullable Handle handle;
     private @Nullable CallFeed feed;
@@ -103,11 +106,7 @@ final class GlossaryModelRuns {
         this.screen = Objects.requireNonNull(screen, "screen");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.answers = new ModelAnswers(screen, calls);
-        // A scan and a review are ruled out by the same work, so the scan's blocker speaks for both.
-        this.blocker = screen.activities().blocker(ActivityKind.GLOSSARY_SCAN);
-        blocker.addListener(observed -> refreshBlocked());
-        busy.addListener(observed -> refreshBlocked());
-        refreshBlocked();
+        this.block = new ModelBlock(screen.activities(), screen.messages(), busy.getReadOnlyProperty());
     }
 
     ReadOnlyBooleanProperty busy() {
@@ -116,19 +115,7 @@ final class GlossaryModelRuns {
 
     /** Why the model actions are not offered because other model work runs; empty otherwise. FX thread only. */
     ReadOnlyStringProperty blockedReason() {
-        return blockedReason.getReadOnlyProperty();
-    }
-
-    private void refreshBlocked() {
-        final ActivityKind kind = blocker.get();
-        final String reason = kind == null || busy.get()
-                ? ""
-                : screen.messages()
-                        .get(MessageKey.ACTIVITY_BLOCKED, screen.messages().get(kind.label()));
-        if (!reason.equals(blockedReason.get())) {
-            log.debug("glossary model actions blocked by {}", kind);
-        }
-        blockedReason.set(reason);
+        return block.reason();
     }
 
     void scan() {
@@ -205,6 +192,19 @@ final class GlossaryModelRuns {
                         .flatMap(done -> answers.terms(project, List.of(), done)),
                 answer -> answers.termsChanged(
                         operation, answer, answer.changes().removed().size(), MessageKey.RECURRING_MODEL_REVIEWED));
+    }
+
+    // The model's context length is asked for off the FX thread, in the job; the selection is read here, on it.
+    void autoNames() {
+        final String project = screen.project().get();
+        final Optional<ModelSelection> chosen = screen.settings().selection();
+        start(
+                ActivityKind.NAMES_PASS,
+                ChangeOperation.AUTO_NAMES,
+                MessageKey.NAMES_STYLE_AUTO_NO_MODEL,
+                (model, progress) -> answers.prepare(
+                        project, model, chosen.flatMap(screen.detection()).orElse(null), progress),
+                answer -> answers.autoPrepared(operation, answer));
     }
 
     /** Stops the action under way, if any; the glossary keeps what it had. */
@@ -290,18 +290,9 @@ final class GlossaryModelRuns {
     }
 
     private boolean isRefusedBecauseOtherWorkRuns(final ActivityKind what) {
-        final Optional<ActivityKind> conflict = screen.activities().conflictFor(what);
-        if (conflict.isEmpty()) {
-            return false;
-        }
-        log.debug("the model {} was not started: {} is running", what, conflict.get());
-        line(
-                GlossaryNotice.Level.ERROR,
-                screen.messages()
-                        .get(
-                                MessageKey.ACTIVITY_BLOCKED,
-                                screen.messages().get(conflict.get().label())));
-        return true;
+        final Optional<String> refusal = block.refusalFor(what);
+        refusal.ifPresent(text -> line(GlossaryNotice.Level.ERROR, text));
+        return refusal.isPresent();
     }
 
     private <T> void ended(

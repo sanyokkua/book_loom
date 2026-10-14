@@ -24,6 +24,7 @@ import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.ScriptedLexiconService;
+import ua.bookloom.ui.ScriptedNamesPass;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -55,6 +56,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     final ScriptedReviewDesk desk = new ScriptedReviewDesk();
     final ScriptedGlossaryService glossary = new ScriptedGlossaryService();
     final ScriptedLexiconService lexicon = new ScriptedLexiconService();
+    final ScriptedNamesPass namesPass = new ScriptedNamesPass();
     final ScriptedTranslationEngine engine = ScriptedTranslationEngine.returning(job);
     private ReviewMode launchMode = ReviewMode.UNATTENDED;
 
@@ -66,6 +68,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
                 .engine(engine)
                 .glossary(glossary)
                 .lexicon(lexicon)
+                .namesPass(namesPass)
                 .reviewDesk(desk)
                 .reviewMode(launchMode)
                 .build();

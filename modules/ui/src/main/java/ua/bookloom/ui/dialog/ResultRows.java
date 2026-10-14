@@ -21,6 +21,7 @@ import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
+import ua.bookloom.ui.state.ChangeSection;
 
 /**
  * The lines of the results list and the cells that draw them: a heading per kind of change with its count, then that
@@ -53,6 +54,25 @@ final class ResultRows {
     }
 
     List<Object> items() {
+        return results.operation().isSectioned() ? bySection() : byKind();
+    }
+
+    // One operation changed both tables: a heading per table, its rows below (added, removed, then changed).
+    private List<Object> bySection() {
+        final List<Object> items = new ArrayList<>();
+        for (final ChangeSection section : ChangeSection.values()) {
+            final List<ChangeRow> ofSection = results.rows().stream()
+                    .filter(row -> row.section() == section)
+                    .toList();
+            if (!ofSection.isEmpty()) {
+                items.add(new Heading(section.heading(), ofSection.size()));
+                items.addAll(ofSection);
+            }
+        }
+        return items;
+    }
+
+    private List<Object> byKind() {
         final List<Object> items = new ArrayList<>();
         for (final ChangeKind kind : ChangeKind.values()) {
             final List<ChangeRow> ofKind =

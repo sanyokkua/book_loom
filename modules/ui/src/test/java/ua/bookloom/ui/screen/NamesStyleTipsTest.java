@@ -57,6 +57,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
     // IF a button carried another control's words, THEN hovering it would explain the wrong action.
     @ParameterizedTest
     @CsvSource({
+        "names-style-auto,NAMES_STYLE_AUTO_TIP",
         "names-style-add,NAMES_STYLE_ADD_TIP",
         "names-style-scan,NAMES_STYLE_MODEL_SCAN_TIP",
         "names-style-review,NAMES_STYLE_REVIEW_TIP",

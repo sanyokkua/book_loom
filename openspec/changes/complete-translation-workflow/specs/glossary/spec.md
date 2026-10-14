@@ -1108,6 +1108,33 @@ Stop, must not leave half of a result behind; and what the person fixed by hand 
 - **WHEN** the call that reads the recurring terms fails with `unreachable`
 - **THEN** the pass answers `unreachable` and the glossary and the recurring terms are as they were
 
+### Requirement: Offer the one-pass preparation on Names & style
+
+The Names & style screen SHALL offer "Prepare names automatically" as a secondary button above both cards, with a muted
+line under it that states the pass's estimate for the brief's dial ("about 15–25 min on Balanced"); the line SHALL be
+asked for again when the screen opens and when a change of the dial has been saved, and SHALL be blank when the port
+cannot estimate. The button SHALL be off while any model action runs, and with no model chosen it SHALL report that in
+the screen's banner and call nothing. A press SHALL run the names pass on the chosen model as a blocking activity (the
+shared busy card, "Preparing names", whose Cancel is the pass's Stop, and the computer kept awake), and a stopped or
+failed pass SHALL leave both tables as they were. WHEN the pass succeeds, both tables SHALL be read again and the
+results dialog "Automatic names — results" SHALL open with a "Names (n)" section above a "Recurring terms (n)" section,
+a Revert on each row and one Undo all across both; every changed row SHALL wear the "Changed" chip on its card, and
+"Show changed rows" SHALL turn on both cards' changed filters.
+
+**Source:** `tasks.md` 15i.U6. In plain words: one button replaces five presses, shows what it will cost before it
+starts, and gives every change back one by one or all together.
+
+#### Scenario: The press fills both tables and Undo all gives both back
+
+- **WHEN** the person presses "Prepare names automatically" and the pass adds `Mid`, drops `Hale` and adds `pentacle`
+- **THEN** the results dialog lists `Mid` and `Hale` under "Names (2)" and `pentacle` under "Recurring terms (1)"
+- **AND** Undo all removes `Mid` and `pentacle` and puts `Hale` back
+
+#### Scenario: Cancel on the busy card changes nothing
+
+- **WHEN** the person presses Cancel on the busy card while the pass waits for the model
+- **THEN** the pass is interrupted, the dialog says "Stopped. Nothing was changed." and both tables are as they were
+
 #### Scenario: The person's entries are left alone
 
 - **WHEN** the glossary holds a locked `Gatewarden`, a `Marrow Lane` with the person's target and a `Wren` whose

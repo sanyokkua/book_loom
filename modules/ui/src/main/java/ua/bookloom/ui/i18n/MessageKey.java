@@ -77,6 +77,8 @@ public enum MessageKey {
     ACTIVITY_TERM_REVIEW("activity.termReview"),
     /** Name of the recurring terms' rendering suggestion as running model work. */
     ACTIVITY_TERM_TRANSLATE("activity.termTranslate"),
+    /** Name of the automatic names pass as running model work, and the title of its busy card. */
+    ACTIVITY_NAMES_PASS("activity.namesPass"),
     /** Name of a review-panel segment retry as running model work. */
     ACTIVITY_REVIEW_RETRY("activity.reviewRetry"),
     /** Name of the file name proposal as running model work. */
@@ -1147,6 +1149,18 @@ public enum MessageKey {
     NAMES_STYLE_NO_MODEL_REVIEW("namesStyle.noModelReview"),
     /** Why the translate-only action did not start. */
     NAMES_STYLE_NO_MODEL_TRANSLATE("namesStyle.noModelTranslate"),
+    /** Caption of the button that prepares the names and the recurring terms in one pass. */
+    NAMES_STYLE_AUTO("namesStyle.auto"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_AUTO}. */
+    NAMES_STYLE_AUTO_TIP("namesStyle.auto.tip"),
+    /** The estimate under that button; arguments are the fewest and most minutes and the dial's name. */
+    NAMES_STYLE_AUTO_ESTIMATE("namesStyle.auto.estimate"),
+    /** The estimate when the fewest and most minutes are the same; arguments are the minutes and the dial's name. */
+    NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimateOne"),
+    /** Why the automatic pass did not start. */
+    NAMES_STYLE_AUTO_NO_MODEL("namesStyle.auto.noModel"),
+    /** Line after the automatic pass; argument 0 is how many model calls it made. */
+    NAMES_STYLE_AUTO_DONE("namesStyle.auto.done"),
     /** Line after the glossary's translate-only action; argument 0 is how many names took a suggested target. */
     NAMES_STYLE_TRANSLATED("namesStyle.translated"),
     /**
@@ -2061,6 +2075,12 @@ public enum MessageKey {
     RESULTS_OP_TERM_REVIEW("results.op.termReview"),
     /** Name of the recurring terms' rendering suggestion in the results dialog. */
     RESULTS_OP_TERM_TRANSLATE("results.op.termTranslate"),
+    /** Name of the automatic names pass in the results dialog. */
+    RESULTS_OP_AUTO_NAMES("results.op.autoNames"),
+    /** Heading of the glossary's rows in a sectioned results list; argument 0 is their count. */
+    RESULTS_SECTION_NAMES("results.section.names"),
+    /** Heading of the recurring terms' rows in a sectioned results list; argument 0 is their count. */
+    RESULTS_SECTION_TERMS("results.section.terms"),
     /** The three counts at the top of the results dialog: added, removed, changed. */
     RESULTS_SUMMARY("results.summary"),
     /** Heading of the rows an operation added, with their count. */

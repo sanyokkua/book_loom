@@ -33,6 +33,16 @@ final class NamesStyleConformanceCases {
                             new Part("#recurring-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             // The scanned term is readable, strong text in the glossary table.
                             new Part(".glossary-term", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"))),
+            // The one-press preparation button (15i.U6) is the secondary button with the muted estimate under it.
+            new Screen(
+                    "NAMES_STYLE_AUTO",
+                    ViewNames.NAMES_STYLE,
+                    Preparation.GLOSSARY_LISTED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#names-style-auto", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#names-style-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#names-style-auto-subtitle", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             // The Add term card, opened from the glossary card's header over the names screen.
             new Screen(
                     "ADD_TERM_DIALOG",

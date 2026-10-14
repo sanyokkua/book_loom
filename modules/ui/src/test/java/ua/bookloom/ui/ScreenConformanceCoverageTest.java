@@ -27,6 +27,7 @@ class ScreenConformanceCoverageTest {
                         "IMPORT_DETECTED",
                         "IMPORT_CHECKED",
                         "NAMES_STYLE",
+                        "NAMES_STYLE_AUTO",
                         "TRANSLATING",
                         "EXPORT",
                         "ABOUT_DIALOG",

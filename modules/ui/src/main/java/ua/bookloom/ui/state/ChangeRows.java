@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -27,41 +28,69 @@ final class ChangeRows {
     }
 
     ChangeRow added(final GlossaryEntry entry) {
-        return new ChangeRow(next++, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null);
+        return row(
+                ChangeSection.NAMES, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, ChangeOrigin.MODEL);
     }
 
     ChangeRow removed(final EntryChanges.Removal<GlossaryEntry> removal) {
         final GlossaryEntry entry = removal.entry();
-        return new ChangeRow(next++, ChangeKind.REMOVED, entry.term(), describe(entry), DASH, removal.reason());
+        return row(
+                ChangeSection.NAMES,
+                ChangeKind.REMOVED,
+                entry.term(),
+                describe(entry),
+                DASH,
+                removal.reason(),
+                ChangeOrigin.MODEL);
     }
 
     ChangeRow changed(final EntryChanges.Change<GlossaryEntry> change) {
-        return new ChangeRow(
-                next++,
+        return row(
+                ChangeSection.NAMES,
                 ChangeKind.CHANGED,
                 change.after().term(),
                 describe(change.before()),
                 describe(change.after()),
-                change.reason());
+                change.reason(),
+                ChangeOrigin.MODEL);
     }
 
     ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
-        return new ChangeRow(next++, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
+        return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
     }
 
     ChangeRow removedTerm(final EntryChanges.Removal<LexiconEntry> removal) {
         final LexiconEntry entry = removal.entry();
-        return new ChangeRow(next++, ChangeKind.REMOVED, entry.term(), describe(entry), DASH, removal.reason());
+        return row(
+                ChangeSection.TERMS,
+                ChangeKind.REMOVED,
+                entry.term(),
+                describe(entry),
+                DASH,
+                removal.reason(),
+                ChangeOrigin.MODEL);
     }
 
     ChangeRow changedTerm(final EntryChanges.Change<LexiconEntry> change) {
-        return new ChangeRow(
-                next++,
+        return row(
+                ChangeSection.TERMS,
                 ChangeKind.CHANGED,
                 change.after().term(),
                 describe(change.before()),
                 describe(change.after()),
-                change.reason());
+                change.reason(),
+                ChangeOrigin.MODEL);
+    }
+
+    private ChangeRow row(
+            final ChangeSection section,
+            final ChangeKind kind,
+            final String term,
+            final String before,
+            final String after,
+            final @Nullable String reason,
+            final ChangeOrigin origin) {
+        return new ChangeRow(next++, kind, term, before, after, reason, origin, section);
     }
 
     private String describe(final GlossaryEntry entry) {

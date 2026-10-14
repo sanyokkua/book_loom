@@ -40,6 +40,12 @@ public final class ScriptedLexiconService implements LexiconService {
         held.addAll(List.of(entries));
     }
 
+    /** Makes the entries the service holds exactly these, as a write of the whole list by another service would. */
+    public void replaceHeld(final LexiconEntry... entries) {
+        held.clear();
+        held.addAll(List.of(entries));
+    }
+
     /** Names what the next scan adds. */
     public void willFind(final LexiconEntry... entries) {
         scanFinds.addAll(List.of(entries));

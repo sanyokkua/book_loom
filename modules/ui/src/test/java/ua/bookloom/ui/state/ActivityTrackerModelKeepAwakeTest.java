@@ -60,7 +60,15 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
     @EnumSource(
             value = ActivityKind.class,
             mode = EnumSource.Mode.INCLUDE,
-            names = {"SUGGEST_STYLE", "SUGGEST_NAME", "EXPORT", "REVIEW_RETRY", "TERM_REVIEW", "RUN_PREPARATION"})
+            names = {
+                "SUGGEST_STYLE",
+                "SUGGEST_NAME",
+                "EXPORT",
+                "REVIEW_RETRY",
+                "TERM_REVIEW",
+                "RUN_PREPARATION",
+                "NAMES_PASS"
+            })
     void begin_otherKindThatCallsTheModel_holdsThenReleases(final ActivityKind kind) {
         final ActivityTracker tracker = tracker();
 

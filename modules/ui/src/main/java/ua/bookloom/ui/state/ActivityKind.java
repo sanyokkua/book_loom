@@ -28,6 +28,8 @@ public enum ActivityKind {
     TERM_REVIEW(MessageKey.ACTIVITY_TERM_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true),
     /** The model's suggestion of a rendering for each recurring term; abandoned work if the person leaves the screen. */
     TERM_TRANSLATE(MessageKey.ACTIVITY_TERM_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The autonomous names pass over both tables of Names &amp; style; abandoned work if the person leaves the screen. */
+    NAMES_PASS(MessageKey.ACTIVITY_NAMES_PASS, true, true, ViewNames.NAMES_STYLE, true, true),
     /** One segment re-translated from the review panel. */
     REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true, true),
     /** The provider test that asks the chosen model for a short answer. */
