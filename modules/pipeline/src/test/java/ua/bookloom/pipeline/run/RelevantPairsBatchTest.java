@@ -89,7 +89,7 @@ class RelevantPairsBatchTest {
         final SegmentTranslator translator = new SegmentTranslator(
                 gate, calls, BookFormat.TXT, new DraftPromptBuilder(TEMPLATES, FRAME), new DraftReplyParser(MAPPER));
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON),
+                new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON, true),
                 new BatchReplyParser(MAPPER),
                 calls,
                 "en",

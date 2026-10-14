@@ -27,50 +27,14 @@ public final class TextChecks {
      *
      * @param source the source's display text
      * @param target the candidate's display text, with kept names and protected tokens already out
-     * @param sourceLanguage the source language tag, or {@code null} when none is declared; the checks that need it
-     *     are skipped
-     * @param targetLanguage the target language tag
-     * @return the findings, blocking ones first within each check's order; empty when the text is clean or has
-     *     nothing but digits and locators (an ISBN or a web address is nobody's language); never null
-     */
-    public static List<CheckFinding> run(
-            final String source,
-            final String target,
-            @Nullable final String sourceLanguage,
-            final String targetLanguage) {
-        return run(source, target, sourceLanguage, targetLanguage, List.of());
-    }
-
-    /**
-     * Runs every deterministic text check on one segment, with the glossary pairs the vocative check holds the target to.
-     *
-     * @param source the source's display text
-     * @param target the candidate's display text, with kept names and protected tokens already out
      * @param sourceLanguage the source language tag, or {@code null} when none is declared
      * @param targetLanguage the target language tag
-     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds
-     * @return the findings; empty when the text is clean; never null
-     */
-    public static List<CheckFinding> run(
-            final String source,
-            final String target,
-            @Nullable final String sourceLanguage,
-            final String targetLanguage,
-            final List<String> glossaryPairs) {
-        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, List.of());
-    }
-
-    /**
-     * Runs every deterministic text check on one segment, with the glossary pairs and the terms the glossary keeps as
-     * written, which the Latin-run check leaves alone.
-     *
-     * @param source the source's display text
-     * @param target the candidate's display text, with kept names and protected tokens already out
-     * @param sourceLanguage the source language tag, or {@code null} when none is declared
-     * @param targetLanguage the target language tag
-     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds
-     * @param keptTerms the locked terms whose rendering is their own spelling; never null
-     * @return the findings; empty when the text is clean; never null
+     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds, which the vocative check
+     *     holds the target to; never null, empty when there are none
+     * @param keptTerms the locked terms whose rendering is their own spelling, which the Latin-run check leaves alone;
+     *     never null, empty when there are none
+     * @return the findings, blocking ones first within each check's order; empty when the text is clean or has nothing
+     *     but digits and locators (an ISBN or a web address is nobody's language); never null
      */
     public static List<CheckFinding> run(
             final String source,

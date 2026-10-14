@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.checks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -61,7 +62,7 @@ class ResidueCheckTest {
 
     @Test
     void run_textChecks_includesResidueFinding() {
-        assertThat(TextChecks.run("He left.", "Він пішов.}]}", "en", "uk"))
+        assertThat(TextChecks.run("He left.", "Він пішов.}]}", "en", "uk", List.of(), List.of()))
                 .extracting(CheckFinding::kind)
                 .contains(FindingKind.PROTOCOL_LEAK);
     }

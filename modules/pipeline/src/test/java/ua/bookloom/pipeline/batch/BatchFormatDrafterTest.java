@@ -59,7 +59,7 @@ class BatchFormatDrafterTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, format),
+                new BatchPromptBuilder(new PromptTemplates(), frame, format, false),
                 new BatchReplyParser(new ObjectMapper()),
                 scripted,
                 "en",

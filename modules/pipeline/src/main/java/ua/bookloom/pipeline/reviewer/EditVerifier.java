@@ -46,30 +46,17 @@ public final class EditVerifier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings) {
-        return verify(candidate, edit, checker, baseline, renderings, Set.of());
+        return verify(candidate, edit, checker, baseline, renderings, Set.of(), GenderGuess.NONE);
     }
 
     /**
-     * Verifies one edit as the overload with renderings does, also knowing the target language's function words.
+     * Verifies one edit as {@link #verify(String, ReviewEdit, CandidateChecker, Set)} does, also knowing the target
+     * language's function words and holding a gender or agreement edit to the genders of the chunk that are only
+     * suggested.
      *
+     * @param renderings the glossary renderings (targets) of the chunk, which a terminology edit may use; never null
      * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
      *     language lists none
-     * @return the verification, as above
-     */
-    public Verification verify(
-            final String candidate,
-            final ReviewEdit edit,
-            final CandidateChecker checker,
-            final Set<String> baseline,
-            final List<String> renderings,
-            final Set<String> functionWords) {
-        return verify(candidate, edit, checker, baseline, renderings, functionWords, GenderGuess.NONE);
-    }
-
-    /**
-     * Verifies one edit as the overload with function words does, also holding a gender or agreement edit to the
-     * genders of the chunk that are only suggested.
-     *
      * @param guess the suggested genders an edit may not enforce; never null
      * @return the verification, as above
      */

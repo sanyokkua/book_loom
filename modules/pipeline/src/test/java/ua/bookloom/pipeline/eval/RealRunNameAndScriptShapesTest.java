@@ -48,7 +48,12 @@ class RealRunNameAndScriptShapesTest {
     @Test
     void run_latinRunOfTheSourceLeftInACyrillicTarget_hasABlockingFinding() {
         final List<CheckFinding> findings = TextChecks.run(
-                "He read the Daily Courier on the train.", "Він читав Daily Courier у поїзді.", "en", "uk");
+                "He read the Daily Courier on the train.",
+                "Він читав Daily Courier у поїзді.",
+                "en",
+                "uk",
+                List.of(),
+                List.of());
 
         assertThat(findings).anyMatch(CheckFinding::blocking);
     }

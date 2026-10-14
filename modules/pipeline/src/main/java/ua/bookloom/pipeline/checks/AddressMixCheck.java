@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.checks;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -35,17 +36,33 @@ final class AddressMixCheck {
         }
         final List<CheckFinding> findings = new ArrayList<>();
         for (final TextSpan speech : QuotedSpans.speeches(target, targetLanguage)) {
-            mixIn(target, speech, informal, formal).ifPresent(findings::add);
+            final String spoken = withoutNestedQuotes(target, speech, targetLanguage);
+            mixIn(target, spoken, speech, informal, formal).ifPresent(findings::add);
         }
         log.debug("Address mix check found {} mixed speech(es) in {}", findings.size(), targetLanguage);
         return List.copyOf(findings);
     }
 
+    // A word a speaker only names ("Ви" in quotes inside the speech) addresses nobody: the speech's own opening mark
+    // and everything outside it are blanked, so the quote left inside is a top-level one that narration() blanks.
+    private static String withoutNestedQuotes(final String target, final TextSpan speech, final String targetLanguage) {
+        final char[] only = new char[target.length()];
+        Arrays.fill(only, ' ');
+        final int from =
+                OPENING_MARKS.indexOf(target.charAt(speech.start())) >= 0 ? speech.start() + 1 : speech.start();
+        target.getChars(from, speech.end(), only, from);
+        return QuotedSpans.narration(new String(only), targetLanguage);
+    }
+
     private static Optional<CheckFinding> mixIn(
-            final String target, final TextSpan speech, final Set<String> informal, final Set<String> formal) {
+            final String target,
+            final String spoken,
+            final TextSpan speech,
+            final Set<String> informal,
+            final Set<String> formal) {
         String informalForm = null;
         TextSpan formalForm = null;
-        final Matcher words = Words.WORD.matcher(target).region(speech.start(), speech.end());
+        final Matcher words = Words.WORD.matcher(spoken).region(speech.start(), speech.end());
         while (words.find()) {
             final String word = words.group();
             if (informalForm == null && informal.contains(word.toLowerCase(Locale.ROOT))) {

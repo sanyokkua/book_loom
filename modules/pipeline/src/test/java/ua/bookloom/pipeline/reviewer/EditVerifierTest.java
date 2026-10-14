@@ -143,7 +143,13 @@ class EditVerifierTest {
                 new ReviewEdit(ReviewCriterion.AGREEMENT, "міг би пройти їхню охорону.", "міг пройти їхню охорону.");
 
         final Verification result = VERIFIER.verify(
-                "Він міг би пройти їхню охорону.", dropsBy, CLEAN, NO_BLOCKERS, List.of(), Set.of("би", "не"));
+                "Він міг би пройти їхню охорону.",
+                dropsBy,
+                CLEAN,
+                NO_BLOCKERS,
+                List.of(),
+                Set.of("би", "не"),
+                GenderGuess.NONE);
 
         assertThat(result).isInstanceOf(Verification.Ignored.class);
     }

@@ -255,7 +255,7 @@ record EffectiveTargets(
     }
 
     private static List<FindingKind> blockingKinds(final String origin, final String shown, final Languages languages) {
-        return TextChecks.run(origin, shown, languages.source(), languages.target()).stream()
+        return TextChecks.run(origin, shown, languages.source(), languages.target(), List.of(), List.of()).stream()
                 .filter(CheckFinding::blocking)
                 .map(CheckFinding::kind)
                 .toList();

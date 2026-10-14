@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -43,8 +44,13 @@ class LanguageCorpusTest {
         final LanguageCorpus corpus = EvalCorpus.language(tag);
 
         assertThat(corpus.reviews().stream().filter(review -> !review.defective()))
-                .allSatisfy(review -> assertThat(
-                                TextChecks.run(review.source(), review.candidate(), corpus.sourceLanguage(), tag))
+                .allSatisfy(review -> assertThat(TextChecks.run(
+                                review.source(),
+                                review.candidate(),
+                                corpus.sourceLanguage(),
+                                tag,
+                                List.of(),
+                                List.of()))
                         .as(review.id())
                         .isEmpty());
     }

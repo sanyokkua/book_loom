@@ -4,7 +4,6 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.checks.CharacterName;
@@ -46,9 +45,7 @@ final class GuessedGenders {
     }
 
     private static boolean isGuessed(final Narrator narrator) {
-        return narrator.person() == NarratorPerson.FIRST
-                && (narrator.gender() == Gender.MALE || narrator.gender() == Gender.FEMALE)
-                && narrator.genderOrigin() == Narrator.GenderOrigin.SUGGESTED;
+        return narrator.person() == NarratorPerson.FIRST && narrator.hasSuggestedGender();
     }
 
     private static boolean fewerFindings(final List<?> before, final List<?> after) {

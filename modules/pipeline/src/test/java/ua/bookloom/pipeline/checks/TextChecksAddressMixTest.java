@@ -15,7 +15,7 @@ class TextChecksAddressMixTest {
     private static final String FORMAL = "«Ви втомилися, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»";
 
     private static List<CheckFinding> addressMix(final String target, final String targetLanguage) {
-        return TextChecks.run(SOURCE, target, "en", targetLanguage).stream()
+        return TextChecks.run(SOURCE, target, "en", targetLanguage, List.of(), List.of()).stream()
                 .filter(finding -> finding.kind() == FindingKind.ADDRESS_MIX)
                 .toList();
     }
@@ -29,7 +29,8 @@ class TextChecksAddressMixTest {
 
     @Test
     void run_ukrainianTargetMixingTheForms_addsNoBlockingFinding() {
-        assertThat(TextChecks.run(SOURCE, MIXED, "en", "uk")).noneMatch(CheckFinding::blocking);
+        assertThat(TextChecks.run(SOURCE, MIXED, "en", "uk", List.of(), List.of()))
+                .noneMatch(CheckFinding::blocking);
     }
 
     @Test

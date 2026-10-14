@@ -150,7 +150,7 @@ class ContextWindowBudgetTest {
 
     @Test
     void staticPrefix_batchSystemMessage_fitsTheReservedPrefix() {
-        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON)
+        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME, BatchFormat.JSON, false)
                         .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "He left."))))
                 .systemTokens();
 

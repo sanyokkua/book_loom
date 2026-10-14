@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class IdentifierChecksTest {
 
     private static List<CheckFinding> uk(final String source, final String target) {
-        return TextChecks.run(source, target, "en", "uk");
+        return TextChecks.run(source, target, "en", "uk", List.of(), List.of());
     }
 
     private static final String UUID = "3f2b8c1d-9a4e-4b7a-8c11-2d5f6e7a8b90";

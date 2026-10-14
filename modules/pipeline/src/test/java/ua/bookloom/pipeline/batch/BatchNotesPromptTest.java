@@ -45,7 +45,8 @@ class BatchNotesPromptTest {
         return new BatchPromptBuilder(
                 new PromptTemplates(),
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP),
-                BatchFormat.JSON);
+                BatchFormat.JSON,
+                false);
     }
 
     private static ChatRequest request() {

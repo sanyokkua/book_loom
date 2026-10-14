@@ -323,7 +323,7 @@ final class TranslationJobImpl implements TranslationJob {
         final RollingSummaryKeeper summary = new RollingSummaryKeeper(
                 stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
         final BatchDrafter batch = new BatchDrafter(
-                new BatchPromptBuilder(templates, settings.frame(), BatchFormat.current()),
+                new BatchPromptBuilder(templates, settings.frame(), BatchFormat.current(), settings.relevantPairs()),
                 new BatchReplyParser(mapper),
                 calls,
                 settings.frame().sourceLanguage(),

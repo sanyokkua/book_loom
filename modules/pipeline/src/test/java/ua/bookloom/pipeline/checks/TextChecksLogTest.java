@@ -46,7 +46,7 @@ class TextChecksLogTest {
     // IF a listed foreign word were logged at DEBUG, THEN the book's words would reach an ordinary log file.
     @Test
     void run_listedForeignWord_logsTheWordAtTraceOnly() {
-        TextChecks.run("He came too.", "Він тоже прийшов.", "en", "uk");
+        TextChecks.run("He came too.", "Він тоже прийшов.", "en", "uk", List.of(), List.of());
 
         assertThat(atDebugOrAbove()).noneMatch(line -> line.contains("тоже") || line.contains("теж"));
         assertThat(appender.list)
@@ -56,8 +56,14 @@ class TextChecksLogTest {
 
     @Test
     void run_glossaryNameLostOrSpelledAnotherWay_logsTheNameAtTraceOnly() {
-        TextChecks.run("They reached Zurich at dawn.", "Вони дісталися міста.", "en", "uk", List.of("Zurich → Цюріх"));
-        TextChecks.run("David stayed home.", "Тавид залишився вдома.", "en", "uk", List.of("David → Давид"));
+        TextChecks.run(
+                "They reached Zurich at dawn.",
+                "Вони дісталися міста.",
+                "en",
+                "uk",
+                List.of("Zurich → Цюріх"),
+                List.of());
+        TextChecks.run("David stayed home.", "Тавид залишився вдома.", "en", "uk", List.of("David → Давид"), List.of());
 
         assertThat(atDebugOrAbove()).noneMatch(line -> line.contains("Zurich") || line.contains("David"));
     }

@@ -47,30 +47,15 @@ public final class EditApplier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings) {
-        return apply(candidate, edits, checker, baseline, renderings, Set.of());
+        return apply(candidate, edits, checker, baseline, renderings, Set.of(), GenderGuess.NONE);
     }
 
     /**
-     * Applies the verified edits of one segment, also knowing the target language's function words.
+     * Applies the verified edits of one segment, also knowing the target language's function words and refusing a gender
+     * or agreement edit toward a gender that is only suggested.
      *
      * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
      *     language lists none
-     * @return the edited text and what became of every edit
-     */
-    public EditOutcome apply(
-            final String candidate,
-            final List<ReviewEdit> edits,
-            final CandidateChecker checker,
-            final Set<String> baseline,
-            final List<String> renderings,
-            final Set<String> functionWords) {
-        return apply(candidate, edits, checker, baseline, renderings, functionWords, GenderGuess.NONE);
-    }
-
-    /**
-     * Applies the verified edits of one segment, also refusing a gender or agreement edit toward a gender that is only
-     * suggested.
-     *
      * @param guess the suggested genders an edit may not enforce; never null
      * @return the edited text and what became of every edit
      */

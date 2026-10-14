@@ -177,6 +177,21 @@ class ConsistencyPassRepairGuardsTest {
         assertThat(report.checks().retriedImproved()).isZero();
     }
 
+    // IF mending one kind of finding excused a redraft that brings another kind in, THEN the relaxation would let a
+    // Russian letter into the book for the price of a dash.
+    @Test
+    void run_retryThatMendsTheMixedWordButBringsARussianLetterAndDropsOneDash_keepsTheOldText() {
+        final String mendedWithRussianLetter = "— Біжи, Денні, сказав я. Він побіг стары.";
+        flagged(RUN_DANNY, MIXED_TWO_DASHES);
+        book.model().answerTo(DRAFT, reply(mendedWithRussianLetter));
+        book.model().answerTo(NEIGHBOUR_ASKED_FOR, reply(MIXED_TWO_DASHES));
+
+        final ConsistencyReport report = ok(book.runExport(EXPORT));
+
+        assertThat(book.stored(RUN_DANNY).machineTarget()).isEqualTo(MIXED_TWO_DASHES);
+        assertThat(report.checks().retriedImproved()).isZero();
+    }
+
     // IF the mode counted a dash before it looked at what the redraft mended, THEN the mended word is thrown away.
     // The caller (PassChecks) names the mended mode; the alphabet case needs the target language and is covered whole
     // by run_retryThatMendsARussianLetterAndDropsOneDash_keepsTheNewText.

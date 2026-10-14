@@ -94,7 +94,9 @@ final class RunVerdicts {
                 DisplayText.of(runCase.source()),
                 DisplayText.of(candidate),
                 runCase.language(),
-                RunCorpus.TARGET_LANGUAGE);
+                RunCorpus.TARGET_LANGUAGE,
+                List.of(),
+                List.of());
     }
 
     private Gender narratorGender() {

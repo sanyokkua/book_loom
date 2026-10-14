@@ -23,7 +23,7 @@ class TextChecksCorpusTest {
                         corpusCase.id(),
                         corpusCase.kind(),
                         corpusCase.defective(),
-                        !TextChecks.run(corpusCase.source(), corpusCase.candidate(), "en", "uk")
+                        !TextChecks.run(corpusCase.source(), corpusCase.candidate(), "en", "uk", List.of(), List.of())
                                 .isEmpty(),
                         true,
                         true,

@@ -31,7 +31,8 @@ class BatchFormatPromptTest {
         return new BatchPromptBuilder(
                 TEMPLATES,
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP),
-                format);
+                format,
+                false);
     }
 
     private static List<ChatMessage> messages(final BatchFormat format) {

@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.revision;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -125,24 +126,28 @@ final class PassChecks {
                 : RevisionGuards.violation(before, after, mode);
     }
 
-    // A new draft of a doubted text that no longer has the broken word the old one had (a letter of another alphabet)
-    // is
-    // worth one lost dash or quote mark: refusing it keeps the broken word in the book.
+    // A new draft of a doubted text that has fewer broken words than the old one (a letter of another alphabet) and no
+    // kind of them more is worth one lost dash or quote mark: refusing it keeps the broken word in the book.
     private static boolean isMended(final RevisionGuards.Mode mode, final QaResult old, final QaResult fresh) {
         if (mode != RevisionGuards.Mode.NO_LOSS) {
             return false;
         }
-        final Set<String> remaining = scriptFindings(fresh);
-        final boolean mended = !scriptFindings(old).stream().allMatch(remaining::contains);
-        log.debug("Pass mended={} oldScriptFindings={} newScriptFindings={}", mended, scriptFindings(old), remaining);
+        final Map<String, Long> before = scriptFindings(old);
+        final Map<String, Long> after = scriptFindings(fresh);
+        final boolean fewer =
+                before.entrySet().stream().anyMatch(kind -> kind.getValue() > after.getOrDefault(kind.getKey(), 0L));
+        final boolean more =
+                after.entrySet().stream().anyMatch(kind -> kind.getValue() > before.getOrDefault(kind.getKey(), 0L));
+        final boolean mended = fewer && !more;
+        log.debug("Pass mended={} oldScriptFindings={} newScriptFindings={}", mended, before, after);
         return mended;
     }
 
-    private static Set<String> scriptFindings(final QaResult qa) {
+    private static Map<String, Long> scriptFindings(final QaResult qa) {
         return qa.findings().stream()
                 .map(QaFinding::raisedBy)
                 .filter(kind -> MENDABLE.contains(kind))
-                .collect(Collectors.toSet());
+                .collect(Collectors.groupingBy(kind -> kind, Collectors.counting()));
     }
 
     private static boolean isUntranslated(final QaResult old) {

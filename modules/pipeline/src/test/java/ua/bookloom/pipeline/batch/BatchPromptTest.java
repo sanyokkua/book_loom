@@ -34,10 +34,15 @@ class BatchPromptTest {
             new BatchItem("3", "⟦g0⟧Hello⟦g1⟧ there."));
 
     private static BatchPromptBuilder builder(final String source, final String target) {
+        return builder(source, target, false);
+    }
+
+    private static BatchPromptBuilder builder(final String source, final String target, final boolean relatedPairs) {
         return new BatchPromptBuilder(
                 TEMPLATES,
                 new CallFrame(source, target, StyleSheet.from(BookBrief.defaults(source)), ForeignPassagePolicy.KEEP),
-                BatchFormat.JSON);
+                BatchFormat.JSON,
+                relatedPairs);
     }
 
     private static BatchContext fullContext() {
@@ -81,7 +86,7 @@ class BatchPromptTest {
     // source/translation pairs, best first, before the chapter's previous pairs and the items.
     @Test
     void messagesFor_relevantPairs_areShownUnderTheirOwnHeadingBeforeThePreviousPairs() {
-        final String user = builder("en", "uk")
+        final String user = builder("en", "uk", true)
                 .messagesFor(withRelatedPairs(), ITEMS)
                 .get(1)
                 .content();
@@ -107,28 +112,49 @@ class BatchPromptTest {
         assertThat(user).contains("[Previous pairs").doesNotContain("Related earlier pairs");
     }
 
-    // The system rules already say the previous pairs are context only; the related ones must be named there too, in
-    // both the token and the tokenless variant of the rules.
+    // The system rules already say the previous pairs are context only; with the switch on, the related ones must be
+    // named there too, in both the token and the tokenless variant of the rules.
     @Test
-    void messagesFor_systemRules_nameTheRelatedEarlierPairsAsContextOnly() {
+    void messagesFor_systemRulesWithRelatedPairsOn_nameTheRelatedEarlierPairsAsContextOnly() {
         final List<BatchItem> plain = List.of(new BatchItem("1", "She opened the door."), new BatchItem("2", "1881"));
 
-        assertThat(builder("en", "uk")
+        assertThat(builder("en", "uk", true)
                         .messagesFor(withRelatedPairs(), ITEMS)
                         .getFirst()
                         .content())
-                .contains("Related earlier pairs");
-        assertThat(builder("en", "uk")
+                .contains("\n8. Previous pairs, Related earlier pairs, the next item and characters are context only:");
+        assertThat(builder("en", "uk", true)
                         .messagesFor(withRelatedPairs(), plain)
                         .getFirst()
                         .content())
-                .contains("Related earlier pairs");
+                .contains("\n5. Previous pairs, Related earlier pairs, the next item and characters are context only:");
+    }
+
+    // IF the switch is off, THEN the system prompt is the one before the block existed (15i.T8): no mention of pairs
+    // the prompt never carries, and the two rule lines read exactly as they did.
+    @Test
+    void messagesFor_systemRulesWithRelatedPairsOff_areThePreRelatedPairsText() {
+        final List<BatchItem> plain = List.of(new BatchItem("1", "She opened the door."), new BatchItem("2", "1881"));
+
+        final String withTokens =
+                builder("en", "uk").messagesFor(fullContext(), ITEMS).getFirst().content();
+        final String tokenless =
+                builder("en", "uk").messagesFor(fullContext(), plain).getFirst().content();
+
+        assertThat(withTokens)
+                .contains("\n8. Previous pairs, the next item and characters are context only: never translate, copy"
+                        + " or answer them.\n9. ")
+                .doesNotContain("Related earlier");
+        assertThat(tokenless)
+                .contains("\n5. Previous pairs, the next item and characters are context only: never translate, copy"
+                        + " or answer them.\n6. ")
+                .doesNotContain("Related earlier");
     }
 
     // The shown call (what the person reads in the live panel) lists the block as its own section.
     @Test
     void sectionsFor_relevantPairs_listTheBlockAsItsOwnSection() {
-        final List<PromptSection> sections = builder("en", "uk").sectionsFor(withRelatedPairs(), ITEMS);
+        final List<PromptSection> sections = builder("en", "uk", true).sectionsFor(withRelatedPairs(), ITEMS);
 
         assertThat(sections)
                 .filteredOn(section -> section.slot().equals("relevantPairs"))

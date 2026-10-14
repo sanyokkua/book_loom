@@ -38,6 +38,7 @@ public final class BatchPromptBuilder {
     private final PromptTemplates templates;
     private final CallFrame frame;
     private final BatchFormat format;
+    private final boolean relatedPairs;
 
     /**
      * Creates a builder for one run's templates, call frame and batch format.
@@ -45,11 +46,18 @@ public final class BatchPromptBuilder {
      * @param templates the non-null loaded templates
      * @param frame the non-null run's languages, style sheet and policy
      * @param format the non-null format batches are sent and answered in
+     * @param relatedPairs whether this run's batches carry the related-earlier-pairs block, which the system rules
+     *     then name as context; off, the system prompt reads as it did before the block existed
      */
-    public BatchPromptBuilder(final PromptTemplates templates, final CallFrame frame, final BatchFormat format) {
+    public BatchPromptBuilder(
+            final PromptTemplates templates,
+            final CallFrame frame,
+            final BatchFormat format,
+            final boolean relatedPairs) {
         this.templates = Objects.requireNonNull(templates, "templates");
         this.frame = Objects.requireNonNull(frame, "frame");
         this.format = Objects.requireNonNull(format, "format");
+        this.relatedPairs = relatedPairs;
     }
 
     /** The format this builder's batches are sent and answered in. */
@@ -127,6 +135,7 @@ public final class BatchPromptBuilder {
     private Map<String, String> systemGates(final List<BatchItem> items) {
         final Map<String, String> gates = new HashMap<>(PromptTemplates.tokenGate(hasTokens(items)));
         gates.putAll(PromptTemplates.notesGate(notesOn()));
+        gates.putAll(PromptTemplates.relatedPairsGate(relatedPairs));
         return gates;
     }
 

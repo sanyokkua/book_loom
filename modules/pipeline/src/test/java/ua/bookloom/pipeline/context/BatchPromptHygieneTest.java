@@ -42,8 +42,8 @@ class BatchPromptHygieneTest {
                 List.of("Hale — male"),
                 List.of());
 
-        final List<ChatMessage> messages =
-                new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON).messagesFor(context, ITEMS);
+        final List<ChatMessage> messages = new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON, false)
+                .messagesFor(context, ITEMS);
 
         final String chunk =
                 String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());
@@ -73,8 +73,8 @@ class BatchPromptHygieneTest {
                 List.of("Hale — male"),
                 List.of());
 
-        final List<ChatMessage> messages =
-                new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON).messagesFor(context, ITEMS);
+        final List<ChatMessage> messages = new BatchPromptBuilder(new PromptTemplates(), FRAME, BatchFormat.JSON, false)
+                .messagesFor(context, ITEMS);
 
         final String chunk =
                 String.join("\n", ITEMS.stream().map(BatchItem::masked).toList());

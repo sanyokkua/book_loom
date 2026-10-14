@@ -360,13 +360,14 @@ nearer), and `RelevantPairs` keeps the best two that are `ACCEPTED` or `REVISED`
 edit), never `FLAGGED`, `PENDING`, without a target, after the batch's first segment, or already among the previous
 pairs. The block sits before `[Previous pairs]` under
 `[Related earlier pairs — context only; reuse their renderings of the same names and terms, do NOT translate or answer them]`
-as `Source:` / `Translation:` pairs, best first, and the system rules name "Related earlier pairs" as context only. It has
+as `Source:` / `Translation:` pairs, best first, and, when the run shows the block, the system rules name "Related earlier pairs" as context only (with the block off
+the rule reads as it did before the block existed: the slot `relatedPairsName` is empty). It has
 a quarter of the dynamic allowance (`ContextBudget.relevantAllowance`, rounded up; the previous pairs have half, the next
 source a quarter), filled best first. When the prompt does not fit the window the parts go in this order: the related
 pairs first, then the rest of the optional context (previous pairs, next source, characters, key terms), then the batch
 shrinks. `BOOKLOOM_RELEVANT_PAIRS=on|off` (else `bookloom.relevant.pairs`; the eval sets it from
-`BOOKLOOM_EVAL_RELEVANT_PAIRS`, `scripts/eval-matrix.sh --relevant-pairs`) turns the block off; it is on until the
-sequence suite's on/off round decides.
+`BOOKLOOM_EVAL_RELEVANT_PAIRS`, `scripts/eval-matrix.sh --relevant-pairs`) turns the block on or off; it is off since the
+sequence suite's on/off round of 2026-10-13 missed its gate on e4b.
 
 ### recurring-terms {#recurring-terms}
 

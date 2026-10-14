@@ -17,7 +17,7 @@ class EditGuardsTest {
     private static final String CANDIDATE = "Він пішов додому. Потім він заснув.";
 
     private static EditOutcome apply(final String candidate, final ReviewEdit edit, final List<String> renderings) {
-        return APPLIER.apply(candidate, List.of(edit), CLEAN, Set.of(), renderings, Set.of());
+        return APPLIER.apply(candidate, List.of(edit), CLEAN, Set.of(), renderings, Set.of(), GenderGuess.NONE);
     }
 
     private static void assertRefused(

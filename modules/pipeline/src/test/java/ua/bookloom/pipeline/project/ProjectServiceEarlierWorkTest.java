@@ -108,6 +108,20 @@ class ProjectServiceEarlierWorkTest {
         assertThat(decided(book)).isZero();
     }
 
+    // The FictionBook reader hashes the unzipped member, not the archive; the stored hash must still match its own
+    // file.
+    @Test
+    void decidedSegments_zippedFictionBookUnchangedSinceImport_countsTheDecisions() {
+        final Path zipped = TestBooks.zippedFb2(
+                tempDir.resolve("Book.fb2.zip"), List.of("It was a dark night.", "The rain kept falling."), "en");
+        final String id = Objects.requireNonNull(
+                Objects.requireNonNull(service.importBook(zipped).data()).projectId());
+        decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
+
+        assertThat(decided(zipped)).isEqualTo(1);
+        assertThat(service.continueBook(zipped).isOk()).isTrue();
+    }
+
     // IF Continue reset the records, THEN the question would promise work it then throws away.
     @Test
     void continueBook_afterDecisions_keepsTheStoredDecisionsAndTheStoredBrief() {

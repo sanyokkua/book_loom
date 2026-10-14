@@ -90,7 +90,7 @@ public final class NarratorStage {
 
     private static boolean isOpenToInference(final Narrator narrator) {
         final boolean open = narrator.person() != NarratorPerson.THIRD
-                && (narrator.gender() == Gender.UNKNOWN || narrator.genderOrigin() == GenderOrigin.SUGGESTED);
+                && (narrator.gender() == Gender.UNKNOWN || narrator.hasSuggestedGender());
         log.debug(
                 "Narrator inference open: {} ({} {} {})",
                 open,
@@ -138,11 +138,16 @@ public final class NarratorStage {
 
     private Optional<AppError> store(final Project project, final Verdict verdict, final FirstPerson told) {
         final BookBrief brief = project.brief();
-        if (brief.narrator().genderOrigin() == GenderOrigin.SUGGESTED) {
+        if (brief.narrator().hasSuggestedGender()) {
             log.info(
                     "Narrator inference replaces the suggested {} with {}",
                     brief.narrator().gender(),
                     verdict.gender());
+        }
+        if (!brief.narrator().evidence().isEmpty()) {
+            log.info(
+                    "Narrator inference drops {} stored evidence quotes: the run's own count replaces them",
+                    brief.narrator().evidence().size());
         }
         final Narrator inferred =
                 new Narrator(NarratorPerson.FIRST, verdict.gender(), GenderOrigin.INFERRED, List.of());
@@ -161,6 +166,7 @@ public final class NarratorStage {
     private record FirstPerson(List<String> ids, List<String> targets) {}
 
     private FirstPerson firstPerson(final List<SegmentRecord> records, final @Nullable String language) {
+        log.debug("Narrator first-person scan: {} records, language={}", records.size(), language);
         final Map<String, SegmentRecord> byId = new HashMap<>();
         records.forEach(record -> byId.put(record.segmentId(), record));
         final List<String> ids = new ArrayList<>();
@@ -182,6 +188,7 @@ public final class NarratorStage {
                 }
             }
         }
+        log.debug("Narrator first-person scan found {} segments told as \"I\"", ids.size());
         return new FirstPerson(ids, targets);
     }
 }

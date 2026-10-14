@@ -44,6 +44,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepAvailability;
 import ua.bookloom.ui.state.StepLocks;
+import ua.bookloom.ui.state.StoredNarratorFollower;
 import ua.bookloom.ui.state.SystemCsvFileChooser;
 import ua.bookloom.ui.state.SystemDestinationChooser;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -101,6 +102,8 @@ public final class UiModule extends AbstractModule {
         bind(DiagnosticActions.class);
         // Eager, so the first book opened is told to the detailed log before any screen asks for the reporter.
         bind(SessionReporter.class).asEagerSingleton();
+        // Eager, so a narrator the run inferred reaches the brief even when no brief screen exists when the run ends.
+        bind(StoredNarratorFollower.class).asEagerSingleton();
     }
 
     private void bindShell() {

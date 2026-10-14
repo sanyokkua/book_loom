@@ -1,7 +1,5 @@
 package ua.bookloom.pipeline.project;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,14 +8,15 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.util.hash.HashUtil;
 
 /** What the project service reads off a stored project and its segments: pending records, change and decided counts. */
 @Slf4j
@@ -26,13 +25,19 @@ import ua.bookloom.util.hash.HashUtil;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class StoredBooks {
 
-    // Every format's content hash is the SHA-256 of the whole file, so the file is compared without opening it.
-    static boolean isUnchanged(final Project stored, final Path source) {
-        try {
-            return HashUtil.sha256Hex(Files.readAllBytes(source)).equals(stored.contentHash());
-        } catch (IOException unreadable) {
+    // The content hash is the document's own (a zipped FictionBook hashes its unzipped member, not the archive), so the
+    // file is compared by the hash the reader would store for it now.
+    static boolean isUnchanged(final Project stored, final Path source, final DocumentPort documents) {
+        final Result<Document> opened = documents.open(source);
+        final Document document = opened.data();
+        if (document == null) {
             log.debug("project={} source unreadable: treated as changed", stored.id());
             return false;
+        }
+        try {
+            return document.contentHash().equals(stored.contentHash());
+        } finally {
+            documents.close(document);
         }
     }
 

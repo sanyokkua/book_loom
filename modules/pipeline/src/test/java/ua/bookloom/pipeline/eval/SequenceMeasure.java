@@ -325,7 +325,12 @@ final class SequenceMeasure {
 
     private List<CheckFinding> textFindings(final Decided segment) {
         return TextChecks.run(
-                segment.source(), Objects.requireNonNull(segment.target()), fixture.source(), fixture.target());
+                segment.source(),
+                Objects.requireNonNull(segment.target()),
+                fixture.source(),
+                fixture.target(),
+                List.of(),
+                List.of());
     }
 
     private boolean isEnglishLeftover(final Decided segment) {

@@ -20,11 +20,11 @@ class TextChecksTest {
             "Noc była zimna, a ulice puste, i nikt nie widział starego człowieka od wieczora.";
 
     private static List<CheckFinding> uk(final String source, final String target) {
-        return TextChecks.run(source, target, "en", "uk");
+        return TextChecks.run(source, target, "en", "uk", List.of(), List.of());
     }
 
     private static List<CheckFinding> pl(final String source, final String target) {
-        return TextChecks.run(source, target, "en", "pl");
+        return TextChecks.run(source, target, "en", "pl", List.of(), List.of());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -119,15 +119,15 @@ class TextChecksTest {
 
     @Test
     void run_turkishApostropheAfterAName_isNotAStrayQuote() {
-        assertThat(TextChecks.run("He went to Ankara.", "Ankara’ya gitti.", "en", "tr"))
+        assertThat(TextChecks.run("He went to Ankara.", "Ankara’ya gitti.", "en", "tr", List.of(), List.of()))
                 .isEmpty();
     }
 
     @ParameterizedTest(name = "{0}")
     @ValueSource(strings = {"uk", "ru", "be", "de", "cs", "sk", "sl", "hr", "bg"})
     void run_balancedEnglishCurlyQuotes_isOnlyASoftNote(final String language) {
-        final List<CheckFinding> findings =
-                TextChecks.run("“No, sir,” said the boy.", "“Ні, сер,” — відповів хлопчик.", "en", language);
+        final List<CheckFinding> findings = TextChecks.run(
+                "“No, sir,” said the boy.", "“Ні, сер,” — відповів хлопчик.", "en", language, List.of(), List.of());
 
         assertThat(findings)
                 .extracting(CheckFinding::kind, CheckFinding::blocking)
@@ -191,7 +191,7 @@ class TextChecksTest {
 
     @Test
     void run_sourceLanguageUnknown_skipsTheLanguageIdentityCheck() {
-        assertThat(TextChecks.run(ENGLISH_PARAGRAPH, ENGLISH_PARAGRAPH, null, "uk"))
+        assertThat(TextChecks.run(ENGLISH_PARAGRAPH, ENGLISH_PARAGRAPH, null, "uk", List.of(), List.of()))
                 .isEmpty();
     }
 
@@ -237,7 +237,13 @@ class TextChecksTest {
 
     @Test
     void run_frenchStylePunctuationSpacing_isNeverAnError() {
-        assertThat(TextChecks.run("Come here! Why? Now: go.", "Viens ici ! Pourquoi ? Maintenant : va.", "en", "fr"))
+        assertThat(TextChecks.run(
+                        "Come here! Why? Now: go.",
+                        "Viens ici ! Pourquoi ? Maintenant : va.",
+                        "en",
+                        "fr",
+                        List.of(),
+                        List.of()))
                 .isEmpty();
     }
 
@@ -297,7 +303,8 @@ class TextChecksTest {
                 "Danny Vosk сидів біля стійки.",
                 "en",
                 "uk",
-                List.of("Danny Vosk → Danny Vosk"));
+                List.of("Danny Vosk → Danny Vosk"),
+                List.of());
 
         assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
     }
@@ -309,7 +316,8 @@ class TextChecksTest {
                 "Danny Vosk читав Daily Courier у нічному поїзді.",
                 "en",
                 "uk",
-                List.of("Danny Vosk → Danny Vosk"));
+                List.of("Danny Vosk → Danny Vosk"),
+                List.of());
 
         assertThat(found)
                 .filteredOn(finding -> finding.kind() == FindingKind.LATIN_RUN)
@@ -357,7 +365,8 @@ class TextChecksTest {
                 "Вони дісталися до міста на світанку.",
                 "en",
                 "uk",
-                List.of("Zurich → Цюріх"));
+                List.of("Zurich → Цюріх"),
+                List.of());
 
         assertThat(found).singleElement().satisfies(finding -> {
             assertThat(finding.kind()).isEqualTo(FindingKind.NAME_MISSING);
@@ -369,8 +378,8 @@ class TextChecksTest {
     // IF the model wrote the name another way, THEN the finding must name that word and the exact replacement.
     @Test
     void run_glossaryNameSpelledAnotherWay_isSoftWithTheWordAndTheReplacement() {
-        final List<CheckFinding> found =
-                TextChecks.run("David stayed home.", "Тавид залишився вдома.", "en", "uk", List.of("David → Давид"));
+        final List<CheckFinding> found = TextChecks.run(
+                "David stayed home.", "Тавид залишився вдома.", "en", "uk", List.of("David → Давид"), List.of());
 
         assertThat(found).singleElement().satisfies(finding -> {
             assertThat(finding.kind()).isEqualTo(FindingKind.NAME_SPELLING);
@@ -383,8 +392,8 @@ class TextChecksTest {
     // IF a pronoun that folds into the name were its spelling, THEN the fix would put the name over every "Він".
     @Test
     void run_pronounThatFoldsIntoTheLostName_isNotItsSpelling() {
-        final List<CheckFinding> found =
-                TextChecks.run("Dane stayed home.", "Він залишився вдома.", "en", "uk", List.of("Dane → Дейн"));
+        final List<CheckFinding> found = TextChecks.run(
+                "Dane stayed home.", "Він залишився вдома.", "en", "uk", List.of("Dane → Дейн"), List.of());
 
         assertThat(found).singleElement().extracting(CheckFinding::kind).isEqualTo(FindingKind.NAME_MISSING);
     }

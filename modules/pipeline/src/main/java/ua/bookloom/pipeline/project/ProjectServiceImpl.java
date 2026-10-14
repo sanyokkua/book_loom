@@ -92,7 +92,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.err(errorOf(found));
             }
             final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
-            if (stored == null || !StoredBooks.isUnchanged(stored, source)) {
+            if (stored == null || !StoredBooks.isUnchanged(stored, source, documents)) {
                 log.debug("decidedSegments project={}: nothing stored for this content", id);
                 return Result.ok(0);
             }
@@ -116,7 +116,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.err(errorOf(found));
             }
             final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
-            if (stored == null || !StoredBooks.isUnchanged(stored, source)) {
+            if (stored == null || !StoredBooks.isUnchanged(stored, source, documents)) {
                 log.warn("continueBook refused project={}: nothing stored for this content", id);
                 return Result.err(StoredBooks.nothingToContinue());
             }

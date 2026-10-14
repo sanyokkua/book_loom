@@ -98,6 +98,15 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
     }
 
     /**
+     * Whether the gender is a guess nobody confirmed, which the checks and the style sheet treat as "likely".
+     *
+     * @return {@code true} if the gender is known and only suggested, {@code false} otherwise
+     */
+    public boolean hasSuggestedGender() {
+        return genderOrigin == GenderOrigin.SUGGESTED;
+    }
+
+    /**
      * Whether the person has said anything about the narrator.
      *
      * @return {@code true} unless this is the unspecified narrator

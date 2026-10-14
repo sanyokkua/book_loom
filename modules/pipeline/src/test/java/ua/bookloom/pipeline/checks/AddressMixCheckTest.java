@@ -121,6 +121,24 @@ class AddressMixCheckTest {
         assertThat(uk(target)).isEmpty();
     }
 
+    // IF a quote nested in a speech were read as address, THEN a speaker naming the word "Ви" in a ти speech would be
+    // told to unify a speech that is addressed one way.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "guillemets with a nested quoted Ви|«Ти сказала мені „Ви“, а тобі я не відповів.»",
+                "dash speech with a quoted Вам|— Ти називаєш мене «Вам», а тобі я кажу ти, — сказав він.",
+            })
+    void find_formalFormOnlyInsideANestedQuote_isNotAddress(final String name, final String target) {
+        assertThat(uk(target)).isEmpty();
+    }
+
+    @Test
+    void find_nestedQuoteBesideARealFormalForm_isStillAMix() {
+        assertThat(uk("«Ти кажеш „Ви“, а Вам я не вірю, тобі ж вірю.»")).hasSize(1);
+    }
+
     // IF the check ran for every target, THEN a Russian or Polish text would be held to Ukrainian pronoun lists; the
     // lists live in the target's language file, so a language without them is off.
     @ParameterizedTest

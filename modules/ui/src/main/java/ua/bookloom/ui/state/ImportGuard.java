@@ -93,7 +93,7 @@ public final class ImportGuard {
     // The stored project is asked off the FX thread; the run is cleared only when the import goes ahead.
     private void openChecked(final Path source, final Runnable clearRun) {
         if (checking) {
-            log.debug("import of {} ignored: another file is still being checked", fileNameOf(source));
+            log.warn("import of {} dropped: another file is still being checked", fileNameOf(source));
             return;
         }
         checking = true;

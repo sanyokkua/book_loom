@@ -86,7 +86,7 @@ final class StylePhrases {
         if (!isStated(narrator.gender())) {
             return "UNKNOWN";
         }
-        return narrator.genderOrigin() == Narrator.GenderOrigin.SUGGESTED
+        return narrator.hasSuggestedGender()
                 ? "LIKELY_" + narrator.gender().name()
                 : narrator.gender().name();
     }

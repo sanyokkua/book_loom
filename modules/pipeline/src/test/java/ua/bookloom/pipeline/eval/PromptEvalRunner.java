@@ -166,7 +166,9 @@ final class PromptEvalRunner {
                         DisplayText.of(defect.source()),
                         DisplayText.of(defect.candidate()),
                         frame.sourceLanguage(),
-                        frame.targetLanguage())
+                        frame.targetLanguage(),
+                        List.of(),
+                        List.of())
                 .isEmpty();
         return new Checked(!qa.hardGatesPass() || qa.failedOutright(), noted);
     }

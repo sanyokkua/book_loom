@@ -166,7 +166,7 @@ public final class EvalProject {
         final List<Segment> unit = new ArrayList<>(chunk);
         unit.addAll(segments(setup.after(), chunk.size()));
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, frame, BatchFormat.current()),
+                new BatchPromptBuilder(TEMPLATES, frame, BatchFormat.current(), settings.relevantPairs()),
                 new BatchReplyParser(MAPPER),
                 calls,
                 frame.sourceLanguage(),

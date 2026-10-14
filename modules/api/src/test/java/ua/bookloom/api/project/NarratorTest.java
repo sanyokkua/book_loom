@@ -68,6 +68,21 @@ class NarratorTest {
                 .isEqualTo(checkable);
     }
 
+    @ParameterizedTest(name = "[{index}] {0} {1} -> {2}")
+    @CsvSource({
+        "MALE, SUGGESTED, true",
+        "FEMALE, SUGGESTED, true",
+        "MALE, PERSON, false",
+        "FEMALE, VERIFIED, false",
+        "MALE, INFERRED, false",
+        "UNKNOWN, SUGGESTED, false"
+    })
+    void hasSuggestedGender_byOrigin_isTrueOnlyForAKnownSuggestedGender(
+            final Gender gender, final GenderOrigin origin, final boolean suggested) {
+        assertThat(new Narrator(NarratorPerson.FIRST, gender, origin, List.of()).hasSuggestedGender())
+                .isEqualTo(suggested);
+    }
+
     @Test
     void narrator_knownGenderWithNoOrigin_isRejected() {
         assertThatThrownBy(() -> new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.NONE, List.of()))

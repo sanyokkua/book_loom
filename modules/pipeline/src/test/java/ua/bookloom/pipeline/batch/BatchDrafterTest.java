@@ -61,7 +61,7 @@ class BatchDrafterTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON),
+                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
                 new BatchReplyParser(new ObjectMapper()),
                 recording,
                 "en",
@@ -122,7 +122,7 @@ class BatchDrafterTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON),
+                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
                 new BatchReplyParser(new ObjectMapper()),
                 scripted,
                 "en",

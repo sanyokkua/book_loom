@@ -47,6 +47,8 @@ public final class PromptTemplates {
     private static final String TOKEN_RULES = "tokenRules";
     private static final String NO_TOKEN_RULES = "noTokenRules";
     private static final String NOTES_RULE = "notesRule";
+    private static final String RELATED_PAIRS_NAME = "relatedPairsName";
+    private static final String RELATED_PAIRS_MENTION = "Related earlier pairs, ";
     private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
@@ -134,6 +136,17 @@ public final class PromptTemplates {
      */
     public static Map<String, String> notesGate(final boolean notes) {
         return Map.of(NOTES_RULE, notes ? GATE_OPEN : "");
+    }
+
+    /**
+     * The system slot that names the related-earlier-pairs block in the batch draft's context-only rule. Left empty when
+     * the run never shows the block, so the rule reads as it did before the block existed.
+     *
+     * @param relatedPairs whether the run's batches carry the block
+     * @return never null; the slot value to pass as {@code extra}
+     */
+    public static Map<String, String> relatedPairsGate(final boolean relatedPairs) {
+        return Map.of(RELATED_PAIRS_NAME, relatedPairs ? RELATED_PAIRS_MENTION : "");
     }
 
     /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */

@@ -52,6 +52,9 @@ public final class BatchDrafter {
 
     static final int CLEAN_STREAK_TO_GROW = 3;
 
+    /** How many first-item-only or cut replies in a row halve the size, because one of them says nothing but a habit does. */
+    static final int STALLS_TO_HALVE = 3;
+
     private final BatchPromptBuilder prompts;
     private final BatchReplyParser parser;
     private final ModelCalls calls;
@@ -59,6 +62,7 @@ public final class BatchDrafter {
     private final String targetLanguage;
     private final BatchSizeController size;
     private final KeyTermAsks keyTermAsks = new KeyTermAsks();
+    private int stallStreak;
 
     /**
      * Creates the drafter of one run.
@@ -265,9 +269,10 @@ public final class BatchDrafter {
      * Feeds a batch's first reply to the adaptive size, never a re-ask's, so a model that needs the second call still
      * shrinks the batches: a lost numbering, an omission or a merge halves it, a reply whose ids were all right counts
      * toward growing it. Neither a reply that answered only the first item nor one cut at the length cap says
-     * anything about the size (a 2-item batch stops early the same way, and a cut was a loop), so those leave it as
-     * it is; their missing ids are asked again as for any omission. An item that only failed its own checks is the
-     * item's problem, not the size's.
+     * anything about the size (a 2-item batch stops early the same way, and a cut was a loop), so one of them leaves
+     * it as it is; their missing ids are asked again as for any omission. {@value #STALLS_TO_HALVE} of them in a row
+     * are a habit of the model, though, and halve the size once; any other reply starts the count again. An item that
+     * only failed its own checks is the item's problem, not the size's.
      *
      * @param reply the non-null reply of the batch just made
      */
@@ -279,6 +284,7 @@ public final class BatchDrafter {
         if (outcome == Outcome.CLEAN) {
             size.recordClean();
         }
+        countStall(outcome);
         log.debug(
                 "Batch recorded outcome={} sent={} size={} nextSize={} maxSize={}",
                 outcome,
@@ -288,25 +294,45 @@ public final class BatchDrafter {
                 MAX_SIZE);
     }
 
+    // A stall alone says nothing, but a model that always stops after item one must still be able to shrink its batch.
+    private void countStall(final Outcome outcome) {
+        if (!outcome.isStall()) {
+            stallStreak = 0;
+            return;
+        }
+        stallStreak++;
+        if (stallStreak >= STALLS_TO_HALVE) {
+            log.debug("Batch answered short {} times in a row: halving", stallStreak);
+            size.recordFailure(Failure.OMISSION);
+            stallStreak = 0;
+        }
+    }
+
     /** What a first reply says about the batch size; only the kinds with a {@link Failure} shrink it. */
     enum Outcome {
         /** Every id was right. */
-        CLEAN(null),
-        /** Only the first item came back and the model stopped normally: no size signal. */
-        FIRST_ONLY(null),
-        /** The reply hit the length cap with ids missing: no size signal. */
-        CUT(null),
+        CLEAN(null, false),
+        /** Only the first item came back and the model stopped normally: no size signal alone. */
+        FIRST_ONLY(null, true),
+        /** The reply hit the length cap with ids missing: no size signal alone. */
+        CUT(null, true),
         /** Some ids were left out, or the reply was unreadable. */
-        OMISSION(Failure.OMISSION),
+        OMISSION(Failure.OMISSION, false),
         /** The reply named an id the batch never held. */
-        WRONG_ID(Failure.WRONG_ID),
+        WRONG_ID(Failure.WRONG_ID, false),
         /** The reply carries two items under one id. */
-        MERGE(Failure.MERGE);
+        MERGE(Failure.MERGE, false);
 
         private final @Nullable Failure failure;
+        private final boolean stall;
 
-        Outcome(final @Nullable Failure failure) {
+        Outcome(final @Nullable Failure failure, final boolean stall) {
             this.failure = failure;
+            this.stall = stall;
+        }
+
+        boolean isStall() {
+            return stall;
         }
 
         Optional<Failure> failure() {

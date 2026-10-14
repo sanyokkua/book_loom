@@ -8,13 +8,14 @@ import static ua.bookloom.pipeline.batch.BatchDrafterTest.reasked;
 import static ua.bookloom.pipeline.batch.BatchDrafterTest.reply;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 
-/** Which first replies move the adaptive batch size: a stop after item one and a cut reply do not. */
+/** Which first replies move the adaptive batch size: a stop after item one and a cut reply do not, until three come in a row. */
 class BatchSizeSignalTest {
 
     private final List<List<String>> segments = new ArrayList<>();
@@ -23,21 +24,63 @@ class BatchSizeSignalTest {
         return BatchDrafterTest.scriptedDrafter(answers, segments);
     }
 
-    // IF the model keeps answering only the first item, THEN the size neither shrinks nor creeps up as for a clean run.
+    // IF the model keeps answering only the first item, THEN a single stop says nothing, but three in a row halve the
+    // size.
     @Test
-    void record_firstItemOnlyRepliesInARow_neitherShrinkNorGrowTheSize() {
-        final BatchDrafter drafter = scripted(List.of(
-                reply(entries("1", "Вона відчинила двері.")),
-                reply(entries("1", "Вона відчинила двері.")),
-                reply(entries("1", "Вона відчинила двері.")),
-                reply(entries("1", "Вона відчинила двері."))));
+    void record_twoFirstItemOnlyReplies_keepTheSize() {
+        final BatchDrafter drafter = scripted(firstOnlyReplies(2));
 
+        drafter.record(firstReply(drafter));
+        drafter.record(firstReply(drafter));
+
+        assertThat(drafter.size()).isEqualTo(8);
+    }
+
+    @Test
+    void record_threeFirstItemOnlyRepliesInARow_halveTheSizeOnce() {
+        final BatchDrafter drafter = scripted(firstOnlyReplies(3));
+
+        drafter.record(firstReply(drafter));
+        drafter.record(firstReply(drafter));
+        drafter.record(firstReply(drafter));
+
+        assertThat(drafter.size()).isEqualTo(4);
+    }
+
+    // IF a full answer comes between, THEN the streak starts over and the size stays.
+    @Test
+    void record_fullAnswerBetweenFirstItemOnlyReplies_resetsTheStreak() {
+        final List<Result<ChatResponse>> answers = new ArrayList<>(firstOnlyReplies(2));
+        answers.add(reply(entries("1", "Вона.", "2", "Він.", "3", "Дощ.", "4", "Ніч.")));
+        answers.addAll(firstOnlyReplies(2));
+        final BatchDrafter drafter = scripted(answers);
+
+        drafter.record(firstReply(drafter));
         drafter.record(firstReply(drafter));
         drafter.record(firstReply(drafter));
         drafter.record(firstReply(drafter));
         drafter.record(firstReply(drafter));
 
         assertThat(drafter.size()).isEqualTo(8);
+    }
+
+    // IF cut replies and first-only replies alternate, THEN they count together toward the same streak.
+    @Test
+    void record_cutAndFirstItemOnlyRepliesMixed_halveTheSizeAfterThree() {
+        final BatchDrafter drafter = scripted(List.of(
+                Result.ok(new ChatResponse(entries("1", "Вона відчинила двері."), FinishReason.LENGTH)),
+                reply(entries("1", "Вона відчинила двері.")),
+                Result.ok(new ChatResponse(entries("1", "Вона відчинила двері."), FinishReason.LENGTH))));
+
+        drafter.record(firstReply(drafter));
+        drafter.record(firstReply(drafter));
+        drafter.record(firstReply(drafter));
+
+        assertThat(drafter.size()).isEqualTo(4);
+    }
+
+    private static List<Result<ChatResponse>> firstOnlyReplies(final int count) {
+        return Collections.nCopies(count, reply(entries("1", "Вона відчинила двері.")));
     }
 
     // IF the reply was cut at the length cap, THEN the missing ids are asked again as for any omission, and the size

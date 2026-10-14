@@ -24,6 +24,7 @@ import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.batch.ProtocolLeak;
+import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
@@ -85,7 +86,8 @@ final class BatchEvalRunner {
     private BatchDrafter sizing(final int initialSize) {
         final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), any.frame(), BatchFormat.current()),
+                new BatchPromptBuilder(
+                        new PromptTemplates(), any.frame(), BatchFormat.current(), RelevantPairsSwitch.isOn()),
                 parser,
                 calls,
                 SOURCE,
