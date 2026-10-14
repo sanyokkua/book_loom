@@ -43,6 +43,7 @@ public enum PromptName {
                             "characters",
                             "precedingTargets",
                             "followingTarget",
+                            "wholeParagraph",
                             "extraInstruction"))),
 
     /**

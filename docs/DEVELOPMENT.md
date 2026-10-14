@@ -1020,6 +1020,21 @@ and missing ids, control-code and quote defects, the placeholder gate, WRONG on 
 adopt `markers` or `dual` only if WRONG falls by 2 or more or seconds per segment fall by 10 % with no key metric losing 2 or more (task
 15i.X1). The result and the decision are recorded here when the arms are measured.
 
+**Long-paragraph arm (15i.X3, an experiment).** Off by default. `BOOKLOOM_LONG_PARAGRAPHS=groups` (else the property
+`-Dbookloom.long.paragraphs=groups`; `off` or unset is today's behaviour, byte for byte) drafts a paragraph of more than 180 words
+(`LongParagraphs.LONG_ABOVE_WORDS`, words as the text checks count them, placeholder tokens left out) as sentence groups of at most
+90 words (`GROUP_WORDS`; the greedy merge of `OversizedSplit`, a sentence above 90 words is a group of its own, a one-sentence paragraph
+is drafted whole as before). Each group is one draft call through `PieceDrafter`, with the whole paragraph in the new optional
+`{{wholeParagraph}}` block of the draft prompt (`12_PROMPT_CATALOG.md`); the block is plain display text with every `⟦gN⟧` token left
+out, because a token shown there could be copied into a group whose own tokens the gate counts. The groups are joined by code and the
+joined text goes through the one whole-segment gate and the usual checks (sentence count, quote balance) as pieces do today. While the
+arm is on `BatchStage` ends a batch before such a paragraph and drafts it on the single path, so it is in no JSON or marker batch. To
+measure: `scripts/eval-matrix.sh --suite longpara --long-paragraphs groups` (and once without the flag for the baseline) drafts the
+twenty paragraphs of `src/test/resources/eval/long-paragraphs.json` on the real draft path and writes `<model>-longpara.json` / `.txt`
+(source and target of each paragraph, calls) for grading; the sequence suite takes the same flag (`BOOKLOOM_EVAL_LONG_PARAGRAPHS` for a
+direct `./gradlew :pipeline:promptEval`). Every report's provenance says `long_paragraphs=groups`. Adopt only if WRONG on the set falls
+by 2 or more with no key metric losing 2 or more; otherwise record the result here and remove the code (task 15i.X3).
+
 **Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
 `ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective
 candidates the reviewer asked to change (thresholds: at least 90% on the e4b class, 95% on the 26b class), `falseAlarmEdits`
