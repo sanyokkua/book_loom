@@ -5,6 +5,8 @@ import com.google.inject.Singleton;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -22,6 +24,7 @@ import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -56,8 +59,11 @@ public final class NarratorDialog {
     private final BookBriefViewModel brief;
     private final CharacterGendersDialog genders;
     private final SetupAssistant assistant;
+    private final ExecutorService executor;
     // Touched on the FX thread only, like every dialog; holds the books the question has been answered for.
     private final Set<String> answered = new HashSet<>();
+    // The books whose narrator is being re-checked in the background; a second Start meanwhile is ignored.
+    private final Set<String> rechecking = new HashSet<>();
 
     /**
      * Creates the dialog.
@@ -68,6 +74,7 @@ public final class NarratorDialog {
      * @param brief the view model the chosen narrator is written through
      * @param genders the question about characters without a gender, asked after the narrator's
      * @param assistant the port that re-checks the narrator's stored quotes before the question is asked
+     * @param executor the background pool the re-check runs on, because it reads the whole book
      */
     @Inject
     public NarratorDialog(
@@ -76,18 +83,21 @@ public final class NarratorDialog {
             final CurrentProject project,
             final BookBriefViewModel brief,
             final CharacterGendersDialog genders,
-            final SetupAssistant assistant) {
+            final SetupAssistant assistant,
+            @BackgroundExecutor final ExecutorService executor) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.project = Objects.requireNonNull(project, "project");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.genders = Objects.requireNonNull(genders, "genders");
         this.assistant = Objects.requireNonNull(assistant, "assistant");
+        this.executor = Objects.requireNonNull(executor, "executor");
     }
 
     /**
      * Starts through the question: when it must be asked the card is shown and {@code start} runs after an answer;
-     * otherwise {@code start} runs at once. FX thread only.
+     * otherwise {@code start} runs at once. The narrator's stored quotes are re-checked on the background pool first,
+     * so the card, or {@code start}, follows a moment later on the FX thread. FX thread only.
      *
      * @param start what starts the translation; not run when the person goes back
      */
@@ -103,31 +113,71 @@ public final class NarratorDialog {
             start.run();
             return;
         }
-        if (isVerifiedByRecheck(book.projectId())) {
+        final String projectId = book.projectId();
+        if (!rechecking.add(projectId)) {
+            log.debug("the narrator of project {} is already being re-checked: Start ignored", projectId);
+            return;
+        }
+        log.debug("re-checking the narrator of project {} in the background", projectId);
+        try {
+            executor.execute(() -> {
+                final Narrator verified = recheck(projectId);
+                Platform.runLater(() -> rechecked(projectId, verified, start));
+            });
+        } catch (RuntimeException rejected) {
+            log.warn("the narrator re-check of project {} could not be submitted", projectId, rejected);
+            rechecked(projectId, null, start);
+        }
+    }
+
+    // The glossary may have learned the name the brief's quote calls the narrator by since the brief was suggested; the
+    // check calls no model, and a failed one only means the question is asked (15i.T5). It splits every paragraph of
+    // the book, so it runs on the background pool.
+    private @Nullable Narrator recheck(final String projectId) {
+        try {
+            final Result<Narrator> checked = assistant.recheckNarrator(projectId);
+            final Narrator narrator = checked.data();
+            if (checked.isErr() || narrator == null || narrator.gender() == Gender.UNKNOWN) {
+                log.debug(
+                        "the narrator re-check verified nothing for project {} (failed {})",
+                        projectId,
+                        checked.isErr());
+                return null;
+            }
+            return narrator;
+        } catch (RuntimeException thrown) {
+            log.error("the narrator re-check of project {} threw instead of returning a result", projectId, thrown);
+            return null;
+        }
+    }
+
+    // Back on the FX thread: the open book may have changed while the check ran, in which case the question is
+    // asked about the book that is open now, or not at all.
+    private void rechecked(final String projectId, final @Nullable Narrator verified, final Runnable start) {
+        rechecking.remove(projectId);
+        final OpenedBook book = project.book().get();
+        if (book == null || !book.projectId().equals(projectId)) {
+            log.debug("the book changed while the narrator of project {} was re-checked: dropped", projectId);
+            return;
+        }
+        if (!mustAsk(book, project.brief().get())) {
+            log.debug("the narrator of project {} was settled while it was re-checked: starting", projectId);
+            start.run();
+            return;
+        }
+        if (verified != null) {
+            log.info("the narrator re-check verified {} for project {}", verified.gender(), projectId);
+            brief.styleSuggestion().adoptNarrator(verified);
             startWhenSaved(start);
             return;
         }
-        log.debug("asking who narrates before starting project {}", book.projectId());
+        log.debug("asking who narrates before starting project {}", projectId);
         final Label text = new Label(messages.get(MessageKey.DIALOG_NARRATOR_TEXT));
         text.setWrapText(true);
         text.getStyleClass().add("dialog-text");
         final DialogPane card = card(new VBox(text));
-        wire(card, book.projectId(), start);
+        wire(card, projectId, start);
         modalHost.show(card, false);
-    }
-
-    // The glossary may have learned the name the brief's quote calls the narrator by since the brief was suggested; the
-    // check calls no model, and a failed one only means the question is asked (15i.T5).
-    private boolean isVerifiedByRecheck(final String projectId) {
-        final Result<Narrator> checked = assistant.recheckNarrator(projectId);
-        final Narrator narrator = checked.data();
-        if (checked.isErr() || narrator == null || narrator.gender() == Gender.UNKNOWN) {
-            log.debug("the narrator re-check verified nothing for project {} (failed {})", projectId, checked.isErr());
-            return false;
-        }
-        log.info("the narrator re-check verified {} for project {}", narrator.gender(), projectId);
-        brief.styleSuggestion().adoptNarrator(narrator);
-        return true;
     }
 
     private boolean mustAsk(final OpenedBook book, final @Nullable BookBrief current) {

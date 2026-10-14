@@ -75,8 +75,6 @@ class ImportViewModelTest extends ImportViewModelTestBase {
                                 "en",
                                 11,
                                 78_214,
-                                7,
-                                0,
                                 BookFixtures.pngCover()),
                         null));
         assertThat(openedBook()).isNotNull().satisfies(book -> {
@@ -114,7 +112,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, 0, 0, null), null));
+                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, null), null));
         assertThat(errors.presented()).isEmpty();
     }
 
@@ -129,7 +127,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, null, 1, 0, 0, 0, null), null));
+                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, null, 1, 0, null), null));
     }
 
     // IF one missing metadata key hid or blanked the other, THEN a book declaring only its title would lose it.
@@ -150,17 +148,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
                         new BookCard(
-                                "book.epub",
-                                BookFormat.EPUB,
-                                null,
-                                expectedTitle,
-                                expectedAuthor,
-                                null,
-                                1,
-                                0,
-                                0,
-                                0,
-                                null),
+                                "book.epub", BookFormat.EPUB, null, expectedTitle, expectedAuthor, null, 1, 0, null),
                         null));
     }
 

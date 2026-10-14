@@ -22,6 +22,7 @@ import ua.bookloom.ui.state.ChangeOperation;
 import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
+import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.LiveCalls;
 
 /**
@@ -45,15 +46,24 @@ class ChangeResultsDialogTest extends ShellTestBase {
     }
 
     private static ChangeRow added(final long id, final String term) {
-        return new ChangeRow(id, ChangeKind.ADDED, term, "—", "Терм · character", null);
+        return new ChangeRow(
+                id, ChangeKind.ADDED, term, "—", "Терм · character", null, ChangeOrigin.MODEL, ChangeSection.NAMES);
     }
 
     private static ChangeRow found(final long id, final String term) {
-        return new ChangeRow(id, ChangeKind.ADDED, term, "—", "—", null, ChangeOrigin.TEXT);
+        return new ChangeRow(id, ChangeKind.ADDED, term, "—", "—", null, ChangeOrigin.TEXT, ChangeSection.NAMES);
     }
 
     private static ChangeRow removed(final long id, final String term, final @Nullable String reason) {
-        return new ChangeRow(id, ChangeKind.REMOVED, term, "No target · other", "—", reason);
+        return new ChangeRow(
+                id,
+                ChangeKind.REMOVED,
+                term,
+                "No target · other",
+                "—",
+                reason,
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES);
     }
 
     private void show(final ChangeResults results) {

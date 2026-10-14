@@ -51,6 +51,12 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         return card != null && card.isVisible() && card.getScene() != null;
     }
 
+    // The narrator's quotes are re-checked in the background first, so the card follows a moment after Start.
+    private void startAndAwaitQuestion() throws Exception {
+        onFx(() -> button("names-style-start").fire());
+        awaitFx(this::isAsking);
+    }
+
     private Narrator narrator() {
         return ThemeTestSupport.onFx(() -> injector.getInstance(ua.bookloom.ui.state.CurrentProject.class)
                 .brief()
@@ -63,7 +69,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     void start_firstPersonBookNarratorNotStated_asksWhoNarratesFirst() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
 
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         assertThat(isAsking()).isTrue();
         assertThat(textsUnder(required(CARD)))
@@ -81,7 +87,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void male_pressed_setsAFirstPersonMaleNarratorAndStartsTheRun() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> button("narrator-male").fire());
 
@@ -98,7 +104,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         showNamesStyle(BookFixtures.firstPersonHint());
         final int savedBefore = projects.briefs().size();
         projects.holdBriefSaves();
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> button("narrator-male").fire());
 
@@ -112,7 +118,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void enter_onTheQuestion_defaultsToNotStatedNeverToMale() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         final boolean[] defaults = ThemeTestSupport.onFx(() -> new boolean[] {
             ((javafx.scene.control.Button) scene.getRoot().lookup("#narrator-unknown")).isDefaultButton(),
@@ -126,7 +132,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void female_pressed_setsAFirstPersonFemaleNarratorAndStartsTheRun() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> button("narrator-female").fire());
 
@@ -137,7 +143,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void notStated_pressed_startsTheRunAndLeavesTheGenderUnknown() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> button("narrator-unknown").fire());
 
@@ -149,7 +155,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void back_pressed_startsNothingAndStaysOnTheNames() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> button("narrator-back").fire());
 
@@ -161,12 +167,12 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
     @Test
     void escape_pressedOnTheQuestion_startsNothingAndAsksAgainAtTheNextStart() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         onFx(() -> scene.getRoot()
                 .lookup("#" + CARD)
                 .fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         assertThat(engine.requests()).isEmpty();
         assertThat(isAsking()).isTrue();
@@ -224,6 +230,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
 
         onFx(() -> button("translating-start").fire());
+        awaitFx(this::isAsking);
 
         assertThat(isAsking()).isTrue();
         assertThat(engine.requests()).isEmpty();
@@ -234,7 +241,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         useLocale(Locale.forLanguageTag("uk"));
         showNamesStyle(BookFixtures.firstPersonHint());
 
-        onFx(() -> button("names-style-start").fire());
+        startAndAwaitQuestion();
 
         assertThat(textsUnder(required(CARD)))
                 .contains("Хто розповідає?", "Назад", "Не вказано — почати все одно", "Жіноча", "Чоловіча");

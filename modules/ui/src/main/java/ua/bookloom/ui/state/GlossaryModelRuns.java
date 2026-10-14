@@ -22,13 +22,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.BatchStarted;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.LexiconService;
-import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -88,17 +85,19 @@ final class GlossaryModelRuns {
             ActivityTracker activities,
             ChangeLog changes) {}
 
+    private static final long NO_TICKET = -1;
+
     private final Screen screen;
     private final GlossaryCalls calls;
     private final ModelAnswers answers;
     private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
     private final ModelBlock block;
+    private final RunProgress runProgress;
     private @Nullable Future<?> running;
     private ActivityTracker.@Nullable Handle handle;
-    private @Nullable CallFeed feed;
     private long ticket;
-    private int requests;
-    private @Nullable BatchStarted suggesting;
+    // The ticket of an automatic pass that was stopped, whose late answer is still shown (see lateAfterStop).
+    private long stoppedPass = NO_TICKET;
     private ChangeOperation operation = ChangeOperation.NAME_SCAN;
     private Set<String> termsBefore = Set.of();
 
@@ -106,6 +105,7 @@ final class GlossaryModelRuns {
         this.screen = Objects.requireNonNull(screen, "screen");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.answers = new ModelAnswers(screen, calls);
+        this.runProgress = new RunProgress(screen.messages(), screen.notice());
         this.block = new ModelBlock(screen.activities(), screen.messages(), busy.getReadOnlyProperty());
     }
 
@@ -214,9 +214,10 @@ final class GlossaryModelRuns {
             log.debug("stop of the model action ignored: none is running");
             return;
         }
-        log.info("model action stopped by the person after {} requests", requests);
+        log.info("model action stopped by the person after {} requests", runProgress.requests());
         current.cancel(true);
         running = null;
+        stoppedPass = operation == ChangeOperation.AUTO_NAMES ? ticket : NO_TICKET;
         ticket++;
         endActivity();
         busy.set(false);
@@ -260,9 +261,10 @@ final class GlossaryModelRuns {
                 project,
                 selection.map(ModelSelection::providerId).orElse("none (text step only)"));
         final long mine = ++ticket;
+        stoppedPass = NO_TICKET;
         reset(which);
         handle = screen.activities().begin(what, this::stop);
-        feed = new CallFeed(handle, screen.activities()::now);
+        runProgress.begin(new CallFeed(handle, screen.activities()::now));
         busy.set(true);
         screen.notice().set(null);
         running = calls.start(
@@ -283,8 +285,6 @@ final class GlossaryModelRuns {
     }
 
     private void reset(final ChangeOperation which) {
-        requests = 0;
-        suggesting = null;
         operation = which;
         screen.changes().begin();
     }
@@ -302,14 +302,14 @@ final class GlossaryModelRuns {
             final Result<T> answer,
             final Consumer<T> onOk) {
         if (mine != ticket) {
-            log.debug("the stopped model {} answered late; its answer is dropped", what);
+            lateAfterStop(mine, what, project, answer, onOk);
             return;
         }
         running = null;
         endActivity();
         busy.set(false);
         final AppError failure = answer.error();
-        log.info("model {} ended ok={} requests={}", what, failure == null, requests);
+        log.info("model {} ended ok={} requests={}", what, failure == null, runProgress.requests());
         if (!project.equals(screen.project().get()) || (failure != null && failure.code() == ErrorCode.cancelled)) {
             log.debug(
                     "the model {} answer is not shown: project {} now {}",
@@ -328,49 +328,36 @@ final class GlossaryModelRuns {
         onOk.accept(Objects.requireNonNull(answer.data(), "data"));
     }
 
+    // The pass writes both tables at its very end, so a Stop that came after it stored them but before its answer
+    // reached the FX thread would leave the screen on the old rows with nothing to undo. That answer is shown as if
+    // Stop had not come, and a stopped pass that failed is read back, so the tables on screen are the stored ones.
+    // Any other stopped action wrote nothing, and its late answer is dropped.
+    private <T> void lateAfterStop(
+            final long mine,
+            final ActivityKind what,
+            final String project,
+            final Result<T> answer,
+            final Consumer<T> onOk) {
+        final boolean isStoppedPass = mine == stoppedPass;
+        if (!isStoppedPass || busy.get() || !project.equals(screen.project().get())) {
+            log.debug("the stopped model {} answered late; its answer is dropped", what);
+            return;
+        }
+        stoppedPass = NO_TICKET;
+        if (answer.isOk()) {
+            log.info("the stopped model {} had already stored its answer; it is shown", what);
+            onOk.accept(Objects.requireNonNull(answer.data(), "data"));
+            return;
+        }
+        log.debug("the stopped model {} failed after Stop; both tables are read back", what);
+        answers.reloadBoth(project);
+    }
+
     private void progress(final long mine, final JobEvent event) {
         if (mine != ticket || running == null) {
             return;
         }
-        final CallFeed shown = feed;
-        if (shown != null) {
-            shown.accept(event);
-        }
-        if (event instanceof BatchStarted batch) {
-            suggesting = batch;
-            log.debug("suggestion batch {} of {} is out", batch.batch(), batch.batches());
-            line(GlossaryNotice.Level.INFO, suggestingLine(batch));
-            return;
-        }
-        if (event instanceof ModelCallStarted started) {
-            requestOut(started);
-        }
-    }
-
-    private void requestOut(final ModelCallStarted started) {
-        if (started.attempt() == 1) {
-            requests++;
-            final ActivityTracker.Handle registered = handle;
-            if (registered != null) {
-                registered.requests(requests);
-            }
-        }
-        log.debug("model request {} attempt {} of {} is out", requests, started.attempt(), started.maxAttempts());
-        final BatchStarted batch = suggesting;
-        line(
-                GlossaryNotice.Level.INFO,
-                started.kind() == CallKind.SUGGEST_TARGETS && batch != null
-                        ? suggestingLine(batch)
-                        : screen.messages()
-                                .get(
-                                        MessageKey.NAMES_STYLE_MODEL_PROGRESS,
-                                        requests,
-                                        started.attempt(),
-                                        started.maxAttempts()));
-    }
-
-    private String suggestingLine(final BatchStarted batch) {
-        return screen.messages().get(MessageKey.NAMES_STYLE_SUGGESTING, batch.batch(), batch.batches());
+        runProgress.accept(event, handle);
     }
 
     private void endActivity() {

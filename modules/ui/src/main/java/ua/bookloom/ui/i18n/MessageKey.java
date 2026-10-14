@@ -523,8 +523,6 @@ public enum MessageKey {
     IMPORT_CARD_FORMAT("import.card.format"),
     /** Label of the row holding the language the book declares. */
     IMPORT_CARD_LANGUAGE("import.card.language"),
-    /** Count of translatable segments; argument 0 is the count, passed as an Integer. */
-    IMPORT_COUNT_SEGMENTS("import.count.segments"),
     /** Name of the EPUB format. */
     IMPORT_FORMAT_EPUB("import.format.epub"),
     /** Name of the FB2 format. */
@@ -2129,8 +2127,6 @@ public enum MessageKey {
     CHANGED_FILTER("namesStyle.changed.filter"),
     /** Hover explanation of the control labelled by {@link #CHANGED_FILTER}. */
     CHANGED_FILTER_TIP("namesStyle.changed.filter.tip"),
-    /** Line shown when putting a row back failed: the term. */
-    RESULTS_REVERT_FAILED("results.revert.failed"),
     /** Line shown when a changed row was edited after the operation, so it is not put back: the term. */
     RESULTS_REVERT_EDITED("results.revert.edited");
 

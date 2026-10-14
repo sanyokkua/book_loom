@@ -17,8 +17,6 @@ import ua.bookloom.api.document.CoverImage;
  * @param declaredLanguage the normalized tag of the language the book declares, or {@code null}
  * @param chapters how many top-level entries the book's structure has
  * @param words the approximate word count
- * @param images how many images the book carries
- * @param fonts how many embedded fonts the book carries
  * @param cover the cover image, or {@code null} when the book has none
  */
 public record BookCard(
@@ -30,8 +28,6 @@ public record BookCard(
         @Nullable String declaredLanguage,
         int chapters,
         int words,
-        int images,
-        int fonts,
         @Nullable CoverImage cover) {
 
     /** Rejects a missing file name or format. */

@@ -170,8 +170,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard(
-                                "second.epub", BookFormat.EPUB, null, "Candide", "Voltaire", "fr", 2, 0, 0, 0, null),
+                        new BookCard("second.epub", BookFormat.EPUB, null, "Candide", "Voltaire", "fr", 2, 0, null),
                         null));
         assertThat(openedBook()).isNotNull().satisfies(book -> {
             assertThat(book.projectId()).isEqualTo("p2");

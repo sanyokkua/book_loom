@@ -18,7 +18,7 @@ import ua.bookloom.ui.state.StructureStatistics;
  * {@code structure-stat-<row>}, as the counts of the import screen's facts card. The words are not among them because
  * the book details already show them.
  */
-final class StructureStatsCard {
+final class StructureStatsRows {
 
     private static final double GAP = 8;
     private static final double LABEL_GAP = 24;
@@ -28,7 +28,7 @@ final class StructureStatsCard {
     private final GridPane grid = new GridPane(LABEL_GAP, GAP);
     private int row;
 
-    StructureStatsCard(final Messages messages, final NumberFormat numbers) {
+    StructureStatsRows(final Messages messages, final NumberFormat numbers) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.numbers = Objects.requireNonNull(numbers, "numbers");
     }

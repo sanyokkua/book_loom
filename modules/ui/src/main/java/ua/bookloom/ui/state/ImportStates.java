@@ -65,7 +65,7 @@ public final class ImportStates {
         final BookFormat format = Objects.requireNonNull(inspection.format(), "format");
         final String declared = declaredOrNull(inspection.languageEvidence().declared());
         if (profile == null) {
-            return new BookCard(fileName, format, inspection.formatVersion(), null, null, declared, 0, 0, 0, 0, null);
+            return new BookCard(fileName, format, inspection.formatVersion(), null, null, declared, 0, 0, null);
         }
         final BookStats stats = profile.stats();
         return new BookCard(
@@ -77,8 +77,6 @@ public final class ImportStates {
                 declared,
                 profile.structure().size(),
                 stats.words(),
-                stats.images(),
-                stats.fonts(),
                 profile.cover());
     }
 

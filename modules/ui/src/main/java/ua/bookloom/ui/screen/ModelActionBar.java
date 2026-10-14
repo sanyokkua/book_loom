@@ -1,9 +1,8 @@
 package ua.bookloom.ui.screen;
 
+import java.util.List;
 import java.util.Objects;
-import javafx.geometry.Pos;
 import javafx.scene.control.Button;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -24,8 +23,6 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ModelActionBar {
-
-    private static final double SPACING = 8;
 
     /**
      * What a card's three actions do.
@@ -55,7 +52,24 @@ final class ModelActionBar {
             MessageKey translateTip) {}
 
     /**
-     * Builds the bar of one card.
+     * The four buttons of one card's bar, to be laid out by the toolbar that carries them: it folds Review and
+     * Translate into its menu when the card is narrow, which only works if each is a part of that toolbar.
+     *
+     * @param scan Scan
+     * @param review Review
+     * @param translate Translate
+     * @param stop Stop, shown while a model action runs
+     */
+    record Bar(Button scan, Button review, Button translate, Button stop) {
+
+        /** {@return the buttons in the order they read: Scan, Review, Translate, Stop} */
+        List<Button> buttons() {
+            return List.of(scan, review, translate, stop);
+        }
+    }
+
+    /**
+     * Builds the buttons of one card's bar.
      *
      * @param messages the catalogue the captions and explanations come from
      * @param card the card's id prefix, which the buttons' ids extend: {@code card-scan}, {@code card-review},
@@ -63,9 +77,9 @@ final class ModelActionBar {
      * @param words the captions and hover explanations of the three actions
      * @param actions what the three actions do
      * @param names the screen's state, whose stop ends whichever action runs
-     * @return the bar, whose id is {@code card-actions}
+     * @return the four buttons
      */
-    static HBox build(
+    static Bar build(
             final Messages messages,
             final String card,
             final Words words,
@@ -85,12 +99,7 @@ final class ModelActionBar {
         }
         stop.visibleProperty().bind(names.busy());
         stop.managedProperty().bind(names.busy());
-        final HBox bar = new HBox(SPACING, scan, review, translate, stop);
-        bar.setId(card + "-actions");
-        bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setMinWidth(Region.USE_PREF_SIZE);
-        bar.setMaxHeight(Double.MAX_VALUE);
-        return bar;
+        return new Bar(scan, review, translate, stop);
     }
 
     private static Button button(

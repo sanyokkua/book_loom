@@ -1,7 +1,9 @@
 package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.AutoNamesFixture.HALE;
 import static ua.bookloom.ui.AutoNamesFixture.PENTACLE;
+import static ua.bookloom.ui.AutoNamesFixture.WELL;
 
 import java.util.List;
 import java.util.Locale;
@@ -79,6 +81,22 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         awaitFx(() -> "about 30–60 min on Max quality".equals(labelText(SUBTITLE)));
         assertThat(namesPass.estimateCalls().size()).isGreaterThan(askedBefore);
+    }
+
+    // IF the old minutes stayed beside the new dial while the save was slow, THEN the line would say "15–25 min on Max
+    // quality", minutes computed for Balanced.
+    @Test
+    void subtitle_dialChangedAndSaveNotYetStored_isBlankUntilTheNewEstimateArrives() throws Exception {
+        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+        showScreen();
+        projects.holdBriefSaves();
+        namesPass.willEstimate(new NamesEstimate(40, 30, 60));
+
+        onFx(() -> injector.getInstance(BookBriefViewModel.class).setDial(QualityDial.MAX));
+
+        assertThat(labelText(SUBTITLE)).isBlank();
+        projects.releaseBriefSaves();
+        awaitFx(() -> "about 30–60 min on Max quality".equals(labelText(SUBTITLE)));
     }
 
     // IF a failed estimate printed a made-up time, THEN the line would promise minutes nobody computed.
@@ -168,7 +186,8 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
     @Test
     void cancel_pressedOnTheBusyCard_interruptsThePassAndBothTablesAreUnchanged() throws Exception {
         showScreen();
-        passWillSucceed();
+        // What the stored tables hold, which Stop reads back: the cancelled pass wrote nothing.
+        glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
         namesPass.hold();
         pressAuto();
         assertThat(namesPass.awaitStarted()).isTrue();

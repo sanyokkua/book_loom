@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -59,6 +60,17 @@ record GlossaryRowEdits(
                 "update",
                 () -> glossary.update(changed),
                 answer -> whileCurrent.accept(() -> updated(entryId, answer)));
+    }
+
+    /** Shows a loaded glossary, or the failure in place. */
+    void loaded(final Result<List<GlossaryEntry>> answer) {
+        final AppError failure = answer.error();
+        if (failure != null) {
+            log.warn("the glossary load failed with {}", failure.code());
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+            return;
+        }
+        rows.setAll(Objects.requireNonNull(answer.data(), "data"));
     }
 
     void remove(final String project, final String entryId, final Consumer<Runnable> whileCurrent) {

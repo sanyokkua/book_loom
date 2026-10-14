@@ -92,6 +92,11 @@ abstract class WorkspaceTestBase {
 
     /** Boots the injector for {@code mode} and shows the window on the Import screen. */
     protected void startWorkspace(final ReviewMode mode) throws Exception {
+        startWorkspace(mode, new AbstractModule() {});
+    }
+
+    /** As {@link #startWorkspace(ReviewMode)}, with {@code extra} replacing bindings of the graph as well. */
+    protected void startWorkspace(final ReviewMode mode, final com.google.inject.Module extra) throws Exception {
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
         final String flag = mode.name().toLowerCase(Locale.ROOT);
         final StartupContext startup = new StartupContext(
@@ -103,7 +108,7 @@ abstract class WorkspaceTestBase {
         // replace one. It therefore skips AppLifecycle's two phases, which hold nothing yet; when persistence fills
         // phase two this test must run it too.
         injector = Guice.createInjector(
-                Modules.override(new CoreModules(startup), new UiModule()).with(new PseudoOnlyModule()));
+                Modules.override(new CoreModules(startup), new UiModule()).with(new PseudoOnlyModule(), extra));
         shell = injector.getInstance(AppShellView.class);
         watchPauses();
         onFx(() -> {

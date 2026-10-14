@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -25,6 +26,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private Result<BriefSuggestion> brief = cast();
     private Result<Narrator> recheck = cast();
     private final List<String> rechecked = new ArrayList<>();
+    private final List<Boolean> recheckedOnFxThread = new ArrayList<>();
     private final List<String> asked = new ArrayList<>();
     private final List<@Nullable Integer> detectedContexts = new ArrayList<>();
 
@@ -62,6 +64,11 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
         return List.copyOf(rechecked);
     }
 
+    /** For each re-check, in order, whether it ran on the FX thread, which a whole-book scan must not. */
+    public List<Boolean> recheckedOnFxThread() {
+        return List.copyOf(recheckedOnFxThread);
+    }
+
     /** The project ids a suggestion was asked for, in order. */
     public List<String> asked() {
         return List.copyOf(asked);
@@ -84,6 +91,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
 
     @Override
     public Result<Narrator> recheckNarrator(final String projectId) {
+        recheckedOnFxThread.add(Platform.isFxApplicationThread());
         rechecked.add(projectId);
         return recheck;
     }

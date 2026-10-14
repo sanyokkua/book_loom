@@ -89,6 +89,31 @@ class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {
         assertThat(projects.briefs().getLast().narrator()).isEqualTo(VERIFIED);
     }
 
+    // IF the re-check ran on the FX thread, THEN Start would freeze the window while a whole book is split.
+    @Test
+    void start_anyRecheck_runsOffTheFxThreadAndTheQuestionStillFollows() throws Exception {
+        showNamesStyle(BookFixtures.firstPersonHint());
+
+        onFx(() -> button("names-style-start").fire());
+
+        awaitAsking();
+        assertThat(assistant().recheckedOnFxThread()).containsExactly(false);
+    }
+
+    @Test
+    void start_pressedTwiceWhileTheRecheckRuns_asksOnce() throws Exception {
+        showNamesStyle(BookFixtures.firstPersonHint());
+
+        onFx(() -> {
+            button("names-style-start").fire();
+            button("names-style-start").fire();
+        });
+
+        awaitAsking();
+        WaitForAsyncUtils.waitForFxEvents();
+        assertThat(assistant().rechecked()).hasSize(1);
+    }
+
     @Test
     void translatingStart_recheckVerifiesTheNarrator_startsWithoutAsking() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());

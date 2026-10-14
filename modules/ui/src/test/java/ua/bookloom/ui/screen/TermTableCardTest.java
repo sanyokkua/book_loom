@@ -94,13 +94,29 @@ class TermTableCardTest extends TermTableCardTestBase {
         showScreen(tag, 960, 640, ROSALIND);
 
         final MenuButton more = (MenuButton) required(card + "-more");
+        final List<MenuItem> files = ThemeTestSupport.onFx(() -> more.getItems().stream()
+                .filter(item -> item.getId().endsWith("-import") || item.getId().endsWith("-export"))
+                .toList());
 
-        assertThat(ThemeTestSupport.onFx(
-                        () -> more.getItems().stream().map(MenuItem::getText).toList()))
-                .containsExactly(importCaption, exportCaption);
-        assertThat(ThemeTestSupport.onFx(
-                        () -> more.getItems().stream().map(MenuItem::getId).toList()))
-                .containsExactly(card + "-more-import", card + "-more-export");
+        assertThat(files).extracting(MenuItem::getText).containsExactly(importCaption, exportCaption);
+        assertThat(files).extracting(MenuItem::getId).containsExactly(card + "-more-import", card + "-more-export");
+    }
+
+    // IF the menu showed Review and Translate while their buttons are in the row, THEN each action would be offered
+    // twice; an item shows only once its button has folded into the menu.
+    @ParameterizedTest
+    @CsvSource({"names-style", "recurring"})
+    void menu_reviewAndTranslateButtonsShown_itsItemsForThemAreHidden(final String card) throws Exception {
+        showScreen("en", 1300, 800, ROSALIND);
+
+        final MenuButton more = (MenuButton) required(card + "-more");
+
+        assertThat(ThemeTestSupport.onFx(() -> more.getItems().stream()
+                        .filter(item ->
+                                item.getId().endsWith("-review") || item.getId().endsWith("-translate"))
+                        .map(MenuItem::isVisible)
+                        .toList()))
+                .containsExactly(false, false);
     }
 
     /** The scene bounds of every toolbar part of a card that a person can see. */

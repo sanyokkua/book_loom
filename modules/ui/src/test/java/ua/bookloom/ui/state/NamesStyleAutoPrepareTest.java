@@ -324,39 +324,6 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
         assertThat(locks).containsExactly("start", "stop");
     }
 
-    // IF Stop left the pass writing, THEN "a stopped pass changes nothing" would be untrue.
-    @Test
-    void stopModel_passWaiting_publishesAStoppedAutoNamesResultAndWritesNothing() {
-        final NamesStyleViewModel stoppable = viewModelWithHeldBackground();
-        run(stoppable::autoPrepare);
-
-        run(stoppable::stopModel);
-
-        final ChangeResults shown = onFx(() -> stoppable.results().get());
-        assertThat(shown.operation()).isEqualTo(ChangeOperation.AUTO_NAMES);
-        assertThat(shown.outcome()).isEqualTo(ChangeResults.Outcome.STOPPED);
-        assertThat(shown.rows()).isEmpty();
-        assertThat(lexicon.calls()).noneMatch(call -> call.startsWith("remove(") || call.startsWith("restore("));
-        assertThat(onFx(() -> tracker.running())).isEmpty();
-    }
-
-    private NamesStyleViewModel viewModelWithHeldBackground() {
-        final NamesStyleViewModel model = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
-                new HeldExecutor(),
-                messages,
-                tracker,
-                () -> "new"));
-        glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
-        run(() -> model.show(PROJECT));
-        chooseModel();
-        return model;
-    }
-
     // IF the estimate were read once and never again, THEN a changed dial would show the old minutes.
     @Test
     void autoEstimate_screenShownThenRefreshed_followsTheNumbersThePortAnswers() {

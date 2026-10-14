@@ -40,13 +40,17 @@ class ModelActionBarTest extends TranslatingScreenTestBase {
         glossary.willAnswer(Result.ok(List.of(HALE)));
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
-        awaitFx(() -> optional("names-style-actions") != null);
+        awaitFx(() -> optional("names-style-toolbar") != null);
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b"));
     }
 
-    private List<String> idsIn(final String barId) {
-        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((Pane) required(barId))
-                .getChildren().stream().filter(Node::isManaged).map(Node::getId).toList());
+    private List<String> modelButtonsIn(final String toolbarId) {
+        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((Pane) required(toolbarId))
+                .getChildren().stream()
+                        .filter(Node::isManaged)
+                        .map(Node::getId)
+                        .filter(id -> id.matches(".*-(scan|review|translate|stop)"))
+                        .toList());
     }
 
     // IF the two cards worded the same action differently, THEN the person would have to learn it twice.
@@ -55,7 +59,8 @@ class ModelActionBarTest extends TranslatingScreenTestBase {
     void bar_idle_offersScanReviewTranslateInThatOrderAndNoStop(final String card) throws Exception {
         showScreen();
 
-        assertThat(idsIn(card + "-actions")).containsExactly(card + "-scan", card + "-review", card + "-translate");
+        assertThat(modelButtonsIn(card + "-toolbar"))
+                .containsExactly(card + "-scan", card + "-review", card + "-translate");
         assertThat(button(card + "-scan").getText()).isEqualTo("Scan");
         assertThat(button(card + "-review").getText()).isEqualTo("Review");
         assertThat(button(card + "-translate").getText()).isEqualTo("Translate");

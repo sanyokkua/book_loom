@@ -62,8 +62,6 @@ class ImportStateTest {
                                 "en",
                                 11,
                                 78_214,
-                                7,
-                                0,
                                 BookFixtures.pngCover()),
                         null));
     }
@@ -85,7 +83,7 @@ class ImportStateTest {
 
         assertThat(ImportStates.of("notes.txt", imported))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, 0, 0, null), null));
+                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, null), null));
     }
 
     @ParameterizedTest(name = "{0}")

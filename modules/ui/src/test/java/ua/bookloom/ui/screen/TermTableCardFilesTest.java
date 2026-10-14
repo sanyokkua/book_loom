@@ -75,11 +75,19 @@ class TermTableCardFilesTest extends TermTableCardTestBase {
         glossary.willAnswer(Result.ok(List.of()));
     }
 
+    private javafx.scene.control.MenuItem menuItem(final String card, final String part) {
+        return ((MenuButton) required(card + "-more"))
+                .getItems().stream()
+                        .filter(item -> (card + "-more-" + part).equals(item.getId()))
+                        .findFirst()
+                        .orElseThrow();
+    }
+
     /** Presses a card's Import: the button while the card is wide, the menu item while it is folded. */
     private void pressImport(final String card, final boolean folded) {
         onFx(() -> {
             if (folded) {
-                ((MenuButton) required(card + "-more")).getItems().get(0).fire();
+                menuItem(card, "import").fire();
             } else {
                 button(card + "-import").fire();
             }
@@ -89,7 +97,7 @@ class TermTableCardFilesTest extends TermTableCardTestBase {
     private void pressExport(final String card, final boolean folded) {
         onFx(() -> {
             if (folded) {
-                ((MenuButton) required(card + "-more")).getItems().get(1).fire();
+                menuItem(card, "export").fire();
             } else {
                 button(card + "-export").fire();
             }
@@ -170,6 +178,19 @@ class TermTableCardFilesTest extends TermTableCardTestBase {
                 .containsExactly("open", "save:" + ("recurring".equals(card) ? "recurring-terms.csv" : "glossary.csv"));
         assertThat(called(card, "importCsv")).isFalse();
         assertThat(called(card, "exportCsv")).isFalse();
+    }
+
+    // IF the dialogs had no owner, THEN on some platforms they would open behind the app window and look like a hang.
+    @ParameterizedTest
+    @CsvSource({"names-style", "recurring"})
+    void importAndExport_dialogAsked_isOwnedByTheWindowOfTheCard(final String card) throws Exception {
+        showScreen("en", 1300, 800, ROSALIND);
+        chooser().answer(null);
+
+        pressImport(card, false);
+        pressExport(card, false);
+
+        assertThat(chooser().owners()).hasSize(2).containsOnly(ThemeTestSupport.onFx(() -> scene.getWindow()));
     }
 
     // ---- every control explains itself ---------------------------------------------------------------------------

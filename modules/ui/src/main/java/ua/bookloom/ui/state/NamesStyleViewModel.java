@@ -275,7 +275,7 @@ public final class NamesStyleViewModel {
         calls.run(
                 "load",
                 () -> GlossaryLoad.loadOrScan(glossary, project),
-                answer -> openings.ifCurrent(ticket, () -> GlossaryLoad.show(answer, rows, notice)));
+                answer -> openings.ifCurrent(ticket, () -> edits.loaded(answer)));
         refreshAutoEstimate();
     }
 
@@ -340,6 +340,11 @@ public final class NamesStyleViewModel {
     /** Asks the port for the estimate again, as when the dial changed. */
     public void refreshAutoEstimate() {
         autoEstimate.refresh(projectId, openings.whileCurrent());
+    }
+
+    /** Forgets the estimate, as the dial it was computed for has changed and the new one is not known yet. */
+    public void clearAutoEstimate() {
+        autoEstimate.clear();
     }
 
     /** Stops the model scan, review or translation under way; the glossary keeps what it had. */

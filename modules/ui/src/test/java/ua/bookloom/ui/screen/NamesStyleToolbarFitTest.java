@@ -22,6 +22,8 @@ import ua.bookloom.ui.ViewNames;
  */
 class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
 
+    private static final double SEARCH_FLOOR = 120;
+
     private static final List<String> CAPTIONS = List.of(
             "names-style-glossary-title",
             "names-style-add",
@@ -109,5 +111,23 @@ class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
         withStop.add("names-style-stop");
         withStop.add("recurring-stop");
         assertThat(cutCaptions(withStop)).isEmpty();
+    }
+
+    // IF the search field could shrink to nothing, THEN the person could not read or type a query: Review and
+    // Translate fold into the menu before the field goes below its floor.
+    @ParameterizedTest(name = "{0} x {1}")
+    @CsvSource({"uk, 960, 640", "uk, 1024, 700", "uk, 1300, 800"})
+    void toolbar_modelActionRunningInUkrainian_keepsEverySearchFieldAtItsFloor(
+            final String tag, final double width, final double height) throws Exception {
+        showNamesStyle(tag, width, height);
+        glossary.holdModelCalls();
+        onFx(() -> button("names-style-review").fire());
+        awaitFx(() -> isShown("names-style-stop"));
+
+        final List<Double> widths = ThemeTestSupport.onFx(() -> List.of(
+                required("names-style-search").getLayoutBounds().getWidth(),
+                required("recurring-search").getLayoutBounds().getWidth()));
+
+        assertThat(widths).allSatisfy(each -> assertThat(each).isGreaterThanOrEqualTo(SEARCH_FLOOR));
     }
 }

@@ -31,6 +31,8 @@ final class ModelAnswers {
     /** What the automatic pass did, with both tables as it left them. */
     record AutoNames(NamesPassReport report, List<GlossaryEntry> glossary, List<LexiconEntry> terms) {}
 
+    private record Tables(List<GlossaryEntry> names, List<LexiconEntry> terms) {}
+
     private final GlossaryModelRuns.Screen screen;
     private final GlossaryCalls calls;
 
@@ -128,6 +130,27 @@ final class ModelAnswers {
                 screen.changes().stopped(operation);
             }
         });
+    }
+
+    // Whatever a pass that Stop interrupted stored: the screen shows the tables as they are, with no results to undo.
+    void reloadBoth(final String project) {
+        calls.run(
+                "tables reload",
+                () -> screen.glossary()
+                        .entries(project)
+                        .flatMap(names -> screen.lexicon().entries(project).map(terms -> new Tables(names, terms))),
+                answer -> {
+                    final Tables held = answer.data();
+                    if (held == null || !project.equals(screen.project().get())) {
+                        return;
+                    }
+                    screen.rows().setAll(held.names());
+                    screen.lexiconRows().setAll(held.terms());
+                    log.debug(
+                            "reloaded {} glossary rows and {} recurring terms",
+                            held.names().size(),
+                            held.terms().size());
+                });
     }
 
     void scanned(final ChangeOperation operation, final EntryChanges<GlossaryEntry> changes) {

@@ -23,8 +23,10 @@ import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOperation;
+import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
+import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.RunState;
@@ -135,7 +137,15 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 false,
                 List.of(
                         new ChangeResults.Item(
-                                new ChangeRow(0, ChangeKind.REMOVED, "Hale", "No target · other", "—", "not a name"),
+                                new ChangeRow(
+                                        0,
+                                        ChangeKind.REMOVED,
+                                        "Hale",
+                                        "No target · other",
+                                        "—",
+                                        "not a name",
+                                        ChangeOrigin.MODEL,
+                                        ChangeSection.NAMES),
                                 done -> done.accept(true)),
                         new ChangeResults.Item(
                                 new ChangeRow(
@@ -144,7 +154,9 @@ abstract class ConformanceTestBase extends ShellTestBase {
                                         "Well",
                                         "No target · other",
                                         "No target · character",
-                                        null),
+                                        null,
+                                        ChangeOrigin.MODEL,
+                                        ChangeSection.NAMES),
                                 done -> done.accept(true))),
                 LiveCalls.EMPTY);
     }

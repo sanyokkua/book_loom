@@ -87,7 +87,7 @@ final class ImportBookView {
         final VBox card = new VBox(
                 CARD_SPACING,
                 title,
-                new StructureStatsCard(messages, numbers).rows(stats),
+                new StructureStatsRows(messages, numbers).rows(stats),
                 checkRows.runTotalLine(listing.totalSegments()),
                 checkRows);
         card.setId("import-facts-card");

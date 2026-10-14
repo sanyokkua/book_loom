@@ -15,8 +15,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * A row that, when narrower than its parts want, hides whole parts in a set order instead of squeezing every one of
  * them into an unreadable stub. One elastic part gives way first, down to a comfortable width (it ends in an ellipsis);
- * then the foldable parts move together into a menu the row shows in their place; then the droppable parts are
- * hidden, the first named first; whatever is left shrinks only the elastic part further.
+ * then the foldable parts move into a menu the row shows in their place, one stage at a time in the order the stages
+ * were named; then the droppable parts are hidden, the first named first; whatever is left shrinks only the elastic
+ * part further, down to its own minimum width.
  *
  * <p>The owner says whether it wants a droppable part shown through {@link #want}; the row shows it only while it also
  * fits. The row asks its parent for room for every wanted part, so a window made wider again brings the hidden parts
@@ -27,7 +28,7 @@ public final class PriorityRow extends HBox {
     private final List<Node> dropOrder = new ArrayList<>();
     private final Map<Node, Boolean> wanted = new HashMap<>();
     private final Set<Node> dropped = new HashSet<>();
-    private final List<Node> foldable = new ArrayList<>();
+    private final List<List<Node>> foldStages = new ArrayList<>();
     private @Nullable Node foldMenu;
     private boolean folded;
     private @Nullable Region elastic;
@@ -86,17 +87,21 @@ public final class PriorityRow extends HBox {
 
     /**
      * Names parts that, when the row is too narrow for all of them, leave together and are replaced by a menu that
-     * holds their actions. This happens before any droppable part is hidden, so what a person uses most stays.
+     * holds their actions. This happens before any droppable part is hidden, so what a person uses most stays. A
+     * second call names a later stage, folded only when the first stage's departure was not enough, into the same
+     * menu.
      *
-     * @param menu a child of this row, shown only while the parts are folded away
+     * @param menu a child of this row, shown only while some parts are folded away
      * @param parts children of this row, always wanted
      */
     public void fold(final Node menu, final Node... parts) {
         foldMenu = Objects.requireNonNull(menu, "menu");
+        final List<Node> stage = new ArrayList<>();
         for (final Node part : parts) {
-            foldable.add(part);
+            stage.add(part);
             wanted.put(part, part.isVisible());
         }
+        foldStages.add(List.copyOf(stage));
         wanted.put(menu, false);
         apply(menu);
     }
@@ -135,7 +140,7 @@ public final class PriorityRow extends HBox {
             dropped.addAll(plan.hidden());
             folded = plan.folded();
             dropOrder.forEach(this::apply);
-            foldable.forEach(this::apply);
+            foldStages.forEach(stage -> stage.forEach(this::apply));
             if (foldMenu != null) {
                 apply(foldMenu);
             }
@@ -143,15 +148,23 @@ public final class PriorityRow extends HBox {
         super.layoutChildren();
     }
 
+    // The first fold stage leaves when the elastic part would have to go below its comfort width; each later stage
+    // only when it would have to go below its own minimum width, so the part is never squeezed to nothing.
     private Plan plan(final double room) {
         final Set<Node> hidden = new HashSet<>();
         boolean fold = false;
-        if (needed(hidden, false) > room && foldMenu != null) {
-            foldable.stream().filter(this::isWanted).forEach(hidden::add);
-            fold = !hidden.isEmpty();
+        for (int stage = 0; stage < foldStages.size(); stage++) {
+            final double elasticLimit = stage == 0 ? comfort : elasticFloor();
+            if (needed(hidden, fold, elasticLimit) <= room) {
+                break;
+            }
+            final List<Node> leaving =
+                    foldStages.get(stage).stream().filter(this::isWanted).toList();
+            hidden.addAll(leaving);
+            fold = fold || !leaving.isEmpty();
         }
         for (final Node part : dropOrder) {
-            if (needed(hidden, fold) <= room) {
+            if (needed(hidden, fold, comfort) <= room) {
                 break;
             }
             if (isWanted(part)) {
@@ -161,14 +174,18 @@ public final class PriorityRow extends HBox {
         return new Plan(hidden, fold);
     }
 
-    private double needed(final Set<Node> hidden, final boolean menuShown) {
+    private double elasticFloor() {
+        return elastic == null ? comfort : Math.min(comfort, snapSizeX(elastic.minWidth(-1)));
+    }
+
+    private double needed(final Set<Node> hidden, final boolean menuShown, final double elasticLimit) {
         double need = 0;
         int count = 0;
         for (final Node part : getChildren()) {
             final boolean counted = part.equals(foldMenu) ? menuShown : isWanted(part) && !hidden.contains(part);
             if (counted) {
                 need += part.equals(elastic)
-                        ? Math.min(snapSizeX(part.prefWidth(-1)), comfort)
+                        ? Math.min(snapSizeX(part.prefWidth(-1)), elasticLimit)
                         : snapSizeX(part.prefWidth(-1));
                 count++;
             }
