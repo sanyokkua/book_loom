@@ -176,6 +176,31 @@ class NameTriageTest {
         assertThat(terms(candidatesOfEverySegment(book, 1))).containsExactly("Quillon");
     }
 
+    // IF a book writes a name only in a section of short credit lines (no paragraph of two full sentences), and another
+    // section is prose, THEN the name is a converter's or publisher's credit and is dropped; one mention in the prose
+    // keeps it, and a book with no prose paragraph anywhere drops nothing this way (15i.N5 junk).
+    @ParameterizedTest(name = "story line \"{0}\", credit name in the story {1} -> [{2}]")
+    @CsvSource({
+        "We saw Ilsabet at dawn. She carried one letter., false, Ilsabet",
+        "We saw Ilsabet at dawn. She carried one letter., true, Ilsabet|Jorvik Hale",
+        "We saw Ilsabet at dawn., false, Ilsabet|Jorvik Hale"
+    })
+    void candidates_nameOnlyInACreditSection_isDroppedWhenTheBookHasProse(
+            final String storyLine, final boolean inStory, final String expected) {
+        final List<String> story = new ArrayList<>(copies(storyLine, 4));
+        story.addAll(inStory ? List.of("Later Jorvik Hale wrote to her.") : List.of());
+        final Document book = IndexTestBooks.document(
+                story(
+                        "notes",
+                        List.of(
+                                "Digital edition prepared by Jorvik Hale.",
+                                "Thanks to Jorvik Hale for the scans.",
+                                "Jorvik Hale wishes you a pleasant read.")),
+                story("chapter", story));
+
+        assertThat(terms(candidates(book, 1))).containsExactlyInAnyOrderElementsOf(split(expected));
+    }
+
     // IF the name is mostly a heading across the whole book, THEN scanning only the chapter that mentions it
     // twice drops it all the same.
     @Test

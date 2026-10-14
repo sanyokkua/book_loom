@@ -23,7 +23,7 @@ import ua.bookloom.pipeline.prompt.GenderedTitles;
  * changes the clusters and nothing is stored. The anchor of a cluster is a full name: a multi-word character entry
  * that does not open with a title. A one-word character or untyped entry that is the first or the last word of exactly
  * one anchor joins it ({@code Arlo} and {@code Venn} join {@code Arlo Venn}); a surname two anchors share joins
- * neither. A form of address ({@code Mr Venn}) joins the one anchor with its surname, and a gendered one
+ * neither, and nor does one a form of address of the other gender carries ({@code Lord Venn} beside {@code Mira Venn}). A form of address ({@code Mr Venn}) joins the one anchor with its surname, and a gendered one
  * ({@code Mrs}) only when that anchor's gender, from the entry or else the first-name list, is the same, since
  * {@code Mrs Venn} is often the wife of {@code Arlo Venn}. A place, a term, a title and an alias never join and are
  * never an anchor: an alias is a spelling of its entry, not a person.
@@ -82,9 +82,12 @@ public final class NameClusters {
         final Set<String> titles = StopWords.titles(languageTag);
         final List<GlossaryEntry> anchorEntries =
                 entries.stream().filter(entry -> isAnchor(entry, titles)).toList();
+        final List<GlossaryEntry> forms = entries.stream()
+                .filter(entry -> isHonorific(wordsOf(entry.term()), titles))
+                .toList();
         final Map<String, String> joined = new HashMap<>();
         for (final GlossaryEntry entry : entries) {
-            anchorFor(entry, anchorEntries, titles, languageTag).ifPresent(anchor -> {
+            anchorFor(entry, anchorEntries, forms, titles, languageTag).ifPresent(anchor -> {
                 log.debug("Name cluster: entry {} joins the full name {}", entry.id(), anchor.id());
                 joined.put(entry.id(), anchor.id());
             });
@@ -176,6 +179,7 @@ public final class NameClusters {
     private static Optional<GlossaryEntry> anchorFor(
             final GlossaryEntry entry,
             final List<GlossaryEntry> anchorEntries,
+            final List<GlossaryEntry> forms,
             final Set<String> titles,
             @Nullable final String languageTag) {
         if (entry.type() != TermType.CHARACTER && entry.type() != TermType.OTHER) {
@@ -184,8 +188,9 @@ public final class NameClusters {
         final List<String> words = wordsOf(entry.term());
         if (words.size() == 1) {
             return unique(anchorEntries.stream()
-                    .filter(anchor -> isEndWord(words.getFirst(), anchor))
-                    .toList());
+                            .filter(anchor -> isEndWord(words.getFirst(), anchor))
+                            .toList())
+                    .filter(anchor -> !isSharedAcrossGenders(words.getFirst(), anchor, forms, languageTag));
         }
         if (!isHonorific(words, titles)) {
             return Optional.empty();
@@ -214,6 +219,30 @@ public final class NameClusters {
                 actual,
                 agrees ? "joined" : "kept apart");
         return agrees;
+    }
+
+    // A surname a form of address of the other gender also carries ("Lord Venn" beside "Mira Venn") is a couple's:
+    // its bare uses may be either person's.
+    private static boolean isSharedAcrossGenders(
+            final String word,
+            final GlossaryEntry anchor,
+            final List<GlossaryEntry> forms,
+            @Nullable final String languageTag) {
+        if (!lower(wordsOf(anchor.term()).getLast()).equals(lower(word))) {
+            return false;
+        }
+        final Gender own = anchor.gender() != Gender.UNKNOWN
+                ? anchor.gender()
+                : GivenNames.genderOf(anchor.term(), languageTag).orElse(Gender.UNKNOWN);
+        final boolean shared = own != Gender.UNKNOWN
+                && forms.stream()
+                        .filter(form -> lower(wordsOf(form.term()).getLast()).equals(lower(word)))
+                        .map(form ->
+                                GenderedTitles.genderOf(wordsOf(form.term()).getFirst(), languageTag))
+                        .anyMatch(gender -> gender.isPresent() && gender.get() != own);
+        log.debug(
+                "Name cluster: surname of full name {} carried by a form of the other gender: {}", anchor.id(), shared);
+        return shared;
     }
 
     private static boolean isEndWord(final String word, final GlossaryEntry anchor) {

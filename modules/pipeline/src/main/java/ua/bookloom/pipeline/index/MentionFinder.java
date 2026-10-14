@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Finds a name in the book as a run of up to three words separated by blanks only; a possessive ends a run, so
+ * Finds a name in the book as a run of up to eight words separated by blanks only (two capitalised runs of three and
+ * the joining word and determiner between them, 15i.N8); a possessive ends a run, so
  * {@code Ashdown’s Garrick} is two names, and a trailing one is no part of the mention. A name written with an
  * ampersand between two words ({@code Orrin & Vale}) is found where the book writes the same ampersand between them,
  * so a pair that is one name stays findable; a joint {@code and} is a word and needs no rule.
@@ -19,7 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MentionFinder {
 
-    private static final int MAX_NAME_WORDS = 3;
+    // Two runs of three joined by a word and a determiner ("Keeper of the Grey Gate"), the longest name a scan makes.
+    private static final int MAX_NAME_WORDS = 8;
     private static final Pattern BLANKS = Pattern.compile("\\p{Zs}+");
     private static final Pattern AMPERSAND_GAP = Pattern.compile("\\p{Zs}+&\\p{Zs}+");
     private static final Pattern APOSTROPHES = Pattern.compile("[’ʼ]");

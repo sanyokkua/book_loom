@@ -60,6 +60,11 @@ class NameClustersTest {
                 "Venn=C, Mr Venn=C, Arlo Venn=Cm | Venn | Venn, Mr Venn, Arlo Venn",
                 "Venn=C, Mr Venn=C | Venn | Venn",
                 "Venn=C, Mr Venn=C | Mr Venn | Mr Venn",
+                // a man's form of address beside a woman's full name of that surname (a married couple): the bare
+                // surname may be either, so it joins neither (15i.N gate: a wife's cluster gave her husband's
+                // surname her gender, verified)
+                "Venn=O, Mira Venn=Cf, Mrs Venn=C, Mr Venn=C | Venn | Venn",
+                "Venn=O, Mira Venn=Cf, Mrs Venn=C | Venn | Venn, Mira Venn, Mrs Venn",
                 // a place or a thing is never joined, and never counts as a second person
                 "Venn=C, Venn Hall=P | Venn | Venn",
                 "Venn=C, Arlo Venn=C, Venn Hall=P | Venn | Venn, Arlo Venn",

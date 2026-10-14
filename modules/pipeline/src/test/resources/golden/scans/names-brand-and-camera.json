@@ -16,11 +16,6 @@
     "firstSentence" : "She wrote to the makers of the Kessel Optik about a stiff shutter.",
     "aliases" : [ "KESSEL OPTIK" ]
   }, {
-    "term" : "Kessels",
-    "count" : 5,
-    "firstSentence" : "The Kessels, he added, were no longer made.",
-    "aliases" : [ ]
-  }, {
     "term" : "June",
     "count" : 1,
     "firstSentence" : "Anneke photographed the regatta in June.",
@@ -36,11 +31,6 @@
     "count" : 3,
     "firstSentence" : "She wrote to the makers of the Kessel Optik about a stiff shutter.",
     "aliases" : [ "KESSEL OPTIK" ]
-  }, {
-    "term" : "Kessels",
-    "count" : 3,
-    "firstSentence" : "The Kessels, he added, were no longer made.",
-    "aliases" : [ ]
   } ],
   "keyTerms" : [ ],
   "frequentWords" : [ ],
@@ -111,25 +101,6 @@
         "maleObject" : [ ]
       }
     },
-    "Kessels" : {
-      "count" : 5,
-      "windows" : [ {
-        "text" : "The Kessels, he added, were no longer made. Every Kessels he had ever sold had come back for repair.",
-        "pronoun" : "MALE"
-      }, {
-        "text" : "Anneke asked what a Kessels cost second-hand. The clerk named a price that made her laugh.",
-        "pronoun" : null
-      }, {
-        "text" : "She preferred her Kessels. She said it had character, and the clerk agreed that it did.",
-        "pronoun" : "FEMALE"
-      } ],
-      "pronouns" : {
-        "female" : [ "she" ],
-        "male" : [ "he", "he" ],
-        "femaleObject" : [ "her" ],
-        "maleObject" : [ ]
-      }
-    },
     "June" : {
       "count" : 1,
       "windows" : [ {
@@ -165,9 +136,6 @@
     "term" : "Orrin & Vale",
     "mentions" : 6
   }, {
-    "term" : "Kessels",
-    "mentions" : 5
-  }, {
     "term" : "Kessel Optik",
     "mentions" : 4
   }, {
@@ -191,12 +159,6 @@
       "female" : [ ],
       "male" : [ ],
       "femaleObject" : [ ],
-      "maleObject" : [ ]
-    },
-    "Kessels" : {
-      "female" : [ "she" ],
-      "male" : [ "he", "he" ],
-      "femaleObject" : [ "her" ],
       "maleObject" : [ ]
     },
     "June" : {

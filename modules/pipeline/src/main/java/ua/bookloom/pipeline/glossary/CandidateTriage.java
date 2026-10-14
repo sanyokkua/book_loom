@@ -21,8 +21,9 @@ import ua.bookloom.pipeline.index.Mention;
  * The code's last word on a list of name candidates before any model reads it (15i.N3). It measures every candidate
  * over the whole book through the index, whatever slice the caller scanned: a candidate that is mostly written in
  * headings, title lines, contents entries and the book's non-story units, and in fewer than {@link #KEEP_NARRATION}
- * places of the story's text, is a section name or a converter's credit and is dropped; a pair written joined is one
- * candidate ({@link JoinedNames}). Speech counts as the story: a name only ever spoken is still a name.
+ * places of the story's text, is a section name or a converter's credit and is dropped, and so is one written only
+ * outside the book's prose sections when it has some ({@link ProseSections}: a credit in a section of a plain-text
+ * book's own body); a pair written joined is one candidate ({@link JoinedNames}). Speech counts as the story: a name only ever spoken is still a name.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -51,6 +52,7 @@ final class CandidateTriage {
             return candidates;
         }
         final Map<String, List<Mention>> byName = mentionsOfEveryName(index, candidates);
+        final Set<Integer> proseSections = ProseSections.of(index);
         final Set<String> terms = candidates.stream().map(NameCandidate::term).collect(Collectors.toSet());
         final Map<String, JoinedNames.Pair> pairOfHalf = new HashMap<>();
         JoinedNames.find(index, terms, byName)
@@ -61,7 +63,8 @@ final class CandidateTriage {
             final JoinedNames.Pair pair = pairOfHalf.get(candidate.term());
             if (pair != null) {
                 place(pair, minCount, remaining, placed, index);
-            } else if (isNotOutsideTheStory(index, candidate, mentionsOf(candidate, byName))) {
+            } else if (isNotOutsideTheStory(index, candidate, mentionsOf(candidate, byName))
+                    && isInAProseSection(candidate, mentionsOf(candidate, byName), proseSections)) {
                 remaining.add(candidate);
             }
         }
@@ -105,6 +108,19 @@ final class CandidateTriage {
         final List<Mention> all = new ArrayList<>(byName.getOrDefault(candidate.term(), List.of()));
         candidate.aliases().forEach(alias -> all.addAll(byName.getOrDefault(alias, List.of())));
         return all;
+    }
+
+    // A name the book writes only outside its prose sections, when it has some, is a credit (15i.N5 junk).
+    private static boolean isInAProseSection(
+            final NameCandidate candidate, final List<Mention> mentions, final Set<Integer> proseSections) {
+        final boolean credit = !proseSections.isEmpty()
+                && !mentions.isEmpty()
+                && mentions.stream().noneMatch(mention -> proseSections.contains(mention.ordinal()));
+        if (credit) {
+            log.debug("Name candidate dropped: its {} mentions are all outside the prose sections", mentions.size());
+            log.trace("Name candidate {} dropped as a credit", candidate.term());
+        }
+        return !credit;
     }
 
     private static boolean isNotOutsideTheStory(

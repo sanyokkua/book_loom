@@ -52,4 +52,14 @@ public final class Pronouns {
     public static Set<String> maleObject(final String languageTag) {
         return Set.copyOf(LanguageRules.bundled().wordsOf(languageTag, "maleObjectPronouns"));
     }
+
+    /**
+     * The plural subject forms ({@code they}): a capitalised word they follow is a group of people, not one person.
+     *
+     * @param languageTag the non-null language tag
+     * @return the lower-case pronouns; never null, empty when the language lists none
+     */
+    public static Set<String> plural(final String languageTag) {
+        return Set.copyOf(LanguageRules.bundled().wordsOf(languageTag, "pluralPronouns"));
+    }
 }

@@ -83,6 +83,29 @@ class ClusterAgreementTest {
                 .containsExactly("Арло Венн", "Там Рен", "Тамсін Рен", "Вен-стріт");
     }
 
+    // A place's first word written alone shares its rendering with the place's full name (15i.N8), and of a name joined
+    // by "of" only the words before it are shared, since the target may decline the rest; a person's word is not a
+    // place's.
+    @Test
+    void align_placeWordWrittenAlone_takesThePlacesRendering() {
+        final GlossaryEntry hall = entry("Arden Hall", TermType.PLACE, Gender.UNKNOWN, null);
+        final GlossaryEntry arden = entry("Arden", TermType.OTHER, Gender.UNKNOWN, null);
+        final GlossaryEntry tower = entry("Tower", TermType.PLACE, Gender.UNKNOWN, null);
+        final GlossaryEntry towerOf = entry("Tower of Arlen", TermType.PLACE, Gender.UNKNOWN, null);
+        final GlossaryEntry person = entry("Arlen Venn", TermType.CHARACTER, Gender.MALE, null);
+        final List<GlossaryEntry> held = List.of(hall, arden, tower, towerOf, person);
+        final ClusterAgreement agreement = ClusterAgreement.over(NameClusters.of(held, null, "en"), held, held);
+
+        assertThat(agreement.align(List.of(
+                        new Suggestion(hall, "Арден-хол"),
+                        new Suggestion(arden, "Гарден"),
+                        new Suggestion(tower, "Тауер"),
+                        new Suggestion(towerOf, "Вежа в Арлені"),
+                        new Suggestion(person, "Арлін Венн"))))
+                .extracting(Suggestion::target)
+                .containsExactly("Арден-хол", "Арден", "Тауер", "Тауер в Арлені", "Арлін Венн");
+    }
+
     // Only the person's rendering binds the other spellings (15i review): an earlier suggestion nobody confirmed is not
     // the cluster's rendering, so a spelling asked now keeps the call's own answer.
     @Test

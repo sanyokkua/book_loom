@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** What a name candidate or a model's proposal may not be, on invented names. */
@@ -88,5 +89,17 @@ class NameHygieneTest {
 
         assertThat(NameHygiene.rejection("Flint", all, "en", mostlyAlone)).isEmpty();
         assertThat(NameHygiene.rejection("Flint", all, "en", onlyInside)).isPresent();
+    }
+
+    // 15i.N8: a place written alone three times beside 35 uses of "Lantern of Arlen" is a name the book uses on its
+    // own, however small its share; once alone it stays a fragment.
+    @ParameterizedTest(name = "alone {0} times -> rejected {1}")
+    @CsvSource({"3, false", "2, false", "1, true"})
+    void rejection_fragmentWrittenAloneTwiceOrMore_isKept(final int alone, final boolean rejected) {
+        final List<String> all = List.of("Arlen", "Lantern of Arlen");
+        final java.util.function.ToIntFunction<String> counts = term -> term.equals("Arlen") ? 35 + alone : 35;
+
+        assertThat(NameHygiene.rejection("Arlen", all, "en", counts).isPresent())
+                .isEqualTo(rejected);
     }
 }

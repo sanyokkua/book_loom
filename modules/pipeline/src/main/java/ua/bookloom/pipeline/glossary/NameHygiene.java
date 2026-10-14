@@ -139,16 +139,18 @@ public final class NameHygiene {
                 .map(longer -> "a fragment of the longer name \"" + String.join(" ", longer) + "\"");
     }
 
-    // The book's own text decides: a fragment it also writes alone often enough is a name of its own.
+    // The book's own text decides: a fragment it also writes alone often enough, or at least twice (15i.N8), is a name
+    // of its own.
     private static boolean isMostlyInside(
             final String term, final String longer, @Nullable final ToIntFunction<String> occurrences) {
         if (occurrences == null) {
             return true;
         }
         final int total = occurrences.applyAsInt(term);
-        final double alone = total == 0 ? 0 : (double) (total - occurrences.applyAsInt(longer)) / total;
-        log.debug("Fragment {} is alone {} of the time in the book", term, alone);
-        return alone < ALONE_SHARE_LIMIT;
+        final int aloneUses = total - occurrences.applyAsInt(longer);
+        final double alone = total == 0 ? 0 : (double) aloneUses / total;
+        log.debug("Fragment {} is alone {} of the time in the book, {} uses", term, alone, aloneUses);
+        return alone < ALONE_SHARE_LIMIT && aloneUses < FrequencyScan.ALONE_MIN_STANDALONE;
     }
 
     private static boolean isEdgeOf(final List<String> words, final List<String> longer) {

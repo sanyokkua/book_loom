@@ -105,8 +105,47 @@ public final class Occurrences {
      * @return the runs in order; never null
      */
     public static List<Occurrence> runs(final Read read, final Predicate<Word> nameLike) {
-        final List<Word> words = read.words();
+        return spans(read, nameLike).stream()
+                .map(span -> new Occurrence(
+                        term(read.words(), span.from(), span.to()),
+                        read.sentences().get(read.words().get(span.from()).sentence())))
+                .toList();
+    }
+
+    /**
+     * The names a segment writes as two runs joined by a joining word ({@code Tower of Arlen}), with at most one
+     * determiner after it ({@code Keeper of the Grey Gate}): the joining word and the determiner in lower case, the
+     * first run not ending in a possessive, everything in one sentence and separated by spaces only. The two runs are
+     * still found on their own by {@link #runs}.
+     *
+     * @param read the segment
+     * @param nameLike whether a word may be (part of) a name
+     * @param joiners the lower-case joining words of the language; empty finds nothing
+     * @param determiners the lower-case determiners that may follow a joining word
+     * @return the joined names in order, each written with single spaces; never null
+     */
+    public static List<Occurrence> joinedRuns(
+            final Read read, final Predicate<Word> nameLike, final Set<String> joiners, final Set<String> determiners) {
+        final List<Span> spans = spans(read, nameLike);
         final List<Occurrence> found = new ArrayList<>();
+        for (int i = 0; i + 1 < spans.size() && !joiners.isEmpty(); i++) {
+            final Span first = spans.get(i);
+            final Span second = spans.get(i + 1);
+            if (isJoined(read, first, second, joiners, determiners)) {
+                found.add(new Occurrence(
+                        term(read.words(), first.from(), second.to()),
+                        read.sentences().get(read.words().get(first.from()).sentence())));
+            }
+        }
+        return found;
+    }
+
+    /** A run's words, {@code from} inclusive and {@code to} exclusive. */
+    private record Span(int from, int to) {}
+
+    private static List<Span> spans(final Read read, final Predicate<Word> nameLike) {
+        final List<Word> words = read.words();
+        final List<Span> found = new ArrayList<>();
         int index = 0;
         while (index < words.size()) {
             final Word word = words.get(index);
@@ -116,12 +155,46 @@ public final class Occurrences {
             }
             final int runEnd = runEnd(read.text(), words, index, nameLike);
             if (runEnd > index + 1 || word.text().codePointCount(0, word.text().length()) > 1) {
-                found.add(new Occurrence(
-                        term(words, index, runEnd), read.sentences().get(word.sentence())));
+                found.add(new Span(index, runEnd));
             }
             index = runEnd;
         }
         return found;
+    }
+
+    // One joining word, then at most one determiner, all lower case, in the first run's sentence, spaces between.
+    private static boolean isJoined(
+            final Read read,
+            final Span first,
+            final Span second,
+            final Set<String> joiners,
+            final Set<String> determiners) {
+        final List<Word> words = read.words();
+        final int between = second.from() - first.to();
+        if (between < 1 || between > 2 || words.get(first.to() - 1).possessive()) {
+            return false;
+        }
+        final Word joiner = words.get(first.to());
+        final boolean determinerFits = between == 1 || isDeterminer(words.get(first.to() + 1), determiners);
+        final boolean wordsFit = !joiner.capitalised() && joiners.contains(joiner.key()) && determinerFits;
+        final boolean oneSentence =
+                words.get(second.from()).sentence() == words.get(first.from()).sentence();
+        return wordsFit && oneSentence && spacesOnly(read.text(), words, first.to() - 1, second.from());
+    }
+
+    private static boolean isDeterminer(final Word word, final Set<String> determiners) {
+        return !word.capitalised() && determiners.contains(word.key());
+    }
+
+    private static boolean spacesOnly(final String text, final List<Word> words, final int from, final int to) {
+        for (int i = from; i < to; i++) {
+            if (!SPACES.matcher(
+                            text.substring(words.get(i).end(), words.get(i + 1).start()))
+                    .matches()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

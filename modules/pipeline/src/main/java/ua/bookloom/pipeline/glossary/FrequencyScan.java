@@ -1,16 +1,13 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -41,9 +38,12 @@ import ua.bookloom.util.text.JunkRules;
  * A capitalised word at a sentence start counts when the book writes it with a capital mid-sentence at least
  * {@link #CREDIT_MIN_MID_SENTENCE} times, so a name that often opens a sentence is not undercounted, and a single word
  * that mostly occurs inside a longer name ({@code Garrick} of {@code Garrick Ashdown}) is not proposed on its own,
- * unless the book writes it alone {@link #ALIAS_MIN_ALONE} times or more.
- * Spellings that differ only in letter case are folded first ({@link CaseVariants}); the list ends with the
- * {@link CandidateTriage}, which drops heading-only names and joins a written pair.
+ * unless the book writes it alone {@link #ALIAS_MIN_ALONE} times or more, or truly alone (mid-sentence, no capital beside
+ * it) {@link #ALONE_MIN_STANDALONE} times or more. Two runs joined by a joining word of the language ({@code Tower of
+ * London}) are a name too. Spellings that differ only in letter case are folded first ({@link CaseVariants}), a plural
+ * written as a common plural is folded or left out ({@link PluralNouns}), and a word written as a common noun or an
+ * adjective is not a name ({@link NounUses}); the list ends with the {@link CandidateTriage}, which drops heading-only
+ * names and credits and joins a written pair.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -74,6 +74,13 @@ public final class FrequencyScan {
      * 76 uses of the full name).
      */
     static final int ALIAS_MIN_ALONE = 10;
+
+    /**
+     * A single word the book writes truly alone (mid-sentence, with no capitalised word beside it) at least this often
+     * is a name of its own beside the longer name (15i.N8: surnames written alone two to five times were lost beside
+     * their full names, while a part written alone only after a sentence-initial capital stays a part).
+     */
+    static final int ALONE_MIN_STANDALONE = 2;
 
     /**
      * Counts the capitalised words and runs of some of the book's segments, read from the book's index.
@@ -136,9 +143,16 @@ public final class FrequencyScan {
     private static Map<String, NameCandidate> cleanTallies(
             final List<Occurrences.Read> read, final WordCounts counts, @Nullable final String sourceLanguage) {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
-        final Map<String, NameCandidate> tallies = NameAliases.fold(
-                CaseVariants.fold(tally(read, word -> isNameLike(word, counts, stopWords))),
-                NameAliases.suffixesOf(sourceLanguage));
+        final List<String> suffixes = NameAliases.suffixesOf(sourceLanguage);
+        final NounUses nouns = NounUses.of(read, sourceLanguage);
+        final Map<String, NameCandidate> tallies = PluralNouns.fold(
+                NameAliases.fold(
+                        CaseVariants.fold(
+                                NameTally.of(read, word -> isNameLike(word, counts, stopWords), sourceLanguage)),
+                        suffixes),
+                nouns,
+                suffixes);
+        nouns.dropFrom(tallies);
         dropJunk(tallies);
         dropHygiene(tallies, sourceLanguage, read);
         return tallies;
@@ -154,17 +168,21 @@ public final class FrequencyScan {
         return tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
                 .flatMap(tally -> keptByCase(tally, counts, reading, neverAlone).stream())
-                .filter(tally -> isNotPartOfLongerName(tally, tallies.values(), minCount))
+                .filter(tally -> isNotPartOfLongerName(tally, tallies.values(), minCount, counts))
                 .sorted((left, right) -> Integer.compare(right.count(), left.count()))
                 .toList();
     }
 
-    // The book's own counts let hygiene keep a plural-shaped name the fold kept as a name of its own.
+    // The book's own counts let hygiene keep a plural-shaped name the fold kept as a name of its own. A name two runs
+    // make joined by "of" makes neither run a fragment: "Grey Gate" stays beside "Keeper of the Grey Gate", "Arlen"
+    // beside "Tower of Arlen" (15i.N8).
     private static void dropHygiene(
             final Map<String, NameCandidate> tallies,
             @Nullable final String language,
             final List<Occurrences.Read> read) {
-        final List<String> all = List.copyOf(tallies.keySet());
+        final List<String> all = tallies.keySet().stream()
+                .filter(term -> !NameTally.isJoined(term))
+                .toList();
         final ToIntFunction<String> occurrences = NameHygiene.occurrencesIn(
                 read.stream().map(Occurrences.Read::text).toList());
         tallies.keySet()
@@ -189,20 +207,6 @@ public final class FrequencyScan {
         return word.capitalised()
                 && !stopWords.contains(key)
                 && (!word.initial() || counts.midSentence(key) >= CREDIT_MIN_MID_SENTENCE);
-    }
-
-    private static Map<String, NameCandidate> tally(
-            final List<Occurrences.Read> read, final Predicate<Occurrences.Word> nameLike) {
-        final Map<String, NameCandidate> tallies = new LinkedHashMap<>();
-        for (final Occurrences.Read segment : read) {
-            for (final Occurrences.Occurrence found : Occurrences.runs(segment, nameLike)) {
-                tallies.merge(
-                        found.term(),
-                        new NameCandidate(found.term(), 1, found.sentence()),
-                        (first, another) -> new NameCandidate(first.term(), first.count() + 1, first.firstSentence()));
-            }
-        }
-        return tallies;
     }
 
     // A common word by its lower-case share is dropped, unless a reading follows (its book index given) and its
@@ -238,38 +242,44 @@ public final class FrequencyScan {
     }
 
     private static boolean isNotPartOfLongerName(
-            final NameCandidate tally, final Collection<NameCandidate> all, final int minCount) {
+            final NameCandidate tally,
+            final Collection<NameCandidate> all,
+            final int minCount,
+            final WordCounts counts) {
         if (tally.term().indexOf(' ') >= 0) {
             return true;
         }
         final String key = Occurrences.keyOf(tally.term());
         final List<NameCandidate> longer = all.stream()
-                .filter(other -> other.count() >= minCount && containsWord(other.term(), key))
+                .filter(other -> other.count() >= minCount
+                        && !NameTally.isJoined(other.term())
+                        && NameTally.containsWord(other.term(), key))
                 .toList();
         final int inside = longer.stream().mapToInt(NameCandidate::count).sum();
         final double standalone = (double) tally.count() / (tally.count() + inside);
-        if (inside > 0 && standalone < ALIAS_STANDALONE_LIMIT && tally.count() >= ALIAS_MIN_ALONE) {
-            log.debug("Name candidate kept: inside a longer name mostly, but alone {} times", tally.count());
-            log.trace(
-                    "Name candidate {} kept beside {}",
-                    tally.term(),
-                    longer.getFirst().term());
+        if (inside == 0 || standalone >= ALIAS_STANDALONE_LIMIT) {
             return true;
         }
-        if (inside > 0 && standalone < ALIAS_STANDALONE_LIMIT) {
-            log.debug(
-                    "Name candidate {} dropped: part of {}, alone {} of the time",
-                    tally.term(),
-                    longer.getFirst().term(),
-                    standalone);
-            return false;
-        }
-        return true;
+        final int trulyAlone = counts.standaloneMidSentence(key);
+        final boolean kept = tally.count() >= ALIAS_MIN_ALONE || trulyAlone >= ALONE_MIN_STANDALONE;
+        logPart(tally, longer.getFirst(), standalone, trulyAlone, kept);
+        return kept;
     }
 
-    private static boolean containsWord(final String run, final String key) {
-        return run.indexOf(' ') >= 0
-                && Arrays.stream(run.split(" ")).map(Occurrences::keyOf).anyMatch(key::equals);
+    private static void logPart(
+            final NameCandidate tally,
+            final NameCandidate longer,
+            final double standalone,
+            final int trulyAlone,
+            final boolean kept) {
+        log.debug(
+                "Name candidate {} part of {}: alone {} of the time, {} times, {} away from any other capital, kept {}",
+                tally.term(),
+                longer.term(),
+                standalone,
+                tally.count(),
+                trulyAlone,
+                kept);
     }
 
     /**

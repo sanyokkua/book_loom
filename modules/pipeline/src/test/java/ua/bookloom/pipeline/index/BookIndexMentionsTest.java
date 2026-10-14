@@ -63,15 +63,18 @@ class BookIndexMentionsTest {
                 .containsExactly(tuple(5, 24, 34));
     }
 
-    // IF a name has three words, THEN it is found; a name of four words is never a run, so it has no mention.
+    // IF a name has three words, THEN it is found; so is a longer one, up to two runs of three joined by a word and a
+    // determiner (15i.N8: "Keeper of the Grey Gate" had no mention, so no window and no reading).
     @Test
-    void mentions_aThreeWordNameIsFound_aFourWordNameIsNot() {
+    void mentions_aThreeWordNameAndAnEightWordNameAreFound() {
         final BookIndex index = statsBook();
 
         assertThat(index.mentions(List.of("Ivo and Mark"), Case.SENSITIVE))
                 .extracting(Mention::ordinal, Mention::start, Mention::end)
                 .containsExactly(tuple(5, 0, 12));
-        assertThat(index.mentions(List.of("Ivo and Mark met"), Case.SENSITIVE)).isEmpty();
+        assertThat(index.mentions(List.of("Ivo and Mark met at the Great Hall"), Case.SENSITIVE))
+                .extracting(Mention::ordinal, Mention::start, Mention::end)
+                .containsExactly(tuple(5, 0, 34));
     }
 
     // IF a possessive ends the word (15h.A6), THEN "Ashdown’s" is a mention of "Ashdown" and the range stops before it.

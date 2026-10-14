@@ -1422,6 +1422,88 @@ sends (names reading, batched review, Max summaries, recurring terms, renderings
 a write fails half-way, and a promotion of a term the glossary already holds only takes it out of the lexicon. Of these, only
 the agreement and pooling rules can move the gate numbers (verified to suggested only, so wrong-verified can only fall).
 
+*Second iteration (2026-10-14), rounds r4–r7.* The same suite, the same corrected gold. The rows below are the reports'
+own counts (`.temporary_context/eval_2026-10-12/raw/Ngate2-r*`): the suite writes 39 eligible persons for owner book 4
+where the hand-rescored r0–r3 rows above say 40, so compare r4 with r3's own report (`raw/Ngate-r3`), not with the row.
+r4 is HEAD after the review fixes; "rf120" is r4 with `LexiconReading`'s Balanced read-first at 120 instead of 30 (15i.N7);
+r5 adds the scan rules below; r6 fixes what r5 broke (a couple's shared surname, the plural rule, a place's spelling,
+two fragments); r7 lets a mention be a joined name of up to eight words and keeps the runs of an "of" name.
+
+| Round | Model | Gender, persons ≥5 (books 1 / 2 / 3 / 4) | Wrong verified | Type | Lost | Spellings (max) | Terms kept (1 / 2 / 3 / 4) | Term junk kept | Minutes (1 / 2 / 3 / 4) | Fixture junk |
+|---|---|---|---|---|---|---|---|---|---|---|
+| r3 (own report) | 26b | 42/50 / 7/8 / 38/42 / 37/39 | 0 | 161/188 | 19 | 1 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 24.0 / 6.9 / 12.1 / 16.9 | 6 |
+| r4 | 26b | 42/50 / 6/8 / 37/42 / 37/39 | 0 | 160/188 | 19 | 1 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 23.3 / 7.4 / 13.1 / 18.2 | 6 |
+| r4 | e4b | 42/50 / 5/8 / 38/42 / 36/39 | 0 | 155/188 | 19 | 1 | 3/23 / 0/13 / 0/21 / 1/26 | 0 | 23.9 / 6.9 / 16.2 / 19.0 | 6 |
+| rf120 | 26b | 42/50 / 6/8 / 37/42 / 37/39 | 0 | 160/188 | 19 | 1 | 11/23 / 5/13 / 3/21 / 5/26 | 4 | 29.9 / 10.9 / 18.8 / 23.6 | 6 |
+| rf120 | e4b | 42/50 / 5/8 / 38/42 / 36/39 | 0 | 155/188 | 19 | 1 | 3/23 / 1/13 / 0/21 / 1/26 | 0 | 28.1 / 9.6 / 19.4 / 23.7 | 6 |
+| r5 | 26b | 44/50 / 7/8 / 38/42 / 39/39 | 1 | 168/188 | 12 | 2 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 24.2 / 7.4 / 13.5 / 18.4 | 0 |
+| r5 | e4b | 44/50 / 5/8 / 39/42 / 38/39 | 1 | 162/188 | 12 | 2 | 4/23 / 0/13 / 0/21 / 1/26 | 0 | 25.2 / 6.9 / 16.3 / 19.7 | 0 |
+| r6 | 26b | 44/50 / 7/8 / 39/42 / 39/39 | 0 | 168/188 | 10 | 1 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 25.4 / 7.6 / 13.6 / 18.4 | 0 |
+| r6 | e4b | 44/50 / 5/8 / 39/42 / 38/39 | 0 | 162/188 | 10 | 1 | 3/23 / 0/13 / 0/21 / 1/26 | 0 | 25.3 / 6.7 / 17.4 / 20.2 | 0 |
+| r7 | 26b | 44/50 / 6/8 / 38/42 / 39/39 | 0 | 168/188 | 9 | 1 | 11/23 / 5/13 / 2/21 / 4/26 | 2 | 24.2 / 8.0 / 13.8 / 19.2 | 0 |
+| r7 | e4b | 44/50 / 5/8 / 39/42 / 38/39 | 0 | 163/188 | 9 | 2 | 3/23 / 0/13 / 0/21 / 1/26 | 0 | 24.3 / 7.3 / 16.8 / 20.7 | 0 |
+
+r4 against r3: nothing lost two or more. Two persons changed on 26b, both model noise: one heroine's reading reply could
+not be read this time (gender and type unknown), and one minor character got no vote. e4b is r3 to the person.
+
+**N7, read-first at 120 (rf120): not adopted.** On 26b it kept three more terms of craft (a painting, a cave, a widow)
+and lost one (doctor), but kept two more ordinary words (monitor, school): the correct keep/drop decisions are level.
+On e4b one more term is kept. Every book took 3.5–6.6 minutes longer and the longest owner book took 29.9 minutes on
+26b, over Balanced's 25. The rule asked for 2+ more correct decisions on both models within the budget; neither holds,
+so `READ_FIRST` stays at 30, and no second value was tried (120 was the only one the r3 notes pointed at, and it did
+not move the count).
+
+**The scan rules of r5–r7 (15i.N5 junk, 15i.N8 lost names), all code, no prompt change.**
+- A capitalised word the book writes after a determiner in nine of ten mid-sentence uses (language file
+  `determiners`) is not a name when it also stands between an indefinite article and a noun ("a Velarian porter": an
+  adjective, `indefiniteArticles`) or when the subject pronoun after it is plural in two uses or more and more often
+  than a gendered one ("the Guildsmen … They": a group, `pluralPronouns`) (`NounUses`). A word of a longer candidate is
+  that name's short form and stays ("an Institute notebook" beside a longer institute's name). On the owner books the
+  rule touches only words no gold lists (a river and a watch brand used as adjectives, "English").
+- A plural-shaped word written after a determiner in half its uses or more ("the Velarians", "every Kessels") is the
+  plural of a word: it folds into that word's candidate, or is left out when the word only stands inside a longer
+  candidate (`PluralNouns`). The singular must be a candidate or a word of one, so a newspaper called "The …s" stays.
+- A name written only in sections with no paragraph of two full sentences, when the book has such paragraphs, is a
+  credit (`ProseSections`, `StoryMeasure.hasProse`; the triage, `CandidateTriage`). Sections are cut at units and
+  headings; a story-chapter measure (20 sentences) dropped real names on the fixture book, whose sub-sections are short.
+- A word inside a longer name is a name of its own when the book writes it truly alone (mid-sentence, no capital beside
+  it) twice (`FrequencyScan.ALONE_MIN_STANDALONE`); the hygiene's fragment rule keeps a fragment written alone twice.
+  This brought back the surnames and first names written alone two to five times beside their full names.
+- Two runs joined by "of", with at most one determiner after it (`nameJoiners`), are one candidate ("Tower of Arlen",
+  "Keeper of the Grey Gate"); neither run becomes its fragment, and a mention may be up to eight words long so such a
+  name has windows (`MentionFinder`).
+- A surname that a form of address of the other gender also carries ("Lord Venn" beside "Mira Venn") joins no full name:
+  r5 had given a husband's surname his wife's gender, verified (`NameClusters`).
+- One word of a place's or other name keeps one rendering across names of that group, up to the first lower-case word
+  (`ClusterAgreement`; a place's first word had two renderings beside the place's full name in r5; a place named after a person
+  keeps its own).
+
+**Gates after r7.** N5's junk fixtures: all junk gone on both models in r5, r6 and r7 (the plural group word, both
+nationality words, the converter's name and the brand's plural; the scan alone now proposes exactly the gold names of
+those two books), the bartender kept, no wrong verified gender (r5's one, a couple's shared surname, is fixed in r6).
+N5's gender: 88 / 88 / 93 / 100 % on 26b in r6, 88 / 75 / 90 / 100 % in r7, where two persons fell back to unknown by
+model noise seen in r4 too (a reading reply that could not be read, a reading with no vote); e4b 88 / 63 / 93 / 97 %.
+N6: spellings 1 on 26b; e4b's 2 in r7 is a joined place name the model rendered as a phrase. N8: lost names 19 → 9;
+what is left: a first name written truly alone once (its other lone uses follow a capital or carry a possessive), a
+place whose first word is a stop word ("Other …"), a shop written with a possessive inside it, a firm joined by "and",
+two nicknames and a place written two or three times, a pet name written alone twice that the model pre-scan did not
+propose, a place written with a lower-case word ("… garden"). Time: the longest owner book takes 24.2 minutes on 26b
+in r7 (25.4 in r6, 24.0 in r3), inside Balanced's 25 with no margin: the names brought back are read too. Recurring
+terms: unchanged by these rules.
+
+**N5's gender gate on 26b is not met as written, and cannot be by evidence.** Every 26b miss in r6 is one of: a person
+the book gives no evidence for (the code's pronoun tally is 0/0 and the reading gave no vote: four minor men of owner
+book 1 who are only spoken to or of in speech, the first-person narrator of owner book 2, a woman and a man of owner
+book 3 written in quoted testimony, and a couple's shared surname, unknown on purpose), a demon the gold calls neuter
+whom the book's narration calls "he" four times, and a name still lost (written truly alone once). Leaving out the 8
+persons with no evidence in the book, gender on 26b in r6 is 44/46 (96 %), 7/7, 39/39 and 39/39: every book at or over
+95 %. On e4b the same count is 44/46, 5/7, 39/39, 38/39: owner book 2 misses two persons with evidence (one typed a
+term, one with a vote against its tally). Proposed task text for N5's gate (owner decision): "characters with five or
+more mentions *that the book gives a pronoun, a gendered form of address or a verified reading vote for* 95 % right on
+26b, 90 % on e4b; the persons with none are listed by the suite and stay unknown (asked at Start)", with the suite
+reporting that denominator. Open, not a code rule: an unreadable term-reading reply is not asked again, which r4 and
+r7 show costs a person now and then.
+
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
 model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial (`BOOKLOOM_EVAL_DIAL`, Balanced when unset; the judgement suites record the dial they ran at, Fast when unset), brief preset and overrides, suite). Besides `build/reports/promptEval`

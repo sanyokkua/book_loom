@@ -24,12 +24,19 @@ import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
  * binds only when the person chose it, never an earlier suggestion nobody confirmed; between two asked spellings the
  * full name's is the cluster's chosen rendering. Words are the runs between spaces and hyphens, and a spelling is
  * aligned only when its rendering has as many words as its term. Beyond one cluster, one word of a person's name has
- * one rendering in every person's name ({@code Wren} of {@code Tam Wren} and of {@code Tamsin Wren}).
+ * one rendering in every person's name ({@code Wren} of {@code Tam Wren} and of {@code Tamsin Wren}), and one word of a
+ * place's name in every place's name ({@code Arden} of {@code Arden Hall}), up to the first word in lower case
+ * ({@code Tower} of {@code Tower of Arlen}).
  */
 @Slf4j
 final class ClusterAgreement {
 
     private static final Pattern WORD = Pattern.compile("[^\\s-]+");
+
+    // A word keeps one rendering across the names of one group: a person's names, or the names of places and other
+    // named things (15i.N8: a place's first word written alone, "Arden" beside "Arden Hall"). A place named after a
+    // person keeps its own rendering, and a term or a title may be a common word whose form varies.
+    private static final Set<TermType> PLACE_GROUP = Set.of(TermType.PLACE, TermType.OTHER);
 
     private final NameClusters clusters;
     private final Map<String, String> held;
@@ -65,9 +72,7 @@ final class ClusterAgreement {
                     && target != null
                     && !target.isBlank()) {
                 targets.put(entry.id(), target.strip());
-                if (entry.type() == TermType.CHARACTER) {
-                    learnWords(entry.term(), target.strip(), words);
-                }
+                groupOf(entry.type()).ifPresent(group -> learnWords(group, entry.term(), target.strip(), words));
             }
         }
         return new ClusterAgreement(clusters, Map.copyOf(targets), Map.copyOf(words));
@@ -130,30 +135,39 @@ final class ClusterAgreement {
         final List<Suggestion> agreed = new ArrayList<>();
         for (final Suggestion suggestion : suggestions) {
             final GlossaryEntry entry = suggestion.entry();
-            if (entry.type() != TermType.CHARACTER) {
+            final Optional<String> group = groupOf(entry.type());
+            if (group.isEmpty()) {
                 agreed.add(suggestion);
                 continue;
             }
-            final String target = sharedWordsOf(entry.term(), suggestion.target(), words);
+            final String target = sharedWordsOf(group.get(), entry.term(), suggestion.target(), words);
             if (!target.equals(suggestion.target())) {
                 log.debug("Shared-word agreement changed the target of entry {}", entry.id());
                 log.trace("Shared-word agreement: {} → {}", suggestion.target(), target);
             }
-            learnWords(entry.term(), target, words);
+            learnWords(group.get(), entry.term(), target, words);
             agreed.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(entry, target));
         }
         return agreed;
     }
 
-    private static String sharedWordsOf(final String term, final String target, final Map<String, String> words) {
+    private static Optional<String> groupOf(final TermType type) {
+        if (type == TermType.CHARACTER) {
+            return Optional.of("person:");
+        }
+        return PLACE_GROUP.contains(type) ? Optional.of("place:") : Optional.empty();
+    }
+
+    private static String sharedWordsOf(
+            final String group, final String term, final String target, final Map<String, String> words) {
         final List<String> source = wordsOf(term);
         final List<int[]> spans = spansOf(target);
         if (source.size() != spans.size()) {
             return target;
         }
         final StringBuilder written = new StringBuilder(target);
-        for (int word = spans.size() - 1; word >= 0; word--) {
-            final String known = words.get(source.get(word));
+        for (int word = headOf(term) - 1; word >= 0; word--) {
+            final String known = words.get(group + source.get(word));
             if (known != null) {
                 written.replace(spans.get(word)[0], spans.get(word)[1], known);
             }
@@ -162,12 +176,13 @@ final class ClusterAgreement {
     }
 
     // Each word of a name whose rendering has as many words, kept as the first rendering seen of it.
-    private static void learnWords(final String term, final String target, final Map<String, String> words) {
+    private static void learnWords(
+            final String group, final String term, final String target, final Map<String, String> words) {
         final List<String> source = wordsOf(term);
         final List<int[]> spans = spansOf(target);
         if (source.size() == spans.size()) {
-            for (int word = 0; word < spans.size(); word++) {
-                words.putIfAbsent(source.get(word), target.substring(spans.get(word)[0], spans.get(word)[1]));
+            for (int word = 0; word < headOf(term); word++) {
+                words.putIfAbsent(group + source.get(word), target.substring(spans.get(word)[0], spans.get(word)[1]));
             }
         }
     }
@@ -226,6 +241,18 @@ final class ClusterAgreement {
             written.replace(at[0], at[1], memberRendering.substring(own.get(word)[0], own.get(word)[1]));
         }
         return Optional.of(written.toString());
+    }
+
+    // The words before the first one in lower case: in "Tower of Arlen" only "Tower" keeps its form, since a target
+    // language may decline the rest ("Вежа в Лондоні").
+    private static int headOf(final String term) {
+        final List<int[]> spans = spansOf(term);
+        for (int word = 0; word < spans.size(); word++) {
+            if (Character.isLowerCase(term.codePointAt(spans.get(word)[0]))) {
+                return word;
+            }
+        }
+        return spans.size();
     }
 
     private static List<String> wordsOf(final String name) {
