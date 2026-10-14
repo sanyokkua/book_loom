@@ -653,6 +653,25 @@ The 10 % rule (15h.C5): the shared style and language block is moved to the fron
 cache it) only when `prefill:` is over 10 % for the dominant kinds on the 26b model. The code does not reorder; run a
 book on 26b, read the line and decide.
 
+### 15i baselines: the 15h prompt round and the book-neutral re-baseline {#15i-baselines}
+
+All rounds 2026-10-12/13 on Ollama `gemma4:e4b-mlx` and `gemma4:26b-mlx`, one run per arm, Balanced, the suites of
+`scripts/eval-matrix.sh`; 1-case moves are within noise.
+
+**15h.C1–C4 (one combined round, before e8247cf0 → after 28e34e45).** realrun (172 shared cases): e4b 135 → 138, 26b
+144 → 148. Default set: e4b script −1, injection −1 of 2; 26b gate −1, script −1, marker +1. Sequence (328
+paragraphs): draft prompt tokens −9 % (e4b) and −10 % (26b), calls per segment 0.372 → 0.363 and 0.643 → 0.607, 26b
+directed fixes 47 → 37. Kept: the target moved +3/+4 and no key metric lost 2+. The four changes were measured
+together, so their effects are not separable.
+
+**15i.E0 re-baseline (28e34e45 → cceac266: invented names in the prompts' examples, and E1–E4's test material).**
+realrun on the shared cases: e4b 138 → 136, 26b 148 → 146 (slang, vocative/review and one placeholder repair −1 each).
+Sequence: e4b name variants 3 → 1, seconds per segment 3.86 → 4.17; 26b calls per segment 0.607 → 0.457, flagged 7 → 9.
+These are the baselines every later 15i prompt change is measured against; the drop is the cost of examples that no
+longer resemble the books the suites were built from.
+
+**15i.E1 names baseline (25cd1699)** is the "base15i" row of the names gate (`#15i-names-gate`).
+
 ### 15i brief prediction {#15i-brief}
 
 The 15i.B4 gate round (2026-10-13, Ollama, `gemma4:e4b-mlx` and `gemma4:26b-mlx`, 16k window, server sampling) ran
