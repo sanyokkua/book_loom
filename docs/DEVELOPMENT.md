@@ -809,6 +809,30 @@ The count runs once, after translation: a gender found during a run reaches the 
 (the run's call frame is built once), and the window's brief is refreshed by the next Start, whose re-check returns the stored
 narrator.
 
+### 15i.M1 dial budgets measured {#15i-m1}
+
+The names pass (the `names` suite, `scripts/eval-matrix.sh`) on `gemma4:e4b-mlx` at tree 41642a45, 2026-10-15, against the
+minutes each dial promises. The owner rule screens on e4b only.
+
+| Book | Fast (target 5–10 min) | Balanced (15–25) | Max (30–60) |
+|---|---|---|---|
+| owner novel | 10.4 min, 136 calls | 23.1 min, 257 calls | about 54 min (from the log; the run hit the eval's 90-minute limit later) |
+| Tom Sawyer (public domain, about 70k words) | 6.9 min, 111 calls | 19.3 min, 250 calls | not reached |
+| DDIA (technical) | 26.2 min, 202 calls | 40.5 min, 392 calls | over 31 min, cut by the time limit |
+
+The novels fit Fast and Balanced at about 4.6 seconds a call (3.7 to 5.4); the technical book misses both because it has
+more candidate terms and its calls take 6 to 8 seconds. `NamesPlan` now holds a call budget per dial, taken from the
+table: a pass of 120 calls at Fast, 260 at Balanced and 520 at Max (6 to 10, 16 to 25 and 31 to 60 minutes at the pace
+constants `NamesPlan` carries). The names reading may use 60 % of it (`readCallCap`: 72, 156 and 312 calls) and reads the
+most mentioned terms first, so a book with many candidates is read for fewer of them; the rest of the budget is left to the
+batched review, recurring terms and renderings, whose share was not measured by kind and is an assumption to check with the
+26b round. The old cap of 80 terms is gone: it was a cap on terms, not on calls, and Max reads two calls a term.
+
+Open finding for N7, not fixed here: the recurring terms kept were fewer at Balanced than at Fast (owner novel 3 of 23
+against 11 of 23, Tom Sawyer 1 of 26 against 10 of 26).
+
+Pending owner: the 26b closing round of these measurements and 15h.F2.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

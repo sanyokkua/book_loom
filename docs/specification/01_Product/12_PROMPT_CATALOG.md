@@ -1255,8 +1255,9 @@ case-sensitive mentions in the story (so the bartender `Mark` is read, not "a ma
 stretch, as the dial's `NamesPlan` says: Fast reads the likely characters (a character, or an untyped entry with a
 seeded gender) written five times or more, 4 windows of ±1 segment at 350 tokens; Balanced every candidate written
 three times or more, 6 windows of ±2 at 450; Max the same terms with up to 12 windows of ±2, split evenly into calls of
-at most 6. At most 80 terms are read, the most mentioned first, which holds the dial's time budget (Fast 5–10,
-Balanced 15–25, Max 30–60 minutes on a novel of about 80k words on a 26b model). In a window the sentences of one
+at most 6. Terms are read the most mentioned first until the dial's reading cap of calls (Fast 72, Balanced 156, Max 312,
+60 % of a pass's 120, 260 and 520 calls), which holds the dial's time budget (Fast 5–10, Balanced 15–25, Max 30–60
+minutes at about 4.6 seconds a call on e4b, 15i.M1). In a window the sentences of one
 segment are joined by a space and segments by a line break, quotation marks and a speaker's dash kept, and the term is
 marked `[[Term]]` where the window was cut around it. The term's line carries how often the story writes it, the code's
 pronoun tally (the cluster's, pooled) and the person's other spellings. Nothing is written by the call; the readings go

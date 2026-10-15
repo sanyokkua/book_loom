@@ -1,6 +1,6 @@
 # ADR-0042 — The source language may be Auto: the model identifies it and the code uses generic rules
 
-**Status:** proposed **Date:** 2026-10-12 **Deciders:** owner
+**Status:** accepted 2026-10-15 **Date:** 2026-10-12 **Deciders:** owner
 **Amends:** ADR-0037
 
 ## Context and problem statement

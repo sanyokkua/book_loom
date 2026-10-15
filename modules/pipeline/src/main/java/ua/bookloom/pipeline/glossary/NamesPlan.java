@@ -19,19 +19,16 @@ import ua.bookloom.pipeline.index.WindowPlan;
 /**
  * Which glossary terms the model reads and how (15i.N4): per quality dial the terms read, the windows each gets and how
  * many windows go into one call, so the names step stays inside its time budget (Fast 5–10, Balanced 15–25, Max 30–60
- * minutes on a novel of about 80k words on a 26b model). The budget is held by the dial's thresholds and by reading at
- * most {@link #MAX_READ_TERMS} terms, the most mentioned first.
+ * minutes). The budget is held by the dial's thresholds and by reading terms, the most mentioned first, until the
+ * dial's {@link #readCallCap(QualityDial)} is reached.
  *
  * @param dial the quality dial the plan is for
- * @param read the candidates read, most mentions first, at most {@link #MAX_READ_TERMS}
+ * @param read the candidates read, most mentions first, within the dial's {@link #readCallCap(QualityDial)}
  * @param windows how many windows a term gets, how many neighbouring segments each reads and its token budget
  * @param windowsPerCall the most windows one call shows; positive
  */
 @Slf4j
 public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windows, int windowsPerCall) {
-
-    /** The most terms one pass reads, whatever the dial: the cap that holds the time budget. */
-    public static final int MAX_READ_TERMS = 80;
 
     /** Fast reads only a likely character the story names this often. */
     static final int FAST_MIN_MENTIONS = 5;
@@ -45,11 +42,37 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
     private static final int FAST_PER_CALL = 4;
     private static final int PER_CALL = 6;
     private static final long MILLIS_PER_MINUTE = 60_000L;
-    private static final long FAST_LOW_MILLIS = 3_750L;
-    private static final long FAST_HIGH_MILLIS = 7_500L;
-    private static final long SLOW_LOW_MILLIS = 11_250L;
-    private static final long BALANCED_HIGH_MILLIS = 18_750L;
-    private static final long MAX_HIGH_MILLIS = 22_500L;
+
+    // 15i.M1: the names suite on gemma4:e4b-mlx, 2026-10-15 (docs/DEVELOPMENT.md#15i-m1), whole passes of 111 to 392
+    // calls took 3.7 to 7.8 seconds a call, 4.6 on the owner novel and on Tom Sawyer at Fast and Balanced. A call's
+    // seconds are set so that the dial's call budget takes the dial's minutes: 120 calls 6 to 10 at Fast, 260 calls 16
+    // to 25 at Balanced, 520 calls 31 to 60 at Max.
+    private static final long FAST_LOW_MILLIS = 3_000L;
+    private static final long FAST_HIGH_MILLIS = 4_900L;
+    private static final long BALANCED_LOW_MILLIS = 3_500L;
+    private static final long BALANCED_HIGH_MILLIS = 5_700L;
+    private static final long MAX_LOW_MILLIS = 3_500L;
+    private static final long MAX_HIGH_MILLIS = 6_900L;
+
+    /**
+     * The model calls a whole names pass may make at Fast, from the M1 measurements: 111 to 202 calls took 6.9 to 26.2
+     * minutes against the 5 to 10 asked; about 4.6 seconds a call lands it at 9 minutes.
+     */
+    private static final int FAST_PASS_CALLS = 120;
+
+    /** The calls of a whole pass at Balanced: 250 to 392 calls took 19.3 to 40.5 minutes against 15 to 25. */
+    private static final int BALANCED_PASS_CALLS = 260;
+
+    /** The calls of a whole pass at Max: the owner novel's pass took about 54 of the 30 to 60 minutes. */
+    private static final int MAX_PASS_CALLS = 520;
+
+    /**
+     * The share of a pass's calls the names reading may take, in percent; the rest is left to the batched review of the
+     * names not read, the recurring terms and the renderings, which the plan cannot count.
+     */
+    private static final int READING_SHARE_PERCENT = 60;
+
+    private static final int PERCENT = 100;
 
     /** Copies the list and rejects a call that could show no window. */
     public NamesPlan {
@@ -80,26 +103,84 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(candidates, "candidates");
         final int minimum = dial == QualityDial.FAST ? FAST_MIN_MENTIONS : MIN_MENTIONS;
-        final List<Candidate> read = candidates.stream()
+        final List<Candidate> eligible = candidates.stream()
                 .filter(candidate -> candidate.mentions() >= minimum)
                 .filter(candidate -> dial != QualityDial.FAST || isLikelyCharacter(candidate.entry()))
                 .sorted(Comparator.comparingInt(Candidate::mentions).reversed())
-                .limit(MAX_READ_TERMS)
                 .toList();
-        final NamesPlan plan =
-                switch (dial) {
-                    case FAST -> new NamesPlan(dial, read, FAST_WINDOWS, FAST_PER_CALL);
-                    case BALANCED -> new NamesPlan(dial, read, BALANCED_WINDOWS, PER_CALL);
-                    case MAX -> new NamesPlan(dial, read, MAX_WINDOWS, PER_CALL);
-                };
+        final List<Candidate> read = withinCap(dial, eligible);
+        final NamesPlan plan = new NamesPlan(dial, read, windowsOf(dial), perCallOf(dial));
         log.debug(
-                "Names plan {}: {} of {} candidates read (at least {} mentions), {} calls estimated",
+                "Names plan {}: {} of {} candidates read ({} eligible, at least {} mentions), {} calls estimated, cap {}",
                 dial,
                 read.size(),
                 candidates.size(),
+                eligible.size(),
                 minimum,
-                plan.estimatedCalls());
+                plan.estimatedCalls(),
+                readCallCap(dial));
         return plan;
+    }
+
+    /**
+     * The most reading calls a plan makes at a dial: the share of the dial's whole-pass budget that goes to reading
+     * terms in context, so a book with many candidates is read for the most mentioned and the pass still fits its
+     * minutes.
+     *
+     * @param dial the quality dial; never null
+     * @return the calls; positive
+     */
+    public static int readCallCap(final QualityDial dial) {
+        return passCallBudget(Objects.requireNonNull(dial, "dial")) * READING_SHARE_PERCENT / PERCENT;
+    }
+
+    /**
+     * The model calls a whole names pass should stay within at a dial, which {@link #minutesFor} times at the dial's
+     * minutes (Fast 5–10, Balanced 15–25, Max 30–60).
+     *
+     * @param dial the quality dial; never null
+     * @return the calls; positive
+     */
+    public static int passCallBudget(final QualityDial dial) {
+        return switch (Objects.requireNonNull(dial, "dial")) {
+            case FAST -> FAST_PASS_CALLS;
+            case BALANCED -> BALANCED_PASS_CALLS;
+            case MAX -> MAX_PASS_CALLS;
+        };
+    }
+
+    // The most mentioned first, stopping at the first term whose calls would pass the cap, so priority is never
+    // skipped.
+    private static List<Candidate> withinCap(final QualityDial dial, final List<Candidate> eligible) {
+        final NamesPlan shape = new NamesPlan(dial, List.of(), windowsOf(dial), perCallOf(dial));
+        final int cap = readCallCap(dial);
+        final List<Candidate> read = new ArrayList<>();
+        int calls = 0;
+        for (final Candidate candidate : eligible) {
+            calls += shape.callsOf(candidate);
+            if (calls > cap) {
+                log.debug("Names plan {}: cap of {} calls reached after {} terms", dial, cap, read.size());
+                break;
+            }
+            read.add(candidate);
+        }
+        return read;
+    }
+
+    private static WindowPlan windowsOf(final QualityDial dial) {
+        return switch (dial) {
+            case FAST -> FAST_WINDOWS;
+            case BALANCED -> BALANCED_WINDOWS;
+            case MAX -> MAX_WINDOWS;
+        };
+    }
+
+    private static int perCallOf(final QualityDial dial) {
+        return dial == QualityDial.FAST ? FAST_PER_CALL : PER_CALL;
+    }
+
+    private int callsOf(final Candidate candidate) {
+        return Math.ceilDiv(Math.min(windows.count(), candidate.mentions()), windowsPerCall);
     }
 
     // A character, or an untyped name a first-name list or the pronouns already took for a person.
@@ -157,9 +238,7 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
      *     most as many windows as it has mentions
      */
     public int estimatedCalls() {
-        return read.stream()
-                .mapToInt(candidate -> Math.ceilDiv(Math.min(windows.count(), candidate.mentions()), windowsPerCall))
-                .sum();
+        return read.stream().mapToInt(this::callsOf).sum();
     }
 
     /**
@@ -196,9 +275,12 @@ public record NamesPlan(QualityDial dial, List<Candidate> read, WindowPlan windo
         return minutes;
     }
 
-    // A call's seconds at the dial: 3.75 to 7.5 at Fast, 11.25 to 18.75 at Balanced, 11.25 to 22.5 at Max.
     private static long lowMillisPerCall(final QualityDial dial) {
-        return dial == QualityDial.FAST ? FAST_LOW_MILLIS : SLOW_LOW_MILLIS;
+        return switch (dial) {
+            case FAST -> FAST_LOW_MILLIS;
+            case BALANCED -> BALANCED_LOW_MILLIS;
+            case MAX -> MAX_LOW_MILLIS;
+        };
     }
 
     private static long highMillisPerCall(final QualityDial dial) {

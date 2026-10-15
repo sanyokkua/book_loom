@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.index.WindowPlan;
  * Which terms the names step reads at each quality dial, with how many windows of how many neighbouring segments and
  * tokens, how many windows go into one call, and the estimate of calls the plan gives before the first one (15i.N4).
  * The time budget (Fast 5–10, Balanced 15–25, Max 30–60 minutes on a novel of about 80k words on 26b) is held by these
- * numbers and the cap of 80 read terms.
+ * numbers and the dial's cap of read calls.
  */
 class NamesPlanTest {
 
@@ -109,17 +109,25 @@ class NamesPlanTest {
         assertThat(plan.windowsPerCall()).isEqualTo(perCall);
     }
 
-    // IF a book with a hundred named characters were read in full, THEN Balanced would run past its budget: the 80 with
-    // the most mentions are read.
-    @ParameterizedTest
-    @CsvSource({"FAST", "BALANCED", "MAX"})
-    void of_hundredCharacters_readsTheEightyWithTheMostMentions(final QualityDial dial) {
-        final NamesPlan plan = NamesPlan.of(dial, characters(100, 5));
+    // IF a technical book with hundreds of capitalised terms were read in full, THEN Fast would run 26 minutes against
+    // its 5 to 10 (15i.M1): reading stops at the dial's call cap, keeping the terms with the most mentions.
+    @ParameterizedTest(name = "{0}: {1} terms read of 200, the most mentioned {2} down to {3}")
+    @CsvSource({"FAST,5,72,204,133", "BALANCED,5,156,204,49", "MAX,12,156,211,56"})
+    void of_manyCharacters_readsUpToTheDialsCallCapMostMentionedFirst(
+            final QualityDial dial, final int first, final int read, final int top, final int bottom) {
+        final NamesPlan plan = NamesPlan.of(dial, characters(200, first));
 
-        assertThat(NamesPlan.MAX_READ_TERMS).isEqualTo(80);
-        assertThat(plan.read()).hasSize(80);
-        assertThat(plan.read().getFirst().mentions()).isEqualTo(104);
-        assertThat(plan.read().getLast().mentions()).isEqualTo(25);
+        assertThat(plan.read()).hasSize(read);
+        assertThat(plan.read().getFirst().mentions()).isEqualTo(top);
+        assertThat(plan.read().getLast().mentions()).isEqualTo(bottom);
+        assertThat(plan.estimatedCalls()).isLessThanOrEqualTo(NamesPlan.readCallCap(dial));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"FAST,72,120", "BALANCED,156,260", "MAX,312,520"})
+    void callCaps_perDial_followTheM1Measurements(final QualityDial dial, final int reading, final int pass) {
+        assertThat(NamesPlan.readCallCap(dial)).isEqualTo(reading);
+        assertThat(NamesPlan.passCallBudget(dial)).isEqualTo(pass);
     }
 
     @Test

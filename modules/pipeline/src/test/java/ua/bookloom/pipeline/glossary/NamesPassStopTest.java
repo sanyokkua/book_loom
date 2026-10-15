@@ -105,15 +105,15 @@ class NamesPassStopTest extends NamesPassTestBase {
 
     // Before the first call the pass says what it will send (15i review: every call, not the names reading alone):
     // five names read in one call each and one review batch for the sixth open name, seven calls for the recurring
-    // words, and two rendering batches each for names and terms with their re-asks — 17 calls, four to six minutes
-    // at Balanced's 11.25-18.75 s a call.
+    // words, and two rendering batches each for names and terms with their re-asks — 17 calls, one to two minutes
+    // at Balanced's 3.5-5.7 s a call (15i.M1).
     @Test
-    void estimate_seededBookAtBalanced_isSeventeenCallsAndFourToSixMinutes() {
+    void estimate_seededBookAtBalanced_isSeventeenCallsAndOneToTwoMinutes() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         final Result<NamesEstimate> estimate = fixture.pass().estimate(PROJECT);
 
-        assertThat(estimate.data()).isEqualTo(new NamesEstimate(17, 4, 6));
+        assertThat(estimate.data()).isEqualTo(new NamesEstimate(17, 1, 2));
     }
 
     @Test
