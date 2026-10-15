@@ -770,6 +770,23 @@ WRONG did not fall by two on either model (the gate), errors moved in opposite d
 so the code was removed. The grader's strict verdicts mark nearly every long paragraph WRONG on both models; 26b makes about half
 of e4b's errors. Grades and the blind key: `.temporary_context/eval_2026-10-12/x3grade/` (owner-local).
 
+### 15i.X2 thinking and notes per call kind: all off {#15i-x2}
+
+Screened on `gemma4:e4b-mlx` only (the owner's rule: an arm that does not improve e4b gets no 26b run), every arm against a
+baseline of the same tree (`55f4e223`), one run per suite. A call kind turns on only if its target moves by 2+ with its time up
+by at most 30 %.
+
+| Arm | realrun right | sequence s/seg | LTCR-1 | flagged | hard-gate r0 | coref right / wrong / abstain | Verdict |
+|---|---|---|---|---|---|---|---|
+| base | 142/179 | 3.99 | 0.908 | 9 | 10 | 8 / 2 / 21 | — |
+| draft batch thinks | 142/179 | 8.82 (+121 %) | 0.886 | 10 | 14 | — | off: no gain, twice the time |
+| batch notes | 143/179 | 4.20 (+5 %) | 0.893 | 10 | 10 | — | off: +1, the rule asks +2 |
+| reviewer thinks | — | 14.01 (+251 %) | 0.934 | 109 | 12 | — | off: the reviewer runs out of time and 100 more segments are flagged |
+| term reading thinks | — | — | — | — | — | 7 / 2 / 22 | off: one right vote fewer |
+
+`brief-synthesis` with thinking on was not run (stopped on the owner's instruction once the other arms had failed); it stays off
+with the rest. `ReasoningPlan` keeps every call kind off and the notes switch stays off; both remain as eval switches.
+
 ### 15i narrator's gender, in order {#15i-narrator}
 
 The narrator's gender is never taken from a model's word alone (15i.T5, which also closes 15f.A4). In order: (1) the brief's
