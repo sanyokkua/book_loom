@@ -503,6 +503,12 @@ not the model — SHALL decide each from its readings:
   windows or more SHALL make a title; anything else SHALL change nothing;
 - a place, an organisation, a thing and a title SHALL carry no gender, and a gender the person set SHALL never be
   decided again;
+- a person the book gives no evidence for — a pronoun tally of 0/0 (forms of address included) and no verified vote —
+  SHALL stay `UNKNOWN` (not specified) and SHALL be marked as a gender the scan found no evidence for
+  (`GlossaryEntry.noGenderEvidence`); any later gender and the person's own edit SHALL clear the mark, and the
+  Names & style gender cell SHALL read "not specified — no evidence in the book" (Ukrainian: "не вказано — у книзі
+  немає свідчень") instead of "unknown", the column's tooltip explaining it; the names suite SHALL report gender over
+  the persons with evidence beside the gender over all persons;
 - the gender SHALL pool the verified votes (a window's pronoun the reading quoted from that window's narration) of every
   spelling of the person and SHALL follow the model's vote mode: a model whose votes the coreference probe found wrong
   more than 5 % of the time — every model today (26b 10 %, e4b 20 % on 2026-10-13) — SHALL only break ties: a clear

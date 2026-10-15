@@ -42,13 +42,17 @@ final class ReadingVotes {
      *
      * @param gender the gender; {@link Gender#UNKNOWN} when none
      * @param origin verified or suggested; null exactly when the gender is unknown
+     * @param noEvidence whether the book gave this person no evidence at all: a pronoun tally of 0/0 and no verified
+     *     vote; only for an unknown gender
      */
-    record GenderCall(Gender gender, @Nullable GenderOrigin origin) {
+    record GenderCall(Gender gender, @Nullable GenderOrigin origin, boolean noEvidence) {
 
-        static final GenderCall NONE = new GenderCall(Gender.UNKNOWN, null);
+        static final GenderCall NONE = new GenderCall(Gender.UNKNOWN, null, false);
+
+        static final GenderCall NO_EVIDENCE = new GenderCall(Gender.UNKNOWN, null, true);
 
         static GenderCall of(final Gender gender, final GenderOrigin origin) {
-            return new GenderCall(gender, origin);
+            return new GenderCall(gender, origin, false);
         }
     }
 
@@ -109,7 +113,12 @@ final class ReadingVotes {
         }
         final Gender oneSided = oneSided(male + tally.male(), female + tally.female());
         log.debug("Reading votes: no clear tally and too few votes; votes and pronouns together point to {}", oneSided);
-        return oneSided == Gender.UNKNOWN ? GenderCall.NONE : GenderCall.of(oneSided, GenderOrigin.SUGGESTED);
+        if (oneSided != Gender.UNKNOWN) {
+            return GenderCall.of(oneSided, GenderOrigin.SUGGESTED);
+        }
+        final boolean nothing = male + female + tally.total() == 0;
+        log.debug("Reading votes: no gender decided, the book gave no evidence at all: {}", nothing);
+        return nothing ? GenderCall.NO_EVIDENCE : GenderCall.NONE;
     }
 
     // Two or more pieces of evidence, all one gender's: a hint the person may confirm, never more.

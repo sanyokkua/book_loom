@@ -177,7 +177,8 @@ public final class GlossaryCsv {
                 TargetOrigin.PERSON,
                 row.gender() == Gender.UNKNOWN ? existing.genderOrigin() : GenderOrigin.PERSON,
                 existing.genderSeedTried(),
-                existing.aliases());
+                existing.aliases(),
+                row.gender() == Gender.UNKNOWN && existing.noGenderEvidence());
         logOrigin(existing, result);
         return result;
     }

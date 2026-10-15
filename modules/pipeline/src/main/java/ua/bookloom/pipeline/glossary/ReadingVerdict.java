@@ -122,13 +122,26 @@ final class ReadingVerdict {
      * @param origin {@link GenderOrigin#VERIFIED} or {@link GenderOrigin#SUGGESTED}; null exactly when the gender is
      *     unknown
      * @param quote the ordinary-word use a removal stands on; empty for any other decision
+     * @param noEvidence whether the term is a person the book gives no evidence of a gender for (15i.N5)
      */
     record Decision(
             Kind kind,
             TermType type,
             Gender gender,
             @Nullable GenderOrigin origin,
-            String quote) {}
+            String quote,
+            boolean noEvidence) {
+
+        /** A decision that reports no missing evidence. */
+        Decision(
+                final Kind kind,
+                final TermType type,
+                final Gender gender,
+                @Nullable final GenderOrigin origin,
+                final String quote) {
+            this(kind, type, gender, origin, quote, false);
+        }
+    }
 
     /**
      * Decides a term from its readings alone, with no call.
@@ -210,17 +223,19 @@ final class ReadingVerdict {
             type = TermType.OTHER;
         }
         final GenderCall gender = genderOf(facts, type);
-        return logged(facts, new Decision(kind, type, gender.gender(), gender.origin(), ""), enough);
+        return logged(
+                facts, new Decision(kind, type, gender.gender(), gender.origin(), "", gender.noEvidence()), enough);
     }
 
     private static Decision logged(final Facts facts, final Decision decision, final boolean enough) {
         log.debug(
-                "Reading verdict for entry {}: {} {} gender={} origin={} (name uses enough: {})",
+                "Reading verdict for entry {}: {} {} gender={} origin={} noEvidence={} (name uses enough: {})",
                 facts.entry().id(),
                 decision.kind(),
                 decision.type(),
                 decision.gender(),
                 decision.origin(),
+                decision.noEvidence(),
                 enough);
         return decision;
     }

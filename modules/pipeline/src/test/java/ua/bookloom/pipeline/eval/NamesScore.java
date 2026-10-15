@@ -41,6 +41,8 @@ import ua.bookloom.api.project.TermType;
  * @param genderCorrect how many of them ended with the gold gender
  * @param wrongButVerified how many of them ended with a known gender that is not the gold one and whose origin is
  *     verified
+ * @param noEvidence how many of them ended with an entry the names pass marked as having no evidence of a gender in
+ *     the book (15i.N5); they stay unspecified and are out of the denominator of {@link #genderAccuracyOverEvidence()}
  * @param typeCorrect how many gold characters ended with the gold type
  * @param typeScored how many gold characters were scored for type
  * @param clusters how many gold clusters have two or more members
@@ -58,6 +60,7 @@ record NamesScore(
         int eligible,
         int genderCorrect,
         int wrongButVerified,
+        int noEvidence,
         int typeCorrect,
         int typeScored,
         int clusters,
@@ -117,6 +120,7 @@ record NamesScore(
                 characters[0],
                 characters[1],
                 characters[2],
+                characters[4],
                 characters[3],
                 gold.characters().size(),
                 (int) clusters.values().stream().filter(c -> c.size() >= 2).count(),
@@ -146,6 +150,14 @@ record NamesScore(
     /** The share of eligible characters with the gold gender; 1 when none is eligible. */
     double genderAccuracy() {
         return rate(genderCorrect, eligible);
+    }
+
+    /**
+     * The share of the eligible characters the book gives evidence for that have the gold gender: those marked as
+     * having no evidence are left out of the denominator (15i.N5); 1 when none is left.
+     */
+    double genderAccuracyOverEvidence() {
+        return rate(genderCorrect, eligible - noEvidence);
     }
 
     /** The share of gold characters with the gold type; 1 when there is none. */
@@ -186,6 +198,8 @@ record NamesScore(
                 + ",\"genderCorrect\":" + genderCorrect
                 + ",\"wrongButVerified\":" + wrongButVerified
                 + ",\"genderAccuracy\":" + round(genderAccuracy())
+                + ",\"noEvidence\":" + noEvidence
+                + ",\"genderOverEvidence\":" + round(genderAccuracyOverEvidence())
                 + ",\"typeCorrect\":" + typeCorrect
                 + ",\"typeScored\":" + typeScored
                 + ",\"typeAccuracy\":" + round(typeAccuracy())
@@ -202,13 +216,14 @@ record NamesScore(
                 + ",\"minutes\":" + round(minutes) + "}";
     }
 
-    /** Eligible, gender correct, wrong but verified and type correct, in that order. */
+    /** Eligible, gender correct, wrong but verified, type correct and marked no-evidence, in that order. */
     private static int[] scoreCharacters(
             final JudgementGold gold, final String text, final Map<String, GlossaryEntry> byTerm) {
         int eligible = 0;
         int correct = 0;
         int verified = 0;
         int typeOk = 0;
+        int unproven = 0;
         for (final JudgementGold.Person person : gold.characters()) {
             final GlossaryEntry entry = byTerm.get(lower(person.term()));
             typeOk += entry != null && entry.type() == person.type() ? 1 : 0;
@@ -218,8 +233,9 @@ record NamesScore(
             eligible++;
             correct += entry != null && entry.gender() == person.gender() ? 1 : 0;
             verified += isWrongButVerified(entry, person) ? 1 : 0;
+            unproven += entry != null && entry.noGenderEvidence() ? 1 : 0;
         }
-        return new int[] {eligible, correct, verified, typeOk};
+        return new int[] {eligible, correct, verified, typeOk, unproven};
     }
 
     /**

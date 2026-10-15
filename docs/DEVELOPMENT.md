@@ -1504,6 +1504,19 @@ more mentions *that the book gives a pronoun, a gendered form of address or a ve
 reporting that denominator. Open, not a code rule: an unreadable term-reading reply is not asked again, which r4 and
 r7 show costs a person now and then.
 
+*Decided 2026-10-15, rescored (15i.N5).* The owner took the proposed gate text: the gender gate counts the persons the book
+gives a pronoun, a gendered form of address or a verified vote for; the others stay not specified, are marked
+`GlossaryEntry.noGenderEvidence` (the names pass sets it on a person with a 0/0 tally and no vote; any later gender or the
+person's edit clears it), read "not specified — no evidence in the book" in the Names & style gender cell, and the suite's
+report and JSON give gender over evidence persons (`genderOverEvidence`, `noEvidence`) beside the old denominator. The r6 and
+r7 reports predate the mark, so they are rescored without a model run: a person who got an entry of the right type and an
+unknown gender is read as "no evidence" (an upper bound on that group: a person with a vote against its tally is in it).
+Pooled over all fourteen books: r6 26b 147/149 (98.7 %, was 93.6 %), r6 e4b 144/147 (98.0 %, was 91.7 %), r7 26b 145/148 (98.0 %,
+was 92.4 %), r7 e4b 144/147 (98.0 %, was 91.7 %). By owner book (1 / 2 / 3 / 4): r6 26b 44/46, 7/7, 39/39, 39/39; r7 26b
+44/46, 6/7, 38/38, 39/39; e4b (r6 and r7) 44/46, 5/6, 39/39, 38/38. The pooled gate (95 % on 26b, 90 % on e4b) is met; read per
+book it is met on 26b in r6 and missed in r7 and on e4b by owner book 2 alone (8 persons: one reading reply that could not be
+read, one person typed a term), so N5 stays open until the owner says whether the gate is pooled or per book.
+
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
 model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial (`BOOKLOOM_EVAL_DIAL`, Balanced when unset; the judgement suites record the dial they ran at, Fast when unset), brief preset and overrides, suite). Besides `build/reports/promptEval`

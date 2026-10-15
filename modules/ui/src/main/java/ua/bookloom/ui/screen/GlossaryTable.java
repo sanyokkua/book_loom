@@ -168,10 +168,14 @@ final class GlossaryTable {
                 model::setGender);
     }
 
-    // Only a character has a gender to settle; a place or a term shows a dash instead of "unknown".
+    // Only a character has a gender to settle; a place or a term shows a dash instead of "unknown". A character the
+    // scan read and found no evidence for says so (15i.N5), which a plain "unknown" would not.
     private static String genderLabel(final Messages messages, final GlossaryEntry entry) {
         if (entry.type() != TermType.CHARACTER) {
             return NOT_A_CHARACTER;
+        }
+        if (entry.noGenderEvidence()) {
+            return messages.get(MessageKey.NAMES_STYLE_GENDER_NO_EVIDENCE);
         }
         final String label = GlossaryLabels.gender(messages, entry.gender());
         return entry.genderOrigin() == GenderOrigin.SUGGESTED

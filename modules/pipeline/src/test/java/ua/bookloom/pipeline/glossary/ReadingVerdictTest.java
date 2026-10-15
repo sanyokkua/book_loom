@@ -216,6 +216,64 @@ class ReadingVerdictTest {
         assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
     }
 
+    // --- no evidence (15i.N5) ----------------------------------------------------------------------------------------
+
+    // A person the book gives no pronoun, no form of address and no verified vote for stays unknown AND says so, so the
+    // table can tell "scanned, nothing found" from "never looked at".
+    @Test
+    void decide_personWithNoTallyAndNoVote_hasNoEvidence() {
+        final Decision decision = decide(times(3, name(TermReading.Kind.PERSON)));
+
+        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(decision.noEvidence()).isTrue();
+    }
+
+    // IF one pronoun of the tally or one vote counted as no evidence, THEN a person with a lone, too weak hint would be
+    // reported as "no evidence found" although the book gave one.
+    @Test
+    void decide_personWithOneTallyPronoun_hasEvidence() {
+        final Decision decision = decide(times(3, name(TermReading.Kind.PERSON)), tally(1, 0));
+
+        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(decision.noEvidence()).isFalse();
+    }
+
+    @Test
+    void decide_personWithOneVerifiedVote_hasEvidence() {
+        final Decision decision =
+                decide(answers(times(1, voting(Gender.MALE)), times(2, name(TermReading.Kind.PERSON))));
+
+        assertThat(decision.gender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(decision.noEvidence()).isFalse();
+    }
+
+    @Test
+    void decide_personWithAGenderDecided_hasEvidence() {
+        final Decision decision = decide(times(3, name(TermReading.Kind.PERSON)), tally(4, 0));
+
+        assertThat(decision.gender()).isEqualTo(Gender.FEMALE);
+        assertThat(decision.noEvidence()).isFalse();
+    }
+
+    // A place or a title has no gender to find, so "no evidence" would be false news on it.
+    @Test
+    void decide_placeWithNoTallyAndNoVote_isNotMarked() {
+        final Decision decision = decide(times(3, name(TermReading.Kind.PLACE)));
+
+        assertThat(decision.noEvidence()).isFalse();
+    }
+
+    // The person's own gender is not found by the scan, so nothing is reported about the scan's evidence.
+    @Test
+    void decide_personSetGender_isNotMarked() {
+        final GlossaryEntry person = entry("Brann", TermType.CHARACTER).withGender(Gender.FEMALE);
+
+        final Decision decision = ReadingVerdict.decide(facts(
+                person, answers(times(3, name(TermReading.Kind.PERSON))), NO_TALLY, 0.0, QualityDial.BALANCED, "en"));
+
+        assertThat(decision.noEvidence()).isFalse();
+    }
+
     // --- not a name --------------------------------------------------------------------------------------------------
 
     // Two ordinary-word uses quoted from their own windows remove a word the book writes in lower case a fifth of the

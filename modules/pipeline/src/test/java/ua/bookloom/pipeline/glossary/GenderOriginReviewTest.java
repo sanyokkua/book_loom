@@ -103,6 +103,39 @@ class GenderOriginReviewTest {
         assertThat(after.genderOrigin()).isEqualTo(expectedOrigin);
     }
 
+    // 15i.N5: the pass's reading found nothing for a person, and the entry says so.
+    @Test
+    void guessed_characterReadWithNoEvidence_isMarkedAsNoEvidenceAndStaysUnknown() {
+        final GlossaryEntry now = holding(null, Gender.UNKNOWN);
+        final Verdict verdict = new Verdict(now, Kind.NAME, TermType.CHARACTER, Gender.UNKNOWN, "", false, true, true);
+
+        final GlossaryEntry after = ReviewCommit.guessed(now, verdict);
+
+        assertThat(after.noGenderEvidence()).isTrue();
+        assertThat(after.gender()).isEqualTo(Gender.UNKNOWN);
+    }
+
+    // IF a later verdict kept the mark, THEN the table would say "no evidence" beside a gender the book later proved.
+    @Test
+    void guessed_markedCharacterLaterVerified_losesTheMark() {
+        final GlossaryEntry now = holding(null, Gender.UNKNOWN).withNoGenderEvidence();
+        final Verdict verdict = new Verdict(now, Kind.NAME, TermType.CHARACTER, Gender.FEMALE, "", true);
+
+        final GlossaryEntry after = ReviewCommit.guessed(now, verdict);
+
+        assertThat(after.noGenderEvidence()).isFalse();
+        assertThat(after.gender()).isEqualTo(Gender.FEMALE);
+    }
+
+    // A verdict that found nothing and does not report "no evidence" (a batched review's) leaves a mark alone.
+    @Test
+    void guessed_markedCharacterAndAVerdictWithNothingToSay_keepsTheMark() {
+        final GlossaryEntry now = holding(null, Gender.UNKNOWN).withNoGenderEvidence();
+        final Verdict verdict = new Verdict(now, Kind.NAME, TermType.CHARACTER, Gender.UNKNOWN, "", false);
+
+        assertThat(ReviewCommit.guessed(now, verdict).noGenderEvidence()).isTrue();
+    }
+
     // A thing or a place takes no gender from the review, whatever the verdict says.
     @Test
     void guessed_nonCharacterEntry_takesNoGenderAndHasNoOrigin() {

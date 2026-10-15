@@ -59,6 +59,7 @@ record NamesDiagnostics(
      * @param origin the entry's gender origin, or null when it has none or there is no entry
      * @param entry the term of the entry that holds the name, or null when none does
      * @param mentions the gold term's case-sensitive mentions
+     * @param noEvidence whether the entry is marked as having no evidence of a gender in the book (15i.N5)
      */
     record Miss(
             String term,
@@ -66,7 +67,8 @@ record NamesDiagnostics(
             Gender got,
             @Nullable GenderOrigin origin,
             @Nullable String entry,
-            int mentions) {
+            int mentions,
+            boolean noEvidence) {
 
         boolean isVerified() {
             return got != Gender.UNKNOWN && origin == GenderOrigin.VERIFIED;
@@ -138,6 +140,7 @@ record NamesDiagnostics(
                 .put("origin", miss.origin() == null ? null : miss.origin().name())
                 .put("entry", miss.entry())
                 .put("mentions", miss.mentions())
+                .put("noEvidence", miss.noEvidence())
                 .put("verified", miss.isVerified()));
         strings(
                 root,
@@ -182,7 +185,8 @@ record NamesDiagnostics(
                         got,
                         entry == null ? null : entry.genderOrigin(),
                         entry == null ? null : entry.term(),
-                        mentions));
+                        mentions,
+                        entry != null && entry.noGenderEvidence()));
             }
         }
         return misses;
@@ -227,7 +231,7 @@ record NamesDiagnostics(
                 " | ",
                 entry.term(),
                 entry.type().name(),
-                entry.gender() + "/" + entry.genderOrigin(),
+                entry.gender() + "/" + entry.genderOrigin() + (entry.noGenderEvidence() ? "/no-evidence" : ""),
                 String.valueOf(entry.target()) + "/" + entry.origin(),
                 entry.locked() ? "locked" : "open",
                 String.join(",", entry.aliases()));

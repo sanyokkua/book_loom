@@ -243,6 +243,47 @@ class NamesPassImplTest extends NamesPassTestBase {
                 .doesNotContain("anvil");
     }
 
+    // 15i.N5: a person the book gives no pronoun, form of address or verified vote for stays "not specified", and the
+    // entry says the scan found no evidence; a person with a pronoun case is gendered and not marked.
+    @Test
+    void run_personWithNoPronounInTheBook_staysUnknownAndIsMarkedAsNoEvidence() {
+        fixture.open(NamesPassFixture.brief("uk", NamePolicy.TRANSLITERATE), odoLines());
+        fixture.seedOpenNames().seedPersonsEntries().seedTerms();
+        fixture.glossary.add(NamesPassFixture.untyped("Odo"));
+
+        succeeded(run(model().reads("Odo", "person", false, false).suggests("Odo", "Одо")));
+
+        assertThat(held("Odo"))
+                .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::noGenderEvidence)
+                .containsExactly(TermType.CHARACTER, Gender.UNKNOWN, true);
+        assertThat(held("Brann").noGenderEvidence()).isFalse();
+    }
+
+    // The person's edit of the unmarked-by-scan gender wins over the mark: setting a gender clears it.
+    @Test
+    void run_markedPersonThenEditedByThePerson_isNoLongerMarked() {
+        fixture.open(NamesPassFixture.brief("uk", NamePolicy.TRANSLITERATE), odoLines());
+        fixture.seedOpenNames().seedPersonsEntries().seedTerms();
+        fixture.glossary.add(NamesPassFixture.untyped("Odo"));
+        succeeded(run(model().reads("Odo", "person", false, false).suggests("Odo", "Одо")));
+
+        fixture.glossary.update(held("Odo").withGender(Gender.MALE));
+
+        assertThat(held("Odo"))
+                .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin, GlossaryEntry::noGenderEvidence)
+                .containsExactly(Gender.MALE, GenderOrigin.PERSON, false);
+    }
+
+    private static List<String> odoLines() {
+        return List.of(
+                "Odo sorted the letters.",
+                "Odo swept the cellar.",
+                "Odo hummed by the window.",
+                "Odo counted the candles.",
+                "Odo waited at the door.",
+                "Odo watched the road.");
+    }
+
     // The glossary scan runs only on an empty glossary, as the Scan button does: a glossary that holds names is not
     // scanned for more.
     @Test

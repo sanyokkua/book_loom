@@ -94,8 +94,15 @@ final class NamesPassFixture {
 
     /** Stores the project with the brief and opens the invented book. */
     NamesPassFixture open(final BookBrief brief) {
+        return open(brief, List.of());
+    }
+
+    /** As {@link #open(BookBrief)}, with more one-line paragraphs after the invented book's own. */
+    NamesPassFixture open(final BookBrief brief, final List<String> moreLines) {
         injector.getInstance(ProjectRepository.class).save(GlossaryServiceFixtures.project(brief));
-        injector.getInstance(OpenProjects.class).put(PROJECT, GlossaryServiceFixtures.book(body(), "Title"));
+        final List<String> lines = new ArrayList<>(body());
+        lines.addAll(moreLines);
+        injector.getInstance(OpenProjects.class).put(PROJECT, GlossaryServiceFixtures.book(lines, "Title"));
         return this;
     }
 

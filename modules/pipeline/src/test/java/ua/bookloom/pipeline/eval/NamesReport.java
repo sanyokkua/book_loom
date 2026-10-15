@@ -57,9 +57,10 @@ record NamesReport(String model, List<NamesRow> rows) {
     String table() {
         final StringBuilder out = new StringBuilder(String.format(
                 Locale.ROOT,
-                "%-34s %7s %6s %6s %9s %6s %5s %5s %9s %6s %7s%n",
+                "%-34s %7s %8s %6s %6s %9s %6s %5s %5s %9s %6s %7s%n",
                 "book",
                 "gender",
+                "genderEv",
                 "wrongV",
                 "type",
                 "cluster1G",
@@ -80,9 +81,10 @@ record NamesReport(String model, List<NamesRow> rows) {
         }
         return String.format(
                 Locale.ROOT,
-                "%-34s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f%n",
+                "%-34s %6.0f%% %7.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f%n",
                 row.book(),
                 PERCENT * score.genderAccuracy(),
+                PERCENT * score.genderAccuracyOverEvidence(),
                 score.wrongButVerified(),
                 PERCENT * score.typeAccuracy(),
                 PERCENT * score.clusterRate(),

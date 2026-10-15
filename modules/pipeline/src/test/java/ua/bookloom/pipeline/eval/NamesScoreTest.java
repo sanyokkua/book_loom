@@ -124,6 +124,27 @@ class NamesScoreTest {
         return NamesScore.of(GOLD, BOOK, glossary(), lexicon(), 12, Duration.ofSeconds(90));
     }
 
+    // 15i.N5: a person the scan marked as "no evidence in the book" is not a miss of the code; the gender score is also
+    // given over the persons with evidence. Dax Orlo is right, Dax is wrong, Ysolde carries the mark, and Ysa and
+    // Perpetua have no entry at all (a lost person is not "no evidence").
+    @Test
+    void of_personMarkedNoEvidence_isOutOfTheEvidenceDenominatorOnly() {
+        final List<GlossaryEntry> held = List.of(
+                entry("Dax Orlo", "Дакс Орло", TermType.CHARACTER, Gender.MALE, false),
+                entry("Dax", "Декс", TermType.CHARACTER, Gender.FEMALE, false),
+                new GlossaryEntry(P + ":Ysolde", P, "Ysolde", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withNoGenderEvidence());
+
+        final NamesScore score = NamesScore.of(GOLD, BOOK, held, lexicon(), 12, Duration.ofSeconds(90));
+
+        assertThat(score.eligible()).isEqualTo(5);
+        assertThat(score.genderCorrect()).isEqualTo(1);
+        assertThat(score.noEvidence()).isEqualTo(1);
+        assertThat(score.genderAccuracy()).isEqualTo(1.0 / 5);
+        assertThat(score.genderAccuracyOverEvidence()).isEqualTo(1.0 / 4);
+        assertThat(score.json()).contains("\"noEvidence\":1").contains("\"genderOverEvidence\":0.25");
+    }
+
     @Test
     void of_charactersMentionedFiveTimes_countGenderCorrectAndWrongButVerified() {
         final NamesScore score = score();
@@ -291,6 +312,7 @@ class NamesScoreTest {
     void json_score_isTheNumbersWithClusterIdsSortedAndRatesToThreeDecimals() {
         assertThat(score().json())
                 .isEqualTo("{\"eligible\":5,\"genderCorrect\":1,\"wrongButVerified\":1,\"genderAccuracy\":0.2,"
+                        + "\"noEvidence\":0,\"genderOverEvidence\":0.2,"
                         + "\"typeCorrect\":3,\"typeScored\":7,\"typeAccuracy\":0.429,\"clusters\":2,"
                         + "\"clustersWithOneGender\":1,\"clusterRate\":0.5,\"spellings\":{\"dax\":2,\"ysolde\":1},"
                         + "\"junkKept\":1,\"realNamesLost\":3,\"recurringKept\":1,\"recurringDropped\":1,"

@@ -234,8 +234,11 @@ final class ReviewCommit {
             return now.withType(verdict.type()).withGender(Gender.UNKNOWN);
         }
         final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
-        if (typed.type() != TermType.CHARACTER || verdict.gender() == Gender.UNKNOWN) {
+        if (typed.type() != TermType.CHARACTER) {
             return typed;
+        }
+        if (verdict.gender() == Gender.UNKNOWN) {
+            return verdict.noGenderEvidence() && typed.gender() == Gender.UNKNOWN ? marked(typed) : typed;
         }
         if (now.gender() == Gender.UNKNOWN) {
             return verdict.genderVerified()
@@ -251,6 +254,11 @@ final class ReviewCommit {
                 verdict.genderVerified(),
                 replaces);
         return replaces ? verified(typed, verdict.gender()) : typed;
+    }
+
+    private static GlossaryEntry marked(final GlossaryEntry typed) {
+        log.debug("Glossary review: the book gives entry {} no evidence of a gender", typed.id());
+        return typed.withNoGenderEvidence();
     }
 
     // A pronoun seed types a word a character from the "he" that follows it, often a neighbour's; the in-context

@@ -1045,6 +1045,7 @@ public enum MessageKey {
     NAMES_STYLE_COLUMN_GENDER_TIP("namesStyle.column.gender.tip"),
     /** A glossary gender that came from the bundled first-name list and is not confirmed; argument 0 is the gender. */
     NAMES_STYLE_GENDER_SUGGESTED("namesStyle.gender.suggested"),
+    NAMES_STYLE_GENDER_NO_EVIDENCE("namesStyle.gender.noEvidence"),
     /** Glossary column of the lock switch. */
     NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
