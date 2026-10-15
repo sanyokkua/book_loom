@@ -1789,7 +1789,10 @@ fixtures use invented brands and names only (book-neutral).
 - [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
   command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified
   genders, segments waiting on a gender and Russian letters, plus a blind Opus grading of the paragraphs that changed; the
-  26b run of the same book and the J6 hand check left to the owner. → all, docs
+  26b run of the same book and the J6 hand check left to the owner; `openspec validate complete-translation-workflow --strict`
+  clean — today two MODIFIED blocks (app-shell "Move through the workflow by its available steps", book-brief "Say so when no
+  book is open") drop the Structure-screen scenarios 15i.U3 retired, which must be stated as removed, and two MODIFIED
+  headers (llm-provider reasoning, resume provider error) no longer match the current specs. → all, docs
 
 ## 16. The gate — after every group above
 
