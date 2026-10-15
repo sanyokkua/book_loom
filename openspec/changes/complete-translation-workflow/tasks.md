@@ -1729,6 +1729,68 @@ The Oct 10 evaluation of ten model builds through the app's own prompts and the 
 ### Measure and close
 - [x] 15i.M1 Measure the dial budgets on an owner book, one 80k-word public-domain novel and a technical book with e4b and 26b: names pass and brief minutes and calls per dial against Fast 5–10, Balanced 15–25 and Max 30–60 min; tune `NamesPlan`'s constants and record the table in `docs/DEVELOPMENT.md`; then 15h.F2 runs as specified there, with the autonomous pass and the adopted experiment arms, adding LTCR-1 to its scoreboard; the spec and doc clauses each 15i task names agree with the code, ADR-0042 is accepted, `AGENTS.md` "Where it stands" says five steps, and the whole gate is green with its tail pasted. Depends on every 15i task. → all, docs Whole gate after 15i's code, reviews and experiments (59f4fc85): `./gradlew clean build check spotlessCheck` → `BUILD SUCCESSFUL in 7m 11s`, 118 actionable tasks: 117 executed, 1 up-to-date. Measured on e4b (names suite, tree 41642a45): owner novel 10.4 min/136 calls Fast, 23.1/257 Balanced, about 54 Max; Tom Sawyer 6.9/111 and 19.3/250; DDIA 26.2/202 and 40.5/392 (over the budget; Max cut by the time limit). `NamesPlan` now caps its reading calls per dial (72, 156, 312 = 60 % of a pass budget of 120, 260 and 520 calls, replacing the 80-term cap) and times a call at 3.0–4.9 s Fast, 3.5–5.7 s Balanced, 3.5–6.9 s Max; table and reasoning in `docs/DEVELOPMENT.md#15i-m1`; ADR-0042 accepted 2026-10-15. Open for N7: recurring terms kept are fewer at Balanced than at Fast. Pending owner: the 26b closing round and 15h.F2.
 
+## 15j. Quality round 6 — after the owner's 26b run of Oct 15 (new_translation_3)
+
+The owner's Oct 15 26b run of an owner book after group 15i, compared paragraph by paragraph with the two earlier 26b runs
+and graded blind by Opus (`.temporary_context/new_translation_3/ANALYSIS.md`, owner-local): on 50 paragraphs where the runs
+differ the new one has 19 paragraphs with a meaning error against 25, 24 errors against 33, and is preferred 28 to 16; the
+consistency pass is preferred 8 to 2 on the 13 paragraphs it changed. Four defects the code caused and one window remain;
+idioms read literally and occasional broken grammar are the model's own ceiling and are left to the review and consistency
+passes. Owner decisions (2026-10-15): a brand follows the brief's name policy as a person's name does, and a material, a
+substance or a drug is a common noun and is always translated; these tasks are written now and implemented later. Test
+fixtures use invented brands and names only (book-neutral).
+
+- [ ] 15j.J1 A brand follows the name policy, and a material is translated: 15i.T4 locked every entry a reading called a `brand`
+  to its source spelling, which left five brand and material names in Latin inside the Ukrainian text (35 Latin words
+  against 13–17 in the earlier runs). Now a brand's target follows the brief's name policy exactly as a person's name does —
+  Transliterate writes it in the target script (the language file's `translit`, then the model's suggestion checked by
+  `TransliterationCheck`), Translate takes the model's rendering, Keep original keeps the source and locks it — and a term a
+  reading calls a material, substance, drug, unit or other common noun is never a brand: it is translated as a common noun
+  and never locked. Latin stays only for codes and identifiers (`Identifiers`: model numbers, UUIDs, URLs, ISBNs).
+  `LatinRunCheck`'s exemption narrows to locked renderings equal to their term under Keep original. Test: under Transliterate
+  an invented brand `Velmora` gets a Cyrillic target and is not locked, under Keep original it keeps `Velmora` and is locked;
+  an invented alloy and an invented drug are translated and unlocked; a code `KX-7` stays. Gate: the e4b sequence and realrun
+  suites lose nothing and the Latin words left in the sequence output fall. Spec: the T4 clause in `specs/glossary/spec.md`
+  and `12_PROMPT_CATALOG.md` where the brand reading is described. → `:pipeline`, language files
+- [ ] 15j.J2 A clear pronoun tally verifies a gender on its own: the names review's fix (B1) wrote a tally verified only when
+  verified votes agreed, but under the tie-break vote mode the reading is asked only on a tie, so a character with twenty
+  "she" and no "he" stayed suggested; five characters of the owner's run did, their genders were not enforced (15i.T1), one
+  woman's name was declined as a man's and 62 segments were left waiting on a gender. Now a tally that `isStrong()` (5 or
+  more pronouns at 90 % or more) with no opposing verified vote is verified without votes; a weaker one stays suggested as
+  today, and B1's counter-case (a creature written "it" with four neighbouring "he") stays suggested. Test: a strong tally
+  with no votes is verified; four "he" beside "it" is suggested; an invented woman's name whose Ukrainian target ends in a
+  consonant (`Flint` → `Флінт`) is not declined as a man's once verified (the 15h.B6 agreement check earns its directed fix).
+  Gate: the e4b names suite keeps 0 wrong verified genders and the share of verified characters rises; the owner-book run's
+  waiting count falls. → `:pipeline`
+- [ ] 15j.J3 A suggested gender asks to be confirmed, not set: the export told the person to set a gender in Names & style
+  while the table already showed it (the suggested ones). Now the export notice and the Start question name suggested
+  genders as "suggested — confirm" apart from unknown ones, the waiting count is split the same way, and Names & style offers
+  "Confirm suggested genders" (one action that turns every suggested character gender into the person's, with Undo) beside
+  the no-evidence mark of 15i.N5. Test: TestFX in both bundles — the notice splits suggested from unknown; Confirm makes them
+  the person's and Undo restores them. → `:ui`, `:pipeline`
+- [ ] 15j.J4 A suggested place keeps its every word and transliterates by the rules: `Chiba City` was suggested and kept as
+  `Сіба` (a word lost, `Ch` read as `С`). Now a suggested target for a multi-word place or name must render each capitalised
+  word (a hyphenated or a translated common word such as `місто` counts) and its transliterated words must agree with the
+  language file's `translit` on the first letter, else the suggestion is refused and asked once more, then left empty for the
+  person. Test: invented `Varno City` → a target missing `City` is refused; `Charrow` → `Сарроу` is refused, `Чарроу` kept.
+  → `:pipeline`
+- [ ] 15j.J5 A Russian letter is repaired, not only listed: an accepted segment held one word with a Russian letter, which the
+  alphabet check reported as soft and the report listed as suspicious. Now a target-alphabet finding (a letter the target
+  language does not use) blocks acceptance like mixed script and earns the directed fix; a draft that still holds it after
+  the repair round is flagged. Test: a draft with one invented word holding `ы` gets the directed fix and is accepted when
+  the fix removes it, flagged when it does not. → `:pipeline`
+- [ ] 15j.J6 The model-call viewer is a window, not a small dialog: with the prompts open, the export's busy dialog ("Model
+  calls") and the Translating screen's call panel do not fit the screen. Now "Model calls" opens a resizable, non-modal
+  window owned by the main window, sized to 80 % of it and centred on it, following its size until the person resizes it,
+  with each call's source, reply and prompt parts scrolling inside; the busy dialog keeps only the progress and a "Show
+  model calls" button. Test: TestFX — the window opens at 80 % of a 1440×900 and a 960×640 owner, the busy dialog never
+  exceeds the owner, Cancel still stops the work; tokens only, both themes. Hand check: the running app at both sizes.
+  → `:ui`
+- [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
+  command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified
+  genders, segments waiting on a gender and Russian letters, plus a blind Opus grading of the paragraphs that changed; the
+  26b run of the same book and the J6 hand check left to the owner. → all, docs
+
 ## 16. The gate — after every group above
 
 - [x] 16.1 Bring the whole project green with no pre-existing-failure exemption, and paste the gate's tail as evidence. Each group ended on `./gradlew build :app:archTest`; only the whole-project clean gate — `clean`, `check` with its coverage gate, and `spotlessCheck` — proves the groups agree with each other, and a red check anywhere means the change is not done. → all modules, build
