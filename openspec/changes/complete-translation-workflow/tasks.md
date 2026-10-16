@@ -1736,7 +1736,7 @@ and graded blind by Opus (`.temporary_context/new_translation_3/ANALYSIS.md`, ow
 differ the new one has 19 paragraphs with a meaning error against 25, 24 errors against 33, and is preferred 28 to 16; the
 consistency pass is preferred 8 to 2 on the 13 paragraphs it changed. Four defects the code caused and one window remain;
 idioms read literally and occasional broken grammar are the model's own ceiling and are left to the review and consistency
-passes. Owner decisions (2026-10-15): a brand follows the brief's name policy as a person's name does, and a material, a
+passes. Owner decisions (2026-10-15/16): the pipeline redesign is a separate proposal (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`) and this group fixes only what is obvious; a brand follows the brief's name policy as a person's name does, and a material, a
 substance or a drug is a common noun and is always translated; these tasks are written now and implemented later. Test
 fixtures use invented brands and names only (book-neutral).
 
@@ -1829,6 +1829,22 @@ fixtures use invented brands and names only (book-neutral).
   calls that answered `unchanged` on navigation and front-matter segments. Now the panel shows the segment's current target
   for a call whose reply keeps it, and the consistency pass does not send navigation or front-matter segments at all (J11).
   Test: TestFX — an `unchanged` consistency call shows the stored target. → `:ui`, `:pipeline`
+- [ ] 15j.J14 The reviewer sees only what its pairs name: the reviewer's glossary, usual renderings and character sheet are
+  built from the whole chunk (`ChunkContext.termPairs`, `usualRenderings`, `characterLines`), so in the Oct 16 run 22–26 % of
+  the names and terms in a reviewer prompt were absent from the pairs it reviewed, every alias got its own line, and an
+  unconfirmed suggested target was listed under "Glossary the translation had to use". Now each reviewer call builds those
+  blocks from its own pairs (source and candidate), lists an entry once with its aliases on the same line, and marks an
+  unconfirmed target "suggested" exactly as the draft prompt does. Test: a chunk of two pairs naming different invented
+  characters, reviewed in two calls, sends each call only its own names; a suggested target is labelled suggested. Gate:
+  the e4b realrun's reviewer cases lose nothing. → `:pipeline`
+- [ ] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed under the pipeline's eval
+  resources) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
+  inflected multi-word term, a brand under each name policy, a material and a drug, names with and without pronoun
+  evidence, a multi-word place, a target trap for a Russian letter, an injected instruction, a long paragraph, a ти/Ви mix,
+  a first-person narrator's gender, a footnote aside, a code that must stay Latin — each with its expected outcome in a
+  side file; a `mini` suite (`scripts/eval-matrix.sh --suite mini`) translates it through the real job (names pass,
+  translation, consistency pass) and scores each expectation, in under 5 minutes on e4b. Test: the suite runs on the pseudo
+  model in `check` (the expectations it can meet) and is env-gated for real models. → `:pipeline` tests, scripts
 - [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
   command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified
   genders, segments waiting on a gender and Russian letters, plus a blind Opus grading of the paragraphs that changed; the

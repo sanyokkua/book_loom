@@ -1,0 +1,80 @@
+# Proposal: re-centre the translation pipeline on prepare → translate → proofread
+
+Status: proposed (owner review pending) · 2026-10-16 · evidence: `.temporary_context/new_translation_3/ANALYSIS.md` (owner-local)
+
+## Why
+
+The pipeline was meant to translate a book almost unattended: the model prepares the book's data, translates chunks that
+fit its window with exactly the context those chunks need, and finally re-reads the whole book to make it consistent. The
+skeleton is still there, but around it the pipeline grew per-segment repair loops (a reviewer on every chunk, directed
+fixes, repair rounds, an in-run backward revision, an export consistency pass), and each loop builds its prompt context in
+its own way. Two owner runs on gemma4 26b (Oct 15–16) show the cost:
+
+- **Context does not follow one rule.** Translation matches names against the item's own text only (names in the previous
+  and next pairs it reads get no rendering); the reviewer matches the whole chunk (22–26 % of its names and terms are not in
+  the pairs it reviews) and lists unconfirmed targets as mandatory; the consistency check matches the paragraph and its
+  neighbours but has no language rules or word filter; a retry replays a single-draft snapshot even for a batch-drafted
+  segment; the directed fix gets no names at all.
+- **The summary is about the book, not the passage.** It is cumulative (or a code-built list of the most frequent names in
+  the whole book), so prompts name people absent from the passage, and the export pass even sees later events.
+- **Rules and examples are fixed.** Every call carries the whole language-rule file and the same worked examples; three
+  prompts carry English→Ukrainian examples whatever the language pair.
+- **Knowledge comes only from the book.** A name with no pronoun nearby stays unknown even when it is plainly a man's name;
+  the model is never asked what a name or a place is.
+- **Max costs without paying.** The 26b Max run of a 3,784-segment novel took 8 h 51 min plus 2 h 45 min of export pass;
+  about half of the model time was prompt reading with nothing cached, and a blind grading found it no more accurate than an
+  earlier, much faster translation of the same book.
+
+## Decisions taken (owner, 2026-10-16)
+
+1. **One window rule for every call.** The text a call works on is its window: the previous chunk, the current chunk and
+   the next chunk (for a single paragraph: the previous, current and next paragraph). Mapped items — glossary names,
+   characters with their genders, recurring terms, locked names, kept foreign runs — are injected when, and only when, they
+   occur in the window (whole word, declined forms through the language file). Nothing else is injected.
+2. **The summary is the current scene.** A call gets a short summary of the current chapter up to the window (what led to
+   this passage), naming only what occurs in the window or that chapter. The book-level summary stays for the brief and for
+   the proofread's chapter view, never for a single call.
+3. **Model knowledge counts as "likely".** When the book gives no evidence of a character's gender, the model is asked the
+   usual gender of the given name; places and other terms are typed by asking the model explicit category questions (a
+   person? a city, a river, a country, a region? an organisation, a product, a material?). The answer is used as "likely",
+   marked in Names & style, never enforced by the checks, and book evidence always overrides it. A name the model is unsure
+   of stays not specified.
+
+## Proposed design
+
+**Stage A — Prepare** (as today, with knowledge): book index, names pass (book evidence first, model knowledge as
+"likely"), recurring terms, the brief. Output: the book map (glossary, lexicon, characters, narrator, style).
+
+**Stage B — Translate**: chunks sized to the window budget, each built by **one `ContextBuilder`** used by every call kind
+(draft, review, fix, retry, proofread). The builder takes the window, selects map items found in it, adds the scene
+summary, and chooses **rules and examples by what the window contains** (a dialogue rule and example only when there is
+dialogue, a number rule when there are numbers, a gender rule when a gendered character or the narrator speaks, an
+example in the book's own language pair). The fixed parts (system prompt, style sheet, language-pair rules) go first and
+unchanged so the provider's prompt cache can reuse them. Deterministic checks stay as gates; a failing segment gets one
+repair, then is marked for the proofread instead of looping.
+
+**Stage C — Proofread**: one whole-book pass with the same builder over windows of consecutive paragraphs: names, terms,
+gender and endings agree with the map and with each other, marked segments are re-drafted with their full window,
+deterministic checks re-run. This replaces the in-run backward revision and the export consistency pass (one pass, not
+two). The quality dial decides how many windows are re-read (flagged only, flagged + doubtful, all), not how many loops run
+per segment.
+
+## How we measure
+
+- **A mini eval book** (invented text, 20–30 segments, under 5 minutes on gemma4 e4b) with one segment per known defect —
+  dialogue punctuation, inflected titles, brands and materials, names with and without evidence, places, a Russian-letter
+  trap, an injected instruction, a long paragraph, a ти/Ви mix, the narrator's gender, a footnote aside — each with its
+  expected outcome, run by `scripts/eval-matrix.sh` on every change and on every new model the owner brings.
+- Then the existing suites on e4b (realrun, sequence, names), then one owner book on e4b, and 26b once when the change
+  closes (the e4b-first rule).
+- Success: on the owner books, fewer meaning errors in a blind grading than today's Balanced run, no injected entry absent
+  from its window, prompt reading under 25 % of call time, and Max at most 2× Balanced's time.
+
+## Out of scope here
+
+The book format work (open, mask, reassemble) is not touched. Providers stay local; no paid API is assumed.
+
+## Next step
+
+Turn this into an OpenSpec change (proposal, delta specs, tasks) after the owner's review; group 15j's fixes ship first
+inside the current change.
