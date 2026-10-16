@@ -1731,7 +1731,7 @@ The Oct 10 evaluation of ten model builds through the app's own prompts and the 
 
 ## 15j. Quality round 6 — after the owner's 26b run of Oct 15 (new_translation_3)
 
-The owner's Oct 15 26b run of an owner book after group 15i, compared paragraph by paragraph with the two earlier 26b runs
+The owner's Oct 15 26b run of an owner book after group 15i (and, for J8–J13, the Oct 16 Max run of a second owner book), compared paragraph by paragraph with the two earlier 26b runs
 and graded blind by Opus (`.temporary_context/new_translation_3/ANALYSIS.md`, owner-local): on 50 paragraphs where the runs
 differ the new one has 19 paragraphs with a meaning error against 25, 24 errors against 33, and is preferred 28 to 16; the
 consistency pass is preferred 8 to 2 on the 13 paragraphs it changed. Four defects the code caused and one window remain;
@@ -1786,6 +1786,49 @@ fixtures use invented brands and names only (book-neutral).
   model calls" button. Test: TestFX — the window opens at 80 % of a 1440×900 and a 960×640 owner, the busy dialog never
   exceeds the owner, Cancel still stops the work; tokens only, both themes. Hand check: the running app at both sizes.
   → `:ui`
+- [ ] 15j.J8 A name check reads an inflected title or term: in the owner's Oct 16 Max run of a second owner book most
+  flags in the retained log were false — `NameSwapCheck` did not recognise the inflected, lower-case rendering of a
+  multi-word glossary entry (`Prime Minister` → `прем'єр-міністра`) or a vowel-alternating declension (`Опір` → `Опором`) and
+  blamed whatever name stood there (24 times one name). Now the target of a glossary entry is matched case-insensitively
+  through the language file's inflection rules (stems with the alternations `і→о`/`і→е` closing a stem), word by word for a
+  multi-word entry, before any swap or missing-name finding is raised. Test: invented `Night Council` → `Нічна рада`, its
+  declined lower-case `нічної ради` is found; `Опір` → `Опором` is found; a real swap still fails. → `:pipeline`, language files
+- [ ] 15j.J9 Sentence count reads target dialogue punctuation: the Ukrainian convention `«Хвилинку», — сказав він.` turns the
+  English quote's full stop into a comma before the dash, so the target counted one sentence fewer and the segment was
+  flagged as an omission. Now the sentence counter treats a closing quote mark followed by a comma or nothing and a dash
+  attribution (`», —`, `» —`) as a sentence boundary when the source closes that quote with `.`/`!`/`?`, per the target's
+  dialogue rules in the language file. Test: an invented three-sentence English dialogue and its Ukrainian in that
+  convention count equal; a real dropped sentence still fails. → `:pipeline`, language files
+- [ ] 15j.J10 The glossary keeps no junk and no broken targets: the Oct 16 glossary held a common noun read as a person
+  (`Government`, `Detonation`, `Egyptian`, the word `name` — 75 segments waited on its gender), honorific abbreviations
+  (`mr`, `mrs`, `ms`), capitalised fragments (`Place`, `Houses`, `Eastern`, `Victorian`, `Direction`, `Naming`, `Duchess`),
+  17 entries with no target, a target with a Russian letter (`Son → Сын`), a declined target (`Baghdad → Багдада`) and a
+  short name rendered as a word (`Nat → Нет`). Now: a candidate that is a dictionary-form common noun of the source
+  language (the language file's stop and common-word lists, and a lower-case share in the book above the existing bar) or
+  an honorific is never a CHARACTER; a title (`Prime Minister`, `Duchess`) is a TITLE entry with no gender; a suggested
+  target is refused when it holds a letter the target language does not use (15j.J5's alphabet) or ends in a case form the
+  language file marks as oblique for that term's type, and asked once more; an entry still without a target after the pass
+  is listed for the person, not kept silently. Gate: the e4b names suite keeps every gold name and its junk count falls.
+  → `:pipeline`, language files
+- [ ] 15j.J11 Max costs what it earns: the Oct 16 Max run spent about 4.2 of its 8.9 hours reading prompts (prefill 41–60 %
+  per call kind, nothing cached), reviewed about once per segment, revised neighbours after the run and then re-read every
+  paragraph again in the export's consistency pass (2 h 45 min more), and a blind grading found it no more accurate than
+  the owner's earlier translation of the same book. Now: (1) every call kind sends its fixed blocks (system prompt, style
+  sheet, language rules) first and unchanged so the provider's prompt cache can reuse them — this is 15h.C5's reorder,
+  measured by `cached` and `prefill` in the run summary on e4b; (2) the export pass at Max skips paragraphs the in-run
+  backward revision already checked unchanged, and skips navigation and front matter; (3) a measured comparison of Balanced
+  against Max on one owner book (time, blind WRONG count) is recorded so the dial's description says what Max buys.
+  → `:pipeline`, `:llm`, docs
+- [ ] 15j.J12 The logs keep the whole run: the ordinary log holds about the last 8 hours of a long run at DEBUG and the
+  evidence log about 3 hours, so the start of a 9-hour run (names pass, brief, first chapters) and most flagged segments'
+  evidence were gone when the owner asked for the analysis. Now INFO lifecycle lines and the run summary also go to a small
+  run log that is never rolled during a run (one file per run, kept for the last 10 runs), and the evidence log keeps every
+  flagged segment of the current run (cap raised to hold a whole book's flags, oldest run dropped first). Test: a simulated
+  long run keeps its first INFO line; the evidence for an early flagged segment survives. → `:app`, `:util`
+- [ ] 15j.J13 Answered calls show their answer: the live call panel showed "No translation for this segment" for consistency
+  calls that answered `unchanged` on navigation and front-matter segments. Now the panel shows the segment's current target
+  for a call whose reply keeps it, and the consistency pass does not send navigation or front-matter segments at all (J11).
+  Test: TestFX — an `unchanged` consistency call shows the stored target. → `:ui`, `:pipeline`
 - [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
   command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified
   genders, segments waiting on a gender and Russian letters, plus a blind Opus grading of the paragraphs that changed; the
