@@ -1840,13 +1840,13 @@ fixtures use invented brands and names only (book-neutral).
   unconfirmed target "suggested" exactly as the draft prompt does. Test: a chunk of two pairs naming different invented
   characters, reviewed in two calls, sends each call only its own names; a suggested target is labelled suggested. Gate:
   the e4b realrun's reviewer cases lose nothing. → `:pipeline`
-- [ ] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed under the pipeline's eval
-  resources) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
+- [ ] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed as `eval/mini/book.json` under the pipeline's eval
+  resources; `MiniBook` generates the EPUB 3 from it at each run, so no binary is committed and the book cannot drift from its source) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
   inflected multi-word term, a brand under each name policy, a material and a drug, names with and without pronoun
   evidence, a multi-word place, a target trap for a Russian letter, an injected instruction, a long paragraph, a ти/Ви mix,
   a first-person narrator's gender, a footnote aside, a code that must stay Latin — each with its expected outcome in a
   side file; a `mini` suite (`scripts/eval-matrix.sh --suite mini`) translates it through the real job (names pass,
-  translation, consistency pass) and scores each expectation, in under 5 minutes on e4b. Test: the suite runs on the pseudo
+  translation, consistency pass) and scores each expectation (`eval/mini/expectations.json`; `--names` picks the name policy the brand expectations are read under), in under 5 minutes on e4b (to be measured by the orchestrator before this box is ticked). Test: the suite runs on the pseudo
   model in `check` (the expectations it can meet) and is env-gated for real models. → `:pipeline` tests, scripts
 - [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
   command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified

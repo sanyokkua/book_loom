@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref] [--batch-sizes 4,8,12,16]
+#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini] [--batch-sizes 4,8,12,16]
 # --relevant-pairs on|off (15i.T8) switches the batch prompt's "Related earlier pairs" block for the run (unset keeps the
 # default, on); run --suite sequence once with each and compare the two reports (their provenance records relevant_pairs=).
 # --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
@@ -58,6 +58,12 @@
 # call and scores the gender votes the reading keeps (reports end in -coref.json): one row per model with the windows
 # read right, the wrong votes, the abstentions and the wrong-vote rate (the gate is at most 5 %, else that model's votes
 # only break ties).
+# --suite mini (15j.J15) runs the invented 28-block EPUB (eval/mini/book.json, one block per defect seen so far) through the
+# names pass, the translation job and the export's consistency pass, and scores each expectation of eval/mini/expectations.json
+# (reports end in -mini-<policy>.json): one row per model with the expectations met, the segments flagged, the calls and the
+# seconds, then the defects that missed. About 3-5 minutes on e4b. --names transliterate|translate|keep_original (default
+# transliterate, BOOKLOOM_EVAL_NAMES) is the brief's name policy and decides what the three brand expectations demand;
+# BOOKLOOM_EVAL_DIAL and BOOKLOOM_EVAL_WINDOW pass through.
 # --batch-format (15i.X1, an experiment) chooses how a batch is sent and answered: json = numbered items and a JSON reply (the
 # default), markers = one passage marked ⟦s1⟧ … with a plain-text reply and no schema, dual = the passage as context beside
 # the numbered items with a JSON reply. It reaches the code as BOOKLOOM_EVAL_BATCH_FORMAT and each report's provenance names it.
@@ -74,6 +80,7 @@ RULES=language
 LANGS=""
 SUITE=""
 BATCH_SIZES=""
+NAMES_POLICY=transliterate
 NARRATOR=unset
 NARRATOR_GENDER=male
 RELEVANT_PAIRS=""
@@ -96,6 +103,7 @@ while [ $# -gt 0 ]; do
     --suite) SUITE=$2; shift 2 ;;
     --batch-sizes) BATCH_SIZES=$2; shift 2 ;;
     --narrator) NARRATOR=$2; shift 2 ;;
+    --names) NAMES_POLICY=$2; shift 2 ;;
     --narrator-gender) NARRATOR_GENDER=$2; shift 2 ;;
     --relevant-pairs) RELEVANT_PAIRS=$2; shift 2 ;;
     --batch-format)
@@ -129,7 +137,7 @@ run_one() {
   log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT ./gradlew :pipeline:promptEval >"$log" 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT ./gradlew :pipeline:promptEval >"$log" 2>&1 &
   local pid=$!
   # The watchdog holds its own sleep, so ending it must end the sleep too: an orphaned sleep keeps the script's stdout
   # pipe open until the timeout runs out when the output is piped.
@@ -215,6 +223,18 @@ if sys.argv[2] == "names":
             print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
     print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
     sys.exit(0)
+if sys.argv[2] == "mini":
+    runs = sorted((r for r in reports if r.get("suite") == "mini"), key=lambda r: (r.get("model", ""), r.get("names", "")))
+    print("%-30s %-14s %-8s %7s %6s %5s %6s %6s %6s %s" % ("model", "names", "dial", "met", "segs", "flag", "calls", "sec", "job", "misses"))
+    for r in runs:
+        miss = [x["id"] for x in r.get("results", []) if not x["passed"]]
+        print("%-30s %-14s %-8s %3d/%-3d %6d %5d %6d %6.0f %6s %s" % (r.get("model", "?")[-30:], r.get("names", "?"), r.get("dial", "?"), r.get("passed", 0), r.get("expectations", 0), r.get("segments", 0), r.get("flagged", 0), r.get("calls", 0), r.get("seconds", 0), r.get("end", "?"), " ".join(miss)))
+    print()
+    print("%-30s %-14s %s" % ("model", "names", "per defect: met/total"))
+    for r in runs:
+        print("%-30s %-14s %s" % (r.get("model", "?")[-30:], r.get("names", "?"), " ".join("%s=%d/%d" % (d, c["passed"], c["total"]) for d, c in r.get("byDefect", {}).items())))
+    print("(met: expectations of the book met / asked at this name policy; misses: the ids not met, their finding is in the report's txt; a brand expectation depends on BOOKLOOM_EVAL_NAMES)")
+    sys.exit(0)
 if sys.argv[2] == "coref":
     print("%-36s %7s %6s %6s %8s %9s" % ("model", "windows", "right", "wrong", "abstain", "wrongVote"))
     for r in (r for r in reports if r.get("suite") == "coref"):
@@ -277,7 +297,7 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

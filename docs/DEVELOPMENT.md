@@ -1339,6 +1339,33 @@ renderings one source word got. Each book's JSON also carries a `diagnostics` ob
 the numbers: each wrong gender with its origin, the wrong types, the lost names, each cluster's renderings, the junk kept, the
 recurring terms per gold decision, the other lexicon terms and the whole final glossary.
 
+<a id="mini-suite"></a>**The mini suite: one small invented book that holds every defect seen so far (15j.J15).** `eval/mini/book.json` is a
+28-block invented book (a first-person male narrator, a harbour town, no line from any real book) with one block per defect the owner's
+runs showed: Ukrainian dialogue punctuation, an inflected title and an inflected multi-word term, a brand, a material and a drug, a
+woman and a man whose pronouns prove their gender and a name with none, a multi-word place and a place whose first letter a model
+mis-transliterates, a word that tempts a Russian letter, an injected instruction, a long paragraph, a ти/Ви mix, a footnote aside and a
+code that must stay Latin. `MiniBook` writes it as an EPUB 3 for each run (nothing binary is committed) and `eval/mini/expectations.json`
+says what each block must come to: a check of one segment or of a group (`NO_LATIN_EXCEPT`, `NO_RUSSIAN_LETTERS`, `MATCHES`, `ABSENT`,
+`NOT_FLAGGED`, `NO_FINDING` by the finding's `raisedBy` name, `NARRATOR_MALE`, `MIN_RATIO`, `ADDRESS_SAME`), the two checks every block
+must pass, and what the glossary holds after the names pass (type, gender and whether it is settled, locked, target in Cyrillic, target
+words, junk absent). Each expectation carries the defect it guards. `MiniRunner` runs it as the app runs a whole book: the autonomous
+names pass (`NamesPass`), the batched translation job, then the export's consistency pass, over one imported project; `MiniScorer`
+scores the result with production checks (`GenderChecks`) and plain patterns.
+
+```bash
+scripts/eval-matrix.sh --suite mini --models "ollama:gemma4:e4b-mlx"                       # Transliterate, the default
+scripts/eval-matrix.sh --suite mini --models "ollama:gemma4:e4b-mlx" --names keep_original # the brand expectations flip
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_SUITE=mini ./gradlew :pipeline:promptEval   # one model, by hand
+```
+
+The book has 28 segments; a run covers the names pass, the translation and one consistency pass at Balanced. Its runtime on e4b is measured by the orchestrator, not stated here. `--names` (env
+`BOOKLOOM_EVAL_NAMES`) is the brief's name policy: under Transliterate and Translate a brand must come out in Cyrillic and unlocked, under Keep
+original it must keep its Latin spelling and be locked; the material and the drug are translated under every policy. The report is
+`build/reports/promptEval/<model>-mini-<POLICY>.{txt,json}` and the history; the `.txt` lists each expectation not met with what was found,
+and the matrix prints the expectations met, the segments flagged, the calls and seconds, the missed ids and the met/total per defect.
+It measures and asserts no floor. In `check`, `MiniEvalOfflineTest` runs the whole flow on the pseudo model (which upper-cases its source,
+so only the expectations an echo can meet are met), and `MiniBookTest` holds the book to its expectation file.
+
 The names gold extends the gold file above with these keys (the older code ignores them): `characters[].cluster` (the id shared by
 every written form of one person, such as "Dax" and "Dax Orlo"; absent for a name of its own), `junk[]` (terms a scan must not leave
 in the glossary: a heading, a nationality, a distress call, half of a brand), `keep[]` (real names besides the characters that must

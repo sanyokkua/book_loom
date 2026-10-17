@@ -16,15 +16,18 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.LexiconReading;
+import ua.bookloom.pipeline.glossary.NamesPassImpl;
 import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
@@ -88,6 +91,31 @@ public final class SequenceJobs {
         return TranslationJobTestSupport.brief(source, target, dial).withNarrator(narrator);
     }
 
+    /** As {@link #brief(String, String, QualityDial, Narrator)} under the given name policy. */
+    public static BookBrief brief(
+            final String source,
+            final String target,
+            final QualityDial dial,
+            final Narrator narrator,
+            final NamePolicy names) {
+        final BookBrief base = brief(source, target, dial, narrator);
+        return new BookBrief(
+                base.sourceLanguage(),
+                base.targetLanguage(),
+                base.genre(),
+                base.register(),
+                base.voiceEra(),
+                base.audience(),
+                names,
+                base.foreignPassages(),
+                base.footnotes(),
+                base.units(),
+                base.balance(),
+                base.alsoTranslate(),
+                base.dial(),
+                base.narrator());
+    }
+
     /** Imports {@code book} under {@code brief}. */
     public static Prepared importBook(final Path book, final BookBrief brief) {
         return new Prepared(TranslationJobTestSupport.project(book, brief));
@@ -136,6 +164,28 @@ public final class SequenceJobs {
                         scans),
                 new LexiconServiceImpl(
                         stores.lexicon(), stores.glossary(), stores.projects(), stores.openProjects(), scans));
+    }
+
+    /** The autonomous names pass ("Prepare names automatically") over the prepared book's own stores. */
+    public static NamesPass namesPass(final Prepared prepared) {
+        final PromptTemplates templates = new PromptTemplates();
+        final ObjectMapper mapper = new ObjectMapper();
+        final RunStores stores = prepared.stores();
+        final SuggestTargets suggest = new SuggestTargets(templates, mapper);
+        final TermReview review = new TermReview(templates, mapper, stores.glossary(), suggest);
+        return new NamesPassImpl(
+                stores.glossary(),
+                stores.lexicon(),
+                stores.segments(),
+                prepared.project.deferrals(),
+                stores.projects(),
+                stores.openProjects(),
+                new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                templates,
+                mapper,
+                suggest,
+                new LexiconReading(templates, mapper, new TermChoice(templates, mapper)),
+                Clock.systemUTC());
     }
 
     /**
