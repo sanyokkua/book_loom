@@ -74,6 +74,24 @@ per segment.
 
 The book format work (open, mask, reassemble) is not touched. Providers stay local; no paid API is assumed.
 
+## Moved here from complete-translation-workflow
+
+Items the closing of `complete-translation-workflow` (2026-10-17) did not do, because they belong to this redesign. The
+follow-up change is named **`redesign-translation-pipeline`**; each item names the task it came from (in that change's
+`additional-work.md`).
+
+- **The batch format (15i.X1).** json stays the default; the `markers` and `dual` arms stay behind
+  `BOOKLOOM_BATCH_FORMAT` until this change decides and removes the losers. On e4b markers met the speed rule (4.11 →
+  3.60 s per segment, 1.60 → 1.32 s on a 300-segment run) but were 17 % slower on 26b; the 60-segment WRONG grading was
+  never run.
+- **A gated reviewer (15h.F1).** Reviewing only segments with a soft finding, confidence under 1, a gendered character or
+  dialogue was never measured; Stage B's "one repair, then marked for the proofread" replaces the per-chunk reviewer it
+  would have gated.
+- **Whole-book speed (15e.15).** "The 26b whole book in at most 5 h" and a window cap above 16k; this change's measures
+  (prompt reading under 25 % of call time, Max at most 2× Balanced) own them.
+- **What review costs at Max (15d.6).** The reviewer writes about 3.3–4.0k completion tokens per fixture book against
+  about 0.8k for the old judge; the dial's meaning ("how many windows are re-read") is redefined here.
+
 ## Next step
 
 Turn this into an OpenSpec change (proposal, delta specs, tasks) after the owner's review; group 15j's fixes ship first
