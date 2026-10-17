@@ -182,9 +182,12 @@ rules:
     - R1 - Decompose a dense FR into several atomic EARS requirements rather than transcribing it. One
       requirement states one testable obligation. Several requirements may share the same `FR-*` citation,
       and that shared citation is what keeps coverage checkable across the split.
-    - "R2 - Every requirement ends with a `**Source:**` block before its scenarios: the spec file and
-      anchor it comes from, and an `In plain words:` sentence saying what the requirement means and why
-      it matters. The pointer locates; the gloss explains. A Source block that is only ids is incomplete."
+    - "R2 - Every requirement ends with ONE line, `**Source**: <spec file#anchor or task id>. In plain words:
+      <what the requirement means and why it matters>`, before its scenarios. The pointer locates; the gloss
+      explains. A Source line that is only ids is incomplete. It is one unwrapped line written `**Source**:`
+      (colon outside the bold) because OpenSpec reads such a line as metadata, not as requirement text, so
+      the requirement's own statement stays within the validator's 500-character limit; a wrapped or
+      `**Source:**` block counts against that limit."
     - R3 - Scenarios use concrete values, never abstractions. Not "invalid input" but the actual string;
       not "an error" but `ErrorCode.validation`; not "a large file" but a stated size. If you cannot name a
       concrete value, the requirement is still too vague.

@@ -7,10 +7,7 @@
 WHEN a chat request that carries a context size goes to an OpenAI-compatible provider, the system SHALL leave the
 context size out of the body entirely, under any field name.
 
-**Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#effective-context`.
-In plain words: the OpenAI chat format has no context-size field; LM Studio and similar servers set it when the model is
-loaded, and a strict server may reject a field it does not know. Only Ollama is told the size.
+**Source**: FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#effective-context`. In plain words: the OpenAI chat format has no context-size field; LM Studio and similar servers set it when the model is loaded, and a strict server may reject a field it does not know. Only Ollama is told the size.
 
 #### Scenario: LM Studio receives no context field
 
@@ -21,21 +18,9 @@ loaded, and a strict server may reject a field it does not know. Only Ollama is 
 
 ### Requirement: Cap a chat call's output where the request states a cap
 
-WHEN a chat request carries an output cap, the system SHALL send it to an Ollama-native provider as `options.num_predict`
-and to an OpenAI-compatible provider as `max_tokens`. WHEN the request carries none, the system SHALL send neither field.
-WHILE an Ollama-native reply streams, IF it has sent more than `2 × cap + 64` lines (with no cap, `2 × context size +
-64`), THEN the system SHALL stop reading, close the connection, and return what arrived as a reply that finished for
-length, instead of waiting for the call's timeout.
+WHEN a chat request carries an output cap, the system SHALL send it to an Ollama-native provider as `options.num_predict` and to an OpenAI-compatible provider as `max_tokens`; WHEN it carries none, the system SHALL send neither field. WHILE an Ollama-native reply streams past the runaway bound, the system SHALL stop reading, close the connection and return what arrived as a reply that finished for length, instead of waiting for the call's timeout.
 
-**Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`,
-`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
-In plain words: a model that loops on one sentence would otherwise write until the server's own limit, and the run would
-wait for all of it. The request states where the server must stop, each dialect names that field its own way, and a call
-that states no cap is left as unbounded as before. Ollama streams about one token per line, so a reply far past twice
-its cap is a model looping on a server that did not stop it; the client cuts it there rather than let one call hold the
-run for three minutes. Which calls carry a cap, and how large it is, is
-the `translation-pipeline` capability's rule.
+**Source**: FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `openspec/changes/complete-translation-workflow/proposal.md#what-changes`. In plain words: a model that loops on one sentence would otherwise write until the server's own limit, and the run would wait for all of it. The request states where the server must stop, each dialect names that field its own way, and a call that states no cap is left as unbounded as before. Ollama streams about one token per line, so a reply far past twice its cap is a model looping on a server that did not stop it; the client cuts it there rather than let one call hold the run for three minutes. Which calls carry a cap, and how large it is, is the `translation-pipeline` capability's rule.
 
 #### Scenario: LM Studio receives max_tokens
 
@@ -59,27 +44,16 @@ the `translation-pipeline` capability's rule.
 - **WHEN** a request with the context size `8192` and an output cap of `80` is sent to the provider `ollama`
 - **THEN** the body posted to `/api/chat` has `"options":{"num_ctx":8192,"num_predict":80}`
 
+#### Scenario: The runaway bound follows the cap, else the context size
+
+- **WHEN** an Ollama-native reply has sent more than `2 × cap + 64` lines, or, with no cap, more than `2 × context size + 64` lines
+- **THEN** the system stops reading and returns what arrived as a reply that finished for length
+
 ### Requirement: Choose a chat call's timeout by its kind and its expected output
 
-The system SHALL wait for each attempt of a judge call for 90 seconds, and for each attempt of a glossary prescan or a
-rolling-summary call for 120 seconds, whatever the provider's request timeout. For every other chat call it SHALL wait
-for the longer of the provider's request timeout and 0.5 seconds per output token the request expects, the latter at
-most 600 seconds — `max(request timeout, min(600 s, expected output tokens × 0.5 s))`. WHEN such a request states no
-expected output, the system SHALL wait for the provider's request timeout. The request timeout is the provider
-description's own — 180 seconds by default, or the command line's `--timeout` — and the system SHALL never wait less
-than it for a call that is neither a judge, a prescan nor a summary call.
+The system SHALL wait for each attempt of a judge call for 90 seconds, and for each attempt of a glossary prescan or a rolling-summary call for 120 seconds, whatever the provider's request timeout. For every other chat call it SHALL wait for the longer of the provider's request timeout and 0.5 seconds per expected output token, at most 600 seconds, and, WHEN the request states no expected output, for the provider's request timeout.
 
-**Source:** FR-INFER-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#provider-config`,
-`docs/next_features.md` §15; the stalled re-judge of the Bartimaeus hand test (tasks 15b).
-In plain words: a page from a slow model can need far longer than the three minutes a line needs, so a call that expects
-a long answer waits longer, up to ten minutes. The configured timeout is the floor for those calls: a short call never
-gets less than the default or the person's `--timeout`, because the first call after Ollama reloads a model for a larger
-context, or a prompt read on a CPU, can take minutes before the first word, and cutting it off would pause the run for
-nothing. A timeout set above ten minutes is kept as set. The judge and the helper calls are different: their replies are
-short and capped, so one still running after a minute and a half (two minutes for a helper) is stuck rather than slow,
-and the flat three minutes only delayed the retry. Which calls state an expected output is the `translation-pipeline`
-capability's rule; the short verification calls state none and keep the request timeout.
+**Source**: FR-INFER-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#provider-config`, `docs/next_features.md` §15; the stalled re-judge of the Bartimaeus hand test (tasks 15b). In plain words: a page from a slow model can need far longer than the three minutes a line needs, so a call that expects a long answer waits longer, up to ten minutes. The configured timeout is the floor for those calls: a short call never gets less than the default or the person's `--timeout`, because the first call after Ollama reloads a model for a larger context, or a prompt read on a CPU, can take minutes before the first word, and cutting it off would pause the run for nothing. A timeout set above ten minutes is kept as set. The judge and the helper calls are different: their replies are short and capped, so one still running after a minute and a half (two minutes for a helper) is stuck rather than slow, and the flat three minutes only delayed the retry. Which calls state an expected output is the `translation-pipeline` capability's rule; the short verification calls state none and keep the request timeout.
 
 #### Scenario: A medium segment gets a proportional wait
 
@@ -124,22 +98,26 @@ capability's rule; the short verification calls state none and keep the request 
 - **WHEN** the provider's request timeout is 900 seconds and a draft request expects 2,000 output tokens
 - **THEN** its attempt waits up to 900 seconds
 
+#### Scenario: The wait is the longer of the request timeout and the proportional bound
+
+- **WHEN** a call that is neither a judge, a prescan nor a summary call states an expected output
+- **THEN** it waits `max(request timeout, min(600 s, expected output tokens × 0.5 s))`
+
+#### Scenario: The request timeout is the provider's own
+
+- **WHEN** the provider description sets no timeout and the command line gives no `--timeout`
+- **THEN** the request timeout is 180 seconds, and a call that is neither a judge, a prescan nor a summary call never waits less than it
+
 ### Requirement: Read an Ollama-native reply as a stream that must keep arriving
 
-The system SHALL ask an Ollama-native provider for a streamed reply and SHALL read it line by line, each line one JSON
-object. It SHALL join the `message.content` of every line in order and take the finish reason and the token counts from
-the last line, so the caller receives the same single response a whole reply gives. WHEN no line arrives for the idle
-gap — 60 seconds, or the provider's request timeout when that is shorter — before the first line or between two lines,
-or the whole reply runs past the attempt's timeout, the system SHALL end the attempt with `ErrorCode.timeout` and close
-the connection. WHEN a line carries an `error` field, the attempt SHALL end with `ErrorCode.upstream`. An interrupted
-caller SHALL end the attempt at once with `ErrorCode.cancelled`. `ChatModel.chat` stays synchronous: no caller sees a
-partial reply, and the OpenAI-compatible client keeps asking for a whole reply.
+The system SHALL ask an Ollama-native provider for a streamed reply and read it line by line, joining the `message.content` of every line and taking the finish reason and the token counts from the last line. WHEN no line arrives for the idle gap, or the whole reply runs past the attempt's timeout, the system SHALL end the attempt with `ErrorCode.timeout`; a line carrying an `error` field SHALL end it with `ErrorCode.upstream`, and an interrupted caller at once with `ErrorCode.cancelled`.
 
-**Source:** FR-INFER-04a, FR-INFER-05 (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`; tasks 15b.
-In plain words: the JDK's request timeout stops counting once the reply begins, so a model that stalls halfway — or a
-runner that stays busy after a cut connection — held the call for the whole three minutes. A stream shows whether the
-model is still writing, so a stall is caught within a minute while a long, steady reply is never cut short.
+**Source**: FR-INFER-04a, FR-INFER-05 (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`; tasks 15b. In plain words: the JDK's request timeout stops counting once the reply begins, so a model that stalls halfway — or a runner that stays busy after a cut connection — held the call for the whole three minutes. A stream shows whether the model is still writing, so a stall is caught within a minute while a long, steady reply is never cut short.
+
+#### Scenario: Lines are joined in order
+
+- **WHEN** an Ollama-native reply streams several lines
+- **THEN** the `message.content` of the lines is joined in the order the lines arrived
 
 #### Scenario: A streamed reply reads as one
 
@@ -158,18 +136,27 @@ model is still writing, so a stall is caught within a minute while a long, stead
 - **WHEN** the calling thread is interrupted while the stream sends nothing
 - **THEN** the attempt ends at once with `ErrorCode.cancelled`
 
+#### Scenario: The idle gap is 60 seconds or a shorter request timeout
+
+- **WHEN** no line arrives before the first line or between two lines
+- **THEN** the idle gap is 60 seconds, or the provider's request timeout when that is shorter
+- **AND** a timed-out attempt closes the connection
+
+#### Scenario: An error line ends the attempt
+
+- **WHEN** a streamed line carries an `error` field
+- **THEN** the attempt ends with `ErrorCode.upstream`
+
+#### Scenario: The caller still receives one whole reply
+
+- **WHEN** a caller asks `ChatModel.chat` for an Ollama-native or an OpenAI-compatible reply
+- **THEN** the call is synchronous and no caller sees a partial reply, and the OpenAI-compatible client keeps asking for a whole reply
+
 ### Requirement: Retry a timed-out call once, and never as the same request
 
-WHEN an attempt of a chat call ends with `ErrorCode.timeout`, the system SHALL send at most one more attempt for that
-call, and that attempt SHALL carry a sampling seed and, when the request states an output cap, three quarters of that cap.
-A call SHALL make at most 2 attempts that time out; the other retryable codes keep the 3-attempt budget and the
-`Retry-After` wait of the provider retry requirement. Each attempt SHALL be logged with its call kind and attempt
-number, and a call that gives up SHALL be logged as a warning with its code.
+WHEN an attempt of a chat call ends with `ErrorCode.timeout`, the system SHALL send at most one more attempt for that call, carrying a sampling seed and, when the request states an output cap, three quarters of that cap. A call SHALL make at most 2 attempts that time out; the other retryable codes keep the 3-attempt budget and the `Retry-After` wait of the provider retry requirement.
 
-**Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`; tasks 15b.
-In plain words: a reply that ran until the timeout most likely looped, and the identical request at a low temperature
-loops the same way, so three identical retries cost nine minutes for nothing. One varied retry gives the model a
-different path and a shorter leash, and then the failure goes to the run, which decides what to do with it.
+**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`; tasks 15b. In plain words: a reply that ran until the timeout most likely looped, and the identical request at a low temperature loops the same way, so three identical retries cost nine minutes for nothing. One varied retry gives the model a different path and a shorter leash, and then the failure goes to the run, which decides what to do with it.
 
 #### Scenario: A timeout then an answer
 
@@ -181,20 +168,16 @@ different path and a shorter leash, and then the failure goes to the run, which 
 - **WHEN** every attempt times out
 - **THEN** the result is `ErrorCode.timeout` and the server received exactly 2 requests
 
+#### Scenario: Attempts are logged
+
+- **WHEN** an attempt is made, or a call gives up
+- **THEN** each attempt is logged with its call kind and attempt number, and a call that gives up is logged as a warning with its code
+
 ### Requirement: Detect a model's context length, optionally and without failing
 
-WHEN asked for a model's context length, the system SHALL ask an Ollama-native provider with `POST /api/show` and read
-the `<architecture>.context_length` entry of `model_info`, and an OpenAI-compatible provider with
-`GET /api/v0/models/<model id>` at the server's root (LM Studio's native endpoint, outside the configured `/v1` base),
-preferring `loaded_context_length` over `max_context_length`. The answer SHALL be `ContextLength` with the figure, or
-`ContextLength.unknown()` when the server is not reachable, answers a non-200 status, answers a body without the field or
-is not that server at all; no such outcome is an error. Only an unregistered provider id is a `validation` error, and no
-request is sent for it. Detection is a user-triggered provider communication, never a background call, and a chat call
-never triggers it.
+WHEN asked for a model's context length, the system SHALL ask an Ollama-native provider with `POST /api/show` and an OpenAI-compatible provider with `GET /api/v0/models/<model id>` at the server's root, and answer `ContextLength` with the figure, or `ContextLength.unknown()` when the server cannot say; no such outcome is an error. Detection SHALL be user-triggered provider communication, never a background call, and a chat call never triggers it.
 
-**Source:** `tasks.md` 15d.5; `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (optional, safe, degrades
-without an error). In plain words: the window a model really has decides how much of the prompt it may be given, but a
-server that cannot say must never stop a run; it just gets the default 8k.
+**Source**: `additional-work.md` 15d.5; `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (optional, safe, degrades without an error). In plain words: the window a model really has decides how much of the prompt it may be given, but a server that cannot say must never stop a run; it just gets the default 8k.
 
 #### Scenario: Ollama reports its context length
 
@@ -211,27 +194,26 @@ server that cannot say must never stop a run; it just gets the default 8k.
 - **WHEN** the server answers 404 or 500, answers a body without the field, or refuses the connection
 - **THEN** the length is unknown and the result is not an error
 
-## MODIFIED Requirements
+#### Scenario: Where the figure is read
+
+- **WHEN** the figure is read from Ollama or from LM Studio
+- **THEN** it is the `<architecture>.context_length` entry of `model_info` for Ollama, and for LM Studio the native endpoint outside the configured `/v1` base, preferring `loaded_context_length` over `max_context_length`
+
+#### Scenario: A server that is not that server at all
+
+- **WHEN** the server is not reachable, answers a non-200 status, answers a body without the field or is not that server at all
+- **THEN** the length is `ContextLength.unknown()` and no error is returned
+
+#### Scenario: An unregistered provider id is refused without a request
+
+- **WHEN** the provider id is not registered
+- **THEN** the result is a `validation` error and no request is sent
 
 ### Requirement: Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning
 
-WHEN a chat request that disables reasoning goes to an OpenAI-compatible provider, the system SHALL send
-`"reasoning_effort":"none"`; a request that leaves reasoning to the provider SHALL carry no `reasoning_effort` key. IF
-the server answers `400` naming the control as unsupported, THEN the request SHALL be sent once more without it, as for
-the Ollama-native `think` (the `inference` capability).
+WHEN a chat request that disables reasoning goes to an OpenAI-compatible provider, the system SHALL send `"reasoning_effort":"none"`. IF a capped reply has blank `content`, non-blank reasoning and the finish `length`, THEN the system SHALL send the same request once more with its cap raised to four times, bounded by the request's context size when one is given; a second such reply SHALL answer `ErrorCode.emptyCompletion`.
 
-IF a capped reply has blank `content`, non-blank `reasoning` or `reasoning_content` and the finish `length`, THEN the
-system SHALL send the same request once more with its cap raised to four times, bounded by the request's context size
-when one is given, before reading the reply; a second such reply SHALL answer `ErrorCode.emptyCompletion`. Neither
-reasoning field SHALL ever reach the reply text.
-
-**Source:** FR-INFER-02, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`.
-In plain words: through `/v1`, a thinking model (gemma4 on Ollama or LM Studio) writes every output token into
-`message.reasoning` unless told not to, so a call capped at 128–190 tokens came back with no translation and 114 of 163
-segments of the earth-gravity EPUB were flagged as empty. Both servers honour `reasoning_effort: none` (checked against
-Ollama 0.x `/v1` and LM Studio with `google/gemma-4-e4b`); a server that does not still gets one chance with room to
-reason and answer.
+**Source**: FR-INFER-02, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`. In plain words: through `/v1`, a thinking model (gemma4 on Ollama or LM Studio) writes every output token into `message.reasoning` unless told not to, so a call capped at 128–190 tokens came back with no translation and 114 of 163 segments of the earth-gravity EPUB were flagged as empty. Both servers honour `reasoning_effort: none` (checked against Ollama 0.x `/v1` and LM Studio with `google/gemma-4-e4b`); a server that does not still gets one chance with room to reason and answer.
 
 #### Scenario: LM Studio is told to skip reasoning
 
@@ -243,6 +225,64 @@ reason and answer.
 - **WHEN** the reply to a call capped at `128` with the context size `8192` is
   `{"choices":[{"message":{"content":"","reasoning_content":"Thinking Process: …"},"finish_reason":"length"}]}`
 - **THEN** the same request is sent once more with `"max_tokens":512`, and its reply is the call's answer
+
+#### Scenario: A server that rejects the control gets the request once more without it
+
+- **WHEN** the server answers `400` naming the `reasoning_effort` control as unsupported
+- **THEN** the request is sent once more without it, as for the Ollama-native `think` (the `inference` capability)
+
+#### Scenario: A request that leaves reasoning to the provider carries no control
+
+- **WHEN** a request that does not disable reasoning goes to an OpenAI-compatible provider
+- **THEN** the body has no `reasoning_effort` key
+
+#### Scenario: Either reasoning field marks a reply that spent its cap
+
+- **WHEN** a capped reply has blank `content`, the finish `length`, and non-blank `reasoning` or `reasoning_content`
+- **THEN** the same request is sent once more with its cap raised
+
+#### Scenario: A second reply that only reasoned is empty
+
+- **WHEN** the repeated request is also answered with blank `content`, reasoning and the finish `length`
+- **THEN** the call answers `ErrorCode.emptyCompletion`
+
+#### Scenario: Reasoning never reaches the reply text
+
+- **WHEN** a reply carries `reasoning` or `reasoning_content`
+- **THEN** neither field is part of the reply text
+
+## MODIFIED Requirements
+
+### Requirement: Shape an OpenAI-compatible chat request
+
+WHEN a chat request goes to an OpenAI-compatible provider, the system SHALL `POST` to `<baseUrl>/chat/completions` a
+JSON body with:
+
+- `model`: the bound model id;
+- `messages`: the conversation as `{"role","content"}` objects with the roles `system`, `user` and `assistant`;
+- `stream`: `false`;
+- `temperature`: the request's temperature, only when one is given;
+- `response_format`: `{"type":"json_schema","json_schema":{"name":<name>,"strict":true,"schema":<schema>}}`, only
+  when a response format is given.
+
+A field whose value is absent SHALL be left out of the body, never sent as `null`. The system SHALL send a reasoning
+parameter only as "Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning"
+states, and no other.
+
+**Source**: FR-INFER-01, FR-INFER-03, FR-INFER-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, ADR-0013. In plain words: one client covers LM Studio, llama.cpp, vLLM and any other OpenAI-shaped server. The only reasoning parameter ever sent is `reasoning_effort: "none"`, on a request that disables reasoning: sending `reasoning_effort: "low"` to a model that does not reason has been observed to turn thinking on and leave the answer empty, so the parameter is never guessed, and the reply is stripped as well.
+
+#### Scenario: A request with structured output and no reasoning parameter
+
+- **WHEN** a request with temperature `0.2` and the response format named `draft` is sent to the provider `lmstudio`
+  for the model `google/gemma-4-e4b`
+- **THEN** the body posted to `/v1/chat/completions` has `"model":"google/gemma-4-e4b"`, `"stream":false`,
+  `"temperature":0.2` and `"response_format":{"type":"json_schema","json_schema":{"name":"draft","strict":true,...}}`
+- **AND** it has no `reasoning_effort` key
+
+#### Scenario: Absent settings are left out
+
+- **WHEN** a request with no temperature and no response format is sent
+- **THEN** the body has neither a `temperature` nor a `response_format` key
 
 ### Requirement: Shape an Ollama-native chat request
 
@@ -262,12 +302,7 @@ with:
 A field whose value is absent SHALL be left out of the body, never sent as `null`. The system SHALL NOT send
 `keep_alive` or any other option, and SHALL NOT read `<baseUrl>/api/show`.
 
-**Source:** FR-INFER-01, FR-INFER-02, FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`,
-`#effective-context`, `docs/next_features.md` §11.
-In plain words: Ollama is spoken to natively because its OpenAI-shaped shim drops native controls and hides Ollama's
-own error bodies. Its default context is small and silently truncates a long prompt, so a run now tells it the context
-size it needs; absent fields remain omitted because a strict server rejects an explicit `null`.
+**Source**: FR-INFER-01, FR-INFER-02, FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`, `#effective-context`, `docs/next_features.md` §11. In plain words: Ollama is spoken to natively because its OpenAI-shaped shim drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so a run now tells it the context size it needs; absent fields remain omitted because a strict server rejects an explicit `null`.
 
 #### Scenario: A full request
 
@@ -312,13 +347,7 @@ write one WARN line naming both ids.
 
 IF the reply text is blank before any sanitising, THEN the system SHALL answer `ErrorCode.emptyCompletion`.
 
-**Source:** FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#empty-response-ordering`, ADR-0013.
-In plain words: both dialects collapse to text, a finish reason and, when the server says so, how many tokens it read
-and wrote and how long it took — which is where the Translating screen's tokens per second comes from. Ollama measures
-its own generation time; an OpenAI-compatible server does not, so the whole call's duration stands in for it. A reply
-carrying no usage field carries no usage at all (the `inference` capability). A separate reasoning channel is ignored. LM Studio answers a request for an unknown model id with whichever model is
-loaded, so the mismatch is logged rather than trusted silently.
+**Source**: FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#empty-response-ordering`, ADR-0013. In plain words: both dialects collapse to text, a finish reason and, when the server says so, how many tokens it read and wrote and how long it took — which is where the Translating screen's tokens per second comes from. Ollama measures its own generation time; an OpenAI-compatible server does not, so the whole call's duration stands in for it. A reply carrying no usage field carries no usage at all (the `inference` capability). A separate reasoning channel is ignored. LM Studio answers a request for an unknown model id with whichever model is loaded, so the mismatch is logged rather than trusted silently.
 
 #### Scenario: An Ollama reply that stopped normally
 
@@ -392,15 +421,7 @@ asked for is not run and not reported.
 
 IF the provider id is unknown, THEN the system SHALL answer `ErrorCode.validation` and run no stage.
 
-**Source:** FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-FR-MODEL-05, FR-MODEL-06 (`#fr-model`), FR-INFER-08 (`#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`,
-`docs/specification/01_Product/07_SETTINGS.md#providers-tab`.
-In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the
-model name, or generation itself. The Providers tab has one button per question and shows what each measured — "reachable
-· 41 ms", "3 models", "inference · 1.2 s" — and each button asks its own question and every cheaper one before it, so a
-models check never reports a list from a server it has not first reached, and each stage reports its time and, for the
-listing, its count.
+**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), FR-MODEL-05, FR-MODEL-06 (`#fr-model`), FR-INFER-08 (`#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`, `docs/specification/01_Product/07_SETTINGS.md#providers-tab`. In plain words: three short questions, each with its own answer, so a person sees which one failed: the server, the model name, or generation itself. The Providers tab has one button per question and shows what each measured — "reachable · 41 ms", "3 models", "inference · 1.2 s" — and each button asks its own question and every cheaper one before it, so a models check never reports a list from a server it has not first reached, and each stage reports its time and, for the listing, its count.
 
 #### Scenario: All three stages pass
 

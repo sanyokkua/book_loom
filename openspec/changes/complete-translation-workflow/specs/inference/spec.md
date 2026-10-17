@@ -7,16 +7,7 @@
 The system SHALL send each model call at the temperature of its kind: draft `0.2`, and the draft a review retry makes
 `0.1` when the person asks for a lower temperature; reviewer `0` with a fixed seed; directed fix `0.2`; pre-scan, summary and revision `0.2`. Every call SHALL carry reasoning control set to disabled.
 
-**Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`,
-`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`.
-In plain words: every call stays low and near-deterministic for fidelity; a scorer is the steadiest, so the same draft
-gets the same verdict, and a repair is as steady as a draft. A
-person who retries a segment and asks for a lower temperature gets a steadier draft of it. Reasoning is turned off
-because it only costs time and can leave the answer empty; how each server is told so is the `llm-provider`
-capability's rule.
+**Source**: FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`. In plain words: every call stays low and near-deterministic for fidelity; a scorer is the steadiest, so the same draft gets the same verdict, and a repair is as steady as a draft. A person who retries a segment and asks for a lower temperature gets a steadier draft of it. Reasoning is turned off because it only costs time and can leave the answer empty; how each server is told so is the `llm-provider` capability's rule.
 
 #### Scenario: A reviewer call is steadier than a draft
 
@@ -40,11 +31,7 @@ WHEN a provider reports how many tokens a call used, the system SHALL return wit
 completion tokens and its generation time, each only when reported. WHEN the provider reports none of them, the reply
 SHALL carry no usage at all, never zeros.
 
-**Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
-In plain words: the Translating screen's tokens-per-second figure comes from what the server says it generated. A
-missing figure must look missing, so the engine knows to estimate it instead of showing a speed of zero. Which field of
-each server's reply holds which figure is the `llm-provider` capability's rule.
+**Source**: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`. In plain words: the Translating screen's tokens-per-second figure comes from what the server says it generated. A missing figure must look missing, so the engine knows to estimate it instead of showing a speed of zero. Which field of each server's reply holds which figure is the `llm-provider` capability's rule.
 
 #### Scenario: Usage is carried when reported
 
@@ -76,18 +63,7 @@ The pseudo model SHALL report a normal finish and no token usage. The conversion
 machine's default locale. Every `⟦gN⟧` token and every character or entity reference SHALL be kept exactly as written.
 The pseudo model SHALL never return an error and SHALL never open a network connection.
 
-**Source:** FR-INFER-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`,
-`docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`,
-`#rolling-summary-update`.
-In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals,
-with its formatting intact. Now that a run also reviews, scans and summarises, the pseudo model answers each of
-those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works
-without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the
-quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every
-review mode, and a short one such as `Yes, sir.` is accepted (the `quality-gates` capability). It reports no usage, which
-exercises the path that estimates throughput.
+**Source**: FR-INFER-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`, `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`, `#rolling-summary-update`. In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals, with its formatting intact. Now that a run also reviews, scans and summarises, the pseudo model answers each of those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every review mode, and a short one such as `Yes, sir.` is accepted (the `quality-gates` capability). It reports no usage, which exercises the path that estimates throughput.
 
 #### Scenario: Letters are capitalised, tokens and references are kept
 
@@ -135,15 +111,7 @@ output tokens the server may generate. A request built from messages alone SHALL
 sends; WHEN present, the model SHALL pass it on as its provider's dialect takes it. The pseudo model SHALL ignore the
 temperature, the context size, the expected output and the output cap.
 
-**Source:** FR-INFER-03, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#response-handling`, `#effective-context`,
-`#service-owned-retry`, ADR-0033.
-In plain words: the engine decides how creative the model may be, what shape it wants back, how much context it needs
-and how long an answer it expects and where the server must stop, without knowing which server answers. A setting that is not given is simply not sent,
-so an old call site keeps working and a strict server never sees a `null`. Where each dialect puts the context size —
-Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout and the cap
-becomes a server field are the `llm-provider` capability's rules. The expected output only sets how long to wait; the
-cap is what stops a runaway reply.
+**Source**: FR-INFER-03, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#response-handling`, `#effective-context`, `#service-owned-retry`, ADR-0033. In plain words: the engine decides how creative the model may be, what shape it wants back, how much context it needs and how long an answer it expects and where the server must stop, without knowing which server answers. A setting that is not given is simply not sent, so an old call site keeps working and a strict server never sees a `null`. Where each dialect puts the context size — Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout and the cap becomes a server field are the `llm-provider` capability's rules. The expected output only sets how long to wait; the cap is what stops a runaway reply.
 
 #### Scenario: A request built from messages alone carries no settings
 
@@ -176,13 +144,7 @@ attempt budget. Unrelated validation errors SHALL not trigger either downgrade.
 A request sent again without a rejected control or format SHALL keep everything else it carried: its messages, its
 temperature, the other control or format, its context size and the output it expects.
 
-**Source:** FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013.
-In plain words: a server that does not understand a control or a structured-output schema says so, and the request is
-sent once more without it rather than failing; that second request must still be the same request in every other way,
-or dropping the schema would quietly shrink Ollama's context back to its small default and cut the call's timeout.
-Which calls disable reasoning is "Send each call kind at its own temperature with reasoning off"; how each server is told
-is the `llm-provider` capability's rule.
+**Source**: FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#response-handling`, `#effective-context`, ADR-0013. In plain words: a server that does not understand a control or a structured-output schema says so, and the request is sent once more without it rather than failing; that second request must still be the same request in every other way, or dropping the schema would quietly shrink Ollama's context back to its small default and cut the call's timeout. Which calls disable reasoning is "Send each call kind at its own temperature with reasoning off"; how each server is told is the `llm-provider` capability's rule.
 
 #### Scenario: An unsupported native thinking control is omitted once
 

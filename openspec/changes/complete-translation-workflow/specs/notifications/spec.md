@@ -4,24 +4,13 @@
 
 ### Requirement: Route an import refusal by the inspection's verdict
 
-WHEN the inspection of a chosen file answers that it is DRM-protected, the import screen SHALL show a banner of error
-severity titled `This book is DRM-protected.` that names the encryption scheme when it is known, and SHALL offer to
-choose another file.
+WHEN the inspection answers DRM-protected, the import screen SHALL show an error banner titled
+`This book is DRM-protected.` naming the encryption scheme when known; WHEN it answers unsupported, one titled
+`Couldn't read this file.` naming the file type detected; each SHALL offer to choose another file.
 
-WHEN the inspection answers that the file is unsupported, the import screen SHALL show a banner of error severity
-titled `Couldn't read this file.` that names the file type detected, and SHALL offer to choose another file.
+The application SHALL choose the banner from the inspection's verdict, never from an error code or message text.
 
-The application SHALL choose between those two surfaces from the inspection's verdict, never from an error code or from
-the text of a message, and SHALL open no dialog and raise no transient message for either.
-
-**Source:** ADR-0039, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`,
-`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-code-categories`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, FR-IMPORT-05
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`).
-In plain words: a DRM-protected book and a PDF both fail to open with the same error code, but they need different
-explanations — one the person cannot fix and one where they picked the wrong file. The inspection names which it is as
-plain data, so the screen routes on that rather than on a localized message that could change under it. The banner is
-already on screen, so a dialog or a toast would only repeat it.
+**Source**: ADR-0039, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`, `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-code-categories`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, FR-IMPORT-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`). In plain words: a DRM-protected book and a PDF both fail to open with the same error code, but they need different explanations — one the person cannot fix and one where they picked the wrong file. The inspection names which it is as plain data, so the screen routes on that rather than on a localized message that could change under it. The banner is already on screen, so a dialog or a toast would only repeat it.
 
 #### Scenario: A DRM-protected book names its scheme
 
@@ -66,17 +55,7 @@ build:
 An export being written raises no transient message of its own: `export`'s completion dialog is the one surface
 that reports it (see `export`, "Report the finished file").
 
-**Source:** FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8,
-FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#toasts`.
-In plain words: four severities, four status roles, one mapping — so a person learns the colour once and it
-means the same thing on a chip, a banner and a message. A blocking failure always gets a dialog as well, because a
-transient message is gone in seconds and somebody looking away has then lost the only report there was. The occasions
-are enumerated because a surface with no stated caller gets built, tested for its colour, and then either never raised
-at all or raised from wherever each screen felt like. This change adds the ones its new actions need — starting a run,
-accepting in review, and a retry that has to wait — each drawn in the reference rendering; a written export gets a
-dialog instead of a toast, because export writes once and a dialog is what stays on screen long enough to read the
-count it reports.
+**Source**: FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), FR-A11Y-8, FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#toasts`. In plain words: four severities, four status roles, one mapping — so a person learns the colour once and it means the same thing on a chip, a banner and a message. A blocking failure always gets a dialog as well, because a transient message is gone in seconds and somebody looking away has then lost the only report there was. The occasions are enumerated because a surface with no stated caller gets built, tested for its colour, and then either never raised at all or raised from wherever each screen felt like. This change adds the ones its new actions need — starting a run, accepting in review, and a retry that has to wait — each drawn in the reference rendering; a written export gets a dialog instead of a toast, because export writes once and a dialog is what stays on screen long enough to read the count it reports.
 
 #### Scenario: Each severity takes its status role
 
@@ -149,14 +128,7 @@ any paused run.
 The provider-error state SHALL NOT open a dialog, because the run's own screen is already showing the failure and
 a dialog over it would say the same thing twice.
 
-**Source:** FR-NOTIF-02 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c
-(`#typed-error-surface`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
-`docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0036,
-`docs/next_features.md#15-left-open-by-the-hand-test`.
-In plain words: the commonest failure by far is that the model server stopped — it was closed, it crashed, it unloaded
-the model. That is not a reason to lose the run or to flag half a chapter: the run waits, says what went wrong and where,
-and offers the three things a person might want — try again now that the server is back, go and fix the settings, or
-leave it for later. Retry now redoes the one segment that was interrupted, so nothing is skipped.
+**Source**: FR-NOTIF-02 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#banners`), FR-NOTIF-04c (`#typed-error-surface`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0036, `docs/next_features.md#15-left-open-by-the-hand-test`. In plain words: the commonest failure by far is that the model server stopped — it was closed, it crashed, it unloaded the model. That is not a reason to lose the run or to flag half a chapter: the run waits, says what went wrong and where, and offers the three things a person might want — try again now that the server is back, go and fix the settings, or leave it for later. Retry now redoes the one segment that was interrupted, so nothing is skipped.
 
 #### Scenario: An unreachable server names itself
 
@@ -239,20 +211,7 @@ The application SHALL choose a failure's surface from the typed code it carries,
 - `discoveryFailed`, reached only from a model listing, SHALL be shown only where that list was asked for, as the
   note that no list was obtained, and SHALL NOT pause or end a run or open a dialog.
 
-**Source:** FR-NOTIF-04a, FR-NOTIF-04c
-(`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `#error-code-categories`,
-`docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0022, ADR-0036.
-In plain words: without this table, "something returned an error" matches every state a screen has, and a damaged
-export plausibly renders as "the model server is unreachable", which sends the person to fix a machine that was never
-broken. A provider failure now pauses the run instead of ending it, because the server coming back is the usual
-outcome; an empty reply or a prompt too long for the model is one segment's problem, so it flags that segment and the
-run carries on; a provider's `400` refusal arrives as `validation` but behaves like any provider failure, so it is told
-apart from a screen's own refusal by where it came from; and a retry pressed while a run is translating is a "not
-now", not a failure worth a dialog. `busy` and `discoveryFailed` are named twice on purpose: once for the one place
-each is actually seen, and once to say what happens if a run's model call ever answered with either anyway — treated
-as `internal`, so a code meant to mean "try later" or "no list today" can never be read as "the run has failed" and
-vice versa. Naming all fifteen codes is what makes the routing a thing a test can check rather than a thing each
-screen decides for itself.
+**Source**: FR-NOTIF-04a, FR-NOTIF-04c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`), `#error-code-categories`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`, ADR-0022, ADR-0036. In plain words: without this table, "something returned an error" matches every state a screen has, and a damaged export plausibly renders as "the model server is unreachable", which sends the person to fix a machine that was never broken. A provider failure now pauses the run instead of ending it, because the server coming back is the usual outcome; an empty reply or a prompt too long for the model is one segment's problem, so it flags that segment and the run carries on; a provider's `400` refusal arrives as `validation` but behaves like any provider failure, so it is told apart from a screen's own refusal by where it came from; and a retry pressed while a run is translating is a "not now", not a failure worth a dialog. `busy` and `discoveryFailed` are named twice on purpose: once for the one place each is actually seen, and once to say what happens if a run's model call ever answered with either anyway — treated as `internal`, so a code meant to mean "try later" or "no list today" can never be read as "the run has failed" and vice versa. Naming all fifteen codes is what makes the routing a thing a test can check rather than a thing each screen decides for itself.
 
 #### Scenario: A provider failure takes the provider-error state
 

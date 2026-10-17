@@ -23,6 +23,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 1. EPUB language metadata stays in the source language
 
+**Fixed by `complete-translation-workflow` (task 4.6):** the target language is written to `dc:language`, the OPF `dcterms:language` meta, `<package xml:lang>` and `xml:lang`/`lang` on each content document.
+
 - **Owner:** `:document`, `EpubWriter` (the language replacement at `EpubWriter.java:108-123`).
 - **Specification:** `openspec/specs/document-round-trip/spec.md`, "Set the target language by replacing the first
   dc:language". No clause, ADR or backlog item mentions `xml:lang` or `dcterms:language`.
@@ -44,6 +46,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 2. The OPF is re-serialized with a new declaration and CRLF line ends
 
+**Fixed by `complete-translation-workflow` (task 5.1):** the package document is written with LF line ends and a declaration only when the source had one, in the encoding it named.
+
 - **Owner:** `:document`, `EpubWriter.java:216-225` (`new XMLOutputter(Format.getRawFormat())`).
 - **Specification:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config` (the declared
   encoding is echoed on output); DD-43 (canonical-equal output).
@@ -60,6 +64,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 3. XHTML attribute values lose a `&#10;` reference
 
+**Fixed by `complete-translation-workflow` (task 5.2):** a line feed, carriage return or tab inside an attribute value stays a character reference, and the canonical comparator normalizes attribute values.
+
 - **Owner:** `:document`, the EPUB spine writer (jsoup with `syntax(xml)`, `XhtmlParser.java:73-80`,
   `EpubWriter.java:195-214`).
 - **Specification:** DD-43 and `.claude/rules/document-roundtrip.md` (only text nodes change).
@@ -75,6 +81,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 4. An XHTML XML declaration becomes a comment
 
+**Fixed by `complete-translation-workflow` (task 5.3):** a content document's prolog is kept verbatim and written ahead of the serialized document.
+
 - **Owner:** `:document`, the EPUB spine writer (jsoup). Already noted in
   `docs/implementation_plan/notes-corpus-verification.md`; recorded here for its encoding consequence.
 - **What is wrong:** `<?xml version='1.0' encoding='utf-8'?>` is written as `<!--?xml version='1.0' encoding='utf-8'?-->`,
@@ -89,6 +97,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 5. An FB2 byte-order mark is not written back
 
+**Fixed by `complete-translation-workflow` (task 5.4):** the mark is recorded and written back exactly when the source had one.
+
 - **Owner:** `:document`, `Fb2Reader.java:175-181` (skips the mark), `ParsedFb2.java:26-33` (no field for it),
   `Fb2Writer.java:182-186`.
 - **Specification:** `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom` says the presence of a
@@ -99,6 +109,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 - **Suggested fix:** record the mark in `ParsedFb2` and write it back, as `TxtReader` and `TxtWriter` already do.
 
 ### 6. A TXT export refused by its charset says "This file could not be opened"
+
+**Fixed by `complete-translation-workflow` (task 5.5, owner decision D-4):** a TXT or Markdown export the source encoding cannot hold is written whole as UTF-8 (ADR-0029), so the refusal and its misleading message no longer arise.
 
 - **Owner:** `:document`. `TxtWriter.java:104-117` throws `CorruptContainerException`, and `DocumentService.write`
   maps it to the message meant for a book that cannot be opened (`DocumentService.java:127-130, 327-336`).
@@ -115,6 +127,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 7. ADR-0029 and the backlog describe EPUB's unencodable characters wrongly
 
+**Fixed by `complete-translation-workflow` (task 5.6):** a test pins that jsoup writes a numeric character reference, and the backlog's D1 paragraph is corrected.
+
 - **Owner:** documentation.
 - **What is wrong:** ADR-0029 and the D1 detail in `CHANGE_BACKLOG.md` say the EPUB writer writes `?` for a character
   the output charset cannot encode. jsoup's escaper writes a numeric character reference instead
@@ -124,6 +138,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 ## Already planned
 
 ### 8. The table of contents, page titles, metadata and alt text stay untranslated
+
+**Fixed by `complete-translation-workflow` (group 6, ADR-0041):** every book has an auxiliary unit holding navigation link texts, NCX labels, image alt text, FB2 title-info and annotation, and Markdown frontmatter values, translated behind the brief's "Also translate" switches and written back.
 
 - **Planned in:** DD-47 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md` (translate metadata, ToC and nav
   labels, and image alt text, behind the "also translate" toggles) and the backlog change
@@ -138,6 +154,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
   reader's table-of-contents panel shows the source language beside translated chapter headings.
 
 ### 9. A reordered placeholder pair slips through the gate
+
+**Closed by `complete-translation-workflow` (task 5.8, ADR-0040 amended):** the pair rules were adopted. Each pair's open and close tokens are recorded at mask time and the gate checks order and nesting after the multiset, so one segment is flagged instead of the whole export failing at its end; the contradiction between `.claude/rules/document-roundtrip.md` and the specification was resolved in the specification ("a pair keeps its order"). Backlog D7 and D8 are closed.
 
 - **Planned in:** backlog D7 and D8, owned by change 12 (`add-chunking-and-context-assembly`).
 - **What is wrong:** the gate compares only the multiset of `⟦gN⟧` tokens (`PlaceholderGate.java:29-34`), so a model
@@ -157,6 +175,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 10. Markdown bare URLs are translated, and unencodable characters become `?`
 
+**Fixed by `complete-translation-workflow` (tasks 5.7 and 5.5):** a bare web address in Markdown prose is masked as an atomic token, and an unencodable character no longer becomes `?` because the file is written as UTF-8 (D-4).
+
 - **Planned in:** change 15 ("bare URLs in running prose") and backlog D1.
 - **What is wrong:** only the tables extension is loaded (`MarkdownReader.java:51-56`), so a bare URL in running text
   is translatable text that a model may rewrite; the pseudo model upper-cases it. The Markdown writer encodes with
@@ -167,6 +187,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 ## Deferred from `add-real-llm-clients`
 
 ### 11. Real-client follow-ups
+
+**Partly answered by `complete-translation-workflow`:** `num_ctx` and `/api/show` context sizing are now sent and read (task 3.1, `llm.capability`), and backlog D7 is closed. The structured-output downgrade and repair call, the interactive gate (`tryRun`), Bearer authentication and `keep_alive` stay open.
 
 - **Structured output and repair:** a structured-output rejection is still a normal mapped failure. The silent
   downgrade to a plain request, JSON extraction from surrounding prose and one bounded JSON repair call remain future
@@ -197,6 +219,8 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 13. Command line: Ctrl+C, folder mode, and Guice outside the `translate` task
 
+**Partly fixed by `complete-translation-workflow` (task 11.3):** Ctrl+C cancels the job and waits up to 5 s so no hidden temporary file is left (a stopped run still exports what it translated), and the Guice bytecode option is set for `:app:run` and the packaged launcher. Folder mode stays a non-goal.
+
 - **Ctrl+C:** there is no shutdown hook, so a killed run can leave the hidden `.<destination file name>` beside the
   output. The next export to the same destination overwrites it. A hook that cancels the job and waits briefly would
   let the export delete it.
@@ -221,7 +245,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
   the source does not open, `run()` returns the error and the job ends Failed without a `Finished` event. The
   translating screen no longer depends on events for the end: `TranslationRunner` reads the `Result<JobReport>` that
   `run()` returns and publishes the terminal state from it. The engine itself still sends no event in that case.
-- **Export verification counts segments only** (`BookExporter.validateCountAndPublish`). A restored segment whose
+- **Export verification counts segments only — fixed by `complete-translation-workflow` (task 11.5).** (`BookExporter.validateCountAndPublish`; `SegmentVerification` now compares each re-opened segment's markup.) A restored segment whose
   structure changed but whose count did not still passes; comparing each re-opened segment's placeholders would not.
 - **FB2 inline `<code>` text is translatable**, masked as a pair, while EPUB's inline `<code>` is one atomic
   placeholder. This follows the shipped document-round-trip specification but not the wording of DD-49, which protects
@@ -234,13 +258,13 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 The hand test of the translation workspace (2026-09-26, English and Ukrainian interface, both themes, Ollama and LM
 Studio, all four formats) and the independent review of the change left these open. None blocked the change.
 
-- **A provider request can hang until Stop.** One Ollama `qwen2.5:1.5b` request, for segment `earth-gravity.md:138`
+- **A provider request can hang until Stop — answered by `complete-translation-workflow`.** Every model call is now bounded by a per-kind timeout, the Ollama reply is read as a stream with an idle gap, and a timed-out call is retried once with a new seed and a lower cap (group 15b). One Ollama `qwen2.5:1.5b` request, for segment `earth-gravity.md:138`
   (sent 18:19:06), got no reply for 131 s until the person pressed Stop; Stop aborted it in 7 ms. That is one request
   in about 1,750. The client is non-streaming, so the log cannot tell a hung server from a very long generation.
   Before the client was pinned to HTTP/1.1 (task 9.6) there were five three-minute timeouts. Owner: `:llm`
   (`HttpExchange`, `ProviderConfig.DEFAULT_REQUEST_TIMEOUT`) and `:pipeline`. Suggested fix: stream the reply or send
   a heartbeat, use a shorter or adaptive timeout, and capture Ollama's own server log when reproducing.
-- **The source language cannot be corrected.** `Croatian_Lesson_Police.epub` declares `en-US` but its text is
+- **The source language cannot be corrected — fixed by `complete-translation-workflow`.** The Book Brief's source language is editable and searchable, can be Auto (ADR-0042), and the language evidence comes from the metadata (ADR-0037). `Croatian_Lesson_Police.epub` declares `en-US` but its text is
   Ukrainian. The Book Brief's source-language selector is read-only, and the draft prompt tells the model to keep a
   passage in any other language verbatim, so some Ukrainian stays in the Polish output (the heading "4. Логіка
   хорватської граматики", the cell "Проживання"). Reproduce: import that book, choose Polish, run to the end, open the
@@ -253,9 +277,8 @@ Studio, all four formats) and the independent review of the change left these op
   when the path has spaces (`"/select,C:\a b\x.epub"`), which Explorer usually accepts, and Explorer returns exit code
   1 even on success, which nothing checks. Linux only opens the folder. The macOS command was seen selecting the
   file. Needs a hand check on Windows. Owner: `:ui` (`OsCommand`, `ProcessCommandLauncher`).
-- **`JobControl.exitModelCall` clears every interrupt on the job thread**, not only one the control sent. An outside
+- **`JobControl.exitModelCall` clears every interrupt on the job thread — fixed by `complete-translation-workflow` (task 10.4):** it clears only the interrupt the control itself sent., not only one the control sent. An outside
   interrupt that lands during a model call which still returns a good answer would be swallowed. Nothing in
   production sends one today (no `cancel(true)` or `shutdownNow` on the job thread). Owner: `:pipeline`. Suggested
   fix: remember that `interruptModelCall` fired and clear the interrupt only then.
-- **Already tracked elsewhere:** a provider HTTP error such as LM Studio's `400` "Model unloaded" is flagged as a
-  `validation` segment and counted as processed, when it should end the run (`CHANGE_BACKLOG.md`, decision debt D19).
+- **Closed by `complete-translation-workflow`:** a provider HTTP error such as LM Studio's `400` "Model unloaded" now pauses the run and redoes the call on resume (`CHANGE_BACKLOG.md`, decision debt D19).

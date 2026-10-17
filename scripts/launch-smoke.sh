@@ -4,7 +4,9 @@
 #
 # "The artifact exists" is not the claim being tested. `:app:run` launches from the classpath, where a missing
 # `requires` or an unopened package cannot fail — so a green `:app:run` says nothing about whether the JPMS graph
-# resolves. Only the packaged image, running on the module path against its own jlinked runtime, can answer that.
+# resolves. The packaged image runs its jars on the classpath too (jpackage --input/--main-jar), so it cannot answer
+# that either (task 16.2 found it); what it does prove is the production-stage injector, every screen's FXML and every
+# resource the image ships.
 #
 # Headless via `-Dglass.platform=Headless`, JavaFX 26's BUILT-IN headless platform (ADR-0019). The frozen
 # 03_PACKAGING_JPACKAGE.md#verification names `-Dglass.platform=Monocle -Dmonocle.platform=Headless`, but
@@ -13,8 +15,9 @@
 # on every platform.
 #
 # `-J-Dbookloom.smoke.resolveAll=true` makes the image build its injector in Guice's production stage and, once the
-# window is shown, load every screen and resolve every port (ResolveAll in :app). That is the only check that sees a
-# missing `requires`, `exports` or `opens`, or a resource left out of the image: the three startup lines alone are
+# window is shown, load every screen and resolve every port (ResolveAll in :app). That is the check that sees a
+# binding that fails only in the production stage, a screen that cannot load, or a resource left out of the image
+# (not a missing `requires`, `exports` or `opens`: the image runs on the classpath): the three startup lines alone are
 # printed by a development-stage injector that loads a screen's FXML only when it is first shown.
 #
 # "Did not actually launch" is a HARD FAILURE, never a skip (02_QUALITY_GATES.md#jpackage-smoke).

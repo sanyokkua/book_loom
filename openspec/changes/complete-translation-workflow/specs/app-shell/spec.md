@@ -4,31 +4,9 @@
 
 ### Requirement: Show the run in the title bar while one exists
 
-WHILE no run exists in the session, the title bar SHALL show only the product name, the theme control and the about
-action.
+WHILE no run exists in the session, the title bar SHALL show only the product name, the theme control and the about action. WHILE a run exists, it SHALL show, ahead of the theme control and in this order: the book's file name, a state text, the elapsed time and, when the run reports one, the time left, and one run control, which SHALL do exactly what the translating screen's Pause or Resume does.
 
-WHILE a run exists in the session, the title bar SHALL show, ahead of the theme control and in this order: the file name
-of the book being translated; a state text — "Progress 78%" while running, "Paused at 78%" while paused, "Stopped at
-78%" while stopped, "Provider error" while paused on an error (every pause on error, a provider's `validation`
-refusal included), "Waiting for the provider · next try in 4:12" while such a pause waits to resume by itself,
-"Finished" once every segment is decided, "Failed at 78%" once the run has ended in failure; the
-elapsed time and, when the run reports one, the time left; and one run control.
-
-The run control SHALL be Pause while the run is running, and Resume while it is paused, stopped or paused by a provider
-failure; the title bar SHALL never show Pause and Resume together, and SHALL show no run control once the run has
-finished or failed. WHILE the run is pausing or stopping, the run control SHALL be shown unavailable.
-
-WHEN the title bar's run control is used, the application SHALL do exactly what the translating screen's Pause or Resume
-does, and both SHALL then show the same state.
-
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, the reference rendering's title-bar
-Resume button.
-In plain words: a book takes hours, and a person spends most of that time on other screens — settings, the brief, the
-export screen. The title bar keeps the run in sight from anywhere and lets it be paused or resumed without going back to
-the translating screen. It is empty when there is nothing to show, so a first launch is not cluttered with a dead
-control, and the single button acts through the same path as the screen's so the two can never disagree.
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, the reference rendering's title-bar Resume button. In plain words: a book takes hours, and a person spends most of that time on other screens — settings, the brief, the export screen. The title bar keeps the run in sight from anywhere and lets it be paused or resumed without going back to the translating screen. It is empty when there is nothing to show, so a first launch is not cluttered with a dead control, and the single button acts through the same path as the screen's so the two can never disagree.
 
 #### Scenario: No run, no run status
 
@@ -73,19 +51,26 @@ control, and the single button acts through the same path as the screen's so the
 - **WHEN** Pause has been used and the request in flight has not yet been abandoned
 - **THEN** the title bar's run control is shown unavailable
 
+#### Scenario: Each run state has its own text
+
+- **WHEN** a run is running, paused, stopped, paused on an error, waiting to resume by itself, finished or ended in failure, at 78%
+- **THEN** the state text reads "Progress 78%", "Paused at 78%", "Stopped at 78%", "Provider error" (for every pause on error, a provider's `validation` refusal included), "Waiting for the provider · next try in 4:12", "Finished" and "Failed at 78%" respectively
+
+#### Scenario: The run control follows the state
+
+- **WHEN** the run is running, or paused, stopped or paused by a provider failure, or has finished or failed
+- **THEN** the run control is Pause, or Resume, or absent respectively, and Pause and Resume are never shown together
+
+#### Scenario: Both controls show the same state
+
+- **WHEN** the title bar's run control is used
+- **THEN** the application does what the translating screen's Pause or Resume does, and both show the same state
+
 ### Requirement: Keep the computer awake while a run is at work
 
-WHILE a run translates, pauses or stops, or waits for the provider by itself, and WHILE any other activity asks the
-model for text (a names or terms scan, review or translation, a review retry, an export, a suggestion, the inference
-test), the desktop application SHALL keep the computer from sleeping through the operating system's own mechanism, tied to the application's process: on macOS
-`caffeinate -i -m -w <pid>`, on Linux `systemd-inhibit` when it is installed; on Windows, and on a Linux without it,
-nothing, with one WARN line. It SHALL let the computer sleep again only when the last of those activities has ended, so
-one ending never releases another's hold, and at exit. A missing or failing command SHALL never fail the run. The connection chip SHALL read
-"Provider unreachable · retrying" while the run waits for the provider by itself.
+WHILE a run translates, pauses or stops, or waits for the provider by itself, and WHILE any other activity asks the model for text, the desktop application SHALL keep the computer from sleeping through the operating system's own mechanism, tied to the application's process. It SHALL let the computer sleep again only when the last of those activities has ended and at exit, and a missing or failing command SHALL never fail the run.
 
-**Source:** the overnight plan, step 11 (owner intent: a run left all night must not be frozen by an idle sleep).
-In plain words: a laptop left alone sleeps after a few minutes, and a sleeping computer translates nothing. Starting a
-local system command is not network traffic, so the offline invariant is untouched.
+**Source**: the overnight plan, step 11 (owner intent: a run left all night must not be frozen by an idle sleep). In plain words: a laptop left alone sleeps after a few minutes, and a sleeping computer translates nothing. Starting a local system command is not network traffic, so the offline invariant is untouched.
 
 #### Scenario: A run keeps the Mac awake until the person pauses it
 
@@ -107,24 +92,36 @@ local system command is not network traffic, so the offline invariant is untouch
 - **WHEN** a run starts on Windows
 - **THEN** nothing is started, one WARN line says keep-awake is not implemented on this OS, and the run goes on
 
+#### Scenario: Every activity that asks the model for text holds the computer awake
+
+- **WHEN** a names or terms scan, a review or translation, a review retry, an export, a suggestion or the inference test asks the model for text
+- **THEN** the computer is kept awake until that activity has ended
+
+#### Scenario: Linux uses systemd-inhibit when it is installed
+
+- **WHEN** a run starts on Linux
+- **THEN** `systemd-inhibit` holds the computer awake when it is installed, and otherwise nothing is started and one WARN line says so
+
+#### Scenario: Exit releases the hold
+
+- **WHEN** the application exits while a hold is in place
+- **THEN** the computer may sleep again
+
+#### Scenario: A failing command does not fail the run
+
+- **WHEN** the keep-awake command is missing or fails
+- **THEN** the run goes on
+
+#### Scenario: The connection chip says the provider is being retried
+
+- **WHEN** the run waits for the provider by itself
+- **THEN** the connection chip reads "Provider unreachable · retrying"
+
 ### Requirement: Search any fixed list by typing
 
-WHERE a choice box offers a fixed list of values — a language, a genre, or any other predefined list — the application
-SHALL narrow the entries shown to those whose displayed name contains the typed text anywhere, ignoring letter case and
-accents.
+WHERE a choice box offers a fixed list of values the application SHALL narrow the entries shown to those whose displayed name contains the typed text anywhere, ignoring letter case and accents. IF the person leaves the box without picking an entry, THEN a choice that accepts free text, as genre does, SHALL keep the typed text, and a choice that accepts only listed values, as a language does, SHALL keep the value the box held before typing began.
 
-WHERE the choice also accepts free text, as genre does, the application SHALL keep the typed text as the value when the
-person leaves the box without picking an entry.
-
-WHERE the choice accepts only listed values, as a language does, IF the person leaves the box without picking an entry,
-THEN the application SHALL keep the value the box held before typing began.
-
-**Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-UI-03
-(`#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`.
-In plain words: the language list has 34 entries and the genre list about 40, and scrolling through them is slow; typing
-three letters is not. Matching anywhere and ignoring accents means `bokmal` finds Norwegian Bokmål and `fran` finds
-French without the person guessing how a name begins. Genre is the one list that also takes something the list does not
-hold, so a typed genre is kept; a language cannot be invented, so an unfinished search leaves the previous one in place.
+**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-UI-03 (`#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`. In plain words: the language list has 34 entries and the genre list about 40, and scrolling through them is slow; typing three letters is not. Matching anywhere and ignoring accents means `bokmal` finds Norwegian Bokmål and `fran` finds French without the person guessing how a name begins. Genre is the one list that also takes something the list does not hold, so a typed genre is kept; a language cannot be invented, so an unfinished search leaves the previous one in place.
 
 #### Scenario: Typing narrows the languages
 
@@ -153,21 +150,9 @@ hold, so a typed genre is kept; a language cannot be invented, so an unfinished 
 
 ### Requirement: Close each workflow step with a Back and a forward action
 
-Each workflow screen SHALL end with a footer holding a backward action on the left and a forward action on the right:
+Each workflow screen SHALL end with a footer holding a backward action on the left and a forward action on the right, as the scenarios name them for each screen.
 
-- the import screen: Cancel, which returns the screen to its empty drop area, and "Continue to Book Brief", available
-  once a book is open — except that a refused book's footer holds only "Choose another file";
-- the book brief: Back to the import screen, and Continue to names and style;
-- names and style: Back to the book brief, and "Start translation";
-- the translating screen: Back to names and style, and Next to the export screen;
-- the export screen: Back to the translating screen, and Next shown unavailable, because export is the last step.
-
-**Source:** FR-UI-01, FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, the reference rendering's step
-actions.
-In plain words: the same two buttons in the same two places on every step make the numbered workflow feel like one path
-— back is always bottom left, onward always bottom right. Cancel on the import screen clears the file just inspected
-rather than leaving the application, because the projects screen it leads to in the reference is not built.
+**Source**: FR-UI-01, FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, the reference rendering's step actions. In plain words: the same two buttons in the same two places on every step make the numbered workflow feel like one path — back is always bottom left, onward always bottom right. Cancel on the import screen clears the file just inspected rather than leaving the application, because the projects screen it leads to in the reference is not built.
 
 #### Scenario: The brief's footer
 
@@ -190,6 +175,26 @@ rather than leaving the application, because the projects screen it leads to in 
 - **WHEN** the export screen is shown
 - **THEN** its footer holds Back, which shows the translating screen, and Next, which is unavailable
 
+#### Scenario: The import screen's footer
+
+- **WHEN** a book is open on the import screen
+- **THEN** its footer holds Cancel, which returns the screen to its empty drop area, and "Continue to Book Brief"
+
+#### Scenario: Names and style's footer
+
+- **WHEN** names and style is shown
+- **THEN** its footer holds Back to the book brief and "Start translation"
+
+#### Scenario: The translating screen's footer
+
+- **WHEN** the translating screen is shown
+- **THEN** its footer holds Back to names and style and Next to the export screen
+
+#### Scenario: The brief's footer names its targets
+
+- **WHEN** the book brief is shown
+- **THEN** its footer holds Back to the import screen and Continue to names and style
+
 ### Requirement: Show the chosen provider and model in the navigation footer
 
 The navigation column SHALL end with a footer line naming the currently selected provider's display name and the
@@ -197,15 +202,7 @@ chosen model identifier, separated by " · ", read from the current selection on
 
 WHERE no model is chosen, the footer SHALL read "No model chosen" in place of a provider and model name.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-MODEL-01
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, the reference rendering's sidebar
-footer.
-In plain words: the navigation column is visible from every screen, so putting the active provider and model there
-means a person never has to open Settings just to check what a run would actually use. Ollama and LM Studio are the
-only two providers this build offers, so the name is one of those two; the model id is whatever was chosen from the
-list or typed by hand on the providers area. Saying plainly that nothing is chosen, rather than leaving the line
-blank, is what tells a person a run cannot start yet.
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-MODEL-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, the reference rendering's sidebar footer. In plain words: the navigation column is visible from every screen, so putting the active provider and model there means a person never has to open Settings just to check what a run would actually use. Ollama and LM Studio are the only two providers this build offers, so the name is one of those two; the model id is whatever was chosen from the list or typed by hand on the providers area. Saying plainly that nothing is chosen, rather than leaving the line blank, is what tells a person a run cannot start yet.
 
 #### Scenario: The footer names the chosen provider and model
 
@@ -224,20 +221,9 @@ blank, is what tells a person a run cannot start yet.
 
 ### Requirement: Ask before an import replaces a translation that can continue
 
-WHEN a book is chosen for import while the current run is running, paused, paused on a provider error or stopped, the
-application SHALL ask whether to discard that run and import the book, or to keep the run, and SHALL change nothing
-until the person answers. WHEN the person chooses to keep the run, the application SHALL leave the run, the open book and
-the screen as they were. WHEN the person chooses to discard the run, the application SHALL discard it, import the
-book and show no run in the title bar. WHEN the current run is completed or failed, the application SHALL import the
-book without asking and show no run.
+WHEN a book is chosen for import while the current run is running, paused, paused on a provider error or stopped, the application SHALL ask whether to discard that run and import the book, or to keep the run, and SHALL change nothing until the person answers. WHEN the current run is completed or failed, the application SHALL import the book without asking and show no run.
 
-**Source:** `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
-`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
-In plain words: the application keeps one translation per session, so importing another book would throw away hours of
-work that could still be finished. It asks first, and both answers are safe: keeping the run changes nothing, discarding
-it is what the person said. A run that has already finished or failed has nothing left to continue, so it never
-gets in the way.
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `openspec/changes/complete-translation-workflow/proposal.md#what-changes`. In plain words: the application keeps one translation per session, so importing another book would throw away hours of work that could still be finished. It asks first, and both answers are safe: keeping the run changes nothing, discarding it is what the person said. A run that has already finished or failed has nothing left to continue, so it never gets in the way.
 
 #### Scenario: Keeping a paused translation
 
@@ -256,20 +242,16 @@ gets in the way.
 - **WHEN** the run over `Frankenstein.epub` is completed and `Kobzar.fb2` is chosen for import
 - **THEN** no dialog is shown, `Kobzar.fb2` is opened and the title bar shows no run
 
+#### Scenario: Keeping the run leaves the screen as it was
+
+- **WHEN** the person answers `Keep translation`
+- **THEN** the run, the open book and the screen stay as they were
+
 ### Requirement: Ask before an import resets a book's earlier translation
 
-WHEN a book is chosen for import and the project stored for that file already holds decided segments (accepted, revised
-or flagged, not pending) and the file's content is unchanged, the application SHALL ask whether to continue the earlier
-translation or to start over, and SHALL change nothing until the person answers. Continue SHALL open the book with its
-stored brief and decisions; Start over SHALL import the book afresh, which resets them; closing the question with Escape
-SHALL do neither. The count SHALL be looked up off the interface thread, and a lookup that fails SHALL open the book
-without asking. A finished run SHALL be cleared only once the person has chosen. WHEN the file was never imported, holds
-no decided segment or changed since, the application SHALL import it without asking.
+WHEN a book is chosen for import, the project stored for that file already holds decided segments (accepted, revised or flagged, not pending) and the file's content is unchanged, the application SHALL ask whether to continue the earlier translation or to start over, and SHALL change nothing until the person answers. Otherwise it SHALL import the book without asking.
 
-**Source:** `openspec/changes/complete-translation-workflow/tasks.md` 15i.T7 (owner intent: importing the same file
-again reset hours of decided work with no warning).
-In plain words: importing a file again rebuilds its segments as pending, so decisions are lost. The application says so
-first, with the number of segments, and lets the person keep them.
+**Source**: `openspec/changes/complete-translation-workflow/additional-work.md` 15i.T7 (owner intent: importing the same file again reset hours of decided work with no warning). In plain words: importing a file again rebuilds its segments as pending, so decisions are lost. The application says so first, with the number of segments, and lets the person keep them.
 
 #### Scenario: Re-importing a file with decided segments asks
 
@@ -286,20 +268,31 @@ first, with the number of segments, and lets the person keep them.
 - **WHEN** the person answers `Start over`
 - **THEN** the book is imported afresh and no segment holds a decision
 
+#### Scenario: Escape does neither
+
+- **WHEN** the question is closed with Escape
+- **THEN** the book is neither continued nor reset
+
+#### Scenario: A failed lookup opens the book without asking
+
+- **WHEN** looking up the count of decided segments fails
+- **THEN** the book is opened without a question, and the lookup runs off the interface thread
+
+#### Scenario: A finished run is cleared only after the choice
+
+- **WHEN** the question is shown while a finished run exists
+- **THEN** the finished run is cleared only once the person has chosen
+
+#### Scenario: A file never imported, without decisions, or changed since is imported without asking
+
+- **WHEN** the chosen file was never imported, holds no decided segment, or has changed since it was imported
+- **THEN** the book is imported without a question
+
 ### Requirement: Let the person find and share the diagnostic log from About
 
-The About dialog SHALL say whether the detailed diagnostic log is written in this launch and, WHEN it is not, how to
-switch it on in an installed application; SHALL say that the detailed log contains text from the book and stays on this
-computer unless the person shares it; SHALL name the log folder; and SHALL offer `Open log folder`, which opens that
-folder in the file manager, `Copy log path`, which puts its path on the clipboard, and `Save diagnostic bundle…`, which
-asks where to save and writes there, off the interface thread, one ZIP of the detailed log's files (the ordinary log
-when there is no detailed log) and a `session.json` naming the build, the machine and the session facts. The bundle
-SHALL be written only to the file the person picks and SHALL NOT be sent anywhere.
+The About dialog SHALL say whether the detailed diagnostic log is written in this launch, that the detailed log contains text from the book and stays on this computer unless the person shares it, and SHALL name the log folder. It SHALL offer `Open log folder`, `Copy log path` and `Save diagnostic bundle…`, which SHALL write only to the file the person picks and SHALL NOT send it anywhere.
 
-**Source:** NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`.
-In plain words: a person asked for "the log" should not need to know where an operating system keeps logs. About is
-the one place that says what the log holds, and it hands the log over as one file the person attaches themselves.
+**Source**: NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`. In plain words: a person asked for "the log" should not need to know where an operating system keeps logs. About is the one place that says what the log holds, and it hands the log over as one file the person attaches themselves.
 
 #### Scenario: About in an installed app without the detailed log
 
@@ -312,6 +305,113 @@ the one place that says what the log holds, and it hands the log over as one fil
 - **WHEN** the person presses `Save diagnostic bundle…` and picks `report.zip`
 - **THEN** `report.zip` holds `bookloom-trace.log`, its archives and `session.json`
 - **AND** the message `Diagnostic bundle saved: report.zip` is shown
+
+#### Scenario: The folder and path actions
+
+- **WHEN** `Open log folder` and `Copy log path` are used
+- **THEN** the folder opens in the file manager and its path is on the clipboard
+
+#### Scenario: The bundle is written off the interface thread
+
+- **WHEN** `Save diagnostic bundle…` asks where to save and the person picks a file
+- **THEN** it is written off the interface thread as one ZIP of the detailed log's files (the ordinary log when there is no detailed log) and a `session.json` naming the build, the machine and the session facts
+
+### Requirement: Move through the workflow by its five available steps
+
+WHEN a person advances from a workflow screen, the application SHALL move to the next step that is available, skipping any step whose navigation entry is inert; every available entry SHALL remain reachable from the navigation column at any time. WHEN "Start translation" is used on names and style while a start is offered, the application SHALL start a run and show the translating screen, or, IF something the run needs is missing, show it naming what is missing and start nothing.
+
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, and translation-pipeline's "Start a run and report its progress". In plain words: names and style now has a screen, so continuing from the book brief lands there, and its Start translation — where the reference draws it — starts the run and takes the person to watch it. The translating screen keeps its own start for a person who arrived by the navigation, and it is also where a start with something missing is explained. Start and Resume read as the same idea from the workflow's point of view — both put the person in front of a running translation — but they are different actions: Start is offered only when there is nothing to resume — no run yet, a run that completed while segments are still pending, or a failed run; Resume always continues something, even when what it continues was stopped and the continuation happens to be a new run underneath. That is why Resume is never one of the "controls that start a run" even on a stopped book, and why the title bar's button is never a third start control — it is the same Resume the screen offers, doing the same thing. While a run can be resumed, names and style's "Start translation" starts nothing and only takes the person to the translating screen (glossary's "Show the glossary as an editable table on Names & style"), so a second run never begins beside one that is waiting to continue. What each of the seven states the translating screen can be in shows and offers — including what Resume and the screen's own start control look like in each one — is stated by translation-pipeline's "Start a run and report its progress" (running, paused, stopped, provider error) and "Show the Translating screen's idle, completed and failed states"; this requirement only fixes which controls may start a run and what starting and resuming each mean, not what the screen draws. The last sentence about reachability says the numbering is a suggested order, not a wizard: the navigation is always live.
+
+#### Scenario: Continuing from the book brief skips the inert step
+
+- **WHEN** a person continues from the book brief, which is step two
+- **THEN** names and style, which is step three and no longer inert, is shown and its navigation entry is marked current
+- **AND** no step is skipped, because the only inert entry, projects, comes before step one
+
+#### Scenario: Start translation starts the run
+
+- **WHEN** `Frankenstein.epub` is open, the model `gemma3:12b` is chosen, and "Start translation" is used on names and
+  style
+- **THEN** a run starts and the translating screen is shown with the run running
+
+#### Scenario: The run is started from the translating screen
+
+- **WHEN** the translating screen is opened from the navigation with `Frankenstein.epub` open and `gemma3:12b` chosen,
+  and its start control is used
+- **THEN** a run starts
+- **AND** the workflow screens carry no other control that starts a run besides names and style's `Start translation`
+
+#### Scenario: Start translation with no model starts nothing
+
+- **WHEN** `Frankenstein.epub` is open, no model is chosen, and "Start translation" is used on names and style
+- **THEN** the translating screen is shown naming the missing model, and no run exists
+
+#### Scenario: Resuming a paused run continues it in place
+
+- **WHEN** the run over `Frankenstein.epub` is paused at 55% and Resume is used, from the title bar or the
+  translating screen
+- **THEN** the same run continues from chunk 41/66, and no new run begins
+
+#### Scenario: Resuming a stopped run begins a new one at the first pending segment
+
+- **WHEN** the run over `Frankenstein.epub` was stopped with `ch12 · p03` as the first pending segment, and Resume is
+  used
+- **THEN** a new run begins at `ch12 · p03`
+- **AND** every segment the earlier run had already decided stays decided
+
+#### Scenario: A screen is reachable without walking the workflow
+
+- **WHEN** a book has been opened and the settings entry is activated directly from the navigation column
+- **THEN** the settings screen is shown, without the brief having been visited
+
+#### Scenario: A start is offered when there is nothing to resume
+
+- **WHEN** the project has no run, or its last run COMPLETED with segments still pending (for example after an "Also translate" switch was turned on), or its last run FAILED
+- **THEN** a start is offered
+
+#### Scenario: No start is offered while a run can be resumed or nothing is pending
+
+- **WHEN** the project's run is running, paused, stopped or in the provider-error state, or its last run COMPLETED and left nothing pending
+- **THEN** the application offers no start
+
+#### Scenario: Start translation while a run can be resumed starts nothing
+
+- **WHEN** a run is paused and "Start translation" is used on names and style
+- **THEN** no second run begins and the translating screen is shown
+
+### Requirement: Resume a run that exists and never call it a start
+
+Resuming SHALL mean continuing a run that already exists for the book. WHILE the run is paused, or paused by a provider error, Resume SHALL continue it in place; WHILE it is stopped, Resume SHALL begin a new run at the first pending segment, keeping the segments already decided. Resume SHALL never be labelled "Start", and the title bar's control SHALL do exactly what the screen's control of the same name does.
+
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, and translation-pipeline's "Start a run and report its progress". In plain words: names and style now has a screen, so continuing from the book brief lands there, and its Start translation — where the reference draws it — starts the run and takes the person to watch it. The translating screen keeps its own start for a person who arrived by the navigation, and it is also where a start with something missing is explained. Start and Resume read as the same idea from the workflow's point of view — both put the person in front of a running translation — but they are different actions: Start is offered only when there is nothing to resume — no run yet, a run that completed while segments are still pending, or a failed run; Resume always continues something, even when what it continues was stopped and the continuation happens to be a new run underneath. That is why Resume is never one of the "controls that start a run" even on a stopped book, and why the title bar's button is never a third start control — it is the same Resume the screen offers, doing the same thing. While a run can be resumed, names and style's "Start translation" starts nothing and only takes the person to the translating screen (glossary's "Show the glossary as an editable table on Names & style"), so a second run never begins beside one that is waiting to continue. What each of the seven states the translating screen can be in shows and offers — including what Resume and the screen's own start control look like in each one — is stated by translation-pipeline's "Start a run and report its progress" (running, paused, stopped, provider error) and "Show the Translating screen's idle, completed and failed states"; this requirement only fixes which controls may start a run and what starting and resuming each mean, not what the screen draws. The last sentence about reachability says the numbering is a suggested order, not a wizard: the navigation is always live.
+
+#### Scenario: The title bar's Resume does what the screen's does
+
+- **WHEN** the run over `Frankenstein.epub` is stopped and Resume is used on the title bar
+- **THEN** a new run begins at the first pending segment, exactly as the translating screen's Resume does
+
+#### Scenario: Resume is not offered while the run is running
+
+- **WHEN** the run over `Frankenstein.epub` is running
+- **THEN** no Resume control is offered, and no control labelled "Start" is offered either
+
+#### Scenario: Resume is offered only while the run is paused, stopped or in the provider-error state
+
+- **WHEN** the run over `Frankenstein.epub` is paused, stopped or paused by a provider error
+- **THEN** Resume is offered on the translating screen and on the title bar
+
+### Requirement: Show the quality dial and review mode in the title bar
+
+WHILE a run exists, the title bar SHALL show the run's quality dial and review mode, joined by ` · `, between the
+state text and the elapsed time (`Balanced · Unattended`), in English and Ukrainian, with a hover explanation, and SHALL
+show nothing for it when the run was started with none named.
+
+**Source**: 08_UI_SCREENS_AND_STATES.md#title-bar-run-status, task 15d.13. In plain words: from any screen a person sees how hard the run works and when it will stop to ask for them.
+
+#### Scenario: A run with the Balanced dial and Unattended mode
+
+- **WHEN** a run starts with the dial Balanced and the review mode Unattended
+- **THEN** the title bar reads `Balanced · Unattended` next to `Progress 0%`
 
 ## MODIFIED Requirements
 
@@ -332,17 +432,7 @@ and a screen with a list that grows SHALL still fill the area when it is not too
 At the smallest window size a count tile SHALL keep a width of at least 120 pixels and SHALL show its number and
 its caption whole, without an ellipsis. A progress bar SHALL keep a height of 9 pixels however short the window is.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, and the reference rendering's
-`.content` (scrolls, padded), `.sidebar` (scrolls), `.stat` (`min-width: 120px`) and `.bar` (`height: 9px`) rules.
-In plain words: 960 by 640 is the size of the whole window, not of the space the screen is drawn in, and the space
-inside is smaller by the title bar and the borders, by different amounts on different systems. So the promise is
-written against a content area of 944 by 600, which is no larger than any system gives at the minimum, and it is that:
-nothing is cut off sideways, and whatever does not fit in height can be scrolled to. A window that can be dragged
-smaller than its own contents, with nothing to scroll, hides parts of
-the application for good: the hand run lost the logo, the Pause and Stop row and the progress bar, and cards
-showed only "…". The reference rendering already scrolls its sidebar and its content and gives a tile and the bar
-a fixed floor, so the application does the same, and refuses a window too small to be useful.
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, and the reference rendering's `.content` (scrolls, padded), `.sidebar` (scrolls), `.stat` (`min-width: 120px`) and `.bar` (`height: 9px`) rules. In plain words: 960 by 640 is the size of the whole window, not of the space the screen is drawn in, and the space inside is smaller by the title bar and the borders, by different amounts on different systems. So the promise is written against a content area of 944 by 600, which is no larger than any system gives at the minimum, and it is that: nothing is cut off sideways, and whatever does not fit in height can be scrolled to. A window that can be dragged smaller than its own contents, with nothing to scroll, hides parts of the application for good: the hand run lost the logo, the Pause and Stop row and the progress bar, and cards showed only "…". The reference rendering already scrolls its sidebar and its content and gives a tile and the bar a fixed floor, so the application does the same, and refuses a window too small to be useful.
 
 #### Scenario: The window cannot be shrunk below the minimum
 
@@ -396,18 +486,7 @@ translating once the run has finished; export once a book has been written.
 The navigation SHALL mark exactly one entry as the current one, and that mark SHALL follow the screen being
 shown, however the person arrived at it.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`.
-In plain words: the numbers tell a first-time user that this is a sequence with an end, not a pile of unrelated
-screens, and the done marks tell a returning one how far they got. One highlighted entry, always agreeing with what is
-on screen, is what stops the navigation from lying after a jump. There are two groups and not the reference rendering's
-three because the third group there lists the mockup's specimen sheets, which are drawings for the designer and not
-screens a person can use. The reference also numbers a separate review queue; review now lives beside the run it
-reviews, so that step is gone and export becomes step five. The structure is no step of its own either: the import
-screen shows the reading-order tree, its segments and the book's facts (15i.U3), so a person reads how the book was
-cut on the screen where they opened it. The reference rendering draws the structure as step three, which the build
-departs from on purpose (`08_UI_SCREENS_AND_STATES.md#shell-departures`).
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the numbers tell a first-time user that this is a sequence with an end, not a pile of unrelated screens, and the done marks tell a returning one how far they got. One highlighted entry, always agreeing with what is on screen, is what stops the navigation from lying after a jump. There are two groups and not the reference rendering's three because the third group there lists the mockup's specimen sheets, which are drawings for the designer and not screens a person can use. The reference also numbers a separate review queue; review now lives beside the run it reviews, so that step is gone and export becomes step five. The structure is no step of its own either: the import screen shows the reading-order tree, its segments and the book's facts (15i.U3), so a person reads how the book was cut on the screen where they opened it. The reference rendering draws the structure as step three, which the build departs from on purpose (`08_UI_SCREENS_AND_STATES.md#shell-departures`).
 
 #### Scenario: The navigation has exactly two groups
 
@@ -446,16 +525,7 @@ current, and the application SHALL NOT carry a screen, a placeholder screen or a
 
 The entry covered by this is one: projects, in the workflow group.
 
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-projects`.
-In plain words: hiding the unfinished part would make the application look smaller than it is going to be. Showing it
-greyed says "this is coming, and here is where it will live", which is the truth. "Inert" is spelled out because the
-alternative reading — build a screen that says "not ready" — produces a view file no navigation can ever reach, which is
-a file with no reader and a test with nothing to assert. Names and style now has a working screen, and the review queue
-entry no longer exists because review happens inside the translating screen, so projects is the only inert entry left.
-Only planned product screens are listed this way: the reference rendering also draws three specimen sheets under a
-heading of their own, and those are not listed at all, because a greyed entry promises a screen that is coming and none
-of them ever will (see "Match the reference rendering").
+**Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-projects`. In plain words: hiding the unfinished part would make the application look smaller than it is going to be. Showing it greyed says "this is coming, and here is where it will live", which is the truth. "Inert" is spelled out because the alternative reading — build a screen that says "not ready" — produces a view file no navigation can ever reach, which is a file with no reader and a test with nothing to assert. Names and style now has a working screen, and the review queue entry no longer exists because review happens inside the translating screen, so projects is the only inert entry left. Only planned product screens are listed this way: the reference rendering also draws three specimen sheets under a heading of their own, and those are not listed at all, because a greyed entry promises a screen that is coming and none of them ever will (see "Match the reference rendering").
 
 #### Scenario: An unavailable entry cannot be opened
 
@@ -483,13 +553,7 @@ screen SHALL be built from that control rather than from an approximation of it.
 This obligation covers a drawn control whether it is available or unavailable: an unavailable region is built
 from the same control it will be built from when it works.
 
-**Source:** FR-UI-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`,
-`docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`.
-In plain words: a segmented picker drawn as three radio buttons and a toggle switch drawn as a checkbox both
-"work", and both make the application read as a different program from the one that was designed. Building the
-unavailable regions from the real control is the cheaper half of this: a greyed toggle switch says "this feature
-is coming", and a greyed checkbox says "somebody gave up here".
+**Source**: FR-UI-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#control-mapping-summary`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#controls-mapping`. In plain words: a segmented picker drawn as three radio buttons and a toggle switch drawn as a checkbox both "work", and both make the application read as a different program from the one that was designed. Building the unavailable regions from the real control is the cheaper half of this: a greyed toggle switch says "this feature is coming", and a greyed checkbox says "somebody gave up here".
 
 #### Scenario: A quality dial is a segmented picker, not three buttons
 
@@ -546,18 +610,7 @@ SHALL be stated by a requirement that gives its reason. The deviations stated ar
 
 Exact pixel placement is NOT part of this obligation.
 
-**Source:** FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28,
-`docs/specification/mockups/README.md`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, ADR-0037
-(`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`).
-In plain words: the mockup is the argument settler for how this looks, and it is checkable — which parts are
-present, how they nest, and which role each one paints with. Where it is not checkable is the exact pixel, so
-that is deliberately excluded. Most of these deviations exist because this build tracks less state than the mockup
-assumes — no kept verification, no per-node formatting report, no Projects — or because one drawn control does the
-job of two (the title bar's run control instead of a toolbar, the brief's language field instead of an import-screen
-override); one, the folded review step, is a deliberate departure the owner approved rather than a limit of this
-build. Naming them here is what stops a conformance test and a behaviour requirement from both being right and
-disagreeing.
+**Source**: FR-UI-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), DD-28, `docs/specification/mockups/README.md`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: the mockup is the argument settler for how this looks, and it is checkable — which parts are present, how they nest, and which role each one paints with. Where it is not checkable is the exact pixel, so that is deliberately excluded. Most of these deviations exist because this build tracks less state than the mockup assumes — no kept verification, no per-node formatting report, no Projects — or because one drawn control does the job of two (the title bar's run control instead of a toolbar, the brief's language field instead of an import-screen override); one, the folded review step, is a deliberate departure the owner approved rather than a limit of this build. Naming them here is what stops a conformance test and a behaviour requirement from both being right and disagreeing.
 
 #### Scenario: A screen's roles match the reference
 
@@ -582,108 +635,10 @@ disagreeing.
 - **WHEN** a screen is rendered on a machine whose font rendering differs from the reference
 - **THEN** the screen still satisfies this requirement, provided its parts and their roles match
 
+## REMOVED Requirements
+
 ### Requirement: Move through the workflow by its available steps
 
-WHEN a person advances from a workflow screen, the application SHALL move to the next step that is available,
-skipping any step whose navigation entry is inert.
+**Reason**: The structure screen was retired by task 15i.U3 (the import screen holds the book's structure), so the scenario "Continuing from the structure screen skips the inert step" describes a screen that no longer exists, and the clause that the run is started only from the translating screen is outgrown by names and style's Start translation.
 
-WHEN "Start translation" is used on names and style while a start is offered, the application SHALL start a run and
-show the translating screen; IF something the run needs is missing, THEN the application SHALL show the translating
-screen naming what is missing and SHALL start nothing.
-
-**Starting** a run SHALL mean beginning a new run at the project's first pending segment. A start SHALL be offered only
-when the project has no run, when its last run COMPLETED and pending segments remain — for example after an "Also
-translate" switch was turned on — or when its last run FAILED. WHILE the project's run is running, paused, stopped or in
-the provider-error state, and after a COMPLETED run that left nothing pending, the application SHALL offer no start.
-The only controls that start a run SHALL be names and style's "Start translation" and the translating screen's own
-start control.
-
-**Resuming** a run SHALL mean continuing a run that already exists for the book, through the Resume control on the
-translating screen or on the title bar: WHILE that run is paused, or paused by a provider error, Resume SHALL continue
-it in place; WHILE it is stopped, Resume SHALL begin a new run at the first pending segment, keeping every segment
-already decided by the earlier run. Resume is not counted among the controls that start a run, even where it begins one
-at the first pending segment: it is offered only while the book's run is paused, stopped or in the provider-error state,
-and it is never labelled "Start". WHERE the title bar shows a run control, that control SHALL do exactly what the
-translating screen's control of the same name does, so Start and Resume never mean something different depending on
-where they are used.
-
-The application SHALL NOT require a person to pass through the workflow in order to reach a screen: every
-available entry SHALL remain reachable from the navigation column at any time.
-
-**Source:** FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, and translation-pipeline's "Start a
-run and report its progress".
-In plain words: names and style now has a screen, so continuing from the book brief lands there, and its Start
-translation — where the reference draws it — starts the run and takes the person to watch it. The translating screen
-keeps its own start for a person who arrived by the navigation, and it is also where a start with something missing is
-explained. Start and Resume read as the same idea from the workflow's point of view — both put the person in front of a
-running translation — but they are different actions: Start is offered only when there is nothing to resume — no run
-yet, a run that completed while segments are still pending, or a failed run; Resume always continues something, even
-when what it continues was stopped and the continuation happens to be a new run underneath. That is why Resume is never
-one of the "controls that start a run" even on a stopped book, and why the title bar's button is never a third start
-control — it is the same Resume the screen offers, doing the same thing. While a run can be resumed, names and style's
-"Start translation" starts nothing and only takes the person to the translating screen (glossary's "Show the glossary as
-an editable table on Names & style"), so a second run never begins beside one that is waiting to continue. What each of
-the seven states the translating screen can be in shows and offers — including what Resume and the screen's own start
-control look like in each one — is stated by translation-pipeline's "Start a run and report its progress" (running, paused, stopped, provider error) and "Show the Translating screen's idle, completed and failed states"; this
-requirement only fixes which controls may start a run and what starting and resuming each mean, not what the screen
-draws. The last sentence about reachability says the numbering is a suggested order, not a wizard: the navigation is
-always live.
-
-#### Scenario: Continuing from the book brief skips the inert step
-
-- **WHEN** a person continues from the book brief, which is step two
-- **THEN** names and style, which is step three and no longer inert, is shown and its navigation entry is marked current
-- **AND** no step is skipped, because the only inert entry, projects, comes before step one
-
-#### Scenario: Start translation starts the run
-
-- **WHEN** `Frankenstein.epub` is open, the model `gemma3:12b` is chosen, and "Start translation" is used on names and
-  style
-- **THEN** a run starts and the translating screen is shown with the run running
-
-#### Scenario: The run is started from the translating screen
-
-- **WHEN** the translating screen is opened from the navigation with `Frankenstein.epub` open and `gemma3:12b` chosen,
-  and its start control is used
-- **THEN** a run starts
-- **AND** the workflow screens carry no other control that starts a run besides names and style's `Start translation`
-
-#### Scenario: Start translation with no model starts nothing
-
-- **WHEN** `Frankenstein.epub` is open, no model is chosen, and "Start translation" is used on names and style
-- **THEN** the translating screen is shown naming the missing model, and no run exists
-
-#### Scenario: Resuming a paused run continues it in place
-
-- **WHEN** the run over `Frankenstein.epub` is paused at 55% and Resume is used, from the title bar or the
-  translating screen
-- **THEN** the same run continues from chunk 41/66, and no new run begins
-
-#### Scenario: Resuming a stopped run begins a new one at the first pending segment
-
-- **WHEN** the run over `Frankenstein.epub` was stopped with `ch12 · p03` as the first pending segment, and Resume is
-  used
-- **THEN** a new run begins at `ch12 · p03`
-- **AND** every segment the earlier run had already decided stays decided
-
-#### Scenario: A screen is reachable without walking the workflow
-
-- **WHEN** a book has been opened and the settings entry is activated directly from the navigation column
-- **THEN** the settings screen is shown, without the brief having been visited
-
-### Requirement: Show the quality dial and review mode in the title bar
-
-WHILE a run exists, the title bar SHALL show the run's quality dial and review mode, joined by ` · `, between the
-state text and the elapsed time (`Balanced · Unattended`), in English and Ukrainian, with a hover explanation, and SHALL
-show nothing for it when the run was started with none named.
-
-**Source:** 08_UI_SCREENS_AND_STATES.md#title-bar-run-status, task 15d.13.
-In plain words: from any screen a person sees how hard the run works and when it will stop to ask for them.
-
-#### Scenario: A run with the Balanced dial and Unattended mode
-
-- **WHEN** a run starts with the dial Balanced and the review mode Unattended
-- **THEN** the title bar reads `Balanced · Unattended` next to `Progress 0%`
+**Migration**: Replaced by *Move through the workflow by its five available steps*.

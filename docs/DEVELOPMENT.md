@@ -152,19 +152,32 @@ green `:app:run` therefore says nothing about the JPMS graph; the packaged image
 is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals) — the last of these is
 switched off on `:app:translate` below, but not here.
 
-**What the window can do.** Open a book of any of the four formats (EPUB, FB2, Markdown, TXT), choose a target
-language, a destination and whether to overwrite, verify a provider (the Ollama and LM Studio presets; connection,
-models, then a test inference), choose a model, then start, pause, resume, stop and start again. The dashboard shows
-progress, the four counts the engine emits and a log; after 10 s without an answer it says "Waiting for the model…
-m:ss". Pause and Stop abort the request in flight, and a stopped run is final and writes nothing. When a run
-finishes, the Export screen has a button that shows the written file in the operating system's file manager.
+**What the window can do.** The whole workflow, in five numbered steps and Settings. *Import*: open a book of any of the
+four formats (EPUB, FB2, Markdown, TXT); the card reports its format, declared language, cover and chapter count, refuses
+a DRM-protected or unsupported file, and shows the book's structure tree and its round-trip check. *Book Brief*: source
+and target language (any language the JDK can name, or Auto for the source), tone and style, the name, foreign-passage,
+footnote and unit policies, who narrates, the quality dial (Fast, Balanced, Max), the "Also translate" switches and a
+file name the model can suggest. *Names & style*: the glossary and the recurring terms, each with search, Scan, Review
+with model, Translate and CSV import and export, or one "Prepare names automatically" pass with Undo all. *Translating*:
+start, pause, resume, stop; a live panel with every model call, the activity log, the provider-error banner with Retry
+now and Skip segment, and the review panel — accept, edit, revert, skip, apply a proposal, retry with a note — inside
+the same screen. *Export*: Save to, the side files (glossary CSV, bilingual HTML, quality report), a consistency pass,
+and the export-complete dialog with a button that shows the written file in the file manager; a stopped or partial run
+can be exported, and what it did not translate stays in the source. Verify a provider on Settings (Providers: connection,
+models, then a test inference, each measured), choose a model, and start. Pause and Stop abort the request in flight.
+Only one translation exists per application run: importing a book while a run can continue asks whether to discard it.
+
+**The review mode is a launch flag**, because nothing is saved yet. `BOOKLOOM_REVIEW_MODE`, else the system property
+`bookloom.review.mode` (for `:app:run`, hand it to the launched JVM with `JAVA_TOOL_OPTIONS="-Dbookloom.review.mode=manual"`),
+takes `unattended` (also `auto`; the default — nothing pauses), `assisted` (also `semi-manual` — the run pauses on a
+flagged segment and on an error) or `manual` (pauses after every segment as well). A value that names no mode falls back
+to `unattended` and is named once in the log. The command line always runs unattended. The mode is shown on the
+Translating screen's ready card and in the session facts of the detailed log.
 
 **What it cannot do yet.** Persist anything across a restart (`:persistence` binds every repository port to an
-in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme is not remembered), detect the
-book's source language (the selector is read-only), switch language inside the app, or open the Projects, Names &
-style and Review entries, which are greyed and have no screen. The chunking, deterministic QA, judge and self-heal
-logic that exists in `:pipeline` is likewise not wired into this run yet — the job still accepts a segment once its
-markup restores.
+in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme, provider, model and brief are not
+remembered), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
+Settings tabs Models, Generation, Automation and Storage.
 
 **Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else
 shows `en`, and there is no switch in the app. To see Ukrainian without changing the OS, run
@@ -1966,8 +1979,10 @@ It launches the packaged image against a throwaway `BOOKLOOM_DATA_DIR` with `-J-
 asserts the three startup log lines from [§5](#running) and a fourth, `resolve-all passed: views=<n> ports=<m>`, appear
 in `<dataDir>/logs/bookloom.log`. The property makes the image build its injector in Guice's production stage and, once
 the window is shown, load every screen and resolve every `ua.bookloom.api` port; a `resolve-all FAILED` line names
-what failed and ends the smoke at once. It is the only check that sees a missing `requires`, `exports` or `opens`, or a
-resource left out of the image. On Linux the packaged app starts the real GTK toolkit, so a
+what failed and ends the smoke at once. The image runs the jars on the **classpath** (`--input`/`--main-jar`), where
+`module-info` is not enforced, so a missing `requires`, `exports` or `opens` is not visible there; the step catches what
+is — a resource left out of the image, a Guice binding that cannot be built in the production stage, a screen whose FXML
+or controller cannot load. (`ResolveAllTest` in `:app` runs the same step in the test JVM.) On Linux the packaged app starts the real GTK toolkit, so a
 display is required — CI starts Xvfb before the smoke. The app icons `jpackage` reads are committed under
 `docs/specification/assets/icon/dist/`; regenerate them from `appicon.png` with the scripts beside it.
 

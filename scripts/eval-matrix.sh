@@ -275,7 +275,7 @@ if sys.argv[2] == "realrun":
     print("%-36s %9s %8s %7s %9s" % ("model", "truncated", "tooShort", "leaked", "stability"))
     for r in runs:
         print("%-36s %9d %7.1f%% %6.1f%% %8.0f%%" % (r["model"], r.get("truncated", 0), 100 * r.get("tooShort", 0), 100 * r.get("leaked", 0), 100 * r.get("stability", 0)))
-    print("(+Nk: N known failures reported beside the rate, see tasks.md 15e.2)")
+    print("(+Nk: N known failures reported beside the rate, see additional-work.md 15e.2)")
     sys.exit(0)
 if sys.argv[2] == "sequence":
     runs = sorted((r for r in reports if r.get("suite") == "sequence"), key=lambda r: (r.get("model", ""), r.get("narrator", "")))

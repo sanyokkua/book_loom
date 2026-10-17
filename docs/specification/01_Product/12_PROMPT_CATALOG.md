@@ -555,8 +555,7 @@ Answer every pair once. Return one JSON object in this schema:
 **Parameters:** temperature 0 and a fixed seed (15), one sample; output format = JSON object / schema, flat — no
 `maxItems`, `maxLength` or `additionalProperties`, only the status and criterion vocabularies enumerated — because LM
 Studio never answered a structured call that carried such limits on one model (the same prompt without a schema answered
-in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning low/off. Output cap
-`64 + Σ (96 + the candidate's tokens)` over the pairs, half of it expected: a rewrite may repeat a whole candidate.
+in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning low/off. Output cap`128 + Σ (70 + 120 + the candidate's tokens)` over the pairs (`OutputLimit.forReview`), half of it expected: a rewrite may repeat a whole candidate.
 
 **Decision rule:** `ok` leaves the candidate; `edits` are verified and applied one after another; `rewrite` replaces the
 draft only when the whole text passes the placeholder gates and every deterministic check, else the draft stays and the

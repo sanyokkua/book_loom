@@ -17,21 +17,7 @@ The system SHALL additionally give every opened book exactly one auxiliary unit,
 the segments of its auxiliary text — metadata, navigation labels, page titles, image alternative text and frontmatter
 text values — and SHALL keep those segments out of the body units.
 
-**Source:** FR-DOC-01, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-07, DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`),
-`02_Architecture/03_DOCUMENT_MODEL.md#data-model`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
-In plain words: a book stops being a file and becomes two things — the structure, which is frozen, and a numbered list
-of the bits of text that may be translated. Everything downstream addresses text by segment id, so the numbering has
-to exist before anything can translate, store, review or export. The unit of that numbering is a *run* rather than a
-whole block because some converters write an entire chapter as one element whose paragraphs are separated only by
-line breaks; treating such a block as one segment produces a segment no model can accept. For the overwhelming
-majority of blocks — every one containing no line break — the run and the block are the same thing. The auxiliary
-unit is kept apart so that the reading order, the structure tree and the coverage measurement still describe the
-chapters alone, while the title, the table of contents and the image descriptions can still be translated. It comes
-last, so every body unit keeps the position it had before auxiliary text was read.
-A paragraph of a lone no-break space looks empty on the page, yet a plain whitespace test took it for text and a model
-was asked to translate it; anything a reader cannot see is now no segment in any of the four formats.
+**Source**: FR-DOC-01, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-07, DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#data-model`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`). In plain words: a book stops being a file and becomes two things — the structure, which is frozen, and a numbered list of the bits of text that may be translated. Everything downstream addresses text by segment id, so the numbering has to exist before anything can translate, store, review or export. The unit of that numbering is a *run* rather than a whole block because some converters write an entire chapter as one element whose paragraphs are separated only by line breaks; treating such a block as one segment produces a segment no model can accept. For the overwhelming majority of blocks — every one containing no line break — the run and the block are the same thing. The auxiliary unit is kept apart so that the reading order, the structure tree and the coverage measurement still describe the chapters alone, while the title, the table of contents and the image descriptions can still be translated. It comes last, so every body unit keeps the position it had before auxiliary text was read. A paragraph of a lone no-break space looks empty on the page, yet a plain whitespace test took it for text and a model was asked to translate it; anything a reader cannot see is now no segment in any of the four formats.
 
 #### Scenario: A chapter with three paragraphs yields three ordered segments
 
@@ -91,17 +77,7 @@ buffer in place, so that no segment's span is invalidated by writing back any ot
 WHERE a segment's text is an attribute value in a tree-shaped document — an image's alternative text — the segment
 SHALL locate it by the element's stable node path plus the attribute's name.
 
-**Source:** DD-07, `02_Architecture/03_DOCUMENT_MODEL.md#data-model` ("a stable node path/id plus child index … not a byte
-offset and not an inserted sentinel node"), FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: the segment has to remember exactly which slot in the structure it came from, so a translation can be
-written back into that same slot. In a tree, a byte offset would be invalidated by the first edit of any earlier
-segment, and a sentinel node would mean the parser modified the structure it promised not to touch. Plain text and
-Markdown have no tree to point into, so their slots *are* byte spans — and they stay valid for exactly one reason:
-nothing ever writes into the buffer they index. The moment reassembly edited that buffer in place, every later span
-would be wrong, which is why the copy-from-original rule is part of the requirement rather than an implementation
-detail. An attribute value has no run to index, so its slot is named by the element and the attribute instead.
+**Source**: DD-07, `02_Architecture/03_DOCUMENT_MODEL.md#data-model` ("a stable node path/id plus child index … not a byte offset and not an inserted sentinel node"), FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: the segment has to remember exactly which slot in the structure it came from, so a translation can be written back into that same slot. In a tree, a byte offset would be invalidated by the first edit of any earlier segment, and a sentinel node would mean the parser modified the structure it promised not to touch. Plain text and Markdown have no tree to point into, so their slots *are* byte spans — and they stay valid for exactly one reason: nothing ever writes into the buffer they index. The moment reassembly edited that buffer in place, every later span would be wrong, which is why the copy-from-original rule is part of the requirement rather than an implementation detail. An attribute value has no run to index, so its slot is named by the element and the attribute instead.
 
 #### Scenario: Writing back an earlier segment does not invalidate a later anchor
 
@@ -156,15 +132,7 @@ system SHALL NOT regenerate, rebuild, or restructure the skeleton.
 WHEN the segment being written back is anchored to an attribute value, the system SHALL replace only that one
 attribute's value and SHALL leave the element, its other attributes and its content unchanged.
 
-**Source:** FR-DOC-03, `02_Architecture/03_DOCUMENT_MODEL.md#reassembly`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: reassembly edits the content of one run and nothing else. Re-serializing the parsed tree on export is
-expected and fine; building a new tree from the segments is not, because everything the segments do not capture —
-attributes, comments, structure, ordering — would be lost in the rebuild. The unit of replacement is a run's inner
-*content* rather than a single text node because a translated paragraph legitimately contains inline markup, and no
-text node can hold an element. Alternative text is the one closed exception to "only text changes": its value is
-replaced, and nothing around it moves.
+**Source**: FR-DOC-03, `02_Architecture/03_DOCUMENT_MODEL.md#reassembly`, ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: reassembly edits the content of one run and nothing else. Re-serializing the parsed tree on export is expected and fine; building a new tree from the segments is not, because everything the segments do not capture — attributes, comments, structure, ordering — would be lost in the rebuild. The unit of replacement is a run's inner *content* rather than a single text node because a translated paragraph legitimately contains inline markup, and no text node can hold an element. Alternative text is the one closed exception to "only text changes": its value is replaced, and nothing around it moves.
 
 #### Scenario: Element identity survives reassembly
 
@@ -202,15 +170,7 @@ segments for it — except the EPUB 3 navigation document and the EPUB 2 NCX, wh
 read into auxiliary segments and written back, while their structure, order, `playOrder` values and link targets
 SHALL be carried through unchanged.
 
-**Source:** EC-EPUB-3 (`01_Product/03_DOCUMENT_FORMATS.md#epub-edge-cases`), FR-DOC-EPUB-8
-(`01_Product/03_DOCUMENT_FORMATS.md#epub`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`.
-In plain words: stylesheets, images, fonts and any stray content document that the spine does not reference are
-carried, not read. The nav document and the NCX are the two exceptions, because they hold the table of contents a
-reader's navigation panel shows — one surveyed book kept 494 labels in English beside translated chapter headings.
-Only their label text changes; where each entry points and in what order stays exactly as it was. Which labels become
-segments — an NCX label that reads exactly like a navigation-document label does not — is stated in *Produce a book's
-auxiliary text as translatable segments*.
+**Source**: EC-EPUB-3 (`01_Product/03_DOCUMENT_FORMATS.md#epub-edge-cases`), FR-DOC-EPUB-8 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`. In plain words: stylesheets, images, fonts and any stray content document that the spine does not reference are carried, not read. The nav document and the NCX are the two exceptions, because they hold the table of contents a reader's navigation panel shows — one surveyed book kept 494 labels in English beside translated chapter headings. Only their label text changes; where each entry points and in what order stays exactly as it was. Which labels become segments — an NCX label that reads exactly like a navigation-document label does not — is stated in *Produce a book's auxiliary text as translatable segments*.
 
 #### Scenario: A stylesheet is carried but not segmented
 
@@ -243,19 +203,7 @@ OPF `<package>` element's `xml:lang` attribute, and the `xml:lang` and `lang` at
 elements of each XHTML content document and of the navigation document. A language attribute carrying any other
 language SHALL be left unchanged, and the system SHALL NOT change the language attribute of any other element.
 
-**Source:** FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-EPUB-6
-(`01_Product/03_DOCUMENT_FORMATS.md#epub`), `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0037
-(`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), `docs/next_features.md` §1.
-In plain words: a translated book that still declares itself English will be read aloud, hyphenated and spell-checked
-as English. Only the first `dc:language` is replaced because later entries may legitimately record other languages
-present in the book. Reading systems pick hyphenation, fonts and the text-to-speech voice from the language
-attributes on the package and on each chapter's root, not only from `dc:language` — one surveyed book kept
-`xml:lang="en"` on 116 chapters after being translated into Ukrainian — so those are rewritten too, but only where
-they carried the source language: a chapter marked as Latin is still Latin after translation. The source language is
-the run's, not only the package's, because a book whose package says English while its chapters say Ukrainian is
-translated from Ukrainian, and it is the chapters' `uk` that must become the target. Only the two root elements of
-each document are rewritten; this is a known limit — a chapter wrapped in `<div lang="en">` still says English inside
-its body.
+**Source**: FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-EPUB-6 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), `docs/next_features.md` §1. In plain words: a translated book that still declares itself English will be read aloud, hyphenated and spell-checked as English. Only the first `dc:language` is replaced because later entries may legitimately record other languages present in the book. Reading systems pick hyphenation, fonts and the text-to-speech voice from the language attributes on the package and on each chapter's root, not only from `dc:language` — one surveyed book kept `xml:lang="en"` on 116 chapters after being translated into Ukrainian — so those are rewritten too, but only where they carried the source language: a chapter marked as Latin is still Latin after translation. The source language is the run's, not only the package's, because a book whose package says English while its chapters say Ukrainian is translated from Ukrainian, and it is the chapters' `uk` that must become the target. Only the two root elements of each document are rewritten; this is a known limit — a chapter wrapped in `<div lang="en">` still says English inside its body.
 
 #### Scenario: The first entry is replaced and the second is left alone
 
@@ -350,33 +298,7 @@ placeholder, SHALL NOT alter the target text, and SHALL NOT attempt a repair or 
 Apart from those rules, the position of an **atomic** token — an image, a code span, a line break — SHALL NOT affect
 the comparison, and a whole pair SHALL be free to move within the target as long as it stays properly formed.
 
-**Source:** FR-DOC-05, FR-QA-01, FR-QA-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2
-(`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`),
-`02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`,
-`02_Architecture/05_PIPELINE_ENGINE.md#qa-checks` (tag integrity is a hard gate, pre-QA), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0040
-(`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`), `docs/next_features.md` §9.
-In plain words: the model may rewrite every word and may move the formatting around the sentence, because word order
-differs between languages — but it may not lose, invent or duplicate a piece of formatting, and it may not turn a
-piece of formatting inside out. A swapped pair — `⟦g1⟧OLD⟦g0⟧` for `⟦g0⟧old⟦g1⟧` — passed the old count-only check
-and produced a closing tag before its opening one; EPUB silently "repaired" it, FB2 refused it at write time, and the
-export failed at the very end with no segment named. Checking order here flags that one segment instead. Two more
-shapes passed the count and the order and still damaged the book: a pair emptied of its words — `⟦g0⟧⟦g1⟧OLD` for
-`⟦g0⟧old⟦g1⟧` — keeps the tokens and loses the emphasis on the word, so a pair that held text must still hold text;
-and a line break moved across a pair's edge changes where the written paragraph splits into runs, so the re-opened book
-has a different number of segments and the whole export fails at its final check. A pair stretched over every word —
-`⟦g0⟧«Понад усе», — сказав він.⟦g1⟧` for the drop cap `⟦g0⟧“A⟦g1⟧bove all,” he said.` — kept count, order and text,
-yet a tree reader makes the outermost element owning text of its own the segment's block, so the written paragraph
-re-opened as a segment of that `<span>` with no markup left, and its drop-cap style covered the whole paragraph; a
-target must therefore keep text outside its pairs when the source did. An image may still move freely, and
-a line break may move within its own pair, because that is an ordinary word-order change. This is the one check no
-confidence score and no judge verdict can outvote, and it runs before any of them. It reports; it never fixes.
-A small model on the fixture book returned `⟦g0⟧Інститут ⟦g1⟧Мерідіанського Зондування⟧ відправив…` for
-`The ⟦g0⟧Meridian Survey Institute⟦g1⟧ sent…`: count, order, text in the pair and text outside all held, so the reply
-was accepted, the stray `⟧` reached the written book as text and the bold moved onto one word; only the export's
-re-open caught it. Any bracket glyph outside a whole token is therefore refused, and a pair that wrapped a phrase must
-still wrap a comparable share of the sentence. The deterministic repair a caller may ask for afterwards first rejoins a
-split or misspelt token and drops the remaining stray glyphs, then places tokens, and its result passes this gate.
+**Source**: FR-DOC-05, FR-QA-01, FR-QA-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `02_Architecture/05_PIPELINE_ENGINE.md#qa-checks` (tag integrity is a hard gate, pre-QA), ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`), `docs/next_features.md` §9. In plain words: the model may rewrite every word and may move the formatting around the sentence, because word order differs between languages — but it may not lose, invent or duplicate a piece of formatting, and it may not turn a piece of formatting inside out. A swapped pair — `⟦g1⟧OLD⟦g0⟧` for `⟦g0⟧old⟦g1⟧` — passed the old count-only check and produced a closing tag before its opening one; EPUB silently "repaired" it, FB2 refused it at write time, and the export failed at the very end with no segment named. Checking order here flags that one segment instead. Two more shapes passed the count and the order and still damaged the book: a pair emptied of its words — `⟦g0⟧⟦g1⟧OLD` for `⟦g0⟧old⟦g1⟧` — keeps the tokens and loses the emphasis on the word, so a pair that held text must still hold text; and a line break moved across a pair's edge changes where the written paragraph splits into runs, so the re-opened book has a different number of segments and the whole export fails at its final check. A pair stretched over every word — `⟦g0⟧«Понад усе», — сказав він.⟦g1⟧` for the drop cap `⟦g0⟧“A⟦g1⟧bove all,” he said.` — kept count, order and text, yet a tree reader makes the outermost element owning text of its own the segment's block, so the written paragraph re-opened as a segment of that `<span>` with no markup left, and its drop-cap style covered the whole paragraph; a target must therefore keep text outside its pairs when the source did. An image may still move freely, and a line break may move within its own pair, because that is an ordinary word-order change. This is the one check no confidence score and no judge verdict can outvote, and it runs before any of them. It reports; it never fixes. A small model on the fixture book returned `⟦g0⟧Інститут ⟦g1⟧Мерідіанського Зондування⟧ відправив…` for `The ⟦g0⟧Meridian Survey Institute⟦g1⟧ sent…`: count, order, text in the pair and text outside all held, so the reply was accepted, the stray `⟧` reached the written book as text and the bold moved onto one word; only the export's re-open caught it. Any bracket glyph outside a whole token is therefore refused, and a pair that wrapped a phrase must still wrap a comparable share of the sentence. The deterministic repair a caller may ask for afterwards first rejoins a split or misspelt token and drops the remaining stray glyphs, then places tokens, and its result passes this gate.
 
 #### Scenario: A stray bracket glyph fails the gate
 
@@ -516,18 +438,7 @@ A body segment's id SHALL be its unit's id, a colon and its position in the unit
 `ncx:<navPoint id>`; `head-title:<content document href>`; `alt:<content document href>:<node path>` for an EPUB image
 and `alt:<file name>:img<k>` for a Markdown image; `fm:<key>` for a frontmatter value.
 
-**Source:** FR-DOC-01, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`02_Architecture/03_DOCUMENT_MODEL.md#data-model`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`,
-`02_Architecture/06_DATA_MODEL_SQLITE.md#tables` (`segments.id` is the primary key), DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: every segment id is built from its unit's id, and those ids are the primary key of the segment table,
-so two units sharing an id would collide the moment anything is stored. An FB2 book's bodies all come from one file
-and would otherwise share one identity, which is why a body's position is part of its id. Markdown and plain text
-now have two units — the body and the auxiliary unit — so "one unit per file" no longer describes them. Auxiliary
-segments are named after their slot rather than numbered, because slots come and go independently: a book that gains
-one table-of-contents entry must not renumber its title, or every translation and review decision stored under the
-old id would land on the wrong text.
+**Source**: FR-DOC-01, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#data-model`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, `02_Architecture/06_DATA_MODEL_SQLITE.md#tables` (`segments.id` is the primary key), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: every segment id is built from its unit's id, and those ids are the primary key of the segment table, so two units sharing an id would collide the moment anything is stored. An FB2 book's bodies all come from one file and would otherwise share one identity, which is why a body's position is part of its id. Markdown and plain text now have two units — the body and the auxiliary unit — so "one unit per file" no longer describes them. Auxiliary segments are named after their slot rather than numbered, because slots come and go independently: a book that gains one table-of-contents entry must not renumber its title, or every translation and review decision stored under the old id would land on the wrong text.
 
 #### Scenario: An FB2 book's two bodies get distinct unit ids
 
@@ -588,16 +499,7 @@ WHERE a character of the output cannot be represented in the encoding the source
 instead write the whole spliced text as UTF-8, as *Write a TXT or Markdown export as UTF-8 when its encoding cannot
 hold the translation* states; every character outside the substituted spans SHALL still be the source's character.
 
-**Source:** FR-DOC-MD-4, FR-DOC-03, DD-43, `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0029
-(`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`),
-`01_Product/03_DOCUMENT_FORMATS.md#markdown`.
-In plain words: re-rendering a Markdown file from its tree normalises formatting everywhere — emphasis markers,
-bullet characters, fence styles, and whether the file ends with a newline — in parts of the document nobody
-translated. Copying the original and replacing only translated spans makes every untouched byte identical by
-construction, which is both stronger and simpler. The frontmatter `lang` value is the one span outside a segment that
-changes, because it is where a Markdown book says what language it is in. A switch to UTF-8 re-encodes every byte but
-changes no character.
+**Source**: FR-DOC-MD-4, FR-DOC-03, DD-43, `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`), ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), `01_Product/03_DOCUMENT_FORMATS.md#markdown`. In plain words: re-rendering a Markdown file from its tree normalises formatting everywhere — emphasis markers, bullet characters, fence styles, and whether the file ends with a newline — in parts of the document nobody translated. Copying the original and replacing only translated spans makes every untouched byte identical by construction, which is both stronger and simpler. The frontmatter `lang` value is the one span outside a segment that changes, because it is where a Markdown book says what language it is in. A switch to UTF-8 re-encodes every byte but changes no character.
 
 #### Scenario: An untranslated round trip is byte-identical
 
@@ -630,14 +532,7 @@ WHERE a character of the output cannot be represented in the encoding the source
 instead write the whole spliced text as UTF-8, as *Write a TXT or Markdown export as UTF-8 when its encoding cannot
 hold the translation* states; every character outside the substituted spans SHALL still be the source's character.
 
-**Source:** FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), FR-DOC-03, DD-43,
-`02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0029
-(`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`).
-In plain words: because everything outside a translated paragraph is copied rather than regenerated, a TXT round trip
-with nothing translated is byte-identical by construction — the encoding, the line endings and the byte-order mark
-survive because nothing re-encodes them. The one exception is a translation the source's code page cannot hold: then
-the whole file is re-encoded as UTF-8, every character kept. This is the one format where byte equality is the correct
-assertion rather than an over-strict one.
+**Source**: FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), FR-DOC-03, DD-43, `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`). In plain words: because everything outside a translated paragraph is copied rather than regenerated, a TXT round trip with nothing translated is byte-identical by construction — the encoding, the line endings and the byte-order mark survive because nothing re-encodes them. The one exception is a translation the source's code page cannot hold: then the whole file is re-encoded as UTF-8, every character kept. This is the one format where byte equality is the correct assertion rather than an over-strict one.
 
 #### Scenario: An untranslated round trip is byte-identical
 
@@ -660,16 +555,7 @@ WHERE a Markdown document's frontmatter holds a top-level `lang` key, the system
 target language tag, keeping the value's quote style, SHALL change nothing else in the frontmatter, and SHALL leave a
 `language` key as it is.
 
-**Source:** FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`) read against
-`02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, which specifies a language update for EPUB and FB2 only; DD-43;
-FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`); the owner's frontmatter decision recorded in
-`openspec/changes/complete-translation-workflow/design.md` (D12).
-In plain words: the export contract takes a target language for every format, but TXT has nowhere to put it and a
-Markdown file has a place only when its frontmatter already declares one. Inventing a place — a `lang:` key in
-frontmatter that had none, a header line in TXT — would add content the source never had, and would break the
-byte-exact round trip. A Markdown file that already says `lang: en` is different: leaving it would make the
-translated file claim to be English, so its value — and only its value, in the quotes it had — becomes the target.
-A `language` key is left alone; the rewrite is limited to `lang` on purpose.
+**Source**: FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`) read against `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, which specifies a language update for EPUB and FB2 only; DD-43; FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`); the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: the export contract takes a target language for every format, but TXT has nowhere to put it and a Markdown file has a place only when its frontmatter already declares one. Inventing a place — a `lang:` key in frontmatter that had none, a header line in TXT — would add content the source never had, and would break the byte-exact round trip. A Markdown file that already says `lang: en` is different: leaving it would make the translated file claim to be English, so its value — and only its value, in the quotes it had — becomes the target. A `language` key is left alone; the rewrite is limited to `lang` on purpose.
 
 #### Scenario: A Markdown export adds no language key
 
@@ -710,14 +596,7 @@ The system SHALL pass a golden round-trip test in which a fixture TXT book is pa
 segment edits, and the output is **byte-for-byte identical** to the source, including its byte-order mark and line
 endings.
 
-**Source:** FR-DOC-09, DD-43 (`01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`), FR-DOC-TXT-3.
-In plain words: TXT is the one format where exact bytes are the right assertion rather than an over-strict one,
-because a zero-edit export never re-encodes anything — it copies the original buffer and substitutes spans, and only a
-translated character the source's code page cannot hold switches a file to UTF-8, which a zero-edit export never
-carries. Anything weaker than byte equality here would fail to notice a charset or line-ending change that the
-mechanism makes impossible, and so would fail to notice the mechanism being replaced by one that does not. The
-encoding-switched case is compared by its re-parsed text instead, as *Write a TXT or Markdown export as UTF-8 when its
-encoding cannot hold the translation* states.
+**Source**: FR-DOC-09, DD-43 (`01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`), FR-DOC-TXT-3. In plain words: TXT is the one format where exact bytes are the right assertion rather than an over-strict one, because a zero-edit export never re-encodes anything — it copies the original buffer and substitutes spans, and only a translated character the source's code page cannot hold switches a file to UTF-8, which a zero-edit export never carries. Anything weaker than byte equality here would fail to notice a charset or line-ending change that the mechanism makes impossible, and so would fail to notice the mechanism being replaced by one that does not. The encoding-switched case is compared by its re-parsed text instead, as *Write a TXT or Markdown export as UTF-8 when its encoding cannot hold the translation* states.
 
 #### Scenario: A no-edit TXT round trip is byte-identical
 
@@ -736,17 +615,7 @@ and without a trailing comment, with `\"` inside double quotes and `''` inside s
 character. WHERE the segment is a Markdown image's alternative text, its source text SHALL be the text between the
 image's brackets with each backslash escape read as the character it escapes.
 
-**Source:** FR-DOC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-TXT-3 (`#txt`), FR-DOC-04
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
-In plain words: these two formats reassemble by splicing bytes back into the file they came from, so any re-spelling
-of the text is a change to the document. `\*` in Markdown source means a literal asterisk and `AT&amp;T` means
-`AT&T`, but writing either decoded form back into the buffer would change what the next parse sees. The contrast
-with EPUB and FB2 is deliberate: there the segment is re-parsed into a tree, here it is copied into a file. The two
-auxiliary slots are the exception because each is written back through quoting or escaping of its own — YAML quotes
-for a frontmatter value, bracket escapes for an image description — and a quote or backslash left in the text would be
-escaped a second time on the way back.
+**Source**: FR-DOC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-TXT-3 (`#txt`), FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`). In plain words: these two formats reassemble by splicing bytes back into the file they came from, so any re-spelling of the text is a change to the document. `\*` in Markdown source means a literal asterisk and `AT&amp;T` means `AT&T`, but writing either decoded form back into the buffer would change what the next parse sees. The contrast with EPUB and FB2 is deliberate: there the segment is re-parsed into a tree, here it is copied into a file. The two auxiliary slots are the exception because each is written back through quoting or escaping of its own — YAML quotes for a frontmatter value, bracket escapes for an image description — and a quote or backslash left in the text would be escaped a second time on the way back.
 
 #### Scenario: A Markdown backslash escape is left as written
 
@@ -785,16 +654,7 @@ restorable and the book exportable. A C1 control, which XML 1.0 permits, SHALL N
 This escaping SHALL apply only when a target is restored, and SHALL NOT apply to target text supplied directly for
 reassembly.
 
-**Source:** FR-DOC-04, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#xml-round-trip-config`, ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0025
-(`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`).
-In plain words: after masking, every piece of markup in a translated segment came from a fragment the parser itself
-recorded — so nothing the model wrote needs to be markup, and nothing it wrote should be parsed as markup. A model
-that writes "x < y" or "Tom & Jerry" is writing ordinary prose, and the book should say so rather than refusing the
-write. The last clause draws the boundary: reassembly still accepts inline markup written straight into a target,
-because that is how a reviewer's manual edit and the corpus harness both work, and escaping there would turn a
-restored `<em>` into the literal text `&lt;em&gt;` — the exact defect ADR-0025 exists to remove.
+**Source**: FR-DOC-04, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `#xml-round-trip-config`, ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0025 (`docs/adr/ADR-0025-reassembly-replaces-run-inner-content.md`). In plain words: after masking, every piece of markup in a translated segment came from a fragment the parser itself recorded — so nothing the model wrote needs to be markup, and nothing it wrote should be parsed as markup. A model that writes "x < y" or "Tom & Jerry" is writing ordinary prose, and the book should say so rather than refusing the write. The last clause draws the boundary: reassembly still accepts inline markup written straight into a target, because that is how a reviewer's manual edit and the corpus harness both work, and escaping there would turn a restored `<em>` into the literal text `&lt;em&gt;` — the exact defect ADR-0025 exists to remove.
 
 The refusal clause is the one case where "treat it as character data" has nothing to treat: a character outside
 XML's own `Char` production is not character data in that format at any spelling, escaped or not. Leaving it
@@ -882,17 +742,7 @@ WHERE the segment's content is inline content owned by a block marker the skelet
 cell — the system SHALL NOT neutralise a block construct type that the structure comparison disregards for that
 kind, since neutralising it spends a visible character on a difference the comparison is about to ignore.
 
-**Source:** FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-04
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
-In plain words: this is the same rule that turns a model's stray `<` into `&lt;` for EPUB, applied to the format
-whose markup is punctuation rather than tags. A translation containing `5 * 3`, a footnote marker, or an asterisked
-aside is ordinary prose, and the book should print it rather than gain emphasis the author never wrote. The
-block-level half is not an afterthought: a translated sentence beginning `1985.` becomes an ordered list,
-`- як казав автор` a bullet list, and `# Це не заголовок` a heading, and every one of those would otherwise fail a
-chunk over a character the frozen spec never protected. A frontmatter value and an image description are not
-Markdown content and are not escaped this way (see *Restore an image's alternative text and a frontmatter value as
-plain text*).
+**Source**: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`). In plain words: this is the same rule that turns a model's stray `<` into `&lt;` for EPUB, applied to the format whose markup is punctuation rather than tags. A translation containing `5 * 3`, a footnote marker, or an asterisked aside is ordinary prose, and the book should print it rather than gain emphasis the author never wrote. The block-level half is not an afterthought: a translated sentence beginning `1985.` becomes an ordered list, `- як казав автор` a bullet list, and `# Це не заголовок` a heading, and every one of those would otherwise fail a chunk over a character the frozen spec never protected. A frontmatter value and an image description are not Markdown content and are not escaped this way (see *Restore an image's alternative text and a frontmatter value as plain text*).
 
 **"SHALL NOT fail" has three exceptions, not two, and the third is this bound.** Each round of neutralisation
 re-parses the candidate and acts on one construct, so the round limit is in practice a cap on how many
@@ -993,16 +843,7 @@ IF the two multisets differ, either paired-content or task-marker condition fail
 above holds, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, and SHALL NOT attempt a
 repair inside `:document`.
 
-**Source:** FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-05
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1
-(`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-43
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`).
-In plain words: a restored Markdown segment is spliced straight into the file, so a translation that changes its
-structure — a link whose label came loose, a task marker moved after its label, a second block inside a heading —
-would change the book the next parser sees. Comparing the kinds of construct on both sides catches that and fails the
-one segment instead of the book. The check is for body segments only: a frontmatter value and an image description
-are not Markdown content and are restored as plain text.
+**Source**: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-43 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`). In plain words: a restored Markdown segment is spliced straight into the file, so a translation that changes its structure — a link whose label came loose, a task marker moved after its label, a second block inside a heading — would change the book the next parser sees. Comparing the kinds of construct on both sides catches that and fails the one segment instead of the book. The check is for body segments only: a frontmatter value and an image description are not Markdown content and are restored as plain text.
 
 #### Scenario: Link delimiters cannot be detached from their label
 
@@ -1075,22 +916,9 @@ are not Markdown content and are restored as plain text.
 
 WHEN a TXT paragraph is masked and it has at least two lines of which either two open with a list marker (a bullet,
 a dash or `1.`/`1)`) or none is longer than 60 characters, the system SHALL put a line-break token that stands for
-nothing before each line end inside it (`• Mass…⟦g0⟧` + line end + `• Weight…`), so a target that merges the lines
-fails the placeholder gate; a paragraph of longer lines is prose wrapped at a column and SHALL carry no such token.
-Export verification SHALL ignore a placeholder that stands for nothing, since whether a paragraph carries one depends
-on its line lengths, which a translation changes.
+nothing before each line end inside it, so a target that merges the lines fails the placeholder gate.
 
-WHEN a target is restored, the system SHALL first replace the whitespace on both sides of each line-break token that
-the masked form has next to a line end with the masked form's own whitespace there, leaving the token where the target
-put it — for Markdown and TXT alike.
-
-**Source:** FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`.
-In plain words: in the gemma4:e4b run on the earth-gravity fixture, the TXT lists and one stanza came back as one line
-each and were accepted, because nothing marked where a line ended; and a Markdown stanza whose model wrote a space
-after a hard-break token restored as `землю,\ він`, failed the structure check and stayed in English. A merged
-reply now gets its line end put back by position (the restore-missing repair) or a repair note saying the token ends
-a line; a space next to the token is simply put back as the line end it was.
+**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`. In plain words: in the gemma4:e4b run on the earth-gravity fixture, the TXT lists and one stanza came back as one line each and were accepted, because nothing marked where a line ended; and a Markdown stanza whose model wrote a space after a hard-break token restored as `землю,\ він`, failed the structure check and stayed in English. A merged reply now gets its line end put back by position (the restore-missing repair) or a repair note saying the token ends a line; a space next to the token is simply put back as the line end it was.
 
 #### Scenario: A TXT list keeps one item per line
 
@@ -1099,6 +927,40 @@ a line; a space next to the token is simply put back as the line end it was.
 - **THEN** its masked form ends the first line with `⟦g0⟧`, and the target `• Маса … тіло.⟦g0⟧ • Вага … масу.` restores
   as two lines
 - **AND** the target `• Маса … тіло. • Вага … масу.` is refused by the gate
+
+### Requirement: Add no line-break token to prose wrapped at a column
+
+WHEN a TXT paragraph has at least one line longer than 60 characters and fewer than two lines that open with a list
+marker, the system SHALL treat it as prose wrapped at a column and SHALL put no line-break token that stands for nothing
+in its masked form.
+
+**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`. In plain words: a paragraph hard-wrapped at a column is one sentence flow, and a model must be free to re-wrap it.
+
+#### Scenario: Wrapped prose carries no line-break token
+
+- **WHEN** a TXT paragraph of two lines of 72 and 68 characters, neither opening with a list marker, is masked
+- **THEN** its masked form holds no `⟦gN⟧` token
+
+### Requirement: Ignore a placeholder that stands for nothing when verifying an export
+
+Export verification SHALL ignore a placeholder that stands for nothing, since whether a paragraph carries one depends
+on its line lengths, which a translation changes.
+
+**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`. In plain words: a translation changes line lengths, so a paragraph may legitimately gain or lose a line-break token that stands for nothing, and that must not fail the export check.
+
+#### Scenario: A line-break token that stands for nothing does not fail the check
+
+- **WHEN** a two-line TXT paragraph carrying a line-break token that stands for nothing is written with a translation
+  whose lines are longer than 60 characters, so that on re-opening the paragraph carries no such token
+- **THEN** the export's placeholder comparison passes
+
+### Requirement: Restore the whitespace beside a line-break token from the masked form
+
+WHEN a target is restored, the system SHALL first replace the whitespace on both sides of each line-break token that
+the masked form has next to a line end with the masked form's own whitespace there, leaving the token where the target
+put it — for Markdown and TXT alike.
+
+**Source**: FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`. In plain words: a model that writes a space after a hard-break token would otherwise restore as a stray backslash and a space; the space is simply put back as the line end it was.
 
 #### Scenario: A Markdown stanza with a space after its hard break
 
@@ -1110,33 +972,41 @@ a line; a space next to the token is simply put back as the line end it was.
 
 WHEN a caller asks the document port to repair a target the placeholder gate refused, the system SHALL return a
 repaired target that passes that gate, or `ErrorCode.validation` when none does, without calling a model and without
-changing any word of the target. Two modes SHALL exist:
+changing any word of the target. Two modes SHALL exist: restore missing and re-place all.
 
-- **restore missing** keeps every token the target placed, drops each token the masked form holds fewer times, drops
-  a token the masked form never holds only when a letter or digit touches it (it is glued to a word, which stays), and
-  puts each missing token back at the position of the target most like the one it held in the masked
-  form — the same kind of boundary (a word's start, a word's end, after a closing quote) nearest the source position
-  scaled to the target's length, and inside a word only where the source's token sat inside a word, at the same letter;
-- **re-place all** strips every token and places all of them again, in the masked form's order, by the same rule.
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a small model that translated every word but dropped one token of a pair should not lose its translation. The two real paragraphs that reached an export broken — a drop cap and an italic phrase before a closing quote — each lost exactly one token; putting it back where the source had it is a deterministic step any person could take by hand. The repaired target still has to pass the whole gate, so the repair can never let through what the gate refuses, and the caller records that the markup was put back so a person can check it. A token the text never had is different: a small model writes one in place of a name (`і ⟦g1⟧ ніколи` for `and Vance never`), and dropping it silently deleted that name in the gemma4:e4b run on the earth-gravity fixture, so only a token glued to a word may go.
 
-IF a token the masked form never holds stands where a word would — between two spaces, at an edge, or beside
-punctuation — THEN neither mode SHALL drop it, and the repair SHALL answer `ErrorCode.validation`, so the reply goes to
-the model repair instead of losing the word the token replaced.
+#### Scenario: Nothing to wrap is not repaired
 
-The gate itself SHALL stay a check that reports and never repairs; this is a separate operation the caller chooses to
-call.
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in re-place-all mode with an empty target
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
-**Source:** FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2
-(`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040
-(`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`).
-In plain words: a small model that translated every word but dropped one token of a pair should not lose its
-translation. The two real paragraphs that reached an export broken — a drop cap and an italic phrase before a closing
-quote — each lost exactly one token; putting it back where the source had it is a deterministic step any person
-could take by hand. The repaired target still has to pass the whole gate, so the repair can never let through what
-the gate refuses, and the caller records that the markup was put back so a person can check it. A token the text never
-had is different: a small model writes one in place of a name (`і ⟦g1⟧ ніколи` for `and Vance never`), and dropping
-it silently deleted that name in the gemma4:e4b run on the earth-gravity fixture, so only a token glued to a word may
-go.
+### Requirement: Repair by restoring the missing tokens
+
+In restore-missing mode the system SHALL keep every token the target placed, drop each token the masked form holds
+fewer times, drop a token the masked form never holds only when a letter or digit touches it (it is glued to a word,
+which stays), and put each missing token back at the position the placement rule gives.
+
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a model that dropped one token of a pair loses nothing else, and a token glued to a word is noise that can go while the word stays.
+
+#### Scenario: An invented token glued to a word is dropped
+
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target `⟦g0⟧старі⟦g1⟧ ⟦g7⟧двері`
+- **THEN** the repaired target is `⟦g0⟧старі⟦g1⟧ двері`
+
+#### Scenario: A surplus token is dropped
+
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target
+  `⟦g0⟧старі⟦g1⟧⟦g1⟧ двері`
+- **THEN** the repaired target is `⟦g0⟧старі⟦g1⟧ двері`
+
+### Requirement: Place a missing token where the source had it
+
+The system SHALL put a missing token at the position of the target most like the one it held in the masked form: the
+same kind of boundary (a word's start, a word's end, after a closing quote) nearest the source position scaled to the
+target's length, and inside a word only where the source's token sat inside a word, at the same letter.
+
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: the two real paragraphs that reached an export broken — a drop cap and an italic phrase before a closing quote — each lost exactly one token; putting it back where the source had it is a deterministic step any person could take by hand.
 
 #### Scenario: A drop cap's lost closing token goes back after the first letter
 
@@ -1150,15 +1020,12 @@ go.
   target `«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом.`
 - **THEN** the repaired target is `«Пам'ятай ⟦g0⟧це»,⟦g1⟧ — сказав він тихим голосом.`
 
-#### Scenario: An invented token glued to a word is dropped
+### Requirement: Repair by placing all the tokens again
 
-- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target `⟦g0⟧старі⟦g1⟧ ⟦g7⟧двері`
-- **THEN** the repaired target is `⟦g0⟧старі⟦g1⟧ двері`
+In re-place-all mode the system SHALL strip every token of the target and place all of them again, in the masked
+form's order, by the placement rule.
 
-#### Scenario: An invented token standing for a word is not dropped
-
-- **WHEN** the segment `and Vance never let` is repaired in either mode with the target `і ⟦g1⟧ ніколи не дозволяв`
-- **THEN** the caller receives a failed result carrying `ErrorCode.validation`
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: when a pair is swapped or tangled, starting the tokens over in the source's order is safer than patching.
 
 #### Scenario: A swapped pair is placed again
 
@@ -1166,10 +1033,30 @@ go.
   `Дивись ⟦g1⟧це⟦g0⟧ зараз.`
 - **THEN** the repaired target is `Дивись ⟦g0⟧це⟦g1⟧ зараз.`
 
-#### Scenario: Nothing to wrap is not repaired
+### Requirement: Never drop a token that stands for a word
 
-- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in re-place-all mode with an empty target
+IF a token the masked form never holds stands where a word would — between two spaces, at an edge, or beside
+punctuation — THEN neither repair mode SHALL drop it, and the repair SHALL answer `ErrorCode.validation`, so the
+reply goes to the model repair instead of losing the word the token replaced.
+
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2 (`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a small model writes a token in place of a name (`і ⟦g1⟧ ніколи` for `and Vance never`), and dropping it silently deleted that name in the gemma4:e4b run on the earth-gravity fixture, so only a token glued to a word may go.
+
+#### Scenario: An invented token standing for a word is not dropped
+
+- **WHEN** the segment `and Vance never let` is repaired in either mode with the target `і ⟦g1⟧ ніколи не дозволяв`
 - **THEN** the caller receives a failed result carrying `ErrorCode.validation`
+
+### Requirement: Keep the placeholder gate a check that never repairs
+
+The placeholder gate itself SHALL stay a check that reports and never repairs; the repair is a separate operation the
+caller chooses to call.
+
+**Source**: FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: the gate is the one check no confidence score can outvote, so it reports and never fixes; fixing is a separate step whose result must pass the gate again.
+
+#### Scenario: The gate refuses and leaves the target as it was
+
+- **WHEN** the gate is given the target `⟦g0⟧старі двері` for the masked form `⟦g0⟧old⟦g1⟧ door`
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation` and no repaired text is returned
 
 ### Requirement: Show the book's structure as a titled tree
 
@@ -1177,21 +1064,7 @@ The import screen SHALL, once a book is open, present the book's structure as a 
 navigation, each node carrying a count pill of the translatable segments that fall under it, and SHALL report the
 book's total segment count.
 
-The tree SHALL show only the book's reading-order content: the auxiliary text (metadata, navigation labels, page
-titles, alternative text, frontmatter values) SHALL NOT appear as a node and SHALL NOT be counted in the total. A node
-that has no title SHALL be shown as `Untitled`.
-
-The tree SHALL be read-only: it SHALL NOT offer to include or exclude a unit, nor to change anything about the
-book. The import screen's own `Continue` is the only way on; the structure has no step of its own since 15i.U3.
-
-**Source:** FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
-In plain words: this is where a person checks the application understood their book before spending hours on it —
-an EPUB that opened with three segments instead of five thousand is visible here in a second. Now that the book's
-own table of contents, section titles and headings are read, the screen can show chapters by name and nested the
-way the book nests them, instead of a flat list of file paths. The auxiliary text is left out of the tree because it
-is not part of the reading order; counting it would make the chapter numbers not add up to what a reader sees. The
-tree stays read-only because nothing downstream reads a translate-or-preserve choice.
+**Source**: FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: this is where a person checks the application understood their book before spending hours on it — an EPUB that opened with three segments instead of five thousand is visible here in a second. Now that the book's own table of contents, section titles and headings are read, the screen can show chapters by name and nested the way the book nests them, instead of a flat list of file paths. The auxiliary text is left out of the tree because it is not part of the reading order; counting it would make the chapter numbers not add up to what a reader sees. The tree stays read-only because nothing downstream reads a translate-or-preserve choice.
 
 #### Scenario: Chapters are listed by their navigation titles
 
@@ -1211,16 +1084,36 @@ tree stays read-only because nothing downstream reads a translate-or-preserve ch
 - **WHEN** the import screen reports a total of `1240` segments
 - **THEN** the counts of the top-level nodes sum to `1240`
 
+### Requirement: Leave auxiliary text out of the structure tree
+
+The structure tree SHALL show only the book's reading-order content: the auxiliary text (metadata, navigation labels,
+page titles, alternative text, frontmatter values) SHALL NOT appear as a node and SHALL NOT be counted in the total.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: the auxiliary text is left out of the tree because it is not part of the reading order; counting it would make the chapter numbers not add up to what a reader sees.
+
 #### Scenario: Auxiliary text is not a node
 
 - **WHEN** an EPUB with a translatable title, 12 navigation labels and 7 image descriptions is open
 - **THEN** no node represents the title, the labels or the descriptions, and none of those 20 segments is counted
   in the total
 
+### Requirement: Show Untitled for a structure node without a title
+
+A structure node that has no title SHALL be shown as `Untitled`.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: text before a book's first heading still has to be a node a person can see, so it gets a plain name instead of an empty one.
+
 #### Scenario: A node without a title reads Untitled
 
 - **WHEN** a Markdown book whose first paragraph comes before its first heading `# Chapter 1` is open
 - **THEN** the tree's first top-level node reads `Untitled` and the second reads `Chapter 1`
+
+### Requirement: Keep the structure tree read-only
+
+The structure tree SHALL be read-only: it SHALL NOT offer to include or exclude a unit, nor to change anything about
+the book. The import screen's own `Continue` is the only way on; the structure has no step of its own since 15i.U3.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: the tree stays read-only because nothing downstream reads a translate-or-preserve choice.
 
 #### Scenario: Nothing in the tree can be changed
 
@@ -1230,41 +1123,35 @@ tree stays read-only because nothing downstream reads a translate-or-preserve ch
 ### Requirement: Produce a book's auxiliary text as translatable segments
 
 WHEN a book is opened, the system SHALL always produce its auxiliary text as segments of its auxiliary unit,
-whatever the Book Brief's "Also translate" switches say:
+whatever the Book Brief's "Also translate" switches say.
 
-- EPUB: the package's first `dc:title` (kind `METADATA_TITLE`); each `dc:creator` (`METADATA_AUTHOR`); each
-  `dc:description` (`METADATA_DESCRIPTION`); the link text of each entry of a navigation document that is not in the
-  spine (`NAV_LABEL`); the text of each NCX `navLabel` whose source text differs from that of every navigation-label
-  segment (`NAV_LABEL`); the `<head><title>` of each spine content document (`TITLE`); and the `alt` value of each
-  image (`ALT`);
-- FB2: the title information's `book-title` (`METADATA_TITLE`); each `author` (`METADATA_AUTHOR`), built from its
-  `first-name`, `middle-name`, `last-name` and `nickname` only, one placeholder pair around each part; and each
-  paragraph of its `annotation` (`METADATA_DESCRIPTION`);
-- Markdown: each frontmatter value that is text (`FRONTMATTER_VALUE`), as *Segment only the text values of Markdown
-  frontmatter, never its keys* defines it, and the alternative text of each image (`ALT`);
-- plain text: nothing.
+**Source**: FR-DOC-11, FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-EPUB-8 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), DD-47 as amended by this change to list descriptions under the metadata switch (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`), `docs/next_features.md` §8. In plain words: a translated book whose table of contents, page titles, shelf title, description and image descriptions are still in the source language reads as half-translated. These texts are always read into segments, and the brief's switches decide later whether the run translates them — so opening the same file always gives the same segments, whatever the brief says. A description is metadata and follows the metadata switch; a page title follows the navigation switch; the switches themselves belong to `translation-pipeline`. An NCX label that reads exactly like a navigation-document label is not a second segment: translating the same words twice wastes a model call and lets a reviewer's edit reach only one of them. A navigation document that is also in the spine is body text already, so its links are not read a second time. An FB2 author is read from the parts of a name only, because the other fields are identifiers and addresses; the source-book information and the file's history describe another book and another file, so neither is text to translate. Frontmatter keys are field names a program reads, so they are never text.
 
-The system SHALL NOT produce a segment for a Markdown frontmatter key, for an FB2 author's `id`, `email` or
-`home-page`, or for anything inside the FB2 `src-title-info` or `history`, and SHALL produce no auxiliary segment for
-an empty value.
+#### Scenario: The switches do not change what is produced
 
-**Source:** FR-DOC-11, FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-EPUB-8
-(`01_Product/03_DOCUMENT_FORMATS.md#epub`), FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), DD-47 as
-amended by this change to list descriptions under the metadata switch
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`),
-`02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`), `docs/next_features.md` §8.
-In plain words: a translated book whose table of contents, page titles, shelf title, description and image
-descriptions are still in the source language reads as half-translated. These texts are always read into segments,
-and the brief's switches decide later whether the run translates them — so opening the same file always gives the
-same segments, whatever the brief says. A description is metadata and follows the metadata switch; a page title
-follows the navigation switch; the switches themselves belong to `translation-pipeline`. An NCX label that reads
-exactly like a navigation-document label is not a second segment: translating the same words twice wastes a model
-call and lets a reviewer's edit reach only one of them. A navigation document that is also in the spine is body text
-already, so its links are not read a second time. An FB2 author is read from the parts of a name only, because the
-other fields are identifiers and addresses; the source-book information and the file's history describe another book
-and another file, so neither is text to translate. Frontmatter keys are field names a program reads, so they are
-never text.
+- **WHEN** the same EPUB is opened once with every "Also translate" switch on and once with every switch off
+- **THEN** both openings produce identical auxiliary segments with identical ids
+
+### Requirement: Produce an EPUB's metadata as auxiliary segments
+
+From an EPUB the system SHALL produce auxiliary segments for the package's first `dc:title` (kind `METADATA_TITLE`),
+each `dc:creator` (`METADATA_AUTHOR`) and each `dc:description` (`METADATA_DESCRIPTION`).
+
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 as amended by this change to list descriptions under the metadata switch (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`. In plain words: the shelf title, the author and the description are what a library shows; a description is metadata and follows the metadata switch.
+
+#### Scenario: EPUB metadata is collected
+
+- **WHEN** an EPUB with `dc:title` `Frankenstein`, `dc:creator` `Mary Shelley` and a `dc:description` is opened
+- **THEN** its auxiliary unit holds one `METADATA_TITLE`, one `METADATA_AUTHOR` and one `METADATA_DESCRIPTION` segment
+
+### Requirement: Produce an EPUB's navigation, page titles and image text as auxiliary segments
+
+From an EPUB the system SHALL produce auxiliary segments for the link text of each entry of a navigation document that
+is not in the spine (`NAV_LABEL`), the text of each NCX `navLabel` whose source text differs from that of every
+navigation-label segment (`NAV_LABEL`), the `<head><title>` of each spine content document (`TITLE`), and the `alt`
+value of each image (`ALT`).
+
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-EPUB-8 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: a translated book whose table of contents, page titles and image descriptions are still in the source language reads as half-translated. An NCX label that reads exactly like a navigation-document label is not a second segment, and a navigation document that is also in the spine is body text already, so its links are not read a second time.
 
 #### Scenario: EPUB auxiliary text is collected
 
@@ -1286,6 +1173,14 @@ never text.
 - **THEN** its auxiliary unit holds no navigation-label segment
 - **AND** the 5 entries' link texts are segments of the `nav.xhtml` body unit
 
+### Requirement: Produce an FB2's auxiliary segments
+
+From an FB2 the system SHALL produce auxiliary segments for the title information's `book-title` (`METADATA_TITLE`),
+each `author` (`METADATA_AUTHOR`), built from its `first-name`, `middle-name`, `last-name` and `nickname` only, one
+placeholder pair around each part, and each paragraph of its `annotation` (`METADATA_DESCRIPTION`).
+
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`). In plain words: an FB2 author is read from the parts of a name only, because the other fields are identifiers and addresses.
+
 #### Scenario: FB2 auxiliary text is collected
 
 - **WHEN** an FB2 whose title information has the `book-title` `Harry Potter et la Coupe de Feu`, one `author` and
@@ -1299,11 +1194,13 @@ never text.
 - **THEN** its auxiliary unit holds one author segment whose masked form is `⟦g0⟧Leo⟦g1⟧ ⟦g2⟧Tolstoy⟦g3⟧`
 - **AND** no segment holds `a1b2` or `leo@example.org`
 
-#### Scenario: FB2 source-book information and history are not read
+### Requirement: Produce a Markdown or plain-text book's auxiliary segments
 
-- **WHEN** an FB2 whose `src-title-info` holds `<book-title>Война и мир</book-title>` and whose `document-info` holds
-  the `history` paragraph `v1.0 — scanned` is opened
-- **THEN** no segment holds `Война и мир` or `v1.0 — scanned`
+From a Markdown file the system SHALL produce auxiliary segments for each frontmatter value that is text
+(`FRONTMATTER_VALUE`), as *Segment only the text values of Markdown frontmatter, never its keys* defines it, and for the
+alternative text of each image (`ALT`); from a plain-text file it SHALL produce none.
+
+**Source**: FR-DOC-10, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: a Markdown book's title lives in its frontmatter and its image descriptions in the text; a plain-text file has neither.
 
 #### Scenario: Only a frontmatter text value is a segment
 
@@ -1312,15 +1209,34 @@ never text.
 - **THEN** its auxiliary unit holds exactly one segment, `The Book`
 - **AND** no segment holds `title`, `lang`, `en`, `2024-05-01` or `true`
 
-#### Scenario: The switches do not change what is produced
+#### Scenario: A Markdown image description is an auxiliary segment
 
-- **WHEN** the same EPUB is opened once with every "Also translate" switch on and once with every switch off
-- **THEN** both openings produce identical auxiliary segments with identical ids
+- **WHEN** a Markdown file holding `![Figure 1](fig1.png)` is opened
+- **THEN** its auxiliary unit holds one `ALT` segment with the source `Figure 1`
 
 #### Scenario: A plain-text book has an empty auxiliary unit
 
 - **WHEN** `notes.txt` is opened
 - **THEN** its auxiliary unit holds no segment
+
+### Requirement: Produce no auxiliary segment for what is not text
+
+The system SHALL NOT produce a segment for a Markdown frontmatter key, for an FB2 author's `id`, `email` or
+`home-page`, or for anything inside the FB2 `src-title-info` or `history`, and SHALL produce no auxiliary segment for
+an empty value.
+
+**Source**: FR-DOC-11, FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`). In plain words: the source-book information and the file's history describe another book and another file, identifiers and addresses are not prose, and frontmatter keys are field names a program reads, so none of them is text to translate.
+
+#### Scenario: FB2 source-book information and history are not read
+
+- **WHEN** an FB2 whose `src-title-info` holds `<book-title>Война и мир</book-title>` and whose `document-info` holds
+  the `history` paragraph `v1.0 — scanned` is opened
+- **THEN** no segment holds `Война и мир` or `v1.0 — scanned`
+
+#### Scenario: An empty value yields no segment
+
+- **WHEN** an EPUB whose package holds an empty `<dc:description></dc:description>` is opened
+- **THEN** its auxiliary unit holds no description segment
 
 ### Requirement: Write auxiliary translations back into their own slots
 
@@ -1329,33 +1245,32 @@ exact slot its segment was read from — the metadata element, the name parts of
 text, the NCX label, the page title, the image's `alt` value, the frontmatter value — and SHALL leave every auxiliary
 slot without target text as it was.
 
-WHERE an image sits inside a body segment and also has an alternative-text segment, the written image SHALL carry the
-translated alternative text whether or not the body segment was translated. WHERE one body segment holds several
-images with identical markup, the k-th such image in the written translation SHALL carry the k-th image's alternative
-text.
-
-WHEN an FB2 author's segment is written, each name part SHALL receive the text its own placeholder pair encloses in
-the translation, and the author's other elements SHALL be written unchanged.
-
-WHEN a Markdown image's alternative text is written, the system SHALL escape each `\`, `[` and `]` in it with a
-backslash.
-
-**Source:** FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`),
-`02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: producing the segments is half the job; the translated title must land in the title, and the
-translated image description must land on that image. An image inside a paragraph travels as a protected token with
-the paragraph, so the rule is stated for that case explicitly — otherwise restoring the paragraph could put the
-untranslated description back, or a paragraph still waiting for its translation could keep the old description. Two
-identical images in one paragraph cannot be told apart by their markup, so they are matched by order. An FB2 author is
-written back part by part, so the first name stays a first name and the author's id and address are untouched. A
-Markdown description sits between brackets, so a bracket or backslash in the translation is escaped to keep the image
-an image.
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: producing the segments is half the job; the translated title must land in the title, and the translated image description must land on that image. An image inside a paragraph travels as a protected token with the paragraph, so the rule is stated for that case explicitly — otherwise restoring the paragraph could put the untranslated description back, or a paragraph still waiting for its translation could keep the old description. Two identical images in one paragraph cannot be told apart by their markup, so they are matched by order. An FB2 author is written back part by part, so the first name stays a first name and the author's id and address are untouched. A Markdown description sits between brackets, so a bracket or backslash in the translation is escaped to keep the image an image.
 
 #### Scenario: A translated title lands in the metadata
 
 - **WHEN** an EPUB whose `dc:title` is `Frankenstein` is written with the target `Франкенштейн` for its title segment
 - **THEN** the output OPF declares `<dc:title>Франкенштейн</dc:title>`
+
+#### Scenario: An untranslated slot stays in the source language
+
+- **WHEN** an FB2 is written with target text for its `book-title` segment only
+- **THEN** its `author` and `annotation` are unchanged in the output
+
+#### Scenario: A frontmatter value is replaced inside the frontmatter
+
+- **WHEN** a Markdown file opening with `---\ntitle: The Book\n---\n` is written with the target `Книга` for its
+  frontmatter value
+- **THEN** the output opens with `---\ntitle: Книга\n---\n` and its key `title` is unchanged
+
+### Requirement: Give an image in a body segment its translated alternative text
+
+WHERE an image sits inside a body segment and also has an alternative-text segment, the written image SHALL carry the
+translated alternative text whether or not the body segment was translated. WHERE one body segment holds several
+images with identical markup, the k-th such image in the written translation SHALL carry the k-th image's alternative
+text.
+
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: an image inside a paragraph travels as a protected token with the paragraph, so restoring the paragraph could put the untranslated description back, or a paragraph still waiting for its translation could keep the old description; two identical images cannot be told apart by their markup, so they are matched by order.
 
 #### Scenario: An image inside a translated paragraph keeps its translated description
 
@@ -1377,6 +1292,13 @@ an image.
 - **THEN** the output paragraph is `<p><img src="dot.png" alt="Перша точка"/> і <img src="dot.png"
   alt="Друга точка"/></p>`
 
+### Requirement: Write an FB2 author back part by part
+
+WHEN an FB2 author's segment is written, each name part SHALL receive the text its own placeholder pair encloses in
+the translation, and the author's other elements SHALL be written unchanged.
+
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`. In plain words: an FB2 author is written back part by part, so the first name stays a first name and the author's id and address are untouched.
+
 #### Scenario: An FB2 author's name parts are written in place
 
 - **WHEN** the FB2 author `<first-name>Leo</first-name> <last-name>Tolstoy</last-name><id>a1b2</id>` is written with
@@ -1384,16 +1306,12 @@ an image.
 - **THEN** the output author holds `<first-name>Лев</first-name>` and `<last-name>Толстой</last-name>`
 - **AND** it still holds `<id>a1b2</id>`
 
-#### Scenario: An untranslated slot stays in the source language
+### Requirement: Escape the brackets of a Markdown image description
 
-- **WHEN** an FB2 is written with target text for its `book-title` segment only
-- **THEN** its `author` and `annotation` are unchanged in the output
+WHEN a Markdown image's alternative text is written, the system SHALL escape each `\`, `[` and `]` in it with a
+backslash.
 
-#### Scenario: A frontmatter value is replaced inside the frontmatter
-
-- **WHEN** a Markdown file opening with `---\ntitle: The Book\n---\n` is written with the target `Книга` for its
-  frontmatter value
-- **THEN** the output opens with `---\ntitle: Книга\n---\n` and its key `title` is unchanged
+**Source**: FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: a Markdown description sits between brackets, so a bracket or backslash in the translation is escaped to keep the image an image.
 
 #### Scenario: A Markdown image description escapes its brackets
 
@@ -1405,22 +1323,9 @@ an image.
 
 WHEN an image's alternative-text segment or a Markdown frontmatter-value segment is restored, the system SHALL return
 its target as plain text — every placeholder substituted back, with no markup escaping, no Markdown escaping and no
-Markdown structure check — so that the writer encodes it exactly once for its slot: as an attribute value in EPUB,
-between its image's brackets in Markdown, and as a YAML value in the frontmatter.
+Markdown structure check — so that the writer encodes it exactly once for its slot.
 
-The system SHALL restore every other auxiliary segment as a body segment of its format is restored.
-
-**Source:** FR-DOC-11, FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0031
-(`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: the restore step was built for paragraph content, which it escapes as markup or as Markdown. An image
-description and a frontmatter value are neither: escaping `&` as markup and then again when the writer puts it into
-the attribute printed `&amp;amp;` on the image, and escaping a frontmatter value as Markdown left backslashes a YAML
-reader keeps. So these two kinds come back as plain text and are encoded once, where they are written. A title, an
-author, a navigation label or a description is written as element text or markup, so it restores exactly as a
-paragraph does.
+**Source**: FR-DOC-11, FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0031 (`docs/adr/ADR-0031-masked-text-is-character-data.md`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: the restore step was built for paragraph content, which it escapes as markup or as Markdown. An image description and a frontmatter value are neither: escaping `&` as markup and then again when the writer puts it into the attribute printed `&amp;amp;` on the image, and escaping a frontmatter value as Markdown left backslashes a YAML reader keeps. So these two kinds come back as plain text and are encoded once, where they are written. A title, an author, a navigation label or a description is written as element text or markup, so it restores exactly as a paragraph does.
 
 #### Scenario: An ampersand in a description inside a translated paragraph is escaped once
 
@@ -1435,11 +1340,24 @@ paragraph does.
   `Том & Джеррі`
 - **THEN** the written image carries `alt="Том &amp; Джеррі"`
 
+#### Scenario: A Markdown image description is encoded once between its brackets
+
+- **WHEN** the Markdown image `![Figure 1](fig1.png)` receives the alternative-text target `Рисунок [1]`
+- **THEN** restoring returns the plain text `Рисунок [1]` and the writer encodes it once, as
+  `![Рисунок \[1\]](fig1.png)`
+
 #### Scenario: A frontmatter value gains no Markdown backslashes
 
 - **WHEN** a Markdown file whose frontmatter holds `title: The Book` is written with the target
   `Том & Джеррі *назавжди*` for that value
 - **THEN** the output's frontmatter holds `title: Том & Джеррі *назавжди*`, with no backslash
+
+### Requirement: Restore every other auxiliary segment as a body segment
+
+The system SHALL restore every auxiliary segment other than an image's alternative text and a frontmatter value as a
+body segment of its format is restored.
+
+**Source**: FR-DOC-11, FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`, DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: a title, an author, a navigation label or a description is written as element text or markup, so it restores exactly as a paragraph does.
 
 #### Scenario: A page title is restored as a body text is
 
@@ -1452,13 +1370,7 @@ WHERE an EPUB carries both a navigation document outside the spine and an NCX, a
 identical to the source text of a navigation-label segment SHALL NOT be a segment of its own, and SHALL be written with
 that navigation-label segment's target text.
 
-**Source:** FR-DOC-EPUB-8 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`),
-`02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`.
-In plain words: many EPUB 3 books ship a legacy NCX next to the navigation document, and different reading systems
-show one or the other. If the same chapter name were translated two different ways, the table of contents would
-change depending on the device. Writing both from one segment makes them agree by construction, costs one model call
-instead of two, and carries a reviewer's edit to both places.
+**Source**: FR-DOC-EPUB-8 (`01_Product/03_DOCUMENT_FORMATS.md#epub`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`. In plain words: many EPUB 3 books ship a legacy NCX next to the navigation document, and different reading systems show one or the other. If the same chapter name were translated two different ways, the table of contents would change depending on the device. Writing both from one segment makes them agree by construction, costs one model call instead of two, and carries a reviewer's edit to both places.
 
 #### Scenario: One label, one rendering
 
@@ -1479,11 +1391,7 @@ WHEN a book is written, the system SHALL change no attribute value except the al
 the language attributes the target-language requirement names; every other attribute — `title`, `href`, `src`, `id`,
 `class`, data attributes — SHALL be written exactly as it was read.
 
-**Source:** FR-DOC-02, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: attribute values usually carry identifiers, links and file names, and changing one breaks a
-cross-reference or an image. The exception for alternative text is closed on purpose, so it cannot grow into
-"translate any attribute that looks like prose".
+**Source**: FR-DOC-02, FR-DOC-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: attribute values usually carry identifiers, links and file names, and changing one breaks a cross-reference or an image. The exception for alternative text is closed on purpose, so it cannot grow into "translate any attribute that looks like prose".
 
 #### Scenario: A title attribute is never translated
 
@@ -1493,47 +1401,55 @@ cross-reference or an image. The exception for alternative text is closed on pur
 ### Requirement: Segment only the text values of Markdown frontmatter, never its keys
 
 WHERE a Markdown file opens with a `---`-delimited frontmatter block, the system SHALL produce an auxiliary segment for
-a value only when all of these hold:
+a value only when its key is neither `lang` nor `language`, and SHALL produce no segment for any key.
 
-- its key is neither `lang` nor `language`;
-- it is a single-line value on a top-level `key: value` line — not on an indented line, not a list item, not a flow
-  collection opening with `[` or `{`, not a block scalar opening with `|` or `>`, and not an anchor, alias or tag
-  opening with `&`, `*` or `!`;
-- written without quotes, it is not a value YAML reads as another type: a null (`~`, `null` in any letter case, or
-  nothing), a boolean (`true`, `false`, `yes`, `no`, `on`, `off`, `y` or `n`, in any letter case), a number
-  (hexadecimal, octal, `.inf` and `.nan` included), or an ISO date or date-time;
-- it is not a web or e-mail address (`scheme://…`, `www.…`, `mailto:…`, `name@host.domain`);
-- with its surrounding quotes, or, when it has none, a trailing `# comment` set aside, it holds at least one letter.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: frontmatter keys are machine-readable field names and translating one breaks whatever reads the file. Values of other types — dates, flags, counts, addresses, lists — are data a site generator or a reader parses: translating `true` as `так` or rewriting a date as prose breaks the file just as surely. `lang` is the book's own language declaration, replaced by the target on export rather than translated. What is left is text a person may want translated, and the Book Brief's "Frontmatter values" switch, off by default, decides whether the run does. Only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
 
-The system SHALL produce no segment for any key, and SHALL carry the block through byte-for-byte when no value
-receives target text, apart from the `lang` value that *Declare no language metadata in formats that carry none*
-replaces. A `---` line that is not at the start of the file SHALL NOT be treated as frontmatter.
+#### Scenario: Keys and the language declaration are never segments
 
-**Source:** FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3
-(`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`),
-`02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, the owner's frontmatter decision recorded in
-`openspec/changes/complete-translation-workflow/design.md` (D12).
-In plain words: frontmatter keys are machine-readable field names and translating one breaks whatever reads the file.
-Values of other types — dates, flags, counts, addresses, lists — are data a site generator or a reader parses:
-translating `true` as `так` or rewriting a date as prose breaks the file just as surely. `lang` is the book's own
-language declaration, replaced by the target on export rather than translated. What is left is text a person may want
-translated, and the Book Brief's "Frontmatter values" switch, off by default, decides whether the run does. Only the
-start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real
-documents use it that way.
+- **WHEN** a Markdown file whose frontmatter holds `title: The Book` and `language: en` is opened
+- **THEN** its auxiliary unit holds exactly one segment, `The Book`
+- **AND** no segment holds `title`, `language` or `en`
 
-#### Scenario: A frontmatter block survives byte-for-byte when untranslated
+### Requirement: Segment only single-line frontmatter values
 
-- **WHEN** a Markdown file opening with `---\ntitle: The Book\nlang: en\n---\n` followed by `Prose.` is parsed and
-  reassembled with zero segment edits and target language `uk`
-- **THEN** exactly one body segment is produced, for `Prose.`
-- **AND** the output's first, second and fourth lines are byte-identical to the source's, and its third line reads
-  `lang: uk`
+The system SHALL produce an auxiliary segment for a frontmatter value only when it is a single-line value on a
+top-level `key: value` line — not on an indented line, not a list item, not a flow collection opening with `[` or `{`,
+not a block scalar opening with `|` or `>`, and not an anchor, alias or tag opening with `&`, `*` or `!`.
 
-#### Scenario: Values that are not text are never segments
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: lists, collections and block scalars are structure a YAML reader parses, so only a plain one-line value is text.
 
-- **WHEN** a Markdown file whose frontmatter holds the lines `tags: [war, peace]`, `homepage: https://example.com`,
-  `pages: 1225`, `published: yes`, `summary: |` and the indented line `  A long story.` is opened
+#### Scenario: Structured values are never segments
+
+- **WHEN** a Markdown file whose frontmatter holds the lines `tags: [war, peace]`, `summary: |` and the indented line
+  `  A long story.` is opened
+- **THEN** its auxiliary unit holds no segment
+
+### Requirement: Skip frontmatter values YAML reads as another type
+
+The system SHALL produce no auxiliary segment for a frontmatter value that, written without quotes, YAML reads as
+another type: a null (`~`, `null` in any letter case, or nothing), a boolean (`true`, `false`, `yes`, `no`, `on`,
+`off`, `y` or `n`, in any letter case), a number (hexadecimal, octal, `.inf` and `.nan` included), or an ISO date or
+date-time.
+
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: translating `true` as `так` or rewriting a date as prose breaks the file just as surely as translating a key.
+
+#### Scenario: Values of another type are never segments
+
+- **WHEN** a Markdown file whose frontmatter holds `pages: 1225`, `published: yes` and `date: 2024-05-01` is opened
+- **THEN** its auxiliary unit holds no segment
+
+### Requirement: Skip web addresses, e-mail addresses and values without a letter
+
+The system SHALL produce no auxiliary segment for a frontmatter value that is a web or e-mail address (`scheme://…`,
+`www.…`, `mailto:…`, `name@host.domain`) or that holds no letter once its surrounding quotes, or, when it has none, a
+trailing `# comment`, are set aside.
+
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: an address is not prose and a value with no letter has nothing to translate; a trailing comment is not part of the value.
+
+#### Scenario: An address is never a segment
+
+- **WHEN** a Markdown file whose frontmatter holds `homepage: https://example.com` is opened
 - **THEN** its auxiliary unit holds no segment
 
 #### Scenario: A quoted value is text only when it holds a letter
@@ -1546,6 +1462,22 @@ documents use it that way.
 - **WHEN** a Markdown file whose frontmatter holds `title: The Book # working title` is opened
 - **THEN** its frontmatter segment holds `The Book`
 
+### Requirement: Carry the frontmatter block through byte-for-byte
+
+The system SHALL carry the frontmatter block through byte-for-byte when no value receives target text, apart from the
+`lang` value that *Declare no language metadata in formats that carry none* replaces. A `---` line that is not at the
+start of the file SHALL NOT be treated as frontmatter.
+
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
+
+#### Scenario: A frontmatter block survives byte-for-byte when untranslated
+
+- **WHEN** a Markdown file opening with `---\ntitle: The Book\nlang: en\n---\n` followed by `Prose.` is parsed and
+  reassembled with zero segment edits and target language `uk`
+- **THEN** exactly one body segment is produced, for `Prose.`
+- **AND** the output's first, second and fourth lines are byte-identical to the source's, and its third line reads
+  `lang: uk`
+
 #### Scenario: A thematic break later in the file is not frontmatter
 
 - **WHEN** a Markdown file begins with `# Title` and contains a `---` line between two paragraphs
@@ -1555,29 +1487,9 @@ documents use it that way.
 ### Requirement: Quote a translated frontmatter value so it still reads as text
 
 WHEN a frontmatter value's translation is written, the system SHALL keep the value's original quotes, writing `"` as
-`\"` inside double quotes and `'` as `''` inside single quotes; and WHERE the value had no quotes, the system SHALL
-wrap the translation in double quotes when it contains `: ` or ` #`, begins with one of `-`, `?`, `:`, `,`, `[`, `]`,
-`{`, `}`, `#`, `&`, `*`, `!`, `|`, `>`, `'`, `"`, `%`, `@` or a backtick, or would itself read as a null, a boolean, a
-number or a date.
+`\"` inside double quotes and `'` as `''` inside single quotes.
 
-**Source:** FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded
-in `openspec/changes/complete-translation-workflow/design.md` (D12).
-In plain words: the translation goes back into YAML, and YAML reads punctuation as structure. Unquoted,
-`Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a
-translation is quoted to stay the text it is. A value that was quoted keeps its quotes, with the quote character
-escaped the way that style of quote requires.
-
-#### Scenario: A colon in the translation is quoted
-
-- **WHEN** the frontmatter line `title: The Book` is written with the target `Книга: Частина 1`
-- **THEN** the output line reads `title: "Книга: Частина 1"`
-
-#### Scenario: A translation that reads as a number is quoted
-
-- **WHEN** the frontmatter line `title: Nineteen Eighty-Four` is written with the target `1984`
-- **THEN** the output line reads `title: "1984"`
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: the translation goes back into YAML, and YAML reads punctuation as structure. Unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is. A value that was quoted keeps its quotes, with the quote character escaped the way that style of quote requires.
 
 #### Scenario: Double quotes are kept and escaped
 
@@ -1589,19 +1501,31 @@ escaped the way that style of quote requires.
 - **WHEN** the frontmatter line `title: 'The Book'` is written with the target `Книга 'Перша'`
 - **THEN** the output line reads `title: 'Книга ''Перша'''`
 
+### Requirement: Wrap an unquoted frontmatter translation in double quotes when YAML would misread it
+
+WHERE a frontmatter value had no quotes, the system SHALL wrap its translation in double quotes when it contains `: `
+or ` #`, begins with one of `-`, `?`, `:`, `,`, `[`, `]`, `{`, `}`, `#`, `&`, `*`, `!`, `|`, `>`, `'`, `"`, `%`, `@` or
+a backtick, or would itself read as a null, a boolean, a number or a date.
+
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is.
+
+#### Scenario: A colon in the translation is quoted
+
+- **WHEN** the frontmatter line `title: The Book` is written with the target `Книга: Частина 1`
+- **THEN** the output line reads `title: "Книга: Частина 1"`
+
+#### Scenario: A translation that reads as a number is quoted
+
+- **WHEN** the frontmatter line `title: Nineteen Eighty-Four` is written with the target `1984`
+- **THEN** the output line reads `title: "1984"`
+
 ### Requirement: Keep the zero-edit round trip canonical-equal with auxiliary text present
 
 The system's per-format golden round-trip tests SHALL show that a book whose auxiliary text is produced as segments —
 metadata, navigation document, NCX, page titles, alternative text, frontmatter values — and reassembled with zero
 segment edits is still canonical-equal to its source, apart from the intentional target-language metadata.
 
-**Source:** FR-DOC-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`),
-`01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`, `02_Architecture/03_DOCUMENT_MODEL.md#golden-round-trip-test`,
-ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`).
-In plain words: reading more slots must not make writing less faithful. The same golden test that proved "we preserve
-the book" keeps proving it after the navigation document stops being copied byte for byte and starts being parsed and
-written. For Markdown the intentional language metadata is the frontmatter's `lang` value.
+**Source**: FR-DOC-09 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), `01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`, `02_Architecture/03_DOCUMENT_MODEL.md#golden-round-trip-test`, ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`). In plain words: reading more slots must not make writing less faithful. The same golden test that proved "we preserve the book" keeps proving it after the navigation document stops being copied byte for byte and starts being parsed and written. For Markdown the intentional language metadata is the frontmatter's `lang` value.
 
 #### Scenario: An EPUB with nav, NCX and alt text still round-trips
 
@@ -1621,10 +1545,7 @@ written. For Markdown the intentional language metadata is the frontmatter's `la
 The system's per-format golden tests SHALL show that when only auxiliary segments receive target text, the written
 book differs from its source only in those slots' values and the intentional target-language metadata.
 
-**Source:** FR-DOC-09, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0041
-(`docs/adr/ADR-0041-translatable-attribute-values.md`), `02_Architecture/03_DOCUMENT_MODEL.md#golden-round-trip-test`.
-In plain words: the zero-edit test proves nothing is broken when nothing is written; this second golden proves that
-writing the new slots touches those slots and nothing next to them — no neighbouring attribute, no link, no element.
+**Source**: FR-DOC-09, FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), ADR-0041 (`docs/adr/ADR-0041-translatable-attribute-values.md`), `02_Architecture/03_DOCUMENT_MODEL.md#golden-round-trip-test`. In plain words: the zero-edit test proves nothing is broken when nothing is written; this second golden proves that writing the new slots touches those slots and nothing next to them — no neighbouring attribute, no link, no element.
 
 #### Scenario: Only the edited slots differ
 
@@ -1637,28 +1558,27 @@ writing the new slots touches those slots and nothing next to them — no neighb
 
 WHEN a file is inspected, the system SHALL answer with a verdict of **readable**, **DRM-protected** or
 **unsupported**, together with the format and its version where known (`EPUB 2.0`, `EPUB 3.0`, `FB2`, `Markdown`,
-`TXT`), the language evidence the book's metadata gives, and:
+`TXT`) and the language evidence the book's metadata gives.
 
-- for a DRM-protected book, the encryption scheme by name where the book's encryption manifest identifies it (for
-  example `Adobe ADEPT`), or `ZIP encryption` for a zipped FB2 whose entry is encrypted;
-- for an unsupported file, the detected file type judged from its name and its leading bytes (`PDF`, `DOCX`, `MOBI`,
-  or `Unknown`).
-
-A refusing verdict SHALL be a normal answer, not a failure. Inspecting SHALL NOT change what opening a book returns:
-a DRM-protected or unsupported file SHALL still fail to open with `ErrorCode.validation`.
-
-**Source:** FR-IMPORT-04, FR-IMPORT-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1
-(`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `02_Architecture/09_ERROR_HANDLING.md#error-code`,
-ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`).
-In plain words: the import screen has to tell "this book is protected" apart from "this is a PDF", and both used to
-arrive as the same validation error told apart only by message text. Inspection answers that question as data. The
-error vocabulary stays at its fixed set, and every caller that opens books — the command line first — sees exactly
-what it saw before. A zipped FB2 has no encryption manifest, so the zip's own encryption flag is the scheme it names.
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `02_Architecture/09_ERROR_HANDLING.md#error-code`, ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the import screen has to tell "this book is protected" apart from "this is a PDF", and both used to arrive as the same validation error told apart only by message text. Inspection answers that question as data. The error vocabulary stays at its fixed set, and every caller that opens books — the command line first — sees exactly what it saw before. A zipped FB2 has no encryption manifest, so the zip's own encryption flag is the scheme it names.
 
 #### Scenario: A readable EPUB reports its version
 
 - **WHEN** `Frankenstein.epub`, whose package declares `version="2.0"`, is inspected
 - **THEN** the verdict is readable, with the format `EPUB 2.0`
+
+#### Scenario: Font obfuscation does not make a book DRM-protected
+
+- **WHEN** an EPUB whose only encrypted entries are fonts under the IDPF font-obfuscation algorithm is inspected
+- **THEN** the verdict is readable
+
+### Requirement: Name the encryption scheme and the detected type of a refusing verdict
+
+A DRM-protected verdict SHALL name the encryption scheme where the book's encryption manifest identifies it (for
+example `Adobe ADEPT`), or `ZIP encryption` for a zipped FB2 whose entry is encrypted; an unsupported verdict SHALL
+name the detected file type judged from the file's name and its leading bytes (`PDF`, `DOCX`, `MOBI`, or `Unknown`).
+
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-DRM-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: a zipped FB2 has no encryption manifest, so the zip's own encryption flag is the scheme it names; a refused file is named by what it is, not just refused.
 
 #### Scenario: An Adobe-protected EPUB is named
 
@@ -1678,39 +1598,46 @@ what it saw before. A zipped FB2 has no encryption manifest, so the zip's own en
 - **WHEN** `mystery.bin`, holding 2,048 random bytes, is inspected
 - **THEN** the verdict is unsupported with the detected type `Unknown`
 
-#### Scenario: Font obfuscation does not make a book DRM-protected
-
-- **WHEN** an EPUB whose only encrypted entries are fonts under the IDPF font-obfuscation algorithm is inspected
-- **THEN** the verdict is readable
-
 #### Scenario: A password-protected zipped FB2 names its zip encryption
 
 - **WHEN** `Kobzar.fb2.zip`, whose `Kobzar.fb2` entry carries the zip encryption flag, is inspected
 - **THEN** the verdict is DRM-protected with the scheme `ZIP encryption`
 - **AND** opening the same file fails with `ErrorCode.validation`
 
+### Requirement: Answer a refusing verdict as data, not as a failure
+
+A refusing verdict SHALL be a normal answer, not a failure. Inspecting SHALL NOT change what opening a book returns: a
+DRM-protected or unsupported file SHALL still fail to open with `ErrorCode.validation`.
+
+**Source**: FR-IMPORT-04, FR-IMPORT-05 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `02_Architecture/09_ERROR_HANDLING.md#error-code`, ADR-0039 (`docs/adr/ADR-0039-import-refusal-kind-is-data.md`). In plain words: the error vocabulary stays at its fixed set, and every caller that opens books — the command line first — sees exactly what it saw before.
+
+#### Scenario: Inspecting is an answer and opening still fails
+
+- **WHEN** `Purchased_Novel.epub` is inspected and then opened
+- **THEN** inspecting returns the DRM-protected verdict as a normal answer, with no error
+- **AND** opening it fails with `ErrorCode.validation`
+
 ### Requirement: Report the language evidence a book's metadata gives
 
 WHEN a book is inspected, the system SHALL report its language evidence: the declared language code as written; that
-code normalized, or none where it names no language the application can name; for an EPUB, the language declared by
-more than half of the content documents that declare one on their root element, or none where no language has such a
-majority; and a verdict of
+code normalized, or none where it names no language the application can name; and, for an EPUB, the language declared
+by more than half of the content documents that declare one on their root element, or none where no language has such
+a majority.
 
-- **match** — a recognized declaration with no content majority or a content majority equal to it;
-- **mismatch** — a recognized declaration and a content majority that differs from it;
-- **unrecognized** — a declaration that names no language the application can name, such as `xx-yy`, whether or not
-  the Book Brief lists the language it does name;
-- **absent** — no declaration.
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: this is everything the book says about its own language, weighed without guessing. The import screen turns "mismatch" and "unrecognized" into warnings and the Book Brief turns the evidence into a preselected source. Reading the text itself is deliberately out of scope: it would need a large detection library, and the person can correct the source on the brief.
 
-Declarations SHALL be compared after normalization. The system SHALL NOT infer a language from the book's text.
+#### Scenario: An FB2 declaration has no content majority
 
-**Source:** FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1
-(`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037
-(`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`).
-In plain words: this is everything the book says about its own language, weighed without guessing. The import screen
-turns "mismatch" and "unrecognized" into warnings and the Book Brief turns the evidence into a preselected source.
-Reading the text itself is deliberately out of scope: it would need a large detection library, and the person can
-correct the source on the brief.
+- **WHEN** an FB2 whose title information declares `<lang>ua</lang>` is inspected
+- **THEN** the evidence reports declared `ua`, normalized `uk`, no content majority and the verdict match
+
+### Requirement: Give a match or mismatch verdict for a recognized declaration
+
+The system SHALL give the language evidence the verdict **match** for a recognized declaration with no content
+majority or a content majority equal to it, and the verdict **mismatch** for a recognized declaration and a content
+majority that differs from it.
+
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a match means the book says nothing against its own declaration; a mismatch means the chapters contradict the package.
 
 #### Scenario: Chapters disagreeing with the package is a mismatch
 
@@ -1718,20 +1645,18 @@ correct the source on the brief.
   inspected
 - **THEN** the evidence reports declared `en`, content majority `uk` and the verdict mismatch
 
-#### Scenario: A regional spelling of the same language is a match
-
-- **WHEN** an EPUB whose package declares `en-US` and whose content documents declare `lang="en"` is inspected
-- **THEN** the verdict is match
-
-#### Scenario: An FB2 declaration has no content majority
-
-- **WHEN** an FB2 whose title information declares `<lang>ua</lang>` is inspected
-- **THEN** the evidence reports declared `ua`, normalized `uk`, no content majority and the verdict match
-
 #### Scenario: A language outside the list is recognized
 
 - **WHEN** a Markdown file whose frontmatter declares `lang: la` is inspected
 - **THEN** the normalized code is `la` and the verdict is match
+
+### Requirement: Give an unrecognized or absent verdict
+
+The system SHALL give the language evidence the verdict **unrecognized** for a declaration that names no language the
+application can name, such as `xx-yy`, whether or not the Book Brief lists the language it does name, and the verdict
+**absent** where there is no declaration.
+
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: a code nobody can name and a book that says nothing are different cases, and the import screen treats them differently.
 
 #### Scenario: An unknown code is unrecognized
 
@@ -1743,6 +1668,22 @@ correct the source on the brief.
 - **WHEN** `notes.txt` is inspected
 - **THEN** the verdict is absent and no content majority is reported
 
+### Requirement: Compare language declarations after normalization and never infer from text
+
+The system SHALL compare declarations after normalization, and SHALL NOT infer a language from the book's text.
+
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: reading the text itself is deliberately out of scope because it would need a large detection library, and the person can correct the source on the brief.
+
+#### Scenario: A regional spelling of the same language is a match
+
+- **WHEN** an EPUB whose package declares `en-US` and whose content documents declare `lang="en"` is inspected
+- **THEN** the verdict is match
+
+#### Scenario: The text is never read for a language
+
+- **WHEN** `notes.txt`, whose text is English prose and which declares no language, is inspected
+- **THEN** the verdict is absent and no language is derived from the text
+
 ### Requirement: Record the language a block declares on its segment
 
 WHEN an EPUB content document or an FB2 document is parsed, the system SHALL record on each segment the value, as
@@ -1750,19 +1691,7 @@ written, of the `xml:lang` or `lang` attribute of the nearest element that enclo
 the document's root element — the segment's own block included — or no language where none of those elements
 declares one.
 
-The system SHALL NOT, while parsing, compare that declaration with any other language or mark a segment as foreign.
-
-**Source:** FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-FOREIGN-1, EC-FOREIGN-2
-(`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037
-(`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`); the quality-gates requirement "Skip the echo and script
-checks for a marked foreign passage kept by policy"
-(`openspec/changes/complete-translation-workflow/specs/quality-gates/spec.md`) is what reads it.
-In plain words: whether a passage is foreign depends on the language the run translates from, which the person settles
-on the Book Brief after opening the book — so parsing only records what the book says about each block, and the run
-makes the comparison. Comparing at parse time against the package's language marked every paragraph of a Ukrainian
-book whose template said English as foreign. The root element is left out because its declaration describes the
-whole document, not a passage in it; the import's language evidence already weighs it, and treating it as a passage
-marking would keep a whole chapter untranslated whenever it disagreed with the brief.
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-FOREIGN-1, EC-FOREIGN-2 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`); the quality-gates requirement "Skip the echo and script checks for a marked foreign passage kept by policy" (`openspec/changes/complete-translation-workflow/specs/quality-gates/spec.md`) is what reads it. In plain words: whether a passage is foreign depends on the language the run translates from, which the person settles on the Book Brief after opening the book — so parsing only records what the book says about each block, and the run makes the comparison. Comparing at parse time against the package's language marked every paragraph of a Ukrainian book whose template said English as foreign. The root element is left out because its declaration describes the whole document, not a passage in it; the import's language evidence already weighs it, and treating it as a passage marking would keep a whole chapter untranslated whenever it disagreed with the brief.
 
 #### Scenario: A block's own declaration is recorded
 
@@ -1774,7 +1703,6 @@ marking would keep a whole chapter untranslated whenever it disagreed with the b
 - **WHEN** an EPUB whose package declares `en` has a content document whose `<body xml:lang="uk">` holds
   `<p>Привіт.</p>`
 - **THEN** that paragraph's segment records the declared language `uk`
-- **AND** parsing marks no segment of the book as foreign
 
 #### Scenario: The root element's declaration is not a block's
 
@@ -1786,19 +1714,25 @@ marking would keep a whole chapter untranslated whenever it disagreed with the b
 - **WHEN** a Markdown file and a TXT file are parsed
 - **THEN** no segment of either records a declared language
 
+### Requirement: Mark no segment foreign while parsing
+
+The system SHALL NOT, while parsing, compare a segment's declared language with any other language or mark a segment
+as foreign.
+
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-FOREIGN-1, EC-FOREIGN-2 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`). In plain words: whether a passage is foreign depends on the language the run translates from, which the person settles on the Book Brief after opening the book, so the run makes the comparison, not the parser.
+
+#### Scenario: Parsing marks no segment as foreign
+
+- **WHEN** an EPUB whose package declares `en` has a content document whose `<body xml:lang="uk">` holds
+  `<p>Привіт.</p>` and is parsed
+- **THEN** parsing marks no segment of the book as foreign
+
 ### Requirement: Record the language an inline element declares on its placeholder pair
 
 WHEN an inline element of a segment is masked as a placeholder pair, the system SHALL record on that pair the value,
 as written, of that element's own `xml:lang` or `lang` attribute, or no language where the element carries neither.
 
-**Source:** FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-FOREIGN-3
-(`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking`,
-ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), ADR-0040
-(`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`).
-In plain words: under the Book Brief's Keep policy for foreign passages, a run keeps an inline passage the book itself
-marks as another language exactly as written, while the prose around it is translated; the policy and the protection
-belong to the pipeline. Recording each pair's own marking when the segment is masked is what lets the run find those
-passages from the book's metadata alone, without guessing from the text.
+**Source**: FR-DOC-04 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-FOREIGN-3 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), `02_Architecture/03_DOCUMENT_MODEL.md#inline-masking`, ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: under the Book Brief's Keep policy for foreign passages, a run keeps an inline passage the book itself marks as another language exactly as written, while the prose around it is translated; the policy and the protection belong to the pipeline. Recording each pair's own marking when the segment is masked is what lets the run find those passages from the book's metadata alone, without guessing from the text.
 
 #### Scenario: A marked inline passage records its language on its pair
 
@@ -1813,28 +1747,22 @@ passages from the book's metadata alone, without guessing from the text.
 
 ### Requirement: Extract the book's cover image
 
-WHEN a book's profile is built, the system SHALL find its cover image by the first rule that applies:
+WHEN a book's profile is built, the system SHALL find its cover image by the first rule that applies for its format.
 
-- EPUB: the manifest item whose properties include `cover-image`; else the item named by `<meta name="cover">`,
-  whose value is read as a manifest id or, failing that, as a manifest href; else the first image in the document the
-  guide references with `type="cover"`;
-- FB2: the binary the title information's `coverpage` image references;
-- Markdown and plain text: none.
-
-WHERE a rule names a resource that does not exist, the system SHALL try the next rule, and SHALL report no cover
-rather than a failure when none applies.
-
-**Source:** FR-IMPORT-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `01_Product/03_DOCUMENT_FORMATS.md#epub`,
-`01_Product/03_DOCUMENT_FORMATS.md#fb2`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
-In plain words: the cover is how a person recognises a book at a glance, and books mark it in several historical ways:
-EPUB 3 has a proper property, EPUB 2 used a `meta` element that tools filled with an id or, wrongly but commonly,
-with a file path, and the oldest books only point at a cover page. A book whose cover marking is broken still opens —
-it just shows the placeholder.
+**Source**: FR-IMPORT-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/03_DOCUMENT_FORMATS.md#fb2`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: the cover is how a person recognises a book at a glance, and books mark it in several historical ways: EPUB 3 has a proper property, EPUB 2 used a `meta` element that tools filled with an id or, wrongly but commonly, with a file path, and the oldest books only point at a cover page. A book whose cover marking is broken still opens — it just shows the placeholder.
 
 #### Scenario: An EPUB 3 cover property wins
 
 - **WHEN** an EPUB 3 whose manifest marks `images/cover.jpg` with `properties="cover-image"` is profiled
 - **THEN** the cover is `images/cover.jpg`
+
+### Requirement: Find an EPUB's cover image
+
+For an EPUB the system SHALL take the manifest item whose properties include `cover-image`; else the item named by
+`<meta name="cover">`, whose value is read as a manifest id or, failing that, as a manifest href; else the first image
+in the document the guide references with `type="cover"`.
+
+**Source**: FR-IMPORT-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: EPUB 3 has a proper property, EPUB 2 used a `meta` element that tools filled with an id or, wrongly but commonly, with a file path, and the oldest books only point at a cover page.
 
 #### Scenario: An EPUB 2 cover meta holding an id
 
@@ -1854,11 +1782,30 @@ it just shows the placeholder.
   and `cover.xhtml` contains `<img src="art/front.jpg"/>`, is profiled
 - **THEN** the cover is `art/front.jpg`
 
+### Requirement: Find an FB2's cover image
+
+For an FB2 the system SHALL take the binary the title information's `coverpage` image references; for Markdown and
+plain text it SHALL find no cover.
+
+**Source**: FR-IMPORT-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `01_Product/03_DOCUMENT_FORMATS.md#fb2`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: an FB2 names its cover page image in the title information, while Markdown and plain text have nowhere to name one.
+
 #### Scenario: An FB2 coverpage references its binary
 
 - **WHEN** an FB2 whose title information holds `<coverpage><image l:href="#cover.jpg"/></coverpage>` and a
   `<binary id="cover.jpg">` is profiled
 - **THEN** the cover is that binary's image
+
+#### Scenario: Plain text has no cover
+
+- **WHEN** `notes.txt` is profiled
+- **THEN** the profile reports no cover
+
+### Requirement: Try the next cover rule when a reference dangles
+
+WHERE a cover rule names a resource that does not exist, the system SHALL try the next rule, and SHALL report no cover
+rather than a failure when none applies.
+
+**Source**: FR-IMPORT-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: a book whose cover marking is broken still opens — it just shows the placeholder.
 
 #### Scenario: A dangling cover reference yields no cover and no error
 
@@ -1866,41 +1813,13 @@ it just shows the placeholder.
   is profiled
 - **THEN** the profile reports no cover and the book opens normally
 
-#### Scenario: Plain text has no cover
-
-- **WHEN** `notes.txt` is profiled
-- **THEN** the profile reports no cover
-
 ### Requirement: Derive the book's structure tree from its own navigation
 
 WHEN a book's profile is built, the system SHALL build its structure tree from the book's own navigation, counting
-every body segment in exactly one node:
+every body segment in exactly one node, and each node's count SHALL be the number of body segments that fall under it,
+its descendants included, so that the counts of the top-level nodes add up to the book's body segment count.
 
-- EPUB: the navigation document's table of contents, or the NCX where there is none, with each entry mapped onto the
-  spine document its link points into and nested entries shown as child nodes; each spine document SHALL be counted
-  once, under the first entry that points into it, and a later entry pointing into an already counted document SHALL
-  appear without a count of its own; a spine document no entry points into SHALL be a top-level node at its spine
-  position, titled by the text of its first heading segment or, where it has none, by its file name;
-- FB2: the nested sections of each body, titled by their `title`; content of the main body that lies outside every
-  section SHALL be an untitled top-level node ahead of the sections; the notes body SHALL be a top-level node titled
-  by its own `title` or, where it has none, by its `name` attribute;
-- Markdown: the headings, nested by heading level; text before the first heading SHALL be an untitled top-level node
-  ahead of them;
-- plain text: the single unit.
-
-Each node's count SHALL be the number of body segments that fall under it, its descendants included, so that the
-counts of the top-level nodes add up to the book's body segment count.
-
-**Source:** FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`,
-`01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
-In plain words: a person recognises their book by its chapter names, not by file paths, so the tree is titled with the
-names the book itself gives. Books often point several table-of-contents entries into one file, which is why each
-file is counted once — otherwise the chapter numbers would not add up to the book's total. Every segment has to land
-in some node for the same reason: text before the first Markdown heading, an FB2 epigraph before the first section
-and the FB2 notes each used to fall outside every node. A spine document the navigation leaves out is titled by its
-file name rather than a bare number, because the name is something a person can find in the book. The top-level nodes
-are what the import card counts as chapters (`book-import`).
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: a person recognises their book by its chapter names, not by file paths, so the tree is titled with the names the book itself gives. Books often point several table-of-contents entries into one file, which is why each file is counted once — otherwise the chapter numbers would not add up to the book's total. Every segment has to land in some node for the same reason: text before the first Markdown heading, an FB2 epigraph before the first section and the FB2 notes each used to fall outside every node. A spine document the navigation leaves out is titled by its file name rather than a bare number, because the name is something a person can find in the book. The top-level nodes are what the import card counts as chapters (`book-import`).
 
 #### Scenario: EPUB navigation titles the tree
 
@@ -1908,16 +1827,37 @@ are what the import card counts as chapters (`book-import`).
   66 and 58 segments, is profiled
 - **THEN** the tree's nodes are `Chapter 1` with count `66` and `Chapter 2` with count `58`
 
+### Requirement: Map EPUB navigation entries onto spine documents
+
+For an EPUB the system SHALL build the tree from the navigation document's table of contents, or the NCX where there
+is none, with each entry mapped onto the spine document its link points into and nested entries shown as child nodes.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: the book's own table of contents names its chapters, so the tree is titled and nested the way the book nests them.
+
+#### Scenario: An NCX is used when there is no navigation document
+
+- **WHEN** an EPUB 2 whose NCX labels its first spine document `Preface` is profiled
+- **THEN** the first node is titled `Preface`
+
+### Requirement: Count an EPUB spine document once
+
+Each EPUB spine document SHALL be counted once, under the first entry that points into it, and a later entry pointing
+into an already counted document SHALL appear without a count of its own.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: books often point several table-of-contents entries into one file, which is why each file is counted once — otherwise the chapter numbers would not add up to the book's total.
+
 #### Scenario: Entries into one file are counted once
 
 - **WHEN** an EPUB whose navigation lists `Author's Introduction` → `intro.xhtml` with children `Letter 1` →
   `intro.xhtml#l1` and `Letter 2` → `intro.xhtml#l2`, and `intro.xhtml` holds 41 segments, is profiled
 - **THEN** `Author's Introduction` has count `41` and its children `Letter 1` and `Letter 2` carry no count
 
-#### Scenario: An NCX is used when there is no navigation document
+### Requirement: Place an EPUB spine document no entry points into
 
-- **WHEN** an EPUB 2 whose NCX labels its first spine document `Preface` is profiled
-- **THEN** the first node is titled `Preface`
+An EPUB spine document no entry points into SHALL be a top-level node at its spine position, titled by the text of its
+first heading segment or, where it has none, by its file name.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#epub`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: a spine document the navigation leaves out is titled by its file name rather than a bare number, because the name is something a person can find in the book.
 
 #### Scenario: A unit without an entry takes its first heading
 
@@ -1928,6 +1868,30 @@ are what the import card counts as chapters (`book-import`).
 
 - **WHEN** the fourth spine document of an EPUB, `OEBPS/c04.xhtml`, is not in its navigation and holds no heading
 - **THEN** a top-level node titled `c04.xhtml` stands at the fourth reading position
+
+### Requirement: Nest FB2 sections into the structure tree
+
+For an FB2 the system SHALL build the tree from the nested sections of each body, titled by their `title`; content of
+the main body that lies outside every section SHALL be an untitled top-level node ahead of the sections; the notes
+body SHALL be a top-level node titled by its own `title` or, where it has none, by its `name` attribute.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: an FB2 epigraph before the first section and the notes body each used to fall outside every node; every segment has to land in some node.
+
+#### Scenario: FB2 content outside sections and the notes body are counted
+
+- **WHEN** an FB2 whose main body holds an `<epigraph>` of one paragraph ahead of its only section — titled
+  `Chapter 1` and holding 4 paragraphs — and whose `<body name="notes">`, with no title, holds 2 note paragraphs, is
+  profiled
+- **THEN** the top-level nodes are an untitled node with count `1`, `Chapter 1` with count `5` and `notes` with count
+  `2`
+- **AND** their counts add up to the book's `8` body segments
+
+### Requirement: Nest Markdown headings into the structure tree
+
+For Markdown the system SHALL build the tree from the headings, nested by heading level, with text before the first
+heading as an untitled top-level node ahead of them; for plain text the tree SHALL be the single unit.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#markdown`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: text before the first Markdown heading used to fall outside every node; every segment has to land in some node.
 
 #### Scenario: Markdown headings nest by level
 
@@ -1941,36 +1905,23 @@ are what the import card counts as chapters (`book-import`).
 - **THEN** the top-level nodes are an untitled node with count `1` and `Chapter 1` with count `2`
 - **AND** their counts add up to the book's `3` body segments
 
-#### Scenario: FB2 content outside sections and the notes body are counted
+#### Scenario: A plain-text book is one node
 
-- **WHEN** an FB2 whose main body holds an `<epigraph>` of one paragraph ahead of its only section — titled
-  `Chapter 1` and holding 4 paragraphs — and whose `<body name="notes">`, with no title, holds 2 note paragraphs, is
-  profiled
-- **THEN** the top-level nodes are an untitled node with count `1`, `Chapter 1` with count `5` and `notes` with count
-  `2`
-- **AND** their counts add up to the book's `8` body segments
+- **WHEN** `notes.txt` holding 5 segments is profiled
+- **THEN** the tree is one node holding count `5`
 
 ### Requirement: Compute the book's statistics
 
-WHEN a book's profile is built, the system SHALL compute: the number of body segments; the number of words in the
-body segments' visible text, placeholders excluded; the number of images the book carries; the number of code blocks
-preserved untranslated; the number of embedded fonts; the number of verse-line segments; the number of footnotes
-(FB2 notes sections, EPUB elements marked as footnotes or endnotes); the number of tables; and the kinds of inline
-formatting that were protected as placeholders (italics, bold, links, quotes, code, line breaks, other markup).
+WHEN a book's profile is built, the system SHALL compute the number of body segments, the number of words in the body
+segments' visible text (placeholders excluded), the number of images the book carries, the number of code blocks
+preserved untranslated, and the number of embedded fonts.
 
-**Source:** FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`, `01_Product/03_DOCUMENT_FORMATS.md#images-and-fonts`,
-`01_Product/03_DOCUMENT_FORMATS.md#code-and-technical-content`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`.
-In plain words: these numbers let a person judge the job before starting it — how long the book is, what will be
-carried untouched (images, fonts, code), and which delicate structures (verse, footnotes, tables) the translation has
-to respect.
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`, `01_Product/03_DOCUMENT_FORMATS.md#images-and-fonts`, `01_Product/03_DOCUMENT_FORMATS.md#code-and-technical-content`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: these numbers let a person judge the job before starting it — how long the book is, what will be carried untouched (images, fonts, code), and which delicate structures (verse, footnotes, tables) the translation has to respect.
 
 #### Scenario: An EPUB's statistics are counted
 
-- **WHEN** an EPUB with 1,240 body segments of 78,214 words, 7 image resources, no fonts, no code blocks, no verse,
-  no footnotes and no tables, whose inline markup is only `<i>` and `<q>`, is profiled
-- **THEN** the statistics report `1240` segments, `78214` words, `7` images, `0` code blocks, `0` fonts, `0` verse
-  lines, `0` footnotes, `0` tables and the formatting kinds italics and quotes
+- **WHEN** an EPUB with 1,240 body segments of 78,214 words, 7 image resources, no fonts and no code blocks is profiled
+- **THEN** the statistics report `1240` segments, `78214` words, `7` images, `0` code blocks and `0` fonts
 
 #### Scenario: Placeholders are not words
 
@@ -1982,6 +1933,35 @@ to respect.
 - **WHEN** a Markdown file with 3 fenced code blocks and 1 table is profiled
 - **THEN** the statistics report `3` code blocks and `1` table
 
+### Requirement: Count verse lines, footnotes and tables
+
+WHEN a book's profile is built, the system SHALL also compute the number of verse-line segments, the number of
+footnotes (FB2 notes sections, EPUB elements marked as footnotes or endnotes), and the number of tables.
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#verse-tables-notes`, `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: verse, footnotes and tables are the delicate structures a translation has to respect, so a person sees how many there are before starting.
+
+#### Scenario: Verse lines and footnotes are counted
+
+- **WHEN** an FB2 with 12 verse-line segments and a notes body of 5 note sections is profiled
+- **THEN** the statistics report `12` verse lines and `5` footnotes
+
+#### Scenario: A book without them reports zero
+
+- **WHEN** an EPUB with no verse, no footnotes and no tables is profiled
+- **THEN** the statistics report `0` verse lines, `0` footnotes and `0` tables
+
+### Requirement: Report the inline formatting kinds that were protected
+
+WHEN a book's profile is built, the system SHALL also report the kinds of inline formatting that were protected as
+placeholders (italics, bold, links, quotes, code, line breaks, other markup).
+
+**Source**: FR-DOC-01, FR-DOC-08 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/08_UI_SCREENS_AND_STATES.md#screen-structure`. In plain words: a person sees which formatting the translation has to carry through untouched.
+
+#### Scenario: The formatting kinds are listed
+
+- **WHEN** an EPUB whose inline markup is only `<i>` and `<q>` is profiled
+- **THEN** the statistics report the formatting kinds italics and quotes
+
 ### Requirement: Show the book's statistics beside its structure
 
 The import screen SHALL show, beside the book's details, a facts card reading: `Translatable segments`, `Words` (prefixed
@@ -1989,10 +1969,7 @@ with `~`), `Images (kept as-is)`, `Code blocks` with the note `preserved — nev
 `Verse / poetry` (reading `none` when zero), `Footnotes · tables`, and `Inline formatting` listing the protected
 kinds followed by `→ protected`.
 
-**Source:** FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
-In plain words: the import screen is the last look before the long part begins, so it shows what will be
-translated and what will be carried through untouched, in the words the reference drawing uses.
+**Source**: FR-DOC-01, FR-DOC-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: the import screen is the last look before the long part begins, so it shows what will be translated and what will be carried through untouched, in the words the reference drawing uses.
 
 #### Scenario: The card reads the book's statistics
 
@@ -2007,29 +1984,45 @@ source opened afresh and written with zero edits, then compared with the source 
 it ends, then either `Round-trip check passed — structure & text preserved` or
 `Round-trip check failed — structure not preserved` naming what differed, the two segment counts when they differ.
 
-The screen SHALL show `All image / font / link IDs preserved` when every image, font and link identifier of the source
-is present in that written copy, and otherwise SHALL show `IDs missing after the round trip:` followed by the missing
-identifiers.
+**Source**: FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, DD-43 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`). In plain words: the golden tests prove the writer on fixtures; this check proves it on the person's actual book, before hours of translation depend on it. It runs on a fresh copy so it cannot disturb the opened book, and in the background so the screen stays usable. The oversized warning explains in advance why some paragraphs will be handled in pieces. The checks inform rather than block, because a person may still want a partial result.
 
-WHERE any body segment is estimated at more tokens than the chunk budget of 1,200 tokens, the screen SHALL show a
-warning naming how many segments exceed it and saying they will be split by sentence and re-joined.
-
-Neither check SHALL block the import screen's `Continue`.
-
-**Source:** FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`,
-`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`, DD-43
-(`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`).
-In plain words: the golden tests prove the writer on fixtures; this check proves it on the person's actual book,
-before hours of translation depend on it. It runs on a fresh copy so it cannot disturb the opened book, and in the
-background so the screen stays usable. The oversized warning explains in advance why some paragraphs will be
-handled in pieces. The checks inform rather than block, because a person may still want a partial result.
-
-#### Scenario: A faithful book passes both checks
+#### Scenario: A faithful book passes the round-trip check
 
 - **WHEN** `Frankenstein.epub` is open and the import screen is shown
 - **THEN** after the background check ends the screen shows `Round-trip check passed — structure & text preserved`
-  and `All image / font / link IDs preserved`
+
+#### Scenario: A dropped paragraph fails the structure check
+
+- **WHEN** the round-trip check's written copy of the open book re-opens with 1,239 body segments where the source has
+  1,240
+- **THEN** the screen shows `Round-trip check failed — structure not preserved` naming `1,239 of 1,240 segments`
+
+### Requirement: Show whether image, font and link IDs survived the round trip
+
+The import screen SHALL show `All image / font / link IDs preserved` when every image, font and link identifier of the
+source is present in the round-trip check's written copy, and otherwise SHALL show `IDs missing after the round trip:`
+followed by the missing identifiers.
+
+**Source**: FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, DD-43 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`). In plain words: a book whose image or link identifiers vanish in the written copy would break its cross-references, so the person is told which ones before translating.
+
+#### Scenario: All identifiers are preserved
+
+- **WHEN** `Frankenstein.epub` is open and the background check ends
+- **THEN** the screen shows `All image / font / link IDs preserved`
+
+#### Scenario: A missing identifier is named
+
+- **WHEN** the round-trip check's written copy of the open book lacks the image identifier `img-7` that the source
+  carries
+- **THEN** the screen shows `IDs missing after the round trip: img-7` in place of
+  `All image / font / link IDs preserved`
+
+### Requirement: Warn about segments over the chunk budget
+
+WHERE any body segment is estimated at more tokens than the chunk budget of 1,200 tokens, the import screen SHALL show
+a warning naming how many segments exceed it and saying they will be split by sentence and re-joined.
+
+**Source**: FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`. In plain words: the oversized warning explains in advance why some paragraphs will be handled in pieces.
 
 #### Scenario: An oversized paragraph is warned about
 
@@ -2041,23 +2034,16 @@ handled in pieces. The checks inform rather than block, because a person may sti
 - **WHEN** every body segment of the open book is estimated below 1,200 tokens
 - **THEN** no chunk-budget warning is shown
 
+### Requirement: Never block Continue on a structure check
+
+Neither the round-trip and identifier checks nor the chunk-budget warning SHALL block the import screen's `Continue`.
+
+**Source**: FR-DOC-02, FR-DOC-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`. In plain words: the checks inform rather than block, because a person may still want a partial result, and they run in the background so the screen stays usable.
+
 #### Scenario: The check does not hold the screen
 
 - **WHEN** the round-trip check is still running
 - **THEN** the tree and the statistics are shown and `Continue` is available
-
-#### Scenario: A missing identifier is named
-
-- **WHEN** the round-trip check's written copy of the open book lacks the image identifier `img-7` that the source
-  carries
-- **THEN** the screen shows `IDs missing after the round trip: img-7` in place of
-  `All image / font / link IDs preserved`
-
-#### Scenario: A dropped paragraph fails the structure check
-
-- **WHEN** the round-trip check's written copy of the open book re-opens with 1,239 body segments where the source has
-  1,240
-- **THEN** the screen shows `Round-trip check failed — structure not preserved` naming `1,239 of 1,240 segments`
 
 #### Scenario: A failed check does not block Continue
 
@@ -2070,13 +2056,7 @@ WHEN an EPUB is written, the system SHALL write its package document, its NCX an
 line-feed line ends only, SHALL write an XML declaration in each only when the source document had one, and SHALL keep
 the encoding that declaration named.
 
-**Source:** FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`),
-`02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config`, `docs/next_features.md` §2.
-In plain words: the package document gained a declaration it never had and carriage returns it never had, and the
-golden comparison could not see it because it re-serialized both sides the same way. Nothing broke, but a file that
-changes where nothing was translated is exactly what "canonical-equal" is meant to rule out. The NCX and the
-navigation document are written back now that their labels are translated, so the same rule covers them.
+**Source**: FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), `02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config`, `docs/next_features.md` §2. In plain words: the package document gained a declaration it never had and carriage returns it never had, and the golden comparison could not see it because it re-serialized both sides the same way. Nothing broke, but a file that changes where nothing was translated is exactly what "canonical-equal" is meant to rule out. The NCX and the navigation document are written back now that their labels are translated, so the same rule covers them.
 
 #### Scenario: No declaration and no carriage return are added
 
@@ -2100,11 +2080,7 @@ navigation document are written back now that their labels are translated, so th
 WHEN an XHTML content document is written, the system SHALL write a line feed, carriage return or tab inside an
 attribute value as a character reference, so that the value read back equals the source's value.
 
-**Source:** FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43
-(`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), `docs/next_features.md` §3.
-In plain words: an XML reader turns a raw line feed in an attribute into a space, so writing `&#10;` as a raw line
-feed silently changes the value. One surveyed book loses the line break in a bookmark label this way; any `alt` or
-`title` holding one would too.
+**Source**: FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-43 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), `docs/next_features.md` §3. In plain words: an XML reader turns a raw line feed in an attribute into a space, so writing `&#10;` as a raw line feed silently changes the value. One surveyed book loses the line break in a bookmark label this way; any `alt` or `title` holding one would too.
 
 #### Scenario: A line-feed reference survives
 
@@ -2119,11 +2095,7 @@ WHEN an XHTML document — a content document or the navigation document — tha
 DOCTYPE is written, the system SHALL write its prolog back verbatim ahead of the document, and SHALL NOT turn the
 declaration into a comment.
 
-**Source:** FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`,
-`02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config`, `docs/next_features.md` §4.
-In plain words: the declaration was written out as `<!--?xml … ?-->`, a comment. For a UTF-8 chapter that is harmless;
-for a chapter in any other encoding the reader no longer learns the encoding and decodes it wrongly. The navigation
-document is written back now that its labels are translated, so its prolog is kept the same way.
+**Source**: FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`, `02_Architecture/03_DOCUMENT_MODEL.md#xml-round-trip-config`, `docs/next_features.md` §4. In plain words: the declaration was written out as `<!--?xml … ?-->`, a comment. For a UTF-8 chapter that is harmless; for a chapter in any other encoding the reader no longer learns the encoding and decodes it wrongly. The navigation document is written back now that its labels are translated, so its prolog is kept the same way.
 
 #### Scenario: The declaration stays a declaration
 
@@ -2146,10 +2118,7 @@ document is written back now that its labels are translated, so its prolog is ke
 WHEN an FB2 book that began with a byte-order mark is written, the system SHALL begin the output with the same mark,
 and SHALL add none to a book that had none.
 
-**Source:** `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`, FR-DOC-02
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/next_features.md` §5.
-In plain words: the encoding rules already say a byte-order mark is recorded and re-emitted exactly as found; plain
-text did that and FB2 dropped it. Some readers rely on the mark to choose the encoding.
+**Source**: `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`, FR-DOC-02 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), `docs/next_features.md` §5. In plain words: the encoding rules already say a byte-order mark is recorded and re-emitted exactly as found; plain text did that and FB2 dropped it. Some readers rely on the mark to choose the encoding.
 
 #### Scenario: A mark is re-emitted
 
@@ -2167,12 +2136,7 @@ WHEN a Markdown block containing a bare web address in running text — one writ
 syntax, such as `https://example.com/path` or `www.example.com` — is segmented, the system SHALL mask that address as
 a single atomic placeholder, so that it is written back unchanged.
 
-**Source:** FR-DOC-MD-2 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-04, FR-DOC-10
-(`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`),
-`docs/next_features.md` §10.
-In plain words: a URL is an address, not prose, and a model asked to translate a sentence will happily "translate" or
-re-case the address in it — the pseudo model turned `https://example.com/path` into `HTTPS://EXAMPLE.COM/PATH`. Masking
-it hands the model a token it must keep.
+**Source**: FR-DOC-MD-2 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-04, FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), `docs/next_features.md` §10. In plain words: a URL is an address, not prose, and a model asked to translate a sentence will happily "translate" or re-case the address in it — the pseudo model turned `https://example.com/path` into `HTTPS://EXAMPLE.COM/PATH`. Masking it hands the model a token it must keep.
 
 #### Scenario: A bare URL is one token
 
@@ -2189,27 +2153,7 @@ it hands the model a token it must keep.
 WHEN a segment's masked text is to be split, the system SHALL divide it at the sentence boundaries of the source
 language into pieces that, joined in order, reproduce the masked text exactly, whitespace included.
 
-WHERE a sentence boundary lies next to placeholder tokens, the system SHALL place it after every closing or atomic
-token that directly follows the end of the sentence, together with the whitespace after those tokens, and before an
-opening token that begins the next sentence.
-
-The system SHALL NOT use a boundary that falls between a paired placeholder's opening and closing tokens; such a
-boundary SHALL be skipped so that the pair stays inside one piece.
-
-WHERE no usable boundary exists, the system SHALL return the whole masked text as a single piece.
-
-**Source:** FR-ALGO-C2, FR-ALGO-C2b (`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`),
-`01_Product/05_TRANSLATION_ALGORITHM.md#chunking`,
-`02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, ADR-0040
-(`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`).
-In plain words: a paragraph longer than the model's budget has to be translated in pieces, and the pieces must fit
-back together into exactly the original paragraph — any lost or doubled space would show in the book. Splitting by the
-source language's sentences keeps each piece meaningful. A piece must never hold half of a formatting pair, because
-each piece is checked on its own and half a pair can never pass the gate. Tokens next to a sentence end are the hard
-case: read as plain text, a token looks like the next sentence continuing, and the boundary disappears on both sides
-of it. So a sentence that ends inside emphasis ends after the closing token, and a sentence that starts with emphasis
-starts at the opening token. A paragraph that cannot be split safely is sent whole rather than cut badly; drafting the
-pieces and joining them is the pipeline's part (`translation-pipeline`).
+**Source**: FR-ALGO-C2, FR-ALGO-C2b (`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`), `01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, `02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a paragraph longer than the model's budget has to be translated in pieces, and the pieces must fit back together into exactly the original paragraph — any lost or doubled space would show in the book. Splitting by the source language's sentences keeps each piece meaningful. A piece must never hold half of a formatting pair, because each piece is checked on its own and half a pair can never pass the gate. Tokens next to a sentence end are the hard case: read as plain text, a token looks like the next sentence continuing, and the boundary disappears on both sides of it. So a sentence that ends inside emphasis ends after the closing token, and a sentence that starts with emphasis starts at the opening token. A paragraph that cannot be split safely is sent whole rather than cut badly; drafting the pieces and joining them is the pipeline's part (`translation-pipeline`).
 
 #### Scenario: Three sentences become three pieces
 
@@ -2222,11 +2166,13 @@ pieces and joining them is the pipeline's part (`translation-pipeline`).
 - **WHEN** the Ukrainian masked text `Він пішов. Вона лишилася.` is split with source language `uk`
 - **THEN** the pieces are `Він пішов. ` and `Вона лишилася.`
 
-#### Scenario: A boundary inside a pair is skipped
+### Requirement: Place a sentence boundary beside placeholder tokens
 
-- **WHEN** the masked text `⟦g0⟧He left. She stayed.⟦g1⟧ Night fell.` is split, where `⟦g0⟧` and `⟦g1⟧` are one pair
-- **THEN** the pieces are `⟦g0⟧He left. She stayed.⟦g1⟧ ` and `Night fell.`
-- **AND** joining them gives back the original text exactly
+WHERE a sentence boundary lies next to placeholder tokens, the system SHALL place it after every closing or atomic
+token that directly follows the end of the sentence, together with the whitespace after those tokens, and before an
+opening token that begins the next sentence.
+
+**Source**: FR-ALGO-C2, FR-ALGO-C2b (`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`), `01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: read as plain text, a token looks like the next sentence continuing, and the boundary disappears on both sides of it; so a sentence that ends inside emphasis ends after the closing token, and a sentence that starts with emphasis starts at the opening token.
 
 #### Scenario: A sentence that starts with inline markup is split before its opening token
 
@@ -2239,10 +2185,29 @@ pieces and joining them is the pipeline's part (`translation-pipeline`).
 - **WHEN** the masked text `He left.⟦g0⟧ She stayed.⟦g1⟧ Night fell.` is split, where `⟦g0⟧` and `⟦g1⟧` are one pair
 - **THEN** the pieces are `He left.`, `⟦g0⟧ She stayed.⟦g1⟧ ` and `Night fell.`
 
+### Requirement: Keep a placeholder pair inside one piece when splitting
+
+The system SHALL NOT use a sentence boundary that falls between a paired placeholder's opening and closing tokens; such
+a boundary SHALL be skipped so that the pair stays inside one piece.
+
+**Source**: FR-ALGO-C2, FR-ALGO-C2b (`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`), `01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a piece must never hold half of a formatting pair, because each piece is checked on its own and half a pair can never pass the gate.
+
+#### Scenario: A boundary inside a pair is skipped
+
+- **WHEN** the masked text `⟦g0⟧He left. She stayed.⟦g1⟧ Night fell.` is split, where `⟦g0⟧` and `⟦g1⟧` are one pair
+- **THEN** the pieces are `⟦g0⟧He left. She stayed.⟦g1⟧ ` and `Night fell.`
+- **AND** joining them gives back the original text exactly
+
 #### Scenario: A pair spanning every boundary keeps the text whole
 
 - **WHEN** the masked text `⟦g0⟧One. Two. Three.⟦g1⟧` is split
 - **THEN** there is one piece, `⟦g0⟧One. Two. Three.⟦g1⟧`
+
+### Requirement: Return the whole text when no sentence boundary is usable
+
+WHERE no usable sentence boundary exists, the system SHALL return the whole masked text as a single piece.
+
+**Source**: FR-ALGO-C2, FR-ALGO-C2b (`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`), `01_Product/05_TRANSLATION_ALGORITHM.md#chunking`, ADR-0040 (`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`). In plain words: a paragraph that cannot be split safely is sent whole rather than cut badly; drafting the pieces and joining them is the pipeline's part (`translation-pipeline`).
 
 #### Scenario: Text without a sentence boundary stays whole
 
@@ -2256,24 +2221,7 @@ resolved when the document was opened, the system SHALL write the whole document
 byte-order mark exactly when the source began with one, and SHALL write every character, never a replacement
 character such as `?` in its place.
 
-WHERE every character of the output can be represented in that encoding, the system SHALL write the document in it.
-
-The system SHALL NOT refuse a TXT or Markdown export because of its encoding.
-
-The per-format golden tests SHALL compare a fixture whose export switches to UTF-8 against its expected text re-parsed
-from the written file, rather than against the source's bytes; the zero-edit goldens SHALL stay as they are.
-
-**Source:** ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), FR-DOC-TXT-1,
-FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`, EC-FB2-1
-(`01_Product/03_DOCUMENT_FORMATS.md#fb2-edge-cases`, the carve-out this extends),
-`01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`, `docs/next_features.md` §6.
-In plain words: a `windows-1251` or Western European text file has no room for a character outside its code page, and
-a Ukrainian translation of a `windows-1252` book has almost no character that fits. Refusing the export threw away a
-finished translation over a detail the person cannot change, and writing `?` destroyed it silently; switching the whole
-file to UTF-8 keeps every character, which is what FB2 has always done. A TXT or Markdown file cannot declare its new
-encoding, so the byte-order mark stays exactly as the source had it and the application's own re-open reads the file as
-UTF-8. EPUB never needs this, because its writer spells such a character as a numeric character reference, and FB2
-keeps the switch it already has. A switched file cannot equal its source's bytes, so its golden compares text instead.
+**Source**: ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), FR-DOC-TXT-1, FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`, EC-FB2-1 (`01_Product/03_DOCUMENT_FORMATS.md#fb2-edge-cases`, the carve-out this extends), `01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`, `docs/next_features.md` §6. In plain words: a `windows-1251` or Western European text file has no room for a character outside its code page, and a Ukrainian translation of a `windows-1252` book has almost no character that fits. Refusing the export threw away a finished translation over a detail the person cannot change, and writing `?` destroyed it silently; switching the whole file to UTF-8 keeps every character, which is what FB2 has always done. A TXT or Markdown file cannot declare its new encoding, so the byte-order mark stays exactly as the source had it and the application's own re-open reads the file as UTF-8. EPUB never needs this, because its writer spells such a character as a numeric character reference, and FB2 keeps the switch it already has. A switched file cannot equal its source's bytes, so its golden compares text instead.
 
 #### Scenario: A character outside windows-1251 switches the whole file to UTF-8
 
@@ -2290,10 +2238,12 @@ keeps the switch it already has. A switched file cannot equal its source's bytes
 - **THEN** the whole output decodes as UTF-8 and contains `Ÿ`
 - **AND** no `?` stands in its place
 
-#### Scenario: A book whose code page holds no Cyrillic is written, not refused
+### Requirement: Keep the source encoding when every character fits
 
-- **WHEN** a TXT file read as `windows-1252` holding `Hello.\n` is exported with the target `Привіт.`
-- **THEN** the export succeeds and the output decodes as UTF-8 to `Привіт.\n`
+WHERE every character of a TXT or Markdown output can be represented in the encoding resolved when the document was
+opened, the system SHALL write the document in that encoding.
+
+**Source**: ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), FR-DOC-TXT-1, FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`. In plain words: a file whose translation fits its code page stays in it, so nothing changes without a reason.
 
 #### Scenario: A representable translation keeps the source encoding
 
@@ -2301,6 +2251,31 @@ keeps the switch it already has. A switched file cannot equal its source's bytes
   second segment
 - **THEN** the output decodes as `windows-1251` to `One.\n\nДва — три.\n`
 - **AND** the bytes before the second paragraph are unchanged
+
+### Requirement: Never refuse a TXT or Markdown export for its encoding
+
+The system SHALL NOT refuse a TXT or Markdown export because of its encoding.
+
+**Source**: ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), FR-DOC-TXT-1, FR-DOC-TXT-3 (`01_Product/03_DOCUMENT_FORMATS.md#txt`), `01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`. In plain words: refusing the export threw away a finished translation over a detail the person cannot change.
+
+#### Scenario: A book whose code page holds no Cyrillic is written, not refused
+
+- **WHEN** a TXT file read as `windows-1252` holding `Hello.\n` is exported with the target `Привіт.`
+- **THEN** the export succeeds and the output decodes as UTF-8 to `Привіт.\n`
+
+### Requirement: Compare an encoding-switched export by its re-parsed text
+
+The per-format golden tests SHALL compare a fixture whose export switches to UTF-8 against its expected text re-parsed
+from the written file, rather than against the source's bytes; the zero-edit goldens SHALL stay as they are.
+
+**Source**: ADR-0029 (`docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`), `01_Product/03_DOCUMENT_FORMATS.md#round-trip-golden-requirement`. In plain words: a switched file cannot equal its source's bytes, so its golden compares text instead.
+
+#### Scenario: A switched fixture is compared by its text
+
+- **WHEN** the golden test exports the `windows-1251` fixture `Привіт.\n\nHello.\n` with the target `車.` for its second
+  segment
+- **THEN** it compares the re-parsed text `Привіт.\n\n車.\n` of the written file, not the source's bytes
+- **AND** the zero-edit golden of the same file still compares byte for byte
 
 ## REMOVED Requirements
 
@@ -2342,9 +2317,7 @@ that refines its `id`, and, for a title, every `calibre:title_sort` meta. An ele
 all of its keys, so a book written with nothing translated stays canonical-equal to its source. This is a permitted
 change of the package document beside the language rewrite.
 
-**Source:** FR-DOC-EPUB metadata, task 15d.13.
-In plain words: a translated book is not shelved under the source-language title or author spelling; a reader that
-finds no key sorts by the translated text.
+**Source**: FR-DOC-EPUB metadata, task 15d.13. In plain words: a translated book is not shelved under the source-language title or author spelling; a reader that finds no key sorts by the translated text.
 
 #### Scenario: A translated title loses its Calibre sort key
 

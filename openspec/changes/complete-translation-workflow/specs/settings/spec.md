@@ -11,12 +11,7 @@ The providers area SHALL show, for the selected provider, a detail card naming i
 models found by the last listing of it — their count and the first three names — or saying that no listing has been
 made yet.
 
-**Source:** FR-PROV-01, FR-PROV-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-`docs/specification/01_Product/07_SETTINGS.md#providers-tab`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`.
-In plain words: a person should see at a glance which server is in use, where it lives, and what it offers, without
-opening anything. The host alone is enough to tell `localhost:11434` from `localhost:1234`; the full endpoint is in the
-card for whoever needs it. Adding, editing and deleting providers stay unavailable, as before.
+**Source**: FR-PROV-01, FR-PROV-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: a person should see at a glance which server is in use, where it lives, and what it offers, without opening anything. The host alone is enough to tell `localhost:11434` from `localhost:1234`; the full endpoint is in the card for whoever needs it. Adding, editing and deleting providers stay unavailable, as before.
 
 #### Scenario: The rows name their hosts and status
 
@@ -56,15 +51,7 @@ as not attempted, never as passed.
 WHEN the model listing cannot be read but the server answers, the application SHALL report that stage as a
 qualified pass rather than a failure.
 
-**Source:** FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-`docs/specification/01_Product/07_SETTINGS.md#providers-tab`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-edit-provider`,
-`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`.
-In plain words: "it does not work" is useless; "the server answers in 41 ms but that model is not loaded" tells you what
-to do next. Three buttons let a person ask the cheap question first — is anything listening — before choosing a model at
-all. The measured values turn a green tick into something comparable: a 1.2-second answer and a 40-second one both pass,
-and only one of them will translate a book tonight. A server with no listing endpoint is a normal, working
-configuration, so an unreadable listing is a qualified pass, not a failure.
+**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-edit-provider`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: "it does not work" is useless; "the server answers in 41 ms but that model is not loaded" tells you what to do next. Three buttons let a person ask the cheap question first — is anything listening — before choosing a model at all. The measured values turn a green tick into something comparable: a 1.2-second answer and a 40-second one both pass, and only one of them will translate a book tonight. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
 
 #### Scenario: The check is unavailable until a model is chosen
 
@@ -124,16 +111,7 @@ The model chooser SHALL be shown on the providers area's detail card, for the se
 shown on any other area, because the models area this build leaves unavailable ("Show every settings area, and
 enable only what works") is where the reference rendering draws it.
 
-**Source:** FR-MODEL-01, FR-MODEL-02, FR-MODEL-03
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38,
-`docs/specification/01_Product/07_SETTINGS.md#models-tab`.
-In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid
-state rather than a broken one. Typing the identifier has to stay possible in all three cases, or the
-application becomes unusable against exactly the servers it was written for. The chosen model is discarded on a
-provider change because a model identifier means nothing on a different server. The chooser itself now lives on the
-providers card rather than behind the drawn Models tab, because that tab stays unavailable in this build: putting
-the same control where the working tab already is is what lets a person actually pick a model, instead of drawing it
-behind a door nothing in this build opens.
+**Source**: FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38, `docs/specification/01_Product/07_SETTINGS.md#models-tab`. In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid state rather than a broken one. Typing the identifier has to stay possible in all three cases, or the application becomes unusable against exactly the servers it was written for. The chosen model is discarded on a provider change because a model identifier means nothing on a different server. The chooser itself now lives on the providers card rather than behind the drawn Models tab, because that tab stays unavailable in this build: putting the same control where the working tab already is is what lets a person actually pick a model, instead of drawing it behind a door nothing in this build opens.
 
 #### Scenario: A listed model can be chosen
 
@@ -192,19 +170,7 @@ The available areas SHALL be providers and appearance.
 The appearance area SHALL carry the theme choice and, beside it, the accent shown as a fixed, read-only value,
 because the accent is not selectable in this version.
 
-**Source:** FR-SETTINGS-02, FR-SETTINGS-04
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-settings`), FR-THEME-4
-(`docs/specification/01_Product/09_THEMING.md#token-model`),
-`docs/specification/01_Product/07_SETTINGS.md#settings-tabs`,
-`docs/specification/01_Product/07_SETTINGS.md#appearance-tab`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`.
-In plain words: the same reasoning as the greyed navigation entries — showing the shape of the finished settings
-screen tells a person what this application will eventually let them control, and an empty tab that opens is
-worse than one that says it is not ready. The subtitle and the underline tabs are how the reference draws the screen,
-and the subtitle states the promise the whole application keeps. The accent is named because the appearance tab has
-exactly three rows in the specification and this build has one of them; leaving the accent out entirely would read as
-an oversight rather than as the deliberate "fixed in v1" that it is. It is read-only rather than disabled: there is
-nothing coming to enable.
+**Source**: FR-SETTINGS-02, FR-SETTINGS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-settings`), FR-THEME-4 (`docs/specification/01_Product/09_THEMING.md#token-model`), `docs/specification/01_Product/07_SETTINGS.md#settings-tabs`, `docs/specification/01_Product/07_SETTINGS.md#appearance-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: the same reasoning as the greyed navigation entries — showing the shape of the finished settings screen tells a person what this application will eventually let them control, and an empty tab that opens is worse than one that says it is not ready. The subtitle and the underline tabs are how the reference draws the screen, and the subtitle states the promise the whole application keeps. The accent is named because the appearance tab has exactly three rows in the specification and this build has one of them; leaving the accent out entirely would read as an oversight rather than as the deliberate "fixed in v1" that it is. It is read-only rather than disabled: there is nothing coming to enable.
 
 #### Scenario: All six areas are listed
 

@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-09-26 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-10-17 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -16,11 +16,13 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 > "covers" column names the material a proposal should draw on; it is not a scope contract.
 
 **One exception exists today.** `complete-translation-workflow` (`openspec/changes/complete-translation-workflow/`,
-not yet archived) is in flight with a real proposal, specs and tasks, built directly against the code — the same
-pattern `add-translation-engine-and-cli` and its siblings used ahead of their planned slot. Its own tasks name three
-rows of `#decision-debt` it addresses: D5 (oversized-segment splitting, tasks 5.9/7.5), D7/D8 (pair order and
-nesting, task 5.8, ADR-0040) and D17 (language-tag normalization, task 1.1) — see each row below for its current
-status. The numbered Stage C rows further down have not been reconciled against it.
+built, not yet archived: what remains open are the owner's checks, `tasks.md` 16.5) has a real proposal, specs and
+tasks, built directly against the code — the same pattern `add-translation-engine-and-cli` and its siblings used ahead
+of their planned slot. It consumed most of the Stage C and Stage D rows below in reduced form (each row says what it
+took and what it left), and closed D5, D7, D8, D17 and D19 and part of D18 in `#decision-debt`. The groups of work that
+were not planned up front (15a–15j) are written down in its `additional-work.md`, with their IDs unchanged. The
+translation pipeline is redesigned by a separate proposal, `docs/proposals/2026-10-16-translation-pipeline-redesign.md`,
+the next change `redesign-translation-pipeline`; SQLite persistence follows it.
 
 ## where-this-stands {#where-this-stands}
 
@@ -245,10 +247,10 @@ moment it is found.
 | D2 | The reader accepts EPUBs the writer can never export | **Settled** — synthesize the `mimetype` entry on write (**ADR-0030**) | `settle-writer-policy-and-document-lifetime` |
 | D3 | No `close()` or eviction seam on the four `Open*Registry` singletons | **Resolved** in `add-translation-engine-and-cli` — `DocumentPort.close(Document)` releases an opened book through its reader's registry | `add-translation-engine-and-cli` |
 | D4 | `EpubWriter` mutates the registry-held tree in place | Open — fix, or document as a contract | `settle-writer-policy-and-document-lifetime` |
-| D5 | One 26,306-character segment; 15 books over 5,000 | **Addressed** — `complete-translation-workflow` (in flight) splits an oversized segment at sentence boundaries (`document.split.IcuSentenceSplitter`, task 5.9; `pipeline.chunk.OversizedSplit`, task 7.5); not yet wired into the running job | `complete-translation-workflow` |
+| D5 | One 26,306-character segment; 15 books over 5,000 | **Closed** by `complete-translation-workflow` — an oversized segment is drafted in sentence-aligned pieces (`document.split.IcuSentenceSplitter`, `pipeline.chunk.OversizedSplit`), gated once as the one segment, and repaired by redrafting its pieces; wired into the running job | `complete-translation-workflow` |
 | D6 | An FB2 entity reference is emitted twice: the skipped reference plus the characters it expands to | Open — the one-line fix is a no-op; expanding entities changes how the offline invariant is enforced | `settle-writer-policy-and-document-lifetime` |
-| D7 | A model that returns a masked pair's tokens swapped or concatenated satisfies the placeholder-multiset gate and restores to broken or empty markup | **Addressed** — `complete-translation-workflow` (in flight, task 5.8) records each pair's open/close tokens and checks order and nesting after the multiset (ADR-0040) | `complete-translation-workflow` |
-| D8 | The flat token→fragment map does not say which two tokens are partners in a masked pair | **Addressed** — `complete-translation-workflow` (in flight, task 5.8) adds `Segment.pairs()` (`PlaceholderPair`, ADR-0040), exposing pairing information | `complete-translation-workflow` |
+| D7 | A model that returns a masked pair's tokens swapped or concatenated satisfies the placeholder-multiset gate and restores to broken or empty markup | **Closed** by `complete-translation-workflow` — the pair rules were adopted: each pair's open/close tokens are recorded at mask time and the gate checks order and nesting after the multiset (ADR-0040, amended) | `complete-translation-workflow` |
+| D8 | The flat token→fragment map does not say which two tokens are partners in a masked pair | **Closed** by `complete-translation-workflow` — `Segment.pairs()` (`PlaceholderPair`, ADR-0040) exposes the pairing | `complete-translation-workflow` |
 | D9 | A Markdown shortcut reference link (`[t]`) whose translated label matches no definition silently becomes literal text on the next parse | Open — reachable only once translation runs | Unowned — needs a change |
 | D10 | A `\|` written into a translated Markdown table cell splits its row on the next parse | **Resolved** in change 5's round-2 audit — an unescaped pipe the source did not have is now `validation` | change 5 |
 | D11 | `Fb2Writer` re-serializes every line feed in an FB2 document as `\r\n` | Open — the adapter half is fixed; the document-write half is a writer-policy decision | `settle-writer-policy-and-document-lifetime` |
@@ -257,9 +259,9 @@ moment it is found.
 | D14 | `DocumentService.unmask` routes on a ternary where an exhaustive `switch` is the mechanism two Javadocs promise | **Resolved** in change 5's round-2 audit — replaced by an exhaustive `switch` over all four `BookFormat` constants | change 5 |
 | D15 | Markdown emits segments whose masked form is exactly one token — 46 code-only table cells corpus-wide | Open — wasted model calls, not corruption | `translate-markdown-raw-html-blocks` |
 | D16 | The Markdown structure check is per-segment, so document-level block structure is unguarded | Open — measured, one book re-opened with 28 segments where it had 31 | `add-chunking-and-context-assembly` (change 12) |
-| D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | **Addressed** — `complete-translation-workflow` (in flight, task 1.1) added `util.lang.LanguageTags.normalize` (case-folds, `ua`→`uk`, region-tag handling); found by the 2026-09-12 `Books_Examples` sweep |
-| D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | Open — left out of `add-translation-engine-and-cli` by design (its design.md, Non-Goals) | Unowned — the next `:document` change |
-| D19 | A provider HTTP error (for example LM Studio's `400` "Model unloaded") is flagged as a `validation` segment and counted as processed, so the run carries on and finishes with every remaining segment flagged; it should end the run | Open — found in `add-ui-translation-workspace`'s hand run | Unowned — the next `:pipeline` change |
+| D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | **Closed** by `complete-translation-workflow` — `util.lang.LanguageTags.normalize` (case-folds, `ua`→`uk`, region-tag handling, any well-formed tag the JDK can name); found by the 2026-09-12 `Books_Examples` sweep | `complete-translation-workflow` |
+| D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | **Partly closed** by `complete-translation-workflow` — the readers, walkers, inspection, splitter, `Fb2Writer` and the placeholder gate now log DEBUG parameters and TRACE text. Still without DEBUG lines: `EpubWriter`, `MarkdownWriter`, `TxtWriter`, `XhtmlParser`, `OpfParser`, `DrmAdjudicator`, `EpubStructureBuilder`, `ZipEntryReader`, `FormatResolver`, `CharsetLadder`, `TreeMasker`, `PlainTextMasker`, `Unmasker`, `MarkdownEscaper`, `MarkdownStructureCheck` | Unowned — the next `:document` change |
+| D19 | A provider HTTP error (for example LM Studio's `400` "Model unloaded") is flagged as a `validation` segment and counted as processed, so the run carries on and finishes with every remaining segment flagged; it should end the run | **Closed** by `complete-translation-workflow` — such an error pauses the run with the provider-error state and redoes the interrupted call on resume (and recovers by itself for an outage); found in `add-ui-translation-workspace`'s hand run | `complete-translation-workflow` |
 
 **The review of `add-translation-engine-and-cli` found more gaps** — EPUB language metadata, serialization details, the
 command line and what the translation screen will need. They are recorded, each with a reproduction, in
@@ -572,18 +574,18 @@ also the largest stage by some distance: **twelve changes, and all three stub mo
 
 | # | Change | Capability |
 |---|---|---|
-| 8 | `add-local-storage` | `local-storage` **NEW** |
-| 9 | `add-resume-checkpoints` | `resume` MOD |
+| 8 | `add-local-storage` | `local-storage` **NEW** — repository ports and in-memory adapters landed with `complete-translation-workflow` (ADR-0034); the SQLite adapter, settings KV and Flyway remain |
+| 9 | `add-resume-checkpoints` | `resume` MOD — in-session resume and the in-memory `CheckpointPort` were consumed by `complete-translation-workflow`; resume across a restart remains with SQLite |
 | 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** — consumed in reduced form by `add-real-llm-clients`; persistence and provider editing remain |
 | 11 | `add-inference-gate-and-response-contract` | `inference` MOD — consumed in reduced form by `add-real-llm-clients`; repair and interactive gate behavior remain |
-| 12 | `add-chunking-and-context-assembly` | `translation-pipeline` MOD |
-| — | `add-prompt-catalog-and-output-contract` | `translation-pipeline` MOD |
-| 13 | `add-translation-draft-loop` | `translation-pipeline` MOD |
-| 14 | `add-deterministic-qa-gate` | `quality-gates` **NEW** |
-| 15 | `add-consistency-stack` | `translation-pipeline` MOD · `glossary` **NEW** |
-| 16 | `add-judge-and-self-heal` | `quality-gates` MOD |
-| — | `add-project-lifecycle-and-orchestration` | `book-import` MOD · `book-brief` **NEW** · `export` MOD · `translation-pipeline` MOD |
-| — | `add-stub-provider-whole-book-e2e` | *(skip_specs)* |
+| 12 | `add-chunking-and-context-assembly` | `translation-pipeline` MOD — consumed by `complete-translation-workflow` (chunk packing, oversized splitting, context package) |
+| — | `add-prompt-catalog-and-output-contract` | `translation-pipeline` MOD — consumed by `complete-translation-workflow` (`PromptTemplates`, the prompt catalog) |
+| 13 | `add-translation-draft-loop` | `translation-pipeline` MOD — consumed by `complete-translation-workflow` (drafts in batches over a stored project) |
+| 14 | `add-deterministic-qa-gate` | `quality-gates` **NEW** — consumed by `complete-translation-workflow` (`pipeline.qa`, `pipeline.checks`) |
+| 15 | `add-consistency-stack` | `translation-pipeline` MOD · `glossary` **NEW** — consumed by `complete-translation-workflow` (glossary, translation memory, rolling summary, protected spans); numeral masking was decided against (D-7) |
+| 16 | `add-judge-and-self-heal` | `quality-gates` MOD — consumed by `complete-translation-workflow`; the per-chunk reviewer that fixes in place replaced the judge (15d.6) |
+| — | `add-project-lifecycle-and-orchestration` | `book-import` MOD · `book-brief` **NEW** · `export` MOD · `translation-pipeline` MOD — consumed by `complete-translation-workflow` (import service, brief, export service, run over a stored project) |
+| — | `add-stub-provider-whole-book-e2e` | *(skip_specs)* — consumed by `complete-translation-workflow` (the whole-book test at the HTTP seam) |
 
 **`add-translation-engine-and-cli` ran ahead of this stage's planned order**, mirroring how Stage A/B's interstitials
 run outside the numbered sequence, and is why four of the rows above read MOD rather than the NEW the original plan
@@ -678,17 +680,17 @@ binding — never a service.
 
 | # | Change | Capability |
 |---|---|---|
-| 17 | `add-app-shell-and-navigation` | `app-shell` MOD — consumed in reduced form by `add-ui-translation-workspace`: the shell, `ViewNames`/`Navigator`, the state mirror, the modal and toast hosts and About. Left: the Projects, Names & style and Review screens (inert entries today) and the other dialogs |
+| 17 | `add-app-shell-and-navigation` | `app-shell` MOD — consumed by `add-ui-translation-workspace` (the shell, `ViewNames`/`Navigator`, the state mirror, the modal and toast hosts, About) and `complete-translation-workflow` (Names & style and Translating are live, review lives inside Translating — D-8 — and the title bar shows the run). Left: the Projects entry, which stays inert until SQLite |
 | 18 | `add-localization-infrastructure` | `localization` **NEW** — consumed in reduced form by `add-ui-translation-workspace`: `en` and `uk` bundles, typed keys, ICU plurals, the locale chosen by the OS. Left: the in-app language switch and the persisted `ui.language` (FR-UI-06) |
-| 19 | `add-import-and-brief-screens` | `book-import` MOD · `book-brief` MOD — consumed in reduced form by `add-ui-translation-workspace`: the Import screen and the brief's languages, destination and overwrite. Left: source-language detection and its mismatch trigger, cover and chapter count, an editable source language; FR-BRIEF-02..08 are drawn but disabled |
-| 20 | `add-structure-and-glossary-screens` | `glossary` MOD — the structure half consumed in reduced form by `add-ui-translation-workspace` (a read-only, flat list of resources); the glossary half not started |
-| 21 | `add-translating-dashboard` | `app-shell` MOD — consumed in reduced form by `add-ui-translation-workspace`: progress, the four counts the engine emits, the activity log, start / pause / resume / stop / new run. Left: throughput and ETA, the in-flight panel, a "repaired" count and a resumable stop, which need engine and storage work |
-| 22 | `add-review-queue` | `review-queue` **NEW** |
-| 23 | `add-export-flow` | `export` MOD — consumed in reduced form by `add-ui-translation-workspace`: a report-only screen that shows the written file. Left: side files, the consistency pass and the export-complete dialog; the save-path field was dropped by design |
-| 24 | `add-settings-and-provider-ui` | `settings` **NEW** · `llm-provider` MOD — consumed in reduced form by `add-ui-translation-workspace`: the Providers tab (two presets, three-stage verify, model discovery plus a typed id) and the Appearance theme. Left: add / edit / delete provider, credentials, the other tabs, persistence |
+| 19 | `add-import-and-brief-screens` | `book-import` MOD · `book-brief` MOD — consumed by `add-ui-translation-workspace` and `complete-translation-workflow`: the Import card with the cover, format, declared language and chapter count, open searchable source and target languages, the live Book Brief, and the Auto source language in place of detection (ADR-0042) |
+| 20 | `add-structure-and-glossary-screens` | `glossary` MOD — consumed by `complete-translation-workflow`: the nested structure tree (on Import) and the glossary and recurring terms on Names & style |
+| 21 | `add-translating-dashboard` | `app-shell` MOD — consumed by `add-ui-translation-workspace` and `complete-translation-workflow`: progress, the counts, throughput and time left, the live call panel, the review modes, the activity log and start / pause / resume / stop within a session. Left: a stop that survives a restart (SQLite) |
+| 22 | `add-review-queue` | `review-queue` **NEW** — consumed by `complete-translation-workflow` as a panel inside Translating (D-8, not a separate screen) |
+| 23 | `add-export-flow` | `export` MOD — consumed by `complete-translation-workflow`: Save to, the side files, the consistency pass, the result tiles and checks and the export-complete dialog; export is its own action (ADR-0035) |
+| 24 | `add-settings-and-provider-ui` | `settings` **NEW** · `llm-provider` MOD — consumed in reduced form by `add-ui-translation-workspace`: the Providers tab (two presets, three-stage verify, model discovery plus a typed id) and the Appearance theme. Left: add / edit / delete provider, credentials, the other tabs, persistence — the Providers tab polish (three measured test actions) landed in `complete-translation-workflow`; add / edit / delete provider, credentials and the other tabs remain |
 | 25 | `add-notifications-and-error-surfacing` | `notifications` **NEW** — the error-with-details dialog and the toasts consumed by `add-ui-translation-workspace` |
 
-**Findings from the hand run of `add-ui-translation-workspace`, owned by no row yet:**
+**Findings from the hand run of `add-ui-translation-workspace`** (the first and third are answered by `complete-translation-workflow`: the source language is editable and can be Auto, and every model call is bounded by a per-kind timeout and an idle gap on the streamed reply; the Ukrainian label width is still open):
 
 - **The source language cannot be corrected.** A book whose metadata declares `en-US` but whose text is Ukrainian keeps
   its Ukrainian passages verbatim, because the draft prompt tells the model to keep passages in other languages as
@@ -718,8 +720,8 @@ every screen is built against bundle keys from the start rather than retrofitted
 
 | # | Change | Capability |
 |---|---|---|
-| 26 | `add-backward-revision-sweep` | `translation-pipeline` MOD |
-| 27 | `add-packaging-and-release` | *(skip_specs)* |
+| 26 | `add-backward-revision-sweep` | `translation-pipeline` MOD — consumed by `complete-translation-workflow`: the `REVISE` stage on Max and the export's consistency pass |
+| 27 | `add-packaging-and-release` | *(skip_specs)* — only the packaged launch smoke's resolve-all step landed in `complete-translation-workflow` (task 16.2) |
 | 28 | `complete-ukrainian-localization` | `localization` MOD |
 
 ---
@@ -795,4 +797,4 @@ Status after group 15d (2026-10-05; numbers in `docs/DEVELOPMENT.md#15d-results`
 - **Partly resolved:** lexical drift (`master`, `imp`, `pentacle`): renderings are learned from the decided pairs by co-occurrence, on any model (e4b whole book: `master` 99 % one rendering). Still open: `Mr`/`Mrs`/`Ms` (they split between містер/пан/місіс and need the person's glossary lock) and the key-term scan proposing generic words.
 - **Still open:** chapter headings rendered as digits only; footnote-marker spacing (the normalizer cannot tell a marker token from another); the Housekeeping flakes (`ui:SmoothScrollTest` under load joins them); groups 16.2–16.4.
 
-Planned: group 15d of `openspec/changes/complete-translation-workflow/tasks.md` (translation-quality engineering: evals first, deterministic text checks, typography normalizer, binary evidence-based judge, best-candidate repair, context budget, batched drafting, terminology lexicon, narrator/gender, garbled-word defence, final audit, review/export/ops fixes, numeric acceptance) addresses every item in the section above.
+Planned: group 15d of `openspec/changes/complete-translation-workflow/additional-work.md` (translation-quality engineering: evals first, deterministic text checks, typography normalizer, binary evidence-based judge, best-candidate repair, context budget, batched drafting, terminology lexicon, narrator/gender, garbled-word defence, final audit, review/export/ops fixes, numeric acceptance) addresses every item in the section above.
