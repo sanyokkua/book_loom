@@ -62,7 +62,7 @@ public final class CallsSection extends TitledPane {
         current.show(now, live);
     }
 
-    private static LiveCallView callView(final String id, final MessageKey heading, final Messages messages) {
+    static LiveCallView callView(final String id, final MessageKey heading, final Messages messages) {
         return new LiveCallView(
                 id,
                 new ReadOnlyStringWrapper(messages.get(heading)),

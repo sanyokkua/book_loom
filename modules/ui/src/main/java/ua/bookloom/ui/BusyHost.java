@@ -14,6 +14,7 @@ import javafx.animation.Timeline;
 import javafx.event.Event;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -30,8 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
-import ua.bookloom.ui.control.CallsSection;
 import ua.bookloom.ui.control.DurationText;
+import ua.bookloom.ui.control.ModelCallsWindow;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
@@ -40,14 +41,16 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.LiveCalls;
+import ua.bookloom.ui.theme.ThemeController;
 
 /**
  * The shell's layer for work the window waits for: a scrim that swallows clicks and a card that says what runs, how far
  * it has got, how long it has taken and what is left, with Cancel when the work can be stopped. It sits between the
  * frame and the {@link ModalHost}, so an error dialog arriving while it is up is shown above it and leaves it intact.
  *
- * <p>Work that makes model calls, such as the export's consistency pass, also shows its current call and the one before it in a
- * folded "Model calls" section, the same view the Translating screen's live panel uses.
+ * <p>Work that makes model calls, such as the export's consistency pass, offers a "Show model calls" button that opens
+ * its current call and the one before it in a window of their own ({@link ModelCallsWindow}), the same view the
+ * Translating screen's live panel uses; the card itself keeps only the progress.
  *
  * <p>The card appears only after {@link #DELAY} so work that ends at once never flashes it, and fades in and out. It
  * cannot be dismissed from the keyboard or by a click: Escape is swallowed, Tab stays on the card, the focus moves onto
@@ -68,8 +71,7 @@ public final class BusyHost {
     static final String ETA_ID = "busy-eta";
     static final String DETAILS_ID = "busy-details";
     static final String CANCEL_ID = "busy-cancel";
-    static final String CALLS_ID = "busy-calls";
-    static final String CALL_ID = "busy-call";
+    static final String SHOW_CALLS_ID = "busy-show-calls";
 
     /** How long work runs before the card appears, so a quick action does not flash it. */
     static final javafx.util.Duration DELAY = javafx.util.Duration.millis(400);
@@ -88,7 +90,8 @@ public final class BusyHost {
     private final Label elapsed = new Label();
     private final Label eta = new Label();
     private final VBox details = new VBox();
-    private final CallsSection calls;
+    private final ModelCallsWindow calls;
+    private final Button showCalls = new Button();
     private final ButtonType cancelType;
     private final Button cancel;
     private final PauseTransition delay = new PauseTransition(DELAY);
@@ -104,13 +107,18 @@ public final class BusyHost {
      * @param activities where the blocking work is read, stopped and timed
      * @param messages the catalogue every word of the card comes from
      * @param modalHost the dialog layer above this one, whose card takes the keyboard while it is shown
+     * @param theme themes the model calls window, which has a scene of its own
      */
     @Inject
-    public BusyHost(final ActivityTracker activities, final Messages messages, final ModalHost modalHost) {
+    public BusyHost(
+            final ActivityTracker activities,
+            final Messages messages,
+            final ModalHost modalHost,
+            final ThemeController theme) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
         cancelType = new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        calls = new CallsSection(CALLS_ID, CALL_ID, messages);
+        calls = new ModelCallsWindow(messages, Objects.requireNonNull(theme, "theme")::attachAlso);
         buildCard();
         cancel = (Button) card.lookupButton(cancelType);
         wireCancel();
@@ -159,11 +167,28 @@ public final class BusyHost {
         final HBox times = new HBox(elapsed, gap, eta);
         times.setAlignment(Pos.CENTER_LEFT);
         details.setId(DETAILS_ID);
-        final VBox body = new VBox(bar, times, details, calls);
+        wireShowCalls();
+        final VBox body = new VBox(bar, times, details, showCalls);
         body.getStyleClass().add("busy-body");
         card.setContent(body);
         card.getButtonTypes().setAll(cancelType);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    }
+
+    private void wireShowCalls() {
+        showCalls.setId(SHOW_CALLS_ID);
+        showCalls.setText(messages.get(MessageKey.BUSY_SHOW_CALLS));
+        Tips.install(messages, showCalls, MessageKey.BUSY_SHOW_CALLS_TIP);
+        showCalls.getStyleClass().add("btn-secondary");
+        showCalls.setVisible(false);
+        showCalls.setManaged(false);
+        showCalls.setOnAction(event -> {
+            log.debug("busy card: show model calls pressed");
+            final Scene scene = host.getScene();
+            if (scene != null) {
+                calls.open(scene.getWindow());
+            }
+        });
     }
 
     private void wireCancel() {
@@ -216,6 +241,7 @@ public final class BusyHost {
             return;
         }
         revealed = false;
+        calls.close();
         clock.stop();
         keyboard.release();
         fade.stop();
@@ -247,8 +273,16 @@ public final class BusyHost {
         eta.setText(left == null ? "" : messages.get(MessageKey.BUSY_ETA, DurationText.format(messages, left)));
         eta.setVisible(left != null);
         showDetails(now);
-        calls.show(now.calls());
+        showCalls(now.calls());
         showCancel(now);
+    }
+
+    // The button is offered while the work has a call to show; the window, once open, follows the calls.
+    private void showCalls(final LiveCalls live) {
+        final boolean any = live.current() != null;
+        showCalls.setVisible(any);
+        showCalls.setManaged(any);
+        calls.show(live);
     }
 
     private String stepText(final Activity now) {

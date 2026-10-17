@@ -1786,8 +1786,11 @@ fixtures use invented brands and names only (book-neutral).
   calls") and the Translating screen's call panel do not fit the screen. Now "Model calls" opens a resizable, non-modal
   window owned by the main window, sized to 80 % of it and centred on it, following its size until the person resizes it,
   with each call's source, reply and prompt parts scrolling inside; the busy dialog keeps only the progress and a "Show
-  model calls" button. Test: TestFX — the window opens at 80 % of a 1440×900 and a 960×640 owner, the busy dialog never
-  exceeds the owner, Cancel still stops the work; tokens only, both themes. Hand check: the running app at both sizes.
+  model calls" button. Test: TestFX — the window opens at 80 % of a large and a 960×640 owner, the busy dialog never
+  exceeds the owner, Cancel still stops the work; tokens only, both themes. The headless screen is 1000×1000, so the test
+  proves the share on a 1000×800 owner and a 960×640 one. The Translating screen's call panel stays inside its scrolling
+  screen; its fit at 960×640 is part of the owner's hand check, and an overflow found there is fixed under this task before
+  it is ticked. Hand check: the running app at both sizes.
   → `:ui`
 - [ ] 15j.J8 A name check reads an inflected title or term: in the owner's Oct 16 Max run of a second owner book most
   flags in the retained log were false — `NameSwapCheck` did not recognise the inflected, lower-case rendering of a

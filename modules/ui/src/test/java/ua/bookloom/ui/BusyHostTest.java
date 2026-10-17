@@ -10,13 +10,15 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Window;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -71,40 +73,60 @@ class BusyHostTest extends ShellTestBase {
         assertThat(text(BusyHost.TITLE_ID)).isEqualTo("Export");
     }
 
-    // IF the card hid the export's calls, THEN a long consistency pass would be a spinner with no way to see the model.
+    // IF the card carried the calls inline, THEN opened prompts would push it past the screen (15j.J6): it keeps only
+    // a button, shown while there is a call.
     @Test
-    void card_workShowsACall_offersTheFoldedCallSectionWithTheCall() throws TimeoutException {
+    void card_workShowsACall_offersAShowModelCallsButtonAndNoInlineCalls() throws TimeoutException {
         final ActivityTracker.Handle export = begin(ActivityKind.EXPORT, true);
         awaitCard();
-        assertThat(required(BusyHost.CALLS_ID).isVisible()).isFalse();
+        assertThat(required(BusyHost.SHOW_CALLS_ID).isVisible()).isFalse();
 
         onFx(() -> export.calls(
                 LiveCallFixtures.calls(LiveCallFixtures.waiting(4, 1, "One.", LiveCallFixtures.smallPrompt()), null)));
         WaitForAsyncUtils.waitForFxEvents();
 
-        final TitledPane calls = (TitledPane) required(BusyHost.CALLS_ID);
-        assertThat(calls.isVisible()).isTrue();
-        assertThat(calls.isExpanded()).isFalse();
-        assertThat(calls.getText()).isEqualTo("Model calls");
-        assertThat(text(BusyHost.CALL_ID + "-label")).isEqualTo("draft-batch-json");
+        final Button show = (Button) required(BusyHost.SHOW_CALLS_ID);
+        assertThat(show.isVisible()).isTrue();
+        assertThat(show.getText()).isEqualTo("Show model calls");
+        assertThat(TooltipProbe.tipText(show)).isNotBlank();
+        assertThat(scene.getRoot().lookup("#model-calls-current-label")).isNull();
     }
 
-    // IF the card showed only the current call, THEN the person could not compare what the last two calls sent.
+    // IF the window showed only the current call, THEN the person could not compare what the last two calls sent.
     @Test
-    void card_workWithTwoCalls_showsThePreviousCallBelowTheCurrentOne() throws TimeoutException {
+    void window_workWithTwoCalls_showsThePreviousCallBelowTheCurrentOne() throws TimeoutException {
         final ActivityTracker.Handle scan = begin(ActivityKind.GLOSSARY_SCAN, true);
         awaitCard();
         final var first =
                 LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 1, "One.", LiveCallFixtures.smallPrompt()), "{}");
         final var second = LiveCallFixtures.waiting(2, 1, "Two.", LiveCallFixtures.smallPrompt());
-
         onFx(() -> scan.calls(LiveCallFixtures.calls(second, first)));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(required(BusyHost.CALL_ID + "-previous").isVisible()).isTrue();
-        assertThat(text(BusyHost.CALL_ID + "-previous-title")).isEqualTo("Previous call");
-        assertThat(text(BusyHost.CALL_ID + "-previous-segment-1-source-text")).isEqualTo("One. #1");
-        assertThat(text(BusyHost.CALL_ID + "-segment-1-source-text")).isEqualTo("Two. #1");
+        onFx(() -> ((Button) required(BusyHost.SHOW_CALLS_ID)).fire());
+
+        final Parent window = callsWindowRoot();
+        assertThat(ThemeTestSupport.onFx(
+                        () -> window.lookup("#model-calls-previous").isVisible()))
+                .isTrue();
+        assertThat(ThemeTestSupport.onFx(() -> ((Label) window.lookup("#model-calls-previous-title")).getText()))
+                .isEqualTo("Previous call");
+        assertThat(ThemeTestSupport.onFx(
+                        () -> ((Label) window.lookup("#model-calls-previous-segment-1-source-text")).getText()))
+                .isEqualTo("One. #1");
+        assertThat(ThemeTestSupport.onFx(
+                        () -> ((Label) window.lookup("#model-calls-current-segment-1-source-text")).getText()))
+                .isEqualTo("Two. #1");
+    }
+
+    private Parent callsWindowRoot() {
+        return ThemeTestSupport.onFx(() -> Window.getWindows().stream()
+                .filter(Window::isShowing)
+                .map(Window::getScene)
+                .map(Scene::getRoot)
+                .filter(root -> "model-calls-window".equals(root.getId()))
+                .findFirst()
+                .orElseThrow());
     }
 
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.

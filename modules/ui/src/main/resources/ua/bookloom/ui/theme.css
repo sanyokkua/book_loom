@@ -749,6 +749,18 @@
     -fx-spacing: 10px;
 }
 
+/* The model calls window: its own scene, so it paints the page colour itself and scrolls its two calls inside. */
+.model-calls-window {
+    -fx-background-color: -color-bg;
+    -fx-padding: 12px;
+}
+
+.model-calls-window > .scroll-pane,
+.model-calls-window > .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
 .busy-body > .progress-bar {
     -fx-pref-width: 480px;
 }

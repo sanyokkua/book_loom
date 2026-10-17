@@ -145,6 +145,10 @@ public enum MessageKey {
     BUSY_CALLS("busy.calls"),
     /** Hover explanation of the busy card's model-call section. */
     BUSY_CALLS_TIP("busy.calls.tip"),
+    /** Busy card: the button that opens the model calls window. */
+    BUSY_SHOW_CALLS("busy.showCalls"),
+    /** Hover explanation of the button labelled by {@link #BUSY_SHOW_CALLS}. */
+    BUSY_SHOW_CALLS_TIP("busy.showCalls.tip"),
     /** Title of the question asked before the run is stopped. */
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */
