@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -15,7 +16,9 @@ import ua.bookloom.util.lang.Script;
  * Whether the target kept every sentence of the source. A paragraph that loses its last sentence keeps a normal length
  * ratio and word count, so only counting sentences sees it: the target must have at least as many sentences as the
  * source has significant ones (three words or more), because a translator may join a one-word exclamation to its
- * neighbour but does not drop a statement. Blocking, so the segment is repaired before any reviewer reads it.
+ * neighbour but does not drop a statement. A speech closed by a quote and a dash attribution is a sentence end in the
+ * target even without the source's full stop, when the language file's dialogue convention says so (15j.J9).
+ * Blocking, so the segment is repaired before any reviewer reads it.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -25,6 +28,7 @@ final class SentenceCountCheck {
     private static final Set<Script> COUNTED = Set.of(Script.LATIN, Script.CYRILLIC, Script.GREEK);
     private static final int MIN_SOURCE_SENTENCES = 2;
     private static final int SPAN_CHARS = 40;
+    private static final Pattern SOURCE_QUOTE_STOP = Pattern.compile("[.!?…]+[”\"»](?=\\s|$)");
     private static final Pattern UNSPACED_SCRIPT =
             Pattern.compile("[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}\\p{IsHangul}\\p{IsThai}\\p{IsLao}\\p{IsKhmer}]");
 
@@ -36,6 +40,21 @@ final class SentenceCountCheck {
         final Optional<Script> source = sourceLanguage == null ? Optional.empty() : Languages.scriptOf(sourceLanguage);
         return target.filter(COUNTED::contains).isPresent()
                 && source.map(COUNTED::contains).orElse(true);
+    }
+
+    // A quote the source closed with a mark and the target closed with a comma or nothing before a dash attribution
+    // lost that mark to the target's dialogue convention: each such quote still ends a sentence. The boundaries are
+    // counted on each side, not paired, and never exceed the number of quotes the source closed with a mark.
+    private static int dialogueBoundaries(final String source, final String target, final String targetLanguage) {
+        final Optional<Pattern> convention = LanguageRules.bundled().pattern(targetLanguage, "dialogueAttribution");
+        if (convention.isEmpty()) {
+            return 0;
+        }
+        final int inTarget = (int) convention.get().matcher(target).results().count();
+        final int inSource = (int) SOURCE_QUOTE_STOP.matcher(source).results().count();
+        final int boundaries = Math.min(inTarget, inSource);
+        log.debug("Dialogue attribution boundaries target={} source={} counted={}", inTarget, inSource, boundaries);
+        return boundaries;
     }
 
     static Optional<CheckFinding> find(
@@ -52,7 +71,7 @@ final class SentenceCountCheck {
         if (significant.size() < MIN_SOURCE_SENTENCES) {
             return Optional.empty();
         }
-        final int kept = Sentences.countLenient(target);
+        final int kept = Sentences.countLenient(target) + dialogueBoundaries(source, target, targetLanguage);
         log.debug("Sentence count source={} target={}", significant.size(), kept);
         if (kept >= significant.size()) {
             return Optional.empty();

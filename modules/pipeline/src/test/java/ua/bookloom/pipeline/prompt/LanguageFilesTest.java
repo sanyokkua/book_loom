@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -35,7 +36,7 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|translit|namesInflect|firstPersonPronouns|firstPersonPast|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|translit|namesInflect|firstPersonPronouns|firstPersonPast|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
@@ -71,6 +72,14 @@ class LanguageFilesTest {
     void file_everyKey_isOneTheAssemblerReads(final String resource) throws IOException {
         assertThat(file(resource).stringPropertyNames())
                 .allMatch(key -> KEY.matcher(key).matches(), resource);
+    }
+
+    @ParameterizedTest
+    @MethodSource("everyFile")
+    void file_dialogueAttribution_compiles(final String resource) throws IOException {
+        final String pattern = file(resource).getProperty("dialogueAttribution", "");
+
+        assertThatCode(() -> Pattern.compile(pattern)).as(resource).doesNotThrowAnyException();
     }
 
     // A file that lists subject pronouns states its object forms too, even as an empty list, so a language whose

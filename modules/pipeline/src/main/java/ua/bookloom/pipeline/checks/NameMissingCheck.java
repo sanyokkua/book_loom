@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.checks;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
@@ -10,7 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
+import ua.bookloom.pipeline.lexicon.AlternationGuard;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
@@ -46,8 +45,14 @@ final class NameMissingCheck {
                 .filter(NameMissingCheck::isCheckable)
                 .filter(entry -> TermMatch.occursIn(entry.term(), source) && isWrittenAsName(entry.term(), source))
                 .toList();
+        final AlternationGuard guard = AlternationGuard.over(
+                target,
+                glossary.stream()
+                        .map(GlossaryEntry::target)
+                        .filter(Objects::nonNull)
+                        .toList());
         final List<GlossaryEntry> missing = inSource.stream()
-                .filter(entry -> isMissing(entry, source, target, alternations))
+                .filter(entry -> isMissing(entry, source, guard, alternations))
                 .toList();
         final List<GlossaryEntry> lost = missing.stream()
                 .filter(entry -> !hasPresentVariant(entry, inSource, missing))
@@ -122,10 +127,11 @@ final class NameMissingCheck {
     }
 
     private static boolean isMissing(
-            final GlossaryEntry entry, final String source, final String target, final List<String> alternations) {
+            final GlossaryEntry entry,
+            final String source,
+            final AlternationGuard guard,
+            final List<String> alternations) {
         final String rendering = Objects.requireNonNull(entry.target(), "target");
-        return TermMappingVerifier.verify(
-                        Map.of(entry.term(), rendering), List.of(entry.term()), source, target, alternations)
-                .isEmpty();
+        return !guard.holds(entry.term(), rendering, source, alternations);
     }
 }

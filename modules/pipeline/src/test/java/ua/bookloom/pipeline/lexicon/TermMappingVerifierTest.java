@@ -170,4 +170,16 @@ class TermMappingVerifierTest {
                         Map.of("data", "data"), List.of("data"), "The data.", "Вони загубили data дорогою."))
                 .hasSize(1);
     }
+
+    @Test
+    void verify_vowelOutsideTheClosingSyllable_staysUnmatched() {
+        final List<String> alternations = List.of("і>о");
+
+        assertThat(TermMappingVerifier.verify(
+                        Map.of("Lisbon", "Лісабон"), List.of("Lisbon"), "Lisbon", "Лосабон", alternations))
+                .isEmpty();
+        assertThat(TermMappingVerifier.verify(
+                        Map.of("Resistance", "Опір"), List.of("Resistance"), "Resistance", "Опором", alternations))
+                .hasSize(1);
+    }
 }

@@ -8,7 +8,9 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * The last target that passed every hard gate, or failed only a text check that spoils its typography and not its
- * meaning (quote balance, script purity), in both its restored and masked forms, or neither when none ever did — what {@link SegmentOutcome#machineTarget()}/{@link SegmentOutcome#maskedMachineTarget()} are built from.
+ * meaning (quote balance, script purity, a letter outside the alphabet), in both its restored and masked forms, or
+ * neither when none ever did — what {@link SegmentOutcome#machineTarget()}/{@link SegmentOutcome#maskedMachineTarget()}
+ * are built from.
  *
  * @param restored the restored (unmasked) form, or {@code null} when no candidate has passed every hard gate yet
  * @param masked {@code restored}'s masked form, still carrying its {@code ⟦gN⟧} tokens; {@code null} exactly when
@@ -18,10 +20,11 @@ record MachineTarget(@Nullable String restored, @Nullable String masked) {
 
     private static final MachineTarget NONE = new MachineTarget(null, null);
 
-    // A failure of either check leaves the model's words intact, so the draft is a better export than the source;
+    // A failure of these checks leaves the model's words intact, so the draft is a better export than the source;
     // any other failed gate (an English leftover, a refusal, markup, a locked name) says the draft is not a
     // translation.
-    private static final Set<CheckName> TOLERATED = Set.of(CheckName.QUOTE_BALANCE, CheckName.SCRIPT_PURITY);
+    private static final Set<CheckName> TOLERATED =
+            Set.of(CheckName.QUOTE_BALANCE, CheckName.SCRIPT_PURITY, CheckName.ALPHABET);
 
     /**
      * The state before any target has passed every hard gate.

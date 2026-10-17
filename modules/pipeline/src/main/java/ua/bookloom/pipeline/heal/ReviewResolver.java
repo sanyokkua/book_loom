@@ -251,9 +251,8 @@ final class ReviewResolver {
                 && !bringsLetters(fixed, edited.qa(), outcome.segment().id());
     }
 
-    // The alphabet check only notes a word, so it is no blocker; a fix that mends the reviewer's quote by writing a
-    // letter
-    // the target language does not have would still swap one defect for another.
+    // A fix that mends the reviewer's quote by writing a letter the target language does not have would swap one
+    // defect for another, so it is held to no more alphabet findings than the edited text had.
     private static boolean bringsLetters(
             final RoundOutcome.Evaluated fixed, final QaResult edited, final String segmentId) {
         final long before = alphabetFindings(edited);

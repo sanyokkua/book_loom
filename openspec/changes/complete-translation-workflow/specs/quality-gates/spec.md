@@ -1421,18 +1421,18 @@ that slip in.
 ### Requirement: Check each target word against the target language's alphabet
 
 The deterministic text checks SHALL include a target-alphabet check driven by language data: a target language whose
-file lists `forbiddenLetters` (Ukrainian: `ыъэё`) gets a soft `alphabet` finding for every target word that holds one of
-them, naming the word and the letter. The finding SHALL NOT block acceptance or flag a segment; with a repair round
-available it earns the same single directed fix as a narrator-gender finding (taken only when the fixed text passes every
-check and no longer holds a soft finding of that kind), otherwise it stays a note for review and the final audit lists it.
-A word that stands in the source text as well is a kept foreign word and is left alone, and a language with no such key is
-never checked.
+file lists `forbiddenLetters` (Ukrainian: `ыъэё`) gets a blocking `alphabet` finding (15j.J5) for every target word that
+holds one of them, naming the word and the letter. Like a mixed-script word the finding SHALL block acceptance and earn
+the directed fix; a draft that still holds the letter after the repair round is flagged, with its draft kept as the
+machine text. A word that stands in the source text as well is a kept foreign word and is left alone, and a language with
+no such key is never checked.
 
-#### Scenario: A Russian letter in a Ukrainian word earns one directed fix
+#### Scenario: A Russian letter in a Ukrainian word is repaired or flagged
 
 - **WHEN** a Ukrainian draft holds `бэкона` or `кобыли`
-- **THEN** the segment is accepted with an `alphabet` finding naming the word, and one directed fix is asked for it
-- **AND** a fix that still holds the letter leaves the draft accepted with the finding as a note
+- **THEN** the segment is not accepted as it is: the directed fix names the word, and the segment is accepted when the
+  fix removes the letter
+- **AND** a draft that still holds the letter after the repair round is flagged with the `alphabet` finding
 
 #### Scenario: A clean Ukrainian text is not touched
 

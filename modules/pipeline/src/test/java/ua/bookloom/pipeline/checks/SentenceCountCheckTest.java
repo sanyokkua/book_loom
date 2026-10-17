@@ -83,6 +83,30 @@ class SentenceCountCheckTest {
                 .isFalse();
     }
 
+    // The Ukrainian convention turns the English quote's full stop into a comma before the dash (15j.J9); the
+    // sentences are invented.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "\"Wait a moment.\" Brin raised her hand. Nobody moved at all.|«Зачекайте хвилинку», — Брін підняла руку. Ніхто не ворухнувся.|false",
+                "\"Wait a moment.\" Brin raised her hand. Nobody moved at all.|«Зачекайте хвилинку» — Брін підняла руку. Ніхто не ворухнувся.|false",
+                "\"Wait a moment.\" Brin raised her hand. Nobody moved at all.|«Зачекайте хвилинку», — Брін підняла руку.|true",
+                "\"Wait a moment,\" Brin said. Nobody moved at all. The room was quiet.|«Зачекайте хвилинку», — сказала Брін. Ніхто не ворухнувся.|true",
+                "\"Wait a moment,\" Brin said. Nobody moved at all.|«Зачекайте хвилинку», — сказала Брін. Ніхто не ворухнувся.|false",
+                "\"Stop!\" she said.|«Стій!» — сказала вона.|false",
+                "\"Stop!\" she said. Nobody moved at all.|«Стій!» — сказала вона. Ніхто не ворухнувся.|false",
+                "\"Wait,\" he said. Nobody moved at all.|— Зачекай, — сказав він. Ніхто не ворухнувся.|false",
+                "\"Wait,\" he said. Nobody moved at all.|— Зачекай, — сказав він.|true",
+                "\"Wait for me here!\" she said quietly. Nobody answered at all.|«Чекай мене тут!» — тихо сказала вона. Ніхто не відповів.|false",
+                "\"Is it far?\" she asked quietly. Nobody answered at all.|«Це далеко?» — тихо спитала вона. Ніхто не відповів.|false",
+                "\"Wait for me here!\" she said quietly. Nobody answered at all. The room was quiet.|«Чекай мене тут!» — тихо сказала вона. Ніхто не відповів.|true"
+            })
+    void dropsSentence_dialogueDashAttribution_isASentenceBoundaryOnlyWhereTheSourceEndedTheQuote(
+            final String source, final String target, final boolean flagged) {
+        assertThat(SentenceCount.dropsSentence(source, target, "en", "uk")).isEqualTo(flagged);
+    }
+
     // A Russian source's abbreviation is no sentence end, so one sentence in is one sentence out.
     @Test
     void dropsSentence_russianAbbreviationBeforeACapital_isOneSentence() {

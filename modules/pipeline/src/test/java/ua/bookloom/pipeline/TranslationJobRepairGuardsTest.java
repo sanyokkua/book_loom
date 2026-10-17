@@ -74,8 +74,8 @@ class TranslationJobRepairGuardsTest {
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
     }
 
-    // IF a fix reply that cannot be read flagged the segment or dropped its text, THEN one bad reply to a note-level
-    // fix would turn a book's accepted paragraph into work for the person.
+    // IF a fix reply that cannot be read dropped the draft's text, THEN one bad reply would leave the book without the
+    // paragraph; the Russian letter stays blocking, so the segment is flagged with its draft as the machine text.
     @ParameterizedTest(name = "[{index}] {0}")
     @ValueSource(
             strings = {
@@ -84,7 +84,7 @@ class TranslationJobRepairGuardsTest {
                 "{\"target\":\"Я відчинив\\u0001 старі двері.\"}",
                 "{\"other\":\"Я відчинив старі двері.\"}"
             })
-    void run_fixReplyIsMalformed_leavesTheAcceptedDraftAcceptedAndUnchanged(final String malformed) {
+    void run_fixReplyIsMalformed_flagsTheSegmentAndKeepsTheDraftAsItsMachineText(final String malformed) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(answer(targetReply(RUSSIAN_LETTER)))
                 .answerTimes(2, answer(malformed));
@@ -94,16 +94,16 @@ class TranslationJobRepairGuardsTest {
 
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, RUSSIAN_LETTER);
+                .containsExactly(SegmentStatus.FLAGGED, SegmentPath.REPAIRED, RUSSIAN_LETTER);
         assertThat(stored(project, "Book.txt:0").findings())
-                .extracting(QaFinding::severity)
-                .doesNotContain(Severity.HIGH);
+                .extracting(QaFinding::raisedBy)
+                .contains("alphabet");
     }
 
     // IF a fix that still holds a Russian letter (a different one) were adopted, THEN the repair would only move the
-    // defect; the alphabet check reads the fix too.
+    // defect; the alphabet check reads the fix too, and the segment is flagged with the first draft.
     @Test
-    void run_fixStillHoldsARussianLetter_keepsTheAcceptedDraft() {
+    void run_fixStillHoldsARussianLetter_flagsTheSegmentAndKeepsTheDraft() {
         final ScriptedChatModel model = replies(RUSSIAN_LETTER, "Я відчинив стыри двері.");
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
 
@@ -112,7 +112,7 @@ class TranslationJobRepairGuardsTest {
         assertThat(formats(model)).containsExactly(DRAFT, FIX);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, RUSSIAN_LETTER);
+                .containsExactly(SegmentStatus.FLAGGED, SegmentPath.REPAIRED, RUSSIAN_LETTER);
     }
 
     // A fix that wraps words in tokens the segment never had is not refused: the designed document-gate path puts the

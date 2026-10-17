@@ -23,8 +23,8 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * A Ukrainian draft with a Russian-only letter (the run's бэкона, кобыли): the soft alphabet finding earns exactly one
- * directed fix that names the word, and a fix that keeps the letter leaves the draft accepted with the note.
+ * A Ukrainian draft with a Russian-only letter (the run's бэкона, кобыли): the blocking alphabet finding earns the
+ * directed fix that names the word, and a draft that still holds the letter after the repair round is flagged.
  */
 class TranslationJobAlphabetTest {
 
@@ -52,7 +52,7 @@ class TranslationJobAlphabetTest {
     }
 
     @Test
-    void run_fixKeepsTheRussianLetter_keepsTheDraftAcceptedWithTheNoteAndSpendsNoSecondFix() {
+    void run_fixKeepsTheRussianLetter_flagsTheSegmentWithTheAlphabetFindingAndKeepsTheDraftAsMachineTarget() {
         final ScriptedChatModel model = replies(RUSSIAN_LETTER, RUSSIAN_LETTER);
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
 
@@ -60,8 +60,8 @@ class TranslationJobAlphabetTest {
 
         assertThat(formats(model)).containsExactly(DRAFT, FIX);
         assertThat(stored(project, "Book.txt:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::path)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.FLAGGED, RUSSIAN_LETTER);
         assertThat(stored(project, "Book.txt:0").findings())
                 .extracting(QaFinding::raisedBy)
                 .contains("alphabet");

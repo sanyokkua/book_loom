@@ -47,7 +47,7 @@ final class TextCheckGates {
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());
-        AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage()).stream()
+        AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage(), input.glossaryPairs()).stream()
                 .map(TextCheckGates::resultOf)
                 .forEach(results::add);
         genderResult(input, target).ifPresent(results::add);

@@ -62,6 +62,7 @@ public final class LanguageRules implements LanguageSupport {
     private final Map<String, LanguageFile> files = new ConcurrentHashMap<>();
     private final Map<String, String> sections = new ConcurrentHashMap<>();
     private final Map<String, String> examples = new ConcurrentHashMap<>();
+    private final Map<String, Pattern> patterns = new ConcurrentHashMap<>();
 
     /**
      * Opens the map over a loader.
@@ -262,8 +263,7 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
-     * The groups of letters a name's stem may swap its last letter within before a suffix, from the target language's
-     * {@code stemAlternations} key, so the name check never hard-codes a language.
+     * The groups of letters a name's stem may swap its last letter within, from the {@code stemAlternations} key.
      *
      * @param targetTag the non-null target language tag
      * @return the groups, such as {@code гзж}; never null, empty when the language names none
@@ -273,8 +273,7 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
-     * The word endings of a target language's oblique case forms, from its {@code obliqueEndings} key, so the lexicon
-     * can prefer the dictionary form of a learned rendering by data and never by a hard-coded tag.
+     * The endings of a target language's oblique case forms, from its {@code obliqueEndings} key, as data.
      *
      * @param targetTag the non-null target language tag
      * @return the endings, such as {@code і} and {@code ів}; never null, empty when the language lists none
@@ -352,8 +351,14 @@ public final class LanguageRules implements LanguageSupport {
 
     /** The {@code firstPersonPast} pattern (groups {@code female}, {@code male}) of a language, if it has one. */
     public Optional<Pattern> firstPersonPast(final String languageTag) {
-        final String value = targetValue(Objects.requireNonNull(languageTag, "languageTag"), "firstPersonPast");
-        return value == null || value.isBlank() ? Optional.empty() : Optional.of(Pattern.compile(value));
+        return pattern(languageTag, "firstPersonPast");
+    }
+
+    public Optional<Pattern> pattern(final String tag, final String key) {
+        final String value = targetValue(Objects.requireNonNull(tag, "tag"), Objects.requireNonNull(key, "key"));
+        return Optional.ofNullable(value)
+                .filter(text -> !text.isBlank())
+                .map(text -> patterns.computeIfAbsent(text, Pattern::compile));
     }
 
     // The whitespace-separated words of a language file's key, as written; empty when the language lacks the key.

@@ -27,7 +27,8 @@ import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
  * last three letters, a short one fewer, and the target word may be at most three letters longer than the rendering's.
  * For a target language that gives alternation data (15e.9) the last letter of a stem of at least four letters may
  * swap within a group ({@code Прага}, {@code Празькі}), within the same three-letter bound, and a rendering of at least six
- * letters also matches a longer derived form ({@code Лондон}, {@code лондонського}).
+ * letters also matches a longer derived form ({@code Лондон}, {@code лондонського}). An entry written {@code і>о} in
+ * that data swaps the vowel that closes the stem ({@code Опір}, {@code Опором}), and the three apostrophes are one.
  * A rendering whose stem changes inside the word ({@code кінь}, {@code коня}) is dropped, which only costs a count.
  */
 @Slf4j
@@ -58,6 +59,8 @@ public final class TermMappingVerifier {
     private static final int DERIVED_WORD_FLOOR = 6;
     private static final int MAX_EXTRA_LETTERS = 3;
     private static final int MAX_RENDERING_WORDS = 5;
+    private static final int CLOSING_SYLLABLE = 2;
+    private static final char VOWEL_SWAP = '>';
 
     /**
      * Keeps the pairs a text proves.
@@ -198,9 +201,16 @@ public final class TermMappingVerifier {
         if (targetWord.startsWith(stem) && targetWord.length() <= length + MAX_EXTRA_LETTERS) {
             return true;
         }
-        if (alternations.isEmpty()
-                || stem.length() < SWAP_STEM_FLOOR
-                || swappedStems(stem, alternations).noneMatch(targetWord::startsWith)) {
+        if (alternations.isEmpty()) {
+            return false;
+        }
+        return swapsConsonant(stem, length, targetWord, alternations)
+                || swapsVowel(stem, length, targetWord, alternations);
+    }
+
+    private static boolean swapsConsonant(
+            final String stem, final int length, final String targetWord, final List<String> alternations) {
+        if (stem.length() < SWAP_STEM_FLOOR || swappedStems(stem, alternations).noneMatch(targetWord::startsWith)) {
             return false;
         }
         // A short name matches any longer word (Остап, остаточно): only a name of six letters or more is trusted past
@@ -208,12 +218,30 @@ public final class TermMappingVerifier {
         return length >= DERIVED_WORD_FLOOR || targetWord.length() <= length + MAX_EXTRA_LETTERS;
     }
 
+    // The vowel of the stem's closing syllable changes in an oblique form (Опір, Опором; камінь, каменя): the entry
+    // "і>о" of the language file's alternations swaps it, inside the plain length bound only.
+    private static boolean swapsVowel(
+            final String stem, final int length, final String targetWord, final List<String> alternations) {
+        return targetWord.length() <= length + MAX_EXTRA_LETTERS
+                && alternations.stream()
+                        .filter(entry -> entry.indexOf(VOWEL_SWAP) == 1 && entry.length() == 3)
+                        .anyMatch(entry ->
+                                targetWord.startsWith(withClosingVowel(stem, entry.charAt(0), entry.charAt(2))));
+    }
+
+    private static String withClosingVowel(final String stem, final char from, final char to) {
+        final int at = stem.lastIndexOf(from);
+        return at >= stem.length() - CLOSING_SYLLABLE && at >= 0
+                ? stem.substring(0, at) + to + stem.substring(at + 1)
+                : stem;
+    }
+
     // A name's adjective or oblique form (лондонського, Празькі for Прага) keeps the stem but may swap its last letter.
     private static Stream<String> swappedStems(final String stem, final List<String> alternations) {
         final String head = stem.substring(0, stem.length() - 1);
         final char last = stem.charAt(stem.length() - 1);
         final Stream<String> swapped = alternations.stream()
-                .filter(group -> group.indexOf(last) >= 0)
+                .filter(group -> group.indexOf(VOWEL_SWAP) < 0 && group.indexOf(last) >= 0)
                 .flatMap(group -> group.chars().mapToObj(letter -> head + (char) letter));
         return Stream.concat(Stream.of(stem), swapped);
     }
@@ -226,7 +254,7 @@ public final class TermMappingVerifier {
 
     // A hyphenated target word counts whole and by each part (З-Зерубін holds Зерубін); a rendering stays whole.
     private static List<String> wordsOf(final String text, final boolean splitHyphens) {
-        return WORD.matcher(text.toLowerCase(Locale.ROOT))
+        return WORD.matcher(text.toLowerCase(Locale.ROOT).replace('’', '\'').replace('ʼ', '\''))
                 .results()
                 .flatMap(match -> splitHyphens ? withParts(match.group()) : Stream.of(match.group()))
                 .toList();

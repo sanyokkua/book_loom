@@ -3,14 +3,13 @@ package ua.bookloom.pipeline.checks;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
-import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
+import ua.bookloom.pipeline.lexicon.AlternationGuard;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
@@ -35,16 +34,18 @@ final class NameSwapCheck {
             final List<String> alternations,
             @Nullable final String sourceLanguage) {
         final List<Named> names = names(glossaryPairs, sourceLanguage);
+        final AlternationGuard guard = AlternationGuard.over(
+                target, names.stream().map(Named::rendering).toList());
         log.trace("Name swap check over {} glossary name(s)", names.size());
         final List<CheckFinding> found = new ArrayList<>();
         for (final Named lost : names) {
-            if (!TermMatch.isNamedIn(lost.term(), source) || holds(lost, target, alternations)) {
+            if (!TermMatch.isNamedIn(lost.term(), source) || holds(guard, lost, alternations)) {
                 continue;
             }
             final Optional<Named> instead = names.stream()
                     .filter(other -> !other.equals(lost) && !overlap(other, lost))
                     .filter(other -> !TermMatch.isNamedIn(other.term(), source))
-                    .filter(other -> holds(other, target, alternations))
+                    .filter(other -> holds(guard, other, alternations))
                     .findFirst();
             instead.ifPresent(other -> {
                 log.debug("Name swap: the source names one glossary name and the target another");
@@ -74,10 +75,8 @@ final class NameSwapCheck {
         return names;
     }
 
-    private static boolean holds(final Named name, final String target, final List<String> alternations) {
-        return !TermMappingVerifier.verify(
-                        Map.of(name.term(), name.rendering()), List.of(name.term()), name.term(), target, alternations)
-                .isEmpty();
+    private static boolean holds(final AlternationGuard guard, final Named name, final List<String> alternations) {
+        return guard.holds(name.term(), name.rendering(), name.term(), alternations);
     }
 
     // One rendering inside the other (Смит, Смітсон) cannot tell which name stands in the target.
