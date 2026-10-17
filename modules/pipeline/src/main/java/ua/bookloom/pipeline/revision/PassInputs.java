@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
@@ -27,6 +28,8 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param book the brief, the opened book and the glossary as the audit reads them, so a new text is never one the
  *     audit doubts more than the old
  * @param context the recurring-term lexicon and the rolling summary the check against the neighbours shows
+ * @param matter the ids of the segments outside the story: those of a front or back matter unit, and the auxiliary
+ *     unit's (navigation labels, title, creator, image text), which the pass never sends to the model
  */
 record PassInputs(
         String projectId,
@@ -38,7 +41,8 @@ record PassInputs(
         List<GlossaryEntry> glossary,
         List<String> order,
         FinalAudit.Book book,
-        BookContext context) {
+        BookContext context,
+        Set<String> matter) {
 
     /** Rejects a missing component and copies the collections. */
     PassInputs {
@@ -52,6 +56,18 @@ record PassInputs(
         order = List.copyOf(Objects.requireNonNull(order, "order"));
         Objects.requireNonNull(book, "book");
         Objects.requireNonNull(context, "context");
+        matter = Set.copyOf(Objects.requireNonNull(matter, "matter"));
+    }
+
+    /**
+     * Whether the pass may send a segment to the model: it is running story text, not navigation, front or back
+     * matter. The same split as the name scan, which reads only {@link ua.bookloom.api.document.UnitRole#BODY} units.
+     *
+     * @param segmentId the segment id
+     * @return {@code true} if the segment lies in a body unit, {@code false} for matter and the auxiliary unit
+     */
+    boolean isStory(final String segmentId) {
+        return !matter.contains(segmentId);
     }
 
     /**

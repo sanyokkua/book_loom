@@ -24,6 +24,7 @@ final class PassTally {
     private int retriedImproved;
     private int retriedKept;
     private int neighbourUnchanged;
+    private int neighbourRemembered;
     private int skipped;
     private final Map<String, Integer> refused = new TreeMap<>();
 
@@ -59,6 +60,16 @@ final class PassTally {
     /** Records a paragraph the check against its neighbours found nothing to change in. */
     void neighbourUnchanged() {
         neighbourUnchanged++;
+    }
+
+    /** Records a paragraph skipped because an earlier check already found it unchanged in this very state. */
+    void neighbourRemembered() {
+        neighbourRemembered++;
+        neighbourUnchanged++;
+    }
+
+    int rememberedCount() {
+        return neighbourRemembered;
     }
 
     /** Records an answer the pass did not keep because it broke {@code rule}. */

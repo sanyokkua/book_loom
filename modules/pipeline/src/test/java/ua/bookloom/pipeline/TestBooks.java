@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
@@ -156,8 +157,45 @@ public final class TestBooks {
         }
     }
 
+    /**
+     * An EPUB at the container root whose first spine document, {@code copyright.xhtml}, is front matter by its file
+     * name, followed by the given body chapters {@code ch01.xhtml}…, with a navigation document outside the spine that
+     * lists {@code labels}.
+     */
+    public static Path epubWithFrontMatterAndNavigation(
+            final Path destination,
+            final List<String> frontParagraphs,
+            final List<List<String>> chapters,
+            final List<String> labels) {
+        final List<String> names = new ArrayList<>(List.of("copyright.xhtml"));
+        final List<List<String>> spine = new ArrayList<>(List.of(frontParagraphs));
+        for (int index = 0; index < chapters.size(); index++) {
+            names.add(String.format("ch%02d.xhtml", index + 1));
+            spine.add(chapters.get(index));
+        }
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml().replace("OEBPS/", ""), ZipEntry.DEFLATED);
+            final String navItem =
+                    "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>";
+            put(zip, "content.opf", rootOpf(names, navItem), ZipEntry.DEFLATED);
+            for (int index = 0; index < names.size(); index++) {
+                put(zip, names.get(index), xhtml(spine.get(index), null, DEFAULT_PAGE_TITLE), ZipEntry.DEFLATED);
+            }
+            put(zip, "nav.xhtml", navigation(labels), ZipEntry.DEFLATED);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
     private static String rootOpf(final List<String> chapterNames) {
-        final StringBuilder manifest = new StringBuilder();
+        return rootOpf(chapterNames, "");
+    }
+
+    private static String rootOpf(final List<String> chapterNames, final String extraManifest) {
+        final StringBuilder manifest = new StringBuilder(extraManifest);
         final StringBuilder spine = new StringBuilder();
         for (int index = 0; index < chapterNames.size(); index++) {
             manifest.append("<item id=\"c")

@@ -63,6 +63,21 @@ final class RevisionBook {
         return new RevisionBook(ReviewFixtures.epubChapters(directory, List.of(chapter(1, 10), chapter(2, 7))));
     }
 
+    /** A front-matter document, one body chapter of {@code body} and a navigation document of three labels. */
+    static RevisionBook openWithMatter(final Path directory, final List<String> front, final List<String> body) {
+        return new RevisionBook(ReviewFixtures.epubWithMatter(
+                directory, front, List.of(body), List.of("Label one", "Label two", "Label three")));
+    }
+
+    /** The ids of the segments of the unit whose id starts with {@code unitPrefix}, in reading order. */
+    List<String> idsOfUnit(final String unitPrefix) {
+        return Objects.requireNonNull(desk.openProjects().get(desk.projectId()), "open book").units().stream()
+                .filter(unit -> unit.id().startsWith(unitPrefix))
+                .flatMap(unit -> unit.segments().stream())
+                .map(Segment::id)
+                .toList();
+    }
+
     Desk desk() {
         return desk;
     }

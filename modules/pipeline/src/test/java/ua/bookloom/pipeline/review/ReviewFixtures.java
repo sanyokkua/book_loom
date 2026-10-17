@@ -142,6 +142,20 @@ public final class ReviewFixtures {
         return open(TestBooks.epubWithNavigation(directory.resolve("Book.epub"), spine, labels), brief);
     }
 
+    /**
+     * An EPUB of a front-matter {@code copyright.xhtml}, body chapters {@code ch01.xhtml}… and a navigation document
+     * listing {@code labels}, with the title and creator in the auxiliary unit, English to Ukrainian.
+     */
+    public static Desk epubWithMatter(
+            final Path directory,
+            final List<String> front,
+            final List<List<String>> chapters,
+            final List<String> labels) {
+        return open(
+                TestBooks.epubWithFrontMatterAndNavigation(directory.resolve("Book.epub"), front, chapters, labels),
+                brief(AlsoTranslate.defaults()));
+    }
+
     /** An EPUB of {@code ch01.xhtml}, {@code ch02.xhtml}… holding {@code chapters}, English to Ukrainian. */
     public static Desk epubChapters(final Path directory, final List<List<String>> chapters) {
         final List<String> names = IntStream.rangeClosed(1, chapters.size())

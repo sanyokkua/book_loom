@@ -349,6 +349,12 @@ translation, the glossary renderings of the names the three paragraphs hold, the
 terms, the genders of the characters they name, the rolling summary, the style sheet with the narrator, and the
 source's immutable tokens; an answer SHALL be stored only under the same rules, its counts kept unchanged.
 
+The pass SHALL send only story text: a segment of the auxiliary unit (navigation labels, title, creator, image text) or
+of a front or back matter unit — the split the glossary scan uses — is neither drafted again nor checked, whatever its
+status. A paragraph that an earlier check, such as the Max run's own backward revision, found unchanged in exactly the
+state the export would show the model SHALL NOT be sent again, and the pass logs how many segments it skipped as matter
+and as already checked.
+
 The system SHALL never change a segment the person edited, SHALL skip a segment whose call fails and go on, SHALL end
 with `cancelled` when the person cancels — keeping every change already stored — and SHALL announce each call as a call
 snapshot and each step's progress (the retry counted by segment, the neighbour check by call).

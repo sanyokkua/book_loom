@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +21,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
@@ -202,9 +204,15 @@ public final class ConsistencyPass {
             return Result.ok(Map.of());
         }
         return inOrder(inputs).map(records -> {
-            final Map<String, List<QaFinding>> doubted =
+            final Map<String, List<QaFinding>> all =
                     RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records));
-            log.debug("Doubted segments project={} count={}", inputs.projectId(), doubted.size());
+            final Map<String, List<QaFinding>> doubted = new LinkedHashMap<>(all);
+            doubted.keySet().removeIf(id -> !inputs.isStory(id));
+            log.debug(
+                    "Doubted segments project={} count={} skippedAsMatter={}",
+                    inputs.projectId(),
+                    doubted.size(),
+                    all.size() - doubted.size());
             return doubted;
         });
     }
@@ -309,7 +317,16 @@ public final class ConsistencyPass {
                 entries,
                 List.copyOf(sources.keySet()),
                 new FinalAudit.Book(brief, document, entries, WordValidator.none()),
-                context);
+                context,
+                matterIds(document));
+    }
+
+    private static Set<String> matterIds(final Document document) {
+        return document.units().stream()
+                .filter(unit -> unit.isAuxiliary() || unit.role() != UnitRole.BODY)
+                .flatMap(unit -> unit.segments().stream())
+                .map(Segment::id)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private static Map<DeferralReason, Integer> byReason(final List<Deferral> open) {

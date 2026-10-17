@@ -72,16 +72,11 @@ final class NeighbourRevision {
         Objects.requireNonNull(read.data(), "records").forEach(record -> byId.put(record.segmentId(), record));
         final List<String> order = inputs.order();
         final List<Integer> checked = IntStream.range(0, order.size())
-                .filter(at -> isInScope(byId.get(order.get(at)), scope))
+                .filter(at -> isInScope(inputs, byId.get(order.get(at)), scope))
                 .boxed()
                 .sorted(Comparator.comparing(at -> !hasBlocking(byId.get(order.get(at)))))
                 .toList();
-        log.info(
-                "Neighbour check started project={} segments={} inScope={} everySegment={}",
-                inputs.projectId(),
-                order.size(),
-                checked.size(),
-                scope.everySegment());
+        logStarted(inputs, byId, scope, checked.size());
         calls.planned(ModelCalls.Stage.NEIGHBOUR_CHECK, checked.size());
         for (final int at : checked) {
             final Result<Boolean> done = checkOne(inputs, order, at, byId, calls, tally);
@@ -89,13 +84,25 @@ final class NeighbourRevision {
                 return done;
             }
         }
-        log.info("Neighbour check ended project={} checked={}", inputs.projectId(), checked.size());
+        log.info(
+                "Neighbour check ended project={} checked={} skippedAsRemembered={}",
+                inputs.projectId(),
+                checked.size(),
+                tally.rememberedCount());
         return Result.ok(true);
     }
 
     // Repaired, flagged or doubted: the shapes where a defect is likely, so by default the pass costs a call only for
     // the paragraphs the run already had trouble with; "every segment" reads the whole book.
-    private static boolean isInScope(@Nullable final SegmentRecord record, final Scope scope) {
+    private static boolean isInScope(final PassInputs inputs, @Nullable final SegmentRecord record, final Scope scope) {
+        if (record != null && !inputs.isStory(record.segmentId())) {
+            log.debug("Neighbour check segmentId={} skipped: navigation, front or back matter", record.segmentId());
+            return false;
+        }
+        return isInScopeByState(record, scope);
+    }
+
+    private static boolean isInScopeByState(@Nullable final SegmentRecord record, final Scope scope) {
         if (record == null
                 || record.userTarget() != null
                 || record.maskedMachineTarget() == null
@@ -107,6 +114,24 @@ final class NeighbourRevision {
                 || record.status() == SegmentStatus.FLAGGED
                 || record.path() == SegmentPath.REPAIRED
                 || scope.doubted().contains(record.segmentId());
+    }
+
+    private static void logStarted(
+            final PassInputs inputs, final Map<String, SegmentRecord> byId, final Scope scope, final int inScope) {
+        log.info(
+                "Neighbour check started project={} segments={} inScope={} everySegment={} skippedAsMatter={}",
+                inputs.projectId(),
+                inputs.order().size(),
+                inScope,
+                scope.everySegment(),
+                matterSkipped(inputs, byId, scope));
+    }
+
+    private static long matterSkipped(
+            final PassInputs inputs, final Map<String, SegmentRecord> byId, final Scope scope) {
+        return inputs.order().stream()
+                .filter(id -> !inputs.isStory(id) && isInScopeByState(byId.get(id), scope))
+                .count();
     }
 
     // Blocking defects first, in reading order within each group, so a stopped pass has spent its calls where they
@@ -135,7 +160,7 @@ final class NeighbourRevision {
         final String fingerprint = ParagraphFingerprint.of(inputs, user, mode);
         if (checked.has(inputs.projectId(), id, fingerprint)) {
             log.debug("Neighbour check segmentId={} skipped: checked before in this state", id);
-            tally.neighbourUnchanged();
+            tally.neighbourRemembered();
             return Result.ok(false);
         }
         log.debug("Neighbour check segmentId={} status={} guards={}", id, record.status(), mode);
