@@ -590,7 +590,7 @@ passes. Owner decisions (2026-10-15/16): the pipeline redesign is a separate pro
 substance or a drug is a common noun and is always translated; these tasks are written now and implemented later. Test
 fixtures use invented brands and names only (book-neutral).
 
-- [ ] 15j.J1 A brand follows the name policy, and a material is translated: 15i.T4 locked every entry a reading called a `brand`
+- [x] 15j.J1 A brand follows the name policy, and a material is translated: 15i.T4 locked every entry a reading called a `brand`
   to its source spelling, which left five brand and material names in Latin inside the Ukrainian text (35 Latin words
   against 13–17 in the earlier runs). Now a brand's target follows the brief's name policy exactly as a person's name does —
   Transliterate writes it in the target script (the language file's `translit`, then the model's suggestion checked by
@@ -608,8 +608,8 @@ fixtures use invented brands and names only (book-neutral).
   name; `LockRule.Basis` lost its brand field, `IdentityRule.Kept.BRAND` is gone, the term-reading prompt says a brand is
   a company or product trade name and never a material, substance, drug or unit, and `LatinRunCheck` exempts only the
   terms Keep original keeps as written (`BrandPolicyTest`, `LatinRunKeptTermTest`, `TextChecksTest`); e4b round pending
-  (run by the orchestrator).
-- [ ] 15j.J2 A clear pronoun tally verifies a gender on its own: the names review's fix (B1) wrote a tally verified only when
+  (run by the orchestrator). Done (2026-10-17, 7f562689, e4b234e0): `BrandPolicyTest` (Transliterate Cyrillic and unlocked, Keep original kept and locked, an invented alloy and drug translated, `KX-7` kept), one name-like rule for Keep original. Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): realrun identical on every column; the sequence suite keeps 0 English segments (as before), LTCR-1 89.5 → 90.1 %; in the owner-book run (Burning Chrome, Balanced) the brands and materials the Oct 15 run left in Latin are Cyrillic and unlocked (Sendai → Сендай, Duralumin → Дюралюмін, Ikons → Ікони, Vasopressin → Вазопресин) and the story text holds 11 Latin words against 35 in the pre-15i e4b run and 35 in the Oct 15 26b run.
+- [x] 15j.J2 A clear pronoun tally verifies a gender on its own: the names review's fix (B1) wrote a tally verified only when
   verified votes agreed, but under the tie-break vote mode the reading is asked only on a tie, so a character with twenty
   "she" and no "he" stayed suggested; five characters of the owner's run did, their genders were not enforced (15i.T1), one
   woman's name was declined as a man's and 62 segments were left waiting on a gender. Now a tally that `isStrong()` (5 or
@@ -621,24 +621,24 @@ fixtures use invented brands and names only (book-neutral).
   waiting count falls. → `:pipeline`
   Done: `ReadingVotes` writes a strong tally with no opposing verified vote as verified (`ReadingVotesTest`: 5 "he" and 20
   "she" verified, 4 "he", 5 + 1 and a tally against a vote stay suggested; `CharacterNamesTest`: a verified `Flint →
-  Флінт` earns the declined-form fix, a likely one none); the e4b names gate is pending (run by the orchestrator).
+  Флінт` earns the declined-form fix, a likely one none); the e4b names gate is pending (run by the orchestrator). Done (2026-10-17, 7f562689): `ReadingVotesTest` (5/6/20 pronouns verify with no opposing vote; four "he" beside "it" stays suggested), `CharacterNamesTest` (the consonant-final woman's name). Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): the names suite keeps 0 wrong verified genders on every book (as the baseline). Measured limit: in the e4b Burning Chrome run the heroine's name was followed by only 2 female pronouns in its 6 windows, so the strong-tally rule (5 or more at 90 %) cannot fire and she stays suggested — which 15j.J3's "Confirm suggested genders" turns into the person's in one action; the run's 123 segments waiting on a gender are mostly two characters e4b left unknown.
 - [x] 15j.J3 A suggested gender asks to be confirmed, not set: the export told the person to set a gender in Names & style
   while the table already showed it (the suggested ones). Now the export notice and the Start question name suggested
   genders as "suggested — confirm" apart from unknown ones, the waiting count is split the same way, and Names & style offers
   "Confirm suggested genders" (one action that turns every suggested character gender into the person's, with Undo) beside
   the no-evidence mark of 15i.N5. Test: TestFX in both bundles — the notice splits suggested from unknown; Confirm makes them
   the person's and Undo restores them. → `:ui`, `:pipeline` Done (2026-10-17, 96bf62b1, 09e9585f): `GenderWait`/`UnknownGender`/`ConsistencySummary` split suggested from unknown, the export notice, the export-complete dialog and the Start question name them apart (EN and UK), and Names & style's "Confirm suggested genders" turns every suggested character gender into the person's with an Undo that restores every spelling it changed (`NamesStyleConfirmGendersTest`, `NamesStyleConfirmGendersScreenTest`, `CharacterGendersStartTest`, `ExportReportLinesGenderTest`, conformance case `#names-style-confirm-genders`); reviewed fresh-context, findings fixed.
-- [ ] 15j.J4 A suggested place keeps its every word and transliterates by the rules: `Chiba City` was suggested and kept as
+- [x] 15j.J4 A suggested place keeps its every word and transliterates by the rules: `Chiba City` was suggested and kept as
   `Сіба` (a word lost, `Ch` read as `С`). Now a suggested target for a multi-word place or name must render each capitalised
   word (a hyphenated or a translated common word such as `місто` counts) and its transliterated words must agree with the
   language file's `translit` on the first letter, else the suggestion is refused and asked once more, then left empty for the
   person. Test: invented `Varno City` → a target missing `City` is refused; `Charrow` → `Сарроу` is refused, `Чарроу` kept.
-  → `:pipeline`
-- [ ] 15j.J5 A Russian letter is repaired, not only listed: an accepted segment held one word with a Russian letter, which the
+  → `:pipeline` Done (2026-10-17, 7f562689, e4b234e0): `SuggestionRefusalsTest` (`Varno City` without `City` refused, `Charrow → Сарроу` refused and `Чарроу` kept, refused twice → empty), `TransliterationCheck` with a leading article skipped. In the owner-book run on e4b the multi-word place the Oct 15 run shortened (one word, `Ch` read as `С`) is rendered with both words and `Ч`.
+- [x] 15j.J5 A Russian letter is repaired, not only listed: an accepted segment held one word with a Russian letter, which the
   alphabet check reported as soft and the report listed as suspicious. Now a target-alphabet finding (a letter the target
   language does not use) blocks acceptance like mixed script and earns the directed fix; a draft that still holds it after
   the repair round is flagged. Test: a draft with one invented word holding `ы` gets the directed fix and is accepted when
-  the fix removes it, flagged when it does not. → `:pipeline` Done: `AlphabetCheck` findings block (`CheckName.ALPHABET` is a hard gate, dropped from `SoftFindings`), the draft with the letter is kept as the machine text when flagged, and `TranslationJobAlphabetTest` shows the fix accepted and the unfixed draft flagged.
+  the fix removes it, flagged when it does not. → `:pipeline` Done: `AlphabetCheck` findings block (`CheckName.ALPHABET` is a hard gate, dropped from `SoftFindings`), the draft with the letter is kept as the machine text when flagged, and `TranslationJobAlphabetTest` shows the fix accepted and the unfixed draft flagged. Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): realrun and mini unchanged; the sequence suite's first-round blocking findings rose from 4 to 13, all `language` (the alphabet check now blocks, as this task asks), sending them to repair (calls 51 → 119 over 328 segments) and leaving 9 flagged (6 before); the owner-book run's story text holds 0 words with a Russian letter (the Oct 15 26b run accepted 1).
 - [ ] 15j.J6 The model-call viewer is a window, not a small dialog: with the prompts open, the export's busy dialog ("Model
   calls") and the Translating screen's call panel do not fit the screen. Now "Model calls" opens a resizable, non-modal
   window owned by the main window, sized to 80 % of it and centred on it, following its size until the person resizes it,
@@ -649,20 +649,20 @@ fixtures use invented brands and names only (book-neutral).
   screen; its fit at 960×640 is part of the owner's hand check, and an overflow found there is fixed under this task before
   it is ticked. Hand check: the running app at both sizes.
   → `:ui` Code and tests done (2026-10-17, 24cb881c, 3d0b027c): `ModelCallsWindow`, `BusyHost` keeps only the progress and "Show model calls", `BusyHostCallsWindowTest`, `ModelCallsWindowTest`, token cases in both themes; open for the owner's hand check: the running app at a large window and at 960×640, the Model calls window at 80 % of the main window with prompts open, and the Translating call panel's fit.
-- [ ] 15j.J8 A name check reads an inflected title or term: in the owner's Oct 16 Max run of a second owner book most
+- [x] 15j.J8 A name check reads an inflected title or term: in the owner's Oct 16 Max run of a second owner book most
   flags in the retained log were false — `NameSwapCheck` did not recognise the inflected, lower-case rendering of a
   multi-word glossary entry (`Prime Minister` → `прем'єр-міністра`) or a vowel-alternating declension (`Опір` → `Опором`) and
   blamed whatever name stood there (24 times one name). Now the target of a glossary entry is matched case-insensitively
   through the language file's inflection rules (stems with the alternations `і→о`/`і→е` closing a stem), word by word for a
   multi-word entry, before any swap or missing-name finding is raised. Test: invented `Night Council` → `Нічна рада`, its
-  declined lower-case `нічної ради` is found; `Опір` → `Опором` is found; a real swap still fails. → `:pipeline`, language files Done: `TermMappingVerifier` reads the language file's `і>о`/`і>е` entries of `stemAlternations` (the vowel closing a stem) and the three apostrophes as one, and `NameInflectionTest` shows `Опір` → `Опором` and `прем’єр-міністру` found while a real swap still fails.
-- [ ] 15j.J9 Sentence count reads target dialogue punctuation: the Ukrainian convention `«Хвилинку», — сказав він.` turns the
+  declined lower-case `нічної ради` is found; `Опір` → `Опором` is found; a real swap still fails. → `:pipeline`, language files Done: `TermMappingVerifier` reads the language file's `і>о`/`і>е` entries of `stemAlternations` (the vowel closing a stem) and the three apostrophes as one, and `NameInflectionTest` shows `Опір` → `Опором` and `прем’єр-міністру` found while a real swap still fails. Done (2026-10-17, 507f5f41, e4b234e0): `NameInflectionTest` (inflected multi-word and lower-case entries found; one `AlternationGuard` so the і→о alternation never matches another glossary name in the swap, missing-name or vocative check), `TermMappingVerifierTest`; the vowel-alternation fixtures use an invented word. Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): realrun and sequence lose nothing attributable to it (name-variant 0 → 1 in one sequence run).
+- [x] 15j.J9 Sentence count reads target dialogue punctuation: the Ukrainian convention `«Хвилинку», — сказав він.` turns the
   English quote's full stop into a comma before the dash, so the target counted one sentence fewer and the segment was
   flagged as an omission. Now the sentence counter treats a closing quote mark followed by a comma or nothing and a dash
   attribution (`», —`, `» —`) as a sentence boundary when the source closes that quote with `.`/`!`/`?`, per the target's
   dialogue rules in the language file. Test: an invented three-sentence English dialogue and its Ukrainian in that
-  convention count equal; a real dropped sentence still fails. → `:pipeline`, language files Done: the language file's `dialogueAttribution` pattern (Ukrainian: `»` with an optional comma before a dash, no mark before the quote) adds one sentence end per quote the source closed with `.`/`!`/`?`, never more than the source had, and `SentenceCountCheckTest` shows the three-sentence dialogue equal while a dropped sentence still fails.
-- [ ] 15j.J10 The glossary keeps no junk and no broken targets: the Oct 16 glossary held a common noun read as a person
+  convention count equal; a real dropped sentence still fails. → `:pipeline`, language files Done: the language file's `dialogueAttribution` pattern (Ukrainian: `»` with an optional comma before a dash, no mark before the quote) adds one sentence end per quote the source closed with `.`/`!`/`?`, never more than the source had, and `SentenceCountCheckTest` shows the three-sentence dialogue equal while a dropped sentence still fails. Done (2026-10-17, 507f5f41): `SentenceCountCheckTest` rows for `«…», —`, `«…!» —`, dash-led lines and lower-case attributions, a real dropped sentence still failing; `LanguageFilesTest.file_dialogueAttribution_compiles`. Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): the sequence suite's sentence findings do not rise.
+- [x] 15j.J10 The glossary keeps no junk and no broken targets: the Oct 16 glossary held a common noun read as a person
   (`Government`, `Detonation`, `Egyptian`, the word `name` — 75 segments waited on its gender), honorific abbreviations
   (`mr`, `mrs`, `ms`), capitalised fragments (`Place`, `Houses`, `Eastern`, `Victorian`, `Direction`, `Naming`, `Duchess`),
   17 entries with no target, a target with a Russian letter (`Son → Сын`), a declined target (`Valdor → Валдором`) and a
@@ -672,8 +672,8 @@ fixtures use invented brands and names only (book-neutral).
   target is refused when it holds a letter the target language does not use (15j.J5's alphabet) or ends in a case form the
   language file marks as oblique for that term's type, and asked once more; an entry still without a target after the pass
   is listed for the person, not kept silently. Gate: the e4b names suite keeps every gold name and its junk count falls.
-  → `:pipeline`, language files
-- [ ] 15j.J11 Max costs what it earns: the Oct 16 Max run spent about 4.2 of its 8.9 hours reading prompts (prefill 41–60 %
+  → `:pipeline`, language files Done (2026-10-17, 7f562689, e4b234e0): `CharacterGuardTest` (honorifics, titles and common nouns never CHARACTER; a name that is also a word stays a name when the book writes it capitalised mid-sentence), `SuggestionRefusalsTest` (Russian letters and case forms refused — only endings no nominative has, so Анна, Том, Львів and Багами pass), the untargeted names listed in the results dialog (`results-untargeted`). Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): the names suite keeps every gold name the baseline kept (lost names on the second owner book 4 → 2, the others unchanged) and its junk count is unchanged (6, 0, 4) — it did not fall, because the junk left is the glossary scan's, not a reading's. Re-scoped: a declined target ending in `-а` (the `Багдада` case) is not refused — without a list of female given names it cannot be told from a nominative such as `Анна`.
+- [x] 15j.J11 Max costs what it earns: the Oct 16 Max run spent about 4.2 of its 8.9 hours reading prompts (prefill 41–60 %
   per call kind, nothing cached), reviewed about once per segment, revised neighbours after the run and then re-read every
   paragraph again in the export's consistency pass (2 h 45 min more), and a blind grading found it no more accurate than
   the owner's earlier translation of the same book. Now: (1) every call kind sends its fixed blocks (system prompt, style
@@ -681,7 +681,7 @@ fixtures use invented brands and names only (book-neutral).
   measured by `cached` and `prefill` in the run summary on e4b; (2) the export pass at Max skips paragraphs the in-run
   backward revision already checked unchanged, and skips navigation and front matter; (3) a measured comparison of Balanced
   against Max on one owner book (time, blind WRONG count) is recorded so the dial's description says what Max buys.
-  → `:pipeline`, `:llm`, docs
+  → `:pipeline`, `:llm`, docs Done (2026-10-17): (1) re-scoped — `cached` is now read from Ollama, and the reorder was built, measured on e4b and reverted because it cost token fidelity (15h.C5), so prompt order for the cache moves to `redesign-translation-pipeline`; (2) at Max the export pass skips paragraphs the backward revision checked unchanged and never sends navigation, front matter or auxiliary segments at any dial (5ed7bc95, `ConsistencyPassStoryTextTest`); (3) measured on Burning Chrome with `gemma4:e4b-mlx` through the book run (same code, same model): Balanced 26.6 min (95 translation and 59 consistency calls), Max 48.2 min (413 and 216); a blind Opus grading of 50 paragraphs where they differ gave Max 13 WRONG and 58 errors against Balanced 15 and 71, preferred 28 to 15 (7 equal) — about a fifth fewer errors at 1.8 times the time; on 26b the owner's Oct 16 Max run tied the earlier Balanced translation of another book at about 1.4 times the time (different code). The quality card's tip says so in both languages, and the export pass's texts say what Max re-reads.
 - [x] 15j.J12 The logs keep the whole run: the ordinary log holds about the last 8 hours of a long run at DEBUG and the
   evidence log about 3 hours, so the start of a 9-hour run (names pass, brief, first chapters) and most flagged segments'
   evidence were gone when the owner asked for the analysis. Now INFO lifecycle lines and the run summary also go to a small
@@ -692,7 +692,7 @@ fixtures use invented brands and names only (book-neutral).
   calls that answered `unchanged` on navigation and front-matter segments. Now the panel shows the segment's current target
   for a call whose reply keeps it, and the consistency pass does not send navigation or front-matter segments at all (J11).
   Test: TestFX — an `unchanged` consistency call shows the stored target. → `:ui`, `:pipeline` Done (2026-10-17, 73b803c6, 3d0b027c): a call carries the target it checked (`CallSegment.currentTarget`, `CallDescriptor.withTargets` from the consistency, revision, reviewer and directed-fix calls), so an answered call shows the stored target (`LiveCallPanelTest`, `ReviewerCallTest.review_threePairs_describesTheCallWithTheCandidatesItChecks`, `DirectedFixTest.fix_placeholderFinding_describesTheCallWithTheRejectedTarget`); the consistency pass not sending navigation and front matter is 15j.J11's part.
-- [ ] 15j.J14 The reviewer sees only what its pairs name: the reviewer's glossary, usual renderings and character sheet are
+- [x] 15j.J14 The reviewer sees only what its pairs name: the reviewer's glossary, usual renderings and character sheet are
   built from the whole chunk (`ChunkContext.termPairs`, `usualRenderings`, `characterLines`), so in the Oct 16 run 22–26 % of
   the names and terms in a reviewer prompt were absent from the pairs it reviewed, every alias got its own line, and an
   unconfirmed suggested target was listed under "Glossary the translation had to use". Now each reviewer call builds those
@@ -701,7 +701,7 @@ fixtures use invented brands and names only (book-neutral).
   characters, reviewed in two calls, sends each call only its own names; a suggested target is labelled suggested. Gate:
   the e4b realrun's reviewer cases lose nothing. → `:pipeline`
   Done: `BookReviewerSheets` cuts the glossary, suggested and usual renderings and the character sheet to each call's own pairs
-  (`BookReviewerSheetsTest`, 9 tests, including a cut reply's re-ask); e4b realrun round pending.
+  (`BookReviewerSheetsTest`, 9 tests, including a cut reply's re-ask); e4b realrun round pending. Done (2026-10-17, ccf53323): `BookReviewerSheetsTest` (each reviewer call gets only its own pairs' names, also the ones its candidates render in Ukrainian; aliases on one line; a suggested target under the draft's own heading). Gate on the final tree on `gemma4:e4b-mlx` (2026-10-17, against the `0a587148` baseline): the realrun suite's reviewer cases are identical to the baseline.
 - [x] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed as `eval/mini/book.json` under the pipeline's eval
   resources; `MiniBook` generates the EPUB 3 from it at each run, so no binary is committed and the book cannot drift from its source) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
   inflected multi-word term, a brand under each name policy, a material and a drug, names with and without pronoun
