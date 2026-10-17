@@ -27,7 +27,7 @@ final class BatchSlots {
     /** The system message's slots, the same in every batch format. */
     static final Slots SYSTEM = new Slots(
             Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-            Set.of("examples", "languageRules", "tokenRules", "noTokenRules", "notesRule", "relatedPairsName"));
+            Set.of("examples", "languageRules", "tokenRules", "notesRule", "relatedPairsName"));
 
     static final Slots USER = new Slots(Set.of("items", "source", "target"), with(CONTEXT, "keyTerms"));
 

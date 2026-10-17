@@ -62,8 +62,10 @@ class PromptShapeTest {
 
     // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
     // language-rules map replaced the per-language example files.
-    private static final int DRAFT_SYSTEM_BUDGET = 720;
-    private static final int SYSTEM_BUDGET = 900;
+    private static final int DRAFT_SYSTEM_BUDGET = 730;
+    // Draft 720->730 and batch 900->915 by the token tail's own sentence (15h.C5): a text of only tokens is now said in
+    // the tail, not in the shared rule 3.
+    private static final int SYSTEM_BUDGET = 915;
     // The passage the dual batch arm (15i.X1) shows once more in each example, about 40 tokens.
     private static final int DUAL_SYSTEM_BUDGET = 980;
     // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.

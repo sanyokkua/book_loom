@@ -24,7 +24,7 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 class BatchPromptTest {
 
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
-    private static final int SYSTEM_BUDGET_TOKENS = 875;
+    private static final int SYSTEM_BUDGET_TOKENS = 885;
     private static final Pattern EXAMPLE = Pattern.compile(
             "<Items>\\n((?:<s id=\"\\d+\">.*</s>\\n)+)</Items>\\nReply:(.*?)(?:\\n\\n|\\z)", Pattern.DOTALL);
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
@@ -122,7 +122,7 @@ class BatchPromptTest {
                         .messagesFor(withRelatedPairs(), ITEMS)
                         .getFirst()
                         .content())
-                .contains("\n8. Previous pairs, Related earlier pairs, the next item and characters are context only:");
+                .contains("\n5. Previous pairs, Related earlier pairs, the next item and characters are context only:");
         assertThat(builder("en", "uk", true)
                         .messagesFor(withRelatedPairs(), plain)
                         .getFirst()
@@ -142,8 +142,8 @@ class BatchPromptTest {
                 builder("en", "uk").messagesFor(fullContext(), plain).getFirst().content();
 
         assertThat(withTokens)
-                .contains("\n8. Previous pairs, the next item and characters are context only: never translate, copy"
-                        + " or answer them.\n9. ")
+                .contains("\n5. Previous pairs, the next item and characters are context only: never translate, copy"
+                        + " or answer them.\n6. ")
                 .doesNotContain("Related earlier");
         assertThat(tokenless)
                 .contains("\n5. Previous pairs, the next item and characters are context only: never translate, copy"
@@ -187,7 +187,7 @@ class BatchPromptTest {
         final List<ChatMessage> messages = builder("en", "uk").messagesFor(fullContext(), ITEMS);
 
         assertThat(messages.getFirst().content())
-                .contains("4. ⟦gN⟧ tokens stand for", "10. Follow any [Extra instruction]");
+                .contains("8. ⟦gN⟧ tokens stand for", "7. Follow any [Extra instruction]");
     }
 
     @Test

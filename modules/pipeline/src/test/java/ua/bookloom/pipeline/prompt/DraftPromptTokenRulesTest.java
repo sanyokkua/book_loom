@@ -29,7 +29,7 @@ class DraftPromptTokenRulesTest {
         final var messages = builder.messagesFor(GoldenCases.segment("He opened the ⟦g0⟧old⟦g1⟧ door."));
 
         assertThat(messages.getFirst().content())
-                .contains("3. ⟦gN⟧ tokens stand for", "9. Follow any [Extra instruction]");
+                .contains("7. ⟦gN⟧ tokens stand for", "6. Follow any [Extra instruction]");
         assertThat(messages.get(1).content())
                 .contains("[Immutable tokens for this text]", "sequence unchanged: ⟦g0⟧ ⟦g1⟧");
     }

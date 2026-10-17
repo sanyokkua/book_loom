@@ -29,7 +29,7 @@ public enum PromptName {
             0.1,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("examples", "languageRules", "tokenRules", "noTokenRules")),
+                    Set.of("examples", "languageRules", "tokenRules")),
             new Slots(
                     Set.of("source", "target", "text"),
                     Set.of(
