@@ -95,7 +95,7 @@ final class CallSegmentRow extends VBox {
         locator.setText(segment.locator());
         showChips(notes, live);
         show(source, segment.displaySource(), messages.get(MessageKey.LIVE_EMPTY_SOURCE));
-        // A call that checks a translation carries it, so an answer that kept it shows what it kept.
+        // The target the call was given is shown until the run has a live target of its own for this segment.
         final String runs = live == null ? null : live.target();
         final String drafted = runs == null ? segment.currentTarget() : runs;
         if (drafted == null) {

@@ -97,6 +97,7 @@ public final class BusyHost {
     private final PauseTransition delay = new PauseTransition(DELAY);
     private final FadeTransition fade = new FadeTransition(FADE, host);
     private final Timeline clock = new Timeline(new KeyFrame(TICK, event -> updateClock()));
+    private LiveCalls latest = LiveCalls.EMPTY;
     private long shownId = -1;
     private boolean revealed;
     private final BusyKeyboard keyboard;
@@ -185,9 +186,12 @@ public final class BusyHost {
         showCalls.setOnAction(event -> {
             log.debug("busy card: show model calls pressed");
             final Scene scene = host.getScene();
-            if (scene != null) {
-                calls.open(scene.getWindow());
+            if (scene == null) {
+                log.debug("busy card: show model calls pressed with the card off the scene: nothing opened");
+                return;
             }
+            calls.open(scene.getWindow());
+            calls.show(latest);
         });
     }
 
@@ -282,7 +286,10 @@ public final class BusyHost {
         final boolean any = live.current() != null;
         showCalls.setVisible(any);
         showCalls.setManaged(any);
-        calls.show(live);
+        latest = live;
+        if (calls.isOpen()) {
+            calls.show(live);
+        }
     }
 
     private String stepText(final Activity now) {

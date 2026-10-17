@@ -110,6 +110,25 @@ class DirectedFixTest {
         });
     }
 
+    // IF the fix carried no target, THEN the live panel showed "No translation" for the draft being repaired.
+    @Test
+    void fix_placeholderFinding_describesTheCallWithTheRejectedTarget() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(TARGET_ONLY_REPLY));
+        final List<CallDescriptor> described = new ArrayList<>();
+
+        FIX.fix(
+                segment("Book.md:0"),
+                FRAME,
+                THREE_TOKEN_SOURCE,
+                THREE_TOKEN_TARGET,
+                List.of(PLACEHOLDER_FINDING),
+                describing(model, described));
+
+        assertThat(described)
+                .singleElement()
+                .satisfies(descriptor -> assertThat(descriptor.targets()).hasSize(1));
+    }
+
     @Test
     void fix_echoFinding_textBlockHoldsOnlyRejectedTargetWithSourceUnderSourceLabel() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(TARGET_ONLY_REPLY));

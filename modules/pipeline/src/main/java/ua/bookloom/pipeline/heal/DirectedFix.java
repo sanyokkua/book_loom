@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -111,7 +112,8 @@ public final class DirectedFix {
                 CallKind.DIRECTED_FIX,
                 List.of(segmentId),
                 request,
-                SelfHealCalls.descriptor(templates, PromptName.DIRECTED_FIX, frame, maskedSource, userValues));
+                SelfHealCalls.descriptor(templates, PromptName.DIRECTED_FIX, frame, maskedSource, userValues)
+                        .withTargets(block.equals(maskedSource) ? List.of() : List.of(DisplayText.of(block))));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
         final Result<RepairReply> outcome =
                 RepairReplies.read(reply, replyParser, maskedSource, frame.targetLanguage());
