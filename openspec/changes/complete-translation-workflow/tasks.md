@@ -1755,6 +1755,13 @@ fixtures use invented brands and names only (book-neutral).
   an invented alloy and an invented drug are translated and unlocked; a code `KX-7` stays. Gate: the e4b sequence and realrun
   suites lose nothing and the Latin words left in the sequence output fall. Spec: the T4 clause in `specs/glossary/spec.md`
   and `12_PROMPT_CATALOG.md` where the brand reading is described. → `:pipeline`, language files
+  Done: `SuggestionLocks` no longer forces a brand to its source; a brand is "name-like" and judged by `RenderingChecks`
+  (copy refused, letter table) under Transliterate, taken from the model under Translate, and kept and locked only under
+  Keep original, while a term the reading does not call a brand is a common noun, asked, translated and never locked as a
+  name; `LockRule.Basis` lost its brand field, `IdentityRule.Kept.BRAND` is gone, the term-reading prompt says a brand is
+  a company or product trade name and never a material, substance, drug or unit, and `LatinRunCheck` exempts only the
+  terms Keep original keeps as written (`BrandPolicyTest`, `LatinRunKeptTermTest`, `TextChecksTest`); e4b round pending
+  (run by the orchestrator).
 - [ ] 15j.J2 A clear pronoun tally verifies a gender on its own: the names review's fix (B1) wrote a tally verified only when
   verified votes agreed, but under the tie-break vote mode the reading is asked only on a tie, so a character with twenty
   "she" and no "he" stayed suggested; five characters of the owner's run did, their genders were not enforced (15i.T1), one
@@ -1765,6 +1772,9 @@ fixtures use invented brands and names only (book-neutral).
   consonant (`Flint` → `Флінт`) is not declined as a man's once verified (the 15h.B6 agreement check earns its directed fix).
   Gate: the e4b names suite keeps 0 wrong verified genders and the share of verified characters rises; the owner-book run's
   waiting count falls. → `:pipeline`
+  Done: `ReadingVotes` writes a strong tally with no opposing verified vote as verified (`ReadingVotesTest`: 5 "he" and 20
+  "she" verified, 4 "he", 5 + 1 and a tally against a vote stay suggested; `CharacterNamesTest`: a verified `Flint →
+  Флінт` earns the declined-form fix, a likely one none); the e4b names gate is pending (run by the orchestrator).
 - [x] 15j.J3 A suggested gender asks to be confirmed, not set: the export told the person to set a gender in Names & style
   while the table already showed it (the suggested ones). Now the export notice and the Start question name suggested
   genders as "suggested — confirm" apart from unknown ones, the waiting count is split the same way, and Names & style offers
@@ -1808,7 +1818,7 @@ fixtures use invented brands and names only (book-neutral).
 - [ ] 15j.J10 The glossary keeps no junk and no broken targets: the Oct 16 glossary held a common noun read as a person
   (`Government`, `Detonation`, `Egyptian`, the word `name` — 75 segments waited on its gender), honorific abbreviations
   (`mr`, `mrs`, `ms`), capitalised fragments (`Place`, `Houses`, `Eastern`, `Victorian`, `Direction`, `Naming`, `Duchess`),
-  17 entries with no target, a target with a Russian letter (`Son → Сын`), a declined target (`Baghdad → Багдада`) and a
+  17 entries with no target, a target with a Russian letter (`Son → Сын`), a declined target (`Valdor → Валдором`) and a
   short name rendered as a word (`Nat → Нет`). Now: a candidate that is a dictionary-form common noun of the source
   language (the language file's stop and common-word lists, and a lower-case share in the book above the existing bar) or
   an honorific is never a CHARACTER; a title (`Prime Minister`, `Duchess`) is a TITLE entry with no gender; a suggested

@@ -47,7 +47,7 @@ abstract class NamesPassTestBase {
                 .suggests("Brann", "Бранн")
                 .suggests("Wren", "Врен")
                 .suggests("Harrowgate", "Гарроугейт")
-                .suggests("Zorbo", "Zorbo")
+                .suggests("Zorbo", "Зорбо")
                 .suggests("Silverbrook", "Срібний Струмок")
                 .suggests("Marrow Lane", "Інша вулиця")
                 .suggests("Gatewarden", "Хтось інший")

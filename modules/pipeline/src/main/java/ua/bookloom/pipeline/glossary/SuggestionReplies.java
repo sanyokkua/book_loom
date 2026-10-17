@@ -42,7 +42,7 @@ final class SuggestionReplies {
      */
     record Suggestion(GlossaryEntry entry, String target, LockRule.Basis basis, boolean namesInflect) {
 
-        private static final LockRule.Basis UNKNOWN = new LockRule.Basis(false, false, false, false, false);
+        private static final LockRule.Basis UNKNOWN = new LockRule.Basis(false, false, false, false);
 
         /** A suggestion nothing is known of beyond its entry, so it is never locked. */
         Suggestion(final GlossaryEntry entry, final String target) {
@@ -56,7 +56,7 @@ final class SuggestionReplies {
 
         /**
          * The entry as it is now with this suggestion written in as a suggested target, locked when the lock rule
-         * says the rendering is final (a brand or a kept name as its source, a verified name where names are not
+         * says the rendering is final (a kept name or brand as its source, a verified name where names are not
          * declined); nothing else changes.
          */
         GlossaryEntry onto(final GlossaryEntry now) {
@@ -67,21 +67,44 @@ final class SuggestionReplies {
 
     /** How a rendering stands before the script rules are applied to it. */
     enum Standing {
-        /** The rendering is right as written, whatever its script: a brand or an identifier kept verbatim. */
-        VERBATIM,
+        /** The rendering is right as written, whatever its script: an identifier kept verbatim. */
+        VERBATIM(""),
         /** The script rules decide. */
-        OPEN,
+        OPEN(""),
         /** A copy of the source across scripts: refused and asked once more. */
-        COPY,
+        COPY("it is the source spelling, not a rendering"),
         /** It does not open as the name transliterates: refused and asked once more. */
-        LETTERS
+        LETTERS("it does not begin the way the name sounds"),
+        /** It leaves out a capitalised word of the name: refused and asked once more. */
+        LOST_WORD("it leaves out a word of the name"),
+        /** It holds a letter the target language does not use: refused and asked once more. */
+        ALPHABET("it has a letter the target language does not use"),
+        /** It is a case form of a name that ends in a consonant, not the dictionary form: refused, asked once more. */
+        OBLIQUE("it is a case form, not the dictionary form"),
+        /** It changes an identifier, which stays as written: refused and asked once more. */
+        IDENTIFIER("it is an identifier and stays as written");
+
+        private final String reason;
+
+        Standing(final String reason) {
+            this.reason = reason;
+        }
+
+        /** Why the rendering was refused, as the retry's line says it; empty for a standing that is no refusal. */
+        String reason() {
+            return reason;
+        }
+
+        boolean isRefusal() {
+            return !reason.isEmpty();
+        }
     }
 
     /**
      * What one reply held.
      *
      * @param kept the suggestions that stand
-     * @param refused the renderings refused for a copy or for the letter table, each with the entry it was for; the
+     * @param refused the renderings refused by the name rules, each with the entry it was for; the
      *     caller asks about them once more
      */
     record Replies(List<Suggestion> kept, List<Refusal> refused) {}
@@ -91,7 +114,7 @@ final class SuggestionReplies {
      *
      * @param entry the entry as it was held when the batch was asked
      * @param rendering the refused rendering
-     * @param why {@link Standing#COPY} or {@link Standing#LETTERS}
+     * @param why the refusing {@link Standing}
      */
     record Refusal(GlossaryEntry entry, String rendering, Standing why) {}
 
@@ -126,7 +149,7 @@ final class SuggestionReplies {
      * @param sourceScript the script a target must not hold a letter of; null when any script is acceptable
      * @param targetScript the script every letter of a target must belong to; null when it is not known
      * @param standing how a usable rendering stands for its entry: a {@link Standing#VERBATIM} one skips the script
-     *     rules, a refused one is returned in {@link Replies#refused()}
+     *     rules, a refusing one is returned in {@link Replies#refused()}
      * @return the suggestions kept and the renderings refused; both empty when the reply is unreadable
      */
     static Replies read(
@@ -173,7 +196,7 @@ final class SuggestionReplies {
         final String target = LookAlikes.repaired(node.path("target").asText("").strip());
         final String shape = shapeRefusal(target);
         final Standing stands = shape != null ? Standing.OPEN : standing.apply(entry, target);
-        if (stands == Standing.COPY || stands == Standing.LETTERS) {
+        if (stands.isRefusal()) {
             log.debug("Suggestion refused for a retry: {}", stands);
             log.trace("Suggestion refused for term '{}' target '{}': {}", term, target, stands);
             refused.add(new Refusal(entry, target, stands));

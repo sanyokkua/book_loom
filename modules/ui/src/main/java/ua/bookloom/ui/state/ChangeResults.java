@@ -63,6 +63,7 @@ public final class ChangeResults {
     private final ChangeOperation operation;
     private final boolean stopped;
     private final List<ChangeRow> rows;
+    private final List<String> untargeted;
     private final Map<Long, Reversal> reversals = new HashMap<>();
     private final LiveCalls calls;
     private final ObservableSet<Long> reverted = FXCollections.observableSet();
@@ -82,6 +83,25 @@ public final class ChangeResults {
      */
     public ChangeResults(
             final ChangeOperation operation, final boolean stopped, final List<Item> items, final LiveCalls calls) {
+        this(operation, stopped, items, calls, List.of());
+    }
+
+    /**
+     * Creates the results of an operation that also left names without a target.
+     *
+     * @param operation what ran
+     * @param stopped whether the person stopped it
+     * @param items the rows with their reversals, in the order the dialog lists them
+     * @param calls the model calls the operation made, for the dialog's folded section
+     * @param untargeted the terms still without a target, listed for the person to give; never null
+     */
+    public ChangeResults(
+            final ChangeOperation operation,
+            final boolean stopped,
+            final List<Item> items,
+            final LiveCalls calls,
+            final List<String> untargeted) {
+        this.untargeted = List.copyOf(Objects.requireNonNull(untargeted, "untargeted"));
         this.operation = Objects.requireNonNull(operation, "operation");
         this.stopped = stopped;
         this.rows = items.stream().map(Item::row).toList();
@@ -96,6 +116,15 @@ public final class ChangeResults {
      */
     public ChangeOperation operation() {
         return operation;
+    }
+
+    /**
+     * The terms the operation left without a target.
+     *
+     * @return the terms for the person to give a target; empty when none
+     */
+    public List<String> untargeted() {
+        return untargeted;
     }
 
     /**

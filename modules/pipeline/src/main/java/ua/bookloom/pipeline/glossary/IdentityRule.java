@@ -11,7 +11,7 @@ import ua.bookloom.util.lang.Script;
 
 /**
  * The one rule about a rendering that is the source spelling (15i.N6): across scripts it is no translation and is
- * refused, unless the entry is a brand, an identifier or kept as written. In one script (English to German) a copy can
+ * refused, unless the entry is an identifier or kept as written (a brand is no exception, 15j.J1). In one script (English to German) a copy can
  * be right. Shared by the name suggestion, the term-mapping check and the recurring-term path.
  */
 @Slf4j
@@ -23,8 +23,6 @@ public final class IdentityRule {
     public enum Kept {
         /** Nothing: the rendering must differ from the source across scripts. */
         NOT_KEPT,
-        /** The reading says the entry is a brand or a product. */
-        BRAND,
         /** The person's name policy or the entry keeps the original. */
         KEEP_ORIGINAL
     }
@@ -38,7 +36,7 @@ public final class IdentityRule {
      * @param targetTag the target language tag; null when not known, which allows the copy
      * @param kept why the source may stay; never null
      * @return {@code true} if the rendering equals the term (ignoring case and outer space), the languages are
-     *     written in different scripts, the term has a letter, and it is no brand, identifier or kept original;
+     *     written in different scripts, the term has a letter, and it is no identifier or kept original;
      *     {@code false} otherwise, including when a script is not known
      */
     public static boolean refuses(

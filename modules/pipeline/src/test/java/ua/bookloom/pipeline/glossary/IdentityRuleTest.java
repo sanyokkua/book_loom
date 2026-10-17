@@ -28,8 +28,7 @@ class IdentityRuleTest {
                 // a rendering that differs is no copy
                 "Arlo|Арло|en|uk|NOT_KEPT|false",
                 "Arlo Venn|Arlo Венн|en|uk|NOT_KEPT|false",
-                // the three exceptions
-                "KESSEL OPTIK|KESSEL OPTIK|en|uk|BRAND|false",
+                // the exceptions: a kept original and an identifier (a brand is none, 15j.J1)
                 "KESSEL OPTIK|KESSEL OPTIK|en|uk|KEEP_ORIGINAL|false",
                 "ZX-81|ZX-81|en|uk|NOT_KEPT|false",
                 "A7|A7|en|uk|NOT_KEPT|false",

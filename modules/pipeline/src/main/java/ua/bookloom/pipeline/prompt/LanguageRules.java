@@ -361,8 +361,8 @@ public final class LanguageRules implements LanguageSupport {
                 .map(text -> patterns.computeIfAbsent(text, Pattern::compile));
     }
 
-    // The whitespace-separated words of a language file's key, as written; empty when the language lacks the key.
-    List<String> wordsOf(final String tag, final String key) {
+    /** The whitespace-separated words of a language file's key, as written; empty when the language lacks it. */
+    public List<String> wordsOf(final String tag, final String key) {
         final String value = targetValue(Objects.requireNonNull(tag, "tag"), key);
         return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
     }

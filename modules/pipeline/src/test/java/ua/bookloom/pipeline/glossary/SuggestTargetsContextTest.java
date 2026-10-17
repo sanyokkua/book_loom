@@ -36,7 +36,7 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
  * Names translated with context (15i.N6): what each name's line carries, the letter-table and identity refusals with
- * their one re-ask, the exceptions for a brand and an identifier, and the agreement of a cluster's renderings. The
+ * their one re-ask, the exception for an identifier, and the agreement of a cluster's renderings. The
  * model is scripted at the call seam; the prompt text and the requests are asserted as the model would see them.
  */
 class SuggestTargetsContextTest {
@@ -268,23 +268,6 @@ class SuggestTargetsContextTest {
         assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Арло");
         assertThat(model.requests()).hasSize(2);
         assertThat(termLines(model.requests().get(1))).hasSize(1);
-    }
-
-    @Test
-    void suggest_brandCopiedVerbatim_isKeptWithoutAnotherCall() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(says("KESSEL OPTIK", "KESSEL OPTIK"));
-
-        final Result<List<Suggestion>> suggested = suggest.suggest(
-                List.of(KESSEL),
-                BOOK,
-                EN_UK,
-                NamePolicy.TRANSLITERATE,
-                calls(model),
-                new TargetContext(
-                        List.of(KESSEL), Map.of(KESSEL.id(), new Reading("KESSEL OPTIK", List.of(), false, true))));
-
-        assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("KESSEL OPTIK");
-        assertThat(model.requests()).hasSize(1);
     }
 
     @Test

@@ -11,9 +11,9 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 
 /**
- * A source run of Latin words that is a term the glossary keeps as written is no untranslated phrase (15i.T4): the
- * Latin-run gate leaves it alone whether the kept term is a locked rendering or an unlocked one, and still blocks any
- * other run the source has. The target texts here still hold the kept term, as the final audit and the consistency pass
+ * A source run of Latin words that is a term the glossary keeps as written under Keep original is no untranslated
+ * phrase (15i.T4, narrowed by 15j.J1): the Latin-run gate leaves it alone whether the kept term is a locked rendering
+ * or an unlocked one, blocks the same words under Transliterate and Translate, and still blocks any other run. The target texts here still hold the kept term, as the final audit and the consistency pass
  * read them.
  */
 class LatinRunKeptTermTest {
@@ -27,6 +27,16 @@ class LatinRunKeptTermTest {
             final List<LockedRendering> locked,
             final List<String> pairs,
             final List<String> terms) {
+        return input(source, target, locked, pairs, terms, NamePolicy.KEEP_ORIGINAL);
+    }
+
+    private static SoftCheckInput input(
+            final String source,
+            final String target,
+            final List<LockedRendering> locked,
+            final List<String> pairs,
+            final List<String> terms,
+            final NamePolicy policy) {
         return new SoftCheckInput(
                 source,
                 target,
@@ -34,7 +44,7 @@ class LatinRunKeptTermTest {
                 "en",
                 "uk",
                 ForeignPassagePolicy.TRANSLATE,
-                NamePolicy.TRANSLITERATE,
+                policy,
                 null,
                 terms,
                 locked,
@@ -102,8 +112,25 @@ class LatinRunKeptTermTest {
                 NELL_TARGET,
                 List.of(new LockedRendering("KESSEL OPTIK", "Кессел Оптік")),
                 List.of(),
-                List.of("KESSEL OPTIK"));
+                List.of("KESSEL OPTIK"),
+                NamePolicy.TRANSLITERATE);
 
         assertThat(latinRunBlocks(renderedElsewhere)).isTrue();
+    }
+
+    // IF a locked Latin rendering were exempt under every policy, THEN a brand left in Latin passed under Transliterate
+    // (35 Latin words in the owner's run against 13-17 in the earlier ones).
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({"TRANSLITERATE", "TRANSLATE"})
+    void evaluate_keptTermUnderAPolicyThatRendersNames_isALatinRun(final NamePolicy policy) {
+        final SoftCheckInput locked = input(
+                NELL_SOURCE,
+                NELL_TARGET,
+                List.of(new LockedRendering("KESSEL OPTIK", "KESSEL OPTIK")),
+                List.of("KESSEL OPTIK → KESSEL OPTIK"),
+                List.of("KESSEL OPTIK"),
+                policy);
+
+        assertThat(latinRunBlocks(locked)).isTrue();
     }
 }

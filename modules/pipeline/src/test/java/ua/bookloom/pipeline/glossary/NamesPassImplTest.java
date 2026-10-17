@@ -44,7 +44,9 @@ class NamesPassImplTest extends NamesPassTestBase {
     }
 
     // Names are typed, gendered by the book's pronouns and given a suggested target; a word that is no name is gone.
-    // The pseudo model quotes no pronoun, so the pronouns' gender is a suggestion (15i.N gate).
+    // The pseudo model quotes no pronoun and votes nothing, but the book's pronoun tally is strong (five or more at 90
+    // %)
+    // and no vote opposes it, so the gender is verified (15j.J2).
     @Test
     void run_seededBook_typesGendersAndTargetsTheNamesAndRemovesWhatIsNoName() {
         seeded("uk", NamePolicy.TRANSLITERATE);
@@ -64,12 +66,7 @@ class NamesPassImplTest extends NamesPassTestBase {
                         GlossaryEntry::origin,
                         GlossaryEntry::locked)
                 .containsExactly(
-                        TermType.CHARACTER,
-                        Gender.MALE,
-                        GenderOrigin.SUGGESTED,
-                        "Бранн",
-                        TargetOrigin.SUGGESTED,
-                        false);
+                        TermType.CHARACTER, Gender.MALE, GenderOrigin.VERIFIED, "Бранн", TargetOrigin.SUGGESTED, false);
         assertThat(held("Harrowgate"))
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::target, GlossaryEntry::locked)
                 .containsExactly(TermType.PLACE, Gender.UNKNOWN, "Гарроугейт", false);
@@ -78,9 +75,28 @@ class NamesPassImplTest extends NamesPassTestBase {
                 .containsExactly(TermType.PLACE, "Срібний Струмок", false);
     }
 
-    // A brand is kept as written and locked whatever the target does to names; a name in an inflecting target is not.
+    // IF an entry without a target were left out of the report because of its type, THEN the person would not see it.
     @Test
-    void run_ukrainianTarget_locksTheBrandKeptAsWrittenAndNoOtherName() {
+    void run_entriesTheModelGaveNoTarget_areAllListedInTheReport() {
+        seeded("uk", NamePolicy.TRANSLITERATE);
+
+        final NamesPassReport report = succeeded(
+                run(model().suggests("Zorbo", "").suggests("wardstone", "").suggests("beacon", "")));
+
+        assertThat(report.untargeted()).contains("Zorbo").containsAll(untargetedHeld());
+    }
+
+    private List<String> untargetedHeld() {
+        return fixture.glossaryNow().stream()
+                .filter(entry -> entry.target() == null)
+                .map(GlossaryEntry::term)
+                .toList();
+    }
+
+    // A brand follows the name policy as a person's name does (15j.J1): under Transliterate it is written in the target
+    // script and, in a target that declines names, not locked; only the person's own entry is locked.
+    @Test
+    void run_ukrainianTarget_writesTheBrandInTheTargetScriptAndLocksNoOtherName() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         succeeded(run(model()));
@@ -88,7 +104,8 @@ class NamesPassImplTest extends NamesPassTestBase {
         assertThat(fixture.glossaryNow())
                 .filteredOn(GlossaryEntry::locked)
                 .extracting(GlossaryEntry::term, GlossaryEntry::target)
-                .containsExactlyInAnyOrder(tuple("Zorbo", "Zorbo"), tuple("Gatewarden", "Брамник"));
+                .containsExactly(tuple("Gatewarden", "Брамник"));
+        assertThat(held("Zorbo").target()).isEqualTo("Зорбо");
     }
 
     // German does not decline names: a name read as a name, not a speaking one, rendered and checked, is locked.
@@ -99,6 +116,7 @@ class NamesPassImplTest extends NamesPassTestBase {
         succeeded(run(model().suggests("Brann", "Brann")
                 .suggests("Wren", "Wren")
                 .suggests("Harrowgate", "Harrowgate")
+                .suggests("Zorbo", "Zorbo")
                 .suggests("Silverbrook", "Silberbach")
                 .suggests("wardstone", "Wardstein")
                 .suggests("beacon", "Leuchtfeuer")));

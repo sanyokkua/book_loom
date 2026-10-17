@@ -263,8 +263,25 @@ public final class NamesPassImpl implements NamesPass {
                     terms.changed().size(),
                     run.counter().calls(),
                     elapsed);
-            return new NamesPassReport(names, terms, run.counter().calls(), elapsed);
+            return new NamesPassReport(names, terms, run.counter().calls(), elapsed, untranslated(stage));
         });
+    }
+
+    // An entry still without a target after the pass is the person's to give: the report lists it for the results
+    // dialog, and it is counted at WARN and listed at TRACE (15j.J10), never kept silently.
+    private static List<String> untranslated(final Stage stage) {
+        final List<String> open = stage.names().entries().stream()
+                .filter(entry -> entry.target() == null || entry.target().isBlank())
+                .map(GlossaryEntry::term)
+                .toList();
+        if (!open.isEmpty()) {
+            log.warn(
+                    "Names pass project={} left {} name(s) without a target for the person",
+                    stage.projectId(),
+                    open.size());
+            log.trace("Names pass project={} names without a target: {}", stage.projectId(), open);
+        }
+        return open;
     }
 
     private static Map<String, String> reasonsOf(final EntryChanges<GlossaryEntry> changes) {

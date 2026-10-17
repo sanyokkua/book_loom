@@ -38,6 +38,7 @@ public final class ChangeResultsDialog {
 
     static final String CARD_ID = "results-card";
     static final String LIST_ID = "results-list";
+    static final String UNTARGETED_ID = "results-untargeted";
     static final String LINE_ID = "results-line";
     static final String SUMMARY_ID = "results-summary";
     static final String CALLS_ID = "results-calls";
@@ -45,6 +46,7 @@ public final class ChangeResultsDialog {
     static final String SHOW_ID = "results-show-changed";
     static final String UNDO_ID = "results-undo-all";
 
+    private static final int MAX_UNTARGETED = 20;
     private static final double MAX_LIST_HEIGHT = 420;
     private static final double LIST_WIDTH = ResultRows.WIDTH;
 
@@ -111,10 +113,26 @@ public final class ChangeResultsDialog {
             case NOTHING -> body.getChildren().add(line(MessageKey.RESULTS_NOTHING));
             case CHANGED -> body.getChildren().addAll(table(results));
         }
+        if (!results.untargeted().isEmpty()) {
+            body.getChildren().add(untargeted(results.untargeted()));
+        }
         final CallsSection calls = new CallsSection(CALLS_ID, "results-call", messages);
         calls.show(results.calls());
         body.getChildren().add(calls);
         return body;
+    }
+
+    // The names the pass could not name in the target language are the person's to give, so they are listed, not kept
+    // silently; a long list shows its first names and says how many more there are.
+    private Label untargeted(final List<String> terms) {
+        final String shown = String.join(", ", terms.subList(0, Math.min(terms.size(), MAX_UNTARGETED)));
+        final Label line = new Label(messages.get(
+                MessageKey.RESULTS_UNTARGETED, terms.size(), terms.size() > MAX_UNTARGETED ? shown + "…" : shown));
+        line.setId(UNTARGETED_ID);
+        line.setWrapText(true);
+        line.setMaxWidth(LIST_WIDTH);
+        line.getStyleClass().add("dialog-text");
+        return line;
     }
 
     private Label line(final MessageKey text) {

@@ -82,16 +82,18 @@ final class ChangeLog {
      * @param operation the operation
      * @param names what it did to the glossary
      * @param terms what it did to the recurring terms
+     * @param untargeted the glossary terms it left without a target, for the dialog to list
      */
     void both(
             final ChangeOperation operation,
             final EntryChanges<GlossaryEntry> names,
-            final EntryChanges<LexiconEntry> terms) {
+            final EntryChanges<LexiconEntry> terms,
+            final List<String> untargeted) {
         final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
         nameItems(rows, items, names);
         termItems(rows, items, List.of(), terms);
-        publish(operation, items);
+        publish(operation, items, untargeted);
     }
 
     private void nameItems(
@@ -132,8 +134,14 @@ final class ChangeLog {
 
     // The tracker keeps the calls of the last work that made any; they are this operation's only if it made some.
     private void publish(final ChangeOperation operation, final List<ChangeResults.Item> items) {
-        log.info("{} changed {} rows", operation, items.size());
+        publish(operation, items, List.of());
+    }
+
+    private void publish(
+            final ChangeOperation operation, final List<ChangeResults.Item> items, final List<String> untargeted) {
+        log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
-        results.set(new ChangeResults(operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last));
+        results.set(new ChangeResults(
+                operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last, untargeted));
     }
 }

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.eval;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
@@ -39,7 +40,12 @@ final class RunVerdicts {
                         runCase.source()),
                 (kind, segmentId, request) -> {
                     throw new IllegalStateException("a verdict sends no model call");
-                });
+                },
+                EvalProject.window(),
+                EvalBrief.of(
+                        runCase.language(),
+                        RunCorpus.TARGET_LANGUAGE,
+                        runCase.names() == null ? Map.of() : Map.of("BOOKLOOM_EVAL_NAMES", runCase.names())));
         return new RunVerdicts(runCase, project);
     }
 

@@ -71,7 +71,7 @@ final class ModelAnswers {
         screen.rows().setAll(answer.glossary());
         screen.lexiconRows().setAll(answer.terms());
         info(screen.messages().get(MessageKey.NAMES_STYLE_AUTO_DONE, report.calls()));
-        screen.changes().both(operation, report.names(), report.terms());
+        screen.changes().both(operation, report.names(), report.terms(), report.untargeted());
     }
 
     void termsChanged(final ChangeOperation operation, final Terms answer, final int changed, final MessageKey line) {

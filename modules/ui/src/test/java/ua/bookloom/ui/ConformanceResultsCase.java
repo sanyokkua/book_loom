@@ -23,5 +23,6 @@ final class ConformanceResultsCase {
             Overlay.RESULTS,
             List.of(
                     new Part("#results-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                    new Part("#results-card", Kind.BORDER, "border", "#ddd5c8", "#48585f")));
+                    new Part("#results-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                    new Part("#results-untargeted", Kind.TEXT, "text", "#2c3941", "#e6ebed")));
 }

@@ -11,7 +11,6 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Refusal;
-import ua.bookloom.pipeline.glossary.SuggestionReplies.Standing;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 
@@ -62,10 +61,7 @@ final class SuggestionLines {
     }
 
     private static String refusedNote(final Refusal refusal) {
-        final String reason = refusal.why() == Standing.COPY
-                ? "it is the source spelling, not a rendering"
-                : "it does not begin the way the name sounds";
-        return "refused: \"" + refusal.rendering() + "\" (" + reason + "); give another";
+        return "refused: \"" + refusal.rendering() + "\" (" + refusal.why().reason() + "); give another";
     }
 
     private static String genderOf(final GlossaryEntry entry) {

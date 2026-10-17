@@ -13,7 +13,8 @@ import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
 /**
  * How a person's gender follows from the readings' verified votes and the code's pronoun tally (15i.N5). No model's
  * votes passed the coreference probe (15i.N4: 26b 10 %, e4b 20 % wrong votes against 5 %), so the votes only break
- * ties: the code's tally decides wherever it is clear, verified where the votes agree. A mode in which a model's votes
+ * ties: the code's tally decides wherever it is clear, verified where the votes agree or the tally is strong and
+ * no verified vote opposes it (15j.J2). A mode in which a model's votes
  * decide, with its tiebreak call, returns with the first model that passes the probe (15i review: removed as dead).
  */
 @Slf4j
@@ -95,15 +96,18 @@ final class ReadingVotes {
             final int female) {
         final Gender clear = TermReviewReplies.favouredBy(tally);
         if (clear != null) {
-            // The tally reads the first pronoun after each mention, which often belongs to a neighbour; it stands
-            // verified only where the readings' verified votes point the same way and none points the other way. A
-            // dominant tally with no vote stays a suggestion: a demon written "it" had a neighbour's "he" four times.
+            // The tally reads the first pronoun after each mention, which often belongs to a neighbour: it stands
+            // verified where the readings' verified votes point the same way and none points the other way, or where
+            // it is strong (5 or more pronouns at 90 %) and no verified vote opposes it. A weaker tally with no vote
+            // stays a suggestion: a demon written "it" had a neighbour's "he" four times (15j.J2).
             final int against = clear == Gender.MALE ? female : male;
-            final boolean agreed = majority == clear && against == 0;
+            final boolean agreed = against == 0 && (majority == clear || tally.isStrong());
             log.debug(
-                    "Reading votes: the tally is clear for {}, votes for {}: {}",
+                    "Reading votes: the tally is clear for {} (strong {}), votes for {}, {} against: {}",
                     clear,
+                    tally.isStrong(),
                     majority,
+                    against,
                     agreed ? "verified" : "suggested");
             return GenderCall.of(clear, agreed ? GenderOrigin.VERIFIED : GenderOrigin.SUGGESTED);
         }

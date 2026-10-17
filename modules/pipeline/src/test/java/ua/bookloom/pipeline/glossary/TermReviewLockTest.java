@@ -38,8 +38,9 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
  * Where the lock rule is applied (15i.T4): the review writes a target, and for an entry the rule locks it writes the
- * lock with it — a brand the reading flagged and a name the policy keeps in Latin take their source as target, locked;
- * a name the readings verified is locked only where the target language does not decline names. A recording model
+ * lock with it — a name the policy keeps in Latin, and a brand the reading flagged under Keep original, take their
+ * source as target, locked; a brand under Transliterate takes the model's rendering like any name (15j.J1); a name the
+ * readings verified is locked only where the target language does not decline names. A recording model
  * answers each call by its response format; the book is invented.
  */
 class TermReviewLockTest {
@@ -69,8 +70,9 @@ class TermReviewLockTest {
                 new SuggestTargets(new PromptTemplates(), new ObjectMapper()));
     }
 
-    // IF the reading says the entry is a brand but the lock waited for the person, THEN the model's paragraph keeps
-    // the brand in Latin letters unmasked and the Latin-run check blocks it as an untranslated phrase.
+    // Under Keep original a brand is kept as written. IF the reading says the entry is a brand but the lock waited for
+    // the person, THEN the model's paragraph keeps the brand in Latin letters unmasked and the Latin-run check blocks
+    // it as an untranslated phrase.
     @ParameterizedTest(name = "{0}")
     @CsvSource({"KESSEL OPTIK", "Orrin & Vale"})
     void review_entryReadAsABrand_getsItsSourceAsTargetAndIsLocked(final String brand) {
@@ -80,7 +82,7 @@ class TermReviewLockTest {
                 PROJECT,
                 bookAbout(brand, "Nell bought a lens from %s on her way home."),
                 EN_UK,
-                NamePolicy.TRANSLITERATE,
+                NamePolicy.KEEP_ORIGINAL,
                 QualityDial.BALANCED,
                 model(readingReply("organisation", false, true), NO_SUGGESTIONS));
 
@@ -89,10 +91,11 @@ class TermReviewLockTest {
                 .containsExactly(tuple(brand, brand, true, TargetOrigin.PERSON));
     }
 
-    // IF the model's transliteration of a brand were taken, THEN the brand would be written in Cyrillic in some
-    // paragraphs and kept in Latin in others; the brand's rendering is its source whatever the model suggests.
+    // IF a brand were locked to its Latin source under Transliterate, THEN the Ukrainian text would hold Latin words
+    // for
+    // names (35 of them in the owner's run); the brand follows the policy like a person's name (15j.J1).
     @Test
-    void review_brandTheModelTransliterates_stillGetsItsSourceAsLockedTarget() {
+    void review_brandTheModelTransliterates_getsTheTransliterationUnlocked() {
         glossary.add(entry("KESSEL OPTIK", TermType.OTHER));
 
         review.review(
@@ -107,7 +110,7 @@ class TermReviewLockTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::target, GlossaryEntry::locked)
-                .containsExactly(tuple("KESSEL OPTIK", true));
+                .containsExactly(tuple("Кессел Оптік", false));
     }
 
     // The same name read as an organisation but not as a brand is rendered like any name: guidance, not a lock.

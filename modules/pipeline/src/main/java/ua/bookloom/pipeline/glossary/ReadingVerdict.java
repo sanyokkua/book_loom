@@ -88,6 +88,8 @@ final class ReadingVerdict {
      *     {@code WordCounts} over {@code BookIndex.scanReads}), from 0 to 1
      * @param dial the quality dial of the project
      * @param analysisLanguage the language the code reads the book in; null under Auto
+     * @param capitalisedMidSentence how often the book writes the term with a capital away from a sentence start; a
+     *     name is written so, a common noun only opens sentences with a capital
      */
     record Facts(
             GlossaryEntry entry,
@@ -96,7 +98,20 @@ final class ReadingVerdict {
             NameWindows.Evidence evidence,
             double lowerShare,
             QualityDial dial,
-            @Nullable String analysisLanguage) {
+            @Nullable String analysisLanguage,
+            int capitalisedMidSentence) {
+
+        /** Facts of a term the book never writes with a capital mid-sentence. */
+        Facts(
+                final GlossaryEntry entry,
+                final List<ReadCall> calls,
+                final List<ReadCall> memberCalls,
+                final NameWindows.Evidence evidence,
+                final double lowerShare,
+                final QualityDial dial,
+                @Nullable final String analysisLanguage) {
+            this(entry, calls, memberCalls, evidence, lowerShare, dial, analysisLanguage, 0);
+        }
 
         /** Copies the calls. */
         Facts {
@@ -222,9 +237,22 @@ final class ReadingVerdict {
             kind = Kind.UNSURE;
             type = TermType.OTHER;
         }
+        if (type == TermType.CHARACTER) {
+            final Optional<TermType> demoted = CharacterGuard.demotion(facts);
+            if (demoted.isPresent()) {
+                return demoted(facts, demoted.get(), enough);
+            }
+        }
         final GenderCall gender = genderOf(facts, type);
         return logged(
                 facts, new Decision(kind, type, gender.gender(), gender.origin(), "", gender.noEvidence()), enough);
+    }
+
+    // An honorific or a title is a title entry; a common noun stays unsure: neither is a person, so neither has a
+    // gender.
+    private static Decision demoted(final Facts facts, final TermType type, final boolean enough) {
+        final Kind kind = type == TermType.TITLE ? Kind.TERM : Kind.UNSURE;
+        return logged(facts, new Decision(kind, type, Gender.UNKNOWN, null, ""), enough);
     }
 
     private static Decision logged(final Facts facts, final Decision decision, final boolean enough) {

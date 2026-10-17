@@ -25,7 +25,6 @@ import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Refusal;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Replies;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
@@ -45,8 +44,8 @@ import ua.bookloom.util.text.GlossaryKeys;
 /**
  * The model's suggested target for each open glossary entry, the third step of the review and of the name scan, after
  * the verdicts: a call of its own, since a small model does one task per call far better than two. The rendering
- * follows the Book Brief's name policy — under Keep original a name keeps its source spelling without any call, and
- * only a term is asked about. Nothing is written here; the caller writes once every batch has answered.
+ * follows the Book Brief's name policy — under Keep original a name or a brand keeps its source spelling without any
+ * call, and only a common noun is asked about. Nothing is written here; the caller writes once every batch has answered.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -137,9 +136,9 @@ public final class SuggestTargets {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         Objects.requireNonNull(context, "context");
-        final List<Suggestion> kept = new ArrayList<>(keptAsWritten(entries, policy));
+        final List<Suggestion> kept = new ArrayList<>(keptAsWritten(entries, policy, context));
         final List<GlossaryEntry> asked = entries.stream()
-                .filter(entry -> !isKeptAsWritten(entry, policy))
+                .filter(entry -> !SuggestionLocks.isKeptAsWritten(entry, policy, context))
                 .toList();
         final int batches = (asked.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         log.info(
@@ -155,7 +154,7 @@ public final class SuggestTargets {
             return answered;
         }
         kept.addAll(Objects.requireNonNull(answered.data(), "answered"));
-        final List<Suggestion> locked = SuggestionLocks.apply(entries, kept, frame, policy, context);
+        final List<Suggestion> locked = SuggestionLocks.apply(kept, frame, policy, context);
         log.info("Glossary suggestions finished suggested={} of {}", locked.size(), entries.size());
         return Result.ok(locked);
     }
@@ -180,14 +179,10 @@ public final class SuggestTargets {
         return suggest(entries, story, frame, policy, calls, TargetContext.none());
     }
 
-    /** Under Keep original a name keeps its source spelling, so only a term needs the model. */
-    private static boolean isKeptAsWritten(final GlossaryEntry entry, final NamePolicy policy) {
-        return policy == NamePolicy.KEEP_ORIGINAL && entry.type() != TermType.TERM;
-    }
-
-    private static List<Suggestion> keptAsWritten(final List<GlossaryEntry> entries, final NamePolicy policy) {
+    private static List<Suggestion> keptAsWritten(
+            final List<GlossaryEntry> entries, final NamePolicy policy, final TargetContext context) {
         return entries.stream()
-                .filter(entry -> isKeptAsWritten(entry, policy))
+                .filter(entry -> SuggestionLocks.isKeptAsWritten(entry, policy, context))
                 .map(entry -> new Suggestion(entry, entry.term()))
                 .toList();
     }

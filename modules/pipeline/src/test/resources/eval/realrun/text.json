@@ -1186,7 +1186,8 @@
    }
   ],
   "context": null,
-  "rationale": "a brand of two Latin words as the names pass leaves it: its source is its locked target, so the paragraph ships translated around the kept brand"
+  "rationale": "a brand of two Latin words as the names pass leaves it: its source is its locked target, so the paragraph ships translated around the kept brand",
+  "names": "keep"
  },
  {
   "id": "kept-run-magazine-en",
@@ -1208,7 +1209,8 @@
    }
   ],
   "context": null,
-  "rationale": "a magazine title of three Latin words kept as it is written: locked as its own source by the names pass"
+  "rationale": "a magazine title of three Latin words kept as it is written: locked as its own source by the names pass",
+  "names": "keep"
  },
  {
   "id": "kept-run-uuid-en",

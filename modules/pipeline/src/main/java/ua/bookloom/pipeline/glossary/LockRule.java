@@ -6,9 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * When a suggested rendering is locked (15i.N6). A brand, an identifier or a kept original is locked when it is kept
- * verbatim. A verified proper name with a checked rendering that is not a speaking name is locked only when the target
- * language does not decline names; where names inflect the rendering stays guidance held by the name checks.
+ * When a suggested rendering is locked (15i.N6, 15j.J1). An identifier or a kept original (a name, or a brand, under
+ * Keep original) is locked when it is kept verbatim. A verified proper name with a checked rendering that is not a
+ * speaking name is locked only when the target language does not decline names; where names inflect the rendering
+ * stays guidance held by the name checks. A brand follows the name policy like any name: it has no lock of its own.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -18,14 +19,12 @@ public final class LockRule {
     /**
      * What is known of the entry.
      *
-     * @param brand whether the reading says it is a brand or a product
-     * @param keepOriginal whether the name policy or the entry keeps the original spelling
-     * @param verifiedName whether the readings verified it as a proper name
+     * @param keepOriginal whether the name policy keeps the original spelling of this entry (a name or a brand)
+     * @param verifiedName whether the readings verified it as a proper name; never for a common noun
      * @param speaking whether the reading says its meaning matters, so it is translated
      * @param renderingChecked whether the rendering passed the letter table and the identity rule
      */
-    public record Basis(
-            boolean brand, boolean keepOriginal, boolean verifiedName, boolean speaking, boolean renderingChecked) {}
+    public record Basis(boolean keepOriginal, boolean verifiedName, boolean speaking, boolean renderingChecked) {}
 
     /**
      * Decides whether to lock.
@@ -41,7 +40,7 @@ public final class LockRule {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(rendering, "rendering");
         Objects.requireNonNull(basis, "basis");
-        final boolean isKept = (basis.brand() || basis.keepOriginal() || IdentityRule.isIdentifier(term))
+        final boolean isKept = (basis.keepOriginal() || IdentityRule.isIdentifier(term))
                 && term.strip().equals(rendering.strip());
         final boolean isNameLock =
                 basis.verifiedName() && !basis.speaking() && basis.renderingChecked() && !namesInflect;

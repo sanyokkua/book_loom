@@ -501,6 +501,11 @@ not the model — SHALL decide each from its readings:
 - a name SHALL need two windows read as a name (one window of one at Fast) and SHALL take the kind most of its name
   windows give: a person is a character, a place a place, an organisation or a thing a term; a title majority of two
   windows or more SHALL make a title; anything else SHALL change nothing;
+- a term the windows call a person SHALL NOT be typed a character (15j.J10) when it is an honorific or a title of the
+  source language (the bundled title list, or a run of capitalised words ending in a word of the language file's
+  `officeTitles`: `Mrs`, `Duchess`, `Prime Minister`), which SHALL be a title entry with no gender, nor when it is a
+  common noun — a stop word or a never-alone word of the source language, or a word the book writes in lower case a
+  fifth of the time or more with no clear pronoun tally — which SHALL stay unsure and carry no gender;
 - a place, an organisation, a thing and a title SHALL carry no gender, and a gender the person set SHALL never be
   decided again;
 - a person the book gives no evidence for — a pronoun tally of 0/0 (forms of address included) and no verified vote —
@@ -512,8 +517,9 @@ not the model — SHALL decide each from its readings:
 - the gender SHALL pool the verified votes (a window's pronoun the reading quoted from that window's narration) of every
   spelling of the person and SHALL follow the model's vote mode: a model whose votes the coreference probe found wrong
   more than 5 % of the time — every model today (26b 10 %, e4b 20 % on 2026-10-13) — SHALL only break ties: a clear
-  code tally (three or more pronouns making 60 % or more) SHALL decide, written verified only when the verified votes
-  agree with it and as a suggestion otherwise, and with no clear tally two or more votes making 75 % (three at 80 % under
+  code tally (three or more pronouns making 60 % or more) SHALL decide, written verified when the verified votes
+  agree with it and none opposes it, or when it is strong (five or more pronouns making 90 % or more) and no verified
+  vote opposes it (15j.J2), and as a suggestion otherwise, and with no clear tally two or more votes making 75 % (three at 80 % under
   Auto), or two or more pieces of evidence (votes and pronouns together) all of one gender, SHALL give a suggestion,
   never a verified gender; the tally SHALL count a name's own uses only: a use that ends a longer name is the longer
   name's, a use after a gendered form of address counts that form unless the surname follows both genders' forms, and a
@@ -575,20 +581,30 @@ asks for the name spelled in the target language by its sound, by the target lan
 names when the application bundles one (for Ukrainian, the orthography's practical transcription of foreign names)
 and a neutral sentence otherwise, a real place or person keeping an established target-language name; both translate
 a name made of ordinary words and a domain term by meaning. UNDER Keep original the application SHALL make no call for
-an entry that is not of type term and SHALL suggest its source spelling as its target; an entry of type term is still
-asked about, to be translated by meaning. The application SHALL keep a suggestion only for a term of its batch, on one
+an entry that is not of type term, or whose reading calls it a brand, and SHALL suggest its source spelling as its
+target; any other entry of type term (a common noun, such as a material, a substance, a drug or a unit) is still asked
+about, to be translated by meaning, and is never kept or locked as a name (15j.J1). The application SHALL keep a suggestion only for a term of its batch, on one
 line, without a placeholder token, at most 80 characters, and — under Transliterate when the source and target scripts
 differ — with no letter left in the source's script once a Latin look-alike inside a Cyrillic word (`Вeнс`) is put back
-as its Cyrillic twin. UNDER Transliterate, for an entry that is not of type term and whose reading does not call it a
-speaking name, the application SHALL refuse a rendering whose words do not each open as the matching source word
-transliterates, by the `translit` letter table of the target's language file (the opening letter or digraph of the source
-word, the longest key first, against the opening letter of the rendering's word; words split at spaces and hyphens and
-equal in number; a word the table has no row for is not judged; an empty table judges nothing); UNDER every policy it
-SHALL refuse a rendering equal to the term, ignoring case and outer space, when the source and target scripts differ,
-unless the entry is a brand, an identifier (one token holding a letter and a digit) or kept as written, which is kept
+as its Cyrillic twin. For an entry that is not of type term, or whose reading calls it a brand, and whose reading does not call it a
+speaking name (a brand follows the name policy exactly as a person's name does, 15j.J1), the application SHALL refuse,
+under Transliterate and Translate alike, a rendering that leaves out a capitalised word of the name (a hyphenated word
+counts as its parts, and a translated common word that stands in lower case, such as `місто` for `City`, takes the place
+of one: `Varno City` → `Варно` is refused, `Варно Сіті` and `місто Варно` are kept; 15j.J4); UNDER Transliterate it
+SHALL also refuse a rendering whose words do not each open as a source word transliterates, by the `translit` letter
+table of the target's language file (the opening letter or digraph of the source word, the longest key first, against
+the opening letter of a word of the rendering, in any order; a word the table has no row for is not judged; an empty
+table judges no letters, while a lost word is still refused since it needs no table; a capitalised word of the
+rendering that stands for no source word is refused), and a last word that is the source's own transliteration plus an
+ending in the language file's `nonNominativeEndings` (endings no nominative has: `-ом`, `-ем`, `-ові`, `-ами` and the like; `-а`, `-у` and `-і` are left out, for `Анна`, `Павло` and `Джессі` are dictionary forms) (the letter before the ending is one the `translit`
+table gives for the name's last letter and the stem is no shorter than the source word) when the last letter of the
+name is not one the source language's `openNameFinals` lists (`Valdor` → `Валдором` is refused for `Валдор`; `Ann` → `Анна`, `Jess` →
+`Джессі`, `Sarah` → `Сара`, `Tom` → `Том`, `Lviv` → `Львів` and `Thamesor` → `Темзор` are kept). UNDER every policy it SHALL refuse a rendering that changes an identifier (`KX-7`), and a rendering that holds a letter in the language file's `forbiddenLetters`
+(`Сын`, 15j.J10) and a rendering equal to the term, ignoring case and outer space, when the source and target scripts
+differ, unless the entry is an identifier (one token holding a letter and a digit) or kept as written, which is kept
 even though its letters are in the source's script. The application SHALL ask once more, in one further call per batch
-that carries only the refused names and names each refused rendering, about the renderings refused by the letter table
-or by the identity rule and about no other refusal; a rendering refused a second time SHALL leave its entry without a
+that carries only the refused names and names each refused rendering and why, about the renderings refused by these
+rules and about no other refusal; a rendering refused a second time SHALL leave its entry without a
 target, and a failed further call SHALL return its error. The renderings of one person's spellings SHALL agree word by
 word: a spelling SHALL take the word the full name's rendering has in its place, the full name's rendering being the one
 the glossary holds or else the one asked in the same batch, and a full name asked about SHALL take the words of a held
@@ -596,14 +612,17 @@ rendering of one of its spellings. Beyond one person, a word of a character's na
 character's name whose rendering has as many words: the glossary's rendering of the word, else the first one a call
 gives (a surname two full names share, which no cluster joins). The one identity rule SHALL also be applied by the term-mapping check, which SHALL
 not count a rendering equal to the term across scripts as a learned rendering. A rendering SHALL be locked by rule
-only when it is a brand, an identifier or a kept original kept verbatim, or a verified proper name with a checked
+only when it is an identifier or a kept original (a name, or a brand, under Keep original) kept verbatim, or a verified
+proper name that is not a common noun, with a checked
 rendering, not marked speaking, in a target whose language file says `namesInflect=false` (English, German, French,
 Spanish, Portuguese); for a target whose names inflect (Ukrainian, Russian, Polish, Czech, Croatian, Slovak, Slovenian
 and any language with no such key) it SHALL stay unlocked guidance held by the name checks. The rule SHALL be applied
 where the target is written, by every writer of a suggestion (the review's commit, the translate-only action and the
 name scan), so the same name is locked after Review, after Translate and after the scan alike: a brand — an entry any
-of whose readings says `brand` — SHALL get its source as target and be locked even when the model answered nothing or a
-transliteration; under Keep original every entry that is not of type term SHALL get its source as target and be locked;
+of whose readings says `brand`, the trade name of a company or a product line and never a material, a substance, a
+drug, a unit or any other common noun — SHALL follow the name policy exactly as a person's name does (15j.J1, which
+replaces 15i.T4's lock of every brand to its source): written in the target's alphabet under Transliterate, rendered by
+the model under Translate, its source and locked under Keep original; under Keep original every entry that is not of type term, and every brand, SHALL get its source as target and be locked;
 and "verified" SHALL mean decided as a name by the in-context readings, never by the batch review or the pronoun count
 alone. Only after every call has answered, and against each entry as it then stands, it SHALL write a
 suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and SHALL NOT write
@@ -649,20 +668,29 @@ inside `Венс`, which reads right and matches nothing.
   for `Venn`, and then `Арло` for `Arlo`
 - **THEN** the second call carries only `Arlo`, with `Карло` named as refused, and `Arlo` reads `Арло`, `Venn` `Венн`
 
-#### Scenario: A brand or an identifier is kept as written
+#### Scenario: An identifier is kept as written
 
-- **WHEN** the model answers `KESSEL OPTIK` for a brand `KESSEL OPTIK` and `ZX-81` for `ZX-81`, English to Ukrainian
-- **THEN** both are kept with no further call
+- **WHEN** the model answers `ZX-81` for `ZX-81`, English to Ukrainian
+- **THEN** it is kept with no further call
 
 #### Scenario: A person's spellings agree
 
 - **WHEN** `Arlo Venn` reads `Арло Венн` and the model suggests `Вен` for `Venn`
 - **THEN** `Venn` reads `Венн`, and the line sent for `Venn` said `Arlo Venn → Арло Венн, so Venn → Венн`
 
-#### Scenario: A brand is locked as its source
+#### Scenario: A brand follows the name policy and a material is translated
 
-- **WHEN** the reading calls `KESSEL OPTIK` a brand and the model suggests `Кессел Оптік` or nothing
-- **THEN** the entry reads `KESSEL OPTIK`, locked, whatever the policy and target language
+- **WHEN** the reading calls `Velmora` a brand, the policy is Transliterate and the model suggests `Velmora` and then
+  `Вельмора`
+- **THEN** the copy is refused and asked once more, and the entry reads `Вельмора`, not locked
+- **AND** under Keep original it reads `Velmora`, locked, with no call, and a term the reading does not call a brand
+  (an alloy, a drug) is asked about, translated and never locked
+
+#### Scenario: A suggested name that loses a word or holds a foreign letter is asked again
+
+- **WHEN** the model suggests `Варно` for `Varno City`, `Сарроу` for `Charrow`, `Валдором` for `Valdor` or `Сын` for
+  `Son`
+- **THEN** each is refused, named with its reason in one further call, and an entry refused twice has no target
 
 #### Scenario: Keep original locks every kept name
 
@@ -1078,7 +1106,7 @@ run, in this order, on a private copy of the glossary and of the recurring terms
 glossary is empty (the deterministic scan; the model name scan stays behind its gate), read and decide the names (remove,
 type, gender), read the recurring terms (keep, drop, promote), ask a rendering for every name and recurring term that has
 none, and lock by rule. The names step SHALL NOT ask for any rendering: both tables are read before either is translated.
-A name SHALL be locked, with the rendering it was given, when it is a brand, an identifier or kept as written by the
+A name SHALL be locked, with the rendering it was given, when it is an identifier or kept as written by the
 name policy (the rendering is its own spelling), or when the pass read it, decided it is a name and not a speaking one,
 and the target language does not decline names and the rendering passed the checks. Before the first model call the
 application SHALL be able to estimate the calls and the minutes of the names step from the dial's plan over the glossary
@@ -1104,12 +1132,12 @@ Stop, must not leave half of a result behind; and what the person fixed by hand 
 - **THEN** every model call goes out against the tables as they were, and afterwards `Brann` is a male character with a
   suggested rendering, `Overture` and `ferry` are gone, and `beacon` is a recurring term with its rendering
 
-#### Scenario: A brand is locked, a name in a language that declines names is not
+#### Scenario: A brand under Keep original is locked, a name in a language that declines names is not
 
-- **WHEN** the target is Ukrainian and the model reads `Zorbo` as a brand and `Brann` as a person, with the renderings
-  `Zorbo` and `Бранн`
+- **WHEN** the policy is Keep original, the target is Ukrainian and the model reads `Zorbo` as a brand and `Brann` as a
+  person, with the renderings `Zorbo` and `Бранн`
 - **THEN** `Zorbo` is locked with the target `Zorbo` and `Brann` is not locked
-- **AND** with a German target a name read as a name and not a speaking one is locked as well
+- **AND** with a German target a name read as a name and not a speaking one is locked as well, but never a common noun
 
 #### Scenario: A stopped pass changes nothing
 

@@ -31,7 +31,7 @@ public final class TextChecks {
      * @param targetLanguage the target language tag
      * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds, which the vocative check
      *     holds the target to; never null, empty when there are none
-     * @param keptTerms the locked terms whose rendering is their own spelling, which the Latin-run check leaves alone;
+     * @param keptTerms the terms Keep original keeps as written, which the Latin-run check leaves alone;
      *     never null, empty when there are none
      * @return the findings, blocking ones first within each check's order; empty when the text is clean or has nothing
      *     but digits and locators (an ISBN or a web address is nobody's language); never null
@@ -71,8 +71,7 @@ public final class TextChecks {
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
-            findings.addAll(
-                    LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), glossaryPairs, keptTerms));
+            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), keptTerms));
         }
         findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
         findings.addAll(AddressMixCheck.find(target, targetLanguage));

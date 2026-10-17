@@ -28,6 +28,8 @@ import org.jspecify.annotations.Nullable;
  * @param marker a regular expression a model's draft must match to count as right where no production check decides,
  *     or null for none
  * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
+ * @param names the Book Brief's name policy the case runs under ({@code keep}, {@code transliterate} or
+ *     {@code translate}), or null for the environment's
  */
 record RunCase(
         String id,
@@ -44,7 +46,8 @@ record RunCase(
         String rationale,
         @Nullable String sourceLanguage,
         @Nullable String marker,
-        @Nullable Boolean quick) {
+        @Nullable Boolean quick,
+        @Nullable String names) {
 
     private static final String DEFAULT_SOURCE_LANGUAGE = "en";
 

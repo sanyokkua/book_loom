@@ -158,7 +158,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
                                         ChangeOrigin.MODEL,
                                         ChangeSection.NAMES),
                                 done -> done.accept(true))),
-                LiveCalls.EMPTY);
+                LiveCalls.EMPTY,
+                List.of("Mid"));
     }
 
     // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.

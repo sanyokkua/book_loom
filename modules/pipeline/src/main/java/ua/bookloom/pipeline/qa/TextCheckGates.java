@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.checks.CharacterName;
@@ -17,6 +19,7 @@ import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
 import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.glossary.IdentityRule;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
@@ -56,13 +59,31 @@ final class TextCheckGates {
         return List.copyOf(results);
     }
 
-    // A locked term whose rendering is its own spelling is a kept original: the Latin-run check leaves it alone.
+    // An identifier stays as written whatever the policy. Under Keep original a term whose rendering is its own
+    // spelling, locked or in the glossary's pairs, is a kept original too: the Latin-run check leaves them alone.
+    // Under any other policy a Latin rendering is a copied phrase.
     private static List<String> keptAsWritten(final SoftCheckInput input) {
-        return input.lockedRenderings().stream()
-                .filter(locked ->
-                        locked.term().strip().equals(locked.rendering().strip()))
-                .map(LockedRendering::term)
-                .toList();
+        final Stream<String> identifiers = input.glossaryTerms().stream().filter(IdentityRule::isIdentifier);
+        return Stream.concat(identifiers, keptOriginals(input)).distinct().toList();
+    }
+
+    private static Stream<String> keptOriginals(final SoftCheckInput input) {
+        if (input.namePolicy() != NamePolicy.KEEP_ORIGINAL) {
+            return Stream.empty();
+        }
+        final Stream<String> locked = input.lockedRenderings().stream()
+                .filter(rendering ->
+                        rendering.term().strip().equals(rendering.rendering().strip()))
+                .map(LockedRendering::term);
+        final Stream<String> paired = input.glossaryPairs().stream()
+                .map(pair -> pair.split(" → ", 2))
+                .filter(parts -> parts.length == 2 && parts[0].strip().equals(parts[1].strip()))
+                .map(parts -> parts[0].strip());
+        final List<String> kept = Stream.concat(locked, paired).distinct().toList();
+        if (!kept.isEmpty()) {
+            log.debug("Keep original: {} term(s) kept as written are exempt from the Latin-run check", kept.size());
+        }
+        return kept.stream();
     }
 
     // One low note per segment that names every doubtful word; it never blocks, because a real rare word can be

@@ -24,4 +24,19 @@ class CharacterNamesTest {
     void of_confirmedLine_isAFemaleCharacterWithItsRendering(final String line) {
         assertThat(CharacterNames.of(List.of(line), PAIRS)).containsExactly(new CharacterName("Сем", Gender.FEMALE));
     }
+
+    // 15j.J2: once a strong tally verifies a woman's gender, her consonant-ending name earns the agreement fix.
+    @Test
+    void findCharacters_verifiedWomanWhoseTargetEndsInAConsonant_isNotDeclinedAsAMans() {
+        final List<CharacterName> verified =
+                CharacterNames.of(List.of("Flint — female (she ×6)"), List.of("Flint → Флінт"));
+        final List<CharacterName> guessed =
+                CharacterNames.of(List.of("Flint — likely female (she ×3)"), List.of("Flint → Флінт"));
+        final GenderCheck check = GenderChecks.named("uk");
+
+        assertThat(check.findCharacters("Ми дали Флінту чашку.", verified))
+                .extracting(finding -> finding.span().text())
+                .containsExactly("Флінту");
+        assertThat(check.findCharacters("Ми дали Флінту чашку.", guessed)).isEmpty();
+    }
 }

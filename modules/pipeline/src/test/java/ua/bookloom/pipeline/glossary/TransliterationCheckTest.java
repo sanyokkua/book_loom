@@ -87,4 +87,17 @@ class TransliterationCheckTest {
     void holds_emptyTable_judgesNothing() {
         assertThat(TransliterationCheck.holds("Arlo", "Карло", Map.of())).isTrue();
     }
+
+    // IF a leading article counted as a capitalised word of the name, THEN "The Hague" -> "Гаага" would lose a word.
+    @ParameterizedTest(name = "articles {0} -> {1}")
+    @CsvSource(
+            delimiter = '|',
+            value = {"the|", "|LOST_WORD"})
+    void problem_leadingArticleOfAName_isNoWordOfItWhenTheLanguageListsIt(
+            final String articles, final String expected) {
+        final var found = TransliterationCheck.problem(
+                "The Hague", "Гаага", UK, true, articles == null ? java.util.Set.of() : java.util.Set.of(articles));
+
+        assertThat(found.map(Enum::name).orElse(null)).isEqualTo(expected);
+    }
 }

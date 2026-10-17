@@ -80,6 +80,30 @@ class ChangeResultsDialogTest extends ShellTestBase {
         return textsUnder(required(ChangeResultsDialog.CARD_ID));
     }
 
+    // IF a name the pass could not give a target stayed unlisted, THEN the person would find it only by scanning the
+    // table.
+    @ParameterizedTest(name = "noRows={0}")
+    @ValueSource(booleans = {false, true})
+    void show_namesWithoutATarget_areListedForThePersonWhateverTheOutcome(final boolean noRows) {
+        final ChangeResults results = new ChangeResults(
+                ChangeOperation.NAME_REVIEW,
+                false,
+                noRows ? List.of() : List.of(new ChangeResults.Item(added(0, "Mid"), done -> done.accept(true))),
+                LiveCalls.EMPTY,
+                List.of("Hale", "Well"));
+
+        show(results);
+
+        assertThat(texts()).contains("Still without a target (2): Hale, Well. Give each one in the glossary.");
+    }
+
+    @Test
+    void show_everyNameHasATarget_listsNoUntargetedLine() {
+        show(results(false, added(0, "Mid")));
+
+        assertThat(texts()).noneMatch(text -> text.startsWith("Still without a target"));
+    }
+
     // IF the card gave counts only, THEN the person could not tell how large the operation was before reading rows.
     @Test
     void show_addedAndRemovedRows_headsTheCardWithTheOperationAndEveryCount() {

@@ -34,20 +34,27 @@ class ReadingVotesTest {
         return ReadingVerdict.decide(facts(untyped(), answers, tally, 0.0, QualityDial.BALANCED, "en"));
     }
 
-    // A clear tally (three or more pronouns at 60 %) decides the gender; it is written verified only when the verified
-    // votes agree with it and none opposes it (15i.N gate: the tally's nearest-name attribution alone wrote a demon's
-    // "it" as a verified "he"), else as a suggestion, even at six pronouns of one gender.
+    // A clear tally (three or more pronouns at 60 %) decides the gender; it is written verified when the verified votes
+    // agree with it and none opposes it, or when it is strong (5 or more pronouns at 90 %) and no verified vote opposes
+    // it (15j.J2: twenty "she" and no "he" stayed suggested); a weaker tally with no vote is a suggestion (15i.N gate:
+    // the tally's nearest-name attribution alone wrote a demon's "it" as a verified "he", four times).
     @ParameterizedTest(name = "{0} male, {1} female votes, tally she {2} he {3} -> {4} {5}")
     @CsvSource({
         "3,0,4,0,FEMALE,SUGGESTED",
         "0,0,3,2,FEMALE,SUGGESTED",
-        "0,0,0,5,MALE,SUGGESTED",
+        "0,0,0,4,MALE,SUGGESTED",
+        "0,0,0,5,MALE,VERIFIED",
+        "0,0,6,0,FEMALE,VERIFIED",
+        "0,0,20,0,FEMALE,VERIFIED",
+        "0,1,0,6,MALE,SUGGESTED",
+        "1,0,6,0,FEMALE,SUGGESTED",
+        "0,0,5,1,FEMALE,SUGGESTED",
         "3,0,0,3,MALE,VERIFIED",
         "1,0,0,3,MALE,VERIFIED",
         "0,1,3,0,FEMALE,VERIFIED",
         "1,1,0,4,MALE,SUGGESTED",
         "2,1,0,4,MALE,SUGGESTED",
-        "0,0,0,6,MALE,SUGGESTED"
+        "0,0,0,6,MALE,VERIFIED"
     })
     void decide_tieBreakingAndAClearTally_isTheTallysGenderVerifiedOnlyWhenTheVotesAgree(
             final int male,

@@ -2115,6 +2115,8 @@ public enum MessageKey {
     RESULTS_CHANGED("results.changed"),
     /** Line of the results dialog when an operation changed nothing. */
     RESULTS_NOTHING("results.nothing"),
+    /** Line of the results dialog that lists the names still without a target, with their count and the names. */
+    RESULTS_UNTARGETED("results.untargeted"),
     /** Line of the results dialog when the person stopped an operation. */
     RESULTS_STOPPED("results.stopped"),
     /** Column of the results rows: the term. */

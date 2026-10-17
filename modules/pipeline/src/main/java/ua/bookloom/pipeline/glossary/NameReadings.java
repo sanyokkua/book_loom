@@ -154,7 +154,8 @@ final class NameReadings {
                     evidenceOf(entry, in),
                     lowerShare(entry, counts),
                     in.dial(),
-                    language);
+                    language,
+                    midSentence(entry, counts));
             final Result<Decision> verdict = verdicts.verdict(facts, in.frame(), in.calls());
             if (verdict.isErr()) {
                 return Result.err(Objects.requireNonNull(verdict.error(), "error"));
@@ -201,6 +202,10 @@ final class NameReadings {
     // A run of words is never written in lower case as one word, so only a single word has a share.
     private static double lowerShare(final GlossaryEntry entry, final WordCounts counts) {
         return entry.term().indexOf(' ') >= 0 ? 0.0 : counts.lowerShare(Occurrences.keyOf(entry.term()));
+    }
+
+    private static int midSentence(final GlossaryEntry entry, final WordCounts counts) {
+        return entry.term().indexOf(' ') >= 0 ? 0 : counts.midSentence(Occurrences.keyOf(entry.term()));
     }
 
     private static Verdict verdictOf(final GlossaryEntry entry, final Decision decision) {

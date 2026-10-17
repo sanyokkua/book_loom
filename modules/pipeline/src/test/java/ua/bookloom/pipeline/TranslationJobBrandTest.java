@@ -71,7 +71,8 @@ class TranslationJobBrandTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // IF the brand stayed an unlocked entry with no target, THEN the draft would carry the Latin words, the Latin-run
+    // Under Keep original (15j.J1: a brand follows the name policy). IF the brand stayed an unlocked entry with no
+    // target, THEN the draft would carry the Latin words, the Latin-run
     // gate would block the paragraph and the run would spend its repairs on a word that is right as it is.
     @Test
     void run_brandReadByTheReview_shipsTranslatedAroundTheMaskedBrand() {
@@ -80,7 +81,7 @@ class TranslationJobBrandTest {
                         "Nell bought a lens from KESSEL OPTIK on her way home.",
                         "The window of KESSEL OPTIK glowed in the rain.",
                         "Later a letter came from KESSEL OPTIK."),
-                NamePolicy.TRANSLITERATE);
+                NamePolicy.KEEP_ORIGINAL);
         add(project, "Nell", "Нелл", TermType.CHARACTER, Gender.FEMALE);
         add(project, BRAND, null, TermType.OTHER, Gender.UNKNOWN);
 
