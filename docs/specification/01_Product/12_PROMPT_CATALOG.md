@@ -547,7 +547,7 @@ Answer every pair once. Return one JSON object in this schema:
 **Parameters:** temperature 0 and a fixed seed (15), one sample; output format = JSON object / schema, flat — no
 `maxItems`, `maxLength` or `additionalProperties`, only the status and criterion vocabularies enumerated — because LM
 Studio never answered a structured call that carried such limits on one model (the same prompt without a schema answered
-in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning low/off. Output cap`128 + Σ (70 + 120 + the candidate's tokens)` over the pairs (`OutputLimit.forReview`), half of it expected: a rewrite may repeat a whole candidate.
+in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning low/off. Output cap `128 + Σ (70 + 120 + the candidate's tokens)` over the pairs (`OutputLimit.forReview`), half of it expected: a rewrite may repeat a whole candidate.
 
 **Decision rule:** `ok` leaves the candidate; `edits` are verified and applied one after another; `rewrite` replaces the
 draft only when the whole text passes the placeholder gates and every deterministic check, else the draft stays and the
@@ -1529,7 +1529,7 @@ The third step of **Review with model** and of the model scan on Names & style (
 two. Every entry still open (unlocked, with no target or a suggested one) is sent, 20 per call, with its type, its
 gender when known and one sentence of the book that holds it (at most 120 characters), and the model suggests a target
 by the Book Brief's name policy and a gender. Under **Keep original** no call is made for a name: it is suggested as
-written, and only an entry of type `term` is asked about. A suggestion is written only into an unlocked entry whose
+written, and only a common noun is asked about (an entry of type `term`, or a single title or other word the readings did not verify as a name). A suggestion is written only into an unlocked entry whose
 target is empty or was itself suggested, as a **suggested** target (`TargetOrigin.SUGGESTED`) that the draft prompt
 lists apart as a hint (`#draft-translation`, `{{suggestedTerms}}`) until the person accepts, edits or locks it. The
 reply's gender is not written: a person's gender is the review's, decided from windows across the book (15h.A2), and
@@ -1540,7 +1540,7 @@ when the term reading (`#term-reading`) says so, up to two sentences of the book
 spelling of a person whose full name is already rendered in the glossary — the cluster line `Arlo Venn → Арло Венн, so
 Venn → Венн`, which gives the part of the full name's rendering that stands where the spelling's words stand in the
 full name (words are the runs between spaces and hyphens; the line carries no `so` part when a word of the spelling
-is not in the full name, as in `Mr Venn`). **Checks.** A name that is not a term, or a brand (a brand follows the name policy exactly as a person's name does,
+is not in the full name, as in `Mr Venn`). **Checks.** A name-like entry (a character, a place, a brand, or a verified or capitalised-phrase title or other entry; a brand follows the name policy exactly as a person's name does,
 15j.J1), and not a speaking name keeps every capitalised word of the term under Transliterate and Translate alike: a
 translated common word in lower case (`місто` for `City`) takes the place of a word. Under Transliterate the opening
 letter or digraph of each source word (longest key first) must also be one the target language's `translit` letter
@@ -1548,7 +1548,7 @@ table allows for the opening letter of one of the rendering's words, and a capit
 stands for no source word is refused; a word the table has no row for is not judged, and a language with no table
 judges no letters (a lost word is still refused, it needs no table). Its last word must not be the source's own
 transliteration plus an ending of the language file's `nonNominativeEndings` (endings no nominative has) when the name's last letter
-is not one the source language's `openNameFinals` lists (`Valdor` → `Валдор`, not `Валдором`; `Анна` and `Джессі` are dictionary forms; `Tom` → `Том` is kept). Under every policy a rendering that holds a letter of the language file's `forbiddenLetters` is refused, and
+is not one the source language's `openNameFinals` lists (`Korvel` → `Корвел`, not `Корвелом`; `Анна` and `Джессі` are dictionary forms; `Tom` → `Том` is kept). Under every policy a rendering that holds a letter of the language file's `forbiddenLetters` is refused, and
 so is one that equals the term (ignoring case and outer space) across scripts unless the entry is an identifier (one
 token holding a letter and a digit) or kept as written — the one identity rule, shared with the term-mapping check; an
 identifier kept verbatim also skips the script-letter refusal. **Re-ask.** Only these refusals are asked again, once per

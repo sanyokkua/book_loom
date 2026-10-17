@@ -238,7 +238,7 @@ public final class SuggestTargets {
                 evidenceOf(setting.story(), asked),
                 refusedScript(frame, setting.policy()),
                 requiredScript(frame),
-                new RenderingChecks(frame, setting.policy(), setting.context().readings()),
+                new RenderingChecks(frame, setting.policy(), setting.context()),
                 ClusterAgreement.over(clusters, setting.context().held(), asked));
     }
 

@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -57,7 +59,9 @@ public final class BookLoomApplication extends Application {
     public void init() {
         final StartupContext startup = StartupContext.take();
 
-        injector = ResolveAll.isEnabled() ? onFxThread(() -> smokeInjector(startup)) : developmentInjector(startup);
+        injector = ResolveAll.isEnabled()
+                ? smokeBuild(Platform::runLater, () -> smokeInjector(startup))
+                : developmentInjector(startup);
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
@@ -73,18 +77,25 @@ public final class BookLoomApplication extends Application {
 
     /**
      * {@code init()} runs on the launcher thread, and the production stage builds every singleton at once, including
-     * controls that only construct on the FX thread.
+     * controls that only construct on the FX thread. A broken image throws an {@code Error} there, which must reach
+     * the waiting thread or {@code init()} never returns and the smoke only times out.
      */
-    private static <T> T onFxThread(final Supplier<T> action) {
-        final CompletableFuture<T> built = new CompletableFuture<>();
-        Platform.runLater(() -> {
+    static Injector smokeBuild(final Executor fxThread, final Supplier<Injector> build) {
+        final CompletableFuture<Injector> built = new CompletableFuture<>();
+        fxThread.execute(() -> {
             try {
-                built.complete(action.get());
-            } catch (RuntimeException e) {
+                built.complete(build.get());
+            } catch (Throwable e) {
                 built.completeExceptionally(e);
             }
         });
-        return built.join();
+        try {
+            return built.join();
+        } catch (CompletionException e) {
+            final Throwable cause = e.getCause() == null ? e : e.getCause();
+            log.error("resolve-all FAILED: injector build: {}", cause.getClass().getSimpleName(), cause);
+            throw e;
+        }
     }
 
     /** Production stage, so every singleton is built now, and every step open so the smoke can load every screen. */

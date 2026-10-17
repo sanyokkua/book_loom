@@ -146,6 +146,22 @@ class BrandPolicyTest {
                 .containsExactly(tuple("сіросплав", false));
     }
 
+    // A phrase of capitalised words is a proper name even when no reading verified it, so Keep original keeps it.
+    @Test
+    void suggestOnto_unverifiedMultiWordOtherUnderKeepOriginal_keepsItsSourceLockedWithNoCall() {
+        final GlossaryEntry guild = entry("Harbour Guild", TermType.OTHER, Gender.UNKNOWN, null);
+        final TargetContext unverified = new TargetContext(List.of(guild), Map.of(), Set.of());
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final Result<List<GlossaryEntry>> result =
+                suggest.suggestOnto(List.of(guild), BOOK, EN_UK, NamePolicy.KEEP_ORIGINAL, calls(model), unverified);
+
+        assertThat(result.data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::locked)
+                .containsExactly(tuple("Harbour Guild", true));
+        assertThat(model.requests()).isEmpty();
+    }
+
     @Test
     void suggestOnto_drugUnderTransliterate_isTranslatedAsACommonNounNotCheckedAgainstTheLetterTable() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(says("Noxelin", "заспокійливе"));

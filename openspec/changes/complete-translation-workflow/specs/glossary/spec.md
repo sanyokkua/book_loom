@@ -830,8 +830,10 @@ suggested targets after every call has answered; IF a call fails or the person p
 #### Scenario: Under Keep original a name is not asked about
 
 - **WHEN** the policy is Keep original
-- **THEN** no call is made for an entry that is not of type term, or whose reading calls it a brand, and its source
-  spelling is suggested as its target
+- **THEN** no call is made for a name-like entry, and its source spelling is suggested as its target
+- **AND** an entry is name-like when it is a character or a place, a brand by its reading, or a title or other entry
+  that the readings verified as a proper name or that is a phrase of capitalised words (`Harbour Guild`); one rule
+  decides it for the keep, the lock and the rendering checks
 - **AND** any other entry of type term (a common noun, such as a material, a substance, a drug or a unit) is still asked
   about, to be translated by meaning, and is never kept or locked as a name (15j.J1)
 
@@ -844,7 +846,7 @@ suggested targets after every call has answered; IF a call fails or the person p
 
 #### Scenario: A rendering that leaves out a capitalised word is refused
 
-- **WHEN** an entry that is not of type term, or whose reading calls it a brand, and whose reading does not call it a
+- **WHEN** a name-like entry, and whose reading does not call it a
   speaking name (a brand follows the name policy exactly as a person's name does, 15j.J1), is rendered under
   Transliterate or Translate alike
 - **THEN** a rendering that leaves out a capitalised word of the name is refused (a hyphenated word counts as its parts,
@@ -932,8 +934,8 @@ writer of a suggestion SHALL apply the rule.
   material, a substance, a drug, a unit or any other common noun — is rendered
 - **THEN** it is written in the target's alphabet under Transliterate, rendered by the model under Translate, and its
   source and locked under Keep original (this replaces 15i.T4's lock of every brand to its source)
-- **AND** under Keep original every entry that is not of type term, and every brand, gets its source as target and is
-  locked
+- **AND** under Keep original every name-like entry gets its source as target and is locked; a single unverified title
+  or other word (a demoted common noun) is asked about and translated
 
 #### Scenario: "Verified" means decided by the in-context readings
 

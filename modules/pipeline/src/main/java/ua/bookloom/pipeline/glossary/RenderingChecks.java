@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Standing;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
@@ -32,17 +31,17 @@ final class RenderingChecks {
 
     private final CallFrame frame;
     private final NamePolicy policy;
-    private final Map<String, Reading> readings;
+    private final TargetContext context;
     private final Map<String, List<String>> table;
     private final String forbiddenLetters;
     private final List<String> caseEndings;
     private final String openFinals;
     private final Set<String> articles;
 
-    RenderingChecks(final CallFrame frame, final NamePolicy policy, final Map<String, Reading> readings) {
+    RenderingChecks(final CallFrame frame, final NamePolicy policy, final TargetContext context) {
         this.frame = frame;
         this.policy = policy;
-        this.readings = readings;
+        this.context = context;
         final LanguageRules rules = LanguageRules.bundled();
         this.table = rules.translit(frame.targetLanguage());
         this.forbiddenLetters = rules.forbiddenLetters(frame.targetLanguage());
@@ -74,10 +73,9 @@ final class RenderingChecks {
             log.trace("Rendering '{}' of '{}' holds a letter outside the alphabet", rendering, term);
             return Standing.ALPHABET;
         }
-        final Reading reading = readings.get(entry.id());
-        final boolean isBrand = reading != null && reading.brand();
+        final Reading reading = context.readings().get(entry.id());
         final boolean isSpeaking = reading != null && reading.speaking();
-        final boolean isName = entry.type() != TermType.TERM || isBrand;
+        final boolean isName = SuggestionLocks.isNameLike(entry, context);
         if (policy == NamePolicy.KEEP_ORIGINAL || !isName || isSpeaking) {
             return Standing.OPEN;
         }
@@ -106,7 +104,7 @@ final class RenderingChecks {
     }
 
     // A name that ends in a consonant sound stays so in the dictionary form: the rendering is a case form only when it
-    // is the source's own transliteration plus an oblique ending (Valdor, not Валдором) - the letter before the ending
+    // is the source's own transliteration plus an oblique ending (Korvel, not Корвелом) - the letter before the ending
     // stands for the source's last letter (language file translit) and the stem is no shorter than the source. A name
     // that merely ends like one (Том, Львів) or is no transliteration of the source is kept; a lower-case last word is
     // a translated common word (річка); a language that lists no open final letters judges nothing.

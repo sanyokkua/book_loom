@@ -179,7 +179,7 @@ class TermMappingVerifierTest {
                         Map.of("Lisbon", "Лісабон"), List.of("Lisbon"), "Lisbon", "Лосабон", alternations))
                 .isEmpty();
         assertThat(TermMappingVerifier.verify(
-                        Map.of("Resistance", "Опір"), List.of("Resistance"), "Resistance", "Опором", alternations))
+                        Map.of("Falcon", "Сокіл"), List.of("Falcon"), "Falcon", "Соколом", alternations))
                 .hasSize(1);
     }
 }

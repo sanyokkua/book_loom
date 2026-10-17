@@ -38,7 +38,7 @@ class SuggestionRefusalsTest {
     private static final CallFrame EN_UK = new CallFrame("en", "uk", StyleSheet.from(BRIEF), ForeignPassagePolicy.KEEP);
     private static final BookSlice BOOK = GlossaryTestSegments.of(List.of(
             "Nell reached Varno City at dusk.",
-            "Charrow lay beyond the hills, and Valdor was far.",
+            "Charrow lay beyond the hills, and Korvel was far.",
             "Brynn and Sarah waited."));
 
     private final SuggestTargets suggest = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
@@ -137,7 +137,7 @@ class SuggestionRefusalsTest {
     }
 
     @ParameterizedTest(name = "{0} -> {1} refused, then {2}")
-    @CsvSource({"Valdor,Валдором,Валдор", "Brann,Бранном,Бранн", "Venn,Венном,Венн", "Valdor,Валдорами,Валдор"})
+    @CsvSource({"Korvel,Корвелом,Корвел", "Brann,Бранном,Бранн", "Venn,Венном,Венн", "Korvel,Корвелами,Корвел"})
     void suggest_nameThatEndsInAConsonantAndIsGivenInACaseForm_isRefusedForTheDictionaryForm(
             final String term, final String declined, final String dictionary) {
         final ScriptedChatModel model =

@@ -28,7 +28,7 @@ import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
  * For a target language that gives alternation data (15e.9) the last letter of a stem of at least four letters may
  * swap within a group ({@code Прага}, {@code Празькі}), within the same three-letter bound, and a rendering of at least six
  * letters also matches a longer derived form ({@code Лондон}, {@code лондонського}). An entry written {@code і>о} in
- * that data swaps the vowel that closes the stem ({@code Опір}, {@code Опором}), and the three apostrophes are one.
+ * that data swaps the vowel that closes the stem ({@code Сокіл}, {@code Соколом}), and the three apostrophes are one.
  * A rendering whose stem changes inside the word ({@code кінь}, {@code коня}) is dropped, which only costs a count.
  */
 @Slf4j
@@ -218,7 +218,7 @@ public final class TermMappingVerifier {
         return length >= DERIVED_WORD_FLOOR || targetWord.length() <= length + MAX_EXTRA_LETTERS;
     }
 
-    // The vowel of the stem's closing syllable changes in an oblique form (Опір, Опором; камінь, каменя): the entry
+    // The vowel of the stem's closing syllable changes in an oblique form (Сокіл, Соколом; камінь, каменя): the entry
     // "і>о" of the language file's alternations swaps it, inside the plain length bound only.
     private static boolean swapsVowel(
             final String stem, final int length, final String targetWord, final List<String> alternations) {

@@ -190,7 +190,6 @@ public final class ModelCallsWindow {
         open.setHeight(askedHeight);
         open.setX(over.getX() + (over.getWidth() - askedWidth) / 2);
         open.setY(over.getY() + (over.getHeight() - askedHeight) / 2);
-        log.debug("model calls window fitted to {}x{}", askedWidth, askedHeight);
     }
 
     private void noticeWidth(final double now) {

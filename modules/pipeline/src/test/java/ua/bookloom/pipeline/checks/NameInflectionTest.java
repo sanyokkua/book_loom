@@ -19,7 +19,7 @@ class NameInflectionTest {
     private static final List<String> PAIRS = List.of(
             "Flint → Флінт",
             "Night Council → Нічна рада",
-            "Resistance → Опір",
+            "Falcon → Сокіл",
             "Prime Minister → Прем'єр-міністр",
             "Stone → Камінь");
     private static final List<String> UK = List.of("гзж", "кцч", "хсш", "і>о", "і>е");
@@ -29,8 +29,8 @@ class NameInflectionTest {
         "The Night Council met at noon., Нічної ради зібралися опівдні. Флінт мовчав.",
         "The Night Council met at noon., нічної ради зібралися опівдні. Флінт мовчав.",
         "Everyone feared the Night Council., Усі боялися Нічної Ради. Флінт мовчав.",
-        "The Resistance held the bridge., Опором став міст. Флінт мовчав.",
-        "The Resistance held the bridge., Міст тримав опір. Флінт мовчав.",
+        "The Falcon held the bridge., Соколом став міст. Флінт мовчав.",
+        "The Falcon held the bridge., Міст тримав сокіл. Флінт мовчав.",
         "The Stone was cold., Каменя торкнувся Флінт.",
         "He thanked the Prime Minister., Він подякував прем'єр-міністру. Флінт кивнув.",
         "He thanked the Prime Minister., Він подякував прем’єр-міністру. Флінт кивнув."
@@ -41,7 +41,7 @@ class NameInflectionTest {
 
     @ParameterizedTest
     @CsvSource({
-        "The Resistance held the bridge., Флінт тримав міст.",
+        "The Falcon held the bridge., Флінт тримав міст.",
         "The Night Council met at noon., Флінт зустрівся опівдні.",
         "He thanked the Prime Minister., Він подякував Флінту."
     })
@@ -60,14 +60,14 @@ class NameInflectionTest {
 
     @ParameterizedTest
     @CsvSource({
-        "The Resistance held the bridge., Міст тримав Опором",
-        "The Resistance held the bridge., Під опором став міст",
+        "The Falcon held the bridge., Міст тримав Соколом",
+        "The Falcon held the bridge., Під соколом став міст",
         "The Night Council met at noon., Збір нічної ради тривав довго",
         "The Night Council met at noon., Збір нічної Ради тривав довго"
     })
     void lost_declinedLowerCaseOrAlternatingTarget_isNotLost(final String source, final String target) {
         final List<GlossaryEntry> glossary = List.of(
-                new GlossaryEntry("a", "p", "Resistance", "Опір", TermType.CHARACTER, Gender.UNKNOWN, false),
+                new GlossaryEntry("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false),
                 new GlossaryEntry("b", "p", "Night Council", "Нічна рада", TermType.CHARACTER, Gender.UNKNOWN, false));
 
         assertThat(NameMissingCheck.lost(glossary, source, target, "uk")).isEmpty();
@@ -76,9 +76,9 @@ class NameInflectionTest {
     @Test
     void lost_alternatingFormOfADifferentWord_isStillLost() {
         final List<GlossaryEntry> glossary =
-                List.of(new GlossaryEntry("a", "p", "Resistance", "Опір", TermType.CHARACTER, Gender.UNKNOWN, false));
+                List.of(new GlossaryEntry("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false));
 
-        assertThat(NameMissingCheck.lost(glossary, "The Resistance held.", "Міст тримали вони.", "uk"))
+        assertThat(NameMissingCheck.lost(glossary, "The Falcon held.", "Міст тримали вони.", "uk"))
                 .hasSize(1);
     }
 
