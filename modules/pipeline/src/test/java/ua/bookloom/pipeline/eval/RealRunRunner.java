@@ -76,14 +76,28 @@ final class RealRunRunner {
 
     /** Runs every case whose id starts with {@code only} (every case when it is empty). */
     List<RealRunRow> runAll(final String only) {
+        return runAll(only, false);
+    }
+
+    /** As {@link #runAll(String)}, and only the cases marked {@code "quick": true} when {@code quickOnly} is set. */
+    List<RealRunRow> runAll(final String only, final boolean quickOnly) {
+        log.debug("Real-run suite only='{}' quickOnly={}", only, quickOnly);
         final List<RealRunRow> rows = new ArrayList<>();
-        RunCorpus.text().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.addAll(text(c)));
+        RunCorpus.text().stream()
+                .filter(c -> c.id().startsWith(only) && (!quickOnly || c.isQuick()))
+                .forEach(c -> rows.addAll(text(c)));
         RunCorpus.reviewerBatches().stream()
-                .filter(c -> c.id().startsWith(only))
+                .filter(c -> c.id().startsWith(only) && (!quickOnly || c.isQuick()))
                 .forEach(c -> rows.addAll(reviewerBatch(c)));
-        RunCorpus.batches().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(batch(c)));
-        RunCorpus.repairs().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(repair(c)));
-        RunCorpus.injections().stream().filter(c -> c.id().startsWith(only)).forEach(c -> rows.add(injection(c)));
+        RunCorpus.batches().stream()
+                .filter(c -> c.id().startsWith(only) && (!quickOnly || c.isQuick()))
+                .forEach(c -> rows.add(batch(c)));
+        RunCorpus.repairs().stream()
+                .filter(c -> c.id().startsWith(only) && (!quickOnly || c.isQuick()))
+                .forEach(c -> rows.add(repair(c)));
+        RunCorpus.injections().stream()
+                .filter(c -> c.id().startsWith(only) && (!quickOnly || c.isQuick()))
+                .forEach(c -> rows.add(injection(c)));
         return rows;
     }
 

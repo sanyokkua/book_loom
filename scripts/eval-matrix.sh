@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
-# Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
-# one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
-#   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini] [--batch-sizes 4,8,12,16]
+# Runs the :pipeline promptEval over the FIRST model of scripts/eval-models.txt (the e4b target), or every line with
+# --all-models, or the entries of --models (Ollama and LM Studio), one model resident at a time and one gradle at a time,
+# then prints a comparison table from build/reports/promptEval/*.json.
+# THE GRADLE LOCK (15j.J16): each (suite x model) Gradle invocation takes scripts/gradle-lock.sh for its own duration and
+# never for the whole loop, so other agents' Gradle runs interleave between models. The lock is not re-entrant: never wrap
+# this script in scripts/gradle-lock.sh (or .temporary_context/15i/g.sh, which is the same lock), or it waits for itself.
+# --suite book --book-file <path> --out-dir <dir> (BookRunEvalTest) translates one whole book and writes its outputs to <dir>
+# (BOOKLOOM_EVAL_SUITE=book, BOOKLOOM_EVAL_BOOK_FILE, BOOKLOOM_EVAL_OUT_DIR); it prints no table. Default timeout 24 h.
+# QUICK (15j.J16): --quick (BOOKLOOM_EVAL_QUICK=1) runs the fast subsets: the default suite sends only the ten cases of
+# QuickEval.PROMPT_CASES and skips the defects corpus, realrun only the cases marked "quick": true, names one invented book
+# (BOOKLOOM_EVAL_BOOK, mayday unless you set it), and sequence is replaced by mini (the script says so). --book-file <path>
+# builds a temporary one-file corpus directory (the book and its <name>.gold.json beside it) for BOOKLOOM_CORPUS_DIR, so
+# the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
+# one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
+#   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
+#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|book] [--batch-sizes 4,8,12,16]
 # --relevant-pairs on|off (15i.T8) switches the batch prompt's "Related earlier pairs" block for the run (unset keeps the
 # default, on); run --suite sequence once with each and compare the two reports (their provenance records relevant_pairs=).
 # --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
@@ -61,7 +73,7 @@
 # --suite mini (15j.J15) runs the invented 28-block EPUB (eval/mini/book.json, one block per defect seen so far) through the
 # names pass, the translation job and the export's consistency pass, and scores each expectation of eval/mini/expectations.json
 # (reports end in -mini-<policy>.json): one row per model with the expectations met, the segments flagged, the calls and the
-# seconds, then the defects that missed. About 3-5 minutes on e4b. --names transliterate|translate|keep_original (default
+# seconds, then the defects that missed. Measured: see docs/DEVELOPMENT.md. --names transliterate|translate|keep_original (default
 # transliterate, BOOKLOOM_EVAL_NAMES) is the brief's name policy and decides what the three brand expectations demand;
 # BOOKLOOM_EVAL_DIAL and BOOKLOOM_EVAL_WINDOW pass through.
 # --batch-format (15i.X1, an experiment) chooses how a batch is sent and answered: json = numbered items and a JSON reply (the
@@ -90,13 +102,22 @@ BATCH_NOTES=""
 DEFAULT_CONTEXT=16384
 # An entry is model,context,label: the columns of a line of eval-models.txt joined by commas ("-" for no context).
 entries() { awk '{ print $1 "," ($2 == "" ? "-" : $2) "," $3 }' | tr '\n' ' '; }
-MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | entries)
+# The default is the first model of the list (the e4b target); --all-models restores every line, --models picks entries.
+ALL_MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | entries)
+MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | head -n 1 | entries)
+QUICK=0
+BOOK_FILE=""
+OUT_DIR=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --stability) STABILITY=$2; shift 2 ;;
     --only) ONLY=$2; shift 2 ;;
     --models) MODELS=$(echo "$2" | tr ' ' '\n' | sed 's/,/ /g' | entries); shift 2 ;;
+    --all-models) MODELS=$ALL_MODELS; shift ;;
+    --quick) QUICK=1; shift ;;
+    --book-file) BOOK_FILE=$2; shift 2 ;;
+    --out-dir) OUT_DIR=$2; shift 2 ;;
     --table-only) TABLE_ONLY=1; shift ;;
     --rules) RULES=$2; shift 2 ;;
     --langs) LANGS=$2; shift 2 ;;
@@ -115,11 +136,63 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-REPORTS=modules/pipeline/build/reports/promptEval
-if [ "$SUITE" = sequence ] || [ "$SUITE" = names ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
+if [ "$QUICK" = 1 ]; then
+  export BOOKLOOM_EVAL_QUICK=1
+  if [ "$SUITE" = sequence ]; then
+    echo "-- --quick: the sequence suite is replaced by mini (the invented 28-block book)"
+    SUITE=mini
+  fi
+  if [ "$SUITE" = names ] && [ -z "${BOOKLOOM_EVAL_BOOK:-}" ]; then export BOOKLOOM_EVAL_BOOK=mayday; fi
+fi
+if [ -n "$BOOK_FILE" ]; then
+  [ -f "$BOOK_FILE" ] || { echo "--book-file: no such file $BOOK_FILE" >&2; exit 2; }
+  BOOK_FILE=$(cd "$(dirname "$BOOK_FILE")" && pwd)/$(basename "$BOOK_FILE")
+  CORPUS_TMP=$(mktemp -d)
+  trap 'rm -rf "$CORPUS_TMP"' EXIT
+  ln -s "$BOOK_FILE" "$CORPUS_TMP/$(basename "$BOOK_FILE")"
+  gold="${BOOK_FILE%.*}.gold.json"
+  [ -f "$gold" ] && ln -s "$gold" "$CORPUS_TMP/$(basename "$gold")"
+  export BOOKLOOM_CORPUS_DIR=$CORPUS_TMP
+  if [ "$SUITE" = book ]; then export BOOKLOOM_EVAL_BOOK_FILE=$BOOK_FILE; fi
+  echo "-- --book-file: BOOKLOOM_CORPUS_DIR=$CORPUS_TMP holds $(basename "$BOOK_FILE")"
+fi
 
+if [ "$SUITE" = book ]; then
+  { [ -n "$BOOK_FILE" ] && [ -n "$OUT_DIR" ]; } || { echo "--suite book needs --book-file and --out-dir" >&2; exit 2; }
+  mkdir -p "$OUT_DIR"
+  export BOOKLOOM_EVAL_OUT_DIR=$(cd "$OUT_DIR" && pwd)
+  MATRIX_TESTS='*BookRunEvalTest'
+fi
+export MATRIX_TESTS="${MATRIX_TESTS:-}"
+
+REPORTS=modules/pipeline/build/reports/promptEval
+if [ "$SUITE" = book ]; then DEFAULT_TIMEOUT=86400; elif [ "$SUITE" = sequence ] || [ "$SUITE" = names ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
+
+# One (suite x model) Gradle run with its watchdog; it runs under scripts/gradle-lock.sh (see gradle_locked), so the
+# timeout counts only the time Gradle really holds the lock, not the wait in the queue.
+gradle_section() {
+  ./gradlew :pipeline:promptEval ${MATRIX_TESTS:+--tests "$MATRIX_TESTS"} >"$MATRIX_LOG" 2>&1 &
+  local pid=$!
+  # The watchdog holds its own sleep, so ending it must end the sleep too: an orphaned sleep keeps the script's stdout
+  # pipe open until the timeout runs out when the output is piped.
+  ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}" & sleeper=$!
+    trap 'kill "$sleeper" 2>/dev/null; exit 0' TERM
+    wait "$sleeper" && { pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null; } ) &
+  local dog=$!
+  local status=0
+  wait "$pid" || status=$?
+  kill "$dog" 2>/dev/null
+  wait "$dog" 2>/dev/null
+  return "$status"
+}
+export -f gradle_section
+
+# Takes the lock for the one Gradle invocation named by the caller's environment and nothing else.
+gradle_locked() { scripts/gradle-lock.sh bash -c gradle_section; }
+
+# run_one <entry> [narrator] [keep]: keep=1 leaves an Ollama model loaded because the next run uses it too.
 run_one() {
-  local entry=$1 narrator=${2:-unset} spec context label provider model api_model url env_provider log
+  local entry=$1 narrator=${2:-unset} keep=${3:-0} spec context label provider model api_model url env_provider log
   IFS=, read -r spec context label <<<"$entry"
   provider=${spec%%:*}; model=${spec#*:}; api_model=$model
   [ "$context" = "-" ] && context=""
@@ -136,23 +209,16 @@ run_one() {
   mkdir -p build/eval-matrix
   log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
-  BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT ./gradlew :pipeline:promptEval >"$log" 2>&1 &
-  local pid=$!
-  # The watchdog holds its own sleep, so ending it must end the sleep too: an orphaned sleep keeps the script's stdout
-  # pipe open until the timeout runs out when the output is piped.
-  ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}" & sleeper=$!
-    trap 'kill "$sleeper" 2>/dev/null; exit 0' TERM
-    wait "$sleeper" && { pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null; } ) &
-  local dog=$!
-  if ! wait "$pid"; then
+  if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
+    BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT \
+    gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
     grep -E "Eval window|FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'
     tail -5 "$log" | sed 's/^/   | /'
   fi
-  kill "$dog" 2>/dev/null
-  wait "$dog" 2>/dev/null
-  if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1; else ollama stop "$model" >/dev/null 2>&1; fi
+  if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1
+  elif [ "$keep" = 0 ]; then ollama stop "$model" >/dev/null 2>&1; fi
 }
 
 run_recall() {
@@ -160,7 +226,7 @@ run_recall() {
   mkdir -p build/eval-matrix
   local log=build/eval-matrix/recall.log
   echo "== recall dir=$BOOKLOOM_RECALL_DIR (gradle log: $log)"
-  if ! BOOKLOOM_EVAL_SUITE=recall ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*' >"$log" 2>&1; then
+  if ! BOOKLOOM_EVAL_SUITE=recall scripts/gradle-lock.sh ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*' >"$log" 2>&1; then
     echo "   !! gradle failed; what $log says:"
     grep -E "FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'
   fi
@@ -170,8 +236,17 @@ if [ "$TABLE_ONLY" = 0 ] && [ "$SUITE" = recall ]; then
   run_recall
 elif [ "$TABLE_ONLY" = 0 ]; then
   if [ "$NARRATOR" = both ]; then MODES="unset set"; else MODES=$NARRATOR; fi
+  # The runs in order as "entry|mode" lines, so a run can tell whether the next one uses the same model: an Ollama model
+  # is stopped only when the next run is a different model or there is none.
+  RUNS=()
   for m in $MODELS; do
-    if [ "$SUITE" = sequence ]; then for n in $MODES; do run_one "$m" "$n"; done; else run_one "$m"; fi
+    if [ "$SUITE" = sequence ]; then for n in $MODES; do RUNS+=("$m|$n"); done; else RUNS+=("$m|unset"); fi
+  done
+  for i in "${!RUNS[@]}"; do
+    entry=${RUNS[$i]%%|*}; mode=${RUNS[$i]##*|}
+    keep=0
+    if [ -n "${RUNS[$((i + 1))]:-}" ] && [ "${RUNS[$((i + 1))]%%|*}" = "$entry" ]; then keep=1; fi
+    run_one "$entry" "$mode" "$keep"
   done
 fi
 
@@ -222,6 +297,9 @@ if sys.argv[2] == "names":
                 continue
             print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
     print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
+    sys.exit(0)
+if sys.argv[2] == "book":
+    print("book run finished; its outputs are in the --out-dir")
     sys.exit(0)
 if sys.argv[2] == "mini":
     runs = sorted((r for r in reports if r.get("suite") == "mini"), key=lambda r: (r.get("model", ""), r.get("names", "")))
@@ -297,7 +375,7 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini", "book") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

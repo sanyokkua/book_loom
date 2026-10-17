@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
  * @param sourceLanguage the source language tag, or null for English; the target is always Ukrainian
  * @param marker a regular expression a model's draft must match to count as right where no production check decides,
  *     or null for none
+ * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
  */
 record RunCase(
         String id,
@@ -42,7 +43,8 @@ record RunCase(
         @Nullable EvalContext context,
         String rationale,
         @Nullable String sourceLanguage,
-        @Nullable String marker) {
+        @Nullable String marker,
+        @Nullable Boolean quick) {
 
     private static final String DEFAULT_SOURCE_LANGUAGE = "en";
 
@@ -79,6 +81,11 @@ record RunCase(
         Objects.requireNonNull(good, "good");
         Objects.requireNonNull(rationale, "rationale");
         glossary = glossary == null ? List.of() : List.copyOf(glossary);
+    }
+
+    /** Whether the quick subset (15j.J16) includes this case. */
+    boolean isQuick() {
+        return Boolean.TRUE.equals(quick);
     }
 
     /** Whether a production check decides this case's labels. */

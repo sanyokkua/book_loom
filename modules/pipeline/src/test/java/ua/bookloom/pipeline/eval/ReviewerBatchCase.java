@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
  * @param context the lexicon and the narrator
  * @param pairs the pairs in document order
  * @param rationale why the case exists
+ * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
  */
 record ReviewerBatchCase(
         String id,
@@ -26,7 +27,8 @@ record ReviewerBatchCase(
         List<EvalTerm> glossary,
         @Nullable EvalContext context,
         List<Pair> pairs,
-        String rationale) {
+        String rationale,
+        @Nullable Boolean quick) {
 
     /**
      * One pair of the batch.
@@ -37,6 +39,11 @@ record ReviewerBatchCase(
      * @param note what is wrong, for the report; empty for a clean pair
      */
     record Pair(String source, String candidate, boolean defective, String note) {}
+
+    /** Whether the quick subset (15j.J16) includes this case. */
+    boolean isQuick() {
+        return Boolean.TRUE.equals(quick);
+    }
 
     /** Rejects missing parts and copies the lists. */
     ReviewerBatchCase {

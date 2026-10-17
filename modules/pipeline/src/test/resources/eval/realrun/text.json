@@ -1,6 +1,7 @@
 [
  {
   "id": "quotes-stray-close-1",
+  "quick": true,
   "kind": "quotes",
   "check": "QUOTES",
   "source": "\"Wait,\" said the boy, “the lamp has gone out.”",
@@ -149,6 +150,7 @@
  },
  {
   "id": "script-latin-letters",
+  "quick": true,
   "kind": "mixed-script",
   "check": "SCRIPT",
   "source": "His heart beat faster as the bell began to toll.",
@@ -275,6 +277,7 @@
  },
  {
   "id": "russian-bacon",
+  "quick": true,
   "kind": "russian-letters",
   "check": "ALPHABET",
   "source": "The innkeeper fried some bacon and set it before the guest.",
@@ -345,6 +348,7 @@
  },
  {
   "id": "narrator-could-not",
+  "quick": true,
   "kind": "narrator",
   "check": "GENDER",
   "source": "I could not see the road, so I stopped and said nothing.",
@@ -563,6 +567,7 @@
  },
  {
   "id": "omission-tail-partners",
+  "quick": true,
   "kind": "omission",
   "check": "OMISSION",
   "source": "Danny was one of those sun-bleached old hands you meet drinking at the Copper Kettle, the narrow bar for ferrymen, net-menders, harbour pilots. We were partners.",
@@ -599,6 +604,7 @@
  },
  {
   "id": "vocative-name-lost",
+  "quick": true,
   "kind": "vocative",
   "check": "VOCATIVE",
   "source": "So when did you ever sign a paper you hadn't read first, Dane?",

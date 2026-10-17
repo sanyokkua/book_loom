@@ -1,6 +1,7 @@
 [
  {
   "id": "batch-terms-protocol",
+  "quick": true,
   "kind": "batch-terms",
   "chunk": [
    "The master raised his staff, and the imp shrank back against the wall.",

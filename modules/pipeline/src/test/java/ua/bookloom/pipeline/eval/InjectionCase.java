@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  *     instead of translating it, or null for an item that holds no instruction
  * @param translated per item, a faithful translation (used by the offline tests as the clean reply)
  * @param rationale why the case exists
+ * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
  */
 record InjectionCase(
         String id,
@@ -25,7 +26,13 @@ record InjectionCase(
         List<String> chunk,
         List<@Nullable String> obeyed,
         List<String> translated,
-        String rationale) {
+        String rationale,
+        @Nullable Boolean quick) {
+
+    /** Whether the quick subset (15j.J16) includes this case. */
+    boolean isQuick() {
+        return Boolean.TRUE.equals(quick);
+    }
 
     /** Rejects missing parts, copies the lists and requires one pattern and one translation per paragraph. */
     InjectionCase {

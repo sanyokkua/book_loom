@@ -919,6 +919,35 @@ two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path y
 review and the rolling summary call, which build their own frame (deferred from 15e.2 to 15e.13, which tunes those
 prompts; `SummaryModelCall` is package-private).
 
+### The fast loop {#fast-loop}
+
+Whole suites cost hours, so a prompt change is iterated in minutes and confirmed once. The loop, narrowest first:
+
+1. **Probe** one case: `scripts/probe.sh --case <id>` sends it through the production builders (`ProbeTest` keeps it
+   honest) and prints each message split by section, the request parameters (`num_ctx`, max output, temperature, seed,
+   format, think), the raw reply, the parsed result with the verdict the suite scores, and per call the usage
+   (`prompt`, `completion`, `promptEvalMs`, `generationMs`, `cachedPrompt`, `wallMs`). `--list [prompt|defects|realrun]`
+   names the ids, `--repeat N` sends it N times, `--dry` prints the request and calls nothing, `--provider pseudo` is the
+   offline model of the tests, `--model`/`--url`/`--window` default to `gemma4:e4b-mlx`, the provider's local address and
+   16,384. Editing a `.prompt` file or an eval JSON needs no build: the probe reads the source resource directories first.
+2. **Quick**: `scripts/eval-matrix.sh --quick` (`BOOKLOOM_EVAL_QUICK=1`) runs ten prompt cases (`QuickEval.PROMPT_CASES`,
+   no defects corpus), the realrun cases marked `"quick": true`, one invented book for `names`, and `mini` in place of
+   `sequence`. `--book-file <path>` runs one owner book of the names and gold suites.
+3. **Mini**: `scripts/eval-matrix.sh --suite mini` (the invented 28-block book, end to end).
+4. **One full run per suite** to confirm, on e4b (the default model; `--all-models` restores the list).
+5. **26b once**, at the end of a change.
+
+Keep the model and its prompt cache warm: start Ollama with `OLLAMA_KEEP_ALIVE=1h` in the *server's* environment (not
+the client's), and keep the window constant (16,384) so a GGUF model is never reloaded. Every Gradle run and every model
+call takes `scripts/gradle-lock.sh` (one at a time across agents; `BOOKLOOM_GRADLE_LOCK_DIR` moves the lock off the
+owner's default path), so never wrap `probe.sh` or `eval-matrix.sh` in it.
+
+Reading `cachedPrompt`: it is filled from Ollama's `prompt_eval_cached_count`. On Ollama's MLX runner `prompt_eval_count`
+is the whole prompt and `prompt_eval_duration` only the part that was not cached, so `promptEvalMs` falls on a repeated
+prompt while `prompt` does not; the share of the prompt served from the cache is `cachedPrompt / prompt`. A first probe
+after a model load shows `cachedPrompt` of 0 or `-`; send the same case again (`--repeat 2`) to see the shared system
+block reused.
+
 **Real-run corpus (15e.2).** The defect classes of the 6 h 17 min GUI run (Bartimaeus 1, en → uk, 26b) as synthetic cases
 under `modules/pipeline/src/test/resources/eval/realrun/` (no book text; failure shapes only), run as their own suite:
 

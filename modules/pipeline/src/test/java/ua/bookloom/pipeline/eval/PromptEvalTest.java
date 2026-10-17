@@ -31,7 +31,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
  * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (review each corpus case this many times) and optionally
- * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_REVIEW=1} (draft, fix and suggest cases only, for a model whose reviewer call stalls) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
+ * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_REVIEW=1} (draft, fix and suggest cases only, for a model whose reviewer call stalls) and {@code BOOKLOOM_EVAL_QUICK=1} (the ten cases of {@link QuickEval#PROMPT_CASES}, no defects corpus) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
  * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  *
@@ -53,7 +53,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 @DisabledIfEnvironmentVariable(
         named = "BOOKLOOM_EVAL_SUITE",
         matches =
-                "batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|stability|gold|names|coref|mini")
+                "batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|stability|gold|names|coref|mini|book")
 class PromptEvalTest {
 
     static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
@@ -89,15 +89,17 @@ class PromptEvalTest {
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
         final boolean skipReview = "1".equals(System.getenv("BOOKLOOM_EVAL_SKIP_REVIEW"));
         final boolean corpusOnly = "corpus".equals(only);
+        final boolean quick = QuickEval.isOn(System.getenv());
         return new EvalReport(
                 model,
                 corpusOnly
                         ? List.of()
                         : runner.runAll(PromptEvalCases.ALL.stream()
                                 .filter(evalCase -> evalCase.name().startsWith(only))
+                                .filter(evalCase -> !quick || QuickEval.PROMPT_CASES.contains(evalCase.name()))
                                 .filter(evalCase -> !skipReview || !(evalCase instanceof EvalCase.Review))
                                 .toList()),
-                skipReview ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats),
+                skipReview || quick ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats),
                 rulesLabel());
     }
 
@@ -141,12 +143,18 @@ class PromptEvalTest {
 
     /** An injector whose provider registry holds the eval's one provider, built from the environment. */
     static Injector registeredProvider() {
+        return registeredProvider(
+                Objects.requireNonNull(System.getenv("BOOKLOOM_EVAL_URL")),
+                "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER")));
+    }
+
+    /** An injector whose provider registry holds one provider at {@code url}: LM Studio's dialect or Ollama's. */
+    static Injector registeredProvider(final String url, final boolean lmStudio) {
         final Injector injector = Guice.createInjector(new LlmModule());
-        final boolean lmStudio = "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER"));
         final ProviderConfig config = new ProviderConfig(
                 PROVIDER_ID,
                 lmStudio ? ProviderKind.OPENAI_COMPATIBLE : ProviderKind.OLLAMA,
-                URI.create(Objects.requireNonNull(System.getenv("BOOKLOOM_EVAL_URL"))),
+                URI.create(url),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
         final Result<ProviderConfig> registered =
@@ -159,9 +167,13 @@ class PromptEvalTest {
 
     /** The real chat model of the eval's provider, built by the production factory. */
     static ChatModel chatModel(final String modelId) {
-        final Result<ChatModel> model = registeredProvider()
-                .getInstance(ChatModelFactory.class)
-                .create(new ModelSelection(PROVIDER_ID, modelId));
+        return chatModel(registeredProvider(), modelId);
+    }
+
+    /** The real chat model of {@code injector}'s eval provider. */
+    static ChatModel chatModel(final Injector injector, final String modelId) {
+        final Result<ChatModel> model =
+                injector.getInstance(ChatModelFactory.class).create(new ModelSelection(PROVIDER_ID, modelId));
         assertThat(model.isOk()).as("chat model creation: " + model.error()).isTrue();
         return Objects.requireNonNull(model.data());
     }

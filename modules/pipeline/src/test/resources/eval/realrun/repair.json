@@ -1,6 +1,7 @@
 [
  {
   "id": "repair-dropped-close",
+  "quick": true,
   "step": "PLACEHOLDER",
   "markdown": "The *old* man opened the **heavy** door.",
   "rejected": "⟦g0⟧Старий⟦g1⟧ чоловік відчинив ⟦g2⟧важкі двері.",

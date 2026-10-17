@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  * @param expectTerms whether the batch must ask for terms: its key terms must not be empty
  * @param replies the scripted reply shapes and what the production parser must make of each
  * @param rationale why the case exists
+ * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
  */
 record BatchCase(
         String id,
@@ -25,7 +26,8 @@ record BatchCase(
         @Nullable EvalContext context,
         boolean expectTerms,
         List<Reply> replies,
-        String rationale) {
+        String rationale,
+        @Nullable Boolean quick) {
 
     /**
      * One reply shape.
@@ -42,6 +44,11 @@ record BatchCase(
             boolean expectAccepted,
             boolean knownFailure,
             @Nullable String fixedBy) {}
+
+    /** Whether the quick subset (15j.J16) includes this case. */
+    boolean isQuick() {
+        return Boolean.TRUE.equals(quick);
+    }
 
     /** Rejects missing parts and copies the lists. */
     BatchCase {

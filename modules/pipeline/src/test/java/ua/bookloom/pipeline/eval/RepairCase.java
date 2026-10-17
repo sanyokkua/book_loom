@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.eval;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
 
 /**
@@ -14,9 +15,22 @@ import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
  * @param good a masked target the document gate restores
  * @param bad a masked target the document gate refuses
  * @param rationale what went wrong in the real shape
+ * @param quick {@code true} when the quick subset (15j.J16) includes the case; null or false otherwise
  */
 record RepairCase(
-        String id, RepairStep step, String markdown, String rejected, String good, String bad, String rationale) {
+        String id,
+        RepairStep step,
+        String markdown,
+        String rejected,
+        String good,
+        String bad,
+        String rationale,
+        @Nullable Boolean quick) {
+
+    /** Whether the quick subset (15j.J16) includes this case. */
+    boolean isQuick() {
+        return Boolean.TRUE.equals(quick);
+    }
 
     /** Rejects missing parts. */
     RepairCase {

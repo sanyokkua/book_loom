@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
  * Local-only: {@code scripts/eval-matrix.sh --suite realrun}, or
  * {@code BOOKLOOM_EVAL_SUITE=realrun ./gradlew :pipeline:promptEval} with {@code BOOKLOOM_EVAL_URL},
  * {@code BOOKLOOM_EVAL_PROVIDER}, {@code BOOKLOOM_EVAL_MODEL}, {@code BOOKLOOM_EVAL_STABILITY} (reviewer repeats) and
- * {@code BOOKLOOM_EVAL_ONLY} (a case-id prefix). It measures and asserts no floor: the thresholds per model class are
+ * {@code BOOKLOOM_EVAL_ONLY} (a case-id prefix) and {@code BOOKLOOM_EVAL_QUICK=1} (only the cases marked quick). It measures and asserts no floor: the thresholds per model class are
  * recorded by 15e.4 from these numbers. The report lands in {@code build/reports/promptEval/<model>-realrun.json}.
  */
 @Slf4j
@@ -35,8 +35,9 @@ class RealRunTest {
         final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
 
-        final RealRunReport report =
-                new RealRunReport(model, new RealRunRunner(PromptEvalTest.calls(model), repeats, workDir).runAll(only));
+        final boolean quick = QuickEval.isOn(System.getenv());
+        final RealRunReport report = new RealRunReport(
+                model, new RealRunRunner(PromptEvalTest.calls(model), repeats, workDir).runAll(only, quick));
 
         write(report);
         assertThat(report.rows()).as(report.table()).isNotEmpty();
