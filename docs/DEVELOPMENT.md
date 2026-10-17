@@ -1953,8 +1953,12 @@ placeholder). There is no cross-compilation: each image is built on its own OS.
 ./scripts/launch-smoke.sh [path/to/image]     # SMOKE_TIMEOUT_SECONDS=90 by default
 ```
 
-It launches the packaged image against a throwaway `BOOKLOOM_DATA_DIR` and asserts the three startup log lines from
-[§5](#running) appear in `<dataDir>/logs/bookloom.log`. On Linux the packaged app starts the real GTK toolkit, so a
+It launches the packaged image against a throwaway `BOOKLOOM_DATA_DIR` with `-J-Dbookloom.smoke.resolveAll=true` and
+asserts the three startup log lines from [§5](#running) and a fourth, `resolve-all passed: views=<n> ports=<m>`, appear
+in `<dataDir>/logs/bookloom.log`. The property makes the image build its injector in Guice's production stage and, once
+the window is shown, load every screen and resolve every `ua.bookloom.api` port; a `resolve-all FAILED` line names
+what failed and ends the smoke at once. It is the only check that sees a missing `requires`, `exports` or `opens`, or a
+resource left out of the image. On Linux the packaged app starts the real GTK toolkit, so a
 display is required — CI starts Xvfb before the smoke. The app icons `jpackage` reads are committed under
 `docs/specification/assets/icon/dist/`; regenerate them from `appicon.png` with the scripts beside it.
 

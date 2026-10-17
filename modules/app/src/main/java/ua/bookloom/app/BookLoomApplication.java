@@ -2,11 +2,16 @@ package ua.bookloom.app;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.OpenStepsModule;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
@@ -51,7 +57,7 @@ public final class BookLoomApplication extends Application {
     public void init() {
         final StartupContext startup = StartupContext.take();
 
-        injector = Guice.createInjector(new CoreModules(startup), new UiModule(), new DesktopModule());
+        injector = ResolveAll.isEnabled() ? onFxThread(() -> smokeInjector(startup)) : developmentInjector(startup);
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
@@ -59,6 +65,34 @@ public final class BookLoomApplication extends Application {
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
         injector.getInstance(SessionInfo.class)
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
+    }
+
+    private static Injector developmentInjector(final StartupContext startup) {
+        return Guice.createInjector(new CoreModules(startup), new UiModule(), new DesktopModule());
+    }
+
+    /**
+     * {@code init()} runs on the launcher thread, and the production stage builds every singleton at once, including
+     * controls that only construct on the FX thread.
+     */
+    private static <T> T onFxThread(final Supplier<T> action) {
+        final CompletableFuture<T> built = new CompletableFuture<>();
+        Platform.runLater(() -> {
+            try {
+                built.complete(action.get());
+            } catch (RuntimeException e) {
+                built.completeExceptionally(e);
+            }
+        });
+        return built.join();
+    }
+
+    /** Production stage, so every singleton is built now, and every step open so the smoke can load every screen. */
+    private static Injector smokeInjector(final StartupContext startup) {
+        log.info("resolve-all smoke: building the injector in the production stage");
+        final Module ui = Modules.override(new UiModule()).with(new OpenStepsModule());
+        return Guice.createInjector(
+                com.google.inject.Stage.PRODUCTION, new CoreModules(startup), ui, new DesktopModule());
     }
 
     @Override
@@ -74,7 +108,8 @@ public final class BookLoomApplication extends Application {
         // settings read would otherwise silently return a default from a database nobody had opened.
         lifecycle.sceneBuilt();
 
-        initialView().ifPresent(shell::activate);
+        final Optional<ViewNames> initial = initialView();
+        initial.ifPresent(shell::activate);
 
         stage.setTitle(TITLE);
         shell.applyWindowLimits(stage);
@@ -90,6 +125,9 @@ public final class BookLoomApplication extends Application {
         log.info(
                 "window shown, initialView={}",
                 injector().getInstance(Navigator.class).currentView().get());
+        if (ResolveAll.isEnabled() && initial.isPresent()) {
+            ResolveAll.run(injector(), injector().getInstance(Navigator.class), initial.get());
+        }
     }
 
     /** The first entry with a screen, so the window never opens on an empty screen area while any screen exists. */
