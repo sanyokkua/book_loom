@@ -1374,6 +1374,22 @@ and the matrix prints the expectations met, the segments flagged, the calls and 
 It measures and asserts no floor. In `check`, `MiniEvalOfflineTest` runs the whole flow on the pseudo model (which upper-cases its source,
 so only the expectations an echo can meet are met), and `MiniBookTest` holds the book to its expectation file.
 
+**The whole-book run (15j.J16).** `BookRunner` takes any book file and decides what a typical user decides in the window: the predicted
+Book Brief accepted (name policy and the rest at the defaults), the names pass, the Start narrator re-check, the translation at the dial,
+then the export written twice, with the consistency pass off and on, each with the glossary CSV and the report. Select the class, since
+`PromptEvalTest` also runs whenever `BOOKLOOM_EVAL_URL` is set:
+
+```bash
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_PROVIDER=ollama BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_DIAL=BALANCED \
+BOOKLOOM_EVAL_BOOK_FILE=/path/book.epub BOOKLOOM_EVAL_OUT_DIR=~/bookloom-runs/book1 BOOKLOOM_EVAL_SOURCE=en BOOKLOOM_EVAL_TARGET=uk \
+  ./gradlew :pipeline:promptEval --tests '*BookRunEvalTest'
+```
+
+`BOOKLOOM_EVAL_OUT_DIR` is required and must lie outside the checkout (the test refuses otherwise: the exports hold book text). It receives
+`<name>.no_consistency_pass.<ext>`, `<name>.with_consistency_pass.<ext>`, their `.glossary.csv` and `.report.md`, and `book-run.json`: calls per stage,
+minutes, flagged segments, characters by gender (verified, suggested, none), and per export the Latin words left, words with a letter the
+target does not use, segments waiting on a gender, and the segments each detector fires on. `BookRunnerOfflineTest` proves it in `check` on the pseudo model.
+
 The names gold extends the gold file above with these keys (the older code ignores them): `characters[].cluster` (the id shared by
 every written form of one person, such as "Dax" and "Dax Orlo"; absent for a name of its own), `junk[]` (terms a scan must not leave
 in the glossary: a heading, a nationality, a distress call, half of a brand), `keep[]` (real names besides the characters that must

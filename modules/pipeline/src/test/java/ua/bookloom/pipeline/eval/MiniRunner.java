@@ -15,10 +15,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
@@ -80,9 +78,9 @@ final class MiniRunner {
         final StageProbe probe = new StageProbe(model);
         final List<String> errors = new ArrayList<>();
         final Instant started = Instant.now();
-        final int names = namesPass(prepared, probe, errors);
+        final int names = WholeBookStages.namesPass(prepared, probe, window, errors);
         final int afterNames = probe.mark();
-        final JobState end = translate(prepared, probe, errors);
+        final JobState end = WholeBookStages.translate(prepared, probe, window, errors);
         final int afterJob = probe.mark();
         consistency(prepared, probe, errors);
         final Calls calls = new Calls(names, afterJob - afterNames, probe.mark() - afterJob);
@@ -91,29 +89,10 @@ final class MiniRunner {
         return new MiniRun(policy, end, outcomes(prepared), glossary(prepared), errors, calls, elapsed);
     }
 
-    private int namesPass(final Prepared prepared, final StageProbe probe, final List<String> errors) {
-        final Result<?> result = SequenceJobs.namesPass(prepared).run(prepared.projectId(), probe, window, event -> {});
-        note("names pass", result, errors);
-        return probe.mark();
-    }
-
-    private JobState translate(final Prepared prepared, final StageProbe probe, final List<String> errors) {
-        final Result<JobReport> result = SequenceJobs.run(prepared, probe, ReviewMode.UNATTENDED, window, event -> {});
-        note("translation", result, errors);
-        return result.isOk() ? Objects.requireNonNull(result.data()).end() : JobState.FAILED;
-    }
-
     private void consistency(final Prepared prepared, final StageProbe probe, final List<String> errors) {
         final Result<?> result = SequenceJobs.consistencyPass(prepared)
                 .run(prepared.projectId(), probe.calls(TARGET), new PassOptions(true, dial == QualityDial.MAX));
-        note("consistency pass", result, errors);
-    }
-
-    private static void note(final String phase, final Result<?> result, final List<String> errors) {
-        if (result.isErr()) {
-            errors.add(phase + ": " + Objects.requireNonNull(result.error()).code());
-            log.warn("Mini eval {} ended in {}", phase, result.error().code());
-        }
+        WholeBookStages.note("consistency pass", result, errors);
     }
 
     private Map<String, Outcome> outcomes(final Prepared prepared) {

@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class Identifiers {
+public final class Identifiers {
 
     private static final String HEX = "[0-9a-fA-F]";
     private static final int MIN_HEX_DIGITS = 8;
@@ -31,7 +31,7 @@ final class Identifiers {
             + "|\\b(?=" + HEX + "*\\d)(?=" + HEX + "*[a-f])" + HEX + "{" + MIN_HEX_DIGITS + ",}\\b)");
 
     /** The text with each identifier overwritten by filler of the same length, so every span keeps its place. */
-    static String masked(final String text) {
+    public static String masked(final String text) {
         return ANY.matcher(text).replaceAll(found -> String.valueOf(FILL).repeat(found.end() - found.start()));
     }
 

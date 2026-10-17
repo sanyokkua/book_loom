@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -12,6 +13,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobReport;
@@ -23,7 +25,9 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.LexiconReading;
@@ -124,6 +128,37 @@ public final class SequenceJobs {
     /** The consistency pass over the prepared book's own stores (the eval's stage runners reach it from here). */
     public static ConsistencyPass consistencyPass(final Prepared prepared) {
         return ConsistencyPassFixture.over(prepared.project);
+    }
+
+    /** The production export service over the prepared book's own stores, as the Export screen reaches it. */
+    public static ExportService exportService(final Prepared prepared) {
+        final TestProject project = prepared.project;
+        return new ExportServiceImpl(
+                project.stores().projects(),
+                project.stores().segments(),
+                project.stores().openProjects(),
+                project.documents(),
+                consistencyPass(prepared),
+                project.stores().glossary(),
+                project.stores().runs(),
+                Clock.systemUTC());
+    }
+
+    /** The brief stored for the prepared book, as the window shows it. */
+    public static BookBrief storedBrief(final Prepared prepared) {
+        final Result<Optional<Project>> found = prepared.stores().projects().find(prepared.projectId());
+        return Objects.requireNonNull(found.data(), "stored project")
+                .orElseThrow()
+                .brief();
+    }
+
+    /** Stores {@code brief} as the prepared book's brief, as a change in the Book Brief screen does. */
+    public static void saveBrief(final Prepared prepared, final BookBrief brief) {
+        final Result<Optional<Project>> found = prepared.stores().projects().find(prepared.projectId());
+        final Project project =
+                Objects.requireNonNull(found.data(), "stored project").orElseThrow();
+        final Result<Project> saved = prepared.stores().projects().save(project.withBrief(brief));
+        Objects.requireNonNull(saved.data(), () -> "saved brief: " + saved.error());
     }
 
     /** The review desk's retry over the prepared book's own stores. */

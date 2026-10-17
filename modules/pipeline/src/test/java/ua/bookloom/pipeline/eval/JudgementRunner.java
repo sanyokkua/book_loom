@@ -107,7 +107,7 @@ final class JudgementRunner {
                         probe.calls(gold.targetLanguage()));
     }
 
-    private static SetupAssistantImpl assistant(final Prepared prepared) {
+    static SetupAssistantImpl assistant(final Prepared prepared) {
         return new SetupAssistantImpl(
                 prepared.stores().projects(),
                 prepared.stores().segments(),
