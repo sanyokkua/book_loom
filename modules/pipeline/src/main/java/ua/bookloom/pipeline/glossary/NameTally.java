@@ -16,7 +16,8 @@ import ua.bookloom.pipeline.prompt.NounPhrases;
 /**
  * Counts the name scan's runs: every capitalised run of the segments, and the names two runs make joined by a joining
  * word of the language with at most one determiner after it (15i.N8: {@code Tower of Arlen} and {@code Keeper of the
- * Grey Gate} would be lost as two runs). Each is counted where it is written; the two runs are still counted alone.
+ * Grey Gate} would be lost as two runs), and the firms written as a run, a connecting word and a firm tail ({@code
+ * Pell and Sons}). Each is counted where it is written; the two runs are still counted alone.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -37,13 +38,17 @@ final class NameTally {
             @Nullable final String language) {
         final Set<String> joiners = language == null ? Set.of() : NounPhrases.joiners(language);
         final Set<String> determiners = language == null ? Set.of() : NounPhrases.determiners(language);
+        final Set<String> firmJoiners = language == null ? Set.of() : NounPhrases.firmJoiners(language);
+        final Set<String> firmTails = language == null ? Set.of() : NounPhrases.firmTails(language);
         final Map<String, NameCandidate> tallies = new LinkedHashMap<>();
         int joined = 0;
         for (final Occurrences.Read segment : read) {
             final List<Occurrences.Occurrence> joins = Occurrences.joinedRuns(segment, nameLike, joiners, determiners);
-            joined += joins.size();
+            final List<Occurrences.Occurrence> firms = Occurrences.firmRuns(segment, nameLike, firmJoiners, firmTails);
+            joined += joins.size() + firms.size();
             Occurrences.runs(segment, nameLike).forEach(found -> count(tallies, found));
             joins.forEach(found -> count(tallies, found));
+            firms.forEach(found -> count(tallies, found));
         }
         log.debug("Name tally: {} distinct runs, {} uses of names joined by a joining word", tallies.size(), joined);
         return tallies;

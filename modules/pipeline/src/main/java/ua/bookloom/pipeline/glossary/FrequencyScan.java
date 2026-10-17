@@ -147,8 +147,12 @@ public final class FrequencyScan {
         final NounUses nouns = NounUses.of(read, sourceLanguage);
         final Map<String, NameCandidate> tallies = PluralNouns.fold(
                 NameAliases.fold(
-                        CaseVariants.fold(
-                                NameTally.of(read, word -> isNameLike(word, counts, stopWords), sourceLanguage)),
+                        CaseVariants.fold(StopWordHeads.add(
+                                NameTally.of(read, word -> isNameLike(word, counts, stopWords), sourceLanguage),
+                                read,
+                                counts,
+                                stopWords,
+                                sourceLanguage)),
                         suffixes),
                 nouns,
                 suffixes);

@@ -1,6 +1,8 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -43,5 +45,41 @@ public final class NounPhrases {
      */
     public static Set<String> joiners(final String languageTag) {
         return Set.copyOf(LanguageRules.bundled().wordsOf(languageTag, "nameJoiners"));
+    }
+
+    /**
+     * The words that connect the two sides of a firm ({@code Pell and Sons}), from the {@code firmJoiners} key.
+     *
+     * @param languageTag the non-null language tag
+     * @return the lower-case words; never null, empty when the language lists none
+     */
+    public static Set<String> firmJoiners(final String languageTag) {
+        return lowerCased(languageTag, "firmJoiners");
+    }
+
+    /**
+     * The words that end a firm's name ({@code Sons}, {@code Company}), from the {@code firmTails} key.
+     *
+     * @param languageTag the non-null language tag
+     * @return the lower-case words; never null, empty when the language lists none
+     */
+    public static Set<String> firmTails(final String languageTag) {
+        return lowerCased(languageTag, "firmTails");
+    }
+
+    /**
+     * The articles that open a name without being a word of it ({@code Le Courrier}), from the {@code articles} key.
+     *
+     * @param languageTag the non-null language tag
+     * @return the lower-case words; never null, empty when the language lists none
+     */
+    public static Set<String> articles(final String languageTag) {
+        return lowerCased(languageTag, "articles");
+    }
+
+    private static Set<String> lowerCased(final String languageTag, final String key) {
+        return LanguageRules.bundled().wordsOf(languageTag, key).stream()
+                .map(word -> word.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
     }
 }

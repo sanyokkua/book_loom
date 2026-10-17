@@ -33,6 +33,13 @@ rules:
   letter starts with a capital, apart from `a`, `an`, `and`, `as`, `at`, `by`, `for`, `from`, `in`, `of`, `on`, `or`,
   `the`, `to` and `with`, is a title line and SHALL NOT be read; neither SHALL a block or an inline run that declares
   a language other than the source language;
+- a name SHALL be proposed as one candidate when it is a run, the language's firm connector (`and`) and a firm tail word
+  of the language file's `firmTails` list (`Son`, `Sons`, `Brothers`, `Co`, `Company`), written that way at least 3
+  times, whatever share of its first word's uses it is; a language with no such list proposes none;
+- a stop word SHALL open a run (`Other Shore`) WHEN the run is written at least 3 times with the stop word capitalised
+  away from a sentence start, the stop word is not one of the language file's `articles`, the run holds at least half of that stop word's such capitals, and the book also writes
+  the stop word in lower case at least 20% of the times (a word the book writes only with a capital is an honorific such
+  as `Herr` or `Don`, which never opens a name);
 - a single word that is a spelled-out number or ordinal (the bundled list of the source language, English when it has
   none) or a language's name as the JDK writes it in the source language (`Latin`, `French`) SHALL NOT be proposed on
   its own, though it may open a longer run.
@@ -154,6 +161,20 @@ name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the
 
 - **WHEN** `Orrin & Vale` is written 9 times, `Orrin` alone once and `Vale` alone 11 times
 - **THEN** `Orrin` and `Vale` are proposed and the pair is not
+
+#### Scenario: A firm joined by "and" is one candidate (15i.N8)
+
+- **WHEN** the book writes `Pell and Sons` 4 times and `Pell` alone 6 times
+- **THEN** `Pell and Sons` is proposed
+- **AND** with `Pell and Bea` in its place it is not (`Bea` is no firm tail), and with a language that lists no firm tails
+  it is not
+
+#### Scenario: A stop word written as part of a name opens it (15i.N8)
+
+- **WHEN** the book writes `Other Shore` 3 times mid-sentence and `other` in lower case 6 times
+- **THEN** `Other Shore` is proposed
+- **AND** with the run written twice, or with the capitalised `Other` mostly outside the run, or with `other` never
+  written in lower case, it is not
 
 #### Scenario: Case variants are one name
 

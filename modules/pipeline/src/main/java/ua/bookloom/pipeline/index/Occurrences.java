@@ -140,6 +140,42 @@ public final class Occurrences {
         return found;
     }
 
+    /**
+     * The firms a segment writes as a run, a connecting word and a firm tail ({@code Pell and Sons}): the connector in
+     * lower case, the run not ending in a possessive, the tail one capitalised word, everything in one sentence and
+     * separated by spaces only. The run is still found on its own by {@link #runs}.
+     *
+     * @param read the segment
+     * @param nameLike whether a word may be (part of) a name
+     * @param connectors the lower-case words that connect the two sides of a firm; empty finds nothing
+     * @param tails the lower-case firm tail words; empty finds nothing
+     * @return the firms in order, each written with single spaces; never null
+     */
+    public static List<Occurrence> firmRuns(
+            final Read read, final Predicate<Word> nameLike, final Set<String> connectors, final Set<String> tails) {
+        final List<Word> words = read.words();
+        final List<Occurrence> found = new ArrayList<>();
+        for (final Span span : spans(read, nameLike)) {
+            final int connector = span.to();
+            if (connector + 1 >= words.size() || words.get(span.to() - 1).possessive()) {
+                continue;
+            }
+            final Word tail = words.get(connector + 1);
+            final boolean wordsFit = !words.get(connector).capitalised()
+                    && connectors.contains(words.get(connector).key())
+                    && tail.capitalised()
+                    && tails.contains(tail.key());
+            if (wordsFit
+                    && tail.sentence() == words.get(span.from()).sentence()
+                    && spacesOnly(read.text(), words, span.to() - 1, connector + 1)) {
+                found.add(new Occurrence(
+                        term(words, span.from(), connector + 2),
+                        read.sentences().get(words.get(span.from()).sentence())));
+            }
+        }
+        return found;
+    }
+
     /** A run's words, {@code from} inclusive and {@code to} exclusive. */
     private record Span(int from, int to) {}
 
