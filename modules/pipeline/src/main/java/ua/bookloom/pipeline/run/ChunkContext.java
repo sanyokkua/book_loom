@@ -24,12 +24,12 @@ import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.lexicon.Lexicon;
-import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.qa.CheckName;
+import ua.bookloom.pipeline.reviewer.BookReviewerSheets;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
@@ -115,32 +115,26 @@ final class ChunkContext {
         return terms;
     }
 
-    /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines: what the reviewer holds the text to. */
+    /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines: what the name checks hold the text to. */
     List<String> termPairs() {
         final List<String> pairs = GlossaryNames.pairs(occurringIn(chunk.segments(), glossary).stream()
                 .filter(entry -> !entry.locked())
                 .toList());
-        log.debug("Reviewer glossary pairs for a chunk pairs={}", pairs.size());
+        log.debug("Glossary pairs for a chunk pairs={}", pairs.size());
         return pairs;
     }
 
     /**
-     * The lexicon's established renderings of the recurring terms the chunk names and the glossary does not hold, as
-     * {@code source → target} lines: the usual renderings, which the reviewer may see differ.
+     * What each reviewer call of this chunk is shown of the glossary, the lexicon and the characters: the call cuts it to
+     * its own pairs, so a name only another pair of the chunk holds never reaches it (15j.J14).
      */
-    List<String> usualRenderings() {
-        final List<String> texts = textsOf(chunk.segments());
-        final List<String> pairs = lexicon.entries(settings.projectId()).stream()
-                .filter(entry -> !heldByGlossary(entry))
-                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(entry.term(), text)))
-                .flatMap(entry -> entry
-                        .established()
-                        .filter(rendering -> lexiconFilter.admits(entry.term(), rendering))
-                        .map(rendering -> entry.term() + " → " + rendering)
-                        .stream())
-                .toList();
-        log.debug("Reviewer usual renderings for a chunk pairs={}", pairs.size());
-        return pairs;
+    BookReviewerSheets reviewerSheets() {
+        final int allowance =
+                ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window()));
+        final List<LexiconEntry> entries = lexicon.entries(settings.projectId());
+        log.debug("Reviewer sheets for a chunk glossary={} lexicon={}", glossary.size(), entries.size());
+        return new BookReviewerSheets(
+                glossary, entries, lexiconFilter, settings.frame().analysisLanguage(), allowance);
     }
 
     /**

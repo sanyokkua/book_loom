@@ -120,8 +120,8 @@ class ReviewerCallTest {
         CALL.review(
                 THREE_PAIRS,
                 FRAME,
-                new ReviewerCall.Terms(List.of("Hale → Гейл"), List.of("master → господар")),
-                List.of(),
+                ReviewerSheets.fixed(
+                        new ReviewerCall.Terms(List.of("Hale → Гейл"), List.of("master → господар")), List.of()),
                 ReviewPass.FIRST,
                 calls(model));
 

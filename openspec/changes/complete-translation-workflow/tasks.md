@@ -1843,6 +1843,8 @@ fixtures use invented brands and names only (book-neutral).
   unconfirmed target "suggested" exactly as the draft prompt does. Test: a chunk of two pairs naming different invented
   characters, reviewed in two calls, sends each call only its own names; a suggested target is labelled suggested. Gate:
   the e4b realrun's reviewer cases lose nothing. → `:pipeline`
+  Done: `BookReviewerSheets` cuts the glossary, suggested and usual renderings and the character sheet to each call's own pairs
+  (`BookReviewerSheetsTest`, 9 tests, including a cut reply's re-ask); e4b realrun round pending.
 - [x] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed as `eval/mini/book.json` under the pipeline's eval Done (2026-10-17): measured on `gemma4:e4b-mlx` (Ollama, Balanced, Transliterate) at f1d6dd53: the job 115 s, 21 calls, 2 min 5 s wall-clock with Gradle; 46 of 50 expectations met before the 15j fixes (missed: injection obeyed, two names with evidence, one multi-word place). `MiniEvalOfflineTest` (pseudo model, in `check`) 0.44 s.
   resources; `MiniBook` generates the EPUB 3 from it at each run, so no binary is committed and the book cannot drift from its source) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
   inflected multi-word term, a brand under each name policy, a material and a drug, names with and without pronoun

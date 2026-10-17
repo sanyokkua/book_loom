@@ -51,7 +51,19 @@ public final class InjectedCharacters {
      */
     public static List<String> select(
             final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
-        final List<String> texts = Tokens.visibleTexts(segments);
+        return selectIn(Tokens.visibleTexts(segments), glossary, sourceLanguage);
+    }
+
+    /**
+     * The sheet for some texts, for a caller whose texts are not segments (a reviewer's source and candidate).
+     *
+     * @param texts the texts whose names decide who is present, tokens already removed
+     * @param glossary every glossary entry as the run read it
+     * @param sourceLanguage as for {@link #select(List, List, String)}
+     * @return the sheet's lines, as {@link #select(List, List, String)} builds them; never null
+     */
+    public static List<String> selectIn(
+            final List<String> texts, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
         final List<GlossaryEntry> characters = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER)
                 .filter(entry -> !entry.term().isBlank())

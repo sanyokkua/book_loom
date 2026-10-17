@@ -259,7 +259,7 @@ public final class PromptRequests {
                 context.terms(),
                 context.termPairs(),
                 context.characterLines(),
-                context.usualRenderings());
+                context.reviewerSheets());
     }
 
     private PreparedBatch prepared(

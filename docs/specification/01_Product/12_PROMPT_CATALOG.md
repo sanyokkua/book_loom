@@ -423,7 +423,7 @@ making them glossary entries. Four prompt-facing parts:
   multi-word rendering needs all its words, a rendering whose stem changes inside the word (`кінь`, `коня`) is dropped and
   only costs a count. Only the pairs of an item adopted from the batch are counted.
 
-The reviewer is given the established renderings of the chunk's recurring terms beside the glossary's pairs
+The reviewer is given the established renderings of the recurring terms its own pairs name beside the glossary's pairs
 (`[Glossary the translation had to use: source → target]`), so its `terminology` criterion — "a glossary rendering unused,
 or one thing named two ways" — covers adherence; a hallucinated quote is still refused by its verifier. The metric of the
 whole mechanism is `RenderingConsistency` — the mean number of distinct verified renderings per term used, 1.0 when every
@@ -506,6 +506,22 @@ Output ONLY the JSON object, no commentary or code fences.
 {{glossaryTerms}}
 {{/glossaryTerms}}
 
+{{#suggestedTerms}}
+[Suggested renderings — not confirmed by the person]
+Not a rule; a different fitting rendering is not a defect.
+{{suggestedTerms}}
+{{/suggestedTerms}}
+
+{{#usualRenderings}}
+[Usual renderings in this book: source → target. Not a rule; a different fitting word is not a defect]
+{{usualRenderings}}
+{{/usualRenderings}}
+
+{{#characters}}
+[Characters in these pairs — who they are]
+{{characters}}
+{{/characters}}
+
 {{#passFocus}}
 {{passFocus}}
 
@@ -522,7 +538,9 @@ Answer every pair once. Return one JSON object in this schema:
 | `{{pairs}}`                                | Required  | The chunk's qualifying pairs as `<Pair>` blocks, labelled `s1…sk`. |
 | `{{styleSheet}}`                           | Required  | In the SYSTEM message, as in every call of a run. |
 | `{{languageRules}}`                        | Optional  | The pair's rules from the language map, with its `reviewerChecks` as `Check:` lines; only in this call. |
-| `{{glossaryTerms}}`                        | Optional  | The chunk's unlocked glossary renderings as `source → target` lines; the block is dropped when empty. |
+| `{{glossaryTerms}}`                        | Optional  | The unlocked, confirmed glossary renderings **of this call's own pairs** (their source or candidate names the entry) as `source → target` lines, an entry once with its aliases on the same line (`Tindle (also Tindles) → Тіндл`); the block is dropped when empty. |
+| `{{suggestedTerms}}`                       | Optional  | The same for an entry whose target the person has not confirmed, under its own "not confirmed" heading, as the draft prompt words it; never listed under the glossary (15j.J14). |
+| `{{usualRenderings}}`, `{{characters}}`    | Optional  | The recurring terms and the characters **of this call's own pairs**; a call re-asking the pairs a cut reply left unread is cut to those pairs. |
 | `{{passFocus}}`                            | Optional  | The second pass's narrower checklist (gender, terminology, agreement); absent in the first pass. |
 | `{{foreignPassageRule}}`                   | Required  | So a kept foreign passage is not reported as the wrong language. |
 
@@ -652,7 +670,7 @@ The narrator and the gender sheet (15d.10) keep who-is-who out of the model's gu
   one `name — gender` line (`name — likely gender` for a suggested gender) for each glossary character of known gender the
   segment names; in a batch the lines of all the
   items, once each, under `[Characters in these items — context only; keep their gender and agreement]`; in the reviewer
-  `[Characters in these pairs — who they are]` for the chunk. A tenth of the dynamic allowance (`ContextSection.CHARACTERS`),
+  `[Characters in these pairs — who they are]` for the call's own pairs (source and candidate). A tenth of the dynamic allowance (`ContextSection.CHARACTERS`),
   taken before the lexicon; recorded in `ContextSnapshot.characters`.
 - **Gender finding** (directed fix, no new template). A `gender` finding, such as `The narrator is male, but this
   past-tense word after «я» is feminine. Use the masculine (-в) form of that word and change nothing else.`, is repeated in

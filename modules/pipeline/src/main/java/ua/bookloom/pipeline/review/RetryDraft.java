@@ -282,6 +282,8 @@ public final class RetryDraft {
                         .filter(term -> term.target() != null && !term.locked())
                         .map(term -> term.term() + " → " + term.target())
                         .toList(),
+                // Uncut lists (LoopSettings' fixed sheets): a retry reviews one pair, so there is nothing to cut them
+                // to.
                 plan.snapshot().characters());
         log.debug(
                 "retry: deciding segment={} dial={} reviewPasses={}",

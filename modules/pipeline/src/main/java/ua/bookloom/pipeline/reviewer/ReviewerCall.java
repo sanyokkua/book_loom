@@ -85,7 +85,7 @@ public final class ReviewerCall {
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
-        return review(pairs, frame, new Terms(glossaryPairs, List.of()), characters, pass, calls);
+        return review(pairs, frame, ReviewerSheets.fixed(new Terms(glossaryPairs, List.of()), characters), pass, calls);
     }
 
     /**
@@ -95,23 +95,32 @@ public final class ReviewerCall {
      *     each: a rule
      * @param usualRenderings the renderings the book usually gave recurring terms, one {@code source → target} line
      *     each: usage that may differ, never a rule
+     * @param suggestedPairs the glossary renderings the person has not confirmed, one {@code source → target} line
+     *     each: a proposal, never a rule
      */
-    public record Terms(List<String> glossaryPairs, List<String> usualRenderings) {
+    public record Terms(List<String> glossaryPairs, List<String> usualRenderings, List<String> suggestedPairs) {
 
-        /** Copies both lists. */
+        /** Copies the lists. */
         public Terms {
             glossaryPairs = List.copyOf(Objects.requireNonNull(glossaryPairs, "glossaryPairs"));
             usualRenderings = List.copyOf(Objects.requireNonNull(usualRenderings, "usualRenderings"));
+            suggestedPairs = List.copyOf(Objects.requireNonNull(suggestedPairs, "suggestedPairs"));
+        }
+
+        /** Terms with no unconfirmed rendering. */
+        public Terms(final List<String> glossaryPairs, final List<String> usualRenderings) {
+            this(glossaryPairs, usualRenderings, List.of());
         }
     }
 
     /**
-     * Reviews one batch in a single call, telling the reviewer the rules and the usual renderings apart.
+     * Reviews one batch in a single call, building the terms and the character sheet from the pairs of this very call:
+     * a reviewer is never shown a name, a term or a character that none of its pairs names, and a call that re-asks
+     * the pairs a cut reply left unread is shown only what those pairs name.
      *
      * @param pairs the batch's pairs, in document order; never empty
      * @param frame the run's language pair, style sheet and foreign-passage policy
-     * @param terms the confirmed and the usual renderings
-     * @param characters the characters present with their gender, or empty when the glossary knows none
+     * @param sheets what the book offers to a reviewer, cut to a set of pairs
      * @param pass which pass of the batch this is
      * @param calls the seam the call is sent through
      * @return as {@link #review(List, CallFrame, List, ReviewPass, ModelCalls)}
@@ -119,12 +128,10 @@ public final class ReviewerCall {
     public Result<ReviewVerdict> review(
             final List<ReviewedPair> pairs,
             final CallFrame frame,
-            final Terms terms,
-            final List<String> characters,
+            final ReviewerSheets sheets,
             final ReviewPass pass,
             final ModelCalls calls) {
-        Objects.requireNonNull(terms, "terms");
-        Objects.requireNonNull(characters, "characters");
+        Objects.requireNonNull(sheets, "sheets");
         Objects.requireNonNull(pairs, "pairs");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(pass, "pass");
@@ -133,10 +140,10 @@ public final class ReviewerCall {
                 pairs.stream().map(ReviewedPair::segmentId).toList();
         log.debug("Reviewing batch pairCount={} pass={} segmentIds={}", pairs.size(), pass, segmentIds);
         try {
-            final Result<ChatResponse> reply = ask(pairs, frame, terms, characters, pass, calls);
+            final Result<ChatResponse> reply = ask(pairs, frame, sheets, pass, calls);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
-                    : read(Objects.requireNonNull(reply.data()), pairs, frame, terms, characters, pass, calls);
+                    : read(Objects.requireNonNull(reply.data()), pairs, frame, sheets, pass, calls);
         } catch (Throwable cause) {
             return internalFailure(cause);
         }
@@ -153,12 +160,11 @@ public final class ReviewerCall {
             final ChatResponse response,
             final List<ReviewedPair> pairs,
             final CallFrame frame,
-            final Terms terms,
-            final List<String> characters,
+            final ReviewerSheets sheets,
             final ReviewPass pass,
             final ModelCalls calls) {
         return response.finishReason() == FinishReason.LENGTH
-                ? readCut(pairs, response, frame, terms, characters, pass, calls)
+                ? readCut(pairs, response, frame, sheets, pass, calls)
                 : Result.ok(
                         readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response));
     }
@@ -166,11 +172,12 @@ public final class ReviewerCall {
     private Result<ChatResponse> ask(
             final List<ReviewedPair> pairs,
             final CallFrame frame,
-            final Terms terms,
-            final List<String> characters,
+            final ReviewerSheets sheets,
             final ReviewPass pass,
             final ModelCalls calls) {
-        final Map<String, String> userValues = userValues(pairs, terms, characters, pass);
+        final ReviewerSheets.Sheet sheet = sheets.forPairs(pairs);
+        logSheet(sheet);
+        final Map<String, String> userValues = userValues(pairs, sheet, pass);
         final ChatRequest request = request(pairs, frame, userValues);
         logTraceMessages(request);
         final CallDescriptor descriptor = new CallDescriptor(
@@ -193,8 +200,7 @@ public final class ReviewerCall {
             final List<ReviewedPair> pairs,
             final ChatResponse response,
             final CallFrame frame,
-            final Terms terms,
-            final List<String> characters,
+            final ReviewerSheets sheets,
             final ReviewPass pass,
             final ModelCalls calls) {
         logTraceReply(response.content());
@@ -207,7 +213,7 @@ public final class ReviewerCall {
         if (unread.isEmpty()) {
             return Result.ok(first);
         }
-        final Result<ChatResponse> again = ask(unread, frame, terms, characters, pass, calls);
+        final Result<ChatResponse> again = ask(unread, frame, sheets, pass, calls);
         if (again.isErr()) {
             return reAskFailed(first, unread, Objects.requireNonNull(again.error()));
         }
@@ -290,13 +296,24 @@ public final class ReviewerCall {
         return Result.err(error);
     }
 
+    private static void logSheet(final ReviewerSheets.Sheet sheet) {
+        log.debug(
+                "Reviewer sheet glossary={} suggested={} usual={} characters={}",
+                sheet.terms().glossaryPairs().size(),
+                sheet.terms().suggestedPairs().size(),
+                sheet.terms().usualRenderings().size(),
+                sheet.characters().size());
+    }
+
     private static Map<String, String> userValues(
-            final List<ReviewedPair> pairs, final Terms terms, final List<String> characters, final ReviewPass pass) {
+            final List<ReviewedPair> pairs, final ReviewerSheets.Sheet sheet, final ReviewPass pass) {
+        final Terms terms = sheet.terms();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("pairs", renderPairs(pairs));
         userValues.put("glossaryTerms", String.join("\n", terms.glossaryPairs()));
+        userValues.put("suggestedTerms", String.join("\n", terms.suggestedPairs()));
         userValues.put("usualRenderings", String.join("\n", terms.usualRenderings()));
-        userValues.put("characters", String.join("\n", characters));
+        userValues.put("characters", String.join("\n", sheet.characters()));
         userValues.put("passFocus", pass.instruction());
         return userValues;
     }

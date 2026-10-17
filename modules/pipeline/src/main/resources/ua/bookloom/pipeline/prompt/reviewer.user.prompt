@@ -3,6 +3,12 @@
 {{glossaryTerms}}
 {{/glossaryTerms}}
 
+{{#suggestedTerms}}
+[Suggested renderings — not confirmed by the person]
+Not a rule; a different fitting rendering is not a defect.
+{{suggestedTerms}}
+{{/suggestedTerms}}
+
 {{#usualRenderings}}
 [Usual renderings in this book: source → target. Not a rule; a different fitting word is not a defect]
 {{usualRenderings}}

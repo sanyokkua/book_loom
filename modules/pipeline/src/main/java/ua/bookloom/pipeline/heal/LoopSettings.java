@@ -6,6 +6,8 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.reviewer.ReviewerCall;
+import ua.bookloom.pipeline.reviewer.ReviewerSheets;
 
 /**
  * One chunk's quality-loop settings.
@@ -15,11 +17,12 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param frame the run's language pair, style sheet and foreign-passage policy
  * @param namePolicy the Book Brief's name policy, read by the script and echo checks' name removal
  * @param glossaryTerms every glossary term in the chunk, read by the same name removal
- * @param glossaryPairs the chunk's unlocked glossary renderings, one {@code source → target} line each, which the
- *     reviewer checks the candidates against
- * @param characters the chunk's character gender sheet, one {@code name — gender} line each, shown to the reviewer
- * @param usualRenderings the lexicon's established renderings of the chunk's recurring terms, one
- *     {@code source → target} line each; the reviewer sees them as usage that may differ, never as a rule
+ * @param glossaryPairs the chunk's unlocked glossary renderings, one {@code source → target} line each, which the name
+ *     checks hold the candidates to
+ * @param characters the chunk's character gender sheet, one {@code name — gender} line each, which the gender checks
+ *     read
+ * @param reviewerSheets what each reviewer call is shown of the glossary, the lexicon and the characters, cut to its own
+ *     pairs; for settings built from ready lines, those lines for every call
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -29,7 +32,7 @@ public record LoopSettings(
         List<String> glossaryTerms,
         List<String> glossaryPairs,
         List<String> characters,
-        List<String> usualRenderings) {
+        ReviewerSheets reviewerSheets) {
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
     public LoopSettings {
@@ -40,14 +43,13 @@ public record LoopSettings(
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
-        Objects.requireNonNull(usualRenderings, "usualRenderings");
-        usualRenderings = List.copyOf(usualRenderings);
+        Objects.requireNonNull(reviewerSheets, "reviewerSheets");
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
         characters = List.copyOf(characters);
     }
 
-    /** Settings for a chunk with no usual renderings to show the reviewer. */
+    /** Settings whose reviewer is shown the glossary pairs and the character lines as they stand, in every call. */
     public LoopSettings(
             final ReviewMode reviewMode,
             final DialParameters dial,
@@ -56,7 +58,15 @@ public record LoopSettings(
             final List<String> glossaryTerms,
             final List<String> glossaryPairs,
             final List<String> characters) {
-        this(reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, characters, List.of());
+        this(
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                ReviewerSheets.fixed(new ReviewerCall.Terms(glossaryPairs, List.of()), characters));
     }
 
     /** Settings for a chunk whose reviewer is shown no character sheet. */
