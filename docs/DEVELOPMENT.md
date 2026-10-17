@@ -671,17 +671,19 @@ unattended command line's JSON report carries the same as `meanFirstTokenSeconds
 `modelCallsByKind`.
 
 The 10 % rule (15h.C5) was met: the owner's 26b Max run (2026-10-16) spent 41–60 % of each kind's call time in
-prefill. Since 2026-10-17 every call sends its fixed blocks first and unchanged, and the draft and batch system prompts
-carry the token rules (present only when a segment has `⟦gN⟧` tokens) at their end, so a call with tokens and one
-without share the rest (`PromptPrefixTest`). `cached:` is the prompt tokens the provider served from its cache:
-Ollama's `prompt_eval_cached_count` (read since 2026-10-17; before, the run summary said `cached:0` while Ollama's
-own server log showed 57 % of the Max run's prompt tokens and 49 % of its export pass cached), LM Studio's
-`usage.prompt_tokens_details.cached_tokens`. Measured on `gemma4:e4b-mlx` with `scripts/probe.sh` (one model, nothing
-else calling it): a repeat of the same case is served whole (806 of 810 tokens, prefill 1,493 → 46 ms); a no-token
-draft after another no-token draft reuses the shared system prompt (478 of 579, 1,091 → 263 ms); the first call after
-a with-token draft reuses nothing, because Ollama's MLX runner caches a branch point only from the second call that
-shares it. On Ollama's MLX runner `prompt_eval_count` is the whole prompt and `prompt_eval_duration` only its uncached
-part.
+prefill. `cached:` is the prompt tokens the provider served from its cache: Ollama's `prompt_eval_cached_count` (read
+since 2026-10-17; before, the run summary said `cached:0` while Ollama's own server log showed 57 % of that run's prompt
+tokens and 49 % of its export pass cached), LM Studio's `usage.prompt_tokens_details.cached_tokens`. On Ollama's MLX
+runner `prompt_eval_count` is the whole prompt and `prompt_eval_duration` only its uncached part.
+
+The reorder was tried and reverted (2026-10-17). Moving the draft and batch system prompts' token rules (present only
+when a segment has `⟦gN⟧` tokens) to their end let two no-token drafts share the system prompt on `gemma4:e4b-mlx`
+(478 of 579 tokens cached, prefill 1,091 → 263 ms; a repeat of the same case is served whole either way, 806 of 810),
+but the first call after a with-token draft reused nothing, because Ollama's MLX runner caches a branch point only from
+the second call that shares it — and the sequence suite lost token fidelity: batch items that dropped a `⟦gN⟧` token
+rose from 4 to 16 and batch fallbacks from 15 to 29 against the same tree without the reorder. On e4b the rules work
+better before the style sheet, so they stay there; prompt layout for the cache moves to `redesign-translation-pipeline`,
+whose one context builder decides the order of every call's blocks.
 
 ### 15i baselines: the 15h prompt round and the book-neutral re-baseline {#15i-baselines}
 

@@ -45,6 +45,7 @@ public final class PromptTemplates {
     private static final String EXAMPLES = "examples";
     private static final String LANGUAGE_RULES = "languageRules";
     private static final String TOKEN_RULES = "tokenRules";
+    private static final String NO_TOKEN_RULES = "noTokenRules";
     private static final String NOTES_RULE = "notesRule";
     private static final String RELATED_PAIRS_NAME = "relatedPairsName";
     private static final String RELATED_PAIRS_MENTION = "Related earlier pairs, ";
@@ -122,7 +123,9 @@ public final class PromptTemplates {
      * @return never null; the slot values to pass as {@code extra}
      */
     public static Map<String, String> tokenGate(final boolean hasTokens) {
-        return hasTokens ? Map.of(TOKEN_RULES, GATE_OPEN) : Map.of(TOKEN_RULES, "");
+        return hasTokens
+                ? Map.of(TOKEN_RULES, GATE_OPEN, NO_TOKEN_RULES, "")
+                : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
     }
 
     /**
@@ -148,7 +151,7 @@ public final class PromptTemplates {
 
     /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
     static boolean isRuleGate(final String slot) {
-        return TOKEN_RULES.equals(slot) || NOTES_RULE.equals(slot);
+        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot) || NOTES_RULE.equals(slot);
     }
 
     /**

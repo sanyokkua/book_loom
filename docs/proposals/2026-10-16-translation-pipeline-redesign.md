@@ -92,6 +92,10 @@ follow-up change is named **`redesign-translation-pipeline`**; each item names t
 - **What review costs at Max (15d.6).** The reviewer writes about 3.3–4.0k completion tokens per fixture book against
   about 0.8k for the old judge; the dial's meaning ("how many windows are re-read") is redefined here.
 
+- **Prompt order for the provider's cache (15h.C5, 15j.J11 (1)).** Moving the token rules to the end of the draft and
+  batch system prompts gave a shared prefix but cost token fidelity on e4b (token-dropping batch items 4 → 16), so it was
+  reverted; the one context builder decides block order with both effects measured.
+
 ## Next step
 
 Turn this into an OpenSpec change (proposal, delta specs, tasks) after the owner's review; group 15j's fixes ship first
