@@ -1765,7 +1765,7 @@ fixtures use invented brands and names only (book-neutral).
   consonant (`Flint` → `Флінт`) is not declined as a man's once verified (the 15h.B6 agreement check earns its directed fix).
   Gate: the e4b names suite keeps 0 wrong verified genders and the share of verified characters rises; the owner-book run's
   waiting count falls. → `:pipeline`
-- [ ] 15j.J3 A suggested gender asks to be confirmed, not set: the export told the person to set a gender in Names & style
+- [x] 15j.J3 A suggested gender asks to be confirmed, not set: the export told the person to set a gender in Names & style Done (2026-10-17, 96bf62b1, 09e9585f): `GenderWait`/`UnknownGender`/`ConsistencySummary` split suggested from unknown, the export notice, the export-complete dialog and the Start question name them apart (EN and UK), and Names & style's "Confirm suggested genders" turns every suggested character gender into the person's with an Undo that restores every spelling it changed (`NamesStyleConfirmGendersTest`, `NamesStyleConfirmGendersScreenTest`, `CharacterGendersStartTest`, `ExportReportLinesGenderTest`, conformance case `#names-style-confirm-genders`); reviewed fresh-context, findings fixed.
   while the table already showed it (the suggested ones). Now the export notice and the Start question name suggested
   genders as "suggested — confirm" apart from unknown ones, the waiting count is split the same way, and Names & style offers
   "Confirm suggested genders" (one action that turns every suggested character gender into the person's, with Undo) beside
@@ -1782,7 +1782,7 @@ fixtures use invented brands and names only (book-neutral).
   language does not use) blocks acceptance like mixed script and earns the directed fix; a draft that still holds it after
   the repair round is flagged. Test: a draft with one invented word holding `ы` gets the directed fix and is accepted when
   the fix removes it, flagged when it does not. → `:pipeline`
-- [ ] 15j.J6 The model-call viewer is a window, not a small dialog: with the prompts open, the export's busy dialog ("Model
+- [ ] 15j.J6 The model-call viewer is a window, not a small dialog: with the prompts open, the export's busy dialog ("Model Code and tests done (2026-10-17, 24cb881c, 3d0b027c): `ModelCallsWindow`, `BusyHost` keeps only the progress and "Show model calls", `BusyHostCallsWindowTest`, `ModelCallsWindowTest`, token cases in both themes; open for the owner's hand check: the running app at a large window and at 960×640, the Model calls window at 80 % of the main window with prompts open, and the Translating call panel's fit.
   calls") and the Translating screen's call panel do not fit the screen. Now "Model calls" opens a resizable, non-modal
   window owned by the main window, sized to 80 % of it and centred on it, following its size until the person resizes it,
   with each call's source, reply and prompt parts scrolling inside; the busy dialog keeps only the progress and a "Show
@@ -1831,7 +1831,7 @@ fixtures use invented brands and names only (book-neutral).
   run log, always on, that is never rolled during a run (one file per run, kept for the last 10 runs), and the evidence log keeps every
   flagged segment of the current run (cap raised to 100 MB and 4 archives to hold a whole book's flags; size-based rolling drops the oldest evidence first, since one run's evidence is one file chain). Test: a simulated
   long run keeps its first INFO line; the evidence for an early flagged segment survives. → `:app`, `:util`
-- [ ] 15j.J13 Answered calls show their answer: the live call panel showed "No translation for this segment" for consistency
+- [x] 15j.J13 Answered calls show their answer: the live call panel showed "No translation for this segment" for consistency Done (2026-10-17, 73b803c6, 3d0b027c): a call carries the target it checked (`CallSegment.currentTarget`, `CallDescriptor.withTargets` from the consistency, revision, reviewer and directed-fix calls), so an answered call shows the stored target (`LiveCallPanelTest`, `ReviewerCallTest.review_threePairs_describesTheCallWithTheCandidatesItChecks`, `DirectedFixTest.fix_placeholderFinding_describesTheCallWithTheRejectedTarget`); the consistency pass not sending navigation and front matter is 15j.J11's part.
   calls that answered `unchanged` on navigation and front-matter segments. Now the panel shows the segment's current target
   for a call whose reply keeps it, and the consistency pass does not send navigation or front-matter segments at all (J11).
   Test: TestFX — an `unchanged` consistency call shows the stored target. → `:ui`, `:pipeline`
@@ -1851,6 +1851,7 @@ fixtures use invented brands and names only (book-neutral).
   side file; a `mini` suite (`scripts/eval-matrix.sh --suite mini`) translates it through the real job (names pass,
   translation, consistency pass) and scores each expectation (`eval/mini/expectations.json`; `--names` picks the name policy the brand expectations are read under), in under 5 minutes on e4b (to be measured by the orchestrator before this box is ticked). Test: the suite runs on the pseudo
   model in `check` (the expectations it can meet) and is env-gated for real models. → `:pipeline` tests, scripts
+- [x] 15j.J16 A fast eval loop, so a prompt change is tried in minutes instead of whole suites on two models (57 h of eval wall-clock in rounds 15i–15j): `scripts/probe.sh` sends one production request (`--case` a prompt-eval, realrun or defects case, `--repeat`, `--dry`, `--provider pseudo`) through `PromptRequests` and `JobModelCalls` straight to the loaded model and prints the sections, parameters, reply, verdict and usage with the cached prompt tokens, without Gradle start-up; `BOOKLOOM_EVAL_QUICK=1` / `scripts/eval-matrix.sh --quick` runs at most ten cases per suite (`QuickEval`, realrun cases marked `quick`, names on one book, the mini book instead of the sequence); `scripts/gradle-lock.sh` serialises Gradle per suite and model; the default model is e4b; `--suite book` runs an owner book as a user would (`BookRunner`); the loop is in `docs/DEVELOPMENT.md` "The fast loop". → `:pipeline` tests, scripts, docs Done (2026-10-17, d0113e80, af3dc260): `ProbeTest`, `QuickEvalTest`, `BookRunnerOfflineTest` in `check`; live on `gemma4:e4b-mlx`: one draft case three times took 10.7 s (model load), then 1.29 s and 1.21 s, with `cachedPrompt` 0, 857 and 857 of 861 prompt tokens and prompt reading 1,937 ms, then 36 ms and 24 ms.
 - [ ] 15j.J7 Close the round: the whole gate green with its tail pasted; one e4b run of the owner's book (Balanced, the
   command line, with and without the consistency pass) compared with `new_translation_3` on Latin words left, verified
   genders, segments waiting on a gender and Russian letters, plus a blind Opus grading of the paragraphs that changed; the
