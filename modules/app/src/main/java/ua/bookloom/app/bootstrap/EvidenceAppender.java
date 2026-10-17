@@ -38,9 +38,9 @@ import ua.bookloom.util.paths.AppPaths;
 final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
 
     private static final String BOOKLOOM_LOGGERS = "ua.bookloom";
-    // 10 MB active plus three gzip archives.
-    private static final String EVIDENCE_MAX_FILE_SIZE = "10MB";
-    private static final int EVIDENCE_ARCHIVES = 3;
+    // 100 MB active plus four gzip archives: a whole book's flags.
+    private static final String EVIDENCE_MAX_FILE_SIZE = "100MB";
+    private static final int EVIDENCE_ARCHIVES = 4;
     private static final String EVIDENCE_ARCHIVE_PATTERN = AppPaths.TRACE_LOG_PREFIX + "-evidence.%i.log.gz";
     // Segments held back at once and lines held per segment; a drafting chunk is at most eight segments.
     private static final int EVIDENCE_HELD_SEGMENTS = 64;
@@ -122,6 +122,11 @@ final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
 
     EvidenceAppender(Appender<ILoggingEvent> file) {
         this.file = file;
+    }
+
+    /** The rolling file behind this appender, so a test can read its policy and force a rollover. */
+    Appender<ILoggingEvent> file() {
+        return file;
     }
 
     @Override

@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.rolling.FixedWindowRollingPolicy;
 import ch.qos.logback.core.rolling.RollingFileAppender;
+import ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,6 +29,9 @@ class EvidenceLogTest {
 
     private static final ResolvedTraceFile TRACE_ON =
             new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null);
+
+    private static final int FULL_FILES = 4;
+    private static final long MIN_EVIDENCE_BYTES = 100L * 1024 * 1024;
 
     @TempDir
     private Path tempDir;
@@ -62,6 +69,59 @@ class EvidenceLogTest {
         assertThat(logLines(logDir.resolve(AppPaths.EVIDENCE_LOG_FILE_NAME)))
                 .anyMatch(line -> line.contains("prompt text of the flagged segment"))
                 .noneMatch(line -> line.contains("accepted segment"));
+    }
+
+    // IF the evidence file held only 10 MB plus three archives, THEN a 9-hour run's early flagged segments would be
+    // gone by the time anyone asks why they were flagged (the run wrote about 90 MB); the cap now holds a whole book's
+    // flags. A size trigger fires only as lines arrive, so the test forces each rollover a full file would cause.
+    @Test
+    void configure_fourFullEvidenceFilesAfterAnEarlyFlag_theEarlyEvidenceSurvivesInAnArchive() throws IOException {
+        final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
+        LoggingBootstrap.configure(logDir, false, resolved(Level.INFO), TRACE_ON, () -> "# session");
+        final Logger logger = LoggerFactory.getLogger("ua.bookloom.test");
+        flagWithText("seg-early", logger, "prompt text of the early flagged segment");
+
+        IntStream.range(0, FULL_FILES).forEach(index -> {
+            flagWithText("seg-" + index, logger, "later flagged segment " + index);
+            evidenceFile().rollover();
+        });
+
+        assertThat(evidenceArchiveText(logDir)).contains("prompt text of the early flagged segment");
+        assertThat(evidenceFile().getTriggeringPolicy())
+                .isInstanceOfSatisfying(
+                        SizeBasedTriggeringPolicy.class,
+                        policy -> assertThat(policy.getMaxFileSize().getSize())
+                                .isGreaterThanOrEqualTo(MIN_EVIDENCE_BYTES));
+        assertThat(evidenceFile().getRollingPolicy())
+                .isInstanceOfSatisfying(
+                        FixedWindowRollingPolicy.class,
+                        policy -> assertThat(policy.getMaxIndex()).isEqualTo(4));
+    }
+
+    private static String evidenceArchiveText(final Path logDir) throws IOException {
+        final StringBuilder text = new StringBuilder();
+        for (final Path archive : evidenceArchives(logDir)) {
+            try (var in = new GZIPInputStream(Files.newInputStream(archive))) {
+                text.append(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            }
+        }
+        return text.toString();
+    }
+
+    private static List<Path> evidenceArchives(final Path logDir) throws IOException {
+        try (var files = Files.list(logDir)) {
+            return files.filter(file -> file.getFileName().toString().startsWith("bookloom-trace-evidence."))
+                    .filter(file -> file.getFileName().toString().endsWith(".gz"))
+                    .toList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static RollingFileAppender<ILoggingEvent> evidenceFile() {
+        final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        final EvidenceAppender evidence =
+                (EvidenceAppender) context.getLogger(Logger.ROOT_LOGGER_NAME).getAppender("EVIDENCE");
+        return (RollingFileAppender<ILoggingEvent>) evidence.file();
     }
 
     // IF a segment's lines before its decision were not held back, THEN the file would hold every segment, not
@@ -104,6 +164,11 @@ class EvidenceLogTest {
         } finally {
             MDC.remove("segment");
         }
+    }
+
+    private static void flagWithText(final String segment, final Logger logger, final String text) {
+        traceFor(segment, logger, text);
+        keep(segment, logger);
     }
 
     private static void keep(final String segment, final Logger logger) {

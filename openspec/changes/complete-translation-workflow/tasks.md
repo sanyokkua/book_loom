@@ -1822,11 +1822,11 @@ fixtures use invented brands and names only (book-neutral).
   backward revision already checked unchanged, and skips navigation and front matter; (3) a measured comparison of Balanced
   against Max on one owner book (time, blind WRONG count) is recorded so the dial's description says what Max buys.
   → `:pipeline`, `:llm`, docs
-- [ ] 15j.J12 The logs keep the whole run: the ordinary log holds about the last 8 hours of a long run at DEBUG and the
+- [x] 15j.J12 The logs keep the whole run: the ordinary log holds about the last 8 hours of a long run at DEBUG and the Done (2026-10-17): `RunLogFiles`, `PreparedRunLog`, `LoggingBootstrap` (run log always on, INFO and above), `EvidenceAppender` 100 MB × 4 gzip archives; `RunLogTest` (10, incl. WARN/ERROR × detailed on/off), `EvidenceLogTest.configure_fourFullEvidenceFilesAfterAnEarlyFlag_theEarlyEvidenceSurvivesInAnArchive`; `:app`/`:util` check green; reviewed fresh-context, findings fixed.
   evidence log about 3 hours, so the start of a 9-hour run (names pass, brief, first chapters) and most flagged segments'
   evidence were gone when the owner asked for the analysis. Now INFO lifecycle lines and the run summary also go to a small
-  run log that is never rolled during a run (one file per run, kept for the last 10 runs), and the evidence log keeps every
-  flagged segment of the current run (cap raised to hold a whole book's flags, oldest run dropped first). Test: a simulated
+  run log, always on, that is never rolled during a run (one file per run, kept for the last 10 runs), and the evidence log keeps every
+  flagged segment of the current run (cap raised to 100 MB and 4 archives to hold a whole book's flags; size-based rolling drops the oldest evidence first, since one run's evidence is one file chain). Test: a simulated
   long run keeps its first INFO line; the evidence for an early flagged segment survives. → `:app`, `:util`
 - [ ] 15j.J13 Answered calls show their answer: the live call panel showed "No translation for this segment" for consistency
   calls that answered `unchanged` on navigation and front-matter segments. Now the panel shows the segment's current target
@@ -1840,7 +1840,7 @@ fixtures use invented brands and names only (book-neutral).
   unconfirmed target "suggested" exactly as the draft prompt does. Test: a chunk of two pairs naming different invented
   characters, reviewed in two calls, sends each call only its own names; a suggested target is labelled suggested. Gate:
   the e4b realrun's reviewer cases lose nothing. → `:pipeline`
-- [ ] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed as `eval/mini/book.json` under the pipeline's eval
+- [x] 15j.J15 A mini eval book: an invented EPUB of 20–30 segments (book-neutral text, committed as `eval/mini/book.json` under the pipeline's eval Done (2026-10-17): measured on `gemma4:e4b-mlx` (Ollama, Balanced, Transliterate) at f1d6dd53: the job 115 s, 21 calls, 2 min 5 s wall-clock with Gradle; 46 of 50 expectations met before the 15j fixes (missed: injection obeyed, two names with evidence, one multi-word place). `MiniEvalOfflineTest` (pseudo model, in `check`) 0.44 s.
   resources; `MiniBook` generates the EPUB 3 from it at each run, so no binary is committed and the book cannot drift from its source) that holds one segment per defect seen so far — Ukrainian dialogue punctuation, an inflected title and an
   inflected multi-word term, a brand under each name policy, a material and a drug, names with and without pronoun
   evidence, a multi-word place, a target trap for a Russian letter, an injected instruction, a long paragraph, a ти/Ви mix,

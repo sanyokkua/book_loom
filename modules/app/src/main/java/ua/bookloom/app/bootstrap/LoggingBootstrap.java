@@ -7,6 +7,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.ConsoleAppender;
+import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy;
@@ -16,6 +17,8 @@ import ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy;
 import ch.qos.logback.core.spi.FilterReply;
 import ch.qos.logback.core.util.FileSize;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
@@ -42,12 +45,17 @@ import ua.bookloom.util.paths.AppPaths;
  * gzip-rotated, with a session header at the top of each file. Raising the BookLoom loggers to TRACE for the second
  * file would flood the first, so the ordinary appenders then filter BookLoom lines back to the resolved level; third
  * party loggers stay at WARN in both.
+ *
+ * <p><strong>Run log.</strong> Always on: {@code bookloom-trace-run-<launch time>.log} receives the BookLoom lines at
+ * INFO and above (plus the WARN and ERROR lines of other loggers), never rolled; the last
+ * {@link AppPaths#RUN_LOGS_KEPT} launches' files stay.
  */
 public final class LoggingBootstrap {
 
     /** The name the detailed-log appender is registered under, so a test can force its rollover. */
     static final String TRACE_APPENDER_NAME = "TRACE_FILE";
 
+    private static final String RUN_LOG_APPENDER_NAME = "RUN_LOG";
     private static final String BOOKLOOM_LOGGERS = "ua.bookloom";
     private static final String LOG_FILE_NAME = "bookloom.log";
     private static final String ARCHIVE_PATTERN = "bookloom.%d{yyyy-MM-dd}.%i.log";
@@ -127,12 +135,12 @@ public final class LoggingBootstrap {
         final Level ordinary = toLogbackLevel(resolvedLevel.level());
         final ch.qos.logback.classic.Logger root = context.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.WARN);
-        attachOrdinary(context, root, logDir, devConsole, trace.enabled() ? ordinary : null);
-        if (trace.enabled()) {
-            root.addAppender(traceAppender(context, logDir, header));
-            root.addAppender(EvidenceAppender.create(context, logDir, headerEncoder(context, header)));
-        }
-        context.getLogger(BOOKLOOM_LOGGERS).setLevel(trace.enabled() ? Level.TRACE : ordinary);
+        // The run log needs INFO lines even when the ordinary level is WARN or ERROR, so the BookLoom loggers sit at
+        // the lowest level any appender wants and the ordinary appenders filter back to the resolved one.
+        final Level bookloom = trace.enabled() ? Level.TRACE : lowest(ordinary, Level.INFO);
+        attachOrdinary(context, root, logDir, devConsole, bookloom.equals(ordinary) ? null : ordinary);
+        final PreparedRunLog runLog = attachDetailed(context, root, logDir, trace.enabled(), header);
+        context.getLogger(BOOKLOOM_LOGGERS).setLevel(bookloom);
         final ch.qos.logback.classic.Logger bootstrapLogger = context.getLogger(LoggingBootstrap.class);
         bootstrapLogger.setLevel(Level.INFO);
         bootstrapLogger.info(
@@ -141,6 +149,8 @@ public final class LoggingBootstrap {
                 resolvedLevel.source(),
                 trace.enabled() ? "on" : "off",
                 trace.source());
+        bootstrapLogger.info("run log file={}", runLog.file().getFileName());
+        runLog.failed().forEach(name -> bootstrapLogger.warn("run log housekeeping failed for {}", name));
         warnIfRejected(bootstrapLogger, resolvedLevel, trace);
         return true;
     }
@@ -162,6 +172,26 @@ public final class LoggingBootstrap {
         if (devConsole) {
             root.addAppender(filtered(consoleAppender(context, encoder), threshold));
         }
+    }
+
+    /** Adds the run log (always) and, with the detailed log on, the trace and evidence files. */
+    private static PreparedRunLog attachDetailed(
+            LoggerContext context,
+            ch.qos.logback.classic.Logger root,
+            Path logDir,
+            boolean detailed,
+            Supplier<String> header) {
+        if (detailed) {
+            root.addAppender(traceAppender(context, logDir, header));
+            root.addAppender(EvidenceAppender.create(context, logDir, headerEncoder(context, header)));
+        }
+        final PreparedRunLog runLog = RunLogFiles.prepareNext(logDir, Clock.system(ZoneId.systemDefault()));
+        root.addAppender(runLogAppender(context, runLog.file(), header));
+        return runLog;
+    }
+
+    private static Level lowest(Level a, Level b) {
+        return a.isGreaterOrEqual(b) ? b : a;
     }
 
     private static Appender<ILoggingEvent> filtered(Appender<ILoggingEvent> appender, @Nullable Level threshold) {
@@ -264,6 +294,23 @@ public final class LoggingBootstrap {
 
         appender.setRollingPolicy(rolling);
         appender.setTriggeringPolicy(trigger);
+        appender.start();
+        return appender;
+    }
+
+    /**
+     * The run log: this launch's INFO and louder BookLoom lines (lifecycle, run summaries, flags, failures) in a file
+     * of their own that is never rolled, so the start of a 9-hour run is still there when the rolling logs have
+     * moved on. DEBUG and TRACE never reach it, so it holds no book text.
+     */
+    private static FileAppender<ILoggingEvent> runLogAppender(
+            LoggerContext context, Path file, Supplier<String> header) {
+        final FileAppender<ILoggingEvent> appender = new FileAppender<>();
+        appender.setContext(context);
+        appender.setName(RUN_LOG_APPENDER_NAME);
+        appender.setFile(file.toString());
+        appender.setEncoder(headerEncoder(context, header));
+        filtered(appender, Level.INFO);
         appender.start();
         return appender;
     }

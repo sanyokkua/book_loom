@@ -238,12 +238,20 @@ detailed log is off) plus `session.json`, written where you choose and sent nowh
 text: it stays on the machine unless the person shares it.
 
 **The evidence log.** The detailed log rolls at 20 MB, so a long run keeps only its last hours (an 8.3-hour run kept
-3.6). Beside it, **`bookloom-trace-evidence.log`** (10 MB, rolled into `bookloom-trace-evidence.1.log.gz` … `.3.log.gz`)
+3.6). Beside it, **`bookloom-trace-evidence.log`** (100 MB, rolled into `bookloom-trace-evidence.1.log.gz` … `.4.log.gz`;
+a 9-hour run wrote about 90 MB of evidence, so the cap holds a whole book's flags and drops the oldest content first)
 keeps the full `TRACE` of every segment that ended **flagged** or went through **repair**, for the whole run: each
 segment's lines are held in memory (at most 64 segments of 400 lines and 8 MB in all) until the pipeline's decision line carries the
 `EVIDENCE_KEEP` marker, then written with the segment's later lines; a segment accepted at once is forgotten. It is on and
 off with the detailed log, and the diagnostic bundle includes it. To read why `part0044.html:16` was flagged, grep that
 segment key in the evidence file first.
+
+**The run log.** The ordinary log at `DEBUG` also loses a long run's start (a 9-hour run kept its last 8 hours).
+**`bookloom-trace-run-<yyyyMMdd-HHmmss>.log`** (the launch time) is written on every launch, detailed log or not. It holds
+the BookLoom lines at `INFO` and above for that launch — the names pass, the brief, run summaries, flags, failures — plus
+the `WARN`/`ERROR` lines of other libraries, and (with the detailed log on) the same `#` session header. It is never rolled and never sees `DEBUG` or `TRACE`, so it holds no book text and stays small; the last
+10 launches' run logs are kept (the oldest name is deleted at the next launch; a failed delete is one `WARN` line), and the diagnostic bundle includes them. Read it first to see
+how a run went, then the evidence file for why one segment was flagged.
 
 **Command line.** `./gradlew :app:translate` runs `ua.bookloom.app.bootstrap.TranslateLauncher`, which repeats
 `Launcher`'s pre-injector steps — paths, single-instance lock, logging — without starting JavaFX, then runs

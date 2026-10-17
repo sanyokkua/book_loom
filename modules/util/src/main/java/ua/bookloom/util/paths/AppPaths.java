@@ -44,6 +44,16 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
      */
     public static final String EVIDENCE_LOG_FILE_NAME = "bookloom-trace-evidence.log";
 
+    /**
+     * What a run log's name starts with: one small file of INFO lifecycle lines per launch, named
+     * {@code bookloom-trace-run-<yyyyMMdd-HHmmss>.log} so the diagnostic bundle collects it by
+     * {@link #TRACE_LOG_PREFIX} and the names sort oldest first.
+     */
+    public static final String RUN_LOG_PREFIX = "bookloom-trace-run-";
+
+    /** How many run logs stay in the log directory, the one being written included. */
+    public static final int RUN_LOGS_KEPT = 10;
+
     /** The name every file of the detailed diagnostic log starts with: the active file and its rotated archives. */
     public static final String TRACE_LOG_PREFIX = "bookloom-trace";
 
