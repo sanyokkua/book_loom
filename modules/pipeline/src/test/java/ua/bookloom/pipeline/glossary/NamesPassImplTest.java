@@ -131,7 +131,6 @@ class NamesPassImplTest extends NamesPassTestBase {
                         tuple("Zorbo", "Zorbo"),
                         tuple("Gatewarden", "Брамник"));
         assertThat(held("Silverbrook").target()).isEqualTo("Silberbach");
-        assertThat(held("wardstone").locked()).isFalse();
     }
 
     // Under Keep original a name keeps its source spelling, which is the kept-verbatim ground whatever the target.
@@ -153,20 +152,19 @@ class NamesPassImplTest extends NamesPassTestBase {
                         tuple("Gatewarden", "Брамник"));
     }
 
-    // The recurring terms: a word used in one sense is kept and given a rendering, an ordinary word is dropped, a
-    // named thing moves to the glossary and is rendered there.
+    // The recurring terms: a word used in one sense is kept and given a rendering, an ordinary word is dropped, and a
+    // word the reading calls a name but the book writes in lower case ("wardstone") stays a recurring term (15i.N7).
     @Test
-    void run_seededBook_keepsDropsAndPromotesTheRecurringTerms() {
+    void run_seededBook_keepsAndDropsTheRecurringTermsAndPromotesNoLowerCaseWord() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         succeeded(run(model()));
 
         assertThat(fixture.lexiconNow())
                 .extracting(LexiconEntry::term, entry -> entry.established().orElse(null))
-                .containsExactlyInAnyOrder(tuple("anvil", "ковадло"), tuple("beacon", "маяк"));
-        assertThat(held("wardstone"))
-                .extracting(GlossaryEntry::type, GlossaryEntry::target, GlossaryEntry::origin)
-                .containsExactly(TermType.TERM, "вартовий камінь", TargetOrigin.SUGGESTED);
+                .containsExactlyInAnyOrder(
+                        tuple("anvil", "ковадло"), tuple("beacon", "маяк"), tuple("wardstone", "вартовий камінь"));
+        assertThat(fixture.glossaryNow()).extracting(GlossaryEntry::term).doesNotContain("wardstone");
     }
 
     // The report is the change against the tables as they were, so a screen can show and undo each row.
@@ -176,14 +174,16 @@ class NamesPassImplTest extends NamesPassTestBase {
 
         final NamesPassReport report = succeeded(run(model()));
 
-        assertThat(report.names().added()).extracting(GlossaryEntry::term).containsExactly("wardstone");
+        assertThat(report.names().added()).isEmpty();
         assertThat(report.names().removed())
                 .extracting(removal -> removal.entry().term())
                 .containsExactly("Overture");
         assertThat(report.names().changed())
                 .extracting(change -> change.before().term())
                 .containsExactlyInAnyOrder("Brann", "Wren", "Harrowgate", "Zorbo", "Silverbrook");
-        assertThat(report.terms().added()).extracting(LexiconEntry::term).containsExactly("beacon");
+        assertThat(report.terms().added())
+                .extracting(LexiconEntry::term)
+                .containsExactlyInAnyOrder("beacon", "wardstone");
         assertThat(report.terms().removed())
                 .extracting(removal -> removal.entry().term())
                 .containsExactly("ferry");
@@ -311,9 +311,7 @@ class NamesPassImplTest extends NamesPassTestBase {
 
         succeeded(run(model()));
 
-        assertThat(fixture.glossaryNow())
-                .extracting(GlossaryEntry::term)
-                .containsExactlyInAnyOrder("Brann", "wardstone");
+        assertThat(fixture.glossaryNow()).extracting(GlossaryEntry::term).containsExactly("Brann");
     }
 
     // An empty glossary is scanned first, and what the scan found goes through the same reading and rendering.

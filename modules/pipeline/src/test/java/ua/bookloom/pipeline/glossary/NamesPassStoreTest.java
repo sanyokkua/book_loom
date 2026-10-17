@@ -31,7 +31,7 @@ import ua.bookloom.persistence.PersistenceModule;
  */
 class NamesPassStoreTest {
 
-    /** A glossary store that refuses the first add once armed, as a full disk would. */
+    /** A glossary store that refuses the first changed entry once armed (after the removals went through), as a full disk would. */
     static final class FailingGlossary implements GlossaryRepository {
 
         private final GlossaryRepository delegate =
@@ -44,15 +44,15 @@ class NamesPassStoreTest {
 
         @Override
         public Result<GlossaryEntry> add(final GlossaryEntry entry) {
-            if (armed) {
-                armed = false;
-                return Result.err(AppError.of(ErrorCode.internal, "Disk full", "The glossary could not be written."));
-            }
             return delegate.add(entry);
         }
 
         @Override
         public Result<GlossaryEntry> update(final GlossaryEntry entry) {
+            if (armed) {
+                armed = false;
+                return Result.err(AppError.of(ErrorCode.internal, "Disk full", "The glossary could not be written."));
+            }
             return delegate.update(entry);
         }
 

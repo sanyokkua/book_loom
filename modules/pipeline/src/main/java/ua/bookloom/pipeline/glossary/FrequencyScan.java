@@ -54,7 +54,7 @@ public final class FrequencyScan {
     static final int PROPOSAL_MIN_COUNT = 3;
 
     /** A word written in lower case at least this share of the time is a common word; every real name measured is below. */
-    static final double LOWER_SHARE_LIMIT = 0.2;
+    public static final double LOWER_SHARE_LIMIT = 0.2;
 
     /**
      * A word over {@link #LOWER_SHARE_LIMIT} stays a candidate for the names reading once the book writes it with a

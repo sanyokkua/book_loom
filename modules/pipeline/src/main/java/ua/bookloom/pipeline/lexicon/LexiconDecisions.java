@@ -15,8 +15,11 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
+import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /**
  * Applies what the code decided from the readings of the recurring terms (15i.N7): a kept term enters or keeps the
@@ -29,6 +32,8 @@ final class LexiconDecisions {
 
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
+    // The open book, which says how it writes a term; null when none is open, and then no verdict is changed.
+    private final @Nullable BookIndex index;
 
     // A kept term enters with the rendering the reading gave, marked as the model's; a named thing goes to the
     // glossary; a dropped or undecided one is not added.
@@ -37,7 +42,8 @@ final class LexiconDecisions {
         log.debug("Lexicon model scan project={} deciding {} candidates", projectId, candidates.size());
         int added = 0;
         for (final String term : candidates) {
-            final Decision decision = decisions.getOrDefault(LexiconEntry.keyOf(term), Decision.undecided());
+            final Decision decision =
+                    settled(term, decisions.getOrDefault(LexiconEntry.keyOf(term), Decision.undecided()));
             log.debug("Lexicon model scan project={} verdict={}", projectId, decision.verdict());
             final Result<Boolean> stored =
                     switch (decision.verdict()) {
@@ -62,7 +68,8 @@ final class LexiconDecisions {
             final String projectId, final List<LexiconEntry> asked, final Map<String, Decision> decisions) {
         log.debug("Lexicon review project={} applying decisions to {} terms", projectId, asked.size());
         for (final LexiconEntry entry : asked) {
-            final Decision decision = decisions.getOrDefault(LexiconEntry.keyOf(entry.term()), Decision.undecided());
+            final Decision decision = settled(
+                    entry.term(), decisions.getOrDefault(LexiconEntry.keyOf(entry.term()), Decision.undecided()));
             log.debug("Lexicon review project={} verdict={}", projectId, decision.verdict());
             final Result<Boolean> applied =
                     switch (decision.verdict()) {
@@ -78,6 +85,21 @@ final class LexiconDecisions {
             }
         }
         return lexicon.all(projectId);
+    }
+
+    // A "name" majority on a word the book writes mostly in lower case is a recurring term, not a name: a common noun
+    // read in windows that happen to mention a person or a place (15i.N7). The scans' own bar decides "mostly".
+    private Decision settled(final String term, final Decision decision) {
+        if (decision.verdict() != Verdict.PROMOTE || index == null) {
+            return decision;
+        }
+        final double lowerShare = index.stats(term).lowerShare();
+        if (lowerShare < FrequencyScan.LOWER_SHARE_LIMIT) {
+            log.debug("Lexicon term promoted by its reading: written in lower case {} of the time, a name", lowerShare);
+            return decision;
+        }
+        log.debug("Lexicon term kept, not promoted: written in lower case {} of the time", lowerShare);
+        return new Decision(Verdict.KEEP, decision.rendering());
     }
 
     private Result<Boolean> keepWith(

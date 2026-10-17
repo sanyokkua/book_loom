@@ -250,6 +250,19 @@ class NamesScoreTest {
         assertThat(score.recurringDropped()).isEqualTo(1);
     }
 
+    // A recurring term the lexicon lost because a reading called it a name is held by the glossary: it is dropped for
+    // the lexicon and promoted for the glossary, and the matrix shows both.
+    @Test
+    void of_goldRecurringTermHeldByTheGlossary_isCountedAsPromoted() {
+        final List<GlossaryEntry> held = List.of(entry("Guild", null, TermType.TERM, Gender.UNKNOWN, false));
+
+        final NamesScore score = NamesScore.of(GOLD, BOOK, held, lexicon(), 12, Duration.ofSeconds(90));
+
+        assertThat(score.recurringPromoted()).isEqualTo(1);
+        assertThat(score.recurringDropped()).isEqualTo(1);
+        assertThat(score.json()).contains("\"recurringPromoted\":1");
+    }
+
     @Test
     void of_callsAndElapsedTime_areCarriedAsCallsAndMinutes() {
         final NamesScore score = score();
@@ -316,7 +329,7 @@ class NamesScoreTest {
                         + "\"typeCorrect\":3,\"typeScored\":7,\"typeAccuracy\":0.429,\"clusters\":2,"
                         + "\"clustersWithOneGender\":1,\"clusterRate\":0.5,\"spellings\":{\"dax\":2,\"ysolde\":1},"
                         + "\"junkKept\":1,\"realNamesLost\":3,\"recurringKept\":1,\"recurringDropped\":1,"
-                        + "\"recurringJunkKept\":1,\"calls\":12,\"minutes\":1.5}");
+                        + "\"recurringPromoted\":0,\"recurringJunkKept\":1,\"calls\":12,\"minutes\":1.5}");
     }
 
     @Test

@@ -52,6 +52,8 @@ import ua.bookloom.api.project.TermType;
  * @param lostNames the gold characters and {@code keep} names no entry holds, each once as the gold writes it
  * @param recurringKept how many gold recurring terms to keep are in the lexicon
  * @param recurringDropped how many gold recurring terms to keep are not in the lexicon
+ * @param recurringPromoted how many of those dropped ended as glossary entries instead: a word the book writes in
+ *     lower case that a reading took for a name (15i.N7), so they read as lost here and as junk there
  * @param recurringJunkKept how many gold recurring terms to drop are in the lexicon
  * @param calls the model calls the run sent
  * @param minutes the run's time in minutes
@@ -70,6 +72,7 @@ record NamesScore(
         List<String> lostNames,
         int recurringKept,
         int recurringDropped,
+        int recurringPromoted,
         int recurringJunkKept,
         int calls,
         double minutes) {
@@ -115,7 +118,7 @@ record NamesScore(
         final Map<String, GlossaryEntry> byTerm = indexByName(glossary);
         final int[] characters = scoreCharacters(gold, String.join("\n", paragraphs), byTerm);
         final Map<String, List<JudgementGold.Person>> clusters = clustersOf(gold);
-        final int[] recurring = scoreRecurring(gold, lexicon);
+        final int[] recurring = scoreRecurring(gold, glossary, lexicon);
         return new NamesScore(
                 characters[0],
                 characters[1],
@@ -134,6 +137,7 @@ record NamesScore(
                 lostNames(gold, glossary),
                 recurring[0],
                 recurring[1],
+                recurring[3],
                 recurring[2],
                 calls,
                 elapsed.toMillis() / MILLIS_PER_MINUTE);
@@ -211,6 +215,7 @@ record NamesScore(
                 + ",\"realNamesLost\":" + realNamesLost()
                 + ",\"recurringKept\":" + recurringKept
                 + ",\"recurringDropped\":" + recurringDropped
+                + ",\"recurringPromoted\":" + recurringPromoted
                 + ",\"recurringJunkKept\":" + recurringJunkKept
                 + ",\"calls\":" + calls
                 + ",\"minutes\":" + round(minutes) + "}";
@@ -338,19 +343,25 @@ record NamesScore(
     }
 
     /** Recurring terms kept, dropped and junk kept, in that order. */
-    private static int[] scoreRecurring(final JudgementGold gold, final List<LexiconEntry> lexicon) {
+    // Kept, dropped, junk kept and promoted (dropped from the lexicon, held by the glossary), in that order.
+    private static int[] scoreRecurring(
+            final JudgementGold gold, final List<GlossaryEntry> glossary, final List<LexiconEntry> lexicon) {
         final Set<String> held =
                 lexicon.stream().map(entry -> lower(entry.term())).collect(Collectors.toSet());
+        final Set<String> named =
+                glossary.stream().map(entry -> lower(entry.term())).collect(Collectors.toSet());
         int kept = 0;
         int dropped = 0;
         int junk = 0;
+        int promoted = 0;
         for (final JudgementGold.Recurring term : gold.recurringTerms()) {
             final boolean isHeld = held.contains(lower(term.term()));
             kept += term.keep() && isHeld ? 1 : 0;
             dropped += term.keep() && !isHeld ? 1 : 0;
             junk += !term.keep() && isHeld ? 1 : 0;
+            promoted += term.keep() && !isHeld && named.contains(lower(term.term())) ? 1 : 0;
         }
-        return new int[] {kept, dropped, junk};
+        return new int[] {kept, dropped, junk, promoted};
     }
 
     private static String lower(final String text) {

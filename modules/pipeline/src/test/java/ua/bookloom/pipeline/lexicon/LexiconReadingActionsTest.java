@@ -52,7 +52,7 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 class LexiconReadingActionsTest {
 
     private static final String PARAGRAPH =
-            "The pentacle glowed in the dark room tonight. A wooden table stood against the grey wall.";
+            "The pentacle glowed in the dark room tonight. A wooden table stood against the grey wall near Orlan.";
     private static final String PENTACLE_KEPT = "пентакль";
     private static final String LEXICON_READING = "lexicon-reading";
     private static final String TERM_CHOICE = "term-choice";
@@ -167,23 +167,19 @@ class LexiconReadingActionsTest {
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
     }
 
-    // promote: a named thing is the glossary's, with the rendering that fits every window as its target; the lexicon
-    // never holds it.
+    // A name majority on a word the book writes in lower case is no promotion (15i.N7): "pentacle" is a common noun
+    // that
+    // some windows happened to use as a name, so it stays a recurring term, with the rendering the reading gave.
     @Test
-    void scanWithModel_balancedNamedThing_goesToTheGlossaryAndNotTheLexicon() {
+    void scanWithModel_balancedNameMajorityOnALowerCaseWord_staysARecurringTermAndNotTheGlossarys() {
         readings.put("pentacle", reading("pentacle", "name", 1, "Пентакль"));
 
         final EntryChanges<LexiconEntry> changes = changes(service.scanWithModel(desk.projectId(), model, event -> {}));
 
-        assertThat(changes.added()).isEmpty();
-        assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
-        assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
-                .hasValueSatisfying(entry -> {
-                    assertThat(entry.target()).isEqualTo("Пентакль");
-                    // The model's rendering is a suggestion in the glossary until a person confirms it.
-                    assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED);
-                    assertThat(entry.locked()).isFalse();
-                });
+        assertThat(changes.added())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.chosen()).isEqualTo("Пентакль"));
+        assertThat(desk.glossary().all(desk.projectId()).data()).isEmpty();
     }
 
     // A term the glossary already holds is no recurring term to read (15i review): the review sends no call about it,
@@ -297,20 +293,20 @@ class LexiconReadingActionsTest {
 
     // promote through the lexicon service: the entry leaves the lexicon and the glossary holds it with the rendering.
     @Test
-    void review_balancedNamedThing_movesTheTermToTheGlossary() {
-        lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
-        readings.put("pentacle", reading("pentacle", "name", 1, "Пентакль"));
+    void review_balancedNamedThingWrittenCapitalised_movesTheTermToTheGlossary() {
+        lexicon.put(LexiconEntry.of(desk.projectId(), "Orlan"));
+        readings.put("Orlan", reading("Orlan", "name", 1, "Орлан"));
 
         final EntryChanges<LexiconEntry> changes = changes(service.review(desk.projectId(), model, event -> {}));
 
         assertThat(changes.removed())
                 .extracting(removal -> removal.entry().term())
-                .containsExactly("pentacle");
+                .containsExactly("Orlan");
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
         assertThat(desk.glossary().all(desk.projectId()).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::target)
-                .containsExactly(org.assertj.core.api.Assertions.tuple("pentacle", "Пентакль"));
-        assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
+                .containsExactly(org.assertj.core.api.Assertions.tuple("Orlan", "Орлан"));
+        assertThat(desk.glossary().findByTerm(desk.projectId(), "Orlan").data())
                 .hasValueSatisfying(entry -> assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED));
     }
 

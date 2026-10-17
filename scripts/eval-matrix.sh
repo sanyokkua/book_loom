@@ -151,6 +151,8 @@ if [ -n "$BOOK_FILE" ]; then
   trap 'rm -rf "$CORPUS_TMP"' EXIT
   ln -s "$BOOK_FILE" "$CORPUS_TMP/$(basename "$BOOK_FILE")"
   gold="${BOOK_FILE%.*}.gold.json"
+  # The corpus names a book corpus-<id>.epub and its gold <id>.gold.json.
+  [ -f "$gold" ] || gold="$(dirname "$BOOK_FILE")/$(basename "${BOOK_FILE%.*}" | sed 's/^corpus-//').gold.json"
   [ -f "$gold" ] && ln -s "$gold" "$CORPUS_TMP/$(basename "$gold")"
   export BOOKLOOM_CORPUS_DIR=$CORPUS_TMP
   if [ "$SUITE" = book ]; then export BOOKLOOM_EVAL_BOOK_FILE=$BOOK_FILE; fi
@@ -288,15 +290,15 @@ if sys.argv[2] == "sequence":
     print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering; LTCR-1: the share of a term's or name's later occurrences that carry the rendering its first one had, DelTA's consistency metric)")
     sys.exit(0)
 if sys.argv[2] == "names":
-    print("%-30s %-32s %7s %6s %6s %9s %6s %5s %5s %9s %6s %7s" % ("model", "book", "gender", "wrongV", "type", "cluster1G", "spell", "junk", "lost", "termsOK", "calls", "minutes"))
+    print("%-30s %-32s %7s %6s %6s %9s %6s %5s %5s %9s %5s %6s %7s" % ("model", "book", "gender", "wrongV", "type", "cluster1G", "spell", "junk", "lost", "termsOK", "promo", "calls", "minutes"))
     for r in (r for r in reports if r.get("suite") == "names"):
         for b in r["books"]:
             s = b.get("score")
             if s is None:
                 print("%-30s %-32s error %s" % (r["model"][-30:], b["book"][-32:], b.get("error")))
                 continue
-            print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s["calls"], s["minutes"]))
-    print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep)")
+            print("%-30s %-32s %6.0f%% %6d %5.0f%% %8.0f%% %6d %5d %5d %4d/%-4d %5d %6d %7.1f" % (r["model"][-30:], b["book"][-32:], 100 * s["genderAccuracy"], s["wrongButVerified"], 100 * s["typeAccuracy"], 100 * s["clusterRate"], max(s["spellings"].values(), default=0), s["junkKept"], s["realNamesLost"], s["recurringKept"], s["recurringKept"] + s["recurringDropped"], s.get("recurringPromoted", 0), s["calls"], s["minutes"]))
+    print("(gender: share of characters with five or more mentions that ended with the gold gender; wrongV: a wrong gender not marked suggested; cluster1G: person clusters holding one gender; spell: most spellings of one person's name, 1 is ideal; junk: gold junk left in the glossary; lost: real names missing; termsOK: gold recurring terms kept of those to keep; promo: of the ones not kept, how many became glossary entries)")
     sys.exit(0)
 if sys.argv[2] == "book":
     print("book run finished; its outputs are in the --out-dir")

@@ -1047,7 +1047,9 @@ WHEN the person asks the model to find or review recurring terms, the applicatio
 own call at the Balanced and Max quality dials, in numbered windows of the book (3 windows of one paragraph either side at
 Balanced, 4 of two at Max), and decide from the answers by code: a term most counted windows use in one sense is kept, an
 ordinary word (most counted windows) or a word with two senses or more is dropped, a named thing (most counted windows)
-moves to the glossary, and a term nothing readable decided is left as it is. A window SHALL count only when the quote the
+moves to the glossary unless the book writes the word in lower case in at least a fifth of its uses (the name scan's
+lower-case bar), in which case it stays a recurring term with the rendering read, and a term nothing readable decided is
+left as it is. A window SHALL count only when the quote the
 model gave for it stands in that window. At the Fast dial the candidates SHALL go to one batch choice over one example
 sentence each, which keeps or drops and gives no rendering; that call SHALL be labelled "Term choice", not "Name review".
 The model scan's candidates SHALL be the book's 300 most frequent words that are no stop word and no held term; at

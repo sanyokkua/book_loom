@@ -124,8 +124,9 @@ public final class LexiconServiceImpl implements LexiconService {
                 "promote",
                 projectId,
                 () -> held(projectId, term)
-                        .flatMap(entry -> entry.map(found -> decisions().promote(projectId, found))
-                                .orElseGet(() -> unknown(term))));
+                        .flatMap(
+                                entry -> entry.map(found -> decisions(projectId).promote(projectId, found))
+                                        .orElseGet(() -> unknown(term))));
     }
 
     @Override
@@ -225,7 +226,7 @@ public final class LexiconServiceImpl implements LexiconService {
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
                 .scanTerms(projectId, candidates, model, progress)
-                .flatMap(decisions -> decisions().addDecided(projectId, candidates, decisions))
+                .flatMap(decisions -> decisions(projectId).addDecided(projectId, candidates, decisions))
                 .flatMap(added -> {
                     log.info("Lexicon model scan project={} added={}", projectId, added);
                     return lexicon.all(projectId);
@@ -250,7 +251,7 @@ public final class LexiconServiceImpl implements LexiconService {
                                     asked.stream().map(LexiconEntry::term).toList(),
                                     model,
                                     progress)
-                            .flatMap(decisions -> decisions().applyReview(projectId, asked, decisions));
+                            .flatMap(decisions -> decisions(projectId).applyReview(projectId, asked, decisions));
                 }));
     }
 
@@ -262,8 +263,8 @@ public final class LexiconServiceImpl implements LexiconService {
         });
     }
 
-    private LexiconDecisions decisions() {
-        return new LexiconDecisions(lexicon, glossary);
+    private LexiconDecisions decisions(final String projectId) {
+        return new LexiconDecisions(lexicon, glossary, openProjects.index(projectId));
     }
 
     private Result<Set<String>> heldKeys(final String projectId) {
