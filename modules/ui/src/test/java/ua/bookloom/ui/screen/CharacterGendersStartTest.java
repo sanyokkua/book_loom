@@ -124,4 +124,47 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         job.awaitRunStarted();
         assertThat(isAsking()).isFalse();
     }
+
+    // IF a suggested gender were listed like a missing one, THEN the person would be told to set what the table shows.
+    @Test
+    void start_suggestedAndUnknown_namesThemApartAndAsksToConfirmTheSuggested() throws Exception {
+        showNamesStyle(List.of(new UnknownGender("Ember", 12), new UnknownGender("Dane", 9, true)));
+
+        onFx(() -> button("names-style-start").fire());
+        awaitAsking();
+
+        assertThat(textsUnder(required(CARD)))
+                .contains(
+                        "Characters without a gender",
+                        "Ember — 12 mentions",
+                        "Dane — 9 mentions · suggested, confirm it",
+                        "This character has only a suggested gender, which the translation does not hold to. Confirm it"
+                                + " in Names & style (Confirm suggested genders), or start anyway: the next export"
+                                + " re-renders those segments.");
+    }
+
+    @Test
+    void start_onlySuggested_titlesTheQuestionAsGendersToConfirm() throws Exception {
+        showNamesStyle(List.of(new UnknownGender("Dane", 9, true)));
+
+        onFx(() -> button("names-style-start").fire());
+        awaitAsking();
+
+        assertThat(textsUnder(required(CARD)))
+                .contains("Genders to confirm", "Dane — 9 mentions · suggested, confirm it")
+                .doesNotContain("Characters without a gender");
+    }
+
+    @Test
+    void start_suggestedAndUnknownInUkrainian_namesThemApartAndAsksToConfirmTheSuggested() throws Exception {
+        useLocale(java.util.Locale.forLanguageTag("uk"));
+        showNamesStyle(List.of(new UnknownGender("Ember", 12), new UnknownGender("Dane", 9, true)));
+
+        onFx(() -> button("names-style-start").fire());
+        awaitAsking();
+
+        assertThat(textsUnder(required(CARD)))
+                .contains("Ember — 12 згадок", "Dane — 9 згадок · припущення, підтвердіть")
+                .noneMatch(text -> text.contains("Dane") && !text.contains("припущення"));
+    }
 }

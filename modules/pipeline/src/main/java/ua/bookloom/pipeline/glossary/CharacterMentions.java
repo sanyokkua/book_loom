@@ -17,7 +17,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /**
- * Counts how often the body text names each character whose gender is still unknown, so Start asks only about those
+ * Counts how often the body text names each character whose gender is still unknown or only suggested, so Start asks only about those
  * the book keeps coming back to. A mention is the whole name as a separate word run; a possessive ending still counts.
  */
 @Slf4j
@@ -44,8 +44,9 @@ final class CharacterMentions {
             final List<GlossaryEntry> entries, final BookIndex index, final int minMentions) {
         final String body = String.join("\n", index.visibleTexts(index.story()));
         final List<UnknownGender> found = entries.stream()
-                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() == Gender.UNKNOWN)
-                .map(entry -> new UnknownGender(entry.term(), count(entry.term(), body)))
+                .filter(entry -> entry.type() == TermType.CHARACTER
+                        && (entry.gender() == Gender.UNKNOWN || entry.isGenderSuggested()))
+                .map(entry -> new UnknownGender(entry.term(), count(entry.term(), body), entry.isGenderSuggested()))
                 .filter(candidate -> candidate.mentions() >= minMentions)
                 .sorted(Comparator.comparingInt(UnknownGender::mentions)
                         .reversed()

@@ -76,16 +76,43 @@ public final class ExportReportLines {
     }
 
     /**
-     * The warning that segments wait on characters whose gender is unknown, which names them and their segments.
+     * The warning that segments wait on characters whose gender is unknown, which names them and their segments. A
+     * character whose gender is only suggested is not named here: the person has to confirm it, not set it
+     * ({@link #suggestedGender}).
      *
      * @param messages the catalogue the line is worded from
      * @param summary the consistency pass's summary from the report
-     * @return the line, or empty when no segment waits on a character's gender
+     * @return the line, or empty when no segment waits on a character whose gender is missing
      */
     public static Optional<String> awaitingGender(final Messages messages, final ConsistencySummary summary) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(summary, "summary");
-        final List<GenderWait> waits = summary.awaitingGender();
+        return waits(messages, summary, false, MessageKey.EXPORT_AWAITING_GENDER, summary.unknownGenderSegments());
+    }
+
+    /**
+     * The warning that segments wait on a gender the glossary only suggests, which the person confirms in Names &amp;
+     * style.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param summary the consistency pass's summary from the report
+     * @return the line, or empty when no segment waits on a suggested gender
+     */
+    public static Optional<String> suggestedGender(final Messages messages, final ConsistencySummary summary) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(summary, "summary");
+        return waits(messages, summary, true, MessageKey.EXPORT_SUGGESTED_GENDER, summary.suggestedGenderSegments());
+    }
+
+    private static Optional<String> waits(
+            final Messages messages,
+            final ConsistencySummary summary,
+            final boolean suggested,
+            final MessageKey line,
+            final int segments) {
+        final List<GenderWait> waits = summary.awaitingGender().stream()
+                .filter(wait -> wait.suggested() == suggested)
+                .toList();
         if (waits.isEmpty()) {
             return Optional.empty();
         }
@@ -96,7 +123,7 @@ public final class ExportReportLines {
         final int unnamed = waits.size() - MAX_NAMED_CHARACTERS;
         final String characters =
                 unnamed > 0 ? named + " " + messages.get(MessageKey.EXPORT_AWAITING_GENDER_MORE, unnamed) : named;
-        return Optional.of(messages.get(MessageKey.EXPORT_AWAITING_GENDER, summary.openGenderDeferrals(), characters));
+        return Optional.of(messages.get(line, segments, characters));
     }
 
     // What the model steps came to besides their fixes, so a pass that read thirty paragraphs and changed none says so.

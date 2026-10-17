@@ -6,6 +6,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
@@ -23,8 +24,8 @@ import ua.bookloom.ui.state.RunMode;
 
 /**
  * The one button above both cards of Names &amp; style that prepares the names and the recurring terms in one pass, with
- * the plan's estimate for the brief's dial under it. While it runs the shared busy card shows the progress, and that
- * card's Cancel is the pass's Stop; the pass changes nothing when stopped. The estimate is asked of the port again when
+ * "Confirm suggested genders" beside it, and the plan's estimate for the brief's dial under it. While it runs the
+ * shared busy card shows the progress, and that card's Cancel is the pass's Stop; the pass changes nothing when stopped. The estimate is asked of the port again when
  * a change of the dial has been saved, since the port reads the stored brief; until then the line is blank, because the
  * minutes it held were computed for the previous dial. The view models outlive this view, so what
  * listens to them does so weakly, with the strong reference held by the subtitle.
@@ -48,7 +49,9 @@ final class AutoNamesBar {
         subtitle.setId("names-style-auto-subtitle");
         subtitle.getStyleClass().add("muted");
         follow(messages, names, brief, subtitle);
-        final VBox bar = new VBox(SPACING, auto, subtitle);
+        final HBox buttons = new HBox(SPACING, auto, confirmGenders(messages, names));
+        buttons.setAlignment(Pos.CENTER_LEFT);
+        final VBox bar = new VBox(SPACING, buttons, subtitle);
         bar.setId("names-style-auto-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
         return bar;
@@ -66,6 +69,25 @@ final class AutoNamesBar {
             names.autoPrepare();
         });
         return auto;
+    }
+
+    // Shown only while a character's gender is a suggestion; off while a model action could replace what it confirms.
+    private static Button confirmGenders(final Messages messages, final NamesStyleViewModel names) {
+        final Button confirm = Tips.install(
+                messages,
+                new Button(messages.get(MessageKey.NAMES_STYLE_CONFIRM_GENDERS)),
+                MessageKey.NAMES_STYLE_CONFIRM_GENDERS_TIP);
+        confirm.setId("names-style-confirm-genders");
+        confirm.getStyleClass().add("btn-ghost");
+        confirm.setMinWidth(Region.USE_PREF_SIZE);
+        confirm.disableProperty().bind(names.busy());
+        confirm.visibleProperty().bind(names.suggestedGenderCount().greaterThan(0));
+        confirm.managedProperty().bind(confirm.visibleProperty());
+        confirm.setOnAction(event -> {
+            log.debug("names-style-confirm-genders pressed");
+            names.confirmGenders();
+        });
+        return confirm;
     }
 
     private static void follow(

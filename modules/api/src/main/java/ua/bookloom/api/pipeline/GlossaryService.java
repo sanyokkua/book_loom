@@ -22,7 +22,7 @@ public interface GlossaryService {
     Result<List<GlossaryEntry>> entries(String projectId);
 
     /**
-     * Lists the characters whose gender is still unknown and whom the book names often enough to be worth asking about.
+     * Lists the characters whose gender is unknown or only suggested (each says which) and whom the book names often enough to be worth asking about.
      *
      * @param projectId the non-null project id
      * @param minMentions how many times the body text must name a character for it to be listed; at least one

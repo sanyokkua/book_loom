@@ -101,7 +101,9 @@ final class ChangeRows {
                         : entry.target());
         parts.add(GlossaryLabels.type(messages, entry.type()));
         if (entry.gender() != Gender.UNKNOWN) {
-            parts.add(GlossaryLabels.gender(messages, entry.gender()));
+            final String gender = GlossaryLabels.gender(messages, entry.gender());
+            parts.add(
+                    entry.isGenderSuggested() ? messages.get(MessageKey.NAMES_STYLE_GENDER_SUGGESTED, gender) : gender);
         }
         return String.join(SEPARATOR, parts);
     }

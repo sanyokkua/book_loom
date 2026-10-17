@@ -32,7 +32,9 @@ final class ExportSummaries {
                 pass.openDeferrals(),
                 pass.neighbourFixes(),
                 pass.checks(),
-                pass.awaitingGender());
+                pass.awaitingGender(),
+                pass.suggestedGenderSegments(),
+                pass.unknownGenderSegments());
     }
 
     // With the pass switched off nothing ran, yet the segments that wait on a character's gender still wait: the
@@ -51,6 +53,8 @@ final class ExportSummaries {
                         waiting.openDeferrals(),
                         0,
                         ConsistencyChecks.NONE,
-                        waiting.awaitingGender());
+                        waiting.awaitingGender(),
+                        waiting.suggestedGenderSegments(),
+                        waiting.unknownGenderSegments());
     }
 }

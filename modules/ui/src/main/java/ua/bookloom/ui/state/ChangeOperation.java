@@ -17,7 +17,9 @@ public enum ChangeOperation {
     /** The model's suggestion of a rendering for each recurring term. */
     TERM_TRANSLATE(MessageKey.RESULTS_OP_TERM_TRANSLATE),
     /** The one autonomous pass that prepares both tables; its results hold a Names and a Recurring terms section. */
-    AUTO_NAMES(MessageKey.RESULTS_OP_AUTO_NAMES);
+    AUTO_NAMES(MessageKey.RESULTS_OP_AUTO_NAMES),
+    /** "Confirm suggested genders": every suggested character gender became the person's; no model is asked. */
+    CONFIRM_GENDERS(MessageKey.RESULTS_OP_CONFIRM_GENDERS);
 
     private final MessageKey label;
 

@@ -24,8 +24,9 @@ import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.UnknownGenders;
 
 /**
- * The question asked at Start translation when characters the book names often still have no gender: it lists them and
- * offers Back (set the genders in Names &amp; style first) or Start anyway, which Enter chooses, so a run is never held
+ * The question asked at Start translation when characters the book names often still have no gender, or only a
+ * suggested one: it lists them, the two kinds apart, and offers Back (set or confirm the genders in Names &amp; style
+ * first) or Start anyway, which Enter chooses, so a run is never held
  * back by it. Once started anyway the question is not asked again for the book in this session. Back, and Escape,
  * which the host guarantees for every card, return without starting.
  */
@@ -93,20 +94,18 @@ public final class CharacterGendersDialog {
     }
 
     private DialogPane card(final List<UnknownGender> found) {
-        final Label text = new Label(messages.get(MessageKey.DIALOG_GENDERS_TEXT, found.size()));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        final VBox body = new VBox(text);
-        for (final UnknownGender character : found) {
-            final Label row =
-                    new Label(messages.get(MessageKey.DIALOG_GENDERS_ROW, character.term(), character.mentions()));
-            row.getStyleClass().add("dialog-text");
-            body.getChildren().add(row);
-        }
+        final List<UnknownGender> missing =
+                found.stream().filter(character -> !character.suggested()).toList();
+        final List<UnknownGender> suggested =
+                found.stream().filter(UnknownGender::suggested).toList();
+        final VBox body = new VBox();
+        group(body, missing, MessageKey.DIALOG_GENDERS_TEXT, MessageKey.DIALOG_GENDERS_ROW);
+        group(body, suggested, MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT, MessageKey.DIALOG_GENDERS_SUGGESTED_ROW);
         final DialogPane card = new ModalCard();
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(MessageKey.DIALOG_GENDERS_TITLE));
+        final Label title = new Label(messages.get(
+                missing.isEmpty() ? MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE : MessageKey.DIALOG_GENDERS_TITLE));
         title.getStyleClass().add("dialog-title");
         final VBox header = new VBox(title);
         header.getStyleClass().add("dialog-h");
@@ -114,6 +113,23 @@ public final class CharacterGendersDialog {
         card.setContent(body);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
+    }
+
+    // One intro and the characters under it; a group with no character adds nothing.
+    private void group(
+            final VBox body, final List<UnknownGender> characters, final MessageKey intro, final MessageKey row) {
+        if (characters.isEmpty()) {
+            return;
+        }
+        final Label text = new Label(messages.get(intro, characters.size()));
+        text.setWrapText(true);
+        text.getStyleClass().add("dialog-text");
+        body.getChildren().add(text);
+        for (final UnknownGender character : characters) {
+            final Label line = new Label(messages.get(row, character.term(), character.mentions()));
+            line.getStyleClass().add("dialog-text");
+            body.getChildren().add(line);
+        }
     }
 
     private void wire(final DialogPane card, final String projectId, final Runnable start) {

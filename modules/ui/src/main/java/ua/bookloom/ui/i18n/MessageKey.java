@@ -1180,6 +1180,10 @@ public enum MessageKey {
     NAMES_STYLE_ACCEPT_ALL("namesStyle.acceptAll"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ACCEPT_ALL}. */
     NAMES_STYLE_ACCEPT_ALL_TIP("namesStyle.acceptAll.tip"),
+    /** Button that turns every suggested character gender into the person's. */
+    NAMES_STYLE_CONFIRM_GENDERS("namesStyle.confirmGenders"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_CONFIRM_GENDERS}. */
+    NAMES_STYLE_CONFIRM_GENDERS_TIP("namesStyle.confirmGenders.tip"),
     /** Accessible name of a row's action that confirms its suggested target. */
     NAMES_STYLE_ACCEPT("namesStyle.accept"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ACCEPT}. */
@@ -1718,6 +1722,11 @@ public enum MessageKey {
      * argument 1 the characters with their segment counts.
      */
     EXPORT_AWAITING_GENDER("export.awaitingGender"),
+    /**
+     * Warning after an export: segments wait on a gender the glossary only suggests; argument 0 is the segment count,
+     * argument 1 the characters with their segment counts.
+     */
+    EXPORT_SUGGESTED_GENDER("export.suggestedGender"),
     /** The control that opens Names &amp; style from the warning labelled by {@link #EXPORT_AWAITING_GENDER}. */
     EXPORT_AWAITING_GENDER_OPEN("export.awaitingGender.open"),
     /** Hover explanation of the control labelled by {@link #EXPORT_AWAITING_GENDER_OPEN}. */
@@ -1892,6 +1901,12 @@ public enum MessageKey {
     DIALOG_GENDERS_ROW("dialog.genders.row"),
     /** The control that starts without setting the genders. */
     DIALOG_GENDERS_START("dialog.genders.start"),
+    /** Title of the question when every character it lists has a suggested gender to confirm. */
+    DIALOG_GENDERS_SUGGESTED_TITLE("dialog.genders.suggested.title"),
+    /** Intro to the characters whose gender is only suggested; argument 0 is how many. */
+    DIALOG_GENDERS_SUGGESTED_TEXT("dialog.genders.suggested.text"),
+    /** One character whose gender is only suggested; arguments: 0 the name, 1 its mentions. */
+    DIALOG_GENDERS_SUGGESTED_ROW("dialog.genders.suggested.row"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_START}. */
     DIALOG_GENDERS_START_TIP("dialog.genders.start.tip"),
     /** The control that returns without starting. */
@@ -2076,6 +2091,8 @@ public enum MessageKey {
     RESULTS_OP_TERM_TRANSLATE("results.op.termTranslate"),
     /** Name of the automatic names pass in the results dialog. */
     RESULTS_OP_AUTO_NAMES("results.op.autoNames"),
+    /** Name of "Confirm suggested genders" in the results dialog. */
+    RESULTS_OP_CONFIRM_GENDERS("results.op.confirmGenders"),
     /** Heading of the glossary's rows in a sectioned results list; argument 0 is their count. */
     RESULTS_SECTION_NAMES("results.section.names"),
     /** Heading of the recurring terms' rows in a sectioned results list; argument 0 is their count. */

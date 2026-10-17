@@ -17,8 +17,10 @@ import ua.bookloom.api.project.DeferralReason;
  * @param openDeferrals the deferrals still open once the pass ended, counted by reason; never null, empty when none
  * @param neighbourFixes how many segments the check against the neighbouring paragraphs corrected
  * @param checks what the retry of doubted segments and the check against the neighbours came to besides the fixes
- * @param awaitingGender the characters whose unknown gender still holds segments back, most waiting first; never
- *     null, empty when none does
+ * @param awaitingGender the characters whose unknown or only suggested gender still holds segments back, most waiting
+ *     first; never null, empty when none does
+ * @param suggestedGenderSegments the distinct segments that wait on a suggested gender
+ * @param unknownGenderSegments the distinct segments that wait on no gender at all, or on the narrator's
  */
 public record ConsistencyReport(
         int termSubstitutions,
@@ -28,7 +30,9 @@ public record ConsistencyReport(
         Map<DeferralReason, Integer> openDeferrals,
         int neighbourFixes,
         ConsistencyChecks checks,
-        List<GenderWait> awaitingGender) {
+        List<GenderWait> awaitingGender,
+        int suggestedGenderSegments,
+        int unknownGenderSegments) {
 
     /** Copies the notes and the counts so the report can never change after construction. */
     public ConsistencyReport {
@@ -36,6 +40,30 @@ public record ConsistencyReport(
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
         Objects.requireNonNull(checks, "checks");
         awaitingGender = List.copyOf(Objects.requireNonNull(awaitingGender, "awaitingGender"));
+    }
+
+    /** A report whose waiting segments are counted from the characters named and the open gender deferrals. */
+    public ConsistencyReport(
+            final int termSubstitutions,
+            final int genderReRenders,
+            final int proposals,
+            final List<String> notes,
+            final Map<DeferralReason, Integer> openDeferrals,
+            final int neighbourFixes,
+            final ConsistencyChecks checks,
+            final List<GenderWait> awaitingGender) {
+        this(
+                termSubstitutions,
+                genderReRenders,
+                proposals,
+                notes,
+                openDeferrals,
+                neighbourFixes,
+                checks,
+                awaitingGender,
+                suggestedOf(awaitingGender),
+                Math.max(
+                        0, openDeferrals.getOrDefault(DeferralReason.GENDER_UNKNOWN, 0) - suggestedOf(awaitingGender)));
     }
 
     /** A report that names no waiting character. */
@@ -87,5 +115,12 @@ public record ConsistencyReport(
     /** The segments still waiting for a character's gender. */
     public int openGenderDeferrals() {
         return openDeferrals.getOrDefault(DeferralReason.GENDER_UNKNOWN, 0);
+    }
+
+    private static int suggestedOf(final List<GenderWait> waits) {
+        return waits.stream()
+                .filter(GenderWait::suggested)
+                .mapToInt(GenderWait::segments)
+                .sum();
     }
 }

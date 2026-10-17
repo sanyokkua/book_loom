@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.revision;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,7 +26,6 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -129,9 +127,10 @@ public final class ConsistencyPass {
     public Result<ConsistencyReport> waiting(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         try {
-            return deferrals.open(projectId).map(open -> {
+            return deferrals.open(projectId).flatMap(open -> {
                 log.debug("Open deferrals read without the pass project={} deferrals={}", projectId, byReason(open));
-                return new PassTally().report(byReason(open), awaitingGender(open));
+                return glossary.all(projectId)
+                        .map(entries -> new PassTally().report(byReason(open), GenderWaits.of(open, entries)));
             });
         } catch (Throwable cause) {
             final AppError error = AppError.of(
@@ -160,7 +159,8 @@ public final class ConsistencyPass {
                 .flatMap(swept -> deferrals.open(inputs.projectId()))
                 .flatMap(afterSweep -> revise(inputs, afterSweep, calls, writer, tally, options))
                 .flatMap(done -> deferrals.open(inputs.projectId()))
-                .map(stillOpen -> ended(inputs.projectId(), tally, stillOpen));
+                .flatMap(stillOpen -> glossary.all(inputs.projectId())
+                        .map(entries -> ended(inputs.projectId(), tally, stillOpen, entries)));
     }
 
     private Result<Boolean> revise(
@@ -230,9 +230,13 @@ public final class ConsistencyPass {
         });
     }
 
-    private static ConsistencyReport ended(final String projectId, final PassTally tally, final List<Deferral> open) {
+    private static ConsistencyReport ended(
+            final String projectId,
+            final PassTally tally,
+            final List<Deferral> open,
+            final List<GlossaryEntry> entries) {
         final Map<DeferralReason, Integer> stillOpen = byReason(open);
-        final ConsistencyReport report = tally.report(stillOpen, awaitingGender(open));
+        final ConsistencyReport report = tally.report(stillOpen, GenderWaits.of(open, entries));
         log.info(
                 "Backward revision ended project={} segmentsChanged={} termSubstitutions={} genderReRenders={} "
                         + "neighbourFixes={} proposals={} openDeferrals={}",
@@ -306,25 +310,6 @@ public final class ConsistencyPass {
                 List.copyOf(sources.keySet()),
                 new FinalAudit.Book(brief, document, entries, WordValidator.none()),
                 context);
-    }
-
-    // Counted by segment: a segment naming two unknown-gender characters holds two deferrals but is one segment that
-    // waits, and the export message says "segments".
-    // One entry per character still unknown, with the segments that wait on it; a segment waiting on two characters
-    // counts for each, because setting either one is a reason to look at it.
-    private static List<GenderWait> awaitingGender(final List<Deferral> open) {
-        final Map<String, Set<String>> byCharacter = new HashMap<>();
-        open.stream()
-                .filter(deferral -> deferral.reason() == DeferralReason.GENDER_UNKNOWN
-                        && deferral.waitingOn() != null
-                        && !DeferralRegister.NARRATOR.equals(deferral.waitingOn()))
-                .forEach(deferral -> byCharacter
-                        .computeIfAbsent(Objects.requireNonNull(deferral.waitingOn()), name -> new HashSet<>())
-                        .add(deferral.segmentId()));
-        return byCharacter.entrySet().stream()
-                .map(entry -> new GenderWait(entry.getKey(), entry.getValue().size()))
-                .sorted(Comparator.comparingInt(GenderWait::segments).reversed().thenComparing(GenderWait::character))
-                .toList();
     }
 
     private static Map<DeferralReason, Integer> byReason(final List<Deferral> open) {

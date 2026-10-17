@@ -181,6 +181,8 @@ public final class ExportCompleteDialog {
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-no-target", line)));
         ExportReportLines.awaitingGender(messages, report.consistency())
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-awaiting-gender", line)));
+        ExportReportLines.suggestedGender(messages, report.consistency())
+                .ifPresent(line -> body.getChildren().add(warning("export-complete-suggested-gender", line)));
         ExportReportLines.reportFile(messages, report).ifPresent(line -> {
             final Label note = plain(line);
             note.setId("export-complete-report");

@@ -61,6 +61,49 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
                         + " the next export re-renders them.");
     }
 
+    // IF a suggested gender were counted as a missing one, THEN the export would say "set it" about what the table
+    // shows.
+    @Test
+    void screen_afterConsistencyPassWithSuggestedAndUnknownGenders_splitsTheNoticeAndTheCounts()
+            throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(
+                ConsistencySummary.Status.RAN,
+                0,
+                0,
+                Map.of(DeferralReason.GENDER_UNKNOWN, 5),
+                0,
+                ConsistencyChecks.NONE,
+                List.of(new GenderWait("Ember", 3, true), new GenderWait("Dane", 2)),
+                3,
+                2)));
+
+        assertThat(labelText("export-check-suggested-gender"))
+                .isEqualTo("3 segments wait on a suggested gender nobody has confirmed: Ember ×3. Confirm it in"
+                        + " Names & style; the next export re-renders them.");
+        assertThat(labelText("export-check-awaiting-gender"))
+                .isEqualTo("2 segments wait on a character's gender: Dane ×2. Set it in Names & style; the next"
+                        + " export re-renders them.");
+    }
+
+    @Test
+    void screen_afterConsistencyPassWithOnlySuggestedGenders_showsNoSetItWarningButStillLinksToNamesAndStyle()
+            throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(
+                ConsistencySummary.Status.RAN,
+                0,
+                0,
+                Map.of(DeferralReason.GENDER_UNKNOWN, 3),
+                0,
+                ConsistencyChecks.NONE,
+                List.of(new GenderWait("Ember", 3, true)),
+                3,
+                0)));
+
+        assertThat(scene.getRoot().lookup("#export-check-awaiting-gender")).isNull();
+        assertThat(scene.getRoot().lookup("#export-check-suggested-gender")).isNotNull();
+        assertThat(scene.getRoot().lookup("#export-awaiting-gender-open")).isNotNull();
+    }
+
     // The warning is only useful if the person can get to the place that fixes it.
     @Test
     void awaitingGenderLink_pressed_opensNamesAndStyle() throws TimeoutException {

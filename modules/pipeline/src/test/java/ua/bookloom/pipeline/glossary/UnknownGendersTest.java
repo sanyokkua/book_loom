@@ -61,6 +61,27 @@ class UnknownGendersTest {
         assertThat(asked).containsExactly(new UnknownGender("Dane", 7), new UnknownGender("Ember", 5));
     }
 
+    // A guessed gender is shown in the table yet still asks the person to confirm it, so Start names it as such.
+    @Test
+    void unknownGenders_suggestedGender_isListedAsSuggestedAndConfirmedOnesAreNot() {
+        openProjects.put(
+                PROJECT,
+                book(
+                        List.of(
+                                "Ember came in. Ember sat. Ember left. Ember ran. Ember spoke.",
+                                "Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke. Hale came. Hale came."
+                                        + " Hale came. Hale came. Hale came."),
+                        "Title"));
+        add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
+        service.add(new GlossaryEntry("p1:Dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.MALE, false)
+                .withSuggestedGender(Gender.MALE));
+        add("Hale", TermType.CHARACTER, Gender.FEMALE);
+
+        final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
+
+        assertThat(asked).containsExactly(new UnknownGender("Dane", 5, true), new UnknownGender("Ember", 5, false));
+    }
+
     @Test
     void unknownGenders_knownGenderPlaceAndPartOfAWord_areNotListed() {
         openProjects.put(PROJECT, book(repeated("Anna Annabel Zurich Zurich Zurich Zurich Zurich Zurich.", 2), "x"));

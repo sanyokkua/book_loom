@@ -60,6 +60,7 @@ public final class NamesStyleViewModel {
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
+    private final GenderConfirmations genderConfirmations;
     private final GlossaryAdditions additions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
@@ -159,6 +160,7 @@ public final class NamesStyleViewModel {
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
         this.additions = new GlossaryAdditions(
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
+        this.genderConfirmations = new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId);
         rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
                 (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
     }
@@ -189,20 +191,12 @@ public final class NamesStyleViewModel {
                 calls);
     }
 
-    /**
-     * The glossary rows, in the order the service listed them, proposals after them.
-     *
-     * @return a read-only list
-     */
+    /** {@return a read-only list of the glossary rows, in the order the service listed them, proposals after them} */
     public ObservableList<GlossaryEntry> rows() {
         return FXCollections.unmodifiableObservableList(rows);
     }
 
-    /**
-     * The line reported in place.
-     *
-     * @return a read-only property holding {@code null} when there is nothing to report
-     */
+    /** {@return a read-only property of the line reported in place, {@code null} when there is nothing to report} */
     public ReadOnlyObjectProperty<@Nullable GlossaryNotice> notice() {
         return notice.getReadOnlyProperty();
     }
@@ -231,20 +225,12 @@ public final class NamesStyleViewModel {
         return changeLog.results();
     }
 
-    /**
-     * The rows the last operation added or changed, for their marker and the "Changed in last run" filter.
-     *
-     * @return the marks, which the next operation clears
-     */
+    /** {@return the marks of the rows the last operation added or changed, which the next operation clears} */
     public ChangeMarks marks() {
         return marks;
     }
 
-    /**
-     * The recurring terms the Recurring terms card shows.
-     *
-     * @return the card's state, which lives as long as this view model
-     */
+    /** {@return the Recurring terms card's state, which lives as long as this view model} */
     public RecurringTerms recurring() {
         return recurring;
     }
@@ -393,5 +379,15 @@ public final class NamesStyleViewModel {
     /** {@return a read-only count of the rows that hold a suggested target nobody confirmed} */
     public ReadOnlyIntegerProperty suggestedCount() {
         return suggestedCount.getReadOnlyProperty();
+    }
+
+    /** Turns every suggested character gender into the person's; the results list can put each back. */
+    public void confirmGenders() {
+        genderConfirmations.confirmAll();
+    }
+
+    /** {@return a read-only count of the characters whose gender is a suggestion nobody has confirmed} */
+    public ReadOnlyIntegerProperty suggestedGenderCount() {
+        return genderConfirmations.suggestedCount();
     }
 }

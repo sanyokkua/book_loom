@@ -200,6 +200,25 @@ class ConsistencyPassGenderTest {
         assertThat(report.awaitingGender()).containsExactly(new GenderWait("Hale", 1), new GenderWait("Sam", 1));
     }
 
+    // A gender the glossary only suggests waits to be confirmed, which is not the same ask as setting a missing one.
+    @Test
+    void run_suggestedAndUnknownGenderDeferrals_areSplitByWhatThePersonHasToDo() {
+        book.add(book.character("Sam", "Сем", Gender.UNKNOWN, false));
+        book.add(book.character("Hale", "Хейл", Gender.UNKNOWN, false).withSuggestedGender(Gender.MALE));
+        book.decide(SAM_MET_HALE, "Сем зустрів Хейла.", "Сем зустрів Хейла.");
+        book.decide(SAM_DOOR, DOOR_PLAIN, DOOR_MASKED);
+        book.recordUnknownGender(SAM_MET_HALE);
+        book.recordUnknownGender(SAM_DOOR);
+
+        final ConsistencyReport report = ok(book.run(false));
+
+        assertThat(report.awaitingGender())
+                .containsExactly(new GenderWait("Sam", 2, false), new GenderWait("Hale", 1, true));
+        assertThat(report.suggestedGenderSegments()).isEqualTo(1);
+        assertThat(report.unknownGenderSegments()).isEqualTo(2);
+        assertThat(report.openGenderDeferrals()).isEqualTo(2);
+    }
+
     // Two unknown-gender characters of one segment are one waiting segment, not two.
     @Test
     void run_twoUnknownGenderDeferralsOnOneSegment_countAsOneWaitingSegment() {

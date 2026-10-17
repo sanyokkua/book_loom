@@ -42,7 +42,10 @@ final class NamesStyleConformanceCases {
                     List.of(
                             new Part("#names-style-auto", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#names-style-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#names-style-auto-subtitle", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
+                            new Part("#names-style-auto-subtitle", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            // "Confirm suggested genders" (15j.J3) is the ghost button beside it, shown while a
+                            // character's gender is only suggested.
+                            new Part("#names-style-confirm-genders", Kind.TEXT, "text", "#2c3941", "#e6ebed"))),
             // The Add term card, opened from the glossary card's header over the names screen.
             new Screen(
                     "ADD_TERM_DIALOG",

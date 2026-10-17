@@ -158,6 +158,15 @@ public record GlossaryEntry(
     }
 
     /**
+     * Whether the gender is a guess nobody has confirmed, which the person only has to confirm.
+     *
+     * @return {@code true} when the known gender is a suggestion, {@code false} for a confirmed or unknown gender
+     */
+    public boolean isGenderSuggested() {
+        return genderOrigin == GenderOrigin.SUGGESTED;
+    }
+
+    /**
      * Whether the gender is one the run may hold a text to: the person's or a verified one, not a guess.
      *
      * @return {@code true} when the gender is known and not a suggestion, {@code false} otherwise

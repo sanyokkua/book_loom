@@ -16,8 +16,10 @@ import ua.bookloom.api.project.DeferralReason;
  *     say what it is waiting for
  * @param neighbourFixes paragraphs the check against the paragraphs around them corrected
  * @param checks what the retry of doubted segments and the neighbour check came to besides the fixes
- * @param awaitingGender the characters whose unknown gender still holds segments back, most waiting first; never
- *     null, empty when none does
+ * @param awaitingGender the characters whose unknown or only suggested gender still holds segments back, most waiting
+ *     first; never null, empty when none does
+ * @param suggestedGenderSegments the distinct segments that wait on a suggested gender the person only has to confirm
+ * @param unknownGenderSegments the distinct segments that wait on a gender nobody has given (or on the narrator's)
  */
 public record ConsistencySummary(
         Status status,
@@ -26,7 +28,9 @@ public record ConsistencySummary(
         Map<DeferralReason, Integer> openDeferrals,
         int neighbourFixes,
         ConsistencyChecks checks,
-        List<GenderWait> awaitingGender) {
+        List<GenderWait> awaitingGender,
+        int suggestedGenderSegments,
+        int unknownGenderSegments) {
 
     /** The summary of an export whose pass was switched off: nothing ran, nothing is to be said. */
     public static final ConsistencySummary NOT_RUN = new ConsistencySummary(Status.NOT_RUN, 0, 0);
@@ -39,6 +43,31 @@ public record ConsistencySummary(
         RAN,
         /** The pass ran without a model, so only the name sweep ran and gender deferrals stayed open. */
         RAN_WITHOUT_MODEL
+    }
+
+    /**
+     * A summary whose waiting segments are counted from the characters named: those waiting on a suggested gender,
+     * and the rest of the open gender deferrals.
+     */
+    public ConsistencySummary(
+            final Status status,
+            final int termSubstitutions,
+            final int genderReRenders,
+            final Map<DeferralReason, Integer> openDeferrals,
+            final int neighbourFixes,
+            final ConsistencyChecks checks,
+            final List<GenderWait> awaitingGender) {
+        this(
+                status,
+                termSubstitutions,
+                genderReRenders,
+                openDeferrals,
+                neighbourFixes,
+                checks,
+                awaitingGender,
+                suggestedOf(awaitingGender),
+                Math.max(
+                        0, openDeferrals.getOrDefault(DeferralReason.GENDER_UNKNOWN, 0) - suggestedOf(awaitingGender)));
     }
 
     /** A summary that names no waiting character. */
@@ -82,10 +111,21 @@ public record ConsistencySummary(
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
         Objects.requireNonNull(checks, "checks");
         awaitingGender = List.copyOf(Objects.requireNonNull(awaitingGender, "awaitingGender"));
-        if (termSubstitutions < 0 || genderReRenders < 0 || neighbourFixes < 0) {
+        if (termSubstitutions < 0
+                || genderReRenders < 0
+                || neighbourFixes < 0
+                || suggestedGenderSegments < 0
+                || unknownGenderSegments < 0) {
             throw new IllegalArgumentException(
                     "no count may be negative: " + termSubstitutions + ", " + genderReRenders);
         }
+    }
+
+    private static int suggestedOf(final List<GenderWait> waits) {
+        return waits.stream()
+                .filter(GenderWait::suggested)
+                .mapToInt(GenderWait::segments)
+                .sum();
     }
 
     /** Segments the pass changed. */

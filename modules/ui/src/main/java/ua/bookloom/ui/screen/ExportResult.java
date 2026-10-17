@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -144,10 +145,13 @@ final class ExportResult {
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-no-target", line)));
-        ExportReportLines.awaitingGender(messages, report.consistency()).ifPresent(line -> {
-            checks.getChildren().add(warning("export-check-awaiting-gender", line));
+        final Optional<String> unknown = ExportReportLines.awaitingGender(messages, report.consistency());
+        final Optional<String> suggested = ExportReportLines.suggestedGender(messages, report.consistency());
+        unknown.ifPresent(line -> checks.getChildren().add(warning("export-check-awaiting-gender", line)));
+        suggested.ifPresent(line -> checks.getChildren().add(warning("export-check-suggested-gender", line)));
+        if (unknown.isPresent() || suggested.isPresent()) {
             checks.getChildren().add(namesStyleLink());
-        });
+        }
         final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
         for (int index = 0; index < passLines.size(); index++) {
             checks.getChildren()
