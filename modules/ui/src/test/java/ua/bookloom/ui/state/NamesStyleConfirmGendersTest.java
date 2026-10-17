@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GenderOrigin;
@@ -129,5 +131,62 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
 
         assertThat(glossary.updated()).isEmpty();
         assertThat(onFx(() -> vm.results().get())).isNull();
+    }
+
+    // IF Undo restored only the rows the action asked for, THEN a character's other spellings stayed the person's.
+    @Test
+    void undoAll_characterWithAnotherSpelling_putsBothRowsBack() {
+        final GlossaryEntry ember = new GlossaryEntry(
+                        "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.FEMALE);
+        final GlossaryEntry embers = new GlossaryEntry(
+                        "e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.FEMALE);
+        glossary.willAnswer(Result.ok(List.of(ember, embers)));
+        run(() -> vm.show(PROJECT));
+        glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
+        glossary.willAnswer(Result.ok(embers.withGender(Gender.FEMALE)));
+        glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
+        run(vm::confirmGenders);
+        assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
+        glossary.willAnswer(Result.ok(ember));
+        glossary.willAnswer(Result.ok(embers));
+
+        run(() -> vm.results().get().undoAll());
+
+        assertThat(glossary.updated()).endsWith(ember, embers);
+        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+    }
+
+    // IF the glossary shared the gender with a spelling nobody asked about, THEN the results must list that row too.
+    @Test
+    void confirmGenders_serviceChangesAnotherSpelling_reportsThatRowToo() {
+        final GlossaryEntry ember = new GlossaryEntry(
+                        "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.FEMALE);
+        final GlossaryEntry embers =
+                new GlossaryEntry("e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.FEMALE, false);
+        glossary.willAnswer(Result.ok(List.of(ember, embers)));
+        run(() -> vm.show(PROJECT));
+        glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
+        glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
+
+        run(vm::confirmGenders);
+
+        assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
+    }
+
+    // IF a refusal after some rows were stored were dropped, THEN the person would think every gender was confirmed.
+    @Test
+    void confirmGenders_refusedAfterOneRow_reportsTheStoredRowAndSaysItStopped() {
+        glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
+        glossary.willAnswer(Result.err(AppError.of(ErrorCode.internal, "Refused", "Boris could not be stored.")));
+
+        run(vm::confirmGenders);
+
+        assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(1);
+        final GlossaryNotice notice = onFx(() -> vm.notice().get());
+        assertThat(notice.level()).isEqualTo(GlossaryNotice.Level.ERROR);
+        assertThat(notice.text()).isEqualTo("Boris could not be stored.");
     }
 }

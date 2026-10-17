@@ -23,12 +23,13 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.RunMode;
 
 /**
- * The one button above both cards of Names &amp; style that prepares the names and the recurring terms in one pass, with
- * "Confirm suggested genders" beside it, and the plan's estimate for the brief's dial under it. While it runs the
- * shared busy card shows the progress, and that card's Cancel is the pass's Stop; the pass changes nothing when stopped. The estimate is asked of the port again when
- * a change of the dial has been saved, since the port reads the stored brief; until then the line is blank, because the
- * minutes it held were computed for the previous dial. The view models outlive this view, so what
- * listens to them does so weakly, with the strong reference held by the subtitle.
+ * The one button above both cards of Names &amp; style that prepares the names and the recurring terms in one pass,
+ * with "Confirm suggested genders" beside it, and the plan's estimate for the brief's dial under it. While it runs the
+ * shared busy card shows the progress, and that card's Cancel is the pass's Stop; the pass changes nothing when
+ * stopped. The estimate is asked of the port again when a change of the dial has been saved, since the port reads the
+ * stored brief; until then the line is blank, because the minutes it held were computed for the previous dial. The
+ * view models outlive this view, so what listens to them does so weakly, with the strong reference held by the
+ * subtitle.
  */
 @Slf4j
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it

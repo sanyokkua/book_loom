@@ -1,7 +1,9 @@
 package ua.bookloom.ui.state;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -72,36 +74,66 @@ final class GenderConfirmations {
         }
         log.info("confirming {} suggested character genders of project {}", suggested.size(), shown);
         changes.begin();
-        calls.run("confirm genders", () -> store(suggested), answer -> published(shown, answer));
+        final List<GlossaryEntry> before = List.copyOf(rows);
+        calls.run("confirm genders", () -> store(suggested, before), answer -> published(shown, answer));
     }
 
-    // Runs on the background executor: each row is stored in turn, and the first refusal ends the action with what was
-    // stored so far reported, so a half-done confirmation can still be undone row by row.
-    private Result<EntryChanges<GlossaryEntry>> store(final List<GlossaryEntry> suggested) {
-        final List<EntryChanges.Change<GlossaryEntry>> done = new ArrayList<>();
-        for (final GlossaryEntry before : suggested) {
-            final Result<GlossaryEntry> stored = glossary.update(before.withGender(before.gender()));
-            final AppError failure = stored.error();
-            if (failure != null) {
-                log.warn("confirming the gender of one character failed with {}", failure.code());
-                return done.isEmpty() ? Result.err(failure) : Result.ok(changesOf(done));
+    /** What the action did: every row it changed, and the refusal that stopped it early, if one did. */
+    private record Outcome(
+            EntryChanges<GlossaryEntry> done, @Nullable AppError stoppedBy) {}
+
+    // Runs on the background executor: each row is stored in turn and the first refusal ends the action. The service
+    // shares a chosen gender with the character's other spellings, so what changed is read back from the glossary
+    // rather than taken from the rows asked for; that is what lets Undo restore every row.
+    private Result<Outcome> store(final List<GlossaryEntry> suggested, final List<GlossaryEntry> before) {
+        final List<EntryChanges.Change<GlossaryEntry>> asked = new ArrayList<>();
+        @Nullable AppError stoppedBy = null;
+        for (final GlossaryEntry row : suggested) {
+            final Result<GlossaryEntry> stored = glossary.update(row.withGender(row.gender()));
+            stoppedBy = stored.error();
+            if (stoppedBy != null) {
+                log.warn("confirming the gender of one character stopped with {}", stoppedBy.code());
+                break;
             }
-            done.add(new EntryChanges.Change<>(before, Objects.requireNonNull(stored.data(), "data"), null));
+            asked.add(new EntryChanges.Change<>(row, Objects.requireNonNull(stored.data(), "data"), null));
         }
-        return Result.ok(changesOf(done));
+        if (asked.isEmpty() && stoppedBy != null) {
+            return Result.err(stoppedBy);
+        }
+        return Result.ok(
+                new Outcome(changesOf(before, asked, suggested.getFirst().projectId()), stoppedBy));
     }
 
-    private static EntryChanges<GlossaryEntry> changesOf(final List<EntryChanges.Change<GlossaryEntry>> done) {
-        return new EntryChanges<>(List.of(), List.of(), done);
+    private EntryChanges<GlossaryEntry> changesOf(
+            final List<GlossaryEntry> before,
+            final List<EntryChanges.Change<GlossaryEntry>> asked,
+            final String projectId) {
+        final Result<List<GlossaryEntry>> now = glossary.entries(projectId);
+        if (now.isErr()) {
+            log.debug("the glossary could not be read back: only the rows asked for are reported");
+            return new EntryChanges<>(List.of(), List.of(), asked);
+        }
+        final Map<String, GlossaryEntry> held = new HashMap<>();
+        before.forEach(entry -> held.put(entry.id(), entry));
+        final List<EntryChanges.Change<GlossaryEntry>> changed = new ArrayList<>();
+        for (final GlossaryEntry after : Objects.requireNonNull(now.data(), "data")) {
+            final GlossaryEntry was = held.get(after.id());
+            if (was != null && !was.equals(after)) {
+                changed.add(new EntryChanges.Change<>(was, after, null));
+            }
+        }
+        log.debug("{} rows asked for, {} rows changed", asked.size(), changed.size());
+        return new EntryChanges<>(List.of(), List.of(), changed);
     }
 
-    private void published(final String shown, final Result<EntryChanges<GlossaryEntry>> answer) {
+    private void published(final String shown, final Result<Outcome> answer) {
         final AppError failure = answer.error();
         if (failure != null) {
             notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
             return;
         }
-        final EntryChanges<GlossaryEntry> done = Objects.requireNonNull(answer.data(), "data");
+        final Outcome outcome = Objects.requireNonNull(answer.data(), "data");
+        final EntryChanges<GlossaryEntry> done = outcome.done();
         if (!shown.equals(project.get())) {
             log.debug("the confirmed genders of project {} are not shown: another project is open", shown);
             return;
@@ -114,5 +146,12 @@ final class GenderConfirmations {
         };
         done.changed().forEach(show);
         changes.names(ChangeOperation.CONFIRM_GENDERS, done);
+        final AppError stopped = outcome.stoppedBy();
+        if (stopped != null) {
+            log.warn(
+                    "confirming genders stopped early after {} changed rows",
+                    done.changed().size());
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, stopped.message()));
+        }
     }
 }
