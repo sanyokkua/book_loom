@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.reviewer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
@@ -19,6 +20,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -53,6 +55,38 @@ class ReviewerCallTest {
         assertThat(request.responseFormat().jsonSchema())
                 .doesNotContain("maxItems", "maxLength", "additionalProperties")
                 .contains("\"enum\":[\"ok\",\"edits\",\"rewrite\"]", "invented-word");
+    }
+
+    // IF the reviewer call carried no target, THEN the live panel showed "No translation" for an answer of "ok".
+    @Test
+    void review_threePairs_describesTheCallWithTheCandidatesItChecks() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(ALL_OK));
+        final List<CallDescriptor> described = new ArrayList<>();
+        final ModelCalls calls = new ModelCalls() {
+            @Override
+            public Result<ChatResponse> call(
+                    final CallKind kind,
+                    final @org.jspecify.annotations.Nullable String segmentId,
+                    final ChatRequest request) {
+                return model.chat(request);
+            }
+
+            @Override
+            public Result<ChatResponse> callAbout(
+                    final CallKind kind,
+                    final List<String> segmentIds,
+                    final ChatRequest request,
+                    final CallDescriptor descriptor) {
+                described.add(descriptor);
+                return model.chat(request);
+            }
+        };
+
+        CALL.review(THREE_PAIRS, FRAME, List.of(), ReviewPass.FIRST, calls);
+
+        assertThat(described).hasSize(1);
+        assertThat(described.getFirst().targets())
+                .containsExactly("Він відчинив старі двері.", "Вона усміхнулася.", "Було тихо.");
     }
 
     @Test

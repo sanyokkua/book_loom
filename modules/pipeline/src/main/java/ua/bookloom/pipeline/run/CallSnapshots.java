@@ -103,13 +103,17 @@ final class CallSnapshots {
         announce.accept(new CallSnapshotUpdated(snapshot));
     }
 
-    private List<CallSegment> segmentsOf(final List<String> ids, final List<String> sources) {
+    private List<CallSegment> segmentsOf(
+            final List<String> ids, final List<String> sources, final List<String> targets) {
         final List<CallSegment> segments = new ArrayList<>();
         for (int index = 0; index < ids.size(); index++) {
             final String id = ids.get(index);
             final SegmentLocator locator = locators.get(id);
             segments.add(new CallSegment(
-                    id, locator == null ? id : locator.text(), index < sources.size() ? sources.get(index) : ""));
+                    id,
+                    locator == null ? id : locator.text(),
+                    index < sources.size() ? sources.get(index) : "",
+                    index < targets.size() ? targets.get(index) : null));
         }
         return segments;
     }
@@ -155,7 +159,7 @@ final class CallSnapshots {
                                     kind,
                                     descriptor.label(),
                                     descriptor.position(),
-                                    segmentsOf(segmentIds, descriptor.sources()),
+                                    segmentsOf(segmentIds, descriptor.sources(), descriptor.targets()),
                                     descriptor.sections().get(),
                                     at,
                                     attempt.number(),

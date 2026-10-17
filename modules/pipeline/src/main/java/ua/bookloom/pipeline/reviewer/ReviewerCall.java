@@ -177,7 +177,10 @@ public final class ReviewerCall {
                 PromptName.REVIEWER.resourceBaseName(),
                 null,
                 pairs.stream().map(pair -> DisplayText.of(pair.maskedSource())).toList(),
-                () -> templates.sectionsOf(PromptName.REVIEWER, frame, userValues));
+                () -> templates.sectionsOf(PromptName.REVIEWER, frame, userValues),
+                pairs.stream()
+                        .map(pair -> DisplayText.of(pair.maskedCandidate()))
+                        .toList());
         return send(pairs.stream().map(ReviewedPair::segmentId).toList(), request, descriptor, calls);
     }
 

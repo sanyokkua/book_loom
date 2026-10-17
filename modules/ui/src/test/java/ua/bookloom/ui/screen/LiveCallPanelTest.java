@@ -212,6 +212,39 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         assertThat(chipTexts(CURRENT + "-segment-2-chips")).containsExactly("from memory");
     }
 
+    // IF a consistency call that answered "unchanged" showed "No translation", THEN a checked paragraph looks
+    // untranslated.
+    @Test
+    void answeredConsistencyCall_showsTheTargetItCheckedNotAnEmptyTranslation() {
+        final CallSnapshot call = LiveCallFixtures.answered(
+                LiveCallFixtures.checking(1, "Rain fell all day.", "Дощ ішов цілий день."), "{\"unchanged\":true}");
+        publishCalls(LiveCallFixtures.calls(call, null));
+
+        assertThat(labelText(CURRENT + "-segment-1-target-text")).isEqualTo("Дощ ішов цілий день.");
+    }
+
+    // IF only revision calls carried the target, THEN a reviewer that answered "ok" showed "No translation".
+    @Test
+    void answeredReviewerCall_showsTheTargetItReviewed() {
+        final CallSnapshot call = LiveCallFixtures.answered(
+                LiveCallFixtures.reviewing(1, "Rain fell all day.", "Дощ ішов цілий день."),
+                "{\"results\":[{\"id\":\"1\",\"status\":\"ok\"}]}");
+        publishCalls(LiveCallFixtures.calls(call, null));
+
+        assertThat(labelText(CURRENT + "-segment-1-target-text")).isEqualTo("Дощ ішов цілий день.");
+    }
+
+    // IF the stored target hid the run's own, THEN a segment redrafted since would show text it no longer holds.
+    @Test
+    void answeredConsistencyCall_withALiveTarget_showsTheLiveOne() {
+        final CallSnapshot call = LiveCallFixtures.answered(
+                LiveCallFixtures.checking(1, "Rain fell all day.", "Дощ ішов цілий день."), "{}");
+        publishCalls(LiveCallFixtures.calls(
+                call, null, Map.of("s-1-1", new SegmentLive("Дощ лив цілий день.", null, SegmentPath.REPAIRED))));
+
+        assertThat(labelText(CURRENT + "-segment-1-target-text")).isEqualTo("Дощ лив цілий день.");
+    }
+
     // IF a failed or cancelled call looked like an answered one, THEN the person would trust a reply that never came.
     @ParameterizedTest
     @CsvSource({"FAILED, Failed", "CANCELLED, Cancelled"})

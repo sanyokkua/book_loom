@@ -13,6 +13,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.RepairReplies;
@@ -104,7 +105,8 @@ final class RevisionCall {
                 CallKind.REVISION,
                 List.of(segment.id()),
                 request,
-                SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user));
+                SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user)
+                        .withTargets(List.of(DisplayText.of(maskedTarget))));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
         if (name == PromptName.CONSISTENCY && UnchangedReply.isUnchanged(reply)) {
             log.debug("Revision answered unchanged segmentId={}", segment.id());

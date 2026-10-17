@@ -34,6 +34,36 @@ public final class LiveCallFixtures {
                 id, CallKind.DRAFT, "draft-batch-json", null, segments, sections, STARTED, 1, 2, Duration.ofMinutes(3));
     }
 
+    /** A consistency call about one translated segment, waiting for the model, that carries the target it checks. */
+    public static CallSnapshot checking(final long id, final String source, final String target) {
+        return CallSnapshot.waiting(
+                id,
+                CallKind.REVISION,
+                "consistency",
+                null,
+                List.of(new CallSegment("s-" + id + "-1", "ch7 · p" + (id * 100 + 1), source, target)),
+                List.of(),
+                STARTED,
+                1,
+                2,
+                Duration.ofMinutes(3));
+    }
+
+    /** A reviewer call about one translated segment, waiting for the model, that carries the target it reviews. */
+    public static CallSnapshot reviewing(final long id, final String source, final String target) {
+        return CallSnapshot.waiting(
+                id,
+                CallKind.REVIEW,
+                "reviewer",
+                null,
+                List.of(new CallSegment("s-" + id + "-1", "ch7 · p" + (id * 100 + 1), source, target)),
+                List.of(),
+                STARTED,
+                1,
+                2,
+                Duration.ofMinutes(3));
+    }
+
     public static CallSnapshot answered(final CallSnapshot waiting, final String reply) {
         return waiting.answered(reply, null, Duration.ofSeconds(7));
     }

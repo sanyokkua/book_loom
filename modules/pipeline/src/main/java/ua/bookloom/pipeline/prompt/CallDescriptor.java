@@ -15,15 +15,48 @@ import ua.bookloom.api.pipeline.PromptSection;
  * @param position the chunk the call is made in, or null when the call site does not know it
  * @param sources each segment's source as a person reads it, in the order of the call's segment ids
  * @param sections the parts of the prompt as sent, in order; called at most once, when the first attempt goes out
+ * @param targets each segment's translation as the call was given it, as a person reads it, in the order of the call's
+ *     segment ids; empty when the call is about no translation yet (a draft) or its site does not show one
  */
 public record CallDescriptor(
-        String label, @Nullable ChunkPosition position, List<String> sources, Supplier<List<PromptSection>> sections) {
+        String label,
+        @Nullable ChunkPosition position,
+        List<String> sources,
+        Supplier<List<PromptSection>> sections,
+        List<String> targets) {
 
-    /** Rejects a missing part and copies the sources. */
+    /** Rejects a missing part and copies the sources and targets. */
     public CallDescriptor {
         Objects.requireNonNull(label, "label");
         sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
         Objects.requireNonNull(sections, "sections");
+        targets = List.copyOf(Objects.requireNonNull(targets, "targets"));
+    }
+
+    /**
+     * A descriptor of a call that is given no translation.
+     *
+     * @param label the name of the prompt the call was built from
+     * @param position the chunk the call is made in, or null
+     * @param sources each segment's source as a person reads it
+     * @param sections the parts of the prompt as sent
+     */
+    public CallDescriptor(
+            final String label,
+            @Nullable final ChunkPosition position,
+            final List<String> sources,
+            final Supplier<List<PromptSection>> sections) {
+        this(label, position, sources, sections, List.of());
+    }
+
+    /**
+     * This descriptor for a call that checks or revises translations.
+     *
+     * @param shown each segment's translation as a person reads it, in the order of the call's segment ids
+     * @return a copy that carries them
+     */
+    public CallDescriptor withTargets(final List<String> shown) {
+        return new CallDescriptor(label, position, sources, sections, shown);
     }
 
     /**
