@@ -89,6 +89,22 @@ class OllamaClientStreamingTest {
     }
 
     @Test
+    void chat_streamedFinalChunkReportsCachedPromptCount_usageCarriesIt() {
+        stubStream(aResponse().withBody("""
+                {"model":"gemma4:e4b-mlx","message":{"content":"Hi"},"done":false}
+                {"model":"gemma4:e4b-mlx","message":{"content":""},"done":true,"done_reason":"stop",\
+                "prompt_eval_count":1000,"prompt_eval_cached_count":812,"eval_count":2,"eval_duration":1000000}
+                """));
+
+        final Result<ChatResponse> result =
+                client(Duration.ofSeconds(2)).chat(MODEL_ID, draft()).result();
+
+        assertThat(result.data())
+                .extracting(ChatResponse::usage)
+                .isEqualTo(new TokenUsage(1000, 2, Duration.ofMillis(1), null, 812));
+    }
+
+    @Test
     void chat_streamArrivingSlowlyButSteadily_answers() {
         stubStream(aResponse().withBody(STREAM).withChunkedDribbleDelay(5, 1500));
 

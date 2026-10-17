@@ -51,6 +51,9 @@ class OllamaLiveTest {
         assertThat(content).isNotBlank().doesNotContain("<think>").doesNotContain("</think>");
     }
 
+    private static final int CACHE_PROMPT_REPEATS = 110;
+    private static final int CACHE_NUM_CTX = 8192;
+    private static final int CACHE_REPLY_CAP = 16;
     private static final String MODEL_ENV = "BOOKLOOM_LIVE_OLLAMA_MODEL";
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
     private static final String TOKEN_REPLY = "⟦g0⟧KEEP⟦g1⟧";
@@ -148,6 +151,35 @@ class OllamaLiveTest {
         assertThat(response.usage()).isNotNull();
         assertThat(response.usage().completion()).isGreaterThan(0);
         assertThat(response.usage().generation()).isPositive();
+    }
+
+    // The same long system prompt sent twice must be served from the server's prompt cache the second time (15h.C5).
+    @Test
+    void chat_sameSystemPromptTwice_secondReplyReportsCachedPromptTokens() {
+        final String system = "You are a careful assistant for the fictional town of Ashvale. "
+                + "The town keeps a ledger of lanterns, bridges and weather. ".repeat(CACHE_PROMPT_REPEATS);
+
+        chatWithSystem(system, "Say one word about lanterns.");
+        final ChatResponse second = chatWithSystem(system, "Say one word about bridges.");
+
+        assertThat(second.usage()).isNotNull();
+        assertThat(second.usage().cachedPrompt()).isNotNull().isGreaterThan(0);
+    }
+
+    private static ChatResponse chatWithSystem(String system, String user) {
+        final Result<ChatResponse> result = client().chat(
+                        modelId(),
+                        new ChatRequest(
+                                List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user)),
+                                0.0,
+                                null,
+                                null,
+                                CACHE_NUM_CTX,
+                                null,
+                                CACHE_REPLY_CAP))
+                .result();
+        assertThat(result.isOk()).as("Ollama chat result: " + result.error()).isTrue();
+        return Objects.requireNonNull(result.data(), "chat response");
     }
 
     private static OllamaClient client() {

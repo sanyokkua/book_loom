@@ -137,7 +137,13 @@ class OllamaClientUsageTest {
                         """, new TokenUsage(812, 96, Duration.ofMillis(3200), Duration.ofMillis(450), null)),
                 arguments("""
                         {"model":"gemma4:e4b-mlx","message":{"content":"reply"},"done_reason":"stop","prompt_eval_duration":450000000}
-                        """, new TokenUsage(null, null, null, Duration.ofMillis(450), null)));
+                        """, new TokenUsage(null, null, null, Duration.ofMillis(450), null)),
+                arguments("""
+                        {"model":"gemma4:e4b-mlx","message":{"content":"reply"},"done_reason":"stop","prompt_eval_count":1000,"prompt_eval_cached_count":812}
+                        """, new TokenUsage(1000, null, null, null, 812)),
+                arguments("""
+                        {"model":"gemma4:e4b-mlx","message":{"content":"reply"},"done_reason":"stop","prompt_eval_count":1000,"prompt_eval_cached_count":0}
+                        """, new TokenUsage(1000, null, null, null, 0)));
     }
 
     private void stubChat(String body) {
