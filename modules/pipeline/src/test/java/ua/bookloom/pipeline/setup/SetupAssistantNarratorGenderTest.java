@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -82,7 +83,9 @@ class SetupAssistantNarratorGenderTest {
     }
 
     private void narratorIs(final Narrator narrator) {
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withNarrator(narrator)));
     }
 
@@ -93,8 +96,8 @@ class SetupAssistantNarratorGenderTest {
         glossaryHoldsRay();
         modelAnswers(reply("male", VOCATIVE, "Ray"));
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
@@ -113,8 +116,8 @@ class SetupAssistantNarratorGenderTest {
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
         modelAnswers(reply("male", VOCATIVE, "Ray"));
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.narrator()).isEqualTo(NarratorPerson.FIRST);
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
@@ -126,8 +129,8 @@ class SetupAssistantNarratorGenderTest {
     void suggestBrief_vocativeOfANameNobodyKnows_leavesTheGenderUnknown() {
         modelAnswers(reply("male", VOCATIVE, "Ray"));
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
     }
@@ -138,8 +141,8 @@ class SetupAssistantNarratorGenderTest {
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
         modelAnswers(reply("male", VOCATIVE, "Ray"));
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.FEMALE);
         assertThat(suggestion.evidence()).doesNotContainKey(BriefField.NARRATOR_GENDER);

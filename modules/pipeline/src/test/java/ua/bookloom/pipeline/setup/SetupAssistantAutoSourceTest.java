@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -40,7 +41,9 @@ class SetupAssistantAutoSourceTest {
 
     private ScriptedChatModel suggestUnderAuto(final String bookText) {
         final Desk desk = ReviewFixtures.markdown(tempDir, bookText);
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withLanguages(null, "uk")));
         final ScriptedChatModel model = new ScriptedChatModel();
         model.answerTo("brief-suggestion", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)))

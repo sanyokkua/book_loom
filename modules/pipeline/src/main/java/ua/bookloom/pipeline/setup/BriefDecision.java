@@ -43,12 +43,21 @@ final class BriefDecision {
     private static final String FEMALE = "female";
 
     /**
-     * A field's value and what it stands on.
+     * A choice field's value and what it stands on.
      *
-     * @param value the decided value, or null for an empty text field
+     * @param value the decided value
      * @param evidence what the value stands on
      */
-    record Decided<T extends @Nullable Object>(T value, FieldEvidence evidence) {}
+    record Decided<T>(T value, FieldEvidence evidence) {}
+
+    /**
+     * A text field's value and what it stands on; a field of its own because a text field may stay empty, which a
+     * choice field never does.
+     *
+     * @param value the decided text, or null when the field stays empty
+     * @param evidence what the value stands on
+     */
+    record Text(@Nullable String value, FieldEvidence evidence) {}
 
     /**
      * The register by a strict majority of the windows read.
@@ -57,7 +66,7 @@ final class BriefDecision {
      * @return the register, neutral and uncertain when no value has a strict majority
      */
     static Decided<Register> register(final List<@Nullable Map<BriefField, Answer>> windows) {
-        final Decided<@Nullable String> word = majority(BriefField.REGISTER, windows);
+        final Text word = majority(BriefField.REGISTER, windows);
         final Register register =
                 switch (word.value() == null ? "" : word.value()) {
                     case "formal" -> Register.FORMAL_LITERARY;
@@ -91,7 +100,7 @@ final class BriefDecision {
             logged(BriefField.NARRATOR, person, measured);
             return new Decided<>(person, measured);
         }
-        final Decided<@Nullable String> word = majority(BriefField.NARRATOR, windows);
+        final Text word = majority(BriefField.NARRATOR, windows);
         final NarratorPerson person =
                 switch (word.value() == null ? "" : word.value()) {
                     case "first" -> NarratorPerson.FIRST;
@@ -160,7 +169,7 @@ final class BriefDecision {
      *     stands for the whole book
      * @return the value with its basis, or null and uncertain
      */
-    static Decided<@Nullable String> synthesized(
+    static Text synthesized(
             final BriefField field,
             final @Nullable JsonNode synthesis,
             final Knowledge knowledge,
@@ -193,7 +202,7 @@ final class BriefDecision {
                 : new FieldEvidence(basis, quotesOf(field, cited, windows), cited.size(), samples);
         log.info("Brief field {} decided: kept={} {}", field, evidence.isKept(), evidence.describe());
         log.trace("Brief field {} value '{}'", field, value);
-        return new Decided<>(evidence.isKept() ? value : null, evidence);
+        return new Text(evidence.isKept() ? value : null, evidence);
     }
 
     /**
@@ -299,8 +308,7 @@ final class BriefDecision {
                 .toList();
     }
 
-    private static Decided<@Nullable String> majority(
-            final BriefField field, final List<@Nullable Map<BriefField, Answer>> windows) {
+    private static Text majority(final BriefField field, final List<@Nullable Map<BriefField, Answer>> windows) {
         final Map<String, List<Answer>> byValue = new LinkedHashMap<>();
         answersOf(field, windows)
                 .forEach(answer -> byValue.computeIfAbsent(answer.value(), value -> new ArrayList<>())
@@ -312,12 +320,10 @@ final class BriefDecision {
                 .orElse(null);
         log.debug("Brief field {} answers by value {} of {} windows", field, byValue.keySet(), samples);
         if (best == null || 2 * best.getValue().size() <= samples) {
-            return new Decided<>(
-                    null, uncertain(best == null ? 0 : best.getValue().size(), samples));
+            return new Text(null, uncertain(best == null ? 0 : best.getValue().size(), samples));
         }
         final List<Answer> agreeing = best.getValue();
-        return new Decided<>(
-                best.getKey(), new FieldEvidence(Basis.PASSAGES, quotesOf(agreeing), agreeing.size(), samples));
+        return new Text(best.getKey(), new FieldEvidence(Basis.PASSAGES, quotesOf(agreeing), agreeing.size(), samples));
     }
 
     // Every window's answer to the field, in passage order; an unreadable window and one with no answer give none.
@@ -333,9 +339,9 @@ final class BriefDecision {
         return answers;
     }
 
-    private static Decided<@Nullable String> empty(final BriefField field, final FieldEvidence evidence) {
+    private static Text empty(final BriefField field, final FieldEvidence evidence) {
         log.info("Brief field {} decided: empty, {}", field, evidence.describe());
-        return new Decided<>(null, evidence);
+        return new Text(null, evidence);
     }
 
     private static void logged(final BriefField field, final Object value, final FieldEvidence evidence) {

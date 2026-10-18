@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +72,9 @@ class SetupAssistantWindowsTest {
     }
 
     private void dialIs(final QualityDial dial) {
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withDial(dial)));
     }
 
@@ -168,7 +171,7 @@ class SetupAssistantWindowsTest {
         assertThat(suggest(null).isOk()).isTrue();
 
         final ChatRequest request = windowRequests().getFirst();
-        final String schema = request.responseFormat().jsonSchema();
+        final String schema = Objects.requireNonNull(request.responseFormat()).jsonSchema();
         final String system = request.messages().getFirst().content();
         assertThat(schema.indexOf("\"evidence\"")).isNotNegative().isLessThan(schema.indexOf("\"value\""));
         assertThat(system).contains("\"genre\":{\"evidence\"");

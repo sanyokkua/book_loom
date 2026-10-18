@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -123,8 +124,8 @@ class BookKnowledgeTest {
         assertThat(request.temperature()).isEqualTo(0.0);
         assertThat(request.expectedOutputTokens()).isEqualTo(160);
         assertThat(request.maxOutputTokens()).isEqualTo(320);
-        assertThat(request.responseFormat().name()).isEqualTo("book-knowledge");
-        assertThat(request.responseFormat().jsonSchema())
+        assertThat(Objects.requireNonNull(request.responseFormat()).name()).isEqualTo("book-knowledge");
+        assertThat(Objects.requireNonNull(request.responseFormat()).jsonSchema())
                 .contains("\"known\"", "\"title\"", "\"author\"", "\"year\"", "\"genre\"", "\"audience\"", "\"era\"")
                 .contains("\"narration\"", "\"summary\"", "\"confidence\"")
                 .contains("\"additionalProperties\":false");
@@ -239,7 +240,7 @@ class BookKnowledgeTest {
         final Knowledge result = ask(FACTS, STEM);
 
         assertThat(result.isKnown()).isTrue();
-        assertThat(result.reply().genre()).isNull();
+        assertThat(Objects.requireNonNull(result.reply()).genre()).isNull();
     }
 
     @Test
@@ -260,7 +261,7 @@ class BookKnowledgeTest {
         final Result<Knowledge> result = knowledge.ask(FACTS, STEM, frame, calls);
 
         assertThat(result.isErr()).isTrue();
-        assertThat(result.error().code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.cancelled);
     }
 
     @Test

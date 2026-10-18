@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.FieldEvidence.Basis;
-import ua.bookloom.pipeline.setup.BriefDecision.Decided;
+import ua.bookloom.pipeline.setup.BriefDecision.Text;
 import ua.bookloom.pipeline.setup.BriefReplies.Answer;
 import ua.bookloom.pipeline.setup.Knowledge.Reason;
 
@@ -89,7 +89,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_basisAcceptedKnowledgeThatAgrees_standsFromWhatTheModelKnows() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
                 KNOWS_A_MYSTERY,
@@ -104,7 +104,7 @@ class BriefDecisionSynthesisTest {
     // IF a cited knowledge counted when the book is unknown, THEN an invented book would get the model's guess.
     @Test
     void synthesized_basisKnowledgeButTheBookIsUnknown_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
                 UNKNOWN,
@@ -118,7 +118,7 @@ class BriefDecisionSynthesisTest {
     // IF the model could cite knowledge for a value the knowledge does not hold, THEN the citation would prove nothing.
     @Test
     void synthesized_basisKnowledgeThatSaysAnotherGenre_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
                 KNOWS_A_ROMANCE,
@@ -131,7 +131,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_basisTwoWindowsWithReadings_standsFromTwoOfFourPassages() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,3", "Mystery"),
                 UNKNOWN,
@@ -148,7 +148,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_oneWindowWithAQuoteAndKnowledgeThatAgrees_stands() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 KNOWS_A_MYSTERY,
@@ -162,7 +162,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_oneWindowWithAQuoteAndKnowledgeThatDisagrees_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 KNOWS_A_ROMANCE,
@@ -176,7 +176,7 @@ class BriefDecisionSynthesisTest {
     // IF one window of four could decide, THEN a single odd stretch of the book would set the genre.
     @Test
     void synthesized_oneWindowOfFourAlone_isEmptyAndUncertainWithItsCount() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
                 UNKNOWN,
@@ -192,7 +192,7 @@ class BriefDecisionSynthesisTest {
     // A short book is read in one window: there is no second window to agree, so its one quoted reading stands.
     @Test
     void synthesized_wholeStoryReadInOneWindow_itsQuotedReadingStandsFromOneOfOnePassages() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1", "Mystery"),
                 UNKNOWN,
@@ -207,7 +207,7 @@ class BriefDecisionSynthesisTest {
     // stretch of it would set the genre alone.
     @Test
     void synthesized_oneWindowThatIsNotTheWholeStory_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1", "Mystery"),
                 UNKNOWN,
@@ -222,7 +222,7 @@ class BriefDecisionSynthesisTest {
     // and "romance".
     @Test
     void synthesized_citedWindowsThatReadAnotherGenre_doNotSupportTheValue() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2", "Thriller"),
                 UNKNOWN,
@@ -236,7 +236,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_oneCitedWindowAgreesAndOneDoesNot_countsOnlyTheOneThatAgrees() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2", "Mystery"),
                 KNOWS_A_MYSTERY,
@@ -251,7 +251,7 @@ class BriefDecisionSynthesisTest {
     // IF a window with no reading of the field counted, THEN the model could cite any window it was shown.
     @Test
     void synthesized_citedWindowThatHadNoReading_doesNotCount() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,4", "Mystery"),
                 UNKNOWN,
@@ -264,7 +264,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_sameWindowTwiceAndAWindowThatDoesNotExist_countOnce() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2,2,9", "Mystery"),
                 UNKNOWN,
@@ -278,7 +278,7 @@ class BriefDecisionSynthesisTest {
     // IF a genre outside the forty were kept, THEN the Book Brief could not show it in Ukrainian.
     @Test
     void synthesized_genreOutsideTheForty_isRejectedWhateverItsBasis() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2,3", "Cyberpunk saga"),
                 UNKNOWN,
@@ -291,7 +291,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_genreInAnotherCase_isTheListedEnglishName() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1,2", "gothic NOVEL"),
                 UNKNOWN,
@@ -304,7 +304,7 @@ class BriefDecisionSynthesisTest {
     @ParameterizedTest
     @CsvSource({"adult, adult", "Young Adult, young adult", "children, children", "general, general"})
     void synthesized_audienceOfTheFive_isThatAudience(final String value, final String expected) {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2", value),
                 UNKNOWN,
@@ -316,7 +316,7 @@ class BriefDecisionSynthesisTest {
 
     @Test
     void synthesized_academicAudience_isAcademic() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2,3", "academic"),
                 UNKNOWN,
@@ -329,7 +329,7 @@ class BriefDecisionSynthesisTest {
     @ParameterizedTest
     @ValueSource(strings = {"teenagers", "adults and teens", ""})
     void synthesized_audienceOutsideTheFive_isEmptyAndUncertain(final String value) {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.AUDIENCE,
                 synthesis("audience", false, "1,2,3", value),
                 UNKNOWN,
@@ -344,7 +344,7 @@ class BriefDecisionSynthesisTest {
     void synthesized_voiceOfTwelveWords_stands() {
         final String twelve = "a dry formal voice of a late nineteenth century clerk writing letters";
 
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.VOICE,
                 synthesis("voice", false, "1,2", twelve),
                 UNKNOWN,
@@ -357,7 +357,7 @@ class BriefDecisionSynthesisTest {
     // IF a voice note of any length were kept, THEN every later prompt would carry a paragraph of the model's prose.
     @Test
     void synthesized_voiceOfThirteenWords_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.VOICE,
                 synthesis(
                         "voice",
@@ -375,7 +375,7 @@ class BriefDecisionSynthesisTest {
     // The synthesis call failed or its reply could not be read: nothing is decided, and the screen says uncertain.
     @Test
     void synthesized_noReply_isEmptyAndUncertain() {
-        final Decided<@Nullable String> decided = BriefDecision.synthesized(
+        final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE, null, KNOWS_A_MYSTERY, readings(BriefField.GENRE, "a slow village mystery"), false);
 
         assertThat(decided.value()).isNull();

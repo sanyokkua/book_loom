@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -210,7 +211,7 @@ class BookFactsTest {
                 """, StandardCharsets.UTF_8);
         final DocumentPort documents =
                 Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
-        final Document document = documents.open(file).data();
+        final Document document = Objects.requireNonNull(documents.open(file).data());
 
         assertThat(BookFacts.of(document))
                 .isEqualTo(new BookFacts(

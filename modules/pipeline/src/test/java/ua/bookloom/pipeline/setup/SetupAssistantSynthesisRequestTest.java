@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -73,7 +74,7 @@ class SetupAssistantSynthesisRequestTest {
     private BriefSuggestion suggested() {
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model, null, events::add);
         assertThat(result.error()).isNull();
-        return result.data();
+        return Objects.requireNonNull(result.data());
     }
 
     private ChatRequest synthesis() {
@@ -91,8 +92,9 @@ class SetupAssistantSynthesisRequestTest {
                 .extracting(ChatRequest::callKind)
                 .containsExactly(CallKind.BRIEF_SUGGESTION, CallKind.BRIEF_SYNTHESIS);
         final ChatRequest request = synthesis();
-        assertThat(request.responseFormat().name()).isEqualTo("brief-synthesis");
-        assertThat(request.responseFormat().jsonSchema()).isEqualTo(BriefSynthesisSchema.SCHEMA);
+        assertThat(Objects.requireNonNull(request.responseFormat()).name()).isEqualTo("brief-synthesis");
+        assertThat(Objects.requireNonNull(request.responseFormat()).jsonSchema())
+                .isEqualTo(BriefSynthesisSchema.SCHEMA);
         assertThat(request.temperature()).isEqualTo(0.0);
         assertThat(request.expectedOutputTokens()).isEqualTo(160);
         assertThat(request.maxOutputTokens()).isEqualTo(320);

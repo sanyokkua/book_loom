@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -44,7 +45,8 @@ class NarratorGenderEvidenceTest {
             throws JsonProcessingException {
         final String reply = "{\"narratorGender\":{\"value\":\"" + value + "\",\"evidence\":\""
                 + quote.replace("\"", "\\\"") + "\",\"name\":\"" + name + "\",\"confidence\":0.8}}";
-        return BriefReplies.read(MAPPER.readTree(reply), sample, evidence).get(BriefField.NARRATOR_GENDER);
+        return Objects.requireNonNull(
+                BriefReplies.read(MAPPER.readTree(reply), sample, evidence).get(BriefField.NARRATOR_GENDER));
     }
 
     private static NarratorGenderEvidence english(final GlossaryEntry... glossary) {

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +51,11 @@ class SetupAssistantRecheckNarratorTest {
     private Desk desk;
     private SetupAssistantImpl assistant;
 
+    @BeforeEach
+    void openAddressedBook() {
+        open(ADDRESSED);
+    }
+
     private void open(final String book) {
         desk = ReviewFixtures.markdown(tempDir, book);
         assistant = new SetupAssistantImpl(
@@ -62,14 +69,14 @@ class SetupAssistantRecheckNarratorTest {
     }
 
     private void narratorIs(final Narrator narrator) {
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withNarrator(narrator)));
     }
 
     private Narrator storedNarrator() {
-        return desk.projects()
-                .find(desk.projectId())
-                .data()
+        return Objects.requireNonNull(desk.projects().find(desk.projectId()).data())
                 .orElseThrow()
                 .brief()
                 .narrator();
@@ -102,7 +109,6 @@ class SetupAssistantRecheckNarratorTest {
             names = {"PERSON", "VERIFIED"})
     void recheckNarrator_pendingVocativeAndGlossaryPersonNowConfirmedFemale_narratorIsFemaleVerified(
             final GenderOrigin origin) {
-        open(ADDRESSED);
         narratorIs(PENDING);
         glossaryHolds(brindle(Gender.FEMALE, origin));
 
@@ -116,7 +122,6 @@ class SetupAssistantRecheckNarratorTest {
     // IF a suggestion counted, THEN a first-name guess nobody confirmed would be enforced on every "I" of the book.
     @Test
     void recheckNarrator_glossaryPersonOnlySuggested_leavesTheNarratorUnknown() {
-        open(ADDRESSED);
         narratorIs(PENDING);
         glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.SUGGESTED));
 
@@ -125,7 +130,6 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_nameNotInTheGlossary_leavesTheNarratorUnchanged() {
-        open(ADDRESSED);
         narratorIs(PENDING);
 
         assertThat(assistant.recheckNarrator(desk.projectId()).data()).isEqualTo(PENDING);
@@ -133,7 +137,6 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_glossaryPersonOfUnknownGender_leavesTheNarratorUnchanged() {
-        open(ADDRESSED);
         narratorIs(PENDING);
         glossaryHolds(brindle(Gender.UNKNOWN, GenderOrigin.PERSON));
 
@@ -142,7 +145,6 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_noQuotesStored_leavesTheNarratorUnchanged() {
-        open(ADDRESSED);
         narratorIs(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
         glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
 
@@ -165,7 +167,6 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_personAlreadyChoseTheGender_neverChangesIt() {
-        open(ADDRESSED);
         final Narrator chosen = new Narrator(NarratorPerson.FIRST, Gender.MALE);
         narratorIs(chosen);
         glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
@@ -175,7 +176,6 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_thirdPersonNarrator_leavesItAlone() {
-        open(ADDRESSED);
         final Narrator third =
                 new Narrator(NarratorPerson.THIRD, Gender.UNKNOWN, Narrator.GenderOrigin.NONE, List.of(QUOTE));
         narratorIs(third);
@@ -188,7 +188,6 @@ class SetupAssistantRecheckNarratorTest {
     // its next save.
     @Test
     void recheckNarrator_verified_writesNothingToTheStoredBrief() {
-        open(ADDRESSED);
         narratorIs(PENDING);
         glossaryHolds(brindle(Gender.FEMALE, GenderOrigin.PERSON));
 
@@ -199,22 +198,19 @@ class SetupAssistantRecheckNarratorTest {
 
     @Test
     void recheckNarrator_projectNotStored_isAValidationError() {
-        open(ADDRESSED);
-
         final Result<Narrator> checked = assistant.recheckNarrator("no-such-project");
 
         assertThat(checked.isErr()).isTrue();
-        assertThat(checked.error().code()).isEqualTo(ErrorCode.validation);
+        assertThat(Objects.requireNonNull(checked.error()).code()).isEqualTo(ErrorCode.validation);
     }
 
     // The quote the model gave for a name nobody knows yet is the only thing the re-check can start from.
     @Test
     void suggestBrief_vocativeOfANameNobodyKnowsYet_keepsTheQuoteAsPendingEvidence() {
-        open(ADDRESSED);
         final ScriptedChatModel model = windowAnswers(QUOTE, "Brindle");
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
         assertThat(suggestion.suggestedNarrator().evidence()).containsExactly(QUOTE);
@@ -228,19 +224,18 @@ class SetupAssistantRecheckNarratorTest {
         open(SPOKEN_BY_NARRATOR);
         final ScriptedChatModel model = windowAnswers("Mind the step, Brindle", "Brindle");
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.suggestedNarrator().evidence()).isEmpty();
     }
 
     @Test
     void suggestBrief_modelNamesAQuoteThatIsNotInTheBook_keepsNoPendingQuote() {
-        open(ADDRESSED);
         final ScriptedChatModel model = windowAnswers("Well done, Brindle", "Brindle");
 
-        final BriefSuggestion suggestion =
-                assistant.suggestBrief(desk.projectId(), model).data();
+        final BriefSuggestion suggestion = Objects.requireNonNull(
+                assistant.suggestBrief(desk.projectId(), model).data());
 
         assertThat(suggestion.suggestedNarrator().evidence()).isEmpty();
     }

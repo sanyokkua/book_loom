@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.setup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Objects;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
@@ -49,7 +50,7 @@ class SetupAssistantBriefFailureTest extends SetupAssistantBriefTestBase {
 
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
-        assertThat(result.error().code()).isEqualTo(ErrorCode.unreachable);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.unreachable);
         assertThat(requestsOf(CallKind.BRIEF_SUGGESTION)).hasSize(WINDOWS);
         assertThat(requestsOf(CallKind.BRIEF_SYNTHESIS)).isEmpty();
     }
@@ -66,7 +67,7 @@ class SetupAssistantBriefFailureTest extends SetupAssistantBriefTestBase {
 
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
-        assertThat(result.error().code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.cancelled);
         assertThat(requestsOf(CallKind.BRIEF_SUGGESTION)).hasSize(1);
         assertThat(requestsOf(CallKind.BRIEF_SYNTHESIS)).isEmpty();
     }
@@ -81,7 +82,7 @@ class SetupAssistantBriefFailureTest extends SetupAssistantBriefTestBase {
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
         assertThat(result.data()).isNull();
-        assertThat(result.error().code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.cancelled);
     }
 
     @Test
@@ -90,7 +91,7 @@ class SetupAssistantBriefFailureTest extends SetupAssistantBriefTestBase {
 
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
-        assertThat(result.error().code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.cancelled);
         assertThat(model.requests()).hasSize(1);
     }
 

@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.setup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -147,7 +148,9 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
     // IF the windows' language were applied, THEN the model, not the person, would choose what the book is read as.
     @Test
     void suggestBrief_autoSourceAndThreeWindowsInFrench_proposesFrenchAndLeavesTheBriefOnAuto() {
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects().save(stored.withBrief(stored.brief().withLanguages(null, "uk")));
         knowledgeAnswers(KNOWN);
         windowsAnswer(
@@ -160,9 +163,7 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
         final BriefSuggestion suggestion = suggested();
 
         assertThat(suggestion.languageProposal()).isEqualTo("fr");
-        assertThat(desk.projects()
-                        .find(desk.projectId())
-                        .data()
+        assertThat(Objects.requireNonNull(desk.projects().find(desk.projectId()).data())
                         .orElseThrow()
                         .brief()
                         .sourceLanguage())
@@ -186,7 +187,7 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
 
         assertThat(result.error()).isNotNull();
-        assertThat(result.error().code()).isEqualTo(ErrorCode.validation);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
         assertThat(requestsOf(CallKind.BRIEF_SYNTHESIS)).isEmpty();
     }
 
@@ -195,14 +196,16 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
         final Result<BriefSuggestion> result = assistant.suggestBrief("no-such-project", model);
 
         assertThat(result.error()).isNotNull();
-        assertThat(result.error().code()).isEqualTo(ErrorCode.validation);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
         assertThat(model.requests()).isEmpty();
     }
 
     // IF a first-person book carried a "third-person limited" voice note, THEN every prompt would contradict itself.
     @Test
     void suggestBrief_narratorAlreadySet_isKeptAndAContradictingVoiceNoteIsDropped() {
-        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        final Project stored = Objects.requireNonNull(
+                        desk.projects().find(desk.projectId()).data())
+                .orElseThrow();
         desk.projects()
                 .save(stored.withBrief(stored.brief().withNarrator(new Narrator(NarratorPerson.FIRST, Gender.MALE))));
         knowledgeAnswers(KNOWN);

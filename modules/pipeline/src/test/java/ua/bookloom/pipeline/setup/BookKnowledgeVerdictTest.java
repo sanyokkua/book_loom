@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.setup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,7 +58,9 @@ class BookKnowledgeVerdictTest {
     }
 
     private static String label(final Knowledge knowledge) {
-        return knowledge.reason() == null ? "stands" : knowledge.reason().label();
+        return knowledge.reason() == null
+                ? "stands"
+                : Objects.requireNonNull(knowledge.reason()).label();
     }
 
     // IF a matching answer were not kept whole, THEN the brief could not use the genre, audience, era and narration.
@@ -70,8 +73,8 @@ class BookKnowledgeVerdictTest {
         assertThat(knowledge.isKnown()).isTrue();
         assertThat(knowledge.reason()).isNull();
         assertThat(knowledge.reply()).isEqualTo(answer);
-        assertThat(knowledge.reply().genre()).isEqualTo("fantasy novel");
-        assertThat(knowledge.reply().narration()).isEqualTo("third person");
+        assertThat(Objects.requireNonNull(knowledge.reply()).genre()).isEqualTo("fantasy novel");
+        assertThat(Objects.requireNonNull(knowledge.reply()).narration()).isEqualTo("third person");
     }
 
     // IF a book without a title were asked about, THEN the model would be asked about nothing and could still say yes.
@@ -84,7 +87,7 @@ class BookKnowledgeVerdictTest {
         assertThat(knowledge.isKnown()).isFalse();
         assertThat(knowledge.reply()).isNull();
         assertThat(knowledge.reason()).isEqualTo(Reason.NO_TITLE);
-        assertThat(knowledge.reason().label()).isEqualTo("no-title");
+        assertThat(Objects.requireNonNull(knowledge.reason()).label()).isEqualTo("no-title");
     }
 
     // A title that is only the file's name was made up from the file and names no book; the same normalisation as the
@@ -302,7 +305,7 @@ class BookKnowledgeVerdictTest {
                 BookKnowledgeVerdict.judge(facts(TITLE, AUTHOR, null), STEM, reply(true, TITLE, AUTHOR, echoed, 0.9));
 
         assertThat(knowledge.isKnown()).isTrue();
-        assertThat(knowledge.reply().year()).isEqualTo(echoed);
+        assertThat(Objects.requireNonNull(knowledge.reply()).year()).isEqualTo(echoed);
     }
 
     @Test

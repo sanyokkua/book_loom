@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -103,7 +104,10 @@ class SetupAssistantImplTest {
     void suggestFileName_titleNotTranslatedYet_isLeftAsTheModelWroteIt() {
         model.answer(reply("{\"target\":\"Мартін Ешбі. Скляна гавань. 1986\"}"));
 
-        assertThat(assistant.suggestFileName(desk.projectId(), model).data().name())
+        assertThat(Objects.requireNonNull(assistant
+                                .suggestFileName(desk.projectId(), model)
+                                .data())
+                        .name())
                 .isEqualTo("Мартін Ешбі. Скляна гавань. 1986");
         assertThat(userMessage()).doesNotContain("Translated title");
     }

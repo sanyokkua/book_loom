@@ -31,6 +31,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.setup.BriefDecision.Decided;
+import ua.bookloom.pipeline.setup.BriefDecision.Text;
 import ua.bookloom.pipeline.setup.BriefReplies.Answer;
 
 /**
@@ -253,7 +254,7 @@ final class BriefSuggester {
         final NarratorHint detected =
                 NarratorDetector.detect(book.document(), book.languageOf()).orElse(null);
         final Decided<NarratorPerson> person = BriefDecision.narrator(detected, answers);
-        final Map<BriefField, Decided<@Nullable String>> synthesized = new EnumMap<>(BriefField.class);
+        final Map<BriefField, Text> synthesized = new EnumMap<>(BriefField.class);
         SYNTHESIZED.forEach(field ->
                 synthesized.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
         final String language = book.project().brief().sourceLanguage() == null
@@ -272,7 +273,7 @@ final class BriefSuggester {
             final Decided<Register> register,
             final Decided<NarratorPerson> person,
             final Decided<Gender> gender,
-            final Map<BriefField, Decided<@Nullable String>> synthesized,
+            final Map<BriefField, Text> synthesized,
             final @Nullable String language) {
         final Map<BriefField, FieldEvidence> evidence = new EnumMap<>(BriefField.class);
         synthesized.forEach((field, decided) -> evidence.put(field, decided.evidence()));
@@ -293,9 +294,8 @@ final class BriefSuggester {
                 language);
     }
 
-    private static @Nullable String valueOf(
-            final Map<BriefField, Decided<@Nullable String>> synthesized, final BriefField field) {
-        final Decided<@Nullable String> decided = synthesized.get(field);
+    private static @Nullable String valueOf(final Map<BriefField, Text> synthesized, final BriefField field) {
+        final Text decided = synthesized.get(field);
         return decided == null ? null : decided.value();
     }
 

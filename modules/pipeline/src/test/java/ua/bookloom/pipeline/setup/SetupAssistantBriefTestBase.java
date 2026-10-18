@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -99,7 +100,7 @@ abstract class SetupAssistantBriefTestBase {
     BriefSuggestion suggested() {
         final Result<BriefSuggestion> result = assistant.suggestBrief(desk.projectId(), model);
         assertThat(result.error()).isNull();
-        return result.data();
+        return Objects.requireNonNull(result.data());
     }
 
     List<CallKind> kinds() {

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -92,7 +93,7 @@ class BookKnowledgeWireMockTest {
                             "confidence");
             assertThat(body.path("messages").get(1).path("content").asText()).contains("The Lantern Ledger");
             assertThat(result.isKnown()).isTrue();
-            assertThat(result.reply().genre()).isEqualTo("fantasy novel");
+            assertThat(Objects.requireNonNull(result.reply()).genre()).isEqualTo("fantasy novel");
         }
     }
 

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.pipeline.setup.BriefReplies.Answer;
@@ -37,7 +38,9 @@ class BriefRepliesNarratorAddressTest {
         final Map<BriefField, Answer> answers =
                 read("\"Mind the step, Lucy,\" I said, and held the lantern higher.", "Mind the step, Lucy");
 
-        assertThat(answers.get(BriefField.NARRATOR_GENDER).value()).isEqualTo("unknown");
+        assertThat(Objects.requireNonNull(answers.get(BriefField.NARRATOR_GENDER))
+                        .value())
+                .isEqualTo("unknown");
     }
 
     @Test
@@ -45,7 +48,9 @@ class BriefRepliesNarratorAddressTest {
         final Map<BriefField, Answer> answers =
                 read("I turned to her and said, \"Mind the step, Lucy.\"", "Mind the step, Lucy");
 
-        assertThat(answers.get(BriefField.NARRATOR_GENDER).value()).isEqualTo("unknown");
+        assertThat(Objects.requireNonNull(answers.get(BriefField.NARRATOR_GENDER))
+                        .value())
+                .isEqualTo("unknown");
     }
 
     @Test
@@ -53,8 +58,12 @@ class BriefRepliesNarratorAddressTest {
         final Map<BriefField, Answer> answers =
                 read("\"Mind the step, Lucy,\" Tom said to me, and held the lantern higher.", "Mind the step, Lucy");
 
-        assertThat(answers.get(BriefField.NARRATOR_GENDER).value()).isEqualTo("female");
-        assertThat(answers.get(BriefField.NARRATOR_GENDER).quote()).isEqualTo("Mind the step, Lucy");
+        assertThat(Objects.requireNonNull(answers.get(BriefField.NARRATOR_GENDER))
+                        .value())
+                .isEqualTo("female");
+        assertThat(Objects.requireNonNull(answers.get(BriefField.NARRATOR_GENDER))
+                        .quote())
+                .isEqualTo("Mind the step, Lucy");
     }
 
     // The narrator giving her own name is the one case where the narrator's speech names the narrator.
@@ -63,6 +72,8 @@ class BriefRepliesNarratorAddressTest {
         final Map<BriefField, Answer> answers =
                 read("\"I'm Lucy,\" I said, and held out my hand to the ferryman.", "I'm Lucy");
 
-        assertThat(answers.get(BriefField.NARRATOR_GENDER).value()).isEqualTo("female");
+        assertThat(Objects.requireNonNull(answers.get(BriefField.NARRATOR_GENDER))
+                        .value())
+                .isEqualTo("female");
     }
 }

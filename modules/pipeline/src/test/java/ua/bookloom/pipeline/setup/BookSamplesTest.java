@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -32,7 +33,7 @@ class BookSamplesTest {
 
     private Document book(final String markdown) {
         final Desk desk = ReviewFixtures.markdown(tempDir, markdown);
-        return desk.openProjects().get(desk.projectId());
+        return Objects.requireNonNull(desk.openProjects().get(desk.projectId()));
     }
 
     /** Sentences {@code from} to {@code to}, {@code perParagraph} to a paragraph, each "Line n goes on here, ...". */
