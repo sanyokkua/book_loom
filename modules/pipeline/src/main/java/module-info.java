@@ -48,4 +48,28 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.revision to
             com.google.guice;
+    opens ua.bookloom.pipeline.setup to
+            com.google.guice;
+    opens ua.bookloom.pipeline.batch to
+            com.google.guice;
+    opens ua.bookloom.pipeline.checks to
+            com.google.guice;
+    opens ua.bookloom.pipeline.chunk to
+            com.google.guice;
+    opens ua.bookloom.pipeline.context to
+            com.google.guice;
+    opens ua.bookloom.pipeline.dial to
+            com.google.guice;
+    opens ua.bookloom.pipeline.index to
+            com.google.guice;
+    opens ua.bookloom.pipeline.labels to
+            com.google.guice;
+    opens ua.bookloom.pipeline.memory to
+            com.google.guice;
+    opens ua.bookloom.pipeline.narrator to
+            com.google.guice;
+    opens ua.bookloom.pipeline.qa to
+            com.google.guice;
+    opens ua.bookloom.pipeline.typography to
+            com.google.guice;
 }

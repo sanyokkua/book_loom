@@ -15,6 +15,7 @@ set -euo pipefail
 require_jpackage
 require_input
 prepare_output
+build_runtime
 banner
 
 ARCH="$(uname -m)"

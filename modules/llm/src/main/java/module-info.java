@@ -27,4 +27,22 @@ module ua.bookloom.llm {
             com.fasterxml.jackson.databind;
     opens ua.bookloom.llm.verify to
             com.google.guice;
+    opens ua.bookloom.llm.gate to
+            com.google.guice;
+    opens ua.bookloom.llm.provider to
+            com.google.guice;
+    opens ua.bookloom.llm.capability to
+            com.google.guice;
+    opens ua.bookloom.llm.client.ollama to
+            com.google.guice;
+    opens ua.bookloom.llm.client.openai to
+            com.google.guice;
+    opens ua.bookloom.llm.http to
+            com.google.guice;
+    opens ua.bookloom.llm.pseudo to
+            com.google.guice;
+    opens ua.bookloom.llm.response to
+            com.google.guice;
+    opens ua.bookloom.llm.retry to
+            com.google.guice;
 }

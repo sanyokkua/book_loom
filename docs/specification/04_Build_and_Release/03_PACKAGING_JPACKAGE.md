@@ -105,7 +105,29 @@ This is consistent with the offline/privacy posture — no signing service or no
 
 Every artifact embeds a jlink-trimmed JDK 25 + JavaFX 25 runtime (native `.dll`/`.dylib`/`.so` included), so the user
 installs nothing else. The trim options above (strip debug, no headers/man pages, zip-6 compression) keep the image
-small; app jars ride on the image's classpath from the script's `--input` directory.
+small; the app jars ride in the image's `app/mods` directory on the module path (next section).
+
+## module-path {#module-path}
+
+The image runs on the **module path**: `jpackage --module-path <dist libs> --module ua.bookloom.app/ua.bookloom.app.bootstrap.Launcher`
+(`BookLoom.cfg` has `app.mainmodule=` and `--module-path $APPDIR/mods`, no `app.classpath=`). `module-info.java` is
+therefore enforced in the shipped app, and the launch smoke fails on a missing `requires`, `exports` or `opens`
+(proved once by removing `opens ua.bookloom.ui.screen`: the image dies at start with an `IllegalAccessException` from
+Guice). Consequences, all in `scripts/jpackage-common.sh`:
+
+- Five runtime jars are **automatic modules** (aopalliance, guice, icu4j, jdom2, listenablefuture) and `jlink` refuses
+  automatic modules, and a plain Temurin has no JavaFX jmods. So the script jlinks a runtime of the JDK modules only
+  (`build_runtime`, the list in `RUNTIME_MODULES`) and hands it to jpackage with `--runtime-image`; every jar, JavaFX
+  included, stays on the module path. A JDK module a dependency starts to need shows as a boot-layer `FindException`
+  in the smoke (`java.compiler` was one) and is added to the list.
+- `--java-options "--add-modules=ALL-MODULE-PATH"`: an automatic module (Guice) does not resolve its explicit
+  dependency Guava, so without it the image fails with `NoClassDefFoundError: com/google/common/base/Stopwatch`.
+- `--java-options "--enable-native-access=javafx.graphics"` silences the JEP 472 warning.
+- Guice runs with `-Dguice_bytecode_gen_option=DISABLED`, so it constructs by reflection and every package holding a
+  Guice-built class must be `opens … to com.google.guice` (the classpath hid nine `:llm` and twelve `:pipeline` packages
+  that lacked it).
+- `scripts/package-windows.bat` still uses `--input`/`--main-jar` (classpath); moving it is open, CI runs the smoke on
+  POSIX only.
 
 ## app-icons-and-metadata {#icons-metadata}
 

@@ -87,9 +87,9 @@ The smoke asserts a positive startup signal (injector built, two-phase init comp
 bounded timeout, and a **fourth** signal, `resolve-all passed: views=<n> ports=<m>`: the smoke starts the image with
 `-Dbookloom.smoke.resolveAll=true`, which builds the injector in Guice's production stage and, once the window is
 shown, loads every available screen and resolves every explicit binding of a `ua.bookloom.api` type. The image runs
-the jars on the classpath, where `module-info` is not enforced, so a missing `requires`, `exports` or `opens` is not
-what it sees; it is the check that sees a resource left out of the image, a binding Guice cannot build in the
-production stage, or a screen that cannot load. A `resolve-all FAILED` line names what failed and fails the smoke at once. **"Did not actually launch" is a hard failure, never a skip:** if no startup signal is observed the
+on the module path (`03_PACKAGING_JPACKAGE.md#module-path`), so `module-info` is enforced and a missing `requires`,
+`exports` or `opens` stops the image before it reports a start; the smoke also sees a resource left out of the image, a
+binding Guice cannot build in the production stage, or a screen that cannot load. A `resolve-all FAILED` line names what failed and fails the smoke at once. **"Did not actually launch" is a hard failure, never a skip:** if no startup signal is observed the
 smoke **fails the job** — it must not be reported as skipped/inconclusive. Absence of a display is handled by
 Xvfb/Monocle, so there is no legitimate "no display, therefore skipped" path.
 

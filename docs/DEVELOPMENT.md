@@ -1990,7 +1990,9 @@ Stage the input first, on every OS:
 ```
 
 The scripts require `modules/app/build/dist/libs/app.jar` to exist and drive the plain `jpackage` CLI with a
-classpath launch (`--main-jar app.jar`), `--java-options "-Dbookloom.env=prod"` and a stripped jlink runtime.
+module-path launch (`--module-path` / `--module ua.bookloom.app/…Launcher`, see `03_PACKAGING_JPACKAGE.md#module-path`),
+`--java-options "-Dbookloom.env=prod"` and a stripped jlink runtime of the JDK modules (built by the script: automatic modules
+cannot be jlinked, the jars stay on the module path). The Windows `.bat` still launches on the classpath.
 `APP_VERSION` overrides the Gradle version (default `dev`; jpackage's own `--app-version` is coerced to a numeric
 placeholder). There is no cross-compilation: each image is built on its own OS.
 
@@ -2010,9 +2012,9 @@ It launches the packaged image against a throwaway `BOOKLOOM_DATA_DIR` with `-J-
 asserts the three startup log lines from [§5](#running) and a fourth, `resolve-all passed: views=<n> ports=<m>`, appear
 in `<dataDir>/logs/bookloom.log`. The property makes the image build its injector in Guice's production stage and, once
 the window is shown, load every screen and resolve every `ua.bookloom.api` port; a `resolve-all FAILED` line names
-what failed and ends the smoke at once. The image runs the jars on the **classpath** (`--input`/`--main-jar`), where
-`module-info` is not enforced, so a missing `requires`, `exports` or `opens` is not visible there; the step catches what
-is — a resource left out of the image, a Guice binding that cannot be built in the production stage, a screen whose FXML
+what failed and ends the smoke at once. The image runs on the **module path**, where
+`module-info` is enforced, so a missing `requires`, `exports` or `opens` stops the start (proved by removing `opens ua.bookloom.ui.screen`); the step also catches
+a resource left out of the image, a Guice binding that cannot be built in the production stage, a screen whose FXML
 or controller cannot load. (`ResolveAllTest` in `:app` runs the same step in the test JVM.) On Linux the packaged app starts the real GTK toolkit, so a
 display is required — CI starts Xvfb before the smoke. The app icons `jpackage` reads are committed under
 `docs/specification/assets/icon/dist/`; regenerate them from `appicon.png` with the scripts beside it.

@@ -101,7 +101,8 @@ require_jpackage() {
     fi
 }
 
-MAIN_JAR="app.jar"
+MAIN_MODULE="ua.bookloom.app"
+RUNTIME_DIR="${REPO_ROOT}/build/runtime"
 
 # --- Shared jpackage arguments --------------------------------------------------------------------------------------
 
@@ -118,14 +119,33 @@ JPACKAGE_ARGS=(
     --vendor "${APP_VENDOR}"
     --description "${APP_DESCRIPTION}"
     --copyright "${APP_COPYRIGHT}"
-    --input "${INPUT_DIR}"
-    --main-jar "${MAIN_JAR}"
-    --main-class "${MAIN_CLASS}"
+    --module-path "${INPUT_DIR}"
+    --module "${MAIN_MODULE}/${MAIN_CLASS}"
     --dest "${OUTPUT_DIR}"
     --java-options "-Dbookloom.env=prod"
     --java-options "-Dguice_bytecode_gen_option=DISABLED"
-    --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6"
+    --java-options "--add-modules=ALL-MODULE-PATH"
+    --java-options "--enable-native-access=javafx.graphics"
+    --runtime-image "${RUNTIME_DIR}"
 )
+
+# The image runs on the MODULE PATH (jpackage --module-path/--module), so module-info.java is enforced in the shipped
+# app and the launch smoke sees a missing `requires`, `exports` or `opens` (task 16.2).
+#
+# jpackage cannot jlink the runtime itself: five dependency jars are automatic modules (aopalliance, guice, icu4j,
+# jdom2, listenablefuture) and jlink refuses those ("automatic module cannot be used with jlink"), and JavaFX has no
+# jmods on a plain Temurin. So the runtime holds only the JDK modules the application needs and every jar stays on the
+# module path in the image's app/mods. `--add-modules=ALL-MODULE-PATH` at launch resolves the modules nothing
+# `requires` by name: Guava (guice's dependency, an explicit module an automatic module does not pull in) and the
+# other jars the root module reaches only reflectively.
+RUNTIME_MODULES="java.base,java.compiler,java.desktop,java.logging,java.naming,java.net.http,java.prefs,java.scripting,java.sql,java.xml,\
+jdk.charsets,jdk.crypto.ec,jdk.jfr,jdk.localedata,jdk.unsupported"
+
+build_runtime() {
+    rm -rf "${RUNTIME_DIR}"
+    jlink --add-modules "${RUNTIME_MODULES}" --strip-debug --no-header-files --no-man-pages --compress zip-6 \
+        --output "${RUNTIME_DIR}"
+}
 
 prepare_output() {
     mkdir -p "${OUTPUT_DIR}"
