@@ -54,8 +54,12 @@ class BusyHostTest extends ShellTestBase {
         return host != null && host.isVisible() && host.getOpacity() > 0;
     }
 
+    // The card turns visible a few statements before it takes the keyboard focus, inside the same FX-thread step; this
+    // check polls from the test thread, so it can see the card between the two. Settling the FX thread after it lets
+    // every check that follows read the finished reveal.
     private void awaitCard() throws TimeoutException {
         WaitForAsyncUtils.waitFor(APPEARS_WITHIN_SECONDS, TimeUnit.SECONDS, this::isCardShown);
+        interact(() -> {});
     }
 
     private String text(final String id) {
