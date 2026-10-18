@@ -865,6 +865,35 @@ against 11 of 23, Tom Sawyer 1 of 26 against 10 of 26).
 
 Pending owner: the 26b closing round of these measurements and 15h.F2.
 
+### 15j results: closing the change on e4b, then 26b once {#15j-results}
+
+Measured 2026-10-17/18 on the final tree against the `0a587148` baseline (the tree before 15j), e4b first and 26b once,
+with the fast loop (`#testing`, "The fast loop"); reports in the owner's `.temporary_context/close/evals/`.
+
+| Suite (e4b) | Baseline | Final | Note |
+|---|---|---|---|
+| mini (28 segments, 50 expectations) | 46/50 | 46/50 | 1 min 51 s; misses: an obeyed injection, two names, one place |
+| default | parse 98 %, gate 100 % | parse 100 %, gate 97 % | script, marker, injection, reviewer separation unchanged |
+| realrun | — | identical on every column | |
+| sequence, narrator unset | flag 1.8 %, LTCR-1 89.5 % | flag 2.7 %, LTCR-1 90.1 % | first-round blocking findings 4 → 13, all the alphabet check (15j.J5), so calls rose 51 → 119 |
+| coref, setup | — | identical | |
+| names, 3 owner books, Balanced | terms kept 3/23, 0/13, 0/21; lost 4, 3, 2 | 9/23, 7/13, 2/21; lost 2, 3, 2 | 0 wrong verified genders, junk unchanged |
+| batch 4 / 8 (json) | — | tokens kept 96 % / 83 % | small sample; the default stays 8 |
+
+On 26b once: mini as on e4b; realrun with no truncation or leak; sequence LTCR-1 78.7 %; names terms kept 11/23, 5/13,
+2/21 (level with the earlier 26b runs), 0 wrong verified genders; batch 4 / 8 both keep every token.
+
+The owner's book on e4b (Burning Chrome through `--suite book`, every decision the model's): Balanced 26.6 min, Max 48.2
+min; 11 Latin words left in the story text at Balanced and 10 at Max, against 35 in the pre-15i e4b run and 35 in the
+Oct 15 26b run; no word with a Russian letter (the Oct 15 run accepted one); brands and materials Cyrillic. Blind Opus
+grading, 50 paragraphs each: against the pre-15i e4b run 15 WRONG and 68 errors against 16 and 80, preferred 20 to 17;
+Max against Balanced 13 WRONG and 58 errors against 15 and 71, preferred 28 to 15 — about a fifth fewer errors at 1.8
+times the time. Two things the run shows that this change does not fix: the predicted brief left the narrator's gender
+unknown at Balanced, and two characters' genders stayed unknown, so 123 segments wait on a gender (15j.J3's Confirm
+helps where a gender is suggested); both belong to the redesign's model-knowledge step.
+
+Tried and reverted: the token rules at the end of the draft and batch system prompts (`#time-to-first-token`).
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

@@ -96,6 +96,14 @@ follow-up change is named **`redesign-translation-pipeline`**; each item names t
   batch system prompts gave a shared prefix but cost token fidelity on e4b (token-dropping batch items 4 → 16), so it was
   reverted; the one context builder decides block order with both effects measured.
 
+- **Recurring terms on 26b, and words read as ordinary (15i.N7).** After the lower-case rule e4b keeps 9/23, 7/13 and
+  2/21 gold recurring terms, but 26b is level with before, and Balanced still drops nouns whose windows the model reads
+  as ordinary words.
+- **Batch size per model (15h.F1).** On e4b size 4 kept tokens in 96 % of items against 83 % at the default 8; on 26b
+  both kept every token. Sizing chunks to the window and the model belongs to Stage B.
+- **The narrator's and characters' gender when the book is silent.** The e4b book run left the narrator's gender and
+  two characters' genders unknown (123 segments waiting); decision 3 (model knowledge as "likely") is the fix.
+
 ## Next step
 
 Turn this into an OpenSpec change (proposal, delta specs, tasks) after the owner's review; group 15j's fixes ship first
