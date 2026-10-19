@@ -93,7 +93,7 @@ public final class AppShellView {
     private final DiagnosticActions diagnostics;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
-    private final StackPane contentHost = new StackPane();
+    private final StackPane contentHost = new ContentHost();
     private final ScrollPane contentScroll = new ScrollPane(contentHost);
     private final ScrollAnchor contentAnchor = ScrollAnchor.install(contentScroll);
     private final ToggleButton themeToggle = new ToggleButton();
@@ -356,5 +356,19 @@ public final class AppShellView {
                 messages, themeToggle, dark ? MessageKey.SHELL_THEME_TO_LIGHT_TIP : MessageKey.SHELL_THEME_TO_DARK_TIP);
         themeToggle.setGraphic(new FontIcon(dark ? Feather.SUN : Feather.MOON));
         themeToggle.setSelected(dark);
+    }
+
+    /**
+     * The padded host the shell scrolls. JavaFX's {@code StackPane.computeMinHeight(width)} hands its children the
+     * full width instead of the width left inside the padding, so for a screen whose text wraps it answers a height for
+     * a wider page than the one it fills; the scroll pane takes that answer as the floor of the content height, and
+     * the screen was laid out shorter than it needs (the last rows crushed) whenever a wrap line fell in between.
+     */
+    private static final class ContentHost extends StackPane {
+        @Override
+        protected double computeMinHeight(final double width) {
+            final Insets padding = getInsets();
+            return super.computeMinHeight(width == -1 ? -1 : width - padding.getLeft() - padding.getRight());
+        }
     }
 }

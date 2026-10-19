@@ -16,14 +16,11 @@ public class ModalCard extends DialogPane {
     private static final String FOOTER_ORDER = "+LHECUAO";
 
     // ButtonBar sizes every button to the widest by default, and a card of fixed width then squeezes them all below
-    // their words ("Not stated — s…"); each button keeps its own width instead, never less than its words.
+    // their words ("Not stated — s…"); each button keeps its own width instead.
     @Override
     protected Node createButton(final ButtonType buttonType) {
         final Node button = super.createButton(buttonType);
         ButtonBar.setButtonUniformSize(button, false);
-        if (button instanceof Region region) {
-            region.setMinWidth(Region.USE_PREF_SIZE);
-        }
         return button;
     }
 
@@ -31,6 +28,11 @@ public class ModalCard extends DialogPane {
     protected Node createButtonBar() {
         final ButtonBar bar = (ButtonBar) super.createButtonBar();
         bar.setButtonOrder(FOOTER_ORDER);
+        // The bar's skin overwrites every button's minimum width with this value when it places the buttons, so a
+        // minimum set on the button itself is lost; USE_PREF_SIZE here makes each one never narrower than its words,
+        // whatever the font (a wider fallback font made a four-button footer outgrow the card and cut the longest
+        // label).
+        bar.setButtonMinWidth(Region.USE_PREF_SIZE);
         return bar;
     }
 }

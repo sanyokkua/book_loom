@@ -37,6 +37,11 @@ class TitleBarFitTest extends ShellTestBase {
     private static final double PART_TOLERANCE = 0.5;
     private static final double TEXT_RATIO = 4.5;
     private static final double WIDE = 1900;
+    private static final String LONG_BOOK_NAME =
+            "The Strange Case of Doctor Jekyll and Mister Hyde, the complete annotated edition.epub";
+    // Short enough for the wide window to hold whole beside every part in any font: how much room a long name needs
+    // depends on the platform's font (a Linux runner's was wider than a 1900 px bar can hold with the other parts).
+    private static final String BOOK_NAME_THAT_FITS_THE_WIDE_WINDOW = "Doctor Jekyll and Mister Hyde.epub";
     private static final List<String> DROP_ORDER =
             List.of("shell-run-rate", "shell-run-mode", "shell-run-left", "shell-run-elapsed");
 
@@ -45,12 +50,14 @@ class TitleBarFitTest extends ShellTestBase {
     }
 
     private void fillTheTitleBar(final String language) {
+        fillTheTitleBar(language, LONG_BOOK_NAME);
+    }
+
+    private void fillTheTitleBar(final String language, final String bookName) {
         useLocale(Locale.forLanguageTag(language));
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         onFx(() -> {
-            mirror.publishRunStarted(
-                    "The Strange Case of Doctor Jekyll and Mister Hyde, the complete annotated edition.epub",
-                    new RunMode(QualityDial.BALANCED, ReviewMode.ASSISTED));
+            mirror.publishRunStarted(bookName, new RunMode(QualityDial.BALANCED, ReviewMode.ASSISTED));
             mirror.publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
             mirror.live()
                     .publishThroughput(
@@ -102,7 +109,7 @@ class TitleBarFitTest extends ShellTestBase {
     // IF a part hidden for a narrow window never came back, THEN widening the window would not restore it.
     @Test
     void titleBar_wideWindowAfterNarrow_showsEveryPartAgain() {
-        fillTheTitleBar("uk");
+        fillTheTitleBar("uk", BOOK_NAME_THAT_FITS_THE_WIDE_WINDOW);
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
         resizeScene(WIDE, CONTENT_AT_MINIMUM_HEIGHT);
 
