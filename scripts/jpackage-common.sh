@@ -95,8 +95,8 @@ require_input() {
 require_jpackage() {
     if ! command -v jpackage >/dev/null 2>&1; then
         echo "error: jpackage is not on PATH. Use a JDK 25 that ships it." >&2
-        echo "       On Windows and Linux aarch64 use Liberica 25 'Full' (jdk+fx): a plain JDK lacks the" >&2
-        echo "       JavaFX jmods jpackage needs there, and hand-copying jmods is never the fix (EC-REL-4)." >&2
+        echo "       Use a plain JDK (Temurin) here, not one that bundles JavaFX: the image takes JavaFX from" >&2
+        echo "       the jars in app/mods, and a JavaFX-linked java.base refuses them at boot." >&2
         exit 1
     fi
 }

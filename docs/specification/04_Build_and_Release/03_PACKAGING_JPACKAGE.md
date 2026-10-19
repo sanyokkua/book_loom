@@ -70,11 +70,12 @@ tar.gz/zip works without installation.
 | Context                                        | JDK                                                                             |
 |------------------------------------------------|---------------------------------------------------------------------------------|
 | Build + test (all CI, local dev)               | **Temurin 25** (standard)                                                       |
-| Packaging on macOS, Linux x86_64               | Temurin 25                                                                      |
-| Packaging on **Windows** and **Linux aarch64** | **Liberica 25 "Full" (`jdk+fx`)** — ships the JavaFX jmods jpackage needs there |
+| Packaging on macOS and Linux (both arches)     | Temurin 25 — the image takes JavaFX from the Maven jars on its module path      |
+| Packaging on **Windows**                       | **Liberica 25 "Full" (`jdk+fx`)** — ships the JavaFX jmods jpackage needs there |
 
 This mirrors the proven reference setup: `actions/setup-java` selects `distribution: liberica, java-package: jdk+fx` on
-exactly those two packaging legs and Temurin everywhere else. A jpackage run that cannot find the JavaFX runtime pieces
+the Windows packaging leg and Temurin everywhere else. A JDK that bundles JavaFX must not package a module-path image:
+its `java.base` records the hashes of its own `javafx.*` modules and refuses the Maven `javafx.base` at boot. A jpackage run that cannot find the JavaFX runtime pieces
 fails fast with a clear message — the fix is the JDK selection, never hand-copying jmods (EC-REL-4).
 
 ## no-cross-compile {#no-cross-compile}
@@ -173,7 +174,7 @@ Full artifact sets are produced on `main` pushes (snapshot, short retention) and
   automatically flagged *pre-release* (suffix detection).
 - **EC-REL-3** — `fakeroot` is absent on a Linux packaging host → the `.deb` is skipped with a warning; the app-image
   tar.gz is still produced. CI installs `fakeroot` explicitly so this only occurs locally.
-- **EC-REL-4** — the packaging JDK lacks the JavaFX jmods (plain JDK on Windows / Linux-ARM) → jpackage fails fast; the
+- **EC-REL-4** — the packaging JDK lacks the JavaFX jmods (plain JDK on Windows) → jpackage fails fast; the
   remedy is the Liberica Full (`jdk+fx`) selection in `#jdk-and-javafx-runtime`, never manual jmod copying.
 - **EC-REL-5** — the packaged image fails the headless launch smoke → the packaging job is **red** (`#verification`); an
   artifact that does not start is never published.

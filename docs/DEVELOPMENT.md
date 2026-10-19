@@ -39,7 +39,7 @@ Optional:
 | `lefthook` | git hooks (inactive until installed per clone) | `brew install lefthook` / `scoop install lefthook` |
 | `gitleaks` | the pre-commit secret scan; the hook fails without it | `brew install gitleaks` / `scoop install gitleaks` |
 | `fakeroot` | the Linux `.deb`; without it `package-linux.sh` warns and skips it | `apt install fakeroot` |
-| Liberica 25 "Full" (`jdk+fx`) | packaging on **Windows** and **Linux aarch64** only — a plain JDK there lacks the JavaFX jmods `jpackage` needs | <https://bell-sw.com/pages/downloads/> |
+| Liberica 25 "Full" (`jdk+fx`) | packaging on **Windows** only — a plain JDK there lacks the JavaFX jmods `jpackage` needs; never on macOS or Linux, whose module-path image refuses a JavaFX-linked `java.base` | <https://bell-sw.com/pages/downloads/> |
 
 There is no `gradle.properties`; one you add is not ignored by git. `org.gradle.parallel` and the build cache stay off on
 purpose ([§7](#test-speed)).
@@ -2001,7 +2001,7 @@ placeholder). There is no cross-compilation: each image is built on its own OS.
 | OS | Command | Needs | Produces under `build/package/` |
 |---|---|---|---|
 | macOS | `./scripts/package-macos.sh` | a JDK 25 with `jpackage` | `BookLoom.app`, `BookLoom-<version>-macos-<arch>.tar.gz`, `.dmg` |
-| Linux | `./scripts/package-linux.sh` | Liberica Full on aarch64; `fakeroot` for the `.deb` | `BookLoom/`, `…-linux-<arch>.tar.gz`, `.deb` |
+| Linux | `./scripts/package-linux.sh` | a plain JDK 25 (Temurin) with `jpackage`; `fakeroot` for the `.deb` | `BookLoom/`, `…-linux-<arch>.tar.gz`, `.deb` |
 | Windows | `scripts\package-windows.bat` | Liberica 25 Full (`jdk+fx`) | `BookLoom\BookLoom.exe` (app-image only, no zip) |
 
 **Launch smoke** (POSIX only):
@@ -2058,7 +2058,7 @@ gates at once; they contend for the same daemon and outputs.
 convention configure it; do not reach for Monocle.
 
 **`jpackage is not on PATH`, or it fails on missing JavaFX jmods** — a JRE instead of a JDK, or a plain JDK on
-Windows/Linux aarch64. Install Liberica 25 Full there ([§1](#prerequisites)); never copy jmods by hand.
+Windows. Install Liberica 25 Full there ([§1](#prerequisites)); never copy jmods by hand.
 
 **Packaging fails with `Specified icon file … does not exist`** — the committed icons are missing from your checkout;
 regenerate them (`docs/specification/assets/icon/README.md`).
