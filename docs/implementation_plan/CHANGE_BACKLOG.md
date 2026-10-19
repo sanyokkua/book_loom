@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-10-17 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-10-19 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -15,8 +15,8 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 > comes**, against the codebase as it actually is at that moment rather than as it was imagined months earlier. The
 > "covers" column names the material a proposal should draw on; it is not a scope contract.
 
-**One exception exists today.** `complete-translation-workflow` (`openspec/changes/complete-translation-workflow/`,
-built, not yet archived: what remains open are the owner's checks, `tasks.md` 16.5) has a real proposal, specs and
+**One exception was built ahead of its slot.** `complete-translation-workflow`
+(`openspec/changes/archive/2026-10-19-complete-translation-workflow/`, archived 2026-10-19 with every task done) had a real proposal, specs and
 tasks, built directly against the code — the same pattern `add-translation-engine-and-cli` and its siblings used ahead
 of their planned slot. It consumed most of the Stage C and Stage D rows below in reduced form (each row says what it
 took and what it left), and closed D5, D7, D8, D17 and D19 and part of D18 in `#decision-debt`. The groups of work that
@@ -26,7 +26,7 @@ the next change `redesign-translation-pipeline`; SQLite persistence follows it.
 
 ## where-this-stands {#where-this-stands}
 
-**Ten changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+**Eleven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
 `add-translation-engine-and-cli` (2026-09-20) delivered the walking skeleton the owner named as the next unit of work
 — a book of any of the four formats through the whole pipeline from the command line with a deterministic pseudo
@@ -52,6 +52,7 @@ persistence, so nothing survives a restart.
 | 2026-09-20 | — · `add-translation-engine-and-cli` | `:llm` and `:pipeline` made real: the pausable job, checked export, a deterministic pseudo model, the `translate` command; `inference`, `translation-pipeline`, `resume` and `export` created |
 | 2026-09-24 | — · `add-real-llm-clients` | Ollama-native and OpenAI-compatible clients behind the chat-model boundary, retry, the single-flight gate, three-stage verification; `llm-provider` created |
 | 2026-09-26 | — · `add-ui-translation-workspace` | The desktop window: shell, Import, Book Brief, Structure, Translating, Export and Settings screens, state mirror, English and Ukrainian bundles, theme; Pause and Stop abort the request in flight; `app-shell`, `book-brief`, `book-import`, `localization`, `notifications`, `settings` and `theming` created, `export`, `llm-provider`, `resume`, `translation-pipeline` and `document-round-trip` extended |
+| 2026-10-19 | — · `complete-translation-workflow` | The whole translation workflow on a stored project: book brief, glossary and recurring terms, chunked batch drafts, deterministic checks, the reviewer and directed repair, the review desk, translation memory and summary, a checked export with a consistency pass, five workflow screens, WCAG AA themes; groups 15a–15j in `additional-work.md`; `glossary`, `quality-gates` and `review-queue` created, eleven other capabilities extended |
 
 **Honest completion figures**, so nobody reads the table above as more progress than it is:
 
@@ -59,7 +60,7 @@ persistence, so nothing survives a restart.
 |---|---|
 | Capabilities with a built-behaviour spec | Thirteen in `openspec/specs/`: `app-shell`, `book-brief`, `book-import`, `document-round-trip`, `export`, `inference`, `llm-provider`, `localization`, `notifications`, `resume`, `settings`, `theming`, `translation-pipeline` |
 | Tests | **616** at the 2026-09-11 archive, plus the suites shipped by the archived `add-translation-engine-and-cli` change across `:llm`, `:pipeline` and `:app`, and by `add-real-llm-clients` and the not-yet-archived `add-ui-translation-workspace` (which adds the `:ui` suites) — a test's name and one-line comment say what it proves; requirement-id markers were retired on 2026-09-11 (ADR-0032) |
-| Modules carrying real production logic | **8 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:persistence`, `:ui`, `:app`) — `add-ui-translation-workspace` made `:ui` real; `:persistence` now binds every repository port to an in-memory adapter (ADR-0034), with SQLite still to come; `complete-translation-workflow` (in flight) is adding real chunking, QA, judge and self-heal logic to `:pipeline`, not yet wired into a run |
+| Modules carrying real production logic | **8 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:persistence`, `:ui`, `:app`) — `add-ui-translation-workspace` made `:ui` real; `:persistence` now binds every repository port to an in-memory adapter (ADR-0034), with SQLite still to come; `complete-translation-workflow` (archived 2026-10-19) made the whole `:pipeline` run real: chunking, deterministic checks, the reviewer, repair, glossary, memory and the checked export |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
 **Inline masking now exists — the previous edition of this section said it did not.**
@@ -312,7 +313,7 @@ forced every write probe to open a fresh service and a fresh document. Advisory 
 `:document` is behaving correctly and splitting them would violate the skeleton invariant. The spec already
 anticipates it (`02_GLOSSARY.md`: "oversized single paragraphs are sentence-split only on overflow", FR-ALGO-02/DD-44)
 but `:pipeline` is a stub, so the safety net does not exist. Against the settings' 512-token minimum `num_ctx`, that
-one segment overflows by 15–20×. **Addressed by `complete-translation-workflow`** (in flight): `document.split.IcuSentenceSplitter`
+one segment overflows by 15–20×. **Closed by `complete-translation-workflow`**: `document.split.IcuSentenceSplitter`
 (task 5.9) splits an oversized masked segment at ICU sentence boundaries without cutting a placeholder pair, and
 `pipeline.chunk.OversizedSplit` (task 7.5) drafts it in sentence-aligned pieces joined back into one segment. Neither
 is yet wired into `TranslationJobImpl`'s running path, which still calls `SegmentTranslator.translate` rather than
@@ -334,8 +335,8 @@ not positions: a model that returns `⟦g1⟧old⟦g0⟧` for a source that mask
 and restores as `</em>old<em>`, and a model that concatenates the two tokens instead of separating them (`⟦g0⟧⟦g1⟧`
 where the source held text between them) also passes and restores to an empty `<em></em>`, deleting the words.
 Neither is a bug in the gate — the frozen spec's placeholder-multiset requirement (`FR-DOC-05`) is order-insensitive
-by definition — it is a hole the gate does not close. **Addressed by `complete-translation-workflow`** (in flight,
-task 5.8, ADR-0040): `MaskWriter` now records each pair's opening and closing tokens, and `PlaceholderGate.compare`
+by definition — it is a hole the gate does not close. **Closed by `complete-translation-workflow`**
+(task 5.8, ADR-0040): `MaskWriter` now records each pair's opening and closing tokens, and `PlaceholderGate.compare`
 walks the target's pair tokens with a stack after the multiset check, failing a close before its open, overlapping
 pairs, or a pair emptied of text the source held. `SegmentTranslator` still calls `translate`, not the chunker this
 row originally named, so the closure comes from the document gate itself rather than from chunking machinery.
@@ -354,8 +355,8 @@ check regardless of format.
 own obligation — never split a masked opening/closing pair across a chunk boundary (`DD-19`,
 `02_Architecture/05_PIPELINE_ENGINE.md`) — needs to know which token closes which, and `Segment.placeholders` is a
 flat map from token to fragment with no pairing information; for Markdown, both fragments of an emphasis pair are the
-literal `*`, so pairing cannot even be inferred from the fragment text. **Addressed by `complete-translation-workflow`**
-(in flight, task 5.8, ADR-0040): `Segment` now carries a `List<PlaceholderPair>` (open token, close token, and the
+literal `*`, so pairing cannot even be inferred from the fragment text. **Closed by `complete-translation-workflow`**
+(task 5.8, ADR-0040): `Segment` now carries a `List<PlaceholderPair>` (open token, close token, and the
 element's own declared language) and a `List<String>` of line-break tokens, so pairing information is exposed at the
 `:api` boundary for the chunker and quality gates to read.
 
@@ -404,7 +405,7 @@ recorded here so none of them is rediscovered from scratch.
 
 **D17 — declared language codes arrive unnormalized.** Found by the 2026-09-12 `Books_Examples` sweep (216 books):
 one EPUB declares `ua` (not a valid code; the book is Ukrainian, `uk`), one FB2 declares `EN`, two EPUBs `en-US`.
-**Addressed by `complete-translation-workflow`** (in flight, task 1.1): `util.lang.LanguageTags.normalize` folds case,
+**Closed by `complete-translation-workflow`** (task 1.1): `util.lang.LanguageTags.normalize` folds case,
 reads `_` as `-`, maps `ua`→`uk`, drops a region tag and splits Chinese into Simplified/Traditional. The same sweep
 fixed one product defect (a spine item whose file is absent is now skipped, not refused) and two harness artefacts —
 see `notes-corpus-verification.md`.
@@ -594,7 +595,7 @@ expected. Built directly against the code as it stood, it created `inference`, `
 (`:llm`), and a pausable `TranslationEngine`/`TranslationJob` that translates a book segment by segment and exports
 it only after the written file re-opens with the source's segment count (`:pipeline`) — driven today from
 `./gradlew :app:translate` (ADR-0033). It takes no number of its own, the same way every other interstitial does not.
-**`complete-translation-workflow` is running the same way now**, against changes 8–16's territory in a different
+**`complete-translation-workflow` ran the same way**, against changes 8–16's territory in a different
 shape than this table plans — see the note under `#where-this-stands` and each addressed `#decision-debt` row.
 
 Seams established here: **F6/F7** (checkpoints, settings KV) by 8–9; **F3** (provider abstraction) by 10; **F4**
@@ -797,4 +798,4 @@ Status after group 15d (2026-10-05; numbers in `docs/DEVELOPMENT.md#15d-results`
 - **Partly resolved:** lexical drift (`master`, `imp`, `pentacle`): renderings are learned from the decided pairs by co-occurrence, on any model (e4b whole book: `master` 99 % one rendering). Still open: `Mr`/`Mrs`/`Ms` (they split between містер/пан/місіс and need the person's glossary lock) and the key-term scan proposing generic words.
 - **Still open:** chapter headings rendered as digits only; footnote-marker spacing (the normalizer cannot tell a marker token from another); the Housekeeping flakes (`ui:SmoothScrollTest` under load joins them); groups 16.2–16.4.
 
-Planned: group 15d of `openspec/changes/complete-translation-workflow/additional-work.md` (translation-quality engineering: evals first, deterministic text checks, typography normalizer, binary evidence-based judge, best-candidate repair, context budget, batched drafting, terminology lexicon, narrator/gender, garbled-word defence, final audit, review/export/ops fixes, numeric acceptance) addresses every item in the section above.
+Planned: group 15d of `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md` (translation-quality engineering: evals first, deterministic text checks, typography normalizer, binary evidence-based judge, best-candidate repair, context budget, batched drafting, terminology lexicon, narrator/gender, garbled-word defence, final audit, review/export/ops fixes, numeric acceptance) addresses every item in the section above.

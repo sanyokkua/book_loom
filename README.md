@@ -122,8 +122,8 @@ resume or stop the run and show the written file in your file manager. The same 
 behind a placeholder hard gate that checks the multiset and the order of paired placeholders — verified canonical-equal
 on a 235-book local corpus. The interface is English or Ukrainian, chosen from the operating system's language.
 `:persistence` binds every storage port to an in-memory adapter (ADR-0034), so nothing survives a restart: a run
-cannot be resumed, and the theme is not remembered. `:pipeline` already has prompt templates, chunking, the
-deterministic quality checks, the judge and self-heal built and tested, but the running job still accepts a segment
-once its markup restores — none of that is wired in yet. Next: re-plan groups 9–15 of
-`openspec/changes/complete-translation-workflow`, then memory (glossary, translation memory, rolling summary), the
-run on a stored project, and the screens that show it.
+cannot be resumed after a restart, and settings are not remembered. Within a run the whole pipeline is live: book
+brief, glossary and recurring terms, chunked drafts, deterministic checks, the reviewer, directed repair, the review
+desk and a checked export with a consistency pass (`openspec/changes/archive/2026-10-19-complete-translation-workflow`).
+Next: the translation-pipeline redesign (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), then SQLite
+persistence.

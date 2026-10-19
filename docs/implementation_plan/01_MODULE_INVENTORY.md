@@ -235,7 +235,7 @@ and the acceptance rule, with protected spans, the context package, translation 
 the glossary and recurring terms, backward revision, the review desk, a checked export with side files, the setup
 assistant and the autonomous names pass all wired into it. A book of any of the four formats can be translated end to end
 from the window or from `./gradlew :app:translate`, with `pseudo` or a configured real provider. Groups 15a–15j, which
-were not planned up front, are written down in `openspec/changes/complete-translation-workflow/additional-work.md`
+were not planned up front, are written down in `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`
 (their IDs are unchanged); the translation pipeline is being redesigned as the next change, `redesign-translation-pipeline`
 (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`).
 

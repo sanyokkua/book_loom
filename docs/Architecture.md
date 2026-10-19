@@ -4,7 +4,7 @@
 and stable so a prompt or a review can say "per §4.3". When the code changes, change this file in the same commit.
 `docs/DEVELOPMENT.md` says how to build and run; `AGENTS.md` is the operating manual and holds the dense "where it
 stands" summary; the groups of work that were not planned up front (15a–15j) are written down in
-`openspec/changes/complete-translation-workflow/additional-work.md`.*
+`openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md`.*
 
 ## 1. What BookLoom is, and where it honestly stands
 
@@ -453,10 +453,8 @@ is the headless proof against a real local model.
 
 ## 9. What comes next
 
-The workflow this change set out to build runs end to end in the window and from the command line (§1, §5, §6). What
-is left before the change closes is owner work, listed in `openspec/changes/complete-translation-workflow/tasks.md`
-task 16.5: the pulse and trackpad hand runs (15h.D1, 15h.D2), the gold spot-check (15h.E2), the Model calls window at a
-large window and at 960×640 (15j.J6), the 26b run of the owner's book, and the whole-change hand run (16.3). Then comes
+The workflow this change set out to build runs end to end in the window and from the command line (§1, §5, §6). The
+change was archived on 2026-10-19 after the owner's hand checks (task 16.5) passed. Next comes
 the pipeline redesign as its own change, `redesign-translation-pipeline`
 (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`), and after it the SQLite adapter behind `:persistence`'s
 ports, which is what finally lets a run, the settings and the Projects screen survive a restart. The order beyond that

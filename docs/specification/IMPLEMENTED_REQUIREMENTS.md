@@ -116,10 +116,8 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
 
 ## Requirements implemented by `complete-translation-workflow`
 
-Built and verified by the scripted checks at the change's final commit; the owner's hand run (task 16.3) and the other
-owner checks of task 16.5 are not done yet, so a row here says "built and tested", not "seen by the owner". The change is
-not archived: its delta specs are not merged yet, so its folders under `openspec/changes/complete-translation-workflow/specs/`
-are where the behaviour is written down until then. Three of the capabilities below — `glossary`, `quality-gates` and
+Built and verified by the scripted checks at the change's final commit and by the owner's hand checks (tasks 16.3 and
+16.5). The change was archived on 2026-10-19 and its delta specs are merged into `openspec/specs/`. Three of the capabilities below — `glossary`, `quality-gates` and
 `review-queue` — are new; the others extend capabilities that already sit under `openspec/specs/`. The work that was not planned up front (groups 15a–15j) is in `additional-work.md`, beside the change.
 
 | Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |

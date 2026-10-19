@@ -555,7 +555,7 @@ WHERE a Markdown document's frontmatter holds a top-level `lang` key, the system
 target language tag, keeping the value's quote style, SHALL change nothing else in the frontmatter, and SHALL leave a
 `language` key as it is.
 
-**Source**: FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`) read against `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, which specifies a language update for EPUB and FB2 only; DD-43; FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`); the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: the export contract takes a target language for every format, but TXT has nowhere to put it and a Markdown file has a place only when its frontmatter already declares one. Inventing a place — a `lang:` key in frontmatter that had none, a header line in TXT — would add content the source never had, and would break the byte-exact round trip. A Markdown file that already says `lang: en` is different: leaving it would make the translated file claim to be English, so its value — and only its value, in the quotes it had — becomes the target. A `language` key is left alone; the rewrite is limited to `lang` on purpose.
+**Source**: FR-DOC-07 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`) read against `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`, which specifies a language update for EPUB and FB2 only; DD-43; FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`); the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: the export contract takes a target language for every format, but TXT has nowhere to put it and a Markdown file has a place only when its frontmatter already declares one. Inventing a place — a `lang:` key in frontmatter that had none, a header line in TXT — would add content the source never had, and would break the byte-exact round trip. A Markdown file that already says `lang: en` is different: leaving it would make the translated file claim to be English, so its value — and only its value, in the quotes it had — becomes the target. A `language` key is left alone; the rewrite is limited to `lang` on purpose.
 
 #### Scenario: A Markdown export adds no language key
 
@@ -1403,7 +1403,7 @@ the language attributes the target-language requirement names; every other attri
 WHERE a Markdown file opens with a `---`-delimited frontmatter block, the system SHALL produce an auxiliary segment for
 a value only when its key is neither `lang` nor `language`, and SHALL produce no segment for any key.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: frontmatter keys are machine-readable field names and translating one breaks whatever reads the file. Values of other types — dates, flags, counts, addresses, lists — are data a site generator or a reader parses: translating `true` as `так` or rewriting a date as prose breaks the file just as surely. `lang` is the book's own language declaration, replaced by the target on export rather than translated. What is left is text a person may want translated, and the Book Brief's "Frontmatter values" switch, off by default, decides whether the run does. Only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), `02_Architecture/03_DOCUMENT_MODEL.md#metadata-unit`, the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: frontmatter keys are machine-readable field names and translating one breaks whatever reads the file. Values of other types — dates, flags, counts, addresses, lists — are data a site generator or a reader parses: translating `true` as `так` or rewriting a date as prose breaks the file just as surely. `lang` is the book's own language declaration, replaced by the target on export rather than translated. What is left is text a person may want translated, and the Book Brief's "Frontmatter values" switch, off by default, decides whether the run does. Only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
 
 #### Scenario: Keys and the language declaration are never segments
 
@@ -1417,7 +1417,7 @@ The system SHALL produce an auxiliary segment for a frontmatter value only when 
 top-level `key: value` line — not on an indented line, not a list item, not a flow collection opening with `[` or `{`,
 not a block scalar opening with `|` or `>`, and not an anchor, alias or tag opening with `&`, `*` or `!`.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: lists, collections and block scalars are structure a YAML reader parses, so only a plain one-line value is text.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: lists, collections and block scalars are structure a YAML reader parses, so only a plain one-line value is text.
 
 #### Scenario: Structured values are never segments
 
@@ -1432,7 +1432,7 @@ another type: a null (`~`, `null` in any letter case, or nothing), a boolean (`t
 `off`, `y` or `n`, in any letter case), a number (hexadecimal, octal, `.inf` and `.nan` included), or an ISO date or
 date-time.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: translating `true` as `так` or rewriting a date as prose breaks the file just as surely as translating a key.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: translating `true` as `так` or rewriting a date as prose breaks the file just as surely as translating a key.
 
 #### Scenario: Values of another type are never segments
 
@@ -1445,7 +1445,7 @@ The system SHALL produce no auxiliary segment for a frontmatter value that is a 
 `www.…`, `mailto:…`, `name@host.domain`) or that holds no letter once its surrounding quotes, or, when it has none, a
 trailing `# comment`, are set aside.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: an address is not prose and a value with no letter has nothing to translate; a trailing comment is not part of the value.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: an address is not prose and a value with no letter has nothing to translate; a trailing comment is not part of the value.
 
 #### Scenario: An address is never a segment
 
@@ -1468,7 +1468,7 @@ The system SHALL carry the frontmatter block through byte-for-byte when no value
 `lang` value that *Declare no language metadata in formats that carry none* replaces. A `---` line that is not at the
 start of the file SHALL NOT be treated as frontmatter.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), EC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: only the start of the file can open a frontmatter block, because `---` elsewhere is an ordinary thematic break, and real documents use it that way.
 
 #### Scenario: A frontmatter block survives byte-for-byte when untranslated
 
@@ -1489,7 +1489,7 @@ start of the file SHALL NOT be treated as frontmatter.
 WHEN a frontmatter value's translation is written, the system SHALL keep the value's original quotes, writing `"` as
 `\"` inside double quotes and `'` as `''` inside single quotes.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: the translation goes back into YAML, and YAML reads punctuation as structure. Unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is. A value that was quoted keeps its quotes, with the quote character escaped the way that style of quote requires.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: the translation goes back into YAML, and YAML reads punctuation as structure. Unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is. A value that was quoted keeps its quotes, with the quote character escaped the way that style of quote requires.
 
 #### Scenario: Double quotes are kept and escaped
 
@@ -1507,7 +1507,7 @@ WHERE a frontmatter value had no quotes, the system SHALL wrap its translation i
 or ` #`, begins with one of `-`, `?`, `:`, `,`, `[`, `]`, `{`, `}`, `#`, `&`, `*`, `!`, `|`, `>`, `'`, `"`, `%`, `@` or
 a backtick, or would itself read as a null, a boolean, a number or a date.
 
-**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/complete-translation-workflow/design.md` (D12). In plain words: unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is.
+**Source**: FR-DOC-MD-3 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-11 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), DD-47 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), the owner's frontmatter decision recorded in `openspec/changes/archive/2026-10-19-complete-translation-workflow/design.md` (D12). In plain words: unquoted, `Книга: Частина 1` is a nested mapping to a YAML reader and a book translated as `1984` becomes a number, so such a translation is quoted to stay the text it is.
 
 #### Scenario: A colon in the translation is quoted
 
@@ -1691,7 +1691,7 @@ written, of the `xml:lang` or `lang` attribute of the nearest element that enclo
 the document's root element — the segment's own block included — or no language where none of those elements
 declares one.
 
-**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-FOREIGN-1, EC-FOREIGN-2 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`); the quality-gates requirement "Skip the echo and script checks for a marked foreign passage kept by policy" (`openspec/changes/complete-translation-workflow/specs/quality-gates/spec.md`) is what reads it. In plain words: whether a passage is foreign depends on the language the run translates from, which the person settles on the Book Brief after opening the book — so parsing only records what the book says about each block, and the run makes the comparison. Comparing at parse time against the package's language marked every paragraph of a Ukrainian book whose template said English as foreign. The root element is left out because its declaration describes the whole document, not a passage in it; the import's language evidence already weighs it, and treating it as a passage marking would keep a whole chapter untranslated whenever it disagreed with the brief.
+**Source**: FR-IMPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-FOREIGN-1, EC-FOREIGN-2 (`01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`); the quality-gates requirement "Skip the echo and script checks for a marked foreign passage kept by policy" (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/quality-gates/spec.md`) is what reads it. In plain words: whether a passage is foreign depends on the language the run translates from, which the person settles on the Book Brief after opening the book — so parsing only records what the book says about each block, and the run makes the comparison. Comparing at parse time against the package's language marked every paragraph of a Ukrainian book whose template said English as foreign. The root element is left out because its declaration describes the whole document, not a passage in it; the import's language evidence already weighs it, and treating it as a passage marking would keep a whole chapter untranslated whenever it disagreed with the brief.
 
 #### Scenario: A block's own declaration is recorded
 

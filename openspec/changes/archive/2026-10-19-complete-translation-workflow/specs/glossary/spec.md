@@ -141,7 +141,7 @@ the model scan's 1 alike), measured over the whole book through the book index w
 result SHALL be what the glossary scan proposes and the model scan is shown. A joined name SHALL still be found as one
 run by the book index's mentions, so later readings of the name can use it.
 
-**Source**: 15i.N3 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a technical book repeats a section name in every heading and a converter credits itself on the title page; neither is a character, and the model should never be asked about them. A shop written `Orrin & Vale` is one name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the text is one name with two writings.
+**Source**: 15i.N3 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a technical book repeats a section name in every heading and a converter credits itself on the title page; neither is a character, and the model should never be asked about them. A shop written `Orrin & Vale` is one name, and a camera printed `KESSEL OPTIK` on the label and `Kessel Optik` in the text is one name with two writings.
 
 #### Scenario: A name that is mostly a heading is dropped
 
@@ -382,7 +382,7 @@ each time it is needed (no stored field, and no book index is needed), and SHALL
 gender: a review SHALL end with one gender for the cluster, and a gender the person chooses for one member SHALL be
 written to the others, a gender the person set never being overwritten.
 
-**Source**: 15i.N2 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a book calls one woman `Zephra` and `Zephra Quillon`; three "she" after each name are too few to decide either, six together decide both, and the model is never left to give them two genders. A gender the person sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to `Arlo Venn`: she may be his wife.
+**Source**: 15i.N2 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: a book calls one woman `Zephra` and `Zephra Quillon`; three "she" after each name are too few to decide either, six together decide both, and the model is never left to give them two genders. A gender the person sets for one spelling is theirs for all of them, but `Mrs Venn` is not joined to `Arlo Venn`: she may be his wife.
 
 #### Scenario: A short name and a full name are one person
 
@@ -638,7 +638,7 @@ the quality dial's names plan reads (Fast: a likely character written five times
 written three times or more; at most 80) SHALL be read in context, one term per call (`term-reading`), and the code —
 not the model — SHALL decide each from its readings, by the rules of the scenarios below.
 
-**Source**: 15i.N5 (`openspec/changes/complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open.
+**Source**: 15i.N5 (`openspec/changes/archive/2026-10-19-complete-translation-workflow/tasks.md`), FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#term-summary`. In plain words: the model reads, the code decides. A small model's pronoun answers were wrong one time in ten or more, so for now they only settle what the book's own pronouns leave open.
 
 #### Scenario: Six windows read a character
 

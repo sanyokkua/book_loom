@@ -223,7 +223,7 @@ WHERE no model is chosen, the footer SHALL read "No model chosen" in place of a 
 
 WHEN a book is chosen for import while the current run is running, paused, paused on a provider error or stopped, the application SHALL ask whether to discard that run and import the book, or to keep the run, and SHALL change nothing until the person answers. WHEN the current run is completed or failed, the application SHALL import the book without asking and show no run.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `openspec/changes/complete-translation-workflow/proposal.md#what-changes`. In plain words: the application keeps one translation per session, so importing another book would throw away hours of work that could still be finished. It asks first, and both answers are safe: keeping the run changes nothing, discarding it is what the person said. A run that has already finished or failed has nothing left to continue, so it never gets in the way.
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`, `openspec/changes/archive/2026-10-19-complete-translation-workflow/proposal.md#what-changes`. In plain words: the application keeps one translation per session, so importing another book would throw away hours of work that could still be finished. It asks first, and both answers are safe: keeping the run changes nothing, discarding it is what the person said. A run that has already finished or failed has nothing left to continue, so it never gets in the way.
 
 #### Scenario: Keeping a paused translation
 
@@ -251,7 +251,7 @@ WHEN a book is chosen for import while the current run is running, paused, pause
 
 WHEN a book is chosen for import, the project stored for that file already holds decided segments (accepted, revised or flagged, not pending) and the file's content is unchanged, the application SHALL ask whether to continue the earlier translation or to start over, and SHALL change nothing until the person answers. Otherwise it SHALL import the book without asking.
 
-**Source**: `openspec/changes/complete-translation-workflow/additional-work.md` 15i.T7 (owner intent: importing the same file again reset hours of decided work with no warning). In plain words: importing a file again rebuilds its segments as pending, so decisions are lost. The application says so first, with the number of segments, and lets the person keep them.
+**Source**: `openspec/changes/archive/2026-10-19-complete-translation-workflow/additional-work.md` 15i.T7 (owner intent: importing the same file again reset hours of decided work with no warning). In plain words: importing a file again rebuilds its segments as pending, so decisions are lost. The application says so first, with the number of segments, and lets the person keep them.
 
 #### Scenario: Re-importing a file with decided segments asks
 

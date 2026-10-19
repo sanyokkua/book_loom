@@ -169,7 +169,7 @@ Export book is pressed, how many segments will be written in the source language
 ones that have no machine translation — and how many flagged segments will be written with their machine
 translation.
 
-**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: a partial book is allowed, but never a surprise — the person reads "312 segments will be written in the source language" before choosing to write it. Auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead, so nothing written in the source language goes unmentioned.
+**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: a partial book is allowed, but never a surprise — the person reads "312 segments will be written in the source language" before choosing to write it. Auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead, so nothing written in the source language goes unmentioned.
 
 #### Scenario: Pending and flagged counts are stated
 
@@ -193,7 +193,7 @@ translation.
 The pending count SHALL leave out every segment kept as source by choice, and WHERE the book has such segments the
 export screen SHALL state their number apart, as `<n> segments are kept as source by choice`.
 
-**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead.
+**Source**: FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is defined by `translation-pipeline` (`openspec/changes/archive/2026-10-19-complete-translation-workflow/specs/translation-pipeline/spec.md`). In plain words: auxiliary text the person switched off on the Book Brief — say, every image description — is not waiting for anything, so counting it as pending would make a finished book look unfinished; it is named on its own line instead.
 
 #### Scenario: Segments kept by choice are named apart from pending ones
 
