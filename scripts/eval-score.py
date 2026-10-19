@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare prompt-eval runs kept in eval-history/ (written by the promptEval tests, see docs/DEVELOPMENT.md).
+"""Compare prompt-eval runs kept in .temporary_context/eval-history/ (written by the promptEval tests, see docs/DEVELOPMENT.md).
 
   eval-score.py list [--history DIR]
   eval-score.py diff A B [--noise N] [--history DIR]
@@ -33,7 +33,7 @@ RATE_WORDS = ("rate", "share", "parse", "gate", "script", "marker", "injection",
 
 
 def history_dir(arg):
-    return arg or os.environ.get("BOOKLOOM_EVAL_HISTORY_DIR") or os.path.join(ROOT, "eval-history")
+    return arg or os.environ.get("BOOKLOOM_EVAL_HISTORY_DIR") or os.path.join(ROOT, ".temporary_context", "eval-history")
 
 
 def load(run):

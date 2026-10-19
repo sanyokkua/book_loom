@@ -4,7 +4,7 @@
 # then prints a comparison table from build/reports/promptEval/*.json.
 # THE GRADLE LOCK (15j.J16): each (suite x model) Gradle invocation takes scripts/gradle-lock.sh for its own duration and
 # never for the whole loop, so other agents' Gradle runs interleave between models. The lock is not re-entrant: never wrap
-# this script in scripts/gradle-lock.sh (or .temporary_context/15i/g.sh, which is the same lock), or it waits for itself.
+# this script in scripts/gradle-lock.sh, or it waits for itself.
 # --suite book --book-file <path> --out-dir <dir> (BookRunEvalTest) translates one whole book and writes its outputs to <dir>
 # (BOOKLOOM_EVAL_SUITE=book, BOOKLOOM_EVAL_BOOK_FILE, BOOKLOOM_EVAL_OUT_DIR); it prints no table. Default timeout 24 h.
 # QUICK (15j.J16): --quick (BOOKLOOM_EVAL_QUICK=1) runs the fast subsets: the default suite sends only the ten cases of

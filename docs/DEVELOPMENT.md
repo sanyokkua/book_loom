@@ -800,7 +800,7 @@ meaning error a reader notices; the A/B order was shuffled per item), and on the
 
 WRONG did not fall by two on either model (the gate), errors moved in opposite directions, and the set cost 3.3 times the calls,
 so the code was removed. The grader's strict verdicts mark nearly every long paragraph WRONG on both models; 26b makes about half
-of e4b's errors. Grades and the blind key: `.temporary_context/eval_2026-10-12/x3grade/` (owner-local).
+of e4b's errors. Grades and the blind key: `.temporary_context/eval-artifacts/eval_2026-10-12/x3grade/` (owner-local).
 
 ### 15i.X2 thinking and notes per call kind: all off {#15i-x2}
 
@@ -868,7 +868,7 @@ Pending owner: the 26b closing round of these measurements and 15h.F2.
 ### 15j results: closing the change on e4b, then 26b once {#15j-results}
 
 Measured 2026-10-17/18 on the final tree against the `0a587148` baseline (the tree before 15j), e4b first and 26b once,
-with the fast loop (`#testing`, "The fast loop"); reports in the owner's `.temporary_context/close/evals/`.
+with the fast loop (`#testing`, "The fast loop"); the numbers below are the record (the per-run reports were not kept).
 
 | Suite (e4b) | Baseline | Final | Note |
 |---|---|---|---|
@@ -1292,11 +1292,13 @@ when `BOOKLOOM_EVAL_REPLAY_LOG` is set, without sending anything.
 book the code's own detectors catch, and how often they fire on a sound paragraph. No model is involved:
 
 ```bash
-BOOKLOOM_EVAL_SUITE=recall BOOKLOOM_RECALL_DIR=~/bookloom-recall ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*'
-BOOKLOOM_RECALL_DIR=~/bookloom-recall scripts/eval-matrix.sh --suite recall     # the same, then the table
+BOOKLOOM_EVAL_SUITE=recall BOOKLOOM_RECALL_DIR=$PWD/.temporary_context/eval-artifacts/recall ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*'
+BOOKLOOM_RECALL_DIR=$PWD/.temporary_context/eval-artifacts/recall scripts/eval-matrix.sh --suite recall     # the same, then the table
 ```
 
-`BOOKLOOM_RECALL_DIR` must lie **outside the repository** (the test refuses a path inside the checkout); unset, the test is
+`BOOKLOOM_RECALL_DIR` must lie in the git-ignored `.temporary_context/` or outside the repository (the test refuses any
+other path inside the checkout, since `segments.jsonl` holds book text), and must be absolute — Gradle runs the test in
+the module directory; unset, the test is
 skipped. The directory is one book (it holds `book.json`) or holds one sub-directory per book. A book directory holds:
 
 | File | Who writes it | What it holds |
@@ -1463,7 +1465,7 @@ then the export written twice, with the consistency pass off and on, each with t
 
 ```bash
 BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_PROVIDER=ollama BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_DIAL=BALANCED \
-BOOKLOOM_EVAL_BOOK_FILE=/path/book.epub BOOKLOOM_EVAL_OUT_DIR=~/bookloom-runs/book1 BOOKLOOM_EVAL_SOURCE=en BOOKLOOM_EVAL_TARGET=uk \
+BOOKLOOM_EVAL_BOOK_FILE=/path/book.epub BOOKLOOM_EVAL_OUT_DIR=$PWD/.temporary_context/eval-artifacts/runs/book1 BOOKLOOM_EVAL_SOURCE=en BOOKLOOM_EVAL_TARGET=uk \
   ./gradlew :pipeline:promptEval --tests '*BookRunEvalTest'
 ```
 
@@ -1597,7 +1599,7 @@ a write fails half-way, and a promotion of a term the glossary already holds onl
 the agreement and pooling rules can move the gate numbers (verified to suggested only, so wrong-verified can only fall).
 
 *Second iteration (2026-10-14), rounds r4–r7.* The same suite, the same corrected gold. The rows below are the reports'
-own counts (`.temporary_context/eval_2026-10-12/raw/Ngate2-r*`): the suite writes 39 eligible persons for owner book 4
+own counts (`.temporary_context/eval-artifacts/eval_2026-10-12/raw/Ngate2-r*`): the suite writes 39 eligible persons for owner book 4
 where the hand-rescored r0–r3 rows above say 40, so compare r4 with r3's own report (`raw/Ngate-r3`), not with the row.
 r4 is HEAD after the review fixes; "rf120" is r4 with `LexiconReading`'s Balanced read-first at 120 instead of 30 (15i.N7);
 r5 adds the scan rules below; r6 fixes what r5 broke (a couple's shared surname, the plural rule, a place's spelling,
@@ -1695,14 +1697,14 @@ read, one person typed a term), so N5 stays open until the owner says whether th
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
 model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial (`BOOKLOOM_EVAL_DIAL`, Balanced when unset; the judgement suites record the dial they ran at, Fast when unset), brief preset and overrides, suite). Besides `build/reports/promptEval`
 (overwritten by the next run) each report is kept as `report.txt` and `report.json` in
-`eval-history/<yyyyMMdd-HHmmss>-<suite>-<model[-label]>/` at the repository root (git-ignored; `BOOKLOOM_EVAL_HISTORY_DIR`
+`.temporary_context/eval-history/<yyyyMMdd-HHmmss>-<suite>-<model[-label]>/` (git-ignored; `BOOKLOOM_EVAL_HISTORY_DIR`
 moves it, `off` disables it; a name that exists gets `-2`). Only what the report holds is written. The JSON carries, where the
 suite has the data: pass rates, defect counts (mixed script, source-language leftover, protocol or closer residue, control
 characters, missing vocative, quote findings, gender slips, name variants), `wastedCallRate` (failed or repeated calls per call),
 calls per segment or case and, for the sequence suite, tokens and seconds per call kind (`costByKind`).
 
 ```bash
-BOOKLOOM_EVAL_LABEL=round7 BOOKLOOM_EVAL_SUITE=terms ./gradlew :pipeline:promptEval   # a run, kept in eval-history
+BOOKLOOM_EVAL_LABEL=round7 BOOKLOOM_EVAL_SUITE=terms ./gradlew :pipeline:promptEval   # a run, kept in .temporary_context/eval-history
 scripts/eval-score.py list                                                          # the kept runs
 scripts/eval-score.py diff previous:terms:e4b latest:terms:e4b                      # or two directories or globs
 scripts/eval-score.py diff A B --noise 3                                            # noise band, default 5
@@ -1718,7 +1720,7 @@ run the offline `StageEvalRunnerTest` and `scripts/test-focused.sh`, then one `:
 **Prompt round 6 — draft rules rewrite (plan 16a, Phase C): reverted, no gain.** Control = HEAD `bd629759` (prompt hash `95c7d4ac6dc2`),
 candidate = the rewritten DRAFT/BATCH-DRAFT rules + end checklist, token rules moved into the conditional `[Immutable tokens]` block,
 the style default dropped when a register line follows, and uk/ru quotes, dialogue and venue-name lines. LM Studio `google/gemma-4-e4b`,
-`burning-chrome` preset, window 16384, three runs per arm (`eval-history/*r6-control*`, `*r6-cand*`, `*r6-split*`). Run-to-run spread of
+`burning-chrome` preset, window 16384, three runs per arm (`.temporary_context/eval-history/*r6-control*`, `*r6-cand*`, `*r6-split*`). Run-to-run spread of
 the control was zero on every group (the seed is fixed per call), so a range proves less than it looks: one case flipping is one sample.
 Moved for the better: `ascii-dialogue/draft` 33 % → 67 % (0.67..1.0), replay-fast pass 90 % (90..92.5) → 95 %, `injection-hello` fixed, default
 `falsePositive` 17.6 % → 5.9 %. Did not move: `venue-name/draft` 0/2 (the model now writes «Синього якоря», still the genitive), `slang/draft`

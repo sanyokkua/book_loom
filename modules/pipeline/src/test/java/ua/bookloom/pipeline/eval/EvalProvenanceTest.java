@@ -160,7 +160,7 @@ class EvalProvenanceTest {
     void historyRoot_offOrEmptyOrPath_follows() {
         assertThat(EvalOutput.historyRoot(Map.of("BOOKLOOM_EVAL_HISTORY_DIR", "OFF"), dir))
                 .isEmpty();
-        assertThat(EvalOutput.historyRoot(Map.of(), dir)).contains(dir.resolve("eval-history"));
+        assertThat(EvalOutput.historyRoot(Map.of(), dir)).contains(dir.resolve(".temporary_context/eval-history"));
         assertThat(EvalOutput.historyRoot(Map.of("BOOKLOOM_EVAL_HISTORY_DIR", "/x/y"), dir))
                 .contains(Path.of("/x/y"));
     }

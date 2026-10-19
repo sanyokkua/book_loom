@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Writes a finished eval report twice: to {@code build/reports/promptEval} where a matrix reads it (overwritten by the
- * next run) and to {@code eval-history/<run>/} at the repository root where runs are kept to be compared. The JSON
+ * next run) and to {@code .temporary_context/eval-history/<run>/} in the repository where runs are kept to be compared. The JSON
  * always carries the run's {@link EvalProvenance}. No book text goes here beyond what the report already holds.
  */
 @Slf4j
@@ -23,7 +23,7 @@ final class EvalOutput {
 
     static final String HISTORY_ENV = "BOOKLOOM_EVAL_HISTORY_DIR";
     static final String OFF = "off";
-    private static final String HISTORY_DEFAULT = "eval-history";
+    private static final String HISTORY_DEFAULT = ".temporary_context/eval-history";
 
     /** Writes a report to the build reports directory and the history as the environment says. */
     static void write(final EvalProvenance provenance, final String name, final String table, final String reportJson)

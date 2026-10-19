@@ -3,8 +3,8 @@
 # first served: each caller takes a ticket in the queue and runs only when its ticket is the oldest and the lock is free.
 # Usage: scripts/gradle-lock.sh <command...>
 # Not re-entrant: a command that takes the lock must not be wrapped in it (scripts/eval-matrix.sh and scripts/probe.sh
-# take it themselves). The directory is the owner's machine default, shared with .temporary_context/15i/g.sh so both
-# locks are one; BOOKLOOM_GRADLE_LOCK_DIR overrides it on another machine.
+# take it themselves). The directory is the owner's machine default;
+# BOOKLOOM_GRADLE_LOCK_DIR overrides it on another machine.
 BASE=${BOOKLOOM_GRADLE_LOCK_DIR:-/private/tmp/claude-501}
 LOCK="$BASE/bookloom-gradle.lock"
 QUEUE="$BASE/bookloom-gradle.queue"

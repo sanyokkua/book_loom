@@ -15,9 +15,10 @@ import ua.bookloom.document.DocumentModule;
 
 /**
  * The detector-recall suite over the owner's exported books, with no model: {@code BOOKLOOM_EVAL_SUITE=recall
- * BOOKLOOM_RECALL_DIR=<dir outside the repository> ./gradlew :pipeline:promptEval} (or
+ * BOOKLOOM_RECALL_DIR=$PWD/.temporary_context/eval-artifacts/recall ./gradlew :pipeline:promptEval} (or
  * {@code scripts/eval-matrix.sh --suite recall}). Skipped when the directory is unset; refused when it lies inside the
- * checkout, since every book directory gets a {@code segments.jsonl} of book text. It measures and asserts no floor;
+ * checkout but outside the git-ignored {@code .temporary_context/}, since every book directory gets a
+ * {@code segments.jsonl} of book text that must never be committed. It measures and asserts no floor;
  * the report lands in {@code build/reports/promptEval/recall.json} and {@code .txt}. The layout and the gold format are
  * in {@code docs/DEVELOPMENT.md#recall-suite}.
  */
@@ -26,14 +27,19 @@ import ua.bookloom.document.DocumentModule;
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "recall")
 class RecallEvalTest {
 
+    private static final String IGNORED_DIR = ".temporary_context";
+
     @Test
     void recall_ownerBooks_reportsEveryDetectorAndClass() throws IOException {
         final String dir = System.getenv(RecallSuite.DIR_ENV);
         Assumptions.assumeTrue(dir != null && !dir.isBlank(), "set " + RecallSuite.DIR_ENV);
         final Path root = Path.of(dir).toAbsolutePath().normalize();
-        assertThat(root.startsWith(EvalProvenance.repoRoot().toAbsolutePath().normalize()))
-                .as("%s must lie outside the repository: segments.jsonl holds book text", RecallSuite.DIR_ENV)
-                .isFalse();
+        final Path repo = EvalProvenance.repoRoot().toAbsolutePath().normalize();
+        assertThat(!root.startsWith(repo) || root.startsWith(repo.resolve(IGNORED_DIR)))
+                .as(
+                        "%s must lie in %s or outside the repository: segments.jsonl holds book text",
+                        RecallSuite.DIR_ENV, IGNORED_DIR)
+                .isTrue();
         final DocumentPort documents =
                 Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
 

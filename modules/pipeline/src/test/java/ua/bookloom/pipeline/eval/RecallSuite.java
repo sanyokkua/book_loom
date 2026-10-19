@@ -22,7 +22,8 @@ import ua.bookloom.api.document.DocumentPort;
  * itself when it holds a {@code book.json}, else each child directory that does — is read against its source, and the
  * detectors that fired are scored against the book's {@code gold.jsonl}. Each book directory also gets a
  * {@code segments.jsonl} with every aligned segment's id, hash, texts and fired detectors, which is what a reading
- * labels; it holds book text, so the root must live outside the repository.
+ * labels; it holds book text, so the root lives in the git-ignored
+ * {@code .temporary_context/} or outside the repository.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

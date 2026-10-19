@@ -189,7 +189,7 @@ since taken findings F1–F6, F11, F12a, F12b and F12c, and recorded F7–F10 in
 **Provenance.** Branch `feature/add-fb2-md-txt-roundtrip`, against 214 real books (194 EPUB, 8 MD,
 7 FB2, 4 TXT, 1 PDF), 314 MB, git-ignored at `.temporary_context/Book_Examples/`.
 
-**The run itself is preserved** at `.temporary_context/corpus-verification-baseline/` — the per-book
+**The run itself was preserved** at `.temporary_context/corpus-verification-baseline/` (removed at the 2026-10-19 cleanup) — the per-book
 JSONL, a summary table, and the analysis script. Git-ignored, so it does not travel to another clone
 and no third-party book titles enter the repository; where it is absent, the aggregate counts below
 are the anchor. This is the diff target for the re-run that proves the fixes. Real books never
