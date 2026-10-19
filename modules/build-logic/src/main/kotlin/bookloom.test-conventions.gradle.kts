@@ -21,21 +21,38 @@ fun lib(alias: String) = catalog.findLibrary(alias).orElseThrow()
 
 fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 
-// --- The four local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6) ------
+// --- The local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6; `soak` by
+// the overnight-run work: a whole generated book under injected faults, about a minute a format) ------------------
 //
-// `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real model plus an embedding scorer, `visual`
+// `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real local model, `visual`
 // needs a pinned rendering environment, `corpus` needs a real, locally configured book corpus. None of the four
 // can run on a CI runner, and all four are excluded from coverage (`06_TESTING_STRATEGY.md#live-local`,
 // `#prompt-evals`, `#visual-validation`, DD-35, `fix-document-round-trip-corpus-defects` design.md D6).
 //
 // The task name and the tag name are deliberately identical: `./gradlew liveLocal` runs tag `liveLocal`. That is
 // what makes the mechanism inspectable — `./gradlew tasks` shows the whole partition.
-val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus")
+val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus", "soak")
+
+// `slow` marks the heavy end-to-end classes (a whole book through the engine, the three-mode workspace run). It is
+// NOT local-only: `test` — and so `check`, pre-push and CI — still runs it. Only `fastTest`, the inner development
+// loop, leaves it out.
+val slowTag = "slow"
+
+// The JVMs one module's `test`/`fastTest` spreads its classes over. Half the cores, capped at four: a TestFX fork
+// renders in software and is CPU-bound, and past four the round-robin split of classes over forks leaves the longest
+// class as the floor anyway. `-Pbookloom.forks=N` overrides it (1 = the old serial run).
+val testForks =
+    providers
+        .gradleProperty("bookloom.forks")
+        .map { it.toInt() }
+        .orElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4))
+        .get()
 
 // `corpus` alone reads its target from an environment variable Gradle does not treat as a task input, so a
 // second consecutive run would otherwise be reported `UP-TO-DATE` while printing `BUILD SUCCESSFUL` and doing
 // nothing (design.md D6, trap 1). The other three tagged tasks keep Gradle's normal up-to-date checking.
-val neverUpToDateTags = setOf("corpus")
+// `promptEval` reads its endpoint and model the same way, and its evidence is the report it writes.
+val neverUpToDateTags = setOf("corpus", "promptEval")
 
 dependencies {
     // The BOM pins every `org.junit.*` coordinate from one version, so `junit-jupiter` and
@@ -70,7 +87,7 @@ dependencies {
 // today that is `:app`'s `archTest`, which must be subject to exactly the same tag exclusions as `test`. A rule
 // that only ever configured the default task would leave a second, unfiltered execution path open.
 tasks.withType<Test>().configureEach {
-    // The four tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
+    // The local-only tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
     // also receive the exclusions: both actions mutate the same `JUnitPlatformOptions`, exclusion beats inclusion
     // in JUnit's filter algebra, and `liveLocal` would then match nothing — forever, and silently.
     if (name !in localOnlyTags) {
@@ -99,6 +116,10 @@ tasks.withType<Test>().configureEach {
     // Any incidental AWT/Swing initialisation (font metrics, image IO) must not try to open a display either.
     systemProperty("java.awt.headless", "true")
 
+    // The window's transitions off (`ua.bookloom.ui.control.Motion`): a UI test reads the state a node is set to, not
+    // a frame on its way there. A test of a transition itself turns them back on for its own duration.
+    systemProperty("bookloom.reduceMotion", "true")
+
     // A tag-partitioned suite legitimately matches zero tests: `:api` has no `visual` test and never will, and on
     // a machine with no local model EVERY `liveLocal` case is skipped. Gradle's default would turn that into a
     // build failure, which would make `./gradlew liveLocal` red on a fresh checkout — the precise outcome
@@ -114,7 +135,32 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// --- The four local-only tasks (design D5) -----------------------------------------------------------------------
+// --- `fastTest`: the inner loop ------------------------------------------------------------------------------------
+//
+// Everything `test` runs except the `slow` classes. Not wired into `check`: the gate keeps running all of it. The
+// local-only exclusions reach this task through the `withType<Test>` block above (its name is not a local-only tag),
+// and adding a further exclusion only narrows the set — exclusion never fights exclusion.
+tasks.register<Test>("fastTest") {
+    description = "Runs every test except the `slow`-tagged end-to-end classes. The inner loop; not part of `check`."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+    val testSourceSet = sourceSets["test"]
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+
+    useJUnitPlatform {
+        excludeTags(slowTag)
+    }
+}
+
+// The default task and its fast subset fork in parallel. Every fork is its own JVM with its own headless glass
+// platform, so a test may not share a file, a port or a log with another class outside its own `@TempDir`. The
+// local-only tasks and `:app`'s `archTest` keep one JVM: they are short, or talk to one real local server.
+tasks.withType<Test>().matching { it.name == "test" || it.name == "fastTest" }.configureEach {
+    maxParallelForks = testForks
+}
+
+// --- The local-only tasks (design D5) ----------------------------------------------------------------------------
 //
 // Each includes exactly its own tag and is NOT wired into `check`. They run the same `test` source set as the
 // default task — the partition is by tag, not by directory, so a `liveLocal` case sits next to the WireMock test
@@ -135,6 +181,38 @@ localOnlyTags.forEach { tag ->
         // Deliberately no `dependsOn`/`finalizedBy` onto `check`, and no JaCoCo verification: these tests prove
         // behaviour against a real server or a pinned display, which is not the kind of evidence a merge gate can
         // reproduce (`06_TESTING_STRATEGY.md#coverage-traceability`).
+
+        if (tag == "soak") {
+            // A night's run in a minute logs too much at DEBUG to be worth keeping; its numbers are INFO lines.
+            systemProperty("BOOKLOOM_LOG_LEVEL", "INFO")
+            outputs.upToDateWhen { false }
+        }
+
+        if (tag == "promptEval") {
+            // The eval measures one sampling mode at a time: `BOOKLOOM_EVAL_SAMPLING=server|tuned`, default server,
+            // reaches the code as the `bookloom.sampling` property (an explicit BOOKLOOM_SAMPLING still wins).
+            systemProperty("bookloom.sampling", System.getenv("BOOKLOOM_EVAL_SAMPLING") ?: "server")
+            // The relevant-pairs block (15i.T8) is measured on and off: `BOOKLOOM_EVAL_RELEVANT_PAIRS=on|off` reaches the
+            // code as the `bookloom.relevant.pairs` property; unset leaves the run's default (an explicit
+            // BOOKLOOM_RELEVANT_PAIRS still wins).
+            System.getenv("BOOKLOOM_EVAL_RELEVANT_PAIRS")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.relevant.pairs", it)
+            }
+            // The batch format (15i.X1) of the arm being measured: `BOOKLOOM_EVAL_BATCH_FORMAT=json|markers|dual` reaches the
+            // code as `bookloom.batch.format`; unset, the property is absent and a run's own default (json) holds.
+            System.getenv("BOOKLOOM_EVAL_BATCH_FORMAT")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.batch.format", it)
+            }
+            // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
+            // code as the `bookloom.reasoning` property, `BOOKLOOM_EVAL_BATCH_NOTES=on|off` as `bookloom.batch.notes`;
+            // unset leaves both off, and an explicit BOOKLOOM_REASONING / BOOKLOOM_BATCH_NOTES still wins.
+            System.getenv("BOOKLOOM_EVAL_REASONING")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.reasoning", it)
+            }
+            System.getenv("BOOKLOOM_EVAL_BATCH_NOTES")?.takeIf { it.isNotBlank() }?.let {
+                systemProperty("bookloom.batch.notes", it)
+            }
+        }
 
         if (tag in neverUpToDateTags) {
             // The evidence of a `corpus` run is its report file, never the exit code (design.md D6, trap 1): the

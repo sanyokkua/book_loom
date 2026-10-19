@@ -1,0 +1,729 @@
+# Spec Delta
+
+## Purpose
+
+How a person inspects and corrects segments inside the Translating screen: the flagged list and its filters, the
+side-by-side compare, the six actions, the segment status machine they drive, and what the panel does when a review
+mode pauses the run — so that the few segments the pipeline could not clear are fixed without leaving the run.
+
+## ADDED Requirements
+
+### Requirement: List flagged segments in a review panel inside the Translating screen
+
+The Translating screen SHALL offer a `Review flagged (n)` control that opens a review panel listing every FLAGGED
+segment by its locator with a badge for its main finding, and SHALL have no separate review entry in the navigation.
+
+**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, `docs/specification/mockups/ui-mockup.html` (Review queue), ADR-0036. In plain words: review happens beside the run it belongs to, so a person never loses sight of progress; the badge and filters let them take the name problems first, or only the omissions. The badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause. A locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways. The mockup draws review as a separate step; keeping it inside Translating is the owner's approved departure.
+
+#### Scenario: Three flagged segments are listed
+
+- **WHEN** segments `ch5 · p12` (a stored score of 0.58, no finding), `ch7 · p40` (glossary finding) and `ch9 · p03` (script
+  check failed) are FLAGGED
+- **THEN** the control reads `Review flagged (3)`
+- **AND** the list shows `ch5 · p12` with `low score`, `ch7 · p40` with `name` and `ch9 · p03` with `wrong lang?`
+
+#### Scenario: No review entry in the navigation
+
+- **WHEN** the navigation is shown
+- **THEN** it has no Review entry
+
+### Requirement: Filter the flagged list with chips
+
+The review panel SHALL offer four filter chips — `all`, `names`, `omissions` and `foreign · kept` — each narrowing the
+list: `names` to segments with a glossary finding (a `terminology` finding from the reviewer counts as one),
+`omissions` to segments with an omission finding, and `foreign · kept` to segments marked foreign or holding a kept
+foreign run.
+
+**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: the chips let a person take one kind of problem at a time, for example the name problems first.
+
+#### Scenario: A filter narrows the list
+
+- **WHEN** `ch5 · p12`, `ch7 · p40` (glossary finding) and `ch9 · p03` are FLAGGED and the person selects the `names`
+  chip
+- **THEN** only `ch7 · p40` is listed
+
+#### Scenario: The foreign · kept chip lists segments with kept foreign text
+
+- **WHEN** `ch11 · p02` is FLAGGED for its length ratio and holds the kept foreign run `au revoir`, and the person
+  selects `foreign · kept`
+- **THEN** only `ch11 · p02` is listed
+
+### Requirement: Badge a flagged segment by its worst finding
+
+The review panel SHALL badge each listed segment with its main finding, the finding of the highest severity; a tie
+SHALL go first to a glossary finding (badge `name`), then a language finding (`wrong lang?`), then an omission finding
+(`omission`), and any other finding, or a stored score with no finding, SHALL show `low score`.
+
+**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: the badge shows the worst problem, and among equally bad ones the kind a reader notices first — a wrong name before a wrong language before a missing clause.
+
+#### Scenario: The worst finding decides the badge
+
+- **WHEN** FLAGGED `ch9 · p03` carries a medium `omission` finding from the length-ratio check and a medium `language`
+  finding from the script check, and FLAGGED `ch4 · p02` carries a high `omission` finding from the reviewer and a medium
+  `glossary` finding
+- **THEN** `ch9 · p03` shows `wrong lang?` and `ch4 · p02` shows `omission`
+
+#### Scenario: A terminology finding counts as a glossary finding
+
+- **WHEN** FLAGGED `ch6 · p08` carries a medium `terminology` finding from the reviewer and a medium `omission` finding
+  from the length-ratio check
+- **THEN** `ch6 · p08` shows `name`
+
+#### Scenario: Any other finding shows low score
+
+- **WHEN** FLAGGED `ch3 · p09` carries only a medium `meaning` finding raised by `number`
+- **THEN** `ch3 · p09` shows `low score`
+
+### Requirement: Locate a segment by chapter and paragraph
+
+A segment's locator SHALL read `ch<n> · p<mm>`, where `n` is its unit's 1-based position among the book's body units
+and `mm` is the segment's 1-based position within its unit, zero-padded to two digits, and SHALL name the segment the
+same way in the review panel, in messages and in the export's report.
+
+**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: a locator like `ch5 · p12` is what a reader can find in the book — chapter five, twelfth paragraph — where an internal id such as `ch05.xhtml:11` is not, and one rule keeps the panel, a toast and the report from naming the same paragraph three ways.
+
+#### Scenario: Locators count from one and pad the paragraph
+
+- **WHEN** the twelfth segment of the fifth body unit and the third segment of the first body unit are shown
+- **THEN** they read `ch5 · p12` and `ch1 · p03`
+
+### Requirement: Locate an auxiliary segment by its kind
+
+A segment of the auxiliary unit SHALL be located by its kind's label instead of a chapter and paragraph, followed by
+`· <kk>` where `kk` is its 1-based position among the auxiliary segments of that kind, zero-padded to two digits; the
+title takes no position.
+
+**Source**: FR-REVIEW-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, ADR-0036. In plain words: auxiliary text such as the table of contents or an image description belongs to no chapter, so it is named by what it is.
+
+#### Scenario: Auxiliary segments read by kind
+
+- **WHEN** the title, the second creator, the third description, the seventh navigation label, the first page title,
+  the fourth image alternative text and the first frontmatter value of the auxiliary unit are shown
+- **THEN** they read `title`, `author · 02`, `description · 03`, `nav · 07`, `page title · 01`, `alt · 04` and
+  `frontmatter · 01`
+
+### Requirement: Show an empty state when nothing is flagged, and browse every segment after an Unattended run
+
+IF the review panel opens with no FLAGGED segment, THEN it SHALL show `Nothing flagged — every chunk cleared the
+checks` with a Back to progress action.
+
+**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: an empty list must say that is good news, not look broken; and in the default mode, where nobody watched the run, the person may still want to read and correct segments that passed. Text the brief chose not to translate — for example the table of contents with its switch off (the translation-pipeline capability defines "kept as source by choice") — is neither a problem nor unfinished work, so it is out of the flagged list and out of the pending count, and only All segments shows it.
+
+#### Scenario: The empty state
+
+- **WHEN** a run finished with 0 flagged segments and the panel is opened
+- **THEN** it shows `Nothing flagged — every chunk cleared the checks` and Back to progress
+
+### Requirement: Browse every segment after an Unattended run
+
+WHEN an Unattended run has finished, the review panel SHALL also offer All segments, listing in document order every
+decided segment and every segment kept as source by choice, the latter marked `kept as source` and shown by no other
+list; the review counts SHALL report segments kept as source by choice on their own, never as pending.
+
+**Source**: FR-REVIEW-Q4 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#empty-states`, ADR-0036. In plain words: in the default mode nobody watched the run, so the person may still want to read and correct segments that passed; text the brief chose not to translate is neither a problem nor unfinished work, so only All segments shows it and it is never counted as pending.
+
+#### Scenario: Browsing an accepted segment after an Unattended run
+
+- **WHEN** an Unattended run has finished and the person chooses All segments
+- **THEN** ACCEPTED segment `ch2 · p04` can be opened in the compare
+
+#### Scenario: Segments kept as source appear only under All segments
+
+- **WHEN** an Unattended run of an EPUB with 7 navigation labels has finished with the navigation-labels switch off
+- **THEN** All segments lists `nav · 01` to `nav · 07`, each marked `kept as source`, and no chip lists any of them
+- **AND** the review counts report 7 segments kept as source and do not count them as pending
+
+### Requirement: Compare source and target side by side with the segment's findings and context
+
+WHEN a segment is selected in the review panel, the application SHALL show its source read-only beside its target,
+editable and marked EDITABLE, with no inline diff, each `⟦gN⟧` placeholder of the book's markup shown where it stands
+and each locked name shown as its rendering.
+
+**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: two plain texts side by side are what a translator reads fastest; the findings say why the segment is here, and the context line says what the model knew when it translated it. The placeholders stay visible so the person keeps the bold, italics and links in place when they edit; a locked name reads as the name, because it is not markup the person has to protect. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language, which read as an untranslated segment although the model had translated it; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
+
+#### Scenario: A flagged segment in the compare
+
+- **WHEN** `ch5 · p12` is selected
+- **THEN** the source pane is read-only, the target pane is editable and marked EDITABLE
+
+#### Scenario: The target shows its placeholders and names
+
+- **WHEN** `ch3 · p02` of a Markdown book has the machine target `Гейл відчинив *старі* двері.`, where `Hale` is locked
+  as `Гейл`, and is selected
+- **THEN** the target pane shows `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.`
+
+### Requirement: Open the compare on the best text the segment has
+
+The compare's target pane SHALL hold the person's saved edit when there is one, else the machine target, else the
+model's refused reply (its rejected target) under the note "No usable translation: the model's last reply is shown
+below, but it broke the formatting.", else the segment's source under the note "No translation kept — showing the
+source."
+
+**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`. In plain words: the pane opens on the most useful text, and says so when it is not a translation. A segment whose every reply broke the formatting used to open on its English source in the pane labelled with the target language; showing the refused reply, labelled, lets the person fix the one token instead of retyping the paragraph.
+
+#### Scenario: A segment with only a refused reply shows it, labelled
+
+- **WHEN** `ch12 · p02` is FLAGGED with no machine target and the rejected target `Він відчинив ⟦g0⟧старі двері.`
+- **THEN** the target pane shows `Він відчинив ⟦g0⟧старі двері.` under "No usable translation: …"
+- **AND** Save edit is offered before any change, because saving repairs the reply if it can
+
+#### Scenario: A saved edit is shown ahead of the machine target
+
+- **WHEN** `ch2 · p04` has the machine target `Дощ ущух лише надвечір.` and the saved edit `Дощ ущух аж надвечір.`
+- **THEN** the target pane shows `Дощ ущух аж надвечір.`
+
+#### Scenario: A segment with nothing shows its source, labelled
+
+- **WHEN** `ch8 · p06`, whose source is `He went away.`, is FLAGGED with no machine target and no rejected target
+- **THEN** the target pane shows `He went away.` under the note that begins `No translation kept — showing the source.`
+
+### Requirement: Show a segment's findings, score and context in the compare
+
+The compare SHALL show the segment's findings — each edit the reviewer applied as a highlighted diff headed by its
+criterion, the words it removed in the error colour and the words it put there in the success colour, and every other
+finding as its kind, severity, note and the check or reviewer that raised it — a badge with a stored score when the
+record has one, and a context line naming what the segment was translated with.
+
+**Source**: FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the findings say why the segment is here, and the context line says what the model knew when it translated it.
+
+#### Scenario: A flagged segment shows its score and context
+
+- **WHEN** `ch5 · p12` is selected, flagged with a stored score of `0.58`, translated with the brief, two glossary
+  terms, the previous paragraph and the summary
+- **THEN** a badge shows the score `0.58` and the context line reads `brief · glossary(2) · previous paragraph · summary`
+
+#### Scenario: An applied edit is shown as a diff
+
+- **WHEN** the selected segment's record carries a low `gender` finding raised by `reviewer-edit` for the quote
+  `Вона втомився` and the replacement `Вона втомилася`
+- **THEN** the findings list shows `Edit applied · gender`, then `− Вона втомився` in the error colour, then
+  `+ Вона втомилася` in the success colour, and no raw note and no `reviewer-edit` label
+- **AND** an edit that only deleted its quote shows `+ (removed)`; the Ukrainian bundle shows `Правку застосовано · рід`
+
+#### Scenario: No score badge without a stored score
+
+- **WHEN** the selected segment was translated on the Fast dial, or its decision gave no score
+- **THEN** no score badge is shown and its findings are listed
+
+### Requirement: Move segments only through the segment status machine
+
+The application SHALL start every segment as PENDING and move it only through the transitions in the scenarios below,
+SHALL never return a segment to PENDING, SHALL never let a retry lower a segment's status, and SHALL keep a FLAGGED
+segment FLAGGED for the rest of its run unless the person acts on it.
+
+**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: every segment's state is decided by a small, fixed set of moves, so progress counts, resume and export always agree about what is done; a flagged segment is not retried automatically, because it already used its repair budget. A retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had. A segment a run has not decided yet is never accepted by a person: a run paused for review has always decided the segment it names before it pauses.
+
+#### Scenario: The pipeline decides a pending segment
+
+- **WHEN** the run decides PENDING `ch6 · p01`
+- **THEN** it becomes ACCEPTED or FLAGGED, and only the pipeline moves a segment out of PENDING
+
+#### Scenario: A flagged segment is accepted
+
+- **WHEN** `ch5 · p12` is FLAGGED and the person presses Accept
+- **THEN** it becomes ACCEPTED
+
+#### Scenario: A flagged segment moves by retry or edit
+
+- **WHEN** FLAGGED `ch5 · p12` is retried and passes, and FLAGGED `ch7 · p40` is retried and fails, and FLAGGED
+  `ch9 · p03` has an edit saved
+- **THEN** `ch5 · p12` becomes ACCEPTED, `ch7 · p40` stays FLAGGED with its new findings recorded, and `ch9 · p03`
+  becomes REVISED
+
+#### Scenario: A flagged segment is not picked up again by the run
+
+- **WHEN** a run stops with `ch5 · p12` FLAGGED and `ch6 · p01` PENDING, and a new run starts in the same session
+- **THEN** the run begins at `ch6 · p01` and `ch5 · p12` stays FLAGGED
+
+#### Scenario: No way back to pending
+
+- **WHEN** an ACCEPTED segment is reverted, retried or edited
+- **THEN** it is never PENDING
+
+#### Scenario: Confirming an accepted segment
+
+- **WHEN** the mode is Manual, `ch1 · p03` is ACCEPTED with `Маяк стояв на прибережній скелі.` and the person presses
+  Accept & continue
+- **THEN** it stays ACCEPTED with `Маяк стояв на прибережній скелі.` and is marked reviewed
+
+#### Scenario: An accepted segment moves by retry or edit
+
+- **WHEN** ACCEPTED `ch2 · p04` is retried and passes, and ACCEPTED `ch2 · p05` is retried and fails, and ACCEPTED
+  `ch2 · p06` has an edit saved
+- **THEN** `ch2 · p04` stays ACCEPTED with the replaced machine target, `ch2 · p05` stays ACCEPTED unchanged with its
+  previous target kept and the new findings reported, and `ch2 · p06` becomes REVISED
+
+#### Scenario: Editing an accepted segment
+
+- **WHEN** the person browses All segments, opens ACCEPTED `ch2 · p04` and saves `Дощ ущух лише надвечір.`
+- **THEN** it becomes REVISED with that text, and saving `Дощ ущух аж надвечір.` afterwards keeps it REVISED with the new
+  text
+
+#### Scenario: A revised segment moves by revert or edit
+
+- **WHEN** REVISED `ch2 · p07` is reverted, and REVISED `ch2 · p08` has another edit saved or an accepted
+  backward-revision proposal applied
+- **THEN** `ch2 · p07` becomes ACCEPTED and `ch2 · p08` stays REVISED
+
+#### Scenario: Backward revision moves accepted and flagged segments
+
+- **WHEN** backward revision changes ACCEPTED `ch2 · p09`, FLAGGED `ch5 · p12` whose only finding is a `glossary`
+  finding about the name it swaps, and FLAGGED `ch5 · p13` that also carries an `omission` finding
+- **THEN** `ch2 · p09` becomes REVISED, `ch5 · p12` becomes REVISED, and `ch5 · p13` takes the revised target and stays
+  FLAGGED, keeping its findings
+
+### Requirement: Refuse an action on a segment whose status it does not start from
+
+The application SHALL refuse with `ErrorCode.validation`, changing nothing, an action on a segment whose status it
+does not start from: Accept on a PENDING or REVISED segment, Save edit on a PENDING one, Revert on one that is not
+REVISED, and Retry on a PENDING or REVISED one.
+
+**Source**: FR-REVIEW-06, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-status-state-machine`. In plain words: a segment a run has not decided yet is never accepted by a person, and a revert or retry makes sense only on a segment that has something to revert or retry.
+
+#### Scenario: A pending segment cannot be accepted
+
+- **WHEN** Accept is requested for the PENDING segment `ch6 · p01`
+- **THEN** it is refused with `ErrorCode.validation` and `ch6 · p01` stays PENDING with no target
+
+#### Scenario: Accept on a revised segment is refused
+
+- **WHEN** `ch2 · p04` is REVISED with `Дощ ущух аж надвечір.` and Accept is requested for it
+- **THEN** it is refused with `ErrorCode.validation` and `ch2 · p04` stays REVISED with its edit
+
+#### Scenario: Save edit on a pending segment is refused
+
+- **WHEN** Save edit with `Він пішов геть.` is requested for the PENDING segment `ch6 · p01`
+- **THEN** it is refused with `ErrorCode.validation` and `ch6 · p01` stays PENDING with no target
+
+#### Scenario: Revert on a segment that is not revised is refused
+
+- **WHEN** Revert is requested for the ACCEPTED segment `ch1 · p03`
+- **THEN** it is refused with `ErrorCode.validation` and `ch1 · p03` stays ACCEPTED
+
+#### Scenario: Retry on a pending or revised segment is refused
+
+- **WHEN** Retry is requested for the PENDING segment `ch6 · p01` and for the REVISED segment `ch2 · p04`
+- **THEN** both are refused with `ErrorCode.validation` and no model call is made
+
+### Requirement: Accept, save an edit, revert, and never discard an edit silently
+
+WHEN the person presses Accept on a FLAGGED or ACCEPTED segment, the application SHALL keep the machine target and
+mark the segment ACCEPTED; WHEN they press Save edit, it SHALL store their text, placeholders included, as the target
+and mark the segment REVISED while keeping the machine target, so the edit opens again exactly as it was saved; WHEN
+they press Revert to machine target, it SHALL clear the edit and mark the segment ACCEPTED.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-08, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: the machine target is never thrown away, so an edit can always be undone; and because Accept means "the machine was right", it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly. An edit that deletes a placeholder would break the book's markup, so it is refused. A saved edit keeps its placeholders, so the person can come back and edit it a second time without the formatting being lost. This replaces the reference's rule that Accept on a dirty editor saves the edit first. A segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
+
+#### Scenario: Saving an edit keeps the machine target
+
+- **WHEN** `ch5 · p12`'s machine target is `Чудовисько зустріло мене опівночі.` and the person saves
+  `Чудовисько стріло мене опівночі.`
+- **THEN** the segment is REVISED with the edited target
+- **AND** Revert to machine target restores `Чудовисько зустріло мене опівночі.` and marks it ACCEPTED
+
+#### Scenario: A revised segment is edited again with its placeholders
+
+- **WHEN** in a Markdown book `ch1 · p05` shows `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves
+  `Він рвучко відчинив ⟦g0⟧старі⟦g1⟧ двері.`
+- **THEN** it is REVISED and its target reads `Він рвучко відчинив *старі* двері.`
+- **AND** opened again, the target pane shows `Він рвучко відчинив ⟦g0⟧старі⟦g1⟧ двері.`, and saving
+  `Він рвучко відчинив ⟦g0⟧старезні⟦g1⟧ двері.` keeps it REVISED as `Він рвучко відчинив *старезні* двері.`
+
+### Requirement: Disable Accept while the target pane holds unsaved changes
+
+WHILE the target pane holds unsaved changes, Accept SHALL be disabled with the hint `Editing disables Accept until you
+Save or Revert.`, and re-reading the list or the segment SHALL NOT replace text the person has typed and not saved.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: Accept means "the machine was right", so it cannot be pressed while the person's own typing is pending — they must keep or drop it explicitly, and a refresh must never eat what they typed. This replaces the reference's rule that Accept on a dirty editor saves the edit first.
+
+#### Scenario: A dirty editor disables Accept
+
+- **WHEN** the person has typed into the target pane without saving
+- **THEN** Accept is disabled and the hint `Editing disables Accept until you Save or Revert.` is shown
+
+#### Scenario: Typed text survives a re-read
+
+- **WHEN** the person has typed `Він пішов геть.` into the target pane of `ch5 · p12` without saving and the list is read
+  again
+- **THEN** the target pane still holds `Він пішов геть.`
+
+### Requirement: Restore or refuse the placeholders of a saved edit
+
+WHEN a saved edit only lost or repeated placeholder tokens, the system SHALL restore them by the restore-missing
+repair (document-round-trip, "Repair a refused target's placeholder tokens without a model") and save the repaired
+text; IF the tokens still do not restore, THEN it SHALL refuse the edit in place with the reason and keep the typed
+text.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: an edit that deletes a placeholder would break the book's markup, so it is repaired when that is certain and refused when it is not, never saved broken.
+
+#### Scenario: An edit that drops its placeholders gets them back
+
+- **WHEN** in a Markdown book the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves
+  `Він відчинив старі двері.` with both tokens deleted
+- **THEN** the segment is REVISED as `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.`, reading `Він відчинив *старі* двері.`
+
+#### Scenario: An edit no repair can fix is refused in place
+
+- **WHEN** the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves `Двері`, one word that cannot
+  hold the pair and keep text outside it
+- **THEN** the edit is refused in place with `ErrorCode.validation`, the typed `Двері` stays in the pane, and the
+  segment keeps its FLAGGED status and its machine target
+
+### Requirement: Name the tokens a refused edit lacks
+
+WHEN a saved edit is refused for its placeholders, the review panel SHALL show beside the actions a banner naming the
+tokens the edit lacks and those it holds too often, the lacking ones as chips that insert their token at the cursor.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: a refusal that does not say which token is wrong leaves the person guessing; a chip puts the missing token back with one click.
+
+#### Scenario: A refused edit offers the missing tokens as chips
+
+- **WHEN** the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves `Двері`, which is refused
+  with `ErrorCode.validation` because its tokens cannot be placed back
+- **THEN** a banner beside the actions offers the chips `⟦g0⟧` and `⟦g1⟧`, and pressing `⟦g0⟧` with the cursor at the
+  start makes the text `⟦g0⟧Двері`
+
+### Requirement: Make the target read-only while a run translates
+
+WHILE a run is translating or a retry is in flight, the target pane SHALL be read-only and a note beside the actions
+SHALL say why — "Review is available when the run pauses." — instead of leaving Save edit silently unavailable.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`. In plain words: an edit made while the run decides the same segment would race it, so the pane waits for the pause and says so.
+
+#### Scenario: The target is read-only while a run translates
+
+- **WHEN** a segment is selected and the run moves from PAUSED to RUNNING
+- **THEN** the target pane is read-only, Save edit is unavailable, and the note "Review is available when the run
+  pauses. …" is shown beside the actions
+
+### Requirement: Refuse Accept for a segment with no machine target
+
+IF Accept is requested for a segment that holds no machine target, THEN the application SHALL refuse it with
+`ErrorCode.validation` and the message `There is no machine translation to accept — edit it or retry.` and SHALL change
+nothing.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a segment can be flagged with no machine target at all — the model refused, answered nothing or overflowed its context — and Accept would then have nothing to keep, so it says what to do instead; the editor opens on the source so the person can write the translation themselves.
+
+#### Scenario: Accept without a machine target is refused
+
+- **WHEN** `ch8 · p06`, whose source is `He went away.`, is FLAGGED after an empty completion with no machine target, is
+  selected, and Accept is requested for it
+- **THEN** it is refused with `ErrorCode.validation` and the message
+  `There is no machine translation to accept — edit it or retry.`, and `ch8 · p06` stays FLAGGED with no target
+- **AND** the target pane shows `He went away.` for the person to edit, and saving `Він пішов геть.` makes it REVISED
+
+### Requirement: Mark a segment reviewed only by the actions that review it
+
+Accept, Save edit, Revert, a passing retry and an accepted proposal SHALL mark the segment reviewed; Skip and a
+failing retry SHALL NOT.
+
+**Source**: FR-REVIEW-05, FR-REVIEW-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: "reviewed" counts the segments a person actually dealt with, so skipping a segment or a retry that failed must not inflate it.
+
+#### Scenario: Accept marks the segment reviewed
+
+- **WHEN** the person presses Accept on FLAGGED `ch5 · p12`
+- **THEN** it becomes ACCEPTED and is marked reviewed
+
+#### Scenario: A failing retry does not mark the segment reviewed
+
+- **WHEN** a retry of FLAGGED `ch5 · p12`, an English → Ukrainian source of 60 characters or more, returns a target with
+  a length ratio of `0.45` against the band `0.7–1.8`
+- **THEN** `ch5 · p12` stays FLAGGED and is not marked reviewed
+
+#### Scenario: Skip leaves the segment flagged
+
+- **WHEN** the person presses Skip on `ch5 · p12`
+- **THEN** it stays FLAGGED, is not marked reviewed, and `ch7 · p40` is selected
+
+### Requirement: Retry a segment with the context it first saw
+
+WHEN the person chooses Retry or Retry with note on a FLAGGED or ACCEPTED segment, the application SHALL draft that one
+segment again with the same brief, glossary entries, recurring-term renderings, preceding targets, memory and summary
+text it first saw — as they read then, not as they read now — adding the note as an extra instruction and lowering the
+temperature when `Lower temperature for this retry` is checked.
+
+**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`, ADR-0038. In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context (the recurring-term renderings included); the note lets the person steer it ("keep it more formal"). The same gates, checks and reviewer decide it as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again. The temperature values are the inference capability's. When a retry may run at all is "Allow a retry whenever no run of the project is running".
+
+#### Scenario: Retry with a note passes
+
+- **WHEN** the run is paused and the person retries `ch5 · p12` with the note `keep it more formal` and
+  `Lower temperature for this retry` checked
+- **AND** the new target passes the hard gates and every soft check, and the reviewer leaves no verified blocker
+- **THEN** `ch5 · p12` becomes ACCEPTED with the new target, recorded as drafted and marked reviewed
+- **AND** exactly one draft call was made, carrying `keep it more formal` and the temperature `0.1`, plus the one-pair
+  reviewer call when the dial enables the reviewer
+
+#### Scenario: A retry replays the recurring-term renderings as they were
+
+- **WHEN** `ch5 · p12` was drafted while the lexicon established `master → господар`, a later draft made `учитель` the
+  most used rendering, and `ch5 · p12` is retried
+- **THEN** the retry's prompt carries `master → господар`, the rendering the first draft saw, and the context line of the
+  segment names `recurring(1)`
+
+#### Scenario: A retry replays the glossary as it was
+
+- **WHEN** `ch5 · p12` was drafted while the glossary held `Hale` → `Хейл`, the person has since changed it to `Гейл`,
+  and `ch5 · p12` is retried
+- **THEN** the retry's prompt carries `Hale` → `Хейл`, the entry the first draft saw
+
+### Requirement: Decide a retry by the acceptance rule without repair rounds
+
+The application SHALL pass a retried draft through the hard gates, the soft checks and, when the brief's quality dial
+enables the reviewer, a reviewer call over that one pair, and SHALL decide it by the acceptance rule, making no repair
+rounds.
+
+**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: the same gates, checks and reviewer decide a retry as decided the first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of automatic repairs — if it fails, the person sees why and chooses again.
+
+#### Scenario: A retry makes no repair rounds
+
+- **WHEN** the retried target of `ch5 · p12`, an English → Ukrainian source of 60 characters or more, has a length ratio
+  of `0.45` against the band `0.7–1.8`
+- **THEN** only the draft call, and the one-pair reviewer call when the dial enables the reviewer, were made
+- **AND** no directed fix or other repair call follows
+
+### Requirement: Keep or replace the target by the outcome of a retry
+
+WHEN a retried draft passes, the application SHALL mark the segment ACCEPTED with the new machine target, recorded as
+drafted; WHEN it fails, the application SHALL leave a FLAGGED segment FLAGGED with the new findings and an ACCEPTED
+segment ACCEPTED with its previous target, reporting the new findings.
+
+**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1, FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0038. In plain words: a retry on an accepted segment is the person asking for a better wording, so a worse attempt must not cost them the translation they already had.
+
+#### Scenario: A failing retry stays flagged with new findings
+
+- **WHEN** the retried target has a length ratio of `0.45` against the band `0.7–1.8`
+- **THEN** the segment stays FLAGGED and shows the new length-ratio finding
+
+#### Scenario: A failing retry never downgrades an accepted segment
+
+- **WHEN** ACCEPTED `ch2 · p04` reads `Дощ ущух лише надвечір.` and a retry returns a target with a length ratio of
+  `0.45` against the band `0.7–1.8`
+- **THEN** `ch2 · p04` stays ACCEPTED with `Дощ ущух лише надвечір.` and the new length-ratio finding is reported
+
+### Requirement: Allow a retry whenever no run of the project is running
+
+WHILE no run of the project is running — its latest run is paused, stopped, completed or failed, or it has none — the
+application SHALL allow Retry and Retry with note; IF a retry is requested while a run of the project is running, THEN
+it SHALL refuse it with `ErrorCode.busy` and make no model call; and WHILE a retry is in flight, the Translating screen
+SHALL make Resume and the other review actions unavailable.
+
+**Source**: FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-INFER-06 (`#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#inference-gate`, ADR-0034, ADR-0036. In plain words: only one model call runs at a time. A running book is using the model, so a retry would only queue behind it; a paused run holds no place (the translation-pipeline capability's "Hold no model-call permit while paused"), so a retry during a review pause reaches the model at once — which is exactly when a person wants it. The run's recorded state (the resume capability's "Record whether a run is running, paused or ended") is what tells the two apart. While the retry runs, resuming the book would put two calls in line again.
+
+#### Scenario: Retry during a review pause is allowed
+
+- **WHEN** an Assisted run is paused on the flagged `ch5 · p12` and the person retries it
+- **THEN** the retry's draft call reaches the provider at once
+
+#### Scenario: Retry after a stop is allowed
+
+- **WHEN** a run was stopped with `ch5 · p12` FLAGGED and the person retries it
+- **THEN** the retry's draft call is made
+
+#### Scenario: Retry while running is refused
+
+- **WHEN** a run is running and a retry of `ch5 · p12` is requested
+- **THEN** it is refused with `ErrorCode.busy` and no model call is made
+
+#### Scenario: A retry in flight holds the run
+
+- **WHEN** a run is paused and a retry of `ch5 · p12` is waiting for the model
+- **THEN** Resume, Accept, Save edit, Revert, Retry and Skip are unavailable until the retry returns
+
+### Requirement: Open the segment a review pause names
+
+WHEN a run pauses for review naming a segment, the Translating screen SHALL open the review panel with that segment
+selected in the compare; WHILE the review mode is Manual, the compare SHALL offer Accept & continue, which confirms the
+segment as Accept does and then resumes the run.
+
+**Source**: FR-REVIEW-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`, ADR-0036. In plain words: when the run stops for the person, the thing to look at is already in front of them. When each review mode pauses — Assisted on each flagged segment, Manual after every segment, Unattended never — and what an edit made during the pause feeds after the resume are the resume capability's "Pause for review as the review mode says" and "Continue after the person acts on the paused segment"; this requirement covers only what the panel does.
+
+#### Scenario: Assisted opens the flagged segment
+
+- **WHEN** an Assisted run pauses on the flagged `ch5 · p12`
+- **THEN** the review panel opens with `ch5 · p12` selected in the compare
+
+#### Scenario: Manual confirms every segment
+
+- **WHEN** a Manual run pauses after the ACCEPTED `ch1 · p03`
+- **THEN** the compare shows `ch1 · p03` with Accept & continue
+- **AND** pressing it marks `ch1 · p03` reviewed and resumes the run, which next decides `ch1 · p04`
+
+### Requirement: Allow export whatever remains flagged, stating the count
+
+The application SHALL allow export whatever remains flagged — at any time except while a run is actively translating,
+when the person pauses it first — and, WHEN segments are still FLAGGED or PENDING, SHALL export each FLAGGED segment's
+machine target, or its source when it has none, and each PENDING segment's source, and SHALL state how many of each were
+written.
+
+**Source**: FR-REVIEW-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-X1, FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), ADR-0035. In plain words: review is optional, so it must never block getting the book out; the person is told how much of it is unreviewed or untranslated. While a run is translating, a book written would disagree with what the run decides a moment later, so export waits for a pause. A segment flagged because its markup never restored has no machine target, so its source is written rather than broken markup. How the file is written belongs to the export capability.
+
+#### Scenario: Exporting with flags and pending segments
+
+- **WHEN** 3 segments are FLAGGED and 120 are PENDING and the person exports
+- **THEN** the flagged three carry their machine targets, the pending 120 carry their source
+- **AND** the report states 3 flagged and 120 untranslated
+
+#### Scenario: Export waits while the run translates
+
+- **WHEN** a run is running with 3 segments FLAGGED
+- **THEN** export is unavailable with the note `Pause the run to export`
+- **AND** after the person pauses the run, export is available and writes the flagged three with their machine targets
+
+### Requirement: Apply backward-revision proposals for edited segments only on acceptance
+
+WHEN backward revision proposes a change to a segment the person edited, the application SHALL show the proposal in
+the review panel beside the person's text and SHALL change that segment only when the person accepts the proposal,
+keeping the accepted proposal, like a saved edit, placeholders included.
+
+**Source**: FR-REVIEW-10 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-ALGO-D1, FR-ALGO-D3 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`). In plain words: a whole-book consistency pass may fix a pronoun once a character's gender is known, but a person's own edit is theirs — the pass may suggest, never overwrite. An accepted proposal becomes the person's text, so it can be edited again like any other edit.
+
+#### Scenario: A proposal waits for the person
+
+- **WHEN** `ch2 · p07` is REVISED by the person as `Вона пішла.` and backward revision proposes `Він пішов.`
+- **THEN** the panel shows the proposal and the segment keeps `Вона пішла.`
+- **AND** when the person accepts the proposal the segment reads `Він пішов.`, stays REVISED, and opens in the editor as
+  `Він пішов.`
+
+#### Scenario: A saved edit or a revert withdraws the proposal built on the old wording
+
+- **WHEN** `ch2 · p07` holds the proposal `Він пішов.` built on the person's `Вона пішла.`, and the person saves
+  `Вона вийшла.`
+- **THEN** the panel shows no proposal for `ch2 · p07`
+- **AND** the deferral behind the proposal stays open, so the next pass builds a new proposal from `Вона вийшла.`
+- **AND** pressing Revert on a REVISED segment withdraws its waiting proposal the same way
+
+#### Scenario: A flagged segment with a problem the name swap cannot fix stays flagged
+
+- **WHEN** `ch5 · p12` is FLAGGED with an `omission` finding and backward revision swaps `Хейл` for `Гейл` in it
+- **THEN** the segment holds the swapped name, stays FLAGGED and stays in the review list with its `omission` finding
+- **AND** a FLAGGED segment whose only finding is a `glossary` finding about that name becomes REVISED
+
+### Requirement: Keep review decisions for the session only
+
+The application SHALL keep every review action's result for the rest of the session and SHALL NOT keep it after the
+application closes.
+
+**Source**: FR-REVIEW-A3 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`), ADR-0034. In plain words: storage is in memory until the database arrives, so a review done today is lost on quitting; this is stated so nobody mistakes it for a bug, and it is what the persistence change will lift.
+
+#### Scenario: A review survives navigation but not a restart
+
+- **WHEN** the person accepts `ch5 · p12`, goes to Export and back to Translating
+- **THEN** `ch5 · p12` is still ACCEPTED
+- **AND** after closing and reopening the application the book's segments are not remembered
+
+### Requirement: List the accepted segments the final audit doubts
+
+The review desk SHALL offer a Suspicious filter that lists, in document order, the ACCEPTED segments no person has
+reviewed that hold an audit finding, each opened with its findings so the check that fired is named, and SHALL count
+them as `suspicious` beside its other counts. A listed segment SHALL leave the list once a person accepts or edits it.
+
+**Source**: FR-REVIEW-A1, task 15d.12. In plain words: a segment that passed every gate can still hold a leak, so there is one more list to open after a run, and the finished run says how long it is.
+
+#### Scenario: The chip lists the audited segments
+
+- **WHEN** the person presses "suspicious" in the review panel after a run whose audit doubts `ch2 · p04`
+- **THEN** the desk is asked for the SUSPICIOUS queue and `ch2 · p04` is listed
+
+#### Scenario: Reviewing a listed segment removes it
+
+- **WHEN** the person accepts `ch2 · p04` from the Suspicious list
+- **THEN** `ch2 · p04` leaves the list and the `suspicious` count falls by one
+
+#### Scenario: Segments kept as source are left out and flagged filters are unchanged
+
+- **WHEN** `nav · 01` is kept as source by choice and `ch2 · p04` is the one doubted accepted segment
+- **THEN** the Suspicious list and count hold only `ch2 · p04`, and the flagged filters list the same segments as before
+
+### Requirement: Run the audit again on demand
+
+The review desk SHALL run the audit again on demand and answer the doubted segments with their checks.
+
+**Source**: FR-REVIEW-A1, task 15d.12. In plain words: the audit reads the stored records as they stand, so a person who changed segments can ask again without running the book.
+
+#### Scenario: The audit is run again
+
+- **WHEN** the person asks the desk to audit again and the accepted segment `ch1 · p01` is still in English
+- **THEN** the desk answers `ch1 · p01` with the check `language-identity`
+
+### Requirement: Show the suspicious count and chip with hover explanations
+
+The Translating screen's outcome card SHALL show the count as "suspicious" with a hover explanation, and the review
+panel SHALL show a "suspicious" filter chip with a hover explanation, both in English and Ukrainian.
+
+**Source**: FR-REVIEW-A1, task 15d.12. In plain words: the finished run says how many accepted segments a last check still doubts, and what that word means is one hover away.
+
+#### Scenario: The outcome card counts them
+
+- **WHEN** a run completes and its audit doubts 3 accepted segments
+- **THEN** the outcome card shows "3" under "suspicious"
+
+#### Scenario: The chip explains itself
+
+- **WHEN** the person hovers the "suspicious" chip
+- **THEN** it explains that it shows accepted segments a last check still doubts
+
+### Requirement: Show a finding's kind and the words it quotes where they stand
+
+The review panel SHALL show a kind badge (`name`, `wrong lang?` or `omission`) beside each finding whose kind maps to
+one.
+
+**Source**: 08_UI_SCREENS_AND_STATES.md#screen-review, task 15d.13. In plain words: a person sees why a segment was flagged on the words themselves, and never has to read `⟦g0⟧` as if it were part of the book.
+
+#### Scenario: A glossary finding shows the name badge
+
+- **WHEN** the target `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.` is open with the finding `"відчинив" — the name is not the locked rendering` of kind `glossary`
+- **THEN** the finding shows a `name` badge
+
+### Requirement: Show a readable view of the source and the target under the panes
+
+The review panel SHALL show under the two panes a readable view of the source and the target in which every `⟦gN⟧`
+formatting token is a chip (`g0`, `g1`), not raw text, and the words a finding quotes — the quoted opening of its note,
+or the replacement of an applied edit — are marked in the target at their first occurrence; the target view SHALL
+follow what is typed in the editor.
+
+**Source**: 08_UI_SCREENS_AND_STATES.md#screen-review, task 15d.13. In plain words: a person sees why a segment was flagged on the words themselves, and never has to read `⟦g0⟧` as if it were part of the book.
+
+#### Scenario: A quoted word is marked and the tokens are chips
+
+- **WHEN** the target `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.` is open with the finding `"відчинив" — the name is not the locked rendering` of kind `glossary`
+- **THEN** the target view marks `відчинив`, and shows `g0` and `g1` as chips with no `⟦` in its text
+
+#### Scenario: The target view follows the editor
+
+- **WHEN** the person appends `!` to the target `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.` in the editor
+- **THEN** the target view ends with `двері.!`
+
+### Requirement: Keep the readable view quiet and themed
+
+A quote that is not in the target SHALL mark nothing, a segment with no token and no found quote SHALL show no
+readable view, and the chips and the mark SHALL take their colours from theme tokens only.
+
+**Source**: 08_UI_SCREENS_AND_STATES.md#screen-review, task 15d.13. In plain words: the view appears only when it has something to show, and it never carries a colour of its own.
+
+#### Scenario: A quote missing from the target marks nothing
+
+- **WHEN** a finding quotes `двері!` and the target is `Гейл відчинив двері.`
+- **THEN** the target view marks nothing
+
+#### Scenario: A plain segment has no readable view
+
+- **WHEN** the target `Він пішов.` holds no token, its source holds no token and no finding quotes a word of it
+- **THEN** no readable view is shown
+
+#### Scenario: Colours come from theme tokens
+
+- **WHEN** a chip and a mark are shown in the light and in the dark theme
+- **THEN** their colours are looked up from theme tokens, not set as literal colours
+
+### Requirement: Refresh the flagged count when a run stops writing
+
+The review view model SHALL read the flagged count from the review desk again whenever the run state becomes
+`PAUSED`, `STOPPED`, `COMPLETED` or `FAILED`, because a run stores its decisions in its last flush, after its last
+event, and SHALL show only the newest read when two reads finish out of order.
+
+**Source**: task 15d.13 (a real run showed 169 flagged on the screen and 170 in the book). In plain words: the number on the Review flagged button at the end of a run is the number of flagged segments the book holds.
+
+#### Scenario: The final flush stored one more flagged segment
+
+- **WHEN** a run showing 169 flagged completes and the desk now counts 170
+- **THEN** the Review flagged count reads 170

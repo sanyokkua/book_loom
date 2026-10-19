@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
 `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`,
@@ -19,7 +19,11 @@ goal, not an acceptance gate.
 
 Chunking is **paragraph-grouped**: whole segments are packed in document order into a chunk until adding the next
 segment would exceed the chunk **token budget**; the chunk then closes and a new one opens. A segment is never split
-across chunks, so one target block always maps back to one source block.
+across chunks, so one target block always maps back to one source block. Concretely, a chunk is a run of consecutive
+pending segments of one unit, packed to at most `min(effectiveContext − reservedHeadroom, chunkBudgetSetting)`
+estimated tokens (`min(8192 − reservedHeadroom, 1200)` with this build's constants) and capped at 8 segments on Fast,
+8 on Balanced, 2 on Max, and 1 under Manual review — whichever limit is reached first; a unit boundary always closes
+the current chunk and soft-resets the preceding-target window (ADR-0038).
 
 The budget is **derived from the provider's effective context window** rather than a fixed constant, and the Generation
 "chunk budget" setting is only a **cap** on it (DD-44). Because BookLoom ships no tokenizer, token counts are
@@ -75,31 +79,45 @@ N (preceding blocks), whether TM/summary are included, and budget are dial-drive
 
 ## tiered-loop {#tiered-loop}
 
-Scoring is **per chunk**, but a failure flags only the **offending segment (s)**; a directed fix re-renders the whole
-chunk and the result is re-QA'd per segment. Per chunk (see `chunk-translate-loop.mermaid`):
+Scoring is **per chunk** when the judge runs, but each check and each repair act on **one segment**: a failure — a
+hard gate, a soft check, or a judge finding — repairs only the **offending segment**, and every repair call (directed
+fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see
+`chunk-translate-loop.mermaid`):
 
 1. **Draft** — one `chat` call for exactly one source segment; the response is exactly `{"target":"…"}`. The last
    three accepted targets may provide context only within their section. A malformed or wrong-shape response gets one
-   structural repair containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag
+   structural repair containing its delimited rejected reply and parsing diagnosis. A valid target that fails the tag
    multiset gets one separate repair containing the source, rejected target, and required token order. No array, id
    map, prose, embedded-object, or text fallback is accepted, and neither repair recurses. A **context-match TM
    auto-reuse** skips this draft call (and the judge) entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Failure → self-heal with a concrete finding.
 3. **Deterministic QA gate** — run the checks in `#qa-checks`; compute `confidence`.
-4. **Judge (dial-gated)** — if QA passes and the dial enables it, an LLM-as-judge quality score; `score` decides,
-   `verdict` is advisory.
-5. **Accept** — `accept = hardGatesPass ∧ confidence ≥ τ ∧ (judgeOff ∨ judgeScore ≥ τ_judge)`; with the judge off,
-   `accept = hardGatesPass ∧ confidence ≥ τ`. `τ` is owned by the **review-mode dial** (not this engine's quality dial);
-   `τ_judge` defaults to `τ`. → `ACCEPTED`.
-6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (repair budget; `N=0` flags on first failure):
-    - **Directed fix (1 call)** when QA/the judge produced *concrete* findings (tag mismatch, wrong language, dropped
-      content, glossary miss) — inject the exact findings and ask for a targeted correction; on a **tag-multiset
-      mismatch** inject the expected placeholder multiset ("restore exactly: …").
-    - **Reflect → improve (2 calls)** when the failure is *vague* quality (judge score low, no concrete finding) —
-      reflect, then rewrite; an **optional monolingual polish** fires only when post-improve QA is still **borderline**
-      (`confidence ∈ [τ − ε, τ)`).
-    - Loop back through QA up to `N` rounds. Still failing → the offending segment (s) `FLAGGED`.
+4. **Reviewer (dial-gated)** — when the dial enables it, one reviewer call per chunk and pass (Balanced one, Max two)
+   over the drafted pairs whose checks passed; it answers per segment `ok`, edits or a rewrite. The code verifies each
+   edit (the quote occurs exactly once after normalisation, the replacement keeps the `⟦gN⟧` tokens in order, the
+   deterministic checks pass on the edited text, the set of blocking checks does not grow) and applies the verified
+   ones; an edit whose quote was found but that was refused gets one directed fix naming the quote; a rewrite is taken
+   only when every check passes. A reply that cannot be read, or a call that times out twice, flags its segments
+   `reviewer-unavailable` instead of pausing the run.
+5. **Accept**, per segment — `accept = hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft`; a failed
+   untranslated-echo check on a source under 20 code points of display text does not count as a failed soft check
+   (`#qa-thresholds`). There is no score and no threshold: confidence only orders segments for review, and the review
+   mode decides when the run pauses (ADR-0038; a model-call error instead of a quality failure is routed by
+   `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`.
+6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (the repair budget: 1 / 2 / 3 by dial):
+    - **Directed fix (1 call)** when QA or a refused reviewer edit produced *concrete* findings (tag mismatch, wrong script, dropped
+      content, glossary miss) — inject the exact findings and ask for a targeted correction of this one segment; on a
+      **tag-multiset mismatch** inject the expected placeholder multiset ("restore exactly: …").
+    - **Nothing** when there is no concrete finding to name: the reflect → improve → polish chain was removed in 15d.7, and
+      the segment is flagged without a call. The repair path keeps a **best candidate** and stops when a step does not
+      lower the blocker set.
+    - Loop back through QA up to `N` rounds. With the judge on, a repaired target that passes its hard gates, fails
+      no soft check and reaches `τ` is **judged again on its own** — a one-pair call labelled `s1` whose score and
+      findings replace the chunk's for that segment; a target short of any of these goes to the next round with no
+      judge call. A self-heal reply that is blank or cut off flags the segment at once; one that is not the required
+      object fails its round (a self-heal call gets no format repair). Still failing → the offending segment (s)
+      `FLAGGED`, keeping the last target that passed every hard gate as its machine translation.
 7. **Persist + update memory** — atomically write the segment; update name dictionary, context-keyed TM, and
    preceding-target window; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
    (FLAGGED is terminal-for-run, excluded from auto-resume). Update the rolling summary on its size-based trigger
@@ -110,34 +128,37 @@ Every self-heal call passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#
 ## qa-checks {#qa-checks}
 
 Deterministic, in `:pipeline`. Checks are of two kinds: **hard gates** (boolean; a failure cannot be accepted and is
-excluded from `confidence`) and **soft checks** (each yields a margin in `[0,1]` that feeds `confidence`). There is
-**no** number/named-entity preservation check (D9): masked numerals are already covered by the tag-multiset hard gate,
-and named-entity consistency comes from locked-glossary masking plus the judge.
+excluded from `confidence`) and **soft checks** (each yields a margin in `[0,1]` that feeds `confidence`; a soft check
+that fails outright blocks acceptance regardless of the blended value — see `#confidence`). No numeral is masked in
+this build (owner decision D-7), so there is no number-preservation check; named-entity consistency comes from
+locked-glossary masking plus the judge.
 
-| Check                    | Kind          | Fails when                                                                                                                            |
-|--------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| tag integrity            | **hard gate** | placeholder multiset differs (pre-QA)                                                                                                 |
-| refusal                  | **hard gate** | output is a model refusal / meta-comment                                                                                              |
-| target-language          | soft          | output not in the target language (Lingua) — respecting foreign-passage policy so a deliberately kept passage is not "wrong language" |
-| untranslated-echo        | soft          | output ≈ source (nothing translated)                                                                                                  |
-| repetition-loop          | soft          | pathological m-gram repetition                                                                                                        |
-| omission by length ratio | soft          | target/source length ratio outside the expected band                                                                                  |
-| glossary compliance      | soft          | a locked term not rendered per the dictionary                                                                                         |
+| Check                    | Kind          | Fails when                                                                                                                                                                                                              |
+|--------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| tag integrity            | **hard gate** | the placeholder multiset differs, a paired placeholder's order or nesting is wrong, or a pair rule of ADR-0040 as amended is broken — a pair that held text in the source but holds none in the target, or a line-break token whose innermost enclosing pair changed (pre-QA) |
+| refusal                  | **hard gate** | the target's display text is empty while the source's display text is not, or the target starts with a refusal phrase                                                                                                |
+| target-script            | soft          | the share of the target's letters that are in the target language's script falls below threshold — respecting the foreign-passage policy so a deliberately kept passage is not scored as wrong-script                |
+| untranslated-echo        | soft          | output ≈ source (nothing translated)                                                                                                                                                                                   |
+| repetition-loop          | soft          | pathological m-gram repetition                                                                                                                                                                                         |
+| omission by length ratio | soft          | target/source length ratio outside the expected band                                                                                                                                                                   |
+| glossary compliance      | soft          | a locked term not rendered per the dictionary                                                                                                                                                                          |
 
 ### qa-thresholds {#qa-thresholds}
 
 Each soft check is made **testable** by an explicit threshold. Defaults:
 
-| Check                            | Threshold (default)                                                                              | Notes                                                                                                                           |
-|----------------------------------|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| untranslated-echo                | normalized similarity(target, source) **≥ 0.90** → fail                                          | normalized Levenshtein / token-overlap on NFC-normalized, case-folded text                                                      |
-| repetition-loop                  | any **m-gram (m = 3)** repeated **≥ k = 3** consecutive times → fail                             | m/k tunable; guards against decode loops                                                                                        |
-| omission by length ratio         | `len(target)/len(source)` (chars) **outside the per-pair band** → fail                           | band is **per script / language-pair** (below), **widened for short segments**                                                  |
-| target-language (gate condition) | check fires **only** when `len(source) ≥ 20 chars` **and** Lingua relative confidence **≥ 0.60** | below the min-length + confidence floor the check is skipped (treated as pass) so short/ambiguous fragments are not mis-flagged |
-| glossary compliance              | every locked in-chunk term present in the target per its dictionary rendering                    | binary per term; margin = fraction of locked terms honoured                                                                     |
+| Check                          | Threshold (default)                                                                                                          | Notes                                                                                                                           |
+|---------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| untranslated-echo               | similarity(target, source) **≥ 0.90** → fail                                                                                 | `1 − Levenshtein / max(length)` over the NFC-normalized, `toLowerCase(Locale.ROOT)` display texts, with every token removed and whitespace collapsed |
+| repetition-loop                 | any **m-gram (m = 3)** repeated **≥ k = 3** consecutive times → fail                                                          | m/k tunable; guards against decode loops                                                                                        |
+| omission by length ratio        | `len(target)/len(source)` (chars) **outside the per-pair band** → fail                                                        | band is **per script / language-pair** (below), **widened for short segments**                                                  |
+| target-script (gate condition)  | check fires **only** when the source display text is **≥ 20 code points** and the pair's two languages use **different scripts**; fails when fewer than **0.60** of the target's letters sit in the target script | below the floor, when source and target share a script, when the target has no letters (counted after the keep-original name removal below) or when the target language is not catalogued, the check is skipped (treated as pass) so short/ambiguous fragments are not mis-flagged |
+| glossary compliance             | every locked in-chunk term present in the target per its dictionary rendering                                                | binary per term; margin = fraction of locked terms honoured                                                                     |
 
 **Omission length-ratio bands** (`target/source` char ratio; widen the lower/upper bound outward by ×0.5 / ×2 for
-**short** source segments `< 25 chars`):
+**short** source segments `< 25 chars`, and by ×0.85 / ×1.25 for those `< 60 chars`). Inside the band the check also
+fails a target with more `letter + space + . or ,` spots than its source (a dropped word's gap), or — for a source of
+8+ words in a spaced script — under 0.55 target words per source word while the char ratio is under 0.85:
 
 | Language-pair class           | Band `[lo, hi]` |
 |-------------------------------|-----------------|
@@ -147,26 +168,71 @@ Each soft check is made **testable** by an explicit threshold. Defaults:
 | CJK → Latin                   | `[1.0, 5.0]`    |
 | Default / unknown             | `[0.5, 2.5]`    |
 
-**Foreign-keep vs echo.** A segment is treated as a legitimate **foreign-keep** — its **untranslated-echo** and
-**target-language** checks suppressed — **only when it matches a pre-detected foreign span from import** (or the
-foreign-passage policy explicitly keeps it). An unmarked segment that simply echoes the source is still failed by
-untranslated-echo; foreign-keep is not a blanket excuse for an untranslated output.
+**Echo floor.** When the source display text holds **fewer than 20 code points**, a failed untranslated-echo check does
+not fail the segment outright — it contributes its `0.0` margin to `confidence` and raises only a `low` finding, so a
+very short fragment (a two-word title, a one-word exclamation) is never blocked on echo alone (`design.md` D8,
+ADR-0038). A source whose display text is empty (a segment that is all tokens) skips the echo and length-ratio checks.
+
+**Keep-original name policy.** Under the "keep original" name policy, every whole-word occurrence of a glossary term is
+removed from **both** the source and target display texts before any skip rule is decided and before the
+target-script share, the untranslated-echo similarity and the echo floor are computed — in addition to the protected-span removal already applied to display texts — so a line that
+is mostly kept names is never scored as an echo or a wrong script on their account.
+
+**Refusal phrases.** The refusal hard gate's phrase list is a set of **anchored prefixes** compared
+case-insensitively (`Locale.ROOT`) against the trimmed target **display text**, with a curly apostrophe `’` read as a
+straight `'`, and a phrase matches only when the end of the text or a character that is neither a letter nor a digit
+follows it (`Як ШІ` never catches `Як шість…`, `As an AI` never catches `As an aide…`). Every phrase names the task or
+the model — never a character's own in-story apology — and the list covers **English**, the run's **source
+language**, and its **target language** (tags normalized first; a language with no list contributes none). The prefix
+test is skipped when the source display text itself starts with a listed phrase, so a book's own `Translation:` line is
+not a refusal. The lists (`qa.RefusalPhrases`):
+
+- `en` — `I'm sorry, but I can't translate`, `I am sorry, but I cannot translate`, `I cannot translate`,
+  `I can't translate`, `I am unable to translate`, `I'm unable to translate`, `As an AI`, `As a language model`,
+  `Here is the translation`, `Here's the translation`, `Translation:`, `Sure, here is the translation`;
+- `uk` — `Вибачте, я не можу перекласти`, `Я не можу перекласти`, `Не можу перекласти`, `Як мовна модель`, `Як ШІ`,
+  `Ось переклад`, `Переклад:`.
+
+**Foreign-keep vs echo/script.** A segment is marked **foreign** under the Keep foreign-passage policy when its
+block's own declared language (recorded on the segment at masking time, `03_DOCUMENT_MODEL.md#data-model`) differs
+from the run's source language, or its dominant script differs from the source language's — never from anything
+detected in unmarked text. A marked segment skips the **untranslated-echo** and **target-script** checks. A kept
+foreign run **inside** a segment, and a locked glossary term, are protected spans removed from both display texts
+before every soft check runs. An unmarked segment that simply echoes the source is still failed by untranslated-echo —
+foreign-keep is not a blanket excuse for an untranslated output.
 
 ### confidence {#confidence}
 
 `confidence ∈ [0,1]` is a **documented weighted blend of the soft-check margins only** — hard gates are excluded (they
 are pre-gate booleans) and the **judge score is NOT folded in** (it is compared separately against `τ_judge`). For each
-soft check, `margin_i ∈ [0,1]` is how far the observed value sits from that check's failure cutoff, clamped to `[0,1]`
-(1.0 = comfortably passing, 0.0 = at/over the cutoff). The blend:
+soft check, `margin_i ∈ [0,1]` is how far the observed value sits from that check's failure cutoff: a **failed** check
+contributes margin `0.0` and a **skipped** check contributes margin `1.0`; a passing, non-skipped check's margin is:
+
+- target script — `clamp((share − 0.60) / 0.20)`
+- untranslated echo — `clamp((0.90 − similarity) / 0.10)`
+- repetition — `1.0` with no repeated run, `0.5` for a run of exactly two
+- length ratio — `clamp(distance to the nearer band bound / (0.10 × band width))`
+- glossary compliance — the fraction of in-segment locked terms rendered as entered; `1.0` whenever the protected-span
+  hard gate passed, since a locked term is masked and cannot mis-render
+
+The blend, summed in this fixed order:
 
 ```
-confidence = 0.30·m_glossary + 0.25·m_lengthRatio + 0.20·m_targetLanguage
+confidence = 0.30·m_glossary + 0.25·m_lengthRatio + 0.20·m_script
            + 0.15·m_untranslatedEcho + 0.10·m_repetitionLoop
 ```
 
-(weights sum to 1.0). A skipped check (e.g. target-language below its firing floor) contributes `margin = 1.0`.
-`confidence` is then compared against the review-mode dial's `τ`; the judge, when run, is a separate
-`judgeScore ≥ τ_judge` term in the accept rule (`#tiered-loop`).
+(weights sum to 1.0). `confidence` is then compared against the review-mode dial's `τ`; the judge, when run, is a
+separate `judgeScore ≥ τ_judge` term in the accept rule (`#tiered-loop`).
+
+**A soft check that fails outright blocks acceptance**, independently of the blended `confidence` value, and raises a
+`medium` finding — `language` for a failed target-script or untranslated-echo check, `fluency` for a failed
+repetition check, `omission` for a failed length-ratio check, `glossary` for a failed glossary-compliance check —
+except the **echo floor** above, where a failed echo under 20 code points contributes only its `0.0` margin and a
+`low` finding without blocking. The blend decides only the close calls that no check failed outright (ADR-0038).
+Every finding also records what raised it — the check (`script`, `echo`, `repetition`, `length`, `glossary`,
+`refusal`, `placeholder`, `locked-term`, `kept-run`) or `judge` — so a review can tell a length-ratio omission from a
+judge's.
 
 ## name-term-dictionary {#name-term-dictionary}
 
@@ -210,7 +276,9 @@ dropped/re-summarized first while character, place, and terminology facts are re
 slice.
 
 **Default is a deterministic summary** (accumulated key facts truncated to budget); the **LLM-generated** variant
-(`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. **No-chapter case** (TXT / single-chapter documents): the
+(`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. Only the LLM-generated text is shown to drafts and in the
+context panel as the running summary; the deterministic text (glossary lines and heading titles) is stored but never
+presented as a summary, so a run without the model summary has none and says so. **No-chapter case** (TXT / single-chapter documents): the
 whole document is treated as one chapter, the every-`K`-blocks trigger is the only periodic trigger, and
 **end-of-document** acts as the chapter-end trigger.
 
@@ -232,22 +300,21 @@ deferrals.
 ## prompt-builder {#prompt-builder}
 
 Prompts are built from a **template + slots**: fixed instruction scaffolding with named slots (`{brief}`, `{summary}`,
-`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). Directed-fix and reflect→improve use
-dedicated templates that add a `{findings}` or `{reflection}` slot. Templates are data, so the quality dial and policies
+`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). The directed-fix template adds a `{findings}` slot. Templates are data, so the quality dial and policies
 parameterize the prompt without code changes. The concrete system/user templates for every pipeline call — draft, judge,
-directed fix, reflect→improve, backward revision, book-brief/tone setup, and rolling-summary update — with their
+directed fix, backward revision, book-brief/tone setup, and rolling-summary update — with their
 injected variables, required-vs-optional fields, parameters, and expected JSON shapes, are the normative catalogue in
 `01_Product/12_PROMPT_CATALOG.md`.
 
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
-output): draft ~0.2 (the default), judge/QA ~0.0–0.2, directed fix ~0.2, reflect→improve slightly higher (≤ ~0.4) to
-escape a bad phrasing, backward revision ~0.2. The default 0.2 is user-adjustable 0.0–2.0 in Generation settings
-(`01_Product/07_SETTINGS.md#generation-tab`), and a repair attempt can opt into an even lower "temperature for this
-retry". Where a **reasoning level** is controllable (Ollama `think`, OpenAI reasoning params) translation and judge
-calls set it low/off; the response handler strips any reasoning/thinking channel before parsing
-(`04_LLM_INTEGRATION.md`). Per-call values live in `01_Product/12_PROMPT_CATALOG.md`.
+output): draft 0.2 (the default), judge 0.1, directed fix 0.2, backward
+revision 0.2, pre-scan/summary 0.2. The default 0.2 is user-adjustable 0.0–2.0 in Generation settings
+(`01_Product/07_SETTINGS.md#generation-tab`), and a review-desk retry can opt into 0.1 for its draft call when a lower
+temperature is asked. Where a **reasoning level** is controllable (Ollama `think`, OpenAI reasoning params) every call
+sets it low/off; the response handler strips any reasoning/thinking channel before parsing (`04_LLM_INTEGRATION.md`).
+Per-call values live in `01_Product/12_PROMPT_CATALOG.md`.
 
 The consistency stack this engine relies on is the **name/term dictionary** (`#name-term-dictionary`), the
 **context-aware translation memory** (`#context-aware-tm`, matched by deterministic string similarity —
@@ -257,16 +324,18 @@ embedding or RAG stage.
 ## quality-dial {#quality-dial}
 
 A single "quality vs speed" dial (`FAST | BALANCED | MAX`) parameterizes the engine's **mechanics**. It does **not** own
-the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual), Manual-settings
-override highest (DD-45); `τ_judge` defaults to `τ`.
+the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual) alone — a manual
+Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.md`); `τ_judge` equals `τ`.
 
 | Parameter                          | FAST  | BALANCED | MAX   |
 |------------------------------------|-------|----------|-------|
 | chunk token budget                 | large | medium   | small |
+| segments per chunk (cap)           | 8     | 4        | 2     |
 | preceding-target blocks (N)        | 1     | 2        | 3     |
 | repair budget (QA re-entry rounds) | 1     | 2        | 3     |
 | judge runs                         | no    | yes      | yes   |
 | backward revision runs             | no    | no       | yes   |
 
-The dial sets mechanics; `τ`/`τ_judge` come from the review-mode dial (DD-45). The automatic-first, tiered-pipeline
-model this dial serves is ADR-0007. Requirements: `FR-ALGO-*`, `FR-QA-*`.
+Manual review additionally caps every chunk at 1 segment, whatever the dial. The dial sets mechanics; `τ`/`τ_judge`
+come from the review-mode dial (DD-45). The automatic-first, tiered-pipeline model this dial serves is ADR-0007.
+Requirements: `FR-ALGO-*`, `FR-QA-*`.

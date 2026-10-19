@@ -1,0 +1,75 @@
+{{#summary}}
+[Book so far — context only; do NOT re-translate it]
+{{summary}}
+{{/summary}}
+
+{{#glossaryTerms}}
+[Glossary — apply these renderings exactly; write each name out as plain text in the target language]
+{{glossaryTerms}}
+{{/glossaryTerms}}
+
+{{#lockedNames}}
+[Locked names — each token stands for a name the app writes in for you: keep the token, never write the name]
+{{lockedNames}}
+{{/lockedNames}}
+
+{{#suggestedTerms}}
+[Suggested renderings — not confirmed by the person]
+Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
+{{suggestedTerms}}
+{{/suggestedTerms}}
+
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+Write each term as shown, inflected as the sentence needs, unless the glossary says otherwise.
+{{lexiconTerms}}
+{{/lexiconTerms}}
+
+{{#memoryHint}}
+[Earlier decisions — keep consistent]
+{{memoryHint}}
+{{/memoryHint}}
+
+{{#keyTerms}}
+[Key terms — a closed list. For each item that contains one of these words, add "terms":{"<key term>":"<your rendering, base form>"} to that item's entry; omit "terms" for an item with none of them]
+{{keyTerms}}
+{{/keyTerms}}
+
+{{#characters}}
+[Characters in these items — context only; keep their gender and agreement]
+{{characters}}
+{{/characters}}
+
+{{#relevantPairs}}
+[Related earlier pairs — context only; reuse their renderings of the same names and terms, do NOT translate or answer them]
+{{relevantPairs}}
+{{/relevantPairs}}
+
+{{#precedingPairs}}
+[Previous pairs — context only; do NOT translate or answer them]
+{{precedingPairs}}
+{{/precedingPairs}}
+
+{{#nextSource}}
+[Next item after the batch — context only; read it for pronouns and gender, do NOT translate or answer it]
+{{nextSource}}
+{{/nextSource}}
+
+Translate from {{source}} to {{target}}.
+
+{{#itemTokens}}
+[Immutable tokens per item — copy each item's sequence unchanged inside that item]
+{{itemTokens}}
+{{/itemTokens}}
+
+{{#extraInstruction}}
+[Extra instruction]
+{{extraInstruction}}
+{{/extraInstruction}}
+
+<Items>
+{{items}}
+</Items>
+
+Reminder: every target is written in {{target}}, not in {{source}}; never copy an item and never write "...".
+Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}

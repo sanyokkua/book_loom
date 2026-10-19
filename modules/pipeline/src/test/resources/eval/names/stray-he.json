@@ -1,0 +1,70 @@
+{
+  "id": "stray-he",
+  "about": "Perpetua is followed by 'She' seven times and by one stray 'He' (the porter, unnamed); her gender must stay FEMALE.",
+  "title": "The Cedar Trunk",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Departure",
+      "paragraphs": [
+        "Perpetua rose before the household and lit the stove. She stirred the porridge until it shone.",
+        "Anselm came down the back stairs in his socks. He sat at the kitchen table and yawned.",
+        "Perpetua set a bowl in front of him. She watched him eat the first spoonful.",
+        "Perpetua spoke to the porter at the side door. He nodded and went to fetch the trunk.",
+        "The trunk was heavy and smelled of cedar. Perpetua lifted the lid and checked the linen.",
+        "She counted the sheets twice. Perpetua did not trust the porter's counting.",
+        "Anselm tied his boots by the stove. He was late, and he knew it.",
+        "Perpetua packed the last of the bread into a cloth. She tied the corners with a double knot.",
+        "At the gate Perpetua stopped and looked back at the house. She had lived there for eleven years.",
+        "Anselm shouldered the trunk. He carried it down the lane without complaint.",
+        "Perpetua walked behind him with the basket. She hummed a tune she had not hummed since childhood.",
+        "The carrier's wagon stood at the crossroads. Perpetua paid the driver and counted her change.",
+        "Anselm lifted the trunk into the wagon. He helped Perpetua up and climbed in after her.",
+        "Perpetua leaned against the cold boards. She closed her eyes and listened to the wheels.",
+        "The road ran east through flat country. Perpetua watched the hedges go by and said nothing.",
+        "Anselm slept with his hat over his face. Perpetua kept watch for both of them.",
+        "At the inn Perpetua asked for two beds. She paid in advance, as her mother had taught her.",
+        "In the district everyone knew Perpetua, and nobody had a bad word for Perpetua.",
+        "Years afterwards people still asked about Perpetua, though few could say why.",
+        "In the district everyone knew Anselm, and nobody had a bad word for Anselm.",
+        "Years afterwards people still asked about Anselm, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Perpetua",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "perpetua"
+      },
+      {
+        "term": "Anselm",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "anselm"
+      }
+    ],
+    "junk": [],
+    "keep": [],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Perpetua": "Перпетуя",
+      "Anselm": "Ансельм"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

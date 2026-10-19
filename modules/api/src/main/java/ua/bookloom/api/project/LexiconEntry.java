@@ -1,0 +1,237 @@
+package ua.bookloom.api.project;
+
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * A recurring common term or title of one project ({@code master}, {@code imp}, {@code Mr}) with the renderings the
+ * run has verified for it, so the book keeps one rendering where a model would drift between several. Unlike a
+ * glossary entry it is soft: the rendering is a "keep consistent" hint, never a lock.
+ *
+ * <p>Which rendering counts as established is decided here, once, by the conflict policy of {@link #established()}, so
+ * the prompt, the reviewer and the screen agree.
+ *
+ * @param projectId the owning project's id
+ * @param term the source term as proposed or typed; matched ignoring case
+ * @param renderings the verified renderings in the order they were first seen, each with how often it was used
+ * @param chosen the rendering the person typed, imported or accepted, or one a reading of the term wrote (see
+ *     {@code chosenOrigin}), or null; it outranks every other source
+ * @param suggested the model's suggested rendering from the suggestion call, or null; used only while nothing was seen
+ * @param learned the rendering the run learned by co-occurrence from the decided segments, or null; it outranks the
+ *     reported renderings but never the person's choice
+ * @param chosenOrigin who wrote {@code chosen}; null exactly when {@code chosen} is null, and a chosen rendering
+ *     stated with no origin is {@link RenderingOrigin#PERSON}'s, so hand-made entries keep the person's authority. A
+ *     person's rendering is never replaced by a reading or a file; a model's may be
+ */
+public record LexiconEntry(
+        String projectId,
+        String term,
+        List<Rendering> renderings,
+        @Nullable String chosen,
+        @Nullable String suggested,
+        @Nullable Learned learned,
+        @Nullable RenderingOrigin chosenOrigin) {
+
+    /**
+     * One verified rendering and its use count.
+     *
+     * @param text the rendering as first written
+     * @param count how many times a draft used it; at least 1
+     */
+    public record Rendering(String text, int count) {
+
+        /** Rejects a blank text or a count below one. */
+        public Rendering {
+            Objects.requireNonNull(text, "text");
+            if (text.isBlank() || count < 1) {
+                throw new IllegalArgumentException("a rendering needs a text and a count of at least 1");
+            }
+        }
+    }
+
+    /**
+     * A rendering learned from the decided segments with no model call: the base form of the target word that
+     * accompanies the term, and the evidence it passed the gate with.
+     *
+     * @param text the base form of the learned rendering, non-blank
+     * @param support how many decided segments naming the term carry the rendering; at least 1
+     * @param occurrences how many decided segments name the term; at least {@code support}
+     */
+    public record Learned(String text, int support, int occurrences) {
+
+        /** Rejects a blank text or counts that do not fit. */
+        public Learned {
+            Objects.requireNonNull(text, "text");
+            if (text.isBlank() || support < 1 || occurrences < support) {
+                throw new IllegalArgumentException("a learned rendering needs a text and 1 <= support <= occurrences");
+            }
+        }
+    }
+
+    /** Rejects missing parts, copies the list and reads a blank choice or suggestion as none. */
+    public LexiconEntry {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(term, "term");
+        renderings = List.copyOf(Objects.requireNonNull(renderings, "renderings"));
+        chosen = blankAsNull(chosen);
+        suggested = blankAsNull(suggested);
+        chosenOrigin = chosen == null ? null : Objects.requireNonNullElse(chosenOrigin, RenderingOrigin.PERSON);
+    }
+
+    /** An entry whose chosen rendering, if any, is the person's. */
+    public LexiconEntry(
+            final String projectId,
+            final String term,
+            final List<Rendering> renderings,
+            @Nullable final String chosen,
+            @Nullable final String suggested,
+            @Nullable final Learned learned) {
+        this(projectId, term, renderings, chosen, suggested, learned, null);
+    }
+
+    /**
+     * A term nothing was seen for yet.
+     *
+     * @param projectId the owning project's id
+     * @param term the source term
+     * @return an entry with no rendering, choice or suggestion
+     */
+    public static LexiconEntry of(final String projectId, final String term) {
+        return new LexiconEntry(projectId, term, List.of(), null, null, null);
+    }
+
+    /**
+     * The comparison key of a term or rendering: composed, stripped and case-folded.
+     *
+     * @param text the text to key; never null
+     * @return the key
+     */
+    public static String keyOf(final String text) {
+        return Normalizer.normalize(Objects.requireNonNull(text, "text"), Normalizer.Form.NFC)
+                .strip()
+                .toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * The rendering a draft is asked to keep: the person's choice if there is one; else the learned one; else the most
+     * used verified rendering, the one first seen when two are used equally often; else the model's suggestion.
+     *
+     * @return the rendering, or empty when nothing was chosen, seen or suggested
+     */
+    public Optional<String> established() {
+        if (chosen != null) {
+            return Optional.of(chosen);
+        }
+        if (learned != null) {
+            return Optional.of(learned.text());
+        }
+        return majority().or(() -> Optional.ofNullable(suggested));
+    }
+
+    /**
+     * The most used verified rendering; the first seen wins a tie.
+     *
+     * @return the rendering, or empty when none was verified yet
+     */
+    public Optional<String> majority() {
+        Rendering best = null;
+        for (final Rendering candidate : renderings) {
+            if (best == null || candidate.count() > best.count()) {
+                best = candidate;
+            }
+        }
+        return Optional.ofNullable(best).map(Rendering::text);
+    }
+
+    /**
+     * This entry after a draft used a rendering once more; a spelling that differs only in case counts with the first.
+     *
+     * @param rendering the non-blank rendering a verified pair named
+     * @return a copy with the count raised, or with the rendering added last when it is new
+     */
+    public LexiconEntry seen(final String rendering) {
+        final String key = keyOf(rendering);
+        final List<Rendering> next = new ArrayList<>();
+        boolean found = false;
+        for (final Rendering held : renderings) {
+            if (keyOf(held.text()).equals(key)) {
+                next.add(new Rendering(held.text(), held.count() + 1));
+                found = true;
+            } else {
+                next.add(held);
+            }
+        }
+        if (!found) {
+            next.add(new Rendering(rendering.strip(), 1));
+        }
+        return new LexiconEntry(projectId, term, next, chosen, suggested, learned, chosenOrigin);
+    }
+
+    /**
+     * This entry with the person's rendering.
+     *
+     * @param rendering the rendering to keep, or null or blank to clear the choice
+     * @return a copy with the choice set, whose origin is {@link RenderingOrigin#PERSON}
+     */
+    public LexiconEntry withChosen(@Nullable final String rendering) {
+        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.PERSON);
+    }
+
+    /**
+     * This entry with the rendering a reading of the term wrote.
+     *
+     * @param rendering the rendering to keep, or null or blank to clear the choice
+     * @return a copy with the choice set, whose origin is {@link RenderingOrigin#MODEL}
+     */
+    public LexiconEntry withModelRendering(@Nullable final String rendering) {
+        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned, RenderingOrigin.MODEL);
+    }
+
+    /**
+     * Whether the chosen rendering is a person's, which no reading and no file may replace.
+     *
+     * @return {@code true} if a rendering is chosen and a person wrote it, {@code false} if none is chosen or a model
+     *     wrote it
+     */
+    public boolean hasPersonsRendering() {
+        return chosen != null && chosenOrigin == RenderingOrigin.PERSON;
+    }
+
+    /**
+     * This entry with the model's suggested rendering.
+     *
+     * @param rendering the suggestion, or null or blank to clear it
+     * @return a copy with the suggestion set
+     */
+    public LexiconEntry withSuggested(@Nullable final String rendering) {
+        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned, chosenOrigin);
+    }
+
+    /**
+     * This entry with the rendering the run learned by co-occurrence.
+     *
+     * @param learned the learned rendering with its evidence, or null to say nothing is established
+     * @return a copy with the learned rendering set
+     */
+    public LexiconEntry withLearned(@Nullable final Learned learned) {
+        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned, chosenOrigin);
+    }
+
+    /**
+     * How many different renderings the drafts used for this term.
+     *
+     * @return the number of verified renderings; 0 when none
+     */
+    public int distinctRenderings() {
+        return renderings.size();
+    }
+
+    private static @Nullable String blankAsNull(@Nullable final String text) {
+        return text == null || text.isBlank() ? null : text.strip();
+    }
+}

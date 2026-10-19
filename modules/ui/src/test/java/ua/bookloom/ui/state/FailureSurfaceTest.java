@@ -19,15 +19,15 @@ class FailureSurfaceTest {
             Map.entry(ErrorCode.auth, FailureSurface.PROVIDER_ERROR),
             Map.entry(ErrorCode.rateLimited, FailureSurface.PROVIDER_ERROR),
             Map.entry(ErrorCode.upstream, FailureSurface.PROVIDER_ERROR),
-            Map.entry(ErrorCode.emptyCompletion, FailureSurface.PROVIDER_ERROR),
+            Map.entry(ErrorCode.emptyCompletion, FailureSurface.FLAGGED_SEGMENT),
             Map.entry(ErrorCode.modelNotFound, FailureSurface.PROVIDER_ERROR),
             Map.entry(ErrorCode.modelUnavailable, FailureSurface.PROVIDER_ERROR),
             Map.entry(ErrorCode.missingCredential, FailureSurface.PROVIDER_ERROR),
-            Map.entry(ErrorCode.contextWindow, FailureSurface.PROVIDER_ERROR),
+            Map.entry(ErrorCode.contextWindow, FailureSurface.FLAGGED_SEGMENT),
             Map.entry(ErrorCode.cancelled, FailureSurface.STOPPED),
             Map.entry(ErrorCode.validation, FailureSurface.IN_PLACE),
             Map.entry(ErrorCode.internal, FailureSurface.DIALOG),
-            Map.entry(ErrorCode.busy, FailureSurface.DIALOG),
+            Map.entry(ErrorCode.busy, FailureSurface.WARNING_TOAST),
             Map.entry(ErrorCode.discoveryFailed, FailureSurface.SETTINGS_ONLY));
 
     // IF a code were routed to another surface than the specification assigns it, THEN a destination that already

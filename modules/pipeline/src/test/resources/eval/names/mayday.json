@@ -1,0 +1,77 @@
+{
+  "id": "mayday",
+  "about": "'Mayday' is a distress call, said seven times in speech and narration, never a person or a place: no name, but a recurring term the book uses in one sense.",
+  "title": "The Last Watch",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Storm",
+      "paragraphs": [
+        "Haldane stood on the bridge of the freighter and watched the barometer fall. He had seen that fall once before.",
+        "Sorrel came up from the engine room with oil on her hands. She said the pumps would not hold another hour.",
+        "Haldane picked up the radio. \"Mayday, mayday, mayday,\" he said, and gave the ship's name and position.",
+        "Nobody answered. Sorrel watched the sea climb the rail and fall back.",
+        "Mayday, he said again, louder. Haldane repeated the position and the number of souls on board.",
+        "The radio hissed. Sorrel put her hand on his shoulder and he did not shake it off.",
+        "A voice came through the static at last, thin and far away. It asked Haldane to repeat the Mayday.",
+        "He repeated it. Haldane gave the position a third time and spelled out the ship's name.",
+        "Sorrel went below to rouse the crew. She came back with the cook and two deckhands in life jackets.",
+        "The ship rolled heavily. Haldane held the radio in both hands and kept repeating the call.",
+        "Mayday, said the voice from the static, we have you. Help is three hours away.",
+        "Sorrel laughed once, a short, cracked sound. She said three hours was a long time to be brave.",
+        "Haldane set down the radio. He took the wheel and held the bow into the weather.",
+        "The crew sang to keep their courage up. Sorrel led the song, flat and loud.",
+        "Three hours later a grey cutter appeared on the horizon. Haldane did not say Mayday again.",
+        "Sorrel took the cook's hand and counted the lights on the cutter. She counted nine, and then she stopped counting.",
+        "In the district everyone knew Haldane, and nobody had a bad word for Haldane.",
+        "Years afterwards people still asked about Haldane, though few could say why.",
+        "In the district everyone knew Sorrel, and nobody had a bad word for Sorrel.",
+        "Years afterwards people still asked about Sorrel, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Haldane",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "haldane"
+      },
+      {
+        "term": "Sorrel",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "sorrel"
+      }
+    ],
+    "junk": [
+      "Mayday"
+    ],
+    "keep": [],
+    "recurringTerms": [
+      {
+        "term": "mayday",
+        "keep": true
+      }
+    ]
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Haldane": "Голдейн",
+      "Sorrel": "Сорел",
+      "mayday": "мейдей"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

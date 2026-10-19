@@ -1,0 +1,137 @@
+package ua.bookloom.pipeline.checks;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.lexicon.AlternationGuard;
+import ua.bookloom.pipeline.lexicon.TermMatch;
+import ua.bookloom.pipeline.prompt.LanguageRules;
+
+/**
+ * A name the glossary renders that the source holds and the target has lost — the case the draft-time glossary check
+ * cannot see for an unlocked name, since only a locked one travels as a token. {@link NameLossCheck} turns it into a
+ * soft finding the directed fix mends. Conservative on purpose: only a person
+ * or place entry with a non-empty target counts, the source form must stand as a whole word, and the target is held to
+ * the same stem match the lexicon uses for an inflected rendering, so a declined name is not a loss.
+ */
+@Slf4j
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+final class NameMissingCheck {
+
+    private static final int MIN_VARIANT_LETTERS = 4;
+    private static final List<String> VARIANT_VOWELS = List.of("иіїы", "еє");
+
+    /**
+     * Looks for names the target lost.
+     *
+     * @param glossary the non-null glossary entries of the project
+     * @param source the non-null source display text
+     * @param target the non-null target display text
+     * @param targetLanguage the non-null target language tag, whose stem data lets a declined or derived name pass
+     * @return the entries whose source form stands in the source and whose rendering is nowhere in the target; never
+     *     null, empty when no name is lost
+     */
+    static List<GlossaryEntry> lost(
+            final List<GlossaryEntry> glossary, final String source, final String target, final String targetLanguage) {
+        final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
+        final List<GlossaryEntry> inSource = glossary.stream()
+                .filter(NameMissingCheck::isCheckable)
+                .filter(entry -> TermMatch.occursIn(entry.term(), source) && isWrittenAsName(entry.term(), source))
+                .toList();
+        final AlternationGuard guard = AlternationGuard.over(
+                target,
+                glossary.stream()
+                        .map(GlossaryEntry::target)
+                        .filter(Objects::nonNull)
+                        .toList());
+        final List<GlossaryEntry> missing = inSource.stream()
+                .filter(entry -> isMissing(entry, source, guard, alternations))
+                .toList();
+        final List<GlossaryEntry> lost = missing.stream()
+                .filter(entry -> !hasPresentVariant(entry, inSource, missing))
+                .toList();
+        if (!lost.isEmpty()) {
+            log.debug("Name check: {} glossary name(s) are in the source and not in the target", lost.size());
+            log.trace("Name check lost: {}", lost);
+        }
+        return lost;
+    }
+
+    // Two entries that spell one name nearly alike (Моріс, Морис) are one name: it is not lost when the other is there.
+    private static boolean hasPresentVariant(
+            final GlossaryEntry entry, final List<GlossaryEntry> inSource, final List<GlossaryEntry> missing) {
+        final String target = Objects.requireNonNull(entry.target(), "target");
+        return inSource.stream()
+                .filter(other -> !missing.contains(other))
+                .anyMatch(other -> isNearlyAlike(target, Objects.requireNonNull(other.target(), "target")));
+    }
+
+    // Only a duplicate spelling: one vowel written two ways (Моріс, Морис) or one doubled letter (Нел, Нелл). A
+    // different consonant (Марта, Марка) is a different name.
+    private static boolean isNearlyAlike(final String first, final String second) {
+        final String a = first.strip().toLowerCase(Locale.ROOT);
+        final String b = second.strip().toLowerCase(Locale.ROOT);
+        if (Math.max(a.length(), b.length()) < MIN_VARIANT_LETTERS || Math.abs(a.length() - b.length()) > 1) {
+            return false;
+        }
+        return a.length() == b.length() ? differsByVariantVowel(a, b) : differsByDoubledLetter(a, b);
+    }
+
+    private static boolean differsByVariantVowel(final String a, final String b) {
+        final int at = commonPrefix(a, b);
+        return at < a.length()
+                && a.substring(at + 1).equals(b.substring(at + 1))
+                && VARIANT_VOWELS.stream()
+                        .anyMatch(group -> group.indexOf(a.charAt(at)) >= 0 && group.indexOf(b.charAt(at)) >= 0);
+    }
+
+    private static boolean differsByDoubledLetter(final String a, final String b) {
+        final String shorter = a.length() < b.length() ? a : b;
+        final String longer = a.length() < b.length() ? b : a;
+        final int at = commonPrefix(shorter, longer);
+        return at > 0
+                && longer.charAt(at) == longer.charAt(at - 1)
+                && longer.substring(at + 1).equals(shorter.substring(at));
+    }
+
+    private static int commonPrefix(final String a, final String b) {
+        int index = 0;
+        while (index < a.length() && index < b.length() && a.charAt(index) == b.charAt(index)) {
+            index++;
+        }
+        return index;
+    }
+
+    // A name is written with its capital: "plug into" holds the verb, not a character named Plug. A term the glossary
+    // spells in lower case is held to the plain match.
+    private static boolean isWrittenAsName(final String term, final String source) {
+        if (term.isEmpty() || !Character.isUpperCase(term.codePointAt(0))) {
+            return true;
+        }
+        return Pattern.compile("(?<![\\p{L}\\p{M}])" + Pattern.quote(term))
+                .matcher(source)
+                .find();
+    }
+
+    private static boolean isCheckable(final GlossaryEntry entry) {
+        final boolean isName = entry.type() == TermType.CHARACTER || entry.type() == TermType.PLACE;
+        final String target = entry.target();
+        return isName && !entry.locked() && target != null && !target.isBlank();
+    }
+
+    private static boolean isMissing(
+            final GlossaryEntry entry,
+            final String source,
+            final AlternationGuard guard,
+            final List<String> alternations) {
+        final String rendering = Objects.requireNonNull(entry.target(), "target");
+        return !guard.holds(entry.term(), rendering, source, alternations);
+    }
+}

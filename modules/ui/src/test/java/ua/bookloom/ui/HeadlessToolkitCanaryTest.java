@@ -7,7 +7,6 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The headless-rendering canary: proof that a TestFX suite boots the JavaFX toolkit and renders a real scene graph
@@ -24,7 +23,7 @@ import org.testfx.framework.junit5.ApplicationTest;
  * <p>Deliberately no robot interaction: a click or a keystroke needs a Glass robot, which is a separate capability
  * from rendering. What must be true today is that the toolkit starts, a stage shows, and layout runs.
  */
-class HeadlessToolkitCanaryTest extends ApplicationTest {
+class HeadlessToolkitCanaryTest extends FxTestBase {
 
     private static final String LABEL_ID = "#canary-label";
 

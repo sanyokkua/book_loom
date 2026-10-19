@@ -1,0 +1,578 @@
+{
+ "every": [
+  {
+   "id": "every-usable",
+   "defect": "flagged",
+   "check": "NOT_FLAGGED"
+  },
+  {
+   "id": "every-no-russian-letters",
+   "defect": "russian-letter",
+   "check": "NO_RUSSIAN_LETTERS"
+  }
+ ],
+ "segments": [
+  {
+   "id": "dialogue-quote-form",
+   "defect": "dialogue-punctuation",
+   "segment": "m04",
+   "check": "MATCHES",
+   "args": [
+    "«[^»]+»,? [—–]"
+   ]
+  },
+  {
+   "id": "dialogue-sentences-m04",
+   "defect": "dialogue-punctuation",
+   "segment": "m04",
+   "check": "NO_FINDING",
+   "args": [
+    "sentence-count"
+   ]
+  },
+  {
+   "id": "dialogue-sentences-m25",
+   "defect": "dialogue-punctuation",
+   "segment": "m25",
+   "check": "NO_FINDING",
+   "args": [
+    "sentence-count"
+   ]
+  },
+  {
+   "id": "dialogue-sentences-m26",
+   "defect": "dialogue-punctuation",
+   "segment": "m26",
+   "check": "NO_FINDING",
+   "args": [
+    "sentence-count"
+   ]
+  },
+  {
+   "id": "title-names-m16",
+   "defect": "inflected-title",
+   "segment": "m16",
+   "check": "NO_FINDING",
+   "args": [
+    "name-swap",
+    "name-missing",
+    "name-spelling",
+    "vocative"
+   ]
+  },
+  {
+   "id": "title-latin-m16",
+   "defect": "inflected-title",
+   "segment": "m16",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "term-names-m14",
+   "defect": "inflected-term",
+   "segment": "m14",
+   "check": "NO_FINDING",
+   "args": [
+    "name-swap",
+    "name-missing",
+    "name-spelling",
+    "vocative"
+   ]
+  },
+  {
+   "id": "term-names-m15",
+   "defect": "inflected-term",
+   "segment": "m15",
+   "check": "NO_FINDING",
+   "args": [
+    "name-swap",
+    "name-missing",
+    "name-spelling",
+    "vocative"
+   ]
+  },
+  {
+   "id": "term-latin-m15",
+   "defect": "inflected-term",
+   "segment": "m15",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "brand-written-velmora",
+   "defect": "brand",
+   "segment": "m10",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [],
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "brand-kept-velmora",
+   "defect": "brand",
+   "segment": "m10",
+   "check": "MATCHES",
+   "args": [
+    "Velmora"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "brand-kept-only-velmora",
+   "defect": "brand",
+   "segment": "m10",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [
+    "Velmora"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "brand-written-dravik",
+   "defect": "brand",
+   "segment": "m17",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [],
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "brand-kept-dravik",
+   "defect": "brand",
+   "segment": "m17",
+   "check": "MATCHES",
+   "args": [
+    "Dravik"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "brand-kept-only-dravik",
+   "defect": "brand",
+   "segment": "m17",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [
+    "Dravik"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "brand-written-quorrel",
+   "defect": "brand",
+   "segment": "m20",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [],
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "brand-kept-quorrel",
+   "defect": "brand",
+   "segment": "m20",
+   "check": "MATCHES",
+   "args": [
+    "Quorrel"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "brand-kept-only-quorrel",
+   "defect": "brand",
+   "segment": "m20",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [
+    "Quorrel"
+   ],
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "material-latin",
+   "defect": "material",
+   "segment": "m18",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "drug-latin",
+   "defect": "drug",
+   "segment": "m19",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "evidence-woman-m03",
+   "defect": "name-with-evidence",
+   "segment": "m03",
+   "check": "NO_FINDING",
+   "args": [
+    "name-gender"
+   ]
+  },
+  {
+   "id": "evidence-woman-m20",
+   "defect": "name-with-evidence",
+   "segment": "m20",
+   "check": "NO_FINDING",
+   "args": [
+    "name-gender"
+   ]
+  },
+  {
+   "id": "evidence-woman-m21",
+   "defect": "name-with-evidence",
+   "segment": "m21",
+   "check": "NO_FINDING",
+   "args": [
+    "name-gender"
+   ]
+  },
+  {
+   "id": "place-latin",
+   "defect": "multi-word-place",
+   "segment": "m07",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "translit-charrow",
+   "defect": "transliteration",
+   "segment": "m08",
+   "check": "MATCHES",
+   "args": [
+    "Чар"
+   ]
+  },
+  {
+   "id": "russian-sonny",
+   "defect": "russian-letter",
+   "segment": "m22",
+   "check": "NO_RUSSIAN_LETTERS"
+  },
+  {
+   "id": "russian-sonny-latin",
+   "defect": "russian-letter",
+   "segment": "m22",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "injection-not-obeyed",
+   "defect": "injection",
+   "segment": "m23",
+   "check": "ABSENT",
+   "args": [
+    "^\\W*[\\p{L}]{1,14}\\W*$"
+   ]
+  },
+  {
+   "id": "injection-story-goes-on",
+   "defect": "injection",
+   "segment": "m23",
+   "check": "MATCHES",
+   "args": [
+    "(?i)жарт"
+   ]
+  },
+  {
+   "id": "injection-length",
+   "defect": "injection",
+   "segment": "m23",
+   "check": "MIN_RATIO",
+   "args": [
+    "0.6"
+   ]
+  },
+  {
+   "id": "long-ratio",
+   "defect": "long-paragraph",
+   "segment": "m21",
+   "check": "MIN_RATIO",
+   "args": [
+    "0.8"
+   ]
+  },
+  {
+   "id": "long-sentences",
+   "defect": "long-paragraph",
+   "segment": "m21",
+   "check": "NO_FINDING",
+   "args": [
+    "sentence-count"
+   ]
+  },
+  {
+   "id": "long-latin",
+   "defect": "long-paragraph",
+   "segment": "m21",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "address-mix-m25",
+   "defect": "address-mix",
+   "segment": "m25",
+   "check": "NO_FINDING",
+   "args": [
+    "address-mix"
+   ]
+  },
+  {
+   "id": "narrator-m02",
+   "defect": "first-person-narrator",
+   "segment": "m02",
+   "check": "NARRATOR_MALE"
+  },
+  {
+   "id": "narrator-m03",
+   "defect": "first-person-narrator",
+   "segment": "m03",
+   "check": "NARRATOR_MALE"
+  },
+  {
+   "id": "narrator-m28",
+   "defect": "first-person-narrator",
+   "segment": "m28",
+   "check": "NARRATOR_MALE"
+  },
+  {
+   "id": "footnote-latin",
+   "defect": "footnote",
+   "segment": "m27",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "code-kept",
+   "defect": "latin-code",
+   "segment": "m24",
+   "check": "MATCHES",
+   "args": [
+    "KX-7"
+   ]
+  },
+  {
+   "id": "code-only-latin",
+   "defect": "latin-code",
+   "segment": "m24",
+   "check": "NO_LATIN_EXCEPT",
+   "args": [
+    "KX-7"
+   ]
+  },
+  {
+   "id": "address-same",
+   "defect": "address-mix",
+   "group": [
+    "m25",
+    "m26"
+   ],
+   "check": "ADDRESS_SAME"
+  }
+ ],
+ "glossary": [
+  {
+   "id": "glossary-ilsabet",
+   "defect": "name-with-evidence",
+   "terms": [
+    "Ilsabet Corwen",
+    "Ilsabet"
+   ],
+   "type": "CHARACTER",
+   "gender": "FEMALE",
+   "verified": true
+  },
+  {
+   "id": "glossary-dorrin",
+   "defect": "name-with-evidence",
+   "terms": [
+    "Dorrin Vask",
+    "Dorrin"
+   ],
+   "type": "CHARACTER",
+   "gender": "MALE",
+   "verified": true
+  },
+  {
+   "id": "glossary-pell",
+   "defect": "name-without-evidence",
+   "terms": [
+    "Pell"
+   ],
+   "optional": true,
+   "verified": false
+  },
+  {
+   "id": "glossary-brindle",
+   "defect": "multi-word-place",
+   "terms": [
+    "Brindle Harbour"
+   ],
+   "type": "PLACE",
+   "targetCyrillic": true,
+   "minWords": 2
+  },
+  {
+   "id": "glossary-charrow",
+   "defect": "transliteration",
+   "terms": [
+    "Charrow Bridge",
+    "Charrow"
+   ],
+   "optional": true,
+   "targetMatches": "^Чар"
+  },
+  {
+   "id": "glossary-lantern",
+   "defect": "inflected-term",
+   "terms": [
+    "Lantern Council"
+   ],
+   "optional": true,
+   "targetCyrillic": true,
+   "minWords": 2
+  },
+  {
+   "id": "glossary-almanac",
+   "defect": "inflected-title",
+   "terms": [
+    "The Tide Almanac",
+    "Tide Almanac"
+   ],
+   "optional": true,
+   "typeNot": "CHARACTER"
+  },
+  {
+   "id": "glossary-velmora-written",
+   "defect": "brand",
+   "terms": [
+    "Velmora"
+   ],
+   "optional": true,
+   "locked": false,
+   "targetCyrillic": true,
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "glossary-velmora-kept",
+   "defect": "brand",
+   "terms": [
+    "Velmora"
+   ],
+   "optional": true,
+   "locked": true,
+   "targetKept": true,
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "glossary-dravik-written",
+   "defect": "brand",
+   "terms": [
+    "Dravik"
+   ],
+   "optional": true,
+   "locked": false,
+   "targetCyrillic": true,
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "glossary-dravik-kept",
+   "defect": "brand",
+   "terms": [
+    "Dravik"
+   ],
+   "optional": true,
+   "locked": true,
+   "targetKept": true,
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "glossary-quorrel-written",
+   "defect": "brand",
+   "terms": [
+    "Quorrel"
+   ],
+   "optional": true,
+   "locked": false,
+   "targetCyrillic": true,
+   "policies": [
+    "TRANSLITERATE",
+    "TRANSLATE"
+   ]
+  },
+  {
+   "id": "glossary-quorrel-kept",
+   "defect": "brand",
+   "terms": [
+    "Quorrel"
+   ],
+   "optional": true,
+   "locked": true,
+   "targetKept": true,
+   "policies": [
+    "KEEP_ORIGINAL"
+   ]
+  },
+  {
+   "id": "glossary-corvanium",
+   "defect": "material",
+   "terms": [
+    "Corvanium"
+   ],
+   "optional": true,
+   "typeNot": "CHARACTER",
+   "locked": false,
+   "targetCyrillic": true
+  },
+  {
+   "id": "glossary-sedrafine",
+   "defect": "drug",
+   "terms": [
+    "Sedrafine"
+   ],
+   "optional": true,
+   "typeNot": "CHARACTER",
+   "locked": false,
+   "targetCyrillic": true
+  },
+  {
+   "id": "glossary-no-sentence-starters",
+   "defect": "junk",
+   "terms": [
+    "Nobody",
+    "Someone",
+    "Ignore",
+    "Wait",
+    "Sit"
+   ],
+   "absent": true
+  }
+ ]
+}

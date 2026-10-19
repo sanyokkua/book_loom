@@ -6,6 +6,7 @@ import static ua.bookloom.app.cli.TranslateCommandTestFakes.RecordingProviderCon
 import static ua.bookloom.app.cli.TranslateCommandTestFakes.ScriptedProviderVerifier;
 
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -37,9 +38,9 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -63,7 +64,7 @@ class TranslateCommandTest {
         assertThat(exit).isEqualTo(0);
         assertThat(Files.readString(destination)).isEqualTo("HE OPENED THE *OLD* DOOR.\n");
         assertThat(consoleText(console).lines())
-                .containsExactly("Completed: " + destination + " (accepted=1, flagged=0)");
+                .containsExactly("Completed: " + destination + " (accepted=0, flagged=1)");
     }
 
     // Pseudo remains offline: it creates the fixed model but neither registers nor verifies a provider.
@@ -107,7 +108,7 @@ class TranslateCommandTest {
                         "connection: ok",
                         "models: ok",
                         "inference: ok (structured output: supported)",
-                        "Completed: " + tempDir.resolve("Book.uk.md") + " (accepted=1, flagged=0)");
+                        "Completed: " + tempDir.resolve("Book.uk.md") + " (accepted=0, flagged=1)");
     }
 
     // Explicit endpoint and timeout flags alter only the configuration registered for this command run.
@@ -284,26 +285,26 @@ class TranslateCommandTest {
         assertThat(exit).isEqualTo(2);
         assertThat(consoleText(console).lines())
                 .containsExactly(
-                        "Invalid command arguments: " + invalidReason(invalidCase),
-                        "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
-                                + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
-                                + "[--base-url <url>] [--timeout <seconds>]");
+                        "Invalid command arguments: " + invalidReason(invalidCase), TranslateCommandTestFakes.USAGE);
         assertThat(children()).isEqualTo(before);
     }
 
     private TranslateCommand command() throws IOException {
-        final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
-        final StartupContext startup = new StartupContext(AppPaths.of(tempDir, logDir), AppEnvironment.DEV);
-        return Guice.createInjector(new CoreModules(startup)).getInstance(TranslateCommand.class);
+        return core().getInstance(TranslateCommand.class);
     }
 
     private TranslateCommand command(ProviderConfigs configs, ProviderVerifier verifier, ChatModelFactory models)
             throws IOException {
+        return TranslateCommandTestFakes.commandOver(core(), models, configs, verifier);
+    }
+
+    private Injector core() throws IOException {
         final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
-        final StartupContext startup = new StartupContext(AppPaths.of(tempDir, logDir), AppEnvironment.DEV);
-        final TranslationEngine engine =
-                Guice.createInjector(new CoreModules(startup)).getInstance(TranslationEngine.class);
-        return new TranslateCommand(engine, models, configs, verifier);
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(tempDir, logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
+        return Guice.createInjector(new CoreModules(startup));
     }
 
     private List<String> argumentsFor(String invalidCase) throws IOException {

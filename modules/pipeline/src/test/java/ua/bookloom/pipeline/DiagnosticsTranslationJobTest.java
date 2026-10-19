@@ -3,10 +3,11 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
@@ -39,12 +40,12 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -52,6 +53,8 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.run.RunStores;
 
 /** Verifies MDC correlation and one-time lifecycle logging at the job boundary. */
 class DiagnosticsTranslationJobTest {
@@ -102,7 +105,8 @@ class DiagnosticsTranslationJobTest {
         assertThat(model.observed()).extracting(MdcObservation::segment).containsExactly("Book.md:0", "Book.md:0");
         final String jobId = Objects.requireNonNull(model.observed().getFirst().job(), "job MDC");
         assertThat(model.observed()).extracting(MdcObservation::job).containsOnly(jobId);
-        assertThat(pausedMdc.get()).isEqualTo(new MdcObservation(jobId, null));
+        // The pause falls between the segment's start and its decision, so its lines name the segment too.
+        assertThat(pausedMdc.get()).isEqualTo(new MdcObservation(jobId, "Book.md:0"));
         assertThat(await(workers.submit(DiagnosticsTranslationJobTest::currentMdc)))
                 .isEqualTo(new MdcObservation(null, null));
         shutdown(workers);
@@ -115,10 +119,8 @@ class DiagnosticsTranslationJobTest {
         final MdcRecordingModel firstModel = new MdcRecordingModel(replies("ONE."));
         final MdcRecordingModel secondModel = new MdcRecordingModel(replies("ONE."));
 
-        final JobReport first = report(job(documents(), source, tempDir.resolve("First.uk.md"), firstModel)
-                .run());
-        final JobReport second = report(job(documents(), source, tempDir.resolve("Second.uk.md"), secondModel)
-                .run());
+        final JobReport first = report(job(source, firstModel).run());
+        final JobReport second = report(job(source, secondModel).run());
 
         assertThat(first.end()).isEqualTo(JobState.COMPLETED);
         assertThat(second.end()).isEqualTo(JobState.COMPLETED);
@@ -147,12 +149,12 @@ class DiagnosticsTranslationJobTest {
     @Test
     void logging_jobLifecycle_containsRequiredFields() {
         final Path source = markdown("One.");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final TranslationJobImpl translation = job(documents(), source, destination, replies("ONE."));
+        final TestProject project = project(source, brief("en", "uk"));
+        final TranslationJobImpl translation = job(project, replies("ONE."));
 
         translation.run();
 
-        assertLifecycleLogs(source, destination);
+        assertLifecycleLogs(project);
     }
 
     // Logging the caught model throwable again at the job level would create a second boundary cause entry.
@@ -167,13 +169,12 @@ class DiagnosticsTranslationJobTest {
         assertOnlyErrorCarries(cause);
     }
 
-    // Wrapping a post-open release fault as a startup refusal would lose this failed report and its MDC cleanup.
+    // An unexpected fault while storing a decision must end as a failed report with one error line and no MDC left.
     @Test
     void logging_boundaryThrow_logsSingleErrorAndCleansMdc() {
-        final IllegalStateException cause = new IllegalStateException("source release fault");
-        final DocumentPort port = throwingInitialClose(documents(), cause);
-        final TranslationJobImpl translation =
-                job(port, markdown("One."), tempDir.resolve("Book.uk.md"), replies("ONE."));
+        final IllegalStateException cause = new IllegalStateException("checkpoint fault");
+        final TestProject project = withCheckpoint(project(markdown("One."), brief("en", "uk")), cause);
+        final TranslationJobImpl translation = job(project, replies("ONE."));
 
         final Result<JobReport> result = translation.run();
 
@@ -189,13 +190,11 @@ class DiagnosticsTranslationJobTest {
     @Test
     void run_unmaskThrowAfterPriorDecisions_preservesProgressAndCause() {
         final IllegalStateException cause = new IllegalStateException("unmask fault");
-        final AppError invalid = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final TranslationJobImpl translation = job(
-                new ThrowingUnmaskPort(documents(), 2, cause),
+                documents -> new ThrowingUnmaskPort(documents, 2, cause),
                 markdown("One.\n\nTwo.\n\nThree."),
-                tempDir.resolve("Book.uk.md"),
                 replies("ONE.")
-                        .answer(Result.err(invalid))
+                        .answer(TranslationJobTestSupport.cutOffReply())
                         .answer(Result.ok(new ChatResponse(
                                 TranslationJobTestSupport.targetReply("THREE."),
                                 ua.bookloom.api.llm.FinishReason.STOP))));
@@ -219,10 +218,11 @@ class DiagnosticsTranslationJobTest {
 
         final Future<Result<JobReport>> run = workers.submit(translation::run);
         awaitPaused(pauses);
-
-        assertRecoveryWarning();
+        // Read the log only once the job thread is done: it goes on logging its recovery wait after the pause.
         translation.cancel();
         assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
+
+        assertRecoveryWarning();
         shutdown(workers);
     }
 
@@ -235,37 +235,50 @@ class DiagnosticsTranslationJobTest {
     }
 
     private TranslationJobImpl markdownJob(final ChatModel model, final String content) {
-        return job(documents(), markdown(content), tempDir.resolve("Book.uk.md"), model);
+        return job(markdown(content), model);
     }
 
     private Path markdown(final String content) {
         return TestBooks.markdown(tempDir.resolve("Book.md"), content);
     }
 
-    private static DocumentPort throwingInitialClose(final DocumentPort delegate, final RuntimeException cause) {
-        return new BookExporterTestSupport.ForwardingDocumentPort(delegate) {
-            @Override
-            public Result<Boolean> close(final Document document) {
-                throw cause;
-            }
+    private static TestProject withCheckpoint(final TestProject project, final RuntimeException failure) {
+        final CheckpointPort throwing = commit -> {
+            throw failure;
         };
+        final RunStores stores = project.stores();
+        return new TestProject(
+                project.id(),
+                new RunStores(
+                        stores.projects(),
+                        stores.segments(),
+                        throwing,
+                        stores.openProjects(),
+                        stores.runs(),
+                        stores.glossary(),
+                        stores.tm(),
+                        stores.summaries(),
+                        stores.lexicon()),
+                project.documents(),
+                project.deferrals());
     }
 
-    private void assertLifecycleLogs(final Path source, final Path destination) {
+    private void assertLifecycleLogs(final TestProject project) {
         final ILoggingEvent start = onlyEvent(Level.INFO, "Translation job started");
         final ILoggingEvent end = onlyEvent(Level.INFO, "Translation job ended");
         assertThat(start.getFormattedMessage())
                 .contains(
+                        "project=" + project.id(),
                         "format=MARKDOWN",
-                        "source=" + source,
-                        "destination=" + destination,
-                        "targetLanguage=uk",
                         "sourceLanguage=en",
+                        "targetLanguage=uk",
+                        "mode=UNATTENDED",
+                        "dial=FAST",
+                        "contextSize=16384",
                         "pausePoints=[]",
                         "segments=1",
                         "sections=1");
-        assertThat(end.getFormattedMessage())
-                .contains("state=COMPLETED", "segments=1", "accepted=1", "flagged=0", "written=" + destination);
+        assertThat(end.getFormattedMessage()).contains("state=COMPLETED", "segments=1", "accepted=1", "flagged=0");
         assertThat(start.getMDCPropertyMap().get("job")).isNotBlank();
         assertThat(end.getMDCPropertyMap().get("job"))
                 .isEqualTo(start.getMDCPropertyMap().get("job"));
@@ -290,16 +303,17 @@ class DiagnosticsTranslationJobTest {
                 .extracting(FlaggedSegment::segmentId, FlaggedSegment::reason)
                 .containsExactly("Book.md:1", ErrorCode.validation);
         assertThat(result.error()).extracting(AppError::cause).isSameAs(cause);
-        assertThat(events)
-                .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly(
-                        "StageStarted",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "ModelCallStarted",
-                        "Finished");
+        // The flagged-at-once second segment has no draft to show; the third ends in the fault before one.
+        assertThat(String.join(
+                        " ",
+                        events.stream()
+                                .map(event -> event.getClass().getSimpleName())
+                                .filter(name -> !name.equals("CallSnapshotUpdated"))
+                                .toList()))
+                .isEqualTo("StageStarted StageStarted"
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDrafted SegmentDecided"
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDecided"
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);
         assertOnlyErrorCarries(cause);
     }
@@ -343,7 +357,7 @@ class DiagnosticsTranslationJobTest {
     private record MdcObservation(
             @Nullable String job, @Nullable String segment) {}
 
-    private static final class ThrowingUnmaskPort extends BookExporterTestSupport.ForwardingDocumentPort {
+    private static final class ThrowingUnmaskPort extends TestDocuments.ForwardingPort {
 
         private final int failingCall;
         private final RuntimeException failure;

@@ -1,0 +1,65 @@
+package ua.bookloom.pipeline.checks;
+
+/** What a deterministic text check found. */
+public enum FindingKind {
+
+    /** A word that holds letters of the target script beside a letter of another script or a digit. */
+    MIXED_SCRIPT,
+
+    /** A quote pair opened and never closed, closed without opening, or closed by the wrong mark. */
+    UNBALANCED_QUOTES,
+
+    /** A whole paragraph that is still in the source language. */
+    LEFTOVER_LANGUAGE,
+
+    /** The same word written twice in a row. */
+    DUPLICATE_WORD,
+
+    /** A space where none belongs: doubled, before a full stop or comma, inside a bracket. */
+    SPACING,
+
+    /** A past-tense word of the narrator's whose gender is not the narrator's. */
+    GENDER,
+
+    /** A word that is not a real word of the target language: garbled or coined, written in the right script. */
+    UNKNOWN_WORD,
+
+    /** A word with a letter the target language's alphabet does not have. */
+    ALPHABET,
+
+    /** A sentence of the source with no counterpart in the target. */
+    SENTENCE_MISSING,
+
+    /** A glossary name the source calls out that the target no longer has. */
+    VOCATIVE_MISSING,
+
+    /** Reply structure (braces, brackets, a wrapper label) the model wrote into the text. */
+    PROTOCOL_LEAK,
+
+    /** A number the source writes in digits that the target changed or lost. */
+    NUMBER_CHANGED,
+
+    /** A glossary name of the source replaced by another glossary name in the target. */
+    NAME_SWAP,
+
+    /** A woman's name written with a man's verb ending or declension. */
+    NAME_GENDER,
+
+    /** A run of Latin words copied from the source into a target written in another script. */
+    LATIN_RUN,
+
+    /** A glossary name the source holds that the target has lost. */
+    NAME_MISSING,
+
+    /** A glossary name the target spells another way than the glossary does. */
+    NAME_SPELLING,
+
+    /** A word of another language that the target language's file lists with its replacement. */
+    FOREIGN_WORD,
+
+    /** A UUID, hexadecimal string, ISBN, web address or e-mail address of the source that the target changed or lost. */
+    IDENTIFIER_CHANGED,
+
+    /** One quoted speech that addresses its listener with ти-forms and capitalised Ви-forms together. */
+    ADDRESS_MIX
+}

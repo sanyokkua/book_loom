@@ -90,7 +90,7 @@ class Fb2EntityExpansionTest {
     @Test
     void read_externalDoctype_resolvesFromBundledListWithoutNetwork() {
         final WireMockServer server =
-                new WireMockServer(WireMockConfiguration.options().dynamicPort());
+                new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
         server.start();
         try {
             final String doctype =

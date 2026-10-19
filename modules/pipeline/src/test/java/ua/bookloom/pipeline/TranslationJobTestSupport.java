@@ -3,8 +3,11 @@ package ua.bookloom.pipeline;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -12,55 +15,262 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.DeferralRepository;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
+import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
+import ua.bookloom.api.persistence.TmRepository;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
+import ua.bookloom.api.project.AlsoTranslate;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.SegmentCounts;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.run.RunStores;
 
-/** Shared real-document and controlled-model setup for translation job acceptance tests. */
+/** Shared real-document and controlled-model setup for job acceptance tests. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    static final SentenceSplitter SPLITTER =
+            Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 
-    static DocumentPort documents() {
-        return Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
+    /** A book imported through a real {@code ProjectServiceImpl} over in-memory repositories, with the deferral store. */
+    record TestProject(String id, RunStores stores, DocumentPort documents, DeferralRepository deferrals) {}
+
+    static TestProject project(final Path book, final BookBrief brief) {
+        return project(UnaryOperator.identity(), book, brief);
+    }
+
+    /** Imports through the injector's own document port, wrapped by {@code decorate} for the job. */
+    static TestProject project(final UnaryOperator<DocumentPort> decorate, final Path book, final BookBrief brief) {
+        return project(Guice.createInjector(new DocumentModule(), new PersistenceModule()), decorate, book, brief);
+    }
+
+    /** Imports through the given injector, so a test can reach other services over the same stores. */
+    static TestProject project(
+            final Injector injector,
+            final UnaryOperator<DocumentPort> decorate,
+            final Path book,
+            final BookBrief brief) {
+        final DocumentPort documents = decorate.apply(injector.getInstance(DocumentPort.class));
+        final RunStores stores = new RunStores(
+                injector.getInstance(ProjectRepository.class),
+                injector.getInstance(SegmentRepository.class),
+                injector.getInstance(CheckpointPort.class),
+                injector.getInstance(OpenProjects.class),
+                injector.getInstance(RunRepository.class),
+                injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(TmRepository.class),
+                injector.getInstance(SummaryRepository.class),
+                injector.getInstance(LexiconRepository.class));
+        final ProjectServiceImpl service = new ProjectServiceImpl(
+                injector.getInstance(BookInspector.class),
+                documents,
+                stores.projects(),
+                stores.segments(),
+                stores.openProjects());
+        final Result<ImportedBook> importResult = service.importBook(book);
+        final ImportedBook imported =
+                Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());
+        final String id = Objects.requireNonNull(imported.projectId(), "project id");
+        service.updateBrief(id, brief);
+        return new TestProject(id, stores, documents, injector.getInstance(DeferralRepository.class));
+    }
+
+    /** The brief the job tests run with: the Fast dial and the given languages, everything else at its default. */
+    static BookBrief brief(@Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
+        final BookBrief defaults = BookBrief.defaults(sourceLanguage);
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                defaults.genre(),
+                defaults.register(),
+                defaults.voiceEra(),
+                defaults.audience(),
+                defaults.names(),
+                defaults.foreignPassages(),
+                defaults.footnotes(),
+                defaults.units(),
+                defaults.balance(),
+                defaults.alsoTranslate(),
+                QualityDial.FAST);
+    }
+
+    /** The job-test brief on another dial. */
+    static BookBrief brief(
+            @Nullable final String sourceLanguage, @Nullable final String targetLanguage, final QualityDial dial) {
+        final BookBrief fast = brief(sourceLanguage, targetLanguage);
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                fast.alsoTranslate(),
+                dial);
+    }
+
+    /**
+     * The job-test brief with the book's metadata and navigation labels left untranslated, so a test that scripts one
+     * reply per body segment of an EPUB never has an auxiliary segment ask for one.
+     */
+    static BookBrief epubBrief() {
+        final BookBrief fast = brief("en", "uk");
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                new AlsoTranslate(
+                        false,
+                        fast.alsoTranslate().altText(),
+                        false,
+                        fast.alsoTranslate().frontmatter()),
+                fast.dial());
+    }
+
+    /** The job-test brief with the given "Also translate" switches. */
+    static BookBrief briefWith(final AlsoTranslate alsoTranslate) {
+        final BookBrief fast = brief("en", "uk");
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                alsoTranslate,
+                fast.dial());
+    }
+
+    static BookBrief withTarget(final BookBrief brief, final String targetLanguage) {
+        return new BookBrief(
+                brief.sourceLanguage(),
+                targetLanguage,
+                brief.genre(),
+                brief.register(),
+                brief.voiceEra(),
+                brief.audience(),
+                brief.names(),
+                brief.foreignPassages(),
+                brief.footnotes(),
+                brief.units(),
+                brief.balance(),
+                brief.alsoTranslate(),
+                brief.dial());
+    }
+
+    /** The model id every test job is started with, which its run record keeps. */
+    static final String MODEL_NAME = "scripted-model";
+
+    static TranslationJobImpl job(final TestProject project, final ChatModel model) {
+        return job(project, project.id(), model);
+    }
+
+    /** A job asked to run a project id that may not be the imported one. */
+    static TranslationJobImpl job(final TestProject project, final String projectId, final ChatModel model) {
+        return job(project, projectId, model, ReviewMode.UNATTENDED);
+    }
+
+    static TranslationJobImpl job(final TestProject project, final ChatModel model, final ReviewMode mode) {
+        return job(project, project.id(), model, mode);
+    }
+
+    private static TranslationJobImpl job(
+            final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
+        return new TranslationJobImpl(
+                project.documents(),
+                new RunRequest(projectId, mode, null, MODEL_NAME),
+                model,
+                new ObjectMapper(),
+                new PromptTemplates(),
+                project.stores(),
+                qualityLoop(),
+                SPLITTER,
+                ConsistencyPassFixture.over(project),
+                Clock.systemUTC());
+    }
+
+    /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */
+    static QualityLoop qualityLoop() {
+        return Guice.createInjector().getInstance(QualityLoop.class);
+    }
+
+    static TranslationJobImpl job(final Path source, final ChatModel model) {
+        return job(project(source, brief("en", "uk")), model);
     }
 
     static TranslationJobImpl job(
-            final DocumentPort documents, final Path source, final Path destination, final ChatModel model) {
-        return new TranslationJobImpl(
-                documents, new TranslationRequest(source, destination, "uk", "en", false), model, new ObjectMapper());
+            final UnaryOperator<DocumentPort> decorate, final Path source, final ChatModel model) {
+        return job(project(decorate, source, brief("en", "uk")), model);
     }
 
-    static SegmentTranslator segmentTranslator(
-            final DocumentPort documents,
-            final ChatModel model,
-            final ua.bookloom.api.document.BookFormat format,
-            final String targetLanguage,
-            @Nullable final String sourceLanguage) {
-        return new SegmentTranslator(
-                documents,
-                model,
-                format,
-                new DraftPromptBuilder(sourceLanguage, targetLanguage),
-                new DraftReplyParser(new ObjectMapper()));
+    static SegmentCounts counts(final TestProject project) {
+        return Objects.requireNonNull(
+                project.stores()
+                        .segments()
+                        .countsByStatus(project.id(), new AlsoTranslate(false, false, false, false).keptKinds())
+                        .data(),
+                "counts");
+    }
+
+    static SegmentRecord stored(final TestProject project, final String segmentId) {
+        return Objects.requireNonNull(
+                        project.stores()
+                                .segments()
+                                .find(project.id(), segmentId)
+                                .data(),
+                        "find result")
+                .orElseThrow();
     }
 
     static ScriptedChatModel replies(final String... content) {
@@ -69,6 +279,11 @@ final class TranslationJobTestSupport {
             model.answer(Result.ok(new ChatResponse(targetReply(reply), FinishReason.STOP)));
         }
         return model;
+    }
+
+    /** A reply cut off by the length limit, which the run flags as {@code validation} without a repair call. */
+    static Result<ChatResponse> cutOffReply() {
+        return Result.ok(new ChatResponse(targetReply("HE OPENED"), FinishReason.LENGTH));
     }
 
     static String targetReply(final String target) {
@@ -159,7 +374,7 @@ final class TranslationJobTestSupport {
      * Waits like a provider that does not honour an interrupt: the call keeps waiting and returns its answer, which
      * is what the boundary tests need, because they prove what the job does with an answer that arrives anyway.
      */
-    private static void awaitIgnoringInterrupt(final CountDownLatch latch, final String what) {
+    static void awaitIgnoringInterrupt(final CountDownLatch latch, final String what) {
         boolean interrupted = false;
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         try {
@@ -177,111 +392,6 @@ final class TranslationJobTestSupport {
         } finally {
             if (interrupted) {
                 Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    static final class BlockingChatModel implements ChatModel {
-
-        private final ChatModel delegate;
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        BlockingChatModel(final ChatModel delegate) {
-            this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            entered.countDown();
-            await(released);
-            return delegate.chat(request);
-        }
-
-        void awaitEntered() {
-            await(entered);
-        }
-
-        void release() {
-            released.countDown();
-        }
-
-        private void await(final CountDownLatch latch) {
-            awaitIgnoringInterrupt(latch, "controlled model");
-        }
-    }
-
-    static final class SecondBlockingChatModel implements ChatModel {
-
-        private final ChatModel delegate;
-        private final AtomicInteger calls = new AtomicInteger();
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        SecondBlockingChatModel(final ChatModel delegate) {
-            this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            if (calls.incrementAndGet() == 2) {
-                entered.countDown();
-                await(released);
-            }
-            return delegate.chat(request);
-        }
-
-        void awaitSecondCall() {
-            await(entered);
-        }
-
-        void releaseSecondCall() {
-            released.countDown();
-        }
-
-        private static void await(final CountDownLatch latch) {
-            awaitIgnoringInterrupt(latch, "second model call");
-        }
-    }
-
-    static final class BlockingClosePort extends BookExporterTestSupport.ForwardingDocumentPort {
-
-        private final AtomicInteger closes = new AtomicInteger();
-        private final int blockingClose;
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        BlockingClosePort(final DocumentPort delegate, final int blockingClose) {
-            super(delegate);
-            this.blockingClose = blockingClose;
-        }
-
-        @Override
-        public Result<Boolean> close(final ua.bookloom.api.document.Document document) {
-            final Result<Boolean> result = super.close(document);
-            if (closes.incrementAndGet() == blockingClose) {
-                entered.countDown();
-                await(released);
-            }
-            return result;
-        }
-
-        void awaitBlockingClose() {
-            await(entered);
-        }
-
-        void releaseClose() {
-            released.countDown();
-        }
-
-        private static void await(final CountDownLatch latch) {
-            try {
-                if (!latch.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new AssertionError("timed out waiting for export close");
-                }
-            } catch (InterruptedException cause) {
-                Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted waiting for export close", cause);
             }
         }
     }

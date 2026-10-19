@@ -1,0 +1,90 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "ru",
+ "drafts": [
+  {
+   "name": "ru-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)^(?!.*[“”]).*«.*».*$",
+    "injection": false
+   }
+  },
+  {
+   "name": "ru-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)устала|уставшая|утомлена",
+    "injection": false
+   }
+  },
+  {
+   "name": "ru-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)\\bустал\\b|уставший|утомлён|утомлен\\b",
+    "injection": false
+   }
+  },
+  {
+   "name": "ru-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)глава",
+    "injection": false
+   }
+  },
+  {
+   "name": "ru-no-ukrainian",
+   "masked": "He had been walking all night.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?su)^[^іїєґІЇЄҐ]+$",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "ru-gender",
+   "kind": "gender",
+   "source": "She was tired, but she kept walking.",
+   "candidate": "Она устал, но продолжала идти.",
+   "defective": true,
+   "rationale": "masculine verb for she"
+  },
+  {
+   "id": "ru-gender-clean",
+   "kind": "gender",
+   "source": "She was tired, but she kept walking.",
+   "candidate": "Она устала, но продолжала идти.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "ru-ukrainian-leak",
+   "kind": "leftover-language",
+   "source": "He did not know why she left.",
+   "candidate": "Он не знал, чому вона пішла.",
+   "defective": true,
+   "rationale": "Ukrainian words in Russian"
+  },
+  {
+   "id": "ru-ukrainian-leak-clean",
+   "kind": "leftover-language",
+   "source": "He did not know why she left.",
+   "candidate": "Он не знал, почему она ушла.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

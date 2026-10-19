@@ -5,7 +5,8 @@ import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * How one stage status is drawn, so that it is told apart by a glyph and by words, never by colour alone.
+ * How one status chip is drawn — a stage status, or an uncertain brief field — so that it is told apart by a glyph and
+ * by words, never by colour alone.
  *
  * @param glyph the mark shown before the text; distinct for every status
  * @param styleClass the one chip style class of the status
@@ -26,6 +27,15 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
             case FAILED -> new ChipLook("✕", "chip-err", MessageKey.SETTINGS_STATUS_FAILED);
             case SKIPPED -> new ChipLook("–", "chip-neutral", MessageKey.SETTINGS_STATUS_SKIPPED);
         };
+    }
+
+    /**
+     * The look of a suggested Book Brief field the samples of the book did not agree on.
+     *
+     * @return the look of the uncertain chip
+     */
+    static ChipLook uncertain() {
+        return new ChipLook("?", "chip-warn", MessageKey.BRIEF_EVIDENCE_UNCERTAIN);
     }
 
     /**

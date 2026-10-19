@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -31,6 +30,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -39,15 +39,31 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDrafted;
+import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 
 /** Proves event order, count snapshots, reports, subscribers, and atomic run claiming. */
 class TranslationJobEventsTest {
+
+    /** What one segment accepted on its first call announces, in order. */
+    private static final List<String> ACCEPTED_ON_FIRST_CALL = List.of(
+            "SegmentStarted",
+            "ContextAssembled",
+            "ModelCallStarted",
+            "CallSnapshotUpdated",
+            "ModelCallFinished",
+            "CallSnapshotUpdated",
+            "SegmentDrafted",
+            "SegmentDecided",
+            "CallSnapshotUpdated");
 
     @TempDir
     private Path tempDir;
@@ -57,29 +73,27 @@ class TranslationJobEventsTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots; the request events have
-    // their own test, so they are left out of the order here.
+    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots, and a screen built from
+    // the events alone would show a segment it never announced.
     @Test
     void events_threeAcceptedSegments_areExactAndOrdered() {
-        final TranslationJobImpl translation = markdownJob(replies("ONE.", "TWO.", "THREE."), "One.\n\nTwo.\n\nThree.");
+        final TranslationJobImpl translation = job(
+                TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree."),
+                replies("ONE.", "TWO.", "THREE."));
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
         final Result<JobReport> result = translation.run();
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(namesWithoutRequests(events))
-                .containsExactly(
-                        "StageStarted",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "StageStarted",
-                        "Finished");
         assertThat(events)
-                .filteredOn(SegmentDecided.class::isInstance)
-                .extracting(event -> ((SegmentDecided) event).progress().pending())
-                .containsExactly(2, 1, 0);
+                .extracting(TranslationJobEventsTest::label)
+                .containsExactlyElementsOf(concat(List.of(
+                        List.of("StageStarted PREP", "StageStarted TRANSLATE"),
+                        acceptedOnFirstCall("Book.txt:0", 1, 2),
+                        acceptedOnFirstCall("Book.txt:1", 2, 1),
+                        acceptedOnFirstCall("Book.txt:2", 3, 0),
+                        List.of("Finished COMPLETED"))));
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
                 .extracting(
@@ -89,7 +103,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3), tuple(JobStage.EXPORT, 0, 1, 3, 0, 0));
+                .containsExactly(tuple(JobStage.PREP, 1, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -121,9 +135,8 @@ class TranslationJobEventsTest {
     // Losing a flag reason or its segment order would change this preserved report list.
     @Test
     void report_flaggedSegments_retainsOrderedIdsAndReasons() {
-        final AppError validation = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final ScriptedChatModel model = replies("ONE.")
-                .answer(Result.err(validation))
+                .answer(TranslationJobTestSupport.cutOffReply())
                 .answer(Result.ok(new ChatResponse("", FinishReason.STOP)));
 
         final JobReport result =
@@ -152,7 +165,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(5);
+        assertThat(healthy).hasSize(2 + ACCEPTED_ON_FIRST_CALL.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -189,7 +202,8 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "ModelCallStarted", "SegmentDecided", "StageStarted", "Finished");
+                .containsExactlyElementsOf(concat(
+                        List.of(List.of("StageStarted", "StageStarted"), ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -210,43 +224,21 @@ class TranslationJobEventsTest {
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly(
-                        "StageStarted",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "Paused",
-                        "Resumed",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "StageStarted",
-                        "Finished");
+                .containsExactlyElementsOf(concat(List.of(
+                        List.of("StageStarted", "StageStarted"),
+                        ACCEPTED_ON_FIRST_CALL,
+                        List.of("Paused", "Resumed"),
+                        ACCEPTED_ON_FIRST_CALL,
+                        List.of("Finished"))));
         shutdown(workers);
     }
 
-    // Resetting export progress to zero would make the final EPUB section index wrong.
-    @Test
-    void progress_exportRetainsLastSectionIndex() {
-        final Path source =
-                TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
-        final TranslationJobImpl translation =
-                job(documents(), source, tempDir.resolve("Book.uk.epub"), replies("ONE.", "TWO.", "THREE."));
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(events::add);
-
-        translation.run();
-
-        assertThat(events)
-                .filteredOn(StageStarted.class::isInstance)
-                .extracting(event -> ((StageStarted) event).progress().section())
-                .containsExactly(0, 1);
-    }
-
-    // Treating an empty book as having no section would reject this zero-count export progress.
+    // Treating an empty book as having no section would reject this zero-count progress.
     @Test
     void progress_emptyBook_usesSectionZero() {
         final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "");
         final ScriptedChatModel model = replies();
-        final TranslationJobImpl translation = job(documents(), source, tempDir.resolve("Book.uk.txt"), model);
+        final TranslationJobImpl translation = job(source, model);
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
@@ -264,7 +256,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0), tuple(JobStage.EXPORT, 0, 1, 0, 0, 0));
+                .containsExactly(tuple(JobStage.PREP, 0, 1, 0, 0, 0), tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0));
         assertThat(events).noneMatch(SegmentDecided.class::isInstance);
         assertThat(model.requests()).isEmpty();
     }
@@ -273,8 +265,7 @@ class TranslationJobEventsTest {
     @Test
     void run_concurrentCallers_onlyOneClaimsExecution() {
         final ScriptedChatModel scripted = replies("ONE.");
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(scripted);
+        final BlockingModels.BlockingChatModel model = new BlockingModels.BlockingChatModel(scripted);
         final TranslationJobImpl translation = markdownJob(model, "One.");
         final CountDownLatch start = new CountDownLatch(1);
         final CountDownLatch loserFinished = new CountDownLatch(1);
@@ -303,18 +294,45 @@ class TranslationJobEventsTest {
     }
 
     private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
-        return job(
-                documents(),
-                TestBooks.markdown(tempDir.resolve("Book.md"), content),
-                tempDir.resolve("Book.uk.md"),
-                model);
+        return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
-    private static List<String> namesWithoutRequests(final List<JobEvent> events) {
-        return events.stream()
-                .filter(event -> !(event instanceof ModelCallStarted))
-                .map(event -> event.getClass().getSimpleName())
-                .toList();
+    // The shown call waits, is answered, and is shown once more with the decision noted on it.
+    private static List<String> acceptedOnFirstCall(final String segmentId, final long callId, final int pendingAfter) {
+        return List.of(
+                "SegmentStarted " + segmentId,
+                "ContextAssembled",
+                "ModelCallStarted DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " WAITING outcomes=0",
+                "ModelCallFinished DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
+                "SegmentDrafted " + segmentId,
+                "SegmentDecided " + segmentId + " ACCEPTED pending=" + pendingAfter,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=1");
+    }
+
+    private static List<String> concat(final List<List<String>> parts) {
+        return parts.stream().flatMap(List::stream).toList();
+    }
+
+    private static String label(final JobEvent event) {
+        return switch (event) {
+            case StageStarted started -> "StageStarted " + started.stage();
+            case SegmentStarted started -> "SegmentStarted " + started.segmentId();
+            case ModelCallStarted started -> "ModelCallStarted " + started.kind() + " " + started.segmentId();
+            case ModelCallFinished finished -> "ModelCallFinished " + finished.kind() + " " + finished.segmentId();
+            case SegmentDrafted drafted -> "SegmentDrafted " + drafted.segmentId();
+            case SegmentDecided decided ->
+                "SegmentDecided " + decided.segmentId() + " " + decided.status() + " pending="
+                        + decided.progress().pending();
+            case MemoryUpdated updated -> "MemoryUpdated " + updated.kind();
+            case Finished finished -> "Finished " + finished.report().end();
+            case CallSnapshotUpdated updated ->
+                "CallSnapshotUpdated " + updated.snapshot().callId() + " "
+                        + updated.snapshot().state() + " outcomes="
+                        + updated.snapshot().outcomes().size();
+            default -> event.getClass().getSimpleName();
+        };
     }
 
     private static void observeFinishedState(

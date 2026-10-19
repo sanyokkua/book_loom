@@ -1,0 +1,136 @@
+package ua.bookloom.pipeline.reviewer;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+/**
+ * Whether an edit does what its criterion says, for the criteria whose meaning code can read off the change: an
+ * omission fix adds words, an addition fix removes them, a quotes fix touches a quotation mark or bracket, a language fix
+ * touches a letter of another script than the candidate's own, a terminology fix renders a name the way the candidate
+ * or the glossary already does, a meaning, terminology, gender or agreement fix does not delete more than half of its
+ * quote, a gender or agreement fix changes only word endings and never adds or drops a function word, and a meaning fix
+ * brings in one new word, words the text and the glossary already hold, or words of the candidate's own script —
+ * a replacement in another script is an invention, not a correction. A small model that cannot find a defect still fills the
+ * slot with a paraphrase under one of these names; such an edit is a false alarm, not evidence, and is ignored.
+ */
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+final class CriterionFit {
+
+    private static final int MIN_NAME_LETTERS = 4;
+    private static final int MIN_NAME_STEM = 4;
+    private static final int NAME_ENDING_LETTERS = 2;
+    private static final String PAIR_MARKS = "«»„“”\"()[]{}‹›‘’'";
+
+    /**
+     * Checks one edit against its criterion.
+     *
+     * @param edit the edit as written; never null
+     * @param candidate the whole candidate the quote was found in; never null
+     * @param renderings the glossary renderings known for the chunk; never null
+     * @return {@code true} when the change fits the criterion or the criterion is one code cannot read off the change
+     */
+    static boolean fits(final ReviewEdit edit, final String candidate, final Collection<String> renderings) {
+        return fits(edit, candidate, renderings, Set.of());
+    }
+
+    /**
+     * Checks one edit against its criterion, knowing the target language's function words.
+     *
+     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     *     language lists none, which skips that one rule
+     * @return {@code true} when the change fits the criterion or the criterion is one code cannot read off the change
+     */
+    static boolean fits(
+            final ReviewEdit edit,
+            final String candidate,
+            final Collection<String> renderings,
+            final Set<String> functionWords) {
+        final String quote = edit.quote().strip();
+        final String replacement = edit.replacement().strip();
+        return switch (edit.criterion()) {
+            case OMISSION -> replacement.length() > quote.length();
+            case ADDITION -> replacement.length() < quote.length();
+            case QUOTES -> quote.chars().anyMatch(mark -> PAIR_MARKS.indexOf(mark) >= 0);
+            case LANGUAGE -> hasForeignScriptLetter(quote, candidate);
+            case TERMINOLOGY ->
+                keepsMostOfQuote(quote, replacement) && known(quote, replacement, candidate, renderings);
+            case GENDER, AGREEMENT ->
+                keepsMostOfQuote(quote, replacement)
+                        && !changesNameForm(quote, replacement, renderings)
+                        && WordChange.changesOnlyEndings(quote, replacement)
+                        && !WordChange.changesFunctionWords(quote, replacement, functionWords);
+            case MEANING ->
+                keepsMostOfQuote(quote, replacement)
+                        && !changesNameForm(quote, replacement, renderings)
+                        && (WordChange.bringsInKnownWords(
+                                        quote, replacement, candidate + " " + String.join(" ", renderings))
+                                || !hasForeignScriptLetter(replacement, candidate));
+            default -> true;
+        };
+    }
+
+    // A name's form is the glossary's and the sentence's business: a meaning, gender or agreement edit that re-inflects
+    // a
+    // name (Дейне → Дейн, Ембер → Емберів) made the text worse in a real run, so only a terminology edit may touch one.
+    static boolean changesNameForm(final String quote, final String replacement, final Collection<String> renderings) {
+        // Only a rendering that starts with a capital is a name's: the lexicon's common-noun renderings (господар) are
+        // meant to be inflected and are never held to their spelling.
+        final List<String> stems = renderings.stream()
+                .flatMap(rendering -> Arrays.stream(rendering.split("[^\\p{L}]+")))
+                .filter(word -> word.length() >= MIN_NAME_LETTERS && Character.isUpperCase(word.codePointAt(0)))
+                .map(word -> word.toLowerCase(Locale.ROOT))
+                .map(word -> word.substring(0, Math.max(MIN_NAME_STEM, word.length() - NAME_ENDING_LETTERS)))
+                .distinct()
+                .toList();
+        return !stems.isEmpty() && !nameWords(quote, stems).equals(nameWords(replacement, stems));
+    }
+
+    private static List<String> nameWords(final String text, final List<String> stems) {
+        return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+                .filter(word -> stems.stream().anyMatch(word::startsWith))
+                .sorted()
+                .toList();
+    }
+
+    private static boolean keepsMostOfQuote(final String quote, final String replacement) {
+        return replacement.length() * 2 >= quote.length();
+    }
+
+    // The words the edit brings in: at least one must already stand in the candidate or be a glossary rendering.
+    private static boolean known(
+            final String quote, final String replacement, final String candidate, final Collection<String> renderings) {
+        final String quoted = quote.toLowerCase(Locale.ROOT);
+        final String known = candidate.toLowerCase(Locale.ROOT)
+                + " "
+                + String.join(" ", renderings).toLowerCase(Locale.ROOT);
+        return Arrays.stream(replacement.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+                .filter(word -> !word.isEmpty() && !quoted.contains(word))
+                .anyMatch(known::contains);
+    }
+
+    private static boolean hasForeignScriptLetter(final String quote, final String candidate) {
+        final Character.UnicodeScript own = majorityScript(candidate);
+        return quote.codePoints()
+                .filter(Character::isLetter)
+                .anyMatch(letter -> Character.UnicodeScript.of(letter) != own);
+    }
+
+    static Character.UnicodeScript majorityScript(final String text) {
+        final Map<Character.UnicodeScript, Integer> counts = new EnumMap<>(Character.UnicodeScript.class);
+        text.codePoints()
+                .filter(Character::isLetter)
+                .forEach(letter -> counts.merge(Character.UnicodeScript.of(letter), 1, Integer::sum));
+        return counts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(Character.UnicodeScript.COMMON);
+    }
+}

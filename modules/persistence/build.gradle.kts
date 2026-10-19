@@ -14,4 +14,10 @@ dependencies {
     implementation(project(":api"))
     implementation(project(":util"))
     implementation(libs.guice)
+
+    // The SLF4J facade, used through Lombok's `@Slf4j` by every in-memory adapter — the port boundary that first
+    // classifies and logs a failure (`.claude/rules/logging.md`).
+    implementation(libs.slf4j.api)
+
+    testRuntimeOnly(libs.logback.classic)
 }

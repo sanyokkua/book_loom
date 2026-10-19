@@ -15,11 +15,12 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 
 /** Covers recovery and one-repair handling for structured replies at the document boundary. */
 class StructuredReplySegmentTranslatorTest {
@@ -42,10 +43,10 @@ class StructuredReplySegmentTranslatorTest {
                 "Here is {\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}",
                 "{\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}");
 
-        final Result<Decision> result = translator(documents, model).translate(segment);
+        final Result<DraftOutcome> result = translator(documents, model).translate(segment);
 
-        assertThat(decision(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decision(result).segment().targetInner()).isEqualTo("Він відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Він відчинив *старі* двері.");
         assertThat(model.requests()).hasSize(2);
     }
 
@@ -58,15 +59,15 @@ class StructuredReplySegmentTranslatorTest {
                 .answer(Result.ok(
                         new ChatResponse("{\"target\":\"Він відчинив ⟦g0⟧старі⟦g1⟧ двері.\"}", FinishReason.STOP)));
 
-        final Result<Decision> result = translator(documents, model).translate(segment);
+        final Result<DraftOutcome> result = translator(documents, model).translate(segment);
 
-        assertThat(decision(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("<RejectedReply>")
                 .contains("{\"segments\":")
                 .contains("was not valid JSON")
-                .contains("start with { followed immediately by \"target\"")
+                .contains("starts with {\"target\":\" and ends with \"}")
                 .contains("Never reproduce a rejected prefix");
     }
 
@@ -79,11 +80,12 @@ class StructuredReplySegmentTranslatorTest {
                 .answer(Result.ok(new ChatResponse("{\"target\":", FinishReason.STOP)));
         final AtomicBoolean unmaskCalled = new AtomicBoolean();
 
-        final Result<Decision> result =
+        final Result<DraftOutcome> result =
                 translator(unmaskRecordingPort(documents, unmaskCalled), model).translate(segment);
 
-        assertThat(decision(result).segment().status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decision(result).flagReason()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(DraftStepFixtures.flaggedAtOnce(result))
+                .extracting(AppError::code)
+                .isEqualTo(ErrorCode.validation);
         assertThat(unmaskCalled.get()).isFalse();
     }
 
@@ -95,15 +97,16 @@ class StructuredReplySegmentTranslatorTest {
                 .answer(Result.ok(new ChatResponse("{\"target\":\"\"}", FinishReason.STOP)))
                 .answer(Result.ok(new ChatResponse("{\"target\":", FinishReason.STOP)));
 
-        final Result<Decision> result = translator(documents, model).translate(segment);
+        final Result<DraftOutcome> result = translator(documents, model).translate(segment);
 
-        assertThat(decision(result).segment().status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decision(result).flagReason()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(DraftStepFixtures.flaggedAtOnce(result))
+                .extracting(AppError::code)
+                .isEqualTo(ErrorCode.validation);
         assertThat(model.requests()).hasSize(2);
     }
 
     private SegmentTranslator translator(DocumentPort port, ScriptedChatModel model) {
-        return TranslationJobTestSupport.segmentTranslator(port, model, BookFormat.MARKDOWN, "uk", "en");
+        return DraftStepFixtures.segmentTranslator(port, model, BookFormat.MARKDOWN, "uk", "en");
     }
 
     private Segment segment() {
@@ -119,10 +122,6 @@ class StructuredReplySegmentTranslatorTest {
         return new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(first, FinishReason.STOP)))
                 .answer(Result.ok(new ChatResponse(second, FinishReason.STOP)));
-    }
-
-    private static Decision decision(Result<Decision> result) {
-        return Objects.requireNonNull(result.data(), "decision");
     }
 
     private static DocumentPort unmaskRecordingPort(DocumentPort delegate, AtomicBoolean called) {
@@ -146,6 +145,11 @@ class StructuredReplySegmentTranslatorTest {
             public Result<String> unmask(BookFormat format, Segment segment, String translatedMasked) {
                 called.set(true);
                 return delegate.unmask(format, segment, translatedMasked);
+            }
+
+            @Override
+            public Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode) {
+                return delegate.repairPlaceholders(segment, translatedMasked, mode);
             }
         };
     }

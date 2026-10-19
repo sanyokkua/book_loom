@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, reviewer **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/05_Dependencies/01_DEPENDENCIES.md`,
 `docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md`,
 `docs/specification/04_Build_and_Release/02_QUALITY_GATES.md`
@@ -25,9 +25,9 @@ Three additional licenses are on the allowlist for named bundled dependencies, e
 permissive, all distribution-safe under the jlink runtime image):
 
 | Allowed license  | Bundled dependency                         | Justification                                                                                                                                                                                                                                       |
-|------------------|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------------|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **EPL-1.0**      | Logback (`logback-classic`/`logback-core`) | Eclipse Public License 1.0 is a weak/file-level copyleft that imposes no obligation on the app's own MIT-licensed sources; Logback is used unmodified as a library. Logback is EPL-1.0 / LGPL-2.1 dual — we take the **EPL-1.0** option explicitly. |
-| **ICU License**  | ICU4J                                      | The ICU License is an MIT/X-style permissive license (attribution only); ICU4J is bundled for sentence segmentation and ICU i18n `MessageFormat` (DD-48).                                                                                           |
+| **ICU License**  | ICU4J                                      | The ICU License is an MIT/X-style permissive license (attribution only); ICU4J is bundled for sentence segmentation, charset detection, and ICU i18n `MessageFormat` (DD-48, ADR-0037).                                                              |
 | **JDOM License** | JDOM2                                      | The JDOM License is a permissive, Apache-style BSD-derived license (attribution only, no copyleft); JDOM2 is bundled for FB2/EPUB XML round-trip.                                                                                                   |
 
 GPL/AGPL/SSPL remain banned regardless of the above. A new or transitively-introduced license absent from this allowlist
@@ -47,7 +47,7 @@ This license gate checks *license compliance* only. There is no known-vulnerabil
 ## per-dependency-licenses {#per-dependency-licenses}
 
 | Dependency                          | License                                                                   |
-|-------------------------------------|---------------------------------------------------------------------------|
+|-------------------------------------|-----------------------------------------------------------------------------|
 | sqlite-jdbc (org.xerial)            | Apache-2.0                                                                |
 | Flyway (flyway-core)                | Apache-2.0                                                                |
 | JDBI 3                              | Apache-2.0                                                                |
@@ -56,7 +56,6 @@ This license gate checks *license compliance* only. There is no known-vulnerabil
 | jsoup                               | MIT                                                                       |
 | commonmark-java                     | BSD-2-Clause                                                              |
 | Jackson (databind, datatype-jsr310) | Apache-2.0                                                                |
-| Lingua                              | Apache-2.0                                                                |
 | ICU4J                               | ICU License (permissive, MIT/X-style)                                     |
 | Google Guice                        | Apache-2.0                                                                |
 | JavaFX 25                           | GPLv2 + Classpath Exception (JDK-adjacent; permitted for the runtime)     |

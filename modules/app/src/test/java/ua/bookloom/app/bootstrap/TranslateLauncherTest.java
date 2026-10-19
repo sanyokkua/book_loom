@@ -26,7 +26,9 @@ class TranslateLauncherTest {
     private static final String MARKDOWN = "He opened the *old* door.\n";
     private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
             + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
-            + "[--base-url <url>] [--timeout <seconds>]";
+            + "[--base-url <url>] [--timeout <seconds>] [--quality fast|balanced|max] "
+            + "[--names translate|transliterate|keep] [--review-names] [--max-outage <duration>] [--report <file>] "
+            + "[--stop-after <segments>] [--no-partial]";
 
     @TempDir
     private Path tempDir;
@@ -169,10 +171,10 @@ class TranslateLauncherTest {
                         && line.contains("Book.uk.md")
                         && line.contains("overwrite=true"));
         assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "DEBUG")
-                        && line.contains("translate command report state=COMPLETED")
-                        && line.contains("accepted=1")
-                        && line.contains("flagged=0"));
+                .anyMatch(line -> atLevel(line, "INFO")
+                        && line.contains("translate command run ended state=COMPLETED")
+                        && line.contains("accepted=0")
+                        && line.contains("flagged=1"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("translate command exitCode=0"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("translate launcher exitCode=0"));
     }
@@ -185,7 +187,8 @@ class TranslateLauncherTest {
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job ended state=COMPLETED"));
         assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("Book.md:0") && line.contains("ACCEPTED"));
+                .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("Book.md:0") && line.contains("FLAGGED"));
+        assertThat(logLines).anyMatch(line -> atLevel(line, "WARN") && line.contains("Book.md:0"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "TRACE") && line.contains("Pseudo chat lastUserMessage="));
         assertThat(String.join("\n", logLines))
                 .contains("He opened the ⟦g0⟧old⟦g1⟧ door.")
@@ -210,6 +213,43 @@ class TranslateLauncherTest {
         assertThat(logLines).noneMatch(line -> line.contains("DEBUG"));
         assertThat(logLines).noneMatch(line -> line.contains(" TRACE "));
         assertThat(logLines).noneMatch(line -> line.contains("He opened"));
+    }
+
+    // WHEN a review mode is set for the command line, THEN the run still finishes with one console line and the
+    // log records once that the flag was ignored.
+    @Test
+    void run_reviewModeSet_logsOnceThatTheCommandLineIgnoresIt() throws IOException {
+        final Path source = writeMarkdown(tempDir.resolve("Book.md"));
+        final Path dataDir = tempDir.resolve("mode-data");
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+
+        final int exit = TranslateLauncher.run(
+                List.of(source.toString()),
+                Map.of("BOOKLOOM_DATA_DIR", dataDir.toString(), "BOOKLOOM_REVIEW_MODE", "manual")::get,
+                emptyProperties(),
+                printStream(console));
+        final List<String> logLines = readLog(dataDir.resolve("logs/bookloom.log"));
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(consoleText(console).lines()).hasSize(1);
+        assertThat(logLines)
+                .filteredOn(line -> line.contains("review mode ignored by the command line"))
+                .hasSize(1)
+                .allMatch(line -> line.contains("value=manual"));
+    }
+
+    // WHEN no review mode is set, THEN the command line says nothing about one.
+    @Test
+    void run_noReviewMode_logsNothingAboutIt() throws IOException {
+        final Path source = writeMarkdown(tempDir.resolve("Book.md"));
+        final Path dataDir = tempDir.resolve("no-mode-data");
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+
+        final int exit = TranslateLauncher.run(
+                List.of(source.toString()), environment(dataDir), emptyProperties(), printStream(console));
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(readLog(dataDir.resolve("logs/bookloom.log"))).noneMatch(line -> line.contains("review mode"));
     }
 
     // WHEN an invalid parser branch is selected, THEN DEBUG and WARN explain the reason, and the console shows only the

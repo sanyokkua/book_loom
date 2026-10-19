@@ -1,0 +1,460 @@
+[
+ {
+  "id": "ctrl-clean-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"«Не сьогодні», — сказала вона.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the same line with the right marks is accepted"
+ },
+ {
+  "id": "ctrl-escaped-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, — сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "U+001E and U+001D, escaped as JSON, where « » belong (the glitch of the directed-fix, revision and consistency calls)"
+ },
+ {
+  "id": "ctrl-wrapped-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"\\u001eВін відчинив старі двері.\\u001d\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a whole target wrapped in the two control characters"
+ },
+ {
+  "id": "ctrl-raw-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\u001eНе сьогодні\u001d, — сказала вона.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the same glitch written as raw control characters, which JSON does not allow: not valid JSON, so nothing to map"
+ },
+ {
+  "id": "ctrl-escaped-ru",
+  "kind": "control-chars",
+  "sourceLanguage": "ru",
+  "source": "\"Не сегодня,\" сказала она.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, — сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: the glitch in a dialogue line"
+ },
+ {
+  "id": "ctrl-wrapped-ru",
+  "kind": "control-chars",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"\\u001eВін відчинив стару браму.\\u001d\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: a whole target wrapped"
+ },
+ {
+  "id": "ctrl-odd-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні, — сказала вона.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "one quote code with no partner: the count is odd, so the codes are not guessed at and the reply is refused"
+ },
+ {
+  "id": "ctrl-dash-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, \\u001f сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the dialogue dash written as a third control code is mapped to the em dash with the quote pair"
+ },
+ {
+  "id": "ctrl-inner-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"He opened the old door,\" he said.",
+  "reply": "{\"target\":\"Він відчинив\\u001e старі двері.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a control code after a word, in a source that has quotes, has no place: refused, never stripped"
+ },
+ {
+  "id": "residue-clean-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a clean target is accepted"
+ },
+ {
+  "id": "residue-brace-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\\\"}\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with a quote and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
+ },
+ {
+  "id": "residue-brace-bracket-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\\\"}]}\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with a quote, a brace, a bracket and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
+ },
+ {
+  "id": "residue-tail-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.}]}\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with bare closers; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
+ },
+ {
+  "id": "residue-after-object-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}]}",
+  "expect": "TRAILING_CLOSERS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "closers after the reply's JSON object"
+ },
+ {
+  "id": "residue-brace-ru",
+  "kind": "closer-residue",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"Він відчинив стару браму.\\\"}\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: a quote and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
+ },
+ {
+  "id": "script-clean-en",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "clean"
+ },
+ {
+  "id": "script-latin-tail-en",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі дверіs.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a Latin s after a Cyrillic word"
+ },
+ {
+  "id": "script-latin-tail-ru",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"Він відчинив стару дверіs.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: the same"
+ },
+ {
+  "id": "gender-name-flint-en",
+  "kind": "gender-name",
+  "sourceLanguage": null,
+  "source": "Flint stopped at the door. She was tired.",
+  "reply": "{\"target\":\"Флінт зупинилася біля дверей. Вона була втомлена.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Flint",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "a female character with a consonant-ending name, agreed in the feminine"
+ },
+ {
+  "id": "gender-name-flint-masc-en",
+  "kind": "gender-name",
+  "sourceLanguage": null,
+  "source": "Flint stopped at the door. She was tired.",
+  "reply": "{\"target\":\"Флінт зупинився біля дверей. Вона була втомлена.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Flint",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the verb after the female name is masculine; no production check compares a character's gender with the verb yet"
+ },
+ {
+  "id": "gender-name-chisel-masc-ru",
+  "kind": "gender-name",
+  "sourceLanguage": "ru",
+  "source": "Чизел налила чаю. Она устала.",
+  "reply": "{\"target\":\"Чизел налив чаю. Вона втомилася.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Чизел",
+    "target": "Чизел",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "ru to uk: a masculine verb after a female name"
+ },
+ {
+  "id": "numbers-dropped-digit-en",
+  "kind": "numbers",
+  "sourceLanguage": null,
+  "source": "The vault held 408 coins and 12 bars.",
+  "reply": "{\"target\":\"У сховищі було 408 монет і 12 зливків.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the numbers kept"
+ },
+ {
+  "id": "numbers-changed-en",
+  "kind": "numbers",
+  "sourceLanguage": null,
+  "source": "The vault held 408 coins and 12 bars.",
+  "reply": "{\"target\":\"У сховищі було 48 монет і 12 зливків.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "408 became 48; no production check compares numbers yet"
+ },
+ {
+  "id": "numbers-changed-ru",
+  "kind": "numbers",
+  "sourceLanguage": "ru",
+  "source": "В хранилище лежало 408 монет и 12 слитков.",
+  "reply": "{\"target\":\"У сховищі лежало 48 монет і 12 злитків.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: 408 became 48"
+ },
+ {
+  "id": "kept-brand-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "Nell bought a lens from KESSEL OPTIK on her way home.",
+  "reply": "{\"target\": \"Нелл купила об'єктив у ⟦g0⟧ дорогою додому.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   },
+   {
+    "term": "KESSEL OPTIK",
+    "target": "KESSEL OPTIK",
+    "type": "OTHER",
+    "gender": "UNKNOWN",
+    "locked": true
+   }
+  ],
+  "rationale": "a brand of two Latin words kept as it is written: the paragraph ships translated around the kept run"
+ },
+ {
+  "id": "kept-brand-ru",
+  "kind": "kept-run",
+  "sourceLanguage": "ru",
+  "source": "Нелл купила линзу в KESSEL OPTIK по дороге домой.",
+  "reply": "{\"target\": \"Нелл купила лінзу в ⟦g0⟧ дорогою додому.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Нелл",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   },
+   {
+    "term": "KESSEL OPTIK",
+    "target": "KESSEL OPTIK",
+    "type": "OTHER",
+    "gender": "UNKNOWN",
+    "locked": true
+   }
+  ],
+  "rationale": "ru to uk: the same brand kept between translated words"
+ },
+ {
+  "id": "kept-magazine-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "On the train he read the latest Weekly Courier Digest from cover to cover.",
+  "reply": "{\"target\": \"У поїзді він прочитав свіжий ⟦g0⟧ від початку до кінця.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Weekly Courier Digest",
+    "target": "Weekly Courier Digest",
+    "type": "TITLE",
+    "gender": "UNKNOWN",
+    "locked": true
+   }
+  ],
+  "rationale": "a magazine title of three Latin words kept as it is written"
+ },
+ {
+  "id": "kept-uuid-en",
+  "kind": "kept-run",
+  "sourceLanguage": null,
+  "source": "The ticket was filed under 3f2b8c1e-5d4a-4b7e-9a10-6c2d8e4f1a77 and nobody read it.",
+  "reply": "{\"target\": \"Заявку подали під номером 3f2b8c1e-5d4a-4b7e-9a10-6c2d8e4f1a77, і ніхто її не прочитав.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "an identifier the target keeps letter for letter is no untranslated phrase"
+ },
+ {
+  "id": "address-mix-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ти втомилася, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "one speech to one listener that writes ти-forms and capitalised Ви-forms together"
+ },
+ {
+  "id": "address-informal-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ти втомилася, Нелл. Сядь, тобі треба відпочити, а я принесу тобі чаю.»\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the same speech addressed throughout with ти-forms"
+ },
+ {
+  "id": "address-formal-en",
+  "kind": "address-mix",
+  "sourceLanguage": null,
+  "source": "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”",
+  "reply": "{\"target\": \"«Ви втомилися, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the same speech addressed throughout with capitalised Ви-forms"
+ }
+]

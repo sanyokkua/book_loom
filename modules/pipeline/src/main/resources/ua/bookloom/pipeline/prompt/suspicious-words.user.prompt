@@ -1,0 +1,5 @@
+[Texts — numbered; check every word of each]
+{{items}}
+
+Return JSON exactly as:
+{"words":[{"id":"<number of the text>","word":"<the word as written>","quote":"<phrase copied from that text>"}]}

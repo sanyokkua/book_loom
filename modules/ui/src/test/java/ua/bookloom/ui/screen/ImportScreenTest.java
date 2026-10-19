@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import javafx.scene.image.ImageView;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,9 +18,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
 import ua.bookloom.ui.state.ImportState;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
 
 /**
  * The import screen the application builds, read from the real scene: what each of its four states shows, what is
@@ -45,24 +50,24 @@ class ImportScreenTest extends ImportScreenTestBase {
                         null,
                         null,
                         null,
-                        List.of("file", "format", "units", "segments"),
-                        List.of("title", "author", "declaredLang")),
+                        List.of("file", "format", "chapters", "drm"),
+                        List.of("titleAuthor", "declaredLang")),
                 Arguments.of(
                         "notes.md",
                         BookFormat.MARKDOWN,
                         null,
                         null,
                         null,
-                        List.of("file", "format", "units", "segments"),
-                        List.of("title", "author", "declaredLang")),
+                        List.of("file", "format", "chapters", "drm"),
+                        List.of("titleAuthor", "declaredLang")),
                 Arguments.of(
                         "titled.md",
                         BookFormat.MARKDOWN,
                         null,
                         "Dune",
                         null,
-                        List.of("file", "format", "title", "units", "segments"),
-                        List.of("author", "declaredLang")));
+                        List.of("file", "format", "titleAuthor", "chapters", "drm"),
+                        List.of("declaredLang")));
     }
 
     // IF a state's parts were shown before anything was chosen, THEN the person would see a card, a progress bar, a
@@ -101,9 +106,9 @@ class ImportScreenTest extends ImportScreenTestBase {
     // IF the card omitted a row the parse carries, showed one it does not, or offered no way on, THEN the screen would
     // misreport the book.
     @Test
-    void card_enBookOpened_showsEverySevenRowsAndContinueAndNoRefusal() throws TimeoutException {
+    void card_enBookOpened_showsEverySixRowsAndContinueAndNoRefusal() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
 
         openBook(source);
@@ -113,11 +118,10 @@ class ImportScreenTest extends ImportScreenTestBase {
                 .containsExactlyInAnyOrder(
                         "import-row-file",
                         "import-row-format",
-                        "import-row-title",
-                        "import-row-author",
+                        "import-row-titleAuthor",
                         "import-row-declaredLang",
-                        "import-row-units",
-                        "import-row-segments");
+                        "import-row-chapters",
+                        "import-row-drm");
         assertThat(optional("import-continue")).isNotNull();
         assertThat(button("import-continue").isDisable()).isFalse();
         assertThat(isShown("import-refusal")).isFalse();
@@ -127,35 +131,109 @@ class ImportScreenTest extends ImportScreenTestBase {
 
     // IF a row reported the wrong value, THEN the person would see a different book from the one they opened.
     @ParameterizedTest
-    @CsvSource({
-        "file, Frankenstein.epub",
-        "format, EPUB",
-        "title, Frankenstein",
-        "author, Mary Shelley",
-        "units, 3",
-        "segments, 9"
-    })
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "file | Frankenstein.epub",
+                "format | EPUB 2.0",
+                "titleAuthor | Frankenstein · Mary Shelley",
+                "declaredLang | English (en)",
+                "chapters | 11 · ~78,000 words",
+                "drm | none"
+            })
     void card_enBookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
 
         openBook(source);
 
-        assertThat(textOf("import-row-" + row)).containsIgnoringCase(expected);
+        assertThat(textOf("import-row-" + row)).contains(expected);
     }
 
-    // IF the declared language row showed anything other than the declared code, THEN a person would be told a language
-    // the book does not declare.
-    @Test
-    void card_enBookOpened_declaredLanguageRowShowsTheDeclaredCode() throws TimeoutException {
-        final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+    // IF the language row showed the raw declaration or the wrong name, THEN a person would be told a language the
+    // application does not use; a tag the JDK names but the catalogue lacks must read like a catalogued one.
+    @ParameterizedTest
+    @CsvSource({"en-US, en, English (en)", "la, la, Latin (la)", "uk, uk, Ukrainian (uk)"})
+    void card_declaredLanguage_isNamedInEnglishWithItsNormalizedTag(
+            final String raw, final String declared, final String expected) throws TimeoutException {
+        final Path source = dir.resolve("book.epub");
+        projects.on(
+                source,
+                Result.ok(BookFixtures.inspected(
+                        "p",
+                        BookFormat.EPUB,
+                        "3.0",
+                        "T",
+                        "A",
+                        BookFixtures.evidence(raw, declared, declared, LanguageEvidence.Verdict.MATCH),
+                        1,
+                        10,
+                        0,
+                        0,
+                        null)));
         openImport();
 
         openBook(source);
 
-        assertThat(textOf("import-row-declaredLang")).containsPattern("\\ben\\b");
+        assertThat(textOf("import-row-declaredLang")).contains(expected);
+        assertThat(isShown("import-mismatch")).isFalse();
+        assertThat(isShown("import-unrecognized")).isFalse();
+    }
+
+    // IF a book with a cover drew the placeholder, or one without drew a picture, THEN the card would misreport the
+    // book.
+    @Test
+    void card_bookWithACover_drawsThePictureNotThePlaceholder() throws TimeoutException {
+        final Path source = dir.resolve("Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
+        openImport();
+
+        openBook(source);
+
+        assertThat(optional("import-cover")).isInstanceOf(ImageView.class);
+        assertThat(optional("import-cover-placeholder")).isNull();
+    }
+
+    @Test
+    void card_bookWithoutACover_drawsTheNeutralPlaceholder() throws TimeoutException {
+        final Path source = dir.resolve("notes.txt");
+        projects.on(source, Result.ok(BookFixtures.imported("notes", BookFormat.TXT, null, null, null, 1)));
+        openImport();
+
+        openBook(source);
+
+        assertThat(optional("import-cover")).isNull();
+        assertThat(required("import-cover-placeholder").getStyleClass()).contains("cover-placeholder");
+    }
+
+    // IF a book of 1,499 or 640 words were shown with another figure, THEN the approximate size would mislead.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {"640|~640", "999|~999", "1000|~1,000", "1499|~1,000", "1500|~2,000", "78214|~78,000"})
+    void card_wordFigure_isExactBelowAThousandAndRoundedToTheNearestThousandFromThere(
+            final int words, final String expected) throws TimeoutException {
+        final Path source = dir.resolve("book.epub");
+        projects.on(
+                source,
+                Result.ok(BookFixtures.inspected(
+                        "p",
+                        BookFormat.EPUB,
+                        "3.0",
+                        null,
+                        null,
+                        BookFixtures.evidence(null, null, null, LanguageEvidence.Verdict.ABSENT),
+                        1,
+                        words,
+                        0,
+                        0,
+                        null)));
+        openImport();
+
+        openBook(source);
+
+        assertThat(textOf("import-row-chapters")).contains("1 · " + expected + " words");
     }
 
     // IF a row for an undeclared field were shown as a placeholder, THEN the card would state something the file never
@@ -172,7 +250,7 @@ class ImportScreenTest extends ImportScreenTestBase {
             final List<String> absentRows)
             throws TimeoutException {
         final Path source = dir.resolve(fileName);
-        port.on(source, Result.ok(BookFixtures.book(fileName, format, lang, title, author, 4, 2)));
+        projects.on(source, Result.ok(BookFixtures.imported(fileName, format, lang, title, author, 4, 2)));
         openImport();
 
         openBook(source);
@@ -186,19 +264,19 @@ class ImportScreenTest extends ImportScreenTestBase {
         assertThat(optional("import-continue")).isNotNull();
     }
 
-    // IF the card mentioned a figure the parsed book does not carry, THEN it would be inventing it.
-    @ParameterizedTest
-    @ValueSource(strings = {"chapter", "word", "image", "font", "cover", "detected"})
-    void card_enBookOpened_neverMentionsWhatTheParseDoesNotCarry(final String invented) throws TimeoutException {
+    // IF the card kept the mockup's valid badge or a source-language override, THEN it would claim a validation nothing
+    // performs and offer a correction the brief owns.
+    @Test
+    void card_enBookOpened_hasNoValidBadgeAndNoLanguageOverride() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
 
         openBook(source);
 
-        assertThat(textOf("import-card")).doesNotContainIgnoringCase(invented);
-        assertThat(idsStartingWith("import-"))
-                .noneMatch(id -> id.toLowerCase(Locale.ROOT).contains(invented));
+        assertThat(textOf("import-card")).doesNotContainIgnoringCase("valid").doesNotContainIgnoringCase("override");
+        assertThat(required("import-screen").lookupAll(".combo-box, .choice-box, .toggle-button"))
+                .isEmpty();
     }
 
     // IF a drop that carried no file opened something, THEN a stray drag from another application would start an open.
@@ -208,7 +286,7 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of()));
 
-        assertThat(port.openedPaths()).isEmpty();
+        assertThat(projects.imports()).isEmpty();
         assertThat(state()).isEqualTo(new ImportState.Idle());
     }
 
@@ -218,14 +296,35 @@ class ImportScreenTest extends ImportScreenTestBase {
     void openDropped_severalFiles_opensOnlyTheFirst() throws TimeoutException {
         final Path first = dir.resolve("first.epub");
         final Path second = dir.resolve("second.epub");
-        port.on(first, Result.ok(BookFixtures.frankenstein()));
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(first, second)));
         awaitFx(() -> !viewModel().opening().get());
 
-        assertThat(port.openedPaths()).containsExactly(first);
+        assertThat(projects.imports()).containsExactly(first);
         assertThat(state()).isInstanceOf(ImportState.Detected.class);
+    }
+
+    // IF a drop on the import screen skipped the guard, THEN a paused translation would be thrown away unasked.
+    @Test
+    void openDropped_runIsPaused_asksTheQuestionAndImportsNothingYet() throws TimeoutException {
+        final Path first = dir.resolve("Frankenstein.epub");
+        final Path second = dir.resolve("Dracula.epub");
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        openImport();
+        openBook(first);
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub", null);
+        mirror.publishRunState(RunState.PAUSED);
+        awaitFx(() -> mirror.runState().get() == RunState.PAUSED);
+
+        onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(second)));
+
+        assertThat(prompt.asked())
+                .containsExactly(
+                        new RecordingReplaceRunPrompt.Asked("Frankenstein.epub", "Dracula.epub", RunState.PAUSED));
+        assertThat(projects.imports()).containsExactly(first);
     }
 
     // IF the open book were held by the screen instead of the view model, THEN leaving and returning would forget it
@@ -233,7 +332,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     @Test
     void screen_leftAndReturnedTo_stillReportsTheOpenBook() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(source);
         onFx(() -> shell.activate(ViewNames.SETTINGS));
@@ -250,23 +349,25 @@ class ImportScreenTest extends ImportScreenTestBase {
     void card_secondBookOpened_reportsTheSecondAndTheFirstIsReleased() throws TimeoutException {
         final Path first = dir.resolve("Frankenstein.epub");
         final Path second = dir.resolve("Candide.epub");
-        port.on(first, Result.ok(BookFixtures.frankenstein()));
-        port.on(second, Result.ok(BookFixtures.book("candide", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1)));
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(
+                second,
+                Result.ok(BookFixtures.imported("candide", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1)));
         openImport();
         openBook(first);
 
         openBook(second);
 
         assertThat(textOf("import-row-file")).contains("Candide.epub").doesNotContain("Frankenstein.epub");
-        assertThat(textOf("import-row-title")).contains("Candide");
-        assertThat(port.closedDocuments()).hasSize(1);
+        assertThat(textOf("import-row-titleAuthor")).contains("Candide");
+        assertThat(projects.closedProjects()).hasSize(1);
     }
 
     // IF a label were still English in Ukrainian, THEN the screen would be half translated.
     @Test
     void screenInUkrainian_dropzoneAndCardLabelsDifferFromEnglish() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         final String englishBrowse = button("import-browse").getText();
         openBook(source);

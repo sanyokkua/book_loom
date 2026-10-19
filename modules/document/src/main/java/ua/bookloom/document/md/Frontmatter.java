@@ -7,10 +7,11 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.MetadataKey;
+import ua.bookloom.document.model.PublicationYear;
 
 /**
- * Splits a leading {@code ---}-delimited frontmatter block off a Markdown file, and reads the two scalar keys the
- * import card needs out of it.
+ * Splits a leading {@code ---}-delimited frontmatter block off a Markdown file, and reads the scalar keys the
+ * import card and the brief need out of it.
  *
  * <p><strong>Why it is split off before the parser sees it.</strong> CommonMark has no notion of frontmatter: a
  * leading {@code ---} block parses as a thematic break followed by a setext heading, which would make the keys and
@@ -76,22 +77,22 @@ final class Frontmatter {
         return -1;
     }
 
-    private static int endOfLine(String text, int from) {
+    static int endOfLine(String text, int from) {
         final int newline = text.indexOf('\n', from);
         return newline < 0 ? text.length() : newline;
     }
 
-    private static int nextLineStart(String text, int from) {
+    static int nextLineStart(String text, int from) {
         final int newline = text.indexOf('\n', from);
         return newline < 0 ? text.length() : newline + 1;
     }
 
     /**
-     * The top-level scalar keys the import card needs.
+     * The top-level scalar keys the import card and the brief need.
      *
      * @param block the frontmatter block as split off, possibly empty
-     * @return an ordered map carrying only {@code title} and {@code lang} where the block declares them as plain
-     *     top-level scalars; never null, possibly empty
+     * @return an ordered map carrying only {@code title}, {@code lang}, {@code publisher} and {@code date} (reduced to its
+     *     four-digit year, dropped when it has none) where the block declares them as plain top-level scalars; never null, possibly empty
      */
     static Map<String, String> scan(String block) {
         final Map<String, String> found = new LinkedHashMap<>();
@@ -111,8 +112,13 @@ final class Frontmatter {
         }
         final String key = line.substring(0, colon).strip();
         final String value = unquote(line.substring(colon + 1).strip());
-        if (!value.isEmpty() && (MetadataKey.TITLE.key().equals(key) || "lang".equals(key))) {
+        if (value.isEmpty()) {
+            return;
+        }
+        if (MetadataKey.TITLE.key().equals(key) || MetadataKey.PUBLISHER.key().equals(key) || "lang".equals(key)) {
             found.put(key, value);
+        } else if (MetadataKey.DATE.key().equals(key)) {
+            PublicationYear.of(value).ifPresent(year -> found.put(key, year));
         }
     }
 

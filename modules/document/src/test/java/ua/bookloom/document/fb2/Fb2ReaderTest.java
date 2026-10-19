@@ -13,6 +13,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.document.fixture.Fb2Fixtures;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
@@ -62,9 +63,40 @@ class Fb2ReaderTest {
     void read_mainAndNotesBodies_getDistinctUnitIdsSharingOneHref() {
         final Document document = readPrimary();
 
-        assertThat(document.units()).extracting(Unit::id).containsExactly("book.fb2#0", "book.fb2#1");
-        assertThat(document.units()).extracting(Unit::href).containsOnly("book.fb2");
-        assertThat(document.units()).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
+        final List<Unit> bodies =
+                document.units().stream().filter(unit -> !unit.isAuxiliary()).toList();
+        assertThat(bodies).extracting(Unit::id).containsExactly("book.fb2#0", "book.fb2#1");
+        assertThat(bodies).extracting(Unit::href).containsOnly("book.fb2");
+        assertThat(bodies).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
+    }
+
+    // FB2 marks the apparatus after the story with a body named "notes"; that body is back matter, the main body is
+    // not.
+    @Test
+    void read_mainAndNotesBodies_notesBodyIsBackMatter() {
+        final Document document = readPrimary();
+
+        assertThat(document.units().stream()
+                        .filter(unit -> !unit.isAuxiliary())
+                        .map(Unit::role)
+                        .toList())
+                .containsExactly(UnitRole.BODY, UnitRole.BACK_MATTER);
+    }
+
+    // Every book ends with an auxiliary unit named for the file, holding its title and author; body units keep their
+    // identity.
+    @Test
+    void read_fictionBook_endsWithTheAuxiliaryUnitNamedForTheFile() {
+        final Document document = readPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(3);
+        assertThat(document.units().get(0).id()).isEqualTo("book.fb2#0");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("book.fb2");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.order()).isEqualTo(2);
+        assertThat(last.segments()).extracting(Segment::id).containsExactly("aux:title", "aux:creator:0");
     }
 
     // segment ids are built from the unit id, so a notes-body segment is namespaced by it.
@@ -159,6 +191,29 @@ class Fb2ReaderTest {
         assertThat(document.declaredLang()).isEqualTo("uk");
         assertThat(document.metadata()).containsEntry("title", "Енеїда");
         assertThat(document.metadata()).containsEntry("author", "Іван Котляревський");
+    }
+
+    // FB2 has no per-document content declaration to compute a majority from, so detectedSourceLang
+    // stays null however the title-info declares its own language.
+    @Test
+    void read_fictionBookFile_reportsNoDetectedSourceLang() {
+        assertThat(readPrimary().detectedSourceLang()).isNull();
+    }
+
+    // WHEN a paragraph declares its own xml:lang, THEN its segment carries that declaration.
+    @Test
+    void read_paragraphDeclaringXmlLang_recordsItAsTheSegmentsDeclaredLanguage() {
+        final String withForeignParagraph =
+                Fb2Fixtures.PRIMARY_XML.replace("<p>Еней був парубок моторний.</p>", "<p xml:lang=\"de\">Hallo.</p>");
+        final Path file =
+                Fb2Fixtures.writeFb2(tempDir.resolve("book.fb2"), withForeignParagraph, Fb2Fixtures.WINDOWS_1251);
+
+        final Document document = new Fb2Reader(new OpenFb2Registry()).read(file);
+
+        assertThat(segmentsOf(document))
+                .filteredOn(s -> "Hallo.".equals(s.sourceInner()))
+                .extracting(Segment::declaredLanguage)
+                .containsExactly("de");
     }
 
     // WHEN title-info declares no language, THEN the document records none rather than

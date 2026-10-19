@@ -10,7 +10,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -37,7 +36,7 @@ class ModelCatalogServiceTest {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(3);
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private InMemoryProviderConfigs configs;
     private ModelCatalogService catalog;
 
@@ -47,7 +46,8 @@ class ModelCatalogServiceTest {
         configs = new InMemoryProviderConfigs();
         catalog = new ModelCatalogService(
                 configs,
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()));
+                new ProviderClientFactory(
+                        new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime));
     }
 
     @AfterEach
@@ -127,9 +127,7 @@ class ModelCatalogServiceTest {
         assertThat(configs.register(config).isOk()).isTrue();
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return URI.create("http://127.0.0.1:" + socket.getLocalPort());
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 }

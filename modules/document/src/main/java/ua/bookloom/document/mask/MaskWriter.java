@@ -1,10 +1,16 @@
 package ua.bookloom.document.mask;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.PlaceholderPair;
 
 /**
  * The mutable accumulator a mask walk appends to — the single place a token is minted, so first-appearance order
@@ -21,6 +27,9 @@ public final class MaskWriter {
 
     private final StringBuilder masked = new StringBuilder();
     private final Map<String, String> placeholders = new LinkedHashMap<>();
+    private final List<String[]> pairSlots = new ArrayList<>();
+    private final Deque<String[]> openPairs = new ArrayDeque<>();
+    private final List<String> lineBreakTokens = new ArrayList<>();
     private int nextIndex;
 
     /**
@@ -64,6 +73,49 @@ public final class MaskWriter {
     }
 
     /**
+     * Mints the opening token of an inline element's pair, recording the language the element declares.
+     *
+     * @param fragment the element's opening markup or delimiter; never null
+     * @param language the element's own declared language as written, or {@code null}
+     * @return the minted opening token; never null
+     */
+    public String appendPairOpen(String fragment, @Nullable String language) {
+        final String token = appendAtomic(fragment);
+        final String[] slot = {token, null, language};
+        pairSlots.add(slot);
+        openPairs.push(slot);
+        return token;
+    }
+
+    /**
+     * Mints the closing token of the innermost pair still open.
+     *
+     * @param fragment the element's closing markup or delimiter; never null
+     * @return the minted closing token; never null
+     * @throws MaskInvariantException if no pair is open
+     */
+    public String appendPairClose(String fragment) {
+        if (openPairs.isEmpty()) {
+            throw new MaskInvariantException("A closing token was minted with no pair open");
+        }
+        final String token = appendAtomic(fragment);
+        openPairs.pop()[1] = token;
+        return token;
+    }
+
+    /**
+     * Mints an atomic token that stands for a line break, so the gate can keep it inside the pair it sits in.
+     *
+     * @param fragment the line break's markup or delimiter; never null
+     * @return the minted token; never null
+     */
+    public String appendLineBreak(String fragment) {
+        final String token = appendAtomic(fragment);
+        lineBreakTokens.add(token);
+        return token;
+    }
+
+    /**
      * Runs the mask-time invariant — every emitted token unique in the masked form, and the placeholder map a
      * bijection over exactly the tokens present — scanning the masked form only, never the mapped fragments, so a
      * code span whose own text is the literal {@code ⟦g0⟧} does not trip the check (design.md D4, the requirement
@@ -91,6 +143,13 @@ public final class MaskWriter {
             throw new MaskInvariantException("Placeholder map is not a bijection over the masked form's tokens: "
                     + "found=" + foundKeys + " mapped=" + placeholders.keySet());
         }
-        return new MaskedContent(result, placeholders);
+        if (!openPairs.isEmpty()) {
+            throw new MaskInvariantException("A pair was opened and never closed");
+        }
+        final List<PlaceholderPair> pairs = new ArrayList<>(pairSlots.size());
+        for (final String[] slot : pairSlots) {
+            pairs.add(new PlaceholderPair(slot[0], slot[1], slot[2]));
+        }
+        return new MaskedContent(result, placeholders, pairs, lineBreakTokens);
     }
 }

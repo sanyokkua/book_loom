@@ -8,7 +8,6 @@ import javafx.scene.effect.DropShadow;
 import javafx.stage.Stage;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The three elevation roles are a real drop-shadow effect on a named style class, one value per block (D10).
@@ -17,12 +16,12 @@ import org.testfx.framework.junit5.ApplicationTest;
  * nothing, which is why these are asserted on the effect a real node ends up with rather than on stylesheet text.
  * Expected values are the published shadows: the offset's y and the blur, with the colour as published.
  */
-class ThemeElevationTest extends ApplicationTest {
+class ThemeElevationTest extends FxTestBase {
 
     private static final double NO_HORIZONTAL_OFFSET = 0.0;
     private static final double EXACT = 1e-9;
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 

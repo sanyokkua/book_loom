@@ -10,13 +10,18 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.MarkdownFixtures;
 
 /**
@@ -58,6 +63,15 @@ class MarkdownRoundTripTest {
     }
 
     // headings, paragraphs and list items are distinguished by kind.
+    // A paragraph of only invisible characters is no segment; the visible paragraphs keep their order.
+    @ParameterizedTest
+    @ValueSource(strings = {"\u00A0", "\u200B", "\uFEFF", "\u00AD", "\u00A0\u200B"})
+    void read_paragraphOfInvisibleCharactersOnly_yieldsNoSegment(String invisible) {
+        final Document document = open("One.\n\n" + invisible + "\n\nTwo.\n", "invisible.md");
+
+        assertThat(innersOf(document)).containsExactly("One.", "Two.");
+    }
+
     @Test
     void read_headingsParagraphsAndListItems_areDistinguishedByKind() {
         final List<Segment> segments = segmentsOf(openPrimary());
@@ -110,12 +124,17 @@ class MarkdownRoundTripTest {
                 .noneSatisfy(inner -> assertThat(inner).contains("class=\"note\""));
     }
 
-    // frontmatter yields no segment for any key or value it contains.
+    // frontmatter yields no body segment for any key or value, and exactly one auxiliary segment: its title text.
     @Test
-    void read_frontmatter_yieldsNoSegmentForItsKeysOrValues() {
-        assertThat(innersOf(openPrimary()))
-                .noneSatisfy(inner -> assertThat(inner).contains("title:"));
-        assertThat(innersOf(openPrimary())).doesNotContain("The Book");
+    void read_frontmatter_yieldsNoBodySegmentAndOneAuxiliarySegmentForItsTextValue() {
+        final Document document = openPrimary();
+
+        assertThat(innersOf(document)).noneSatisfy(inner -> assertThat(inner).contains("title:"));
+        assertThat(innersOf(document)).doesNotContain("The Book", "title", "lang", "en");
+        final Segment only = document.units().get(1).segments().get(0);
+        assertThat(document.units().get(1).segments()).hasSize(1);
+        assertThat(only.id()).isEqualTo("aux:fm:title");
+        assertThat(only.sourceInner()).isEqualTo("The Book");
     }
 
     // the frontmatter's title and lang reach the metadata map and declaredLang.
@@ -135,6 +154,29 @@ class MarkdownRoundTripTest {
 
         assertThat(document.declaredLang()).isNull();
         assertThat(innersOf(document)).contains("Prose one.", "Prose two.");
+    }
+
+    // Markdown carries no per-block language notion, so no segment ever records a declared
+    // language, whatever the frontmatter declares.
+    @Test
+    void read_anyMarkdownSegment_recordsNoDeclaredLanguage() {
+        assertThat(segmentsOf(openPrimary()))
+                .extracting(Segment::declaredLanguage)
+                .containsOnlyNulls();
+    }
+
+    // Every book ends with an auxiliary unit named for the file; the primary fixture's holds its frontmatter title.
+    @Test
+    void read_markdownFile_endsWithAnAuxiliaryUnitNamedForTheFile() {
+        final Document document = openPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(2);
+        assertThat(document.units().get(0).id()).isEqualTo("chapter.md");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("chapter.md");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.segments()).extracting(Segment::id).containsExactly("aux:fm:title");
     }
 
     // the unit's id, href and media type identify a single-unit format.
@@ -158,15 +200,15 @@ class MarkdownRoundTripTest {
         assertThat(textOf(writeOut(document, "uk"))).isEqualTo(MarkdownFixtures.ONLY_A_FENCE);
     }
 
-    // WHEN a Markdown file is reassembled with no segment carrying target text, THEN the
-    // output bytes are identical to the source's.
+    // WHEN a Markdown file is reassembled with no segment carrying target text, THEN the output equals the source
+    // except that the frontmatter's lang value names the target language.
     @Test
-    void write_zeroEditRoundTrip_isByteIdentical() {
+    void write_zeroEditRoundTrip_changesOnlyTheLangValue() {
         final Document document = openPrimary();
 
         final Path output = writeOut(document, "uk");
 
-        assertThat(textOf(output)).isEqualTo(MarkdownFixtures.PRIMARY);
+        assertThat(textOf(output)).isEqualTo(MarkdownFixtures.PRIMARY.replace("lang: en", "lang: uk"));
     }
 
     // a file whose last byte is not a newline still has no trailing newline afterwards.
@@ -236,6 +278,18 @@ class MarkdownRoundTripTest {
     }
 
     /** Rebuilds {@code document} with the segment whose source starts with {@code sourcePrefix} translated. */
+    // WHEN a paragraph with a bare URL is unmasked with the token kept and then written, THEN the line holds the
+    // translated words and the address exactly as written.
+    @Test
+    void write_bareUrlKeptThroughUnmask_isWrittenVerbatim() {
+        final Document document = open("See https://example.com/path\n", "url.md");
+        final Segment segment = document.units().get(0).segments().get(0);
+        final Result<String> restored = DocumentServices.newService().unmask(BookFormat.MARKDOWN, segment, "ДИВ. ⟦g0⟧");
+        final Document translated = withTarget(document, "See ", Objects.requireNonNull(restored.data()));
+
+        assertThat(textOf(writeOut(translated, "uk"))).isEqualTo("ДИВ. https://example.com/path\n");
+    }
+
     private static Document withTarget(Document document, String sourcePrefix, String targetInner) {
         final Unit unit = document.units().get(0);
         final List<Segment> segments = new ArrayList<>(unit.segments());

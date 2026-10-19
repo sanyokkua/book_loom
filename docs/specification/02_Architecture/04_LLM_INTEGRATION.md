@@ -47,8 +47,9 @@ public record ProviderConfig(
 The per-dialect `ProviderClient` is an internal `:llm` interface, not a public port. It supplies `probe()`,
 `listModels()`, `chat(modelId, request)` and `kind()` to the factory and verifier. `probe()` is a lightweight
 reachability check so the Connection and Models stages remain separable: Ollama uses `/api/version` and the
-OpenAI-compatible dialect uses `/models`. Calls are synchronous and return the whole `ChatResponse`; streaming remains
-deferred.
+OpenAI-compatible dialect uses `/models`. Calls are synchronous and return the whole `ChatResponse`; the Ollama-native
+client reads its reply as a stream internally, so a reply that stops sending is ended by an idle gap of 60 seconds,
+while caller-visible streaming remains deferred.
 
 ### client-implementations {#client-implementations}
 
@@ -56,12 +57,15 @@ Two concrete clients implement the internal interface, both returning the same `
 the pipeline stays dialect-agnostic:
 
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
-  `/api/chat` for inference. It sends `stream:false`, plus `options.temperature` and `format` only when the request
+  `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
+  call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
   provides them. It deliberately sends no `think`, `num_ctx`, `keep_alive`, or `/api/show` request in this change.
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
-  `response_format` only when requested; it never sends a reasoning parameter.
+  `response_format` only when requested, and `reasoning_effort:"none"` when the request disables reasoning (Ollama's
+  and LM Studio's `/v1` both honour it). A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
+  is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
 
 ### provider-factory {#provider-factory}
 
@@ -71,7 +75,7 @@ internal client without changing callers of the three public ports.
 
 ### provider-profile {#provider-profile}
 
-This change has no `ProviderProfile` or capability cache. Provider configuration is deliberately minimal while
+There is no per-kind profile type or capability cache; `ProviderConfig` carries only endpoint and timeouts. Provider configuration is deliberately minimal while
 persistence, credentials, reasoning control, structured-output capability detection and context-window sizing remain
 future work.
 
@@ -174,10 +178,12 @@ public final class InferenceGate {
 }
 ```
 
-A local model serves one request at a time (`01_SYSTEM_ARCHITECTURE.md#single-flight-inference`). `run` acquires before
-every provider call and releases in `finally`. The gate is released during backoff or `Retry-After` sleeps and
-re-acquired per attempt, so a retrying call never holds the permit while it sleeps. Interactive `tryRun` and the
-`ErrorCode.busy` UI behavior are deferred until an interactive screen owns them.
+A local model serves one request at a time (`01_SYSTEM_ARCHITECTURE.md#single-flight-inference`). `run` is the gate's
+only entry point: it acquires before every provider call, blocking until the permit is free, and releases in
+`finally`. The gate is released during backoff or `Retry-After` sleeps and re-acquired per attempt, so a retrying call
+never holds the permit while it sleeps. No call is ever refused by the gate itself; the one `busy` outcome belongs to
+the review-retry case, which is refused with `ErrorCode.busy` read from the run record — not from the gate — while
+the project's own run is RUNNING, and its UI behavior is owned by the interactive review screen.
 
 ## http-error-mapping {#http-error-mapping}
 
@@ -203,7 +209,7 @@ structured-output rejection is currently surfaced through the normal HTTP mappin
 
 ## credentials-as-reference {#credentials-as-reference}
 
-Authentication is deferred. The future Bearer path will hold an environment-variable name as a credential reference,
+Credential resolution is planned, not built; authentication is deferred. The future Bearer path will hold an environment-variable name as a credential reference,
 resolve it immediately before a request and never persist or log the secret; keychain support is not part of that path.
 
 ## three-stage-verification {#three-stage-verification}

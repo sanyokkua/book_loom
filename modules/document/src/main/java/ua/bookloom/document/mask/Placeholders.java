@@ -27,6 +27,12 @@ public final class Placeholders {
 
     private static final Pattern TOKEN = Pattern.compile("⟦g(\\d+)⟧");
 
+    /** The token's opening bracket, U+27E6. */
+    static final char OPEN_GLYPH = '⟦';
+
+    /** The token's closing bracket, U+27E7. */
+    static final char CLOSE_GLYPH = '⟧';
+
     /**
      * Spells the token for {@code index}.
      *
@@ -90,6 +96,19 @@ public final class Placeholders {
             counts.merge(token, 1, Integer::sum);
         }
         return counts;
+    }
+
+    /**
+     * Whether {@code text} holds a U+27E6 or U+27E7 glyph that is not part of a whole-grammar token. A masked form
+     * never does — {@link MaskWriter} turns every literal bracket of a source into its own token — so in a target such
+     * a glyph is a token the model broke: split by a space, misspelt, or left over from one it moved.
+     *
+     * @param text the text to scan; never null
+     * @return {@code true} if a bracket glyph stands outside every token, {@code false} otherwise
+     */
+    public static boolean hasStrayBracket(String text) {
+        final String outside = matcher(text).replaceAll("");
+        return outside.indexOf(OPEN_GLYPH) >= 0 || outside.indexOf(CLOSE_GLYPH) >= 0;
     }
 
     /**

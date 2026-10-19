@@ -1,0 +1,126 @@
+package ua.bookloom.pipeline.reviewer;
+
+import com.google.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Applies a segment's edits one after another, each verified against the text the earlier ones left, so two edits that
+ * overlap or depend on each other can never apply half. Fluency and style edits are set aside as notes first.
+ */
+@Slf4j
+@RequiredArgsConstructor(onConstructor_ = {@Inject})
+public final class EditApplier {
+
+    private final EditVerifier verifier;
+
+    /**
+     * Applies the verified edits of one segment.
+     *
+     * @param candidate the whole candidate in masked form; never null
+     * @param edits the reviewer's edits in the order it wrote them; never null
+     * @param checker runs the deterministic checks on a whole candidate; never null
+     * @param baseline the checks that already block the candidate; never null
+     * @return the edited text and what became of every edit
+     */
+    public EditOutcome apply(
+            final String candidate,
+            final List<ReviewEdit> edits,
+            final CandidateChecker checker,
+            final Set<String> baseline) {
+        return apply(candidate, edits, checker, baseline, List.of());
+    }
+
+    /**
+     * Applies the verified edits of one segment, knowing the glossary renderings of the chunk.
+     *
+     * @param renderings the glossary renderings (targets) a terminology edit may use; never null
+     * @return the edited text and what became of every edit
+     */
+    public EditOutcome apply(
+            final String candidate,
+            final List<ReviewEdit> edits,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings) {
+        return apply(candidate, edits, checker, baseline, renderings, Set.of(), GenderGuess.NONE);
+    }
+
+    /**
+     * Applies the verified edits of one segment, also knowing the target language's function words and refusing a gender
+     * or agreement edit toward a gender that is only suggested.
+     *
+     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     *     language lists none
+     * @param guess the suggested genders an edit may not enforce; never null
+     * @return the edited text and what became of every edit
+     */
+    public EditOutcome apply(
+            final String candidate,
+            final List<ReviewEdit> edits,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings,
+            final Set<String> functionWords,
+            final GenderGuess guess) {
+        Objects.requireNonNull(candidate, "candidate");
+        Objects.requireNonNull(edits, "edits");
+        String text = candidate;
+        final List<ReviewEdit> applied = new ArrayList<>();
+        final List<EditOutcome.FailedEdit> failed = new ArrayList<>();
+        final List<ReviewEdit> notes = new ArrayList<>();
+        int ignored = 0;
+        int noOps = 0;
+        for (final ReviewEdit edit : edits.stream().distinct().toList()) {
+            if (edit.criterion().isNote()) {
+                notes.add(edit);
+                continue;
+            }
+            if (isNoOp(edit)) {
+                noOps++;
+                continue;
+            }
+            switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords, guess)) {
+                case Verification.Verified verified -> {
+                    text = verified.edited();
+                    applied.add(edit);
+                }
+                case Verification.Failed refused -> failed.add(refusal(edit, refused));
+                case Verification.Ignored skipped -> ignored++;
+            }
+        }
+        logCounts(applied.size(), failed.size(), ignored, noOps, notes.size());
+        return new EditOutcome(text, applied, failed, ignored, notes);
+    }
+
+    private static EditOutcome.FailedEdit refusal(final ReviewEdit edit, final Verification.Failed refused) {
+        log.debug(
+                "Edit refused criterion={} reason={} disprovesEdit={}",
+                edit.criterion().wire(),
+                refused.reason(),
+                refused.reason().disprovesEdit());
+        return new EditOutcome.FailedEdit(edit, refused.reason());
+    }
+
+    private static void logCounts(
+            final int applied, final int refused, final int ignored, final int noOps, final int notes) {
+        log.debug(
+                "Applied edits applied={} refused={} notFoundOrIgnored={} noOps={} notes={}",
+                applied,
+                refused,
+                ignored,
+                noOps,
+                notes);
+    }
+
+    // A quote equal to its replacement is no proposal at all: it is dropped before anything counts it.
+    private static boolean isNoOp(final ReviewEdit edit) {
+        return NormalisedText.of(edit.quote())
+                .text()
+                .equals(NormalisedText.of(edit.replacement()).text());
+    }
+}

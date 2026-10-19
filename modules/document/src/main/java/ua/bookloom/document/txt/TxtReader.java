@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
@@ -22,13 +23,16 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.document.mask.PlainTextMasker;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.hash.HashUtil;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Opens a plain-text file into the {@code :api} document model: the original byte buffer as the skeleton, plus one
  * {@code PARAGRAPH} segment per blank-line-separated paragraph.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TxtReader {
 
@@ -54,7 +58,8 @@ public final class TxtReader {
 
         // Scanning starts past any byte-order mark, so the mark sits outside every span and is copied through on
         // export rather than being part of a paragraph a translation could replace.
-        final List<ByteSpanAnchor> paragraphs = ParagraphScanner.scan(fileBytes, resolution.bomLength());
+        final List<ByteSpanAnchor> paragraphs =
+                visibleOnly(ParagraphScanner.scan(fileBytes, resolution.bomLength()), fileBytes, charset);
         final List<Segment> segments = segmentsOf(paragraphs, fileBytes, charset, sourceName);
 
         final String documentId = UUID.randomUUID().toString();
@@ -68,7 +73,7 @@ public final class TxtReader {
                 resolution.hasBom(),
                 HashUtil.sha256Hex(fileBytes),
                 Map.of(),
-                List.of(unitOf(sourceName, segments)));
+                List.of(unitOf(sourceName, segments), AuxiliaryUnit.empty(sourceName, 1)));
     }
 
     /**
@@ -80,6 +85,26 @@ public final class TxtReader {
     public boolean close(String documentId) {
         Objects.requireNonNull(documentId, "documentId");
         return registry.close(documentId).isPresent();
+    }
+
+    /**
+     * Drops a paragraph a reader cannot see — a line of no-break spaces or zero-width characters. The scan works on
+     * bytes and knows only ASCII whitespace, so the decoded text is asked here, once per paragraph.
+     */
+    private static List<ByteSpanAnchor> visibleOnly(
+            List<ByteSpanAnchor> paragraphs, byte[] fileBytes, Charset charset) {
+        final List<ByteSpanAnchor> visible = new ArrayList<>(paragraphs.size());
+        for (final ByteSpanAnchor span : paragraphs) {
+            if (VisibleText.isBlank(new String(fileBytes, span.startInclusive(), span.length(), charset))) {
+                log.debug(
+                        "paragraph at bytes {}-{} holds no visible text; no segment",
+                        span.startInclusive(),
+                        span.endExclusive());
+            } else {
+                visible.add(span);
+            }
+        }
+        return visible;
     }
 
     private static List<Segment> segmentsOf(
@@ -110,7 +135,10 @@ public final class TxtReader {
                 span,
                 null,
                 SegmentStatus.PENDING,
-                INITIAL_CONFIDENCE);
+                INITIAL_CONFIDENCE,
+                null,
+                masked.pairs(),
+                masked.lineBreakTokens());
     }
 
     /**

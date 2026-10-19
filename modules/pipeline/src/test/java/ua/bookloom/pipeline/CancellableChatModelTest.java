@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class CancellableChatModelTest {
 
     private static final ChatRequest REQUEST = new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "Hello.")));
 
-    private final JobControl control = new JobControl();
+    private final JobControl control = new JobControl(Set.of());
     private final ScriptedChatModel delegate = TranslationJobTestSupport.replies("ONE.");
     private final AtomicInteger entered = new AtomicInteger();
     private final CancellableChatModel model = new CancellableChatModel(delegate, control, entered::incrementAndGet);

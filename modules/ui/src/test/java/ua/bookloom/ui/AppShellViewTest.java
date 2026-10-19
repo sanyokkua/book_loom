@@ -134,16 +134,14 @@ class AppShellViewTest extends ShellTestBase {
         // groups.
         assertThat(navigationSequence())
                 .containsExactly(
-                        "heading:Workflow",
+                        "heading:WORKFLOW",
                         "nav-projects",
                         "nav-import",
                         "nav-book-brief",
-                        "nav-structure",
                         "nav-names-style",
                         "nav-translating",
-                        "nav-review",
                         "nav-export",
-                        "heading:Application",
+                        "heading:APPLICATION",
                         "nav-settings");
     }
 
@@ -155,7 +153,7 @@ class AppShellViewTest extends ShellTestBase {
                 .filter(entry -> entry.startsWith(HEADING_PREFIX))
                 .toList();
 
-        assertThat(headings).containsExactly("heading:Workflow", "heading:Application");
+        assertThat(headings).containsExactly("heading:WORKFLOW", "heading:APPLICATION");
         assertThat(textsUnder(required("shell-nav")))
                 .doesNotContain("Design reference", "Component library", "Dialogs & alerts", "Notifications");
     }
@@ -167,11 +165,11 @@ class AppShellViewTest extends ShellTestBase {
     }
 
     @Test
-    void navigation_workflowEntries_areNumberedOneToSevenInOrder() {
-        // IF the badges were mis-numbered or mis-ordered, THEN the sequence would not read one to seven.
+    void navigation_workflowEntries_areNumberedOneToFiveInOrder() {
+        // IF the badges were mis-numbered or mis-ordered, THEN the sequence would not read one to five.
         assertThat(required("shell-nav").lookupAll(".nav-step"))
                 .extracting(step -> ((Label) step).getText())
-                .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                .containsExactly("1", "2", "3", "4", "5");
     }
 
     // IF an entry outside the numbered workflow carried a number, THEN projects or the application group would
@@ -182,17 +180,9 @@ class AppShellViewTest extends ShellTestBase {
         assertThat(required(id).lookup(".nav-step")).isNull();
     }
 
-    // IF a numbered entry carried the wrong number, THEN step 4 (names and style) would not line up with the design.
+    // IF a numbered entry carried the wrong number, THEN step 3 (names and style) would not line up with the design.
     @ParameterizedTest
-    @CsvSource({
-        "nav-import, 1",
-        "nav-book-brief, 2",
-        "nav-structure, 3",
-        "nav-names-style, 4",
-        "nav-translating, 5",
-        "nav-review, 6",
-        "nav-export, 7"
-    })
+    @CsvSource({"nav-import, 1", "nav-book-brief, 2", "nav-names-style, 3", "nav-translating, 4", "nav-export, 5"})
     void navigation_numberedEntry_showsItsOwnStepNumber(final String id, final String number) {
         assertThat(((Label) required(id).lookup(".nav-step")).getText()).isEqualTo(number);
     }
@@ -204,10 +194,8 @@ class AppShellViewTest extends ShellTestBase {
         "nav-projects, true",
         "nav-import, false",
         "nav-book-brief, false",
-        "nav-structure, false",
-        "nav-names-style, true",
+        "nav-names-style, false",
         "nav-translating, false",
-        "nav-review, true",
         "nav-export, false",
         "nav-settings, false"
     })
@@ -225,7 +213,7 @@ class AppShellViewTest extends ShellTestBase {
     // IF activating an inert entry (through the shell or by pressing its button) moved the screen or the mark, THEN a
     // screen that does not exist would be shown or claimed as current.
     @ParameterizedTest
-    @CsvSource({"PROJECTS, nav-projects", "NAMES_STYLE, nav-names-style", "REVIEW, nav-review"})
+    @CsvSource({"PROJECTS, nav-projects"})
     void activate_inertEntry_changesNeitherTheScreenAreaNorTheCurrentMark(final ViewNames inert, final String id) {
         onFx(() -> shell.activate(ViewNames.IMPORT));
         final List<Node> contentBefore = List.copyOf(contentHost().getChildren());
@@ -247,11 +235,11 @@ class AppShellViewTest extends ShellTestBase {
     // disagree with the screen shown.
     @ParameterizedTest
     @CsvSource(delimiter = '|', textBlock = """
-            IMPORT      | nav-import      | Workflow / Import book · step 1 of 7
-            BOOK_BRIEF  | nav-book-brief  | Workflow / Book Brief · step 2 of 7
-            STRUCTURE   | nav-structure   | Workflow / Structure · step 3 of 7
-            TRANSLATING | nav-translating | Workflow / Translating · step 5 of 7
-            EXPORT      | nav-export      | Workflow / Export · step 7 of 7
+            IMPORT      | nav-import      | Workflow / Import book · step 1 of 5
+            BOOK_BRIEF  | nav-book-brief  | Workflow / Book Brief · step 2 of 5
+            NAMES_STYLE | nav-names-style | Workflow / Names & style · step 3 of 5
+            TRANSLATING | nav-translating | Workflow / Translating · step 4 of 5
+            EXPORT      | nav-export      | Workflow / Export · step 5 of 5
             SETTINGS    | nav-settings    | Application / Settings
             """)
     void activate_availableEntry_marksOnlyThatEntryAndWritesTheBreadcrumb(
@@ -291,13 +279,13 @@ class AppShellViewTest extends ShellTestBase {
     // navigation lying about what is on screen.
     @Test
     void currentMark_followsAProgrammaticNavigationNotDrivenByTheColumn() {
-        onFx(() -> navigator.navigate(ViewNames.STRUCTURE));
-        assertThat(currentEntryIds()).containsExactly("nav-structure");
+        onFx(() -> navigator.navigate(ViewNames.NAMES_STYLE));
+        assertThat(currentEntryIds()).containsExactly("nav-names-style");
 
         onFx(() -> navigator.navigate(ViewNames.TRANSLATING));
 
         assertThat(currentEntryIds()).containsExactly("nav-translating");
-        assertThat(breadcrumb().getText()).isEqualTo("Workflow / Translating · step 5 of 7");
+        assertThat(breadcrumb().getText()).isEqualTo("Workflow / Translating · step 4 of 5");
     }
 
     @Test
@@ -308,7 +296,7 @@ class AppShellViewTest extends ShellTestBase {
         onFx(() -> shell.activate(ViewNames.IMPORT));
         final Bounds contentAfterFirst = sceneBounds("shell-content");
 
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
+        onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
 
         final HBox actions = (HBox) required("shell-actions");
         assertThat(actions.getChildren()).isEmpty();

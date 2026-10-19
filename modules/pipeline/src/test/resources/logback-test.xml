@@ -1,6 +1,8 @@
 <configuration>
+  <!-- One file per test JVM (Gradle's worker id): a module's tests run in parallel forks, and a test that reads its
+       own lines back must not find another fork's lines in between. -->
   <appender name="TEST_LOG" class="ch.qos.logback.core.FileAppender">
-    <file>build/test-logs/test.log</file>
+    <file>build/test-logs/test-${org.gradle.test.worker:-0}.log</file>
     <append>true</append>
     <encoder>
       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [job=%X{job} segment=%X{segment}] %logger{36} - %msg%n</pattern>

@@ -23,4 +23,12 @@ public interface ErrorPresenter {
      * @param onRetry what Retry does after the dialog has closed; never run for a non-retryable failure
      */
     void present(AppError error, Runnable onRetry);
+
+    /**
+     * Shows the failure that ended a run, worded so that it says what survives: the decided segments are kept, and
+     * only until the application closes.
+     *
+     * @param error the failure; only its title, message and details are ever shown, never its cause
+     */
+    void presentRunFailure(AppError error);
 }

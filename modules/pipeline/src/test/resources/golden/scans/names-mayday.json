@@ -1,0 +1,104 @@
+{
+  "storySegments" : 21,
+  "nameScan" : [ {
+    "term" : "Haldane",
+    "count" : 11,
+    "firstSentence" : "Haldane stood on the bridge of the freighter and watched the barometer fall.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Sorrel",
+    "count" : 10,
+    "firstSentence" : "Sorrel came up from the engine room with oil on her hands.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Haldane",
+    "count" : 1,
+    "firstSentence" : "It asked Haldane to repeat the Mayday.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ {
+    "term" : "mayday",
+    "count" : 7,
+    "firstSentence" : "Mayday, mayday, mayday,",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Haldane" : {
+      "count" : 11,
+      "windows" : [ {
+        "text" : "Haldane stood on the bridge of the freighter and watched the barometer fall. He had seen that fall once before.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Haldane picked up the radio. \"Mayday, mayday, mayday,\" he said, and gave the ship's name and position.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Haldane set down the radio. He took the wheel and held the bow into the weather.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "In the district everyone knew Haldane, and nobody had a bad word for Haldane.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Sorrel" : {
+      "count" : 10,
+      "windows" : [ {
+        "text" : "Sorrel came up from the engine room with oil on her hands. She said the pumps would not hold another hour.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "The radio hissed. Sorrel put her hand on his shoulder and he did not shake it off.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Sorrel laughed once, a short, cracked sound. She said three hours was a long time to be brave.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Sorrel, and nobody had a bad word for Sorrel.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she" ],
+        "male" : [ "he" ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Haldane" : {
+      "count" : 11,
+      "examples" : [ "Haldane stood on the bridge of the freighter and watched the barometer fall.", "Haldane picked up the radio." ]
+    },
+    "Sorrel" : {
+      "count" : 10,
+      "examples" : [ "Sorrel came up from the engine room with oil on her hands.", "Sorrel watched the sea climb the rail and fall back." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Haldane",
+    "mentions" : 11
+  }, {
+    "term" : "Sorrel",
+    "mentions" : 10
+  } ],
+  "pronouns" : {
+    "Haldane" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Sorrel" : {
+      "female" : [ "she", "she", "she", "she" ],
+      "male" : [ "he" ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ ]
+    }
+  }
+}

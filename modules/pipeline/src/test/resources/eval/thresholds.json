@@ -1,0 +1,6 @@
+{
+ "e2b":  {"falseNegativeMax": 0.50, "falsePositiveMax": 0.40, "stabilityMin": 0.60},
+ "small":{"falseNegativeMax": 0.10, "falsePositiveMax": 0.10, "stabilityMin": 0.90},
+ "mid":  {"falseNegativeMax": 0.10, "falsePositiveMax": 0.10, "stabilityMin": 0.95},
+ "large":{"falseNegativeMax": 0.05, "falsePositiveMax": 0.10, "stabilityMin": 0.95}
+}

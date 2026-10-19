@@ -18,6 +18,9 @@ import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.TabMovesFocus;
+import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -36,6 +39,7 @@ final class ErrorDialog {
     static final String TITLE_ID = "error-title";
     static final String MESSAGE_ID = "error-message";
     static final String TOGGLE_ID = "error-details-toggle";
+    static final String NOTE_ID = "error-note";
     static final String DETAILS_ID = "error-details";
     static final String RETRY_ID = "error-retry";
     static final String DISMISS_ID = "error-dismiss";
@@ -46,6 +50,7 @@ final class ErrorDialog {
     private final AppError error;
     private final @Nullable Runnable onRetry;
     private final Runnable onDismiss;
+    private final @Nullable MessageKey note;
 
     /**
      * Prepares the card's content.
@@ -55,13 +60,19 @@ final class ErrorDialog {
      * @param onRetry what Retry does, or {@code null} when the caller offered no way to repeat the action, in which
      *     case no Retry button is built even for a retryable failure
      * @param onDismiss what Dismiss does
+     * @param note a line shown beneath the message, or {@code null} for none
      */
     ErrorDialog(
-            final Messages messages, final AppError error, final @Nullable Runnable onRetry, final Runnable onDismiss) {
+            final Messages messages,
+            final AppError error,
+            final @Nullable Runnable onRetry,
+            final Runnable onDismiss,
+            final @Nullable MessageKey note) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.error = Objects.requireNonNull(error, "error");
         this.onRetry = onRetry;
         this.onDismiss = Objects.requireNonNull(onDismiss, "onDismiss");
+        this.note = note;
     }
 
     /**
@@ -83,7 +94,7 @@ final class ErrorDialog {
     Node card() {
         final Runnable retryAction = error.retryable() ? onRetry : null;
         log.debug("building the error card: retryOffered={}, hasDetails={}", retryAction != null, hasDetails(error));
-        final DialogPane card = new DialogPane();
+        final DialogPane card = new ModalCard();
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header());
@@ -112,6 +123,13 @@ final class ErrorDialog {
         message.getStyleClass().add("dialog-text");
         final VBox body = new VBox(message);
         body.getStyleClass().add("error-body");
+        if (note != null) {
+            final Label line = new Label(messages.get(note));
+            line.setId(NOTE_ID);
+            line.setWrapText(true);
+            line.getStyleClass().add("dialog-text");
+            body.getChildren().add(line);
+        }
         if (hasDetails(error)) {
             body.getChildren().add(detailsToggle(body));
         }
@@ -121,6 +139,7 @@ final class ErrorDialog {
     private Node detailsToggle(final VBox body) {
         final ToggleButton toggle = new ToggleButton(messages.get(MessageKey.ERROR_DETAILS_SHOW));
         toggle.setId(TOGGLE_ID);
+        Tips.install(messages, toggle, MessageKey.ERROR_DETAILS_SHOW_TIP);
         toggle.getStyleClass().add("btn-secondary");
         final TextArea details = detailsArea();
         toggle.setOnAction(event -> {
@@ -137,7 +156,7 @@ final class ErrorDialog {
     }
 
     private TextArea detailsArea() {
-        final TextArea details = new TextArea(error.details());
+        final TextArea details = TabMovesFocus.install(new TextArea(error.details()));
         details.setId(DETAILS_ID);
         details.setEditable(false);
         details.setWrapText(true);
@@ -154,12 +173,14 @@ final class ErrorDialog {
             card.getButtonTypes().add(retryType);
             final Button retry = (Button) card.lookupButton(retryType);
             retry.setId(RETRY_ID);
+            Tips.install(messages, retry, MessageKey.ERROR_RETRY_TIP);
             retry.getStyleClass().add("btn-primary");
             retry.setOnAction(event -> retryAction.run());
         }
         card.getButtonTypes().add(ButtonType.CLOSE);
         final Button dismiss = (Button) card.lookupButton(ButtonType.CLOSE);
         dismiss.setId(DISMISS_ID);
+        Tips.install(messages, dismiss, MessageKey.COMMON_CLOSE_TIP);
         dismiss.setText(messages.get(MessageKey.COMMON_CLOSE));
         dismiss.getStyleClass().add(retryOffered ? "btn-secondary" : "btn-primary");
         dismiss.setOnAction(event -> onDismiss.run());

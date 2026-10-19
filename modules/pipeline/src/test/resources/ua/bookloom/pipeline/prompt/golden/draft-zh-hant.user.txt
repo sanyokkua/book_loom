@@ -1,0 +1,12 @@
+Translate from Chinese (Traditional) (zh-Hant) to Ukrainian (uk).
+
+[Immutable tokens for this text]
+Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧
+Do not add, reorder, split, translate, or omit these tokens.
+
+<Text>
+He opened the ⟦g0⟧old⟦g1⟧ door.
+</Text>
+
+Reminder: the target is written in Ukrainian (uk), not in Chinese (Traditional) (zh-Hant); never copy the text above and never write "...".
+Return exactly one JSON object matching this schema: {"target":"<translation>"}

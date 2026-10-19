@@ -1,0 +1,71 @@
+{
+  "id": "brand-and-camera",
+  "about": "A shop 'Orrin & Vale' and a camera written KESSEL OPTIK, Kessel Optik and Kessels: one brand and one camera, so the halves 'Orrin' and 'Vale' and the variants 'KESSEL OPTIK' and 'Kessels' are not separate names.",
+  "title": "The Corner Shop",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Arcade",
+      "paragraphs": [
+        "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade. She paid in coins.",
+        "The camera was a KESSEL OPTIK, heavy as a brick, with a lens cap on a string. The label said so in capital letters.",
+        "Orrin & Vale sold everything a photographer could want. Anneke went there on the first of every month.",
+        "She wrote to the makers of the Kessel Optik about a stiff shutter. They replied within a week.",
+        "Anneke loaded a roll and walked down to the market. She photographed the fishmongers and the pigeons.",
+        "At Orrin & Vale the clerk shook his head over the shutter. He said the Kessel Optik had a famous weakness.",
+        "The Kessels, he added, were no longer made. Every Kessels he had ever sold had come back for repair.",
+        "Anneke asked what a Kessels cost second-hand. The clerk named a price that made her laugh.",
+        "She kept the camera anyway. Anneke liked the weight of the thing and the sound it made.",
+        "A new poster hung in the window of Orrin & Vale. KESSEL OPTIK, it said, in letters a foot high.",
+        "Anneke stopped to look at it on her way home. She thought the poster made a promise the camera could not keep.",
+        "Next month she took the Kessel Optik back to the shop. Orrin & Vale mended it for the price of a lunch.",
+        "The clerk showed her a smaller camera in a leather case. Anneke turned it over and handed it back.",
+        "She preferred her Kessels. She said it had character, and the clerk agreed that it did.",
+        "Anneke photographed the regatta in June. The Kessel Optik jammed twice and caught the winning boat.",
+        "The picture ran in the local paper. Orrin & Vale framed a copy and hung it by the till.",
+        "Anneke went in to thank them. The clerk said the credit belonged to the Kessels, and to the light.",
+        "In the district everyone knew Anneke, and nobody had a bad word for Anneke.",
+        "Years afterwards people still asked about Anneke, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Anneke",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "anneke"
+      }
+    ],
+    "junk": [
+      "Orrin",
+      "Vale",
+      "KESSEL OPTIK",
+      "Kessels"
+    ],
+    "keep": [
+      "Orrin & Vale",
+      "Kessel Optik"
+    ],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Anneke": "Аннеке",
+      "Orrin & Vale": "Оррін і Вейл",
+      "Kessel Optik": "Кессель Оптік"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

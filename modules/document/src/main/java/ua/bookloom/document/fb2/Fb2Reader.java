@@ -7,13 +7,16 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jspecify.annotations.Nullable;
@@ -22,7 +25,10 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.model.AuxiliarySlots;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
@@ -46,6 +52,7 @@ import ua.bookloom.util.hash.HashUtil;
  * <p>Throws rather than returning a {@code Result}, matching the EPUB reader: {@code DocumentService} is the port
  * boundary that classifies these into the typed envelope.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class Fb2Reader {
 
@@ -55,6 +62,8 @@ public final class Fb2Reader {
     private static final String ZIP_SUFFIX = ".fb2.zip";
     private static final String FB2_SUFFIX = ".fb2";
     private static final String BODY_ELEMENT = "body";
+    private static final String BODY_NAME_ATTRIBUTE = "name";
+    private static final Set<String> APPARATUS_BODIES = Set.of("notes", "comments");
 
     private final OpenFb2Registry registry;
 
@@ -144,8 +153,8 @@ public final class Fb2Reader {
             org.jdom2.Document tree,
             CharsetLadder.Resolution resolution,
             @Nullable String declaredEncodingName) {
-        final Element titleInfo =
-                Fb2Metadata.childOf(Fb2Metadata.childOf(tree.getRootElement(), "description"), "title-info");
+        final Element description = Fb2Metadata.childOf(tree.getRootElement(), "description");
+        final Element titleInfo = Fb2Metadata.childOf(description, "title-info");
         final UnitsResult units = readUnits(tree, source.name());
         final String documentId = UUID.randomUUID().toString();
         registry.put(
@@ -157,7 +166,9 @@ public final class Fb2Reader {
                         resolution.charset(),
                         declaredEncodingName,
                         units.bodiesByHandleId(),
-                        hasCrLf(source.bytes())));
+                        units.auxiliarySlotsByHandleId(),
+                        hasCrLf(source.bytes()),
+                        Arrays.copyOf(source.bytes(), resolution.bomLength())));
         return new Document(
                 documentId,
                 BookFormat.FB2,
@@ -166,7 +177,7 @@ public final class Fb2Reader {
                 resolution.charset().name(),
                 resolution.hasBom(),
                 HashUtil.sha256Hex(source.bytes()),
-                Fb2Metadata.read(titleInfo),
+                Fb2Metadata.read(description),
                 units.units());
     }
 
@@ -204,7 +215,14 @@ public final class Fb2Reader {
         if (units.isEmpty()) {
             throw new CorruptContainerException("This FictionBook document declares no body");
         }
-        return new UnitsResult(units, bodies);
+        final AuxiliarySlots.Collected auxiliary = Fb2Auxiliary.collect(tree.getRootElement(), sourceName);
+        final String auxiliaryHandleId = UUID.randomUUID().toString();
+        units.add(AuxiliaryUnit.of(sourceName, units.size(), auxiliaryHandleId, auxiliary.segments()));
+        log.debug(
+                "FB2 auxiliary unit href={} segments={}",
+                sourceName,
+                auxiliary.segments().size());
+        return new UnitsResult(units, bodies, Map.of(auxiliaryHandleId, auxiliary.slots()));
     }
 
     private static void addUnit(
@@ -214,7 +232,17 @@ public final class Fb2Reader {
         bodies.put(handleId, body);
         final List<Segment> segments =
                 BlockSegmentWalker.walk(Jdom2TreeNode.of(body), unitId, TreeDialect.FICTION_BOOK);
-        units.add(new Unit(unitId, order, sourceName, FB2_MEDIA_TYPE, new SkeletonHandle(handleId), segments));
+        units.add(new Unit(
+                unitId, order, sourceName, FB2_MEDIA_TYPE, new SkeletonHandle(handleId), segments, roleOf(body)));
+    }
+
+    // FB2 names a body "notes" or "comments" when it holds the apparatus after the story; a section has no role.
+    private static UnitRole roleOf(Element body) {
+        final String name = body.getAttributeValue(BODY_NAME_ATTRIBUTE);
+        final boolean apparatus =
+                name != null && APPARATUS_BODIES.contains(name.strip().toLowerCase(Locale.ROOT));
+        log.debug("FB2 body name={} role={}", name, apparatus ? UnitRole.BACK_MATTER : UnitRole.BODY);
+        return apparatus ? UnitRole.BACK_MATTER : UnitRole.BODY;
     }
 
     /** The FB2 bytes plus where they came from — identical for a bare file and for a zipped member. */
@@ -224,5 +252,8 @@ public final class Fb2Reader {
             String name,
             @org.jspecify.annotations.Nullable String zipMemberName) {}
 
-    private record UnitsResult(List<Unit> units, Map<String, Element> bodiesByHandleId) {}
+    private record UnitsResult(
+            List<Unit> units,
+            Map<String, Element> bodiesByHandleId,
+            Map<String, AuxiliarySlots> auxiliarySlotsByHandleId) {}
 }

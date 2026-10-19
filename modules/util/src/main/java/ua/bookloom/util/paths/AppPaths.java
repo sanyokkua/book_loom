@@ -31,6 +31,33 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
     public static final String DATABASE_FILE_NAME = "bookloom.db";
 
     /**
+     * The detailed diagnostic log's fixed name inside the log directory. Its rotated files share the stem, so a
+     * reader of the folder (the diagnostic bundle) finds all of them by this prefix without knowing the rotation
+     * pattern.
+     */
+    public static final String TRACE_LOG_FILE_NAME = "bookloom-trace.log";
+
+    /**
+     * The evidence log's fixed name inside the log directory: the TRACE lines of flagged and repaired segments, kept
+     * apart from the rolling detailed log so a long run's rotation never drops them. It starts with
+     * {@link #TRACE_LOG_PREFIX}, so the diagnostic bundle collects it with the detailed log.
+     */
+    public static final String EVIDENCE_LOG_FILE_NAME = "bookloom-trace-evidence.log";
+
+    /**
+     * What a run log's name starts with: one small file of INFO lifecycle lines per launch, named
+     * {@code bookloom-trace-run-<yyyyMMdd-HHmmss>.log} so the diagnostic bundle collects it by
+     * {@link #TRACE_LOG_PREFIX} and the names sort oldest first.
+     */
+    public static final String RUN_LOG_PREFIX = "bookloom-trace-run-";
+
+    /** How many run logs stay in the log directory, the one being written included. */
+    public static final int RUN_LOGS_KEPT = 10;
+
+    /** The name every file of the detailed diagnostic log starts with: the active file and its rotated archives. */
+    public static final String TRACE_LOG_PREFIX = "bookloom-trace";
+
+    /**
      * Validates that the two roots are absolute and that the two files sit inside the data directory.
      *
      * <p>A relative data directory would resolve against the working directory, which for a double-clicked

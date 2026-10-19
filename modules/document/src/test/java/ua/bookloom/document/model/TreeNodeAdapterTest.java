@@ -5,11 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.StringReader;
 import java.util.Objects;
+import java.util.function.Function;
 import org.jdom2.Comment;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
 import org.jdom2.Text;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * {@link TreeNode#openMarkup()} and {@link TreeNode#closeMarkup()} on both adapters — the two methods masking uses
@@ -232,5 +235,57 @@ class TreeNodeAdapterTest {
         assertThat(reparsed.getQualifiedName()).isEqualTo("z:mark");
         assertThat(reparsed.getNamespace().getURI()).isEqualTo("http://z");
         assertThat(reparsed.getText()).isEqualTo("переклад");
+    }
+
+    private static java.util.stream.Stream<Function<String, TreeNode>> languageBearingElementFactories() {
+        return java.util.stream.Stream.of(
+                TreeNodeAdapterTest::jsoupElementWithLanguageAttributes,
+                TreeNodeAdapterTest::jdom2ElementWithLanguageAttributes);
+    }
+
+    private static TreeNode jsoupElementWithLanguageAttributes(String innerHtml) {
+        final var body = XhtmlTrees.body("<p xml:lang=\"fr\" lang=\"uk\">" + innerHtml + "</p>");
+        return JsoupTreeNode.of(Objects.requireNonNull(body.selectFirst("p")));
+    }
+
+    private static TreeNode jdom2ElementWithLanguageAttributes(String innerText) {
+        final Element root = parseRoot("<root><p xml:lang=\"fr\" lang=\"uk\">" + innerText + "</p></root>");
+        return Jdom2TreeNode.of(childElement(root, "p"));
+    }
+
+    // WHEN an element inside a segment's content declares both xml:lang and lang, the system SHALL
+    // read xml:lang as written by either adapter.
+    @ParameterizedTest
+    @MethodSource("languageBearingElementFactories")
+    void attribute_xmlLangDeclared_readsItsValue(Function<String, TreeNode> factory) {
+        assertThat(factory.apply("Bonjour.").attribute("xml:lang")).isEqualTo("fr");
+    }
+
+    // WHEN an element inside a segment's content declares a plain lang attribute, the system SHALL
+    // read it as written by either adapter.
+    @ParameterizedTest
+    @MethodSource("languageBearingElementFactories")
+    void attribute_plainLangDeclared_readsItsValue(Function<String, TreeNode> factory) {
+        assertThat(factory.apply("Bonjour.").attribute("lang")).isEqualTo("uk");
+    }
+
+    // WHEN an element declares neither xml:lang nor lang, the system SHALL report no value rather
+    // than an empty string, on either adapter.
+    @Test
+    void attribute_jsoupElementWithNoLanguageAttribute_readsNull() {
+        final var body = XhtmlTrees.body("<p>Hi.</p>");
+        final var paragraph = Objects.requireNonNull(body.selectFirst("p"));
+
+        assertThat(JsoupTreeNode.of(paragraph).attribute("xml:lang")).isNull();
+    }
+
+    // WHEN an element declares neither xml:lang nor lang, the system SHALL report no value rather
+    // than an empty string, on either adapter.
+    @Test
+    void attribute_jdom2ElementWithNoLanguageAttribute_readsNull() {
+        final Element root = parseRoot("<root><p>Hi.</p></root>");
+        final Element paragraph = childElement(root, "p");
+
+        assertThat(Jdom2TreeNode.of(paragraph).attribute("xml:lang")).isNull();
     }
 }

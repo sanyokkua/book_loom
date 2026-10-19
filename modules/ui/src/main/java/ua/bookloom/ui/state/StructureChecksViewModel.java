@@ -1,0 +1,157 @@
+package ua.bookloom.ui.state;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
+import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.BookPlan;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewCounts;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.BackgroundExecutor;
+
+/**
+ * Runs the two checks the structure screen shows beside the tree, the round trip and the chunk-budget plan, on the
+ * background executor, reads how many segments a run translates, and publishes what they found on the FX thread.
+ *
+ * <p>Each call to {@link #run} supersedes the one before it: an answer that arrives after a newer run was asked for is
+ * dropped, so a slow check of a book the person has since left cannot overwrite the check of the book on show. Neither
+ * check is ever a reason to block the screen, so a failure of either only shows in the state. The property is touched on
+ * the FX thread only.
+ */
+@Slf4j
+@Singleton
+public final class StructureChecksViewModel {
+
+    private final ProjectService projects;
+    private final ReviewDesk desk;
+    private final ExecutorService executor;
+    private final ReadOnlyObjectWrapper<StructureChecks> state =
+            new ReadOnlyObjectWrapper<>(new StructureChecks.Running());
+    private long generation;
+    private @Nullable String checkedProject;
+    private @Nullable BookBrief checkedBrief;
+
+    /**
+     * Receives the collaborators the injector owns.
+     *
+     * @param projects the port the two checks are asked of
+     * @param desk the port the project's segment counts are read from, so the screen can say how many segments a run
+     *     translates besides the book text
+     * @param executor the daemon executor the checks run on, never the FX thread
+     */
+    @Inject
+    public StructureChecksViewModel(
+            final ProjectService projects, final ReviewDesk desk, @BackgroundExecutor final ExecutorService executor) {
+        this.projects = Objects.requireNonNull(projects, "projects");
+        this.desk = Objects.requireNonNull(desk, "desk");
+        this.executor = Objects.requireNonNull(executor, "executor");
+    }
+
+    /**
+     * Where the checks stand.
+     *
+     * @return a read-only property; running from a {@link #run} until its answer is published
+     */
+    public ReadOnlyObjectProperty<StructureChecks> state() {
+        return state.getReadOnlyProperty();
+    }
+
+    /**
+     * Starts the checks of a project unless they were already asked for this project under this brief and either are
+     * running or gave an answer. A screen that shows the book calls this, so that moving between the screens that show
+     * the checks does not read the whole book again; a changed brief, which moves the run total and the chunk budget, or
+     * a check that could not run, asks again.
+     *
+     * @param projectId the stored project to check
+     * @param brief the brief as it stands now, or {@code null} when none is known
+     */
+    public void ensure(final String projectId, final @Nullable BookBrief brief) {
+        Objects.requireNonNull(projectId, "projectId");
+        final boolean unavailable = state.get() instanceof StructureChecks.Finished finished && !finished.hasReport();
+        if (projectId.equals(checkedProject) && Objects.equals(brief, checkedBrief) && !unavailable) {
+            log.debug("the structure checks of project {} stand: same brief, already asked", projectId);
+            return;
+        }
+        checkedProject = projectId;
+        checkedBrief = brief;
+        run(projectId);
+    }
+
+    /**
+     * Starts the checks of a project, replacing any earlier run.
+     *
+     * @param projectId the stored project to check
+     */
+    public void run(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        final long ticket = ++generation;
+        log.debug("running the structure checks of project {} (run {})", projectId, ticket);
+        state.set(new StructureChecks.Running());
+        try {
+            executor.execute(() -> {
+                final StructureChecks.Finished found = check(projectId);
+                Platform.runLater(() -> publish(ticket, found));
+            });
+        } catch (RuntimeException rejected) {
+            log.warn("the structure checks of project {} could not be submitted", projectId, rejected);
+            state.set(new StructureChecks.Finished(null, 0));
+        }
+    }
+
+    private void publish(final long ticket, final StructureChecks.Finished found) {
+        if (ticket != generation) {
+            log.debug("the answer of run {} is dropped: run {} superseded it", ticket, generation);
+            return;
+        }
+        log.debug("publishing the structure checks of run {}", ticket);
+        state.set(found);
+    }
+
+    private StructureChecks.Finished check(final String projectId) {
+        final RoundTripReport report = attempt("round trip", projectId, () -> projects.roundTrip(projectId));
+        final BookPlan plan = attempt("plan", projectId, () -> projects.plan(projectId));
+        if (report != null) {
+            log.info(
+                    "round trip of project {}: structure preserved {}, ids preserved {}, {} missing id(s), {} of {} segments",
+                    projectId,
+                    report.structurePreserved(),
+                    report.idsPreserved(),
+                    report.missingIds().size(),
+                    report.copySegments(),
+                    report.sourceSegments());
+        }
+        final int oversized = plan == null ? 0 : plan.oversizedSegmentIds().size();
+        log.debug("plan of project {}: {} oversized segment(s)", projectId, oversized);
+        final ReviewCounts counts = attempt("segment counts", projectId, () -> desk.counts(projectId));
+        // A segment kept as source by the brief's choice is never translated, so a run does not count it.
+        final int runSegments = counts == null ? 0 : counts.total() - counts.sourceKept();
+        log.debug("project {}: a run translates {} segment(s)", projectId, runSegments);
+        return new StructureChecks.Finished(report, oversized, runSegments);
+    }
+
+    private static <T> @Nullable T attempt(final String what, final String projectId, final Supplier<Result<T>> call) {
+        try {
+            final Result<T> answer = call.get();
+            final AppError failure = answer.error();
+            if (failure != null) {
+                log.warn("the {} of project {} failed with {}", what, projectId, failure.code());
+                return null;
+            }
+            return answer.data();
+        } catch (Throwable thrown) {
+            log.error("the project service threw instead of returning a result for the {}", what, thrown);
+            return null;
+        }
+    }
+}

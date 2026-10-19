@@ -1,0 +1,139 @@
+{
+  "storySegments" : 21,
+  "nameScan" : [ {
+    "term" : "Halvard",
+    "count" : 11,
+    "firstSentence" : "Halvard came in with the first basket of the day.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Zephra Quillon",
+    "count" : 6,
+    "firstSentence" : "Zephra Quillon opened the net loft before the tide turned.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Zephra",
+    "count" : 5,
+    "firstSentence" : "Zephra counted the baskets twice.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Quillon",
+    "count" : 2,
+    "firstSentence" : "Zephra Quillon opened the net loft before the tide turned.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Halvard" : {
+      "count" : 11,
+      "windows" : [ {
+        "text" : "Halvard came in with the first basket of the day. He set it down by the scale and said nothing.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Halvard weighed the largest fish on the brass scale. He grunted at the number and wrote it down.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Halvard sat on the quay and watched the last light go. He waited for the night boat as he did every evening.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Halvard shut the gate of the quay behind him. He looked back once at the dark water.",
+        "pronoun" : "MALE"
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he", "he", "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "him" ]
+      }
+    },
+    "Zephra Quillon" : {
+      "count" : 6,
+      "windows" : [ {
+        "text" : "Zephra Quillon opened the net loft before the tide turned. She hung the dry nets on the long pegs.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Zephra Quillon sorted the catch by size. She threw the small ones back into the bucket.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Zephra Quillon locked the loft at dusk and hung the key on its nail. She walked home along the sea wall.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Years afterwards people still asked about Zephra Quillon, though few could say why.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Zephra" : {
+      "count" : 11,
+      "windows" : [ {
+        "text" : "Zephra Quillon opened the net loft before the tide turned. She hung the dry nets on the long pegs.",
+        "pronoun" : null
+      }, {
+        "text" : "Zephra counted the baskets twice. She wrote the number on the slate with a stub of chalk.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the village everyone knew Zephra Quillon, and nobody had a bad word for Zephra Quillon.",
+        "pronoun" : null
+      }, {
+        "text" : "In the village everyone knew Zephra, and nobody had a bad word for Zephra.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Halvard" : {
+      "count" : 11,
+      "examples" : [ "Halvard came in with the first basket of the day.", "Halvard weighed the largest fish on the brass scale." ]
+    },
+    "Zephra Quillon" : {
+      "count" : 6,
+      "examples" : [ "Zephra Quillon opened the net loft before the tide turned.", "Zephra Quillon sorted the catch by size." ]
+    },
+    "Zephra" : {
+      "count" : 11,
+      "examples" : [ "Zephra Quillon opened the net loft before the tide turned.", "Zephra counted the baskets twice." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Halvard",
+    "mentions" : 11
+  }, {
+    "term" : "Zephra",
+    "mentions" : 11
+  }, {
+    "term" : "Zephra Quillon",
+    "mentions" : 6
+  } ],
+  "pronouns" : {
+    "Halvard" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he", "he", "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "him" ]
+    },
+    "Zephra Quillon" : {
+      "female" : [ "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Zephra" : {
+      "female" : [ "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

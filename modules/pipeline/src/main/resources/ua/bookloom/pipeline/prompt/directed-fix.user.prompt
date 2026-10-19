@@ -1,0 +1,17 @@
+<Source>
+{{source}}
+</Source>
+
+[Defects to fix — address each exactly]
+{{findings}}
+
+{{#expectedTokens}}
+[Expected tokens — your translation contains exactly this sequence]
+{{expectedTokens}}
+{{/expectedTokens}}
+
+<Translation>
+{{text}}
+</Translation>
+
+Return one JSON object: {"target":"<the full corrected translation>"}

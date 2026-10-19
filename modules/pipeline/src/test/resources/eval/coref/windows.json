@@ -1,0 +1,232 @@
+[
+  {"id": "next-01", "target": "Ilsabet", "shape": "next-sentence-other",
+   "paragraphs": [
+     "Ilsabet unrolled the chart on the long table. Tovrin leaned over the paper, and he frowned at the faded ink.",
+     "She had drawn the coast from memory, and she knew where it was wrong."],
+   "pronouns": [
+     {"quote": "he frowned", "pronoun": "he", "referent": "OTHER", "who": "Tovrin", "inSpeech": false},
+     {"quote": "She had drawn", "pronoun": "She", "referent": "TARGET", "who": "Ilsabet", "inSpeech": false},
+     {"quote": "she knew", "pronoun": "she", "referent": "TARGET", "who": "Ilsabet", "inSpeech": false}]},
+  {"id": "next-02", "target": "Tovrin", "shape": "next-sentence-other",
+   "paragraphs": [
+     "Tovrin set the lamp down by the window. Quenna took the empty chair, and she waited for him to speak.",
+     "He did not speak for a long while."],
+   "pronouns": [
+     {"quote": "she waited", "pronoun": "she", "referent": "OTHER", "who": "Quenna", "inSpeech": false},
+     {"quote": "him to speak", "pronoun": "him", "referent": "TARGET", "who": "Tovrin", "inSpeech": false},
+     {"quote": "He did not speak", "pronoun": "He", "referent": "TARGET", "who": "Tovrin", "inSpeech": false}]},
+  {"id": "next-03", "target": "Odrek", "shape": "next-sentence-other",
+   "paragraphs": [
+     "Odrek bowed to the harbour clerk. The clerk, a thin woman named Yselde, handed back his papers without looking up.",
+     "Yselde watched him cross the yard, and her pen stopped moving."],
+   "pronouns": [
+     {"quote": "his papers", "pronoun": "his", "referent": "TARGET", "who": "Odrek", "inSpeech": false},
+     {"quote": "him cross", "pronoun": "him", "referent": "TARGET", "who": "Odrek", "inSpeech": false},
+     {"quote": "her pen", "pronoun": "her", "referent": "OTHER", "who": "Yselde", "inSpeech": false}]},
+  {"id": "next-04", "target": "Brannoch", "shape": "next-sentence-other",
+   "paragraphs": [
+     "Brannoch carried the sack to the mill. Dathan was already at the stones, and he did not turn when the door opened.",
+     "Brannoch set the sack down beside him and waited.",
+     "Neither man spoke, and the stones went on turning."],
+   "pronouns": [
+     {"quote": "he did not turn", "pronoun": "he", "referent": "OTHER", "who": "Dathan", "inSpeech": false},
+     {"quote": "beside him", "pronoun": "him", "referent": "OTHER", "who": "Dathan", "inSpeech": false}]},
+  {"id": "next-05", "target": "Yselde", "shape": "next-sentence-other",
+   "paragraphs": [
+     "Yselde brought the kettle in from the yard. Her brother Corvane was asleep by the stove.",
+     "She poured water over the leaves and he stirred in his chair, though he did not wake."],
+   "pronouns": [
+     {"quote": "Her brother", "pronoun": "Her", "referent": "TARGET", "who": "Yselde", "inSpeech": false},
+     {"quote": "She poured", "pronoun": "She", "referent": "TARGET", "who": "Yselde", "inSpeech": false},
+     {"quote": "he stirred", "pronoun": "he", "referent": "OTHER", "who": "Corvane", "inSpeech": false},
+     {"quote": "his chair", "pronoun": "his", "referent": "OTHER", "who": "Corvane", "inSpeech": false},
+     {"quote": "he did not wake", "pronoun": "he", "referent": "OTHER", "who": "Corvane", "inSpeech": false}]},
+
+  {"id": "speech-01", "target": "Ilsabet", "shape": "speaker-in-quotes",
+   "paragraphs": [
+     "Ilsabet had left before dawn, and the house was quiet.",
+     "“I saw her on the pier this morning,” Tovrin said.",
+     "“Then she is already at sea,” said Quenna."],
+   "pronouns": [
+     {"quote": "saw her on the pier", "pronoun": "her", "referent": "TARGET", "who": "Ilsabet", "inSpeech": true},
+     {"quote": "she is already", "pronoun": "she", "referent": "TARGET", "who": "Ilsabet", "inSpeech": true}]},
+  {"id": "speech-02", "target": "Odrek", "shape": "speaker-in-quotes",
+   "paragraphs": [
+     "Odrek stood at the back of the hall.",
+     "“Ask him,” Yselde told the clerk. “He signed the ledger, and he will say so.”"],
+   "pronouns": [
+     {"quote": "Ask him", "pronoun": "him", "referent": "TARGET", "who": "Odrek", "inSpeech": true},
+     {"quote": "He signed", "pronoun": "He", "referent": "TARGET", "who": "Odrek", "inSpeech": true},
+     {"quote": "he will say", "pronoun": "he", "referent": "TARGET", "who": "Odrek", "inSpeech": true}]},
+  {"id": "speech-03", "target": "Quenna", "shape": "speaker-in-quotes",
+   "paragraphs": [
+     "Quenna sat down next to the old gardener. “My daughter says you taught her to graft,” she said.",
+     "“I taught the whole street,” he answered, and his hands kept working."],
+   "pronouns": [
+     {"quote": "taught her to graft", "pronoun": "her", "referent": "OTHER", "who": "Quenna's daughter", "inSpeech": true},
+     {"quote": "she said", "pronoun": "she", "referent": "TARGET", "who": "Quenna", "inSpeech": false},
+     {"quote": "he answered", "pronoun": "he", "referent": "OTHER", "who": "the gardener", "inSpeech": false},
+     {"quote": "his hands", "pronoun": "his", "referent": "OTHER", "who": "the gardener", "inSpeech": false}]},
+  {"id": "speech-04", "target": "Dathan", "shape": "speaker-in-quotes",
+   "paragraphs": [
+     "“Dathan owes us two sacks,” Brannoch told the carter. “Ask his wife if you doubt it, because she keeps the tally.”",
+     "The carter shrugged and turned the horses."],
+   "pronouns": [
+     {"quote": "his wife", "pronoun": "his", "referent": "TARGET", "who": "Dathan", "inSpeech": true},
+     {"quote": "she keeps", "pronoun": "she", "referent": "OTHER", "who": "Dathan's wife", "inSpeech": true}]},
+  {"id": "speech-05", "target": "Corvane", "shape": "speaker-in-quotes",
+   "paragraphs": [
+     "Corvane waited at the foot of the stair.",
+     "“Is that him?” Yselde whispered. “He looks smaller than I was told.”",
+     "Corvane did not look up."],
+   "pronouns": [
+     {"quote": "that him", "pronoun": "him", "referent": "TARGET", "who": "Corvane", "inSpeech": true},
+     {"quote": "He looks", "pronoun": "He", "referent": "TARGET", "who": "Corvane", "inSpeech": true}]},
+
+  {"id": "place-01", "target": "Harrowmere", "shape": "place-people",
+   "paragraphs": [
+     "Harrowmere had always looked after her fishermen.",
+     "When the nets came up empty, the town gave out bread from the common ovens."],
+   "pronouns": [
+     {"quote": "her fishermen", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Harrowmere", "inSpeech": false}]},
+  {"id": "place-02", "target": "Vessel Quay", "shape": "place-people",
+   "paragraphs": [
+     "Vessel Quay buried her dead at sea. Every spring the wardens rowed out and laid wreaths on the water, and no one could say who had started it.",
+     "Dathan watched from the steps. He had lost a cousin there."],
+   "pronouns": [
+     {"quote": "her dead", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Vessel Quay", "inSpeech": false},
+     {"quote": "He had lost", "pronoun": "He", "referent": "OTHER", "who": "Dathan", "inSpeech": false}]},
+  {"id": "place-03", "target": "Nine Gates", "shape": "place-people",
+   "paragraphs": [
+     "Nine Gates fed her strangers and asked nothing in return.",
+     "Quenna had come in with the last cart, and she slept in the street.",
+     "In the morning the gate-wardens woke the street with a bell."],
+   "pronouns": [
+     {"quote": "her strangers", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Nine Gates", "inSpeech": false},
+     {"quote": "she slept", "pronoun": "she", "referent": "OTHER", "who": "Quenna", "inSpeech": false}]},
+  {"id": "place-04", "target": "Alder Fen", "shape": "place-people",
+   "paragraphs": [
+     "Alder Fen sent her sons to the muster in the spring, and sent her daughters to the ferries.",
+     "Brannoch counted the boats from the shore."],
+   "pronouns": [
+     {"quote": "her sons", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Alder Fen", "inSpeech": false},
+     {"quote": "her daughters", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Alder Fen", "inSpeech": false}]},
+  {"id": "place-05", "target": "Cold Haven", "shape": "place-people",
+   "paragraphs": [
+     "Cold Haven mourned her lost crew for a month. Then she went back to trading.",
+     "Odrek, who ran the scales, said it was the proper way."],
+   "pronouns": [
+     {"quote": "her lost crew", "pronoun": "her", "referent": "PLACE_PEOPLE", "who": "the people of Cold Haven", "inSpeech": false},
+     {"quote": "she went back", "pronoun": "she", "referent": "PLACE_PEOPLE", "who": "the people of Cold Haven", "inSpeech": false}]},
+
+  {"id": "first-01", "target": "Ilsabet", "shape": "first-person-narrator",
+   "paragraphs": [
+     "My name is Ilsabet, and I kept the lighthouse log for eleven years. Tovrin brought the oil, and he never once asked what I wrote.",
+     "I wrote that the sea was calm. I wrote it every night."],
+   "pronouns": [
+     {"quote": "he never once", "pronoun": "he", "referent": "OTHER", "who": "Tovrin", "inSpeech": false}]},
+  {"id": "first-02", "target": "Odrek", "shape": "first-person-narrator",
+   "paragraphs": [
+     "I told the guard my name was Odrek, and he wrote it down.",
+     "I watched his pen move across the page."],
+   "pronouns": [
+     {"quote": "he wrote", "pronoun": "he", "referent": "OTHER", "who": "the guard", "inSpeech": false},
+     {"quote": "his pen", "pronoun": "his", "referent": "OTHER", "who": "the guard", "inSpeech": false}]},
+  {"id": "first-03", "target": "Quenna", "shape": "first-person-narrator",
+   "paragraphs": [
+     "Everyone on the ferry called me Quenna, although it was not my name. A man named Dathan sold me a ticket, and he laughed as he did it.",
+     "I kept the ticket in my glove."],
+   "pronouns": [
+     {"quote": "he laughed", "pronoun": "he", "referent": "OTHER", "who": "Dathan", "inSpeech": false},
+     {"quote": "he did it", "pronoun": "he", "referent": "OTHER", "who": "Dathan", "inSpeech": false}]},
+  {"id": "first-04", "target": "Brannoch", "shape": "first-person-narrator",
+   "paragraphs": [
+     "I am Brannoch, and the ledger was mine. Yselde kept the keys, and she handed me the ledger only after noon.",
+     "I counted twice, and I found nothing wrong."],
+   "pronouns": [
+     {"quote": "she handed", "pronoun": "she", "referent": "OTHER", "who": "Yselde", "inSpeech": false}]},
+  {"id": "first-05", "target": "Corvane", "shape": "first-person-narrator",
+   "paragraphs": [
+     "They called me Corvane at the yard, and I answered to it. The foreman liked me, and he gave me the early shifts.",
+     "I never asked him why."],
+   "pronouns": [
+     {"quote": "They called", "pronoun": "They", "referent": "NONE", "who": "unnamed yard workers", "inSpeech": false},
+     {"quote": "he gave", "pronoun": "he", "referent": "OTHER", "who": "the foreman", "inSpeech": false},
+     {"quote": "asked him", "pronoun": "him", "referent": "OTHER", "who": "the foreman", "inSpeech": false}]},
+
+  {"id": "none-01", "target": "Ilsabet", "shape": "no-referent",
+   "paragraphs": [
+     "Ilsabet is the name on the second door.",
+     "Someone had left a note under it. Whoever wrote it had pressed hard, and they had not signed."],
+   "pronouns": [
+     {"quote": "they had not", "pronoun": "they", "referent": "NONE", "who": "an unknown writer", "inSpeech": false}]},
+  {"id": "none-02", "target": "Tovrin", "shape": "no-referent",
+   "paragraphs": [
+     "The ledger listed Tovrin as the owner of the barge. The page was torn, and whoever tore it took the rest of the entry with them.",
+     "The barge itself sank years ago."],
+   "pronouns": [
+     {"quote": "with them", "pronoun": "them", "referent": "NONE", "who": "an unknown person", "inSpeech": false}]},
+  {"id": "none-03", "target": "Quenna Street", "shape": "no-referent",
+   "paragraphs": [
+     "Quenna Street runs down to the river.",
+     "Nobody knows who named it, and the old maps give no hint of their reasons."],
+   "pronouns": [
+     {"quote": "their reasons", "pronoun": "their", "referent": "NONE", "who": "the unknown namers", "inSpeech": false}]},
+  {"id": "none-04", "target": "Odrek", "shape": "no-referent",
+   "paragraphs": [
+     "A letter signed Odrek arrived on Tuesday.",
+     "The postmaster turned it over twice. Anyone who has handled a hundred letters knows when he is looking at a forgery."],
+   "pronouns": [
+     {"quote": "he is looking", "pronoun": "he", "referent": "NONE", "who": "anyone, in general", "inSpeech": false}]},
+  {"id": "none-05", "target": "Dathan", "shape": "no-referent",
+   "paragraphs": [
+     "Dathan was written on the wall in chalk.",
+     "Beneath it someone had added a date, and beside that a drawing of a boat. Whoever drew it had pressed hard, and their hand had shaken."],
+   "pronouns": [
+     {"quote": "their hand", "pronoun": "their", "referent": "NONE", "who": "an unknown drawer", "inSpeech": false}]},
+
+  {"id": "plain-01", "target": "Ilsabet", "shape": "plain",
+   "paragraphs": [
+     "Ilsabet closed the shutters and sat down. She had walked since morning, and her feet ached.",
+     "The lamp threw a small circle of light on the floor."],
+   "pronouns": [
+     {"quote": "She had walked", "pronoun": "She", "referent": "TARGET", "who": "Ilsabet", "inSpeech": false},
+     {"quote": "her feet", "pronoun": "her", "referent": "TARGET", "who": "Ilsabet", "inSpeech": false}]},
+  {"id": "plain-02", "target": "Tovrin", "shape": "plain",
+   "paragraphs": [
+     "Tovrin read the letter twice. He folded it and put it in his coat.",
+     "Then he went out into the rain."],
+   "pronouns": [
+     {"quote": "He folded", "pronoun": "He", "referent": "TARGET", "who": "Tovrin", "inSpeech": false},
+     {"quote": "his coat", "pronoun": "his", "referent": "TARGET", "who": "Tovrin", "inSpeech": false},
+     {"quote": "he went out", "pronoun": "he", "referent": "TARGET", "who": "Tovrin", "inSpeech": false}]},
+  {"id": "plain-03", "target": "Quenna", "shape": "plain",
+   "paragraphs": [
+     "Quenna ran the last length of the quay. Her breath came in short bursts, but she did not slow.",
+     "The boat was already pulling away."],
+   "pronouns": [
+     {"quote": "Her breath", "pronoun": "Her", "referent": "TARGET", "who": "Quenna", "inSpeech": false},
+     {"quote": "she did not slow", "pronoun": "she", "referent": "TARGET", "who": "Quenna", "inSpeech": false}]},
+  {"id": "plain-04", "target": "Odrek", "shape": "plain",
+   "paragraphs": [
+     "Odrek had kept the shop for forty years. His father had kept it before him, and his grandfather before that.",
+     "The sign above the door had faded to grey."],
+   "pronouns": [
+     {"quote": "His father", "pronoun": "His", "referent": "TARGET", "who": "Odrek", "inSpeech": false},
+     {"quote": "before him", "pronoun": "him", "referent": "TARGET", "who": "Odrek", "inSpeech": false},
+     {"quote": "his grandfather", "pronoun": "his", "referent": "TARGET", "who": "Odrek", "inSpeech": false}]},
+  {"id": "plain-05", "target": "Yselde", "shape": "plain",
+   "paragraphs": [
+     "Yselde mended nets in winter. Her hands were quick, and the other women said she could tie a knot in the dark.",
+     "Snow fell on the roofs of the harbour."],
+   "pronouns": [
+     {"quote": "Her hands", "pronoun": "Her", "referent": "TARGET", "who": "Yselde", "inSpeech": false},
+     {"quote": "she could tie", "pronoun": "she", "referent": "TARGET", "who": "Yselde", "inSpeech": false}]},
+  {"id": "plain-06", "target": "Brannoch", "shape": "plain",
+   "paragraphs": [
+     "Brannoch sat on the wall and watched the road. The carts came late, and he counted every one.",
+     "Dathan joined him at noon."],
+   "pronouns": [
+     {"quote": "he counted", "pronoun": "he", "referent": "TARGET", "who": "Brannoch", "inSpeech": false},
+     {"quote": "joined him", "pronoun": "him", "referent": "TARGET", "who": "Brannoch", "inSpeech": false}]}
+]

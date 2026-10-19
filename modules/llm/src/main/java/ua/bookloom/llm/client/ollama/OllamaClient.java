@@ -3,9 +3,12 @@ package ua.bookloom.llm.client.ollama;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -15,22 +18,23 @@ import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.dto.OllamaChatRequest;
-import ua.bookloom.llm.dto.OllamaChatResponse;
 import ua.bookloom.llm.dto.OllamaTagsResponse;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.http.RequestTimeouts;
 import ua.bookloom.llm.provider.CapabilityRejections;
+import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
-import ua.bookloom.llm.response.ReplySanitizer;
+import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Speaks Ollama's native chat dialect so request fields and provider errors retain their intended meaning. */
 @Slf4j
@@ -40,15 +44,28 @@ public final class OllamaClient implements ProviderClient {
     private static final String TAGS_PATH = "/api/tags";
     private static final String CHAT_PATH = "/api/chat";
 
+    /** How many times its own cap a streamed reply may run before it is cut as a runaway. */
+    private static final int RUNAWAY_FACTOR = 2;
+
+    /** Lines a streamed reply may add past that, for the final part and the envelope around a short cap. */
+    private static final int RUNAWAY_MARGIN_LINES = 64;
+
+    private static final String THINKING_FIELD = "\"thinking\":\"";
+    private static final String EMPTY_THINKING_FIELD = "\"thinking\":\"\"";
+    private static final String EMPTY_CONTENT_FIELD = "\"content\":\"\"";
+
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
+    private final OllamaReplyReader replies;
 
     /** Keeps each client bound to one provider endpoint and the shared HTTP/JSON infrastructure. */
     public OllamaClient(ProviderConfig config, HttpExchange exchange, ObjectMapper mapper) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.replies = new OllamaReplyReader(
+                config, mapper, (modelId, cause) -> unexpectedError("read chat response", modelId, cause));
     }
 
     @Override
@@ -92,18 +109,25 @@ public final class OllamaClient implements ProviderClient {
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(request, "request");
         log.debug(
-                "Ollama chat started provider={} host={} model={} messageCount={} temperature={} responseFormatPresent={}",
+                "Ollama chat started provider={} host={} model={} messageCount={} temperature={} contextWindow={} maxOutputTokens={} responseFormatPresent={}",
                 config.id(),
                 config.baseUrl().getHost(),
                 modelId,
                 request.messages().size(),
                 request.temperature(),
+                request.contextWindow(),
+                request.maxOutputTokens() == null ? "none" : request.maxOutputTokens(),
                 request.responseFormat() != null);
         try {
             return chatWithParsedFormat(modelId, request);
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
         }
+    }
+
+    @Override
+    public Optional<Integer> contextLength(String modelId) {
+        return new ContextLengthProbe(exchange, mapper).ollama(config, modelId);
     }
 
     @Override
@@ -134,7 +158,7 @@ public final class OllamaClient implements ProviderClient {
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
         return new ProviderCallResult<>(
-                readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply")), call.retryAfter());
+                replies.read(modelId, Objects.requireNonNull(response.data(), "reply")), call.retryAfter());
     }
 
     private Result<ParsedFormat> parseFormat(@Nullable ResponseFormat format, String modelId) {
@@ -169,92 +193,114 @@ public final class OllamaClient implements ProviderClient {
     private Result<String> serializeRequest(String modelId, ChatRequest request, @Nullable JsonNode schema) {
         final List<OllamaChatRequest.Message> messages =
                 request.messages().stream().map(this::toOllamaMessage).toList();
-        final OllamaChatRequest.Options options =
-                request.temperature() == null ? null : new OllamaChatRequest.Options(request.temperature());
+        final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
+                request.temperature(),
+                request.contextWindow(),
+                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
+                request.seed(),
+                request.samplingOrNone().topP(),
+                request.samplingOrNone().topK(),
+                request.samplingOrNone().minP(),
+                request.samplingOrNone().repeatPenalty());
         try {
-            final OllamaChatRequest payload =
-                    new OllamaChatRequest(modelId, messages, false, options, schema, request.reasoningEnabled());
+            final OllamaChatRequest payload = new OllamaChatRequest(
+                    modelId, messages, true, options, schema, thinkControl(modelId, request.reasoningEnabled()));
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(unexpectedError("serialize chat request", modelId, failure));
         }
     }
 
+    /**
+     * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
+     * reasoning, so "reasoning off" is asked of it as its lowest level.
+     */
+    static @Nullable Object thinkControl(final String modelId, final @Nullable Boolean reasoningEnabled) {
+        if (Boolean.FALSE.equals(reasoningEnabled)
+                && modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
+            return "low";
+        }
+        return reasoningEnabled;
+    }
+
+    /**
+     * The cap the server is given: a call that thinks needs room for it on any model, and a gpt-oss model reasons even
+     * at its lowest level, so it gets the room whether or not thinking was asked for (once, never twice).
+     */
+    static @Nullable Integer withReasoningHeadroom(
+            final String modelId, final @Nullable Integer cap, final @Nullable Boolean reasoningEnabled) {
+        if (!needsReasoningRoom(modelId, reasoningEnabled)) {
+            return cap;
+        }
+        return ReasoningHeadroom.raise(cap);
+    }
+
+    private static boolean needsReasoningRoom(final String modelId, final @Nullable Boolean reasoningEnabled) {
+        return Boolean.TRUE.equals(reasoningEnabled)
+                || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss");
+    }
+
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
         return new OllamaChatRequest.Message(message.role().name().toLowerCase(Locale.ROOT), message.content());
     }
 
+    @Override
+    public Duration chatTimeout(ChatRequest request) {
+        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, "request"))
+                .requestTimeout();
+    }
+
+    /**
+     * The most streamed lines read before a reply is cut as a runaway: Ollama sends about one token per line, so a
+     * reply far past twice its own cap (or, with no cap, twice the context) is a model looping that the server did not
+     * stop — a reflect call once streamed 9,664 lines until the three-minute timeout. Cut there, it is read as a
+     * reply that finished for length.
+     */
+    static long maxLines(String modelId, ChatRequest request) {
+        final @Nullable Integer cap =
+                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
+        final @Nullable Integer bound = cap != null ? cap : request.contextWindow();
+        final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;
+        log.debug(
+                "Runaway guard maxOutputTokens={} contextWindow={} reasoning={} maxLines={}",
+                request.maxOutputTokens(),
+                request.contextWindow(),
+                request.reasoningEnabled(),
+                lines);
+        return lines;
+    }
+
+    /**
+     * A thinking call streams its reasoning as lines with an empty {@code content}; they are the room the server was
+     * given, not the answer running away, so only the other lines count against the bound.
+     */
+    private static Predicate<String> countedLines(ChatRequest request) {
+        return Boolean.TRUE.equals(request.reasoningEnabled()) ? line -> !isThinkingLine(line) : line -> true;
+    }
+
+    private static boolean isThinkingLine(String line) {
+        return line.contains(THINKING_FIELD)
+                && !line.contains(EMPTY_THINKING_FIELD)
+                && line.contains(EMPTY_CONTENT_FIELD);
+    }
+
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
-        final Result<HttpReply> response = exchange.post(config, CHAT_PATH, body);
+        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
+        final Result<HttpReply> response = exchange.postStreamed(
+                chatConfig,
+                CHAT_PATH,
+                body,
+                RequestTimeouts.streamIdle(config),
+                maxLines(modelId, request),
+                countedLines(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
         return ProviderCallResult.fromHttpReply(
-                HttpErrorMapper.map(reply, config, CallPurpose.CHAT, modelId),
+                HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
                 reply,
                 CapabilityRejections.from(reply, request));
-    }
-
-    private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply) {
-        final OllamaChatResponse decoded;
-        try {
-            decoded = mapper.readValue(reply.body(), OllamaChatResponse.class);
-        } catch (JsonProcessingException failure) {
-            return unreadableChatResponse(requestedModel, failure);
-        }
-        if (decoded == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        return chatResponse(requestedModel, reply, decoded);
-    }
-
-    private Result<ChatResponse> chatResponse(String requestedModel, HttpReply reply, OllamaChatResponse decoded) {
-        if (decoded.message() == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        final String content = decoded.message().content();
-        if (content == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        if (content.isBlank()) {
-            return emptyCompletion(requestedModel, reply);
-        }
-        logModelMismatch(requestedModel, decoded.model());
-        final FinishReason finishReason = finishReason(decoded.doneReason());
-        log.debug(
-                "Ollama chat outcome host={} model={} status={} bodyLength={} finish={}",
-                config.baseUrl().getHost(),
-                requestedModel,
-                reply.status(),
-                reply.body().length(),
-                finishReason);
-        return Result.ok(new ChatResponse(ReplySanitizer.clean(content), finishReason));
-    }
-
-    private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {
-        log.debug(
-                "Ollama chat outcome host={} model={} status={} bodyLength={} code={}",
-                config.baseUrl().getHost(),
-                modelId,
-                reply.status(),
-                reply.body().length(),
-                ErrorCode.emptyCompletion);
-        return Result.err(AppError.of(
-                ErrorCode.emptyCompletion,
-                "Model returned an empty response",
-                "Ollama completed the request without response text.",
-                details(modelId),
-                null));
-    }
-
-    private void logModelMismatch(String requestedModel, @Nullable String answeredModel) {
-        if (answeredModel != null && !requestedModel.equals(answeredModel)) {
-            log.warn(
-                    "Ollama answered with a different model requested={} answered={}",
-                    SafeDetails.empty().withModelName(requestedModel).render(),
-                    SafeDetails.empty().withModelName(answeredModel).render());
-        }
     }
 
     private Result<List<ModelInfo>> readModels(String body) {
@@ -288,7 +334,7 @@ public final class OllamaClient implements ProviderClient {
     }
 
     private Result<List<ModelInfo>> discoveryError(AppError error) {
-        if (preserveDiscoveryError(error.code())) {
+        if (DiscoveryErrors.preserve(error.code())) {
             log.debug(
                     "Ollama discovery outcome host={} code={}", config.baseUrl().getHost(), error.code());
             return Result.err(error);
@@ -306,23 +352,6 @@ public final class OllamaClient implements ProviderClient {
                 error.cause()));
     }
 
-    private static boolean preserveDiscoveryError(ErrorCode code) {
-        return switch (code) {
-            case auth, unreachable, timeout, cancelled -> true;
-            case rateLimited,
-                    modelNotFound,
-                    modelUnavailable,
-                    discoveryFailed,
-                    upstream,
-                    missingCredential,
-                    contextWindow,
-                    emptyCompletion,
-                    validation,
-                    internal,
-                    busy -> false;
-        };
-    }
-
     private AppError discoveryFailure(@Nullable Throwable cause) {
         log.warn("Ollama discovery failed host={} code={}", config.baseUrl().getHost(), ErrorCode.discoveryFailed);
         return AppError.of(
@@ -331,10 +360,6 @@ public final class OllamaClient implements ProviderClient {
                 "The Ollama model list could not be read.",
                 details(null),
                 cause);
-    }
-
-    private Result<ChatResponse> unreadableChatResponse(String modelId, @Nullable Throwable cause) {
-        return Result.err(unexpectedError("read chat response", modelId, cause));
     }
 
     private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {
@@ -366,17 +391,6 @@ public final class OllamaClient implements ProviderClient {
                 config.baseUrl().getHost(),
                 modelId != null,
                 error == null ? "none" : error.code());
-    }
-
-    private static FinishReason finishReason(@Nullable String doneReason) {
-        if (doneReason == null) {
-            return FinishReason.OTHER;
-        }
-        return switch (doneReason) {
-            case "stop" -> FinishReason.STOP;
-            case "length" -> FinishReason.LENGTH;
-            default -> FinishReason.OTHER;
-        };
     }
 
     private record ParsedFormat(@Nullable JsonNode schema) {}

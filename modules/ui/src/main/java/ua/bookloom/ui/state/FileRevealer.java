@@ -14,4 +14,11 @@ public interface FileRevealer {
      * @param file the written book
      */
     void reveal(Path file);
+
+    /**
+     * Asks the operating system to open {@code file} in the program it associates with the file's type.
+     *
+     * @param file the written book
+     */
+    void open(Path file);
 }

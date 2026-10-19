@@ -2,6 +2,8 @@ package ua.bookloom.ui.theme;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -30,6 +32,8 @@ public final class ThemeController {
     private final ReadOnlyObjectWrapper<ThemeBlock> activeBlock = new ReadOnlyObjectWrapper<>(ThemeBlock.LIGHT);
     private final ReadOnlyObjectWrapper<ThemeMode> mode = new ReadOnlyObjectWrapper<>(ThemeMode.SYSTEM);
     private @Nullable Scene scene;
+    // Scenes of secondary windows that follow the block; weakly held, so a closed window is forgotten.
+    private final List<WeakReference<Scene>> followers = new ArrayList<>();
 
     /**
      * Adds the theme stylesheet to the scene if it is not already listed and applies the block for the current mode.
@@ -46,6 +50,24 @@ public final class ThemeController {
         }
         scene = target;
         apply(resolveBlock());
+    }
+
+    /**
+     * Themes a secondary window's scene the way the attached one is, and keeps it in step with every later change of
+     * mode, without moving the controller off its own scene.
+     *
+     * @param extra the scene of a window other than the main one
+     */
+    public void attachAlso(final Scene extra) {
+        Objects.requireNonNull(extra, "extra");
+        log.debug("attaching a secondary scene, block {}", activeBlock.get());
+        final String stylesheet = Theme.stylesheet();
+        if (!extra.getStylesheets().contains(stylesheet)) {
+            extra.getStylesheets().add(stylesheet);
+        }
+        followers.removeIf(held -> held.get() == null);
+        followers.add(new WeakReference<>(extra));
+        mark(extra, activeBlock.get());
     }
 
     /**
@@ -119,13 +141,24 @@ public final class ThemeController {
     private void apply(final ThemeBlock block) {
         final Scene current = scene;
         if (current != null) {
-            final List<String> styleClass = current.getRoot().getStyleClass();
-            styleClass.remove(Theme.DARK_STYLE_CLASS);
-            if (block == ThemeBlock.DARK) {
-                styleClass.add(Theme.DARK_STYLE_CLASS);
+            mark(current, block);
+        }
+        followers.removeIf(held -> held.get() == null);
+        for (final WeakReference<Scene> held : followers) {
+            final Scene extra = held.get();
+            if (extra != null) {
+                mark(extra, block);
             }
         }
         activeBlock.set(block);
         log.debug("applied theme block {}", block);
+    }
+
+    private static void mark(final Scene target, final ThemeBlock block) {
+        final List<String> styleClass = target.getRoot().getStyleClass();
+        styleClass.remove(Theme.DARK_STYLE_CLASS);
+        if (block == ThemeBlock.DARK) {
+            styleClass.add(Theme.DARK_STYLE_CLASS);
+        }
     }
 }

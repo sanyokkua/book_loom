@@ -1,29 +1,36 @@
 package ua.bookloom.ui.state;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
+import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDrafted;
+import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 
 /**
@@ -38,43 +45,42 @@ import ua.bookloom.api.pipeline.StageStarted;
 @Slf4j
 final class RunSession implements JobListener {
 
-    private static final String STAGE_STARTED = "stageStarted";
-    private static final String PAUSED = "paused";
-    private static final String RESUMED = "resumed";
-    private static final String FINISHED = "finished";
-    /** A request answered within this many seconds is normal for a local model and is not worth a notice. */
-    private static final long WAIT_NOTICE_THRESHOLD_SECONDS = 10;
-
-    /** How a returned result maps onto the mirror. */
-    private record Outcome(
-            RunState state,
-            @Nullable JobReport report,
-            @Nullable AppError error) {}
-
-    /** The counts an outcome line reports. */
-    private record Counts(int segments, int accepted, int flagged) {}
-
     private final StateMirror mirror;
     private final Clock clock;
+    private final LiveCallState liveCalls = new LiveCallState();
+    private final ThroughputMeter throughputMeter = new ThroughputMeter();
+    private final RunClock runClock;
+    private final ActivityLogFeed feed = new ActivityLogFeed();
+    private final ReviewDeskReads deskReads;
+    private final CallTracker calls;
     private final AtomicReference<@Nullable JobProgress> latest = new AtomicReference<>();
     private final AtomicReference<@Nullable JobProgress> lastSeen = new AtomicReference<>();
-    private final ConcurrentLinkedQueue<LogEntry> pending = new ConcurrentLinkedQueue<>();
+    // Guarded by publishLock like the flags below.
+    private final PendingLines pending = new PendingLines();
     private final ReentrantLock publishLock = new ReentrantLock();
     // The four flags below are read and written only while publishLock is held, so a request and an engine event
     // can never each decide on a state the other has just changed.
     private boolean stopRequested;
     private boolean pauseRequested;
     private boolean pauseReached;
-    private boolean exporting;
     private boolean terminal;
-    // The two fields below are guarded by publishLock too: when the request now outstanding was sent, and the second
-    // count the banner currently shows for it.
-    private @Nullable Instant callStartedAt;
-    private int shownWaitSeconds = StateMirror.NOT_WAITING;
+    // Both are guarded by publishLock too: the live calls and the pace figures last published, so a tick publishes only
+    // what moved.
+    private LiveCalls shownCalls = LiveCalls.EMPTY;
+    private Throughput shownThroughput = Throughput.EMPTY;
 
-    RunSession(final StateMirror mirror, final Clock clock) {
+    RunSession(
+            final StateMirror mirror,
+            final Clock clock,
+            final RunContext context,
+            final ReviewDesk desk,
+            final Executor executor) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.clock = Objects.requireNonNull(clock, "clock");
+        Objects.requireNonNull(context, "context");
+        this.calls = new CallTracker(mirror, clock, feed);
+        this.runClock = new RunClock(clock.instant());
+        this.deskReads = new ReviewDeskReads(desk, executor, mirror.live(), context.projectId());
     }
 
     @Override
@@ -92,8 +98,9 @@ final class RunSession implements JobListener {
         try {
             publishLock.lock();
             try {
-                publishWaitLocked();
+                calls.publish(throughputMeter.tokensPerSecond());
                 flushLocked();
+                publishLiveLocked();
             } finally {
                 publishLock.unlock();
             }
@@ -105,28 +112,29 @@ final class RunSession implements JobListener {
     /**
      * Publishes that a pause is pending.
      *
-     * <p>Ignored once the run is over, a stop is in flight, a pause is pending or reached, or the export stage began:
-     * the engine honours no pause in export, so showing one would promise a state that never arrives.
+     * <p>Ignored once the run is over, a stop is in flight, or a pause is pending or reached.
      *
      * @return {@code true} if the job should now be asked to pause, {@code false} if the request changes nothing
      */
     boolean requestPause() {
         publishLock.lock();
         try {
-            if (terminal || stopRequested || pauseRequested || pauseReached || exporting) {
+            if (pauseReached && !terminal && !stopRequested && calls.isRecoveryWaiting()) {
+                log.debug("pause requested while the run waits for the provider: holding it for the person");
+                return true;
+            }
+            if (terminal || stopRequested || pauseRequested || pauseReached) {
                 log.debug(
-                        "pause request ignored: terminal {}, stop requested {}, pause pending {}, pause reached {},"
-                                + " exporting {}",
+                        "pause request ignored: terminal {}, stop requested {}, pause pending {}, pause reached {}",
                         terminal,
                         stopRequested,
                         pauseRequested,
-                        pauseReached,
-                        exporting);
+                        pauseReached);
                 return false;
             }
             log.debug("pause requested, publishing PAUSING");
             pauseRequested = true;
-            clearWaitLocked("a pause was requested");
+            calls.clearWait("a pause was requested");
             mirror.publishRunState(RunState.PAUSING);
             return true;
         } finally {
@@ -172,7 +180,7 @@ final class RunSession implements JobListener {
             }
             log.debug("stop requested, publishing STOPPING");
             stopRequested = true;
-            clearWaitLocked("a stop was requested");
+            calls.clearWait("a stop was requested");
             mirror.publishRunState(RunState.STOPPING);
             return true;
         } finally {
@@ -193,16 +201,20 @@ final class RunSession implements JobListener {
     void finish(final Result<JobReport> result, final Runnable release) {
         Objects.requireNonNull(result, "result");
         Objects.requireNonNull(release, "release");
-        final Outcome outcome = outcomeOf(result);
-        logOutcome(outcome);
+        final RunOutcomes.Outcome outcome = RunOutcomes.outcomeOf(result);
+        RunOutcomes.logEnded(outcome, lastSeen.get());
+        publishSourceKept();
         publishLock.lock();
         try {
             terminal = true;
-            clearWaitLocked("the run ended");
+            runClock.ended(clock.instant());
+            calls.clearWait("the run ended");
+            calls.clearRecovery();
             if (outcome.state() == RunState.COMPLETED) {
-                pending.add(milestone(FINISHED));
+                queue(feed.finished());
             }
             flushLocked();
+            publishLiveLocked();
             mirror.publishOutcome(outcome.state(), outcome.report(), outcome.error(), release);
         } finally {
             publishLock.unlock();
@@ -213,113 +225,120 @@ final class RunSession implements JobListener {
         switch (event) {
             case SegmentDecided decided -> onSegment(decided);
             case StageStarted started -> onStage(started);
-            case Paused paused -> onPausedOrResumed(paused.progress(), PAUSED, RunState.PAUSED, true);
-            case Resumed resumed -> onPausedOrResumed(resumed.progress(), RESUMED, RunState.RUNNING, false);
+            case Paused paused -> onPaused(paused);
+            case Resumed resumed -> onResumed(resumed);
             case ModelCallStarted started -> onModelCall(started);
+            case SegmentStarted started -> onSegmentStarted(started);
+            case SegmentDrafted drafted -> onSegmentDrafted(drafted);
+            case ModelCallFinished finished -> onModelCallFinished(finished);
+            case MemoryUpdated updated -> onMemory(updated);
+            case ContextAssembled assembled ->
+                log.trace("context of segment {} is shown with its call", assembled.segmentId());
+            case RoundStarted round -> onRound(round);
+            case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
+            case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
+            case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
         }
     }
 
     private void onModelCall(final ModelCallStarted started) {
-        log.trace("model call started for segment {}", started.segmentId());
-        publishLock.lock();
-        try {
-            clearWaitLocked("a new request started");
-            callStartedAt = clock.instant();
-        } finally {
-            publishLock.unlock();
-        }
+        log.trace("model call {} attempt {} started for {}", started.kind(), started.attempt(), started.segmentIds());
+        locked(() -> calls.started(started));
     }
 
-    // Both clocks stop with the request: a decision, a pause or the end of the run means nothing is outstanding.
-    private void clearWaitLocked(final String why) {
-        callStartedAt = null;
-        if (shownWaitSeconds != StateMirror.NOT_WAITING) {
-            log.debug("waiting notice cleared after {} s because {}", shownWaitSeconds, why);
-            shownWaitSeconds = StateMirror.NOT_WAITING;
-            mirror.publishWaitingSeconds(StateMirror.NOT_WAITING);
-        }
+    private void onRound(final RoundStarted round) {
+        log.debug("segment {} entered round {} of {}", round.segmentId(), round.round(), round.rounds());
+        locked(() -> queue(feed.roundStarted(round)));
     }
 
-    private void publishWaitLocked() {
-        final Instant started = callStartedAt;
-        if (started == null) {
-            return;
-        }
-        final long waited = Duration.between(started, clock.instant()).toSeconds();
-        if (waited < WAIT_NOTICE_THRESHOLD_SECONDS || waited == shownWaitSeconds) {
-            return;
-        }
-        if (shownWaitSeconds == StateMirror.NOT_WAITING) {
-            log.debug("a model request has been outstanding for {} s, showing the waiting notice", waited);
-        }
-        shownWaitSeconds = Math.toIntExact(waited);
-        mirror.publishWaitingSeconds(shownWaitSeconds);
+    // Stamped here, under the lock, so the lines of one tick read in the order they were queued.
+    private void queue(final LogEntry entry) {
+        pending.add(entry.at(LocalTime.now(clock)));
     }
 
     private void onSegment(final SegmentDecided decided) {
         record(decided.progress());
-        publishLock.lock();
-        try {
-            clearWaitLocked("a segment was decided");
-        } finally {
-            publishLock.unlock();
-        }
-        log.trace("segment {} decided {}", decided.segmentId(), decided.status());
-        switch (decided.status()) {
-            case ACCEPTED -> pending.add(new LogEntry(LogKind.ACCEPTED, List.of(decided.segmentId())));
-            case FLAGGED -> {
-                pending.add(new LogEntry(LogKind.SEGMENT_ERROR, List.of(decided.segmentId())));
-                log.warn("segment {} was flagged, reason {}", decided.segmentId(), decided.reason());
+        locked(() -> {
+            calls.clearWait("a segment was decided");
+            feed.decided(decided).ifPresent(this::queue);
+            liveCalls.decided(decided);
+            if (RunClock.isTimed(decided)) {
+                runClock.decided(clock.instant());
             }
-            case PENDING, REVISED -> log.trace("segment {} is not a decision the log reports", decided.segmentId());
+        });
+        if (decided.status() == SegmentStatus.FLAGGED) {
+            deskReads.refreshFlaggedQueue();
         }
+    }
+
+    private void onSegmentStarted(final SegmentStarted started) {
+        locked(() -> feed.segmentStarted(started));
+    }
+
+    private void onSegmentDrafted(final SegmentDrafted drafted) {
+        locked(() -> liveCalls.drafted(drafted));
+    }
+
+    private void onModelCallFinished(final ModelCallFinished finished) {
+        locked(() -> {
+            throughputMeter.finished(finished);
+            queue(calls.finished(finished));
+        });
+    }
+
+    private void onMemory(final MemoryUpdated updated) {
+        log.debug("memory updated: {}", updated.kind());
+        locked(() -> queue(feed.memory(updated)));
     }
 
     private void onStage(final StageStarted started) {
         record(started.progress());
-        pending.add(milestone(STAGE_STARTED));
+        locked(() -> queue(feed.stageStarted()));
         log.debug("stage {} started", started.stage());
-        if (started.stage() == JobStage.EXPORT) {
-            publishLock.lock();
-            try {
-                exporting = true;
-                clearWaitLocked("the export stage began");
-                dropPendingPauseLocked();
-            } finally {
-                publishLock.unlock();
+    }
+
+    private void onPaused(final Paused paused) {
+        record(paused.progress());
+        locked(() -> {
+            runClock.paused(clock.instant());
+            if (settleLocked(feed.paused(paused), RunState.PAUSED, true)) {
+                calls.publishPause(paused);
             }
-        }
+        });
     }
 
-    // The engine honours no pause once export began, so a pause still pending here will never be reached: no Paused
-    // event follows and the mirror would otherwise stay at PAUSING until the book was written.
-    private void dropPendingPauseLocked() {
-        if (pauseRequested && !pauseReached && !stopRequested && !terminal) {
-            log.debug("export began while a pause was pending; the request is dropped, publishing RUNNING");
-            pauseRequested = false;
-            mirror.publishRunState(RunState.RUNNING);
-        }
+    private void onResumed(final Resumed resumed) {
+        record(resumed.progress());
+        locked(() -> {
+            runClock.resumed(clock.instant());
+            calls.clearRecovery();
+            settleLocked(feed.resumed(), RunState.RUNNING, false);
+            mirror.review().publishResumed();
+        });
     }
 
-    private void onPausedOrResumed(
-            final JobProgress progress, final String token, final RunState reached, final boolean nowPaused) {
-        record(progress);
-        pending.add(milestone(token));
+    private void locked(final Runnable action) {
         publishLock.lock();
         try {
-            pauseReached = nowPaused;
-            pauseRequested = false;
-            clearWaitLocked("the engine paused or resumed");
-            if (terminal || stopRequested) {
-                log.debug("engine reported {} but the run is stopping or over; the state is left alone", token);
-            } else {
-                log.debug("engine reported {}, publishing {}", token, reached);
-                mirror.publishRunState(reached);
-            }
+            action.run();
         } finally {
             publishLock.unlock();
         }
+    }
+
+    private boolean settleLocked(final LogEntry entry, final RunState reached, final boolean nowPaused) {
+        queue(entry);
+        pauseReached = nowPaused;
+        pauseRequested = false;
+        calls.clearWait("the engine paused or resumed");
+        if (terminal || stopRequested) {
+            log.debug("engine reported {} but the run is stopping or over; the state is left alone", reached);
+            return false;
+        }
+        log.debug("engine reported {}, publishing it", reached);
+        mirror.publishRunState(reached);
+        return true;
     }
 
     private void record(final JobProgress progress) {
@@ -332,60 +351,34 @@ final class RunSession implements JobListener {
         if (snapshot != null) {
             mirror.publishProgress(snapshot);
         }
-        final List<LogEntry> batch = new ArrayList<>();
-        LogEntry next = pending.poll();
-        while (next != null) {
-            batch.add(next);
-            next = pending.poll();
-        }
+        final List<LogEntry> batch = pending.drain();
         if (!batch.isEmpty()) {
             mirror.publishLogEntries(batch);
         }
     }
 
-    private static LogEntry milestone(final String token) {
-        return new LogEntry(LogKind.MILESTONE, List.of(token));
-    }
-
-    private static Outcome outcomeOf(final Result<JobReport> result) {
-        final AppError refusal = result.error();
-        if (refusal != null) {
-            // A stop the person chose can come back as an error result too; it is the stopped state, not a failure.
-            return refusal.code() == ErrorCode.cancelled
-                    ? new Outcome(RunState.STOPPED, null, null)
-                    : new Outcome(RunState.FAILED, null, refusal);
-        }
-        final JobReport report = Objects.requireNonNull(result.data(), "successful result data");
-        return switch (report.end()) {
-            case COMPLETED -> new Outcome(RunState.COMPLETED, report, null);
-            case CANCELLED -> new Outcome(RunState.STOPPED, report, null);
-            case FAILED -> new Outcome(RunState.FAILED, report, report.error());
-            // JobReport's constructor rejects a non-terminal end, so no report can carry one.
-            case NEW, RUNNING, PAUSED -> throw new IllegalStateException("a job report carried a non-final state");
-        };
-    }
-
-    private void logOutcome(final Outcome outcome) {
-        final Counts counts = countsOf(outcome.report());
-        final AppError error = outcome.error();
-        log.info(
-                "run ended {}: {} segments, {} accepted, {} flagged, error code {}",
-                outcome.state(),
-                counts.segments(),
-                counts.accepted(),
-                counts.flagged(),
-                error == null ? "none" : error.code());
-    }
-
-    private Counts countsOf(final @Nullable JobReport report) {
-        if (report != null) {
-            return new Counts(report.segments(), report.accepted(), report.flagged());
+    private void publishLiveLocked() {
+        final LiveCalls calls = liveCalls.view(clock.instant());
+        if (!calls.equals(shownCalls)) {
+            shownCalls = calls;
+            mirror.live().publishCalls(calls);
         }
         final JobProgress seen = lastSeen.get();
-        if (seen == null) {
-            return new Counts(0, 0, 0);
+        final Throughput figures = throughputMeter.snapshot(
+                runClock.timeLeft(seen == null ? 0 : seen.pending()), runClock.elapsed(clock.instant()));
+        if (!figures.equals(shownThroughput)) {
+            shownThroughput = figures;
+            mirror.live().publishThroughput(figures);
         }
-        final RunFigures figures = RunFigures.from(seen);
-        return new Counts(figures.total(), figures.accepted(), figures.flagged());
+    }
+
+    // A run ends off the FX thread; the one exception is a start that failed on the caller's own thread, which has no
+    // decisions to count and must not read the desk there.
+    private void publishSourceKept() {
+        if (Platform.isFxApplicationThread()) {
+            log.debug("kept-as-source count not read: the run ended on the FX thread");
+            return;
+        }
+        deskReads.publishSourceKept();
     }
 }

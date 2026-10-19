@@ -65,6 +65,8 @@ public final class EpubCanonicalAssert {
     private static final Pattern SELF_CLOSED_ELEMENT =
             Pattern.compile("<([a-zA-Z][a-zA-Z0-9-]*)\\b((?:\"[^\"]*\"|'[^']*'|[^\"'>])*?)/>");
 
+    private static final Pattern QUOTED_VALUE = Pattern.compile("=\\s*(?:\"[^\"]*\"|'[^']*')");
+
     /**
      * Asserts that {@code output} is canonical-equal to {@code source}: same entry order apart from where the source
      * kept {@code mimetype} (a real book stores it third; the writer rightly moves it first), {@code mimetype} first
@@ -122,7 +124,7 @@ public final class EpubCanonicalAssert {
             assertThat(canonicalXml(output.content()))
                     .as("entry %s (canonical XML)", source.name())
                     .isEqualTo(canonicalXml(source.content()));
-        } else if (lowerName.endsWith(".xhtml") || lowerName.endsWith(".html") || lowerName.endsWith(".htm")) {
+        } else if (isXhtmlDocument(lowerName, source.content())) {
             assertThat(canonicalXhtml(output.content()))
                     .as("entry %s (canonical XHTML)", source.name())
                     .isEqualTo(canonicalXhtml(source.content()));
@@ -132,6 +134,28 @@ public final class EpubCanonicalAssert {
                     .isEqualTo(source.content());
         }
     }
+
+    /**
+     * Whether an entry is a content document the writer re-serializes: by extension, or an {@code .xml} entry whose
+     * root element is {@code html} — Calibre-converted books name spine documents {@code cover.xml}. The writer
+     * serializes every spine document, so it is compared as XHTML like any other; an {@code .xml} entry that is
+     * not an {@code html} document (a manifest, a metadata file) stays byte-exact.
+     */
+    private static boolean isXhtmlDocument(String lowerName, byte[] sourceContent) {
+        return lowerName.endsWith(".xhtml")
+                || lowerName.endsWith(".html")
+                || lowerName.endsWith(".htm")
+                || (lowerName.endsWith(".xml")
+                        && XML_HTML_ROOT.matcher(prologFree(sourceContent)).find());
+    }
+
+    /** The source's text past any XML declaration, comments and DOCTYPE, so only the root element is inspected. */
+    private static String prologFree(byte[] content) {
+        return new String(content, StandardCharsets.UTF_8).replaceAll("(?s)<\\?.*?\\?>|<!--.*?-->|<!DOCTYPE[^>]*>", "");
+    }
+
+    private static final Pattern XML_HTML_ROOT =
+            Pattern.compile("^\\s*\\uFEFF?\\s*<html[\\s>]", Pattern.CASE_INSENSITIVE);
 
     /**
      * Duplicates {@link ua.bookloom.document.epub}'s package-private {@code SecureXml.builder()} four lines
@@ -168,11 +192,28 @@ public final class EpubCanonicalAssert {
      * GoldenComparisonMetaTest}).
      */
     private static String canonicalXhtml(byte[] content) {
-        final String normalized = expandSelfClosedNonVoidElement(new String(content, StandardCharsets.UTF_8));
+        final String normalized = normalizeAttributeWhitespace(
+                expandSelfClosedNonVoidElement(new String(content, StandardCharsets.UTF_8)));
         final Document parsed = Jsoup.parse(normalized);
         clearSeenSelfCloseOnNonVoidElements(parsed);
         parsed.outputSettings().prettyPrint(false).syntax(Document.OutputSettings.Syntax.xml);
         return parsed.outerHtml();
+    }
+
+    /**
+     * Turns a raw line feed, carriage return or tab inside a quoted attribute value into a space, as an XML reader
+     * does (a carriage-return-line-feed pair counts once), while leaving a character reference for jsoup to decode
+     * — so a raw line feed and the reference no longer compare equal.
+     */
+    private static String normalizeAttributeWhitespace(String xhtml) {
+        final Matcher matcher = QUOTED_VALUE.matcher(xhtml);
+        final StringBuilder normalized = new StringBuilder();
+        while (matcher.find()) {
+            final String value = matcher.group().replace("\r\n", " ").replaceAll("[\\n\\r\\t]", " ");
+            matcher.appendReplacement(normalized, Matcher.quoteReplacement(value));
+        }
+        matcher.appendTail(normalized);
+        return normalized.toString();
     }
 
     private static String expandSelfClosedNonVoidElement(String xhtml) {

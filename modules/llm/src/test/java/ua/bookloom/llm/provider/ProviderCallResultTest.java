@@ -31,7 +31,7 @@ import ua.bookloom.llm.http.HttpExchange;
 class ProviderCallResultTest {
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {
@@ -84,7 +84,8 @@ class ProviderCallResultTest {
         return new OpenAiCompatibleClient(
                 config(ProviderKind.OPENAI_COMPATIBLE, server.baseUrl() + "/v1"),
                 new HttpExchange(new HttpClients()),
-                new LlmModule().objectMapper());
+                new LlmModule().objectMapper(),
+                System::nanoTime);
     }
 
     private static ProviderConfig config(ProviderKind kind, String endpoint) {

@@ -18,7 +18,6 @@ import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -44,6 +43,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -58,7 +58,7 @@ class OpenAiCompatibleClientTest {
             {"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
             """;
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {
@@ -71,7 +71,7 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    void chat_fullRequestUsesStrictSchemaAndOmitsReasoningAndAuthorization() {
+    void chat_fullRequestUsesStrictSchemaTurnsReasoningOffAndOmitsAuthorization() {
         stubChat("""
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
                 """);
@@ -86,6 +86,7 @@ class OpenAiCompatibleClientTest {
                           "messages":[{"role":"system","content":"Translate faithfully."},{"role":"user","content":"hello"},{"role":"assistant","content":"prior"}],
                           "stream":false,
                           "temperature":0.2,
+                          "reasoning_effort":"none",
                           "response_format":{"type":"json_schema","json_schema":{"name":"draft","strict":true,"schema":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}}}
                         }
                         """))
@@ -343,7 +344,8 @@ class OpenAiCompatibleClientTest {
     private OpenAiCompatibleClient client(URI endpoint, Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
                 "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout);
-        return new OpenAiCompatibleClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 
     private static ChatRequest messageOnlyRequest() {
@@ -390,9 +392,7 @@ class OpenAiCompatibleClientTest {
                 arguments(400, "private invalid body", ErrorCode.validation));
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return URI.create("http://127.0.0.1:" + socket.getLocalPort() + "/v1");
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("/v1");
     }
 }

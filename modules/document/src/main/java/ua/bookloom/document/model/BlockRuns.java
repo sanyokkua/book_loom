@@ -50,7 +50,13 @@ public final class BlockRuns {
         return runs;
     }
 
-    private static boolean isLineBreak(TreeNode node) {
+    /**
+     * Whether {@code node} is a line-break element.
+     *
+     * @param node the node to test
+     * @return {@code true} for a {@code br} element
+     */
+    static boolean isLineBreak(TreeNode node) {
         return LINE_BREAK_TAG.equals(node.tagName());
     }
 

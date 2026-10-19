@@ -3,6 +3,7 @@ package ua.bookloom.document;
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -13,14 +14,18 @@ import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.epub.EpubReader;
 import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
 import ua.bookloom.document.fb2.Fb2Writer;
 import ua.bookloom.document.mask.GateOutcome;
+import ua.bookloom.document.mask.LineBreakSpacing;
 import ua.bookloom.document.mask.PlaceholderGate;
 import ua.bookloom.document.mask.RestoredContent;
+import ua.bookloom.document.mask.TokenRepair;
 import ua.bookloom.document.mask.Unmasker;
 import ua.bookloom.document.md.MarkdownEscaper;
 import ua.bookloom.document.md.MarkdownReader;
@@ -29,6 +34,7 @@ import ua.bookloom.document.md.MarkdownWriter;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DocumentNotOpenException;
 import ua.bookloom.document.model.DrmRefusedException;
+import ua.bookloom.document.model.FormatResolver;
 import ua.bookloom.document.model.MalformedFragmentException;
 import ua.bookloom.document.model.XmlCharacters;
 import ua.bookloom.document.txt.TxtReader;
@@ -112,12 +118,19 @@ public final class DocumentService implements DocumentPort {
 
     @Override
     public Result<Path> write(Document document, Path destination, String targetLanguage) {
+        Objects.requireNonNull(targetLanguage, "targetLanguage");
+        return write(document, destination, null, targetLanguage);
+    }
+
+    @Override
+    public Result<Path> write(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
-        logWriteEntry(document, destination, targetLanguage);
+        logWriteEntry(document, destination, sourceLanguage, targetLanguage);
         try {
-            final Path written = writeAs(document, destination, targetLanguage);
+            final Path written = writeAs(document, destination, sourceLanguage, targetLanguage);
             log.debug("Wrote document id={} format={} outcome=success", document.id(), document.format());
             return Result.ok(written);
         } catch (DocumentNotOpenException e) {
@@ -139,12 +152,15 @@ public final class DocumentService implements DocumentPort {
         }
     }
 
-    private void logWriteEntry(Document document, Path destination, String targetLanguage) {
+    private void logWriteEntry(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         log.debug(
-                "Writing document id={} format={} destination={} targetLanguage={} translatedSegments={}",
+                "Writing document id={} format={} destination={} sourceLanguage={} targetLanguage={}"
+                        + " translatedSegments={}",
                 document.id(),
                 document.format(),
                 destination,
+                sourceLanguage,
                 targetLanguage,
                 translatedSegmentCount(document));
     }
@@ -173,9 +189,9 @@ public final class DocumentService implements DocumentPort {
         };
     }
 
-    private Path writeAs(Document document, Path destination, String targetLanguage) {
+    private Path writeAs(Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         return switch (document.format()) {
-            case EPUB -> epubWriter.write(document, destination, targetLanguage);
+            case EPUB -> epubWriter.write(document, destination, sourceLanguage, targetLanguage);
             case FB2 -> fb2Writer.write(document, destination, targetLanguage);
             case MARKDOWN -> markdownWriter.write(document, destination, targetLanguage);
             case TXT -> txtWriter.write(document, destination, targetLanguage);
@@ -189,20 +205,16 @@ public final class DocumentService implements DocumentPort {
         Objects.requireNonNull(translatedMasked, "translatedMasked");
         logUnmaskEntry(format, segment, translatedMasked);
         try {
-            final GateOutcome outcome = PlaceholderGate.compare(segment.masked(), translatedMasked);
+            final String spaced =
+                    LineBreakSpacing.normalise(segment.masked(), translatedMasked, segment.lineBreakTokens());
+            final GateOutcome outcome =
+                    PlaceholderGate.compare(segment.masked(), spaced, segment.pairs(), segment.lineBreakTokens());
             if (!outcome.matches()) {
-                final AppError error = gateError(outcome);
+                final AppError error = GateErrors.of(outcome);
                 log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
                 return Result.err(error);
             }
-            final RestoredContent restored = Unmasker.restore(format, segment, translatedMasked);
-            log.trace("Unmask restored format={} segmentId={} restoredText={}", format, segment.id(), restored.text());
-            final Result<String> result =
-                    switch (format) {
-                        case MARKDOWN -> restoreMarkdown(segment, restored);
-                        case EPUB, FB2 -> restoreTree(restored);
-                        case TXT -> Result.ok(restored.text());
-                    };
+            final Result<String> result = restore(format, segment, spaced);
             logUnmaskOutcome(format, segment.id(), result);
             return result;
         } catch (Throwable t) {
@@ -210,6 +222,39 @@ public final class DocumentService implements DocumentPort {
             log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
             return Result.err(error);
         }
+    }
+
+    @Override
+    public Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(translatedMasked, "translatedMasked");
+        Objects.requireNonNull(mode, "mode");
+        log.debug("Repairing placeholders segmentId={} mode={}", segment.id(), mode);
+        try {
+            final Optional<String> repaired = TokenRepair.repair(
+                    segment.masked(), translatedMasked, segment.pairs(), segment.lineBreakTokens(), mode);
+            log.debug(
+                    "Repaired placeholders segmentId={} mode={} repaired={}", segment.id(), mode, repaired.isPresent());
+            return repaired.map(Result::ok).orElseGet(() -> Result.err(GateErrors.unrepairable()));
+        } catch (Throwable t) {
+            final AppError error = internalError(t);
+            log.debug("Repaired placeholders segmentId={} mode={} outcome={}", segment.id(), mode, error.code());
+            return Result.err(error);
+        }
+    }
+
+    /** An image's alternative text and a frontmatter value come back as plain text: the writer encodes them once. */
+    private Result<String> restore(BookFormat format, Segment segment, String translatedMasked) {
+        final boolean isPlain = segment.kind() == SegmentKind.ALT || segment.kind() == SegmentKind.FRONTMATTER_VALUE;
+        final RestoredContent restored = isPlain
+                ? Unmasker.restorePlain(segment, translatedMasked)
+                : Unmasker.restore(format, segment, translatedMasked);
+        log.trace("Unmask restored format={} segmentId={} restoredText={}", format, segment.id(), restored.text());
+        return switch (format) {
+            case MARKDOWN -> isPlain ? Result.ok(restored.text()) : restoreMarkdown(segment, restored);
+            case EPUB, FB2 -> restoreTree(restored);
+            case TXT -> Result.ok(restored.text());
+        };
     }
 
     private void logUnmaskEntry(BookFormat format, Segment segment, String translatedMasked) {
@@ -290,26 +335,6 @@ public final class DocumentService implements DocumentPort {
                 "Restoring this translated passage would change the book's Markdown formatting — a heading, list,"
                         + " emphasis or other structure the original did not have, or the loss of one it did.",
                 SafeDetails.empty().render(),
-                null);
-    }
-
-    /**
-     * Builds the rendered details once and logs <em>that</em>, rather than the raw token lists. The observed list
-     * is scanned out of a provider response, so its size and its tokens' lengths are the model's choice, not the
-     * system's; {@link SafeDetails#withPlaceholderMultiset} is where that side is bounded, and logging its output
-     * is what keeps the same bound on the log line.
-     */
-    private AppError gateError(GateOutcome outcome) {
-        final String details = SafeDetails.empty()
-                .withPlaceholderMultiset(outcome.expected(), outcome.observed())
-                .render();
-        log.warn("Refused a translated segment whose placeholder multiset does not match its masked form: {}", details);
-        return AppError.of(
-                ErrorCode.validation,
-                "This translation could not be restored",
-                "The translated text's formatting placeholders do not match the original segment's — one or more"
-                        + " were dropped, duplicated, or invented. Nothing was restored.",
-                details,
                 null);
     }
 

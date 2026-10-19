@@ -27,7 +27,7 @@ class FxmlMessageKeyTest {
     private static final Pattern KEY_REFERENCE = Pattern.compile("\"%([^\"%]+)\"");
     private static final String THEME_STYLESHEET = "/ua/bookloom/ui/theme.css";
     private static final List<String> PLACEHOLDERS = List.of(
-            "import.fxml", "book-brief.fxml", "structure.fxml", "translating.fxml", "export.fxml", "settings.fxml");
+            "import.fxml", "book-brief.fxml", "names-style.fxml", "translating.fxml", "export.fxml", "settings.fxml");
 
     private static List<String> referencesIn(final String fxml) {
         final Matcher matcher = KEY_REFERENCE.matcher(fxml);

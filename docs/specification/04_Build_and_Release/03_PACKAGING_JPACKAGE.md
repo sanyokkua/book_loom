@@ -70,11 +70,12 @@ tar.gz/zip works without installation.
 | Context                                        | JDK                                                                             |
 |------------------------------------------------|---------------------------------------------------------------------------------|
 | Build + test (all CI, local dev)               | **Temurin 25** (standard)                                                       |
-| Packaging on macOS, Linux x86_64               | Temurin 25                                                                      |
-| Packaging on **Windows** and **Linux aarch64** | **Liberica 25 "Full" (`jdk+fx`)** — ships the JavaFX jmods jpackage needs there |
+| Packaging on macOS and Linux (both arches)     | Temurin 25 — the image takes JavaFX from the Maven jars on its module path      |
+| Packaging on **Windows**                       | **Liberica 25 "Full" (`jdk+fx`)** — ships the JavaFX jmods jpackage needs there |
 
 This mirrors the proven reference setup: `actions/setup-java` selects `distribution: liberica, java-package: jdk+fx` on
-exactly those two packaging legs and Temurin everywhere else. A jpackage run that cannot find the JavaFX runtime pieces
+the Windows packaging leg and Temurin everywhere else. A JDK that bundles JavaFX must not package a module-path image:
+its `java.base` records the hashes of its own `javafx.*` modules and refuses the Maven `javafx.base` at boot. A jpackage run that cannot find the JavaFX runtime pieces
 fails fast with a clear message — the fix is the JDK selection, never hand-copying jmods (EC-REL-4).
 
 ## no-cross-compile {#no-cross-compile}
@@ -105,7 +106,29 @@ This is consistent with the offline/privacy posture — no signing service or no
 
 Every artifact embeds a jlink-trimmed JDK 25 + JavaFX 25 runtime (native `.dll`/`.dylib`/`.so` included), so the user
 installs nothing else. The trim options above (strip debug, no headers/man pages, zip-6 compression) keep the image
-small; app jars ride on the image's classpath from the script's `--input` directory.
+small; the app jars ride in the image's `app/mods` directory on the module path (next section).
+
+## module-path {#module-path}
+
+The image runs on the **module path**: `jpackage --module-path <dist libs> --module ua.bookloom.app/ua.bookloom.app.bootstrap.Launcher`
+(`BookLoom.cfg` has `app.mainmodule=` and `--module-path $APPDIR/mods`, no `app.classpath=`). `module-info.java` is
+therefore enforced in the shipped app, and the launch smoke fails on a missing `requires`, `exports` or `opens`
+(proved once by removing `opens ua.bookloom.ui.screen`: the image dies at start with an `IllegalAccessException` from
+Guice). Consequences, all in `scripts/jpackage-common.sh`:
+
+- Five runtime jars are **automatic modules** (aopalliance, guice, icu4j, jdom2, listenablefuture) and `jlink` refuses
+  automatic modules, and a plain Temurin has no JavaFX jmods. So the script jlinks a runtime of the JDK modules only
+  (`build_runtime`, the list in `RUNTIME_MODULES`) and hands it to jpackage with `--runtime-image`; every jar, JavaFX
+  included, stays on the module path. A JDK module a dependency starts to need shows as a boot-layer `FindException`
+  in the smoke (`java.compiler` was one) and is added to the list.
+- `--java-options "--add-modules=ALL-MODULE-PATH"`: an automatic module (Guice) does not resolve its explicit
+  dependency Guava, so without it the image fails with `NoClassDefFoundError: com/google/common/base/Stopwatch`.
+- `--java-options "--enable-native-access=javafx.graphics"` silences the JEP 472 warning.
+- Guice runs with `-Dguice_bytecode_gen_option=DISABLED`, so it constructs by reflection and every package holding a
+  Guice-built class must be `opens … to com.google.guice` (the classpath hid nine `:llm` and twelve `:pipeline` packages
+  that lacked it).
+- `scripts/package-windows.bat` still uses `--input`/`--main-jar` (classpath); moving it is open, CI runs the smoke on
+  POSIX only.
 
 ## app-icons-and-metadata {#icons-metadata}
 
@@ -151,7 +174,7 @@ Full artifact sets are produced on `main` pushes (snapshot, short retention) and
   automatically flagged *pre-release* (suffix detection).
 - **EC-REL-3** — `fakeroot` is absent on a Linux packaging host → the `.deb` is skipped with a warning; the app-image
   tar.gz is still produced. CI installs `fakeroot` explicitly so this only occurs locally.
-- **EC-REL-4** — the packaging JDK lacks the JavaFX jmods (plain JDK on Windows / Linux-ARM) → jpackage fails fast; the
+- **EC-REL-4** — the packaging JDK lacks the JavaFX jmods (plain JDK on Windows) → jpackage fails fast; the
   remedy is the Liberica Full (`jdk+fx`) selection in `#jdk-and-javafx-runtime`, never manual jmod copying.
 - **EC-REL-5** — the packaged image fails the headless launch smoke → the packaging job is **red** (`#verification`); an
   artifact that does not start is never published.

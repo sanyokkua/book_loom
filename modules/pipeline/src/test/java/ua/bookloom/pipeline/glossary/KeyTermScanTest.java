@@ -1,0 +1,141 @@
+package ua.bookloom.pipeline.glossary;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.TermType;
+import ua.bookloom.persistence.PersistenceModule;
+
+/** The recurring-term scan: titles and dual-use words are proposed, names, function words and rare words are not. */
+class KeyTermScanTest {
+
+    private static List<String> copies(final String line, final int times) {
+        return Collections.nCopies(times, line);
+    }
+
+    @SafeVarargs
+    private static List<String> join(final List<String>... parts) {
+        final List<String> all = new ArrayList<>();
+        for (final List<String> part : parts) {
+            all.addAll(part);
+        }
+        return all;
+    }
+
+    static Stream<Arguments> books() {
+        return Stream.concat(plainBooks(), namePartBooks());
+    }
+
+    private static Stream<Arguments> namePartBooks() {
+        return Stream.of(
+                Arguments.of(
+                        "the words of a repeated two-word place",
+                        join(
+                                copies("We went to the Great Hall today.", 4),
+                                copies("the great hall was a cold place.", 4)),
+                        List.of()),
+                Arguments.of(
+                        "a title written with a capital beside no other capital",
+                        join(copies("We saw the Master again.", 3), copies("the master laughed.", 3)),
+                        List.of("master")));
+    }
+
+    private static Stream<Arguments> plainBooks() {
+        return Stream.of(
+                Arguments.of("a title seen three times", copies("Then Mr. Hale nodded.", 3), List.of("mr")),
+                Arguments.of("a title seen twice", copies("Then Mr. Hale nodded.", 2), List.of()),
+                Arguments.of(
+                        "a word capitalised mid-sentence and also in lower case",
+                        join(copies("We saw the Imp again.", 3), copies("the imp laughed.", 3)),
+                        List.of("imp")),
+                Arguments.of(
+                        "a word the book capitalises only as a name", copies("We saw Hale at the door.", 8), List.of()),
+                Arguments.of(
+                        "a lower-case word however often it recurs", copies("She drew the pentacle.", 20), List.of()),
+                Arguments.of(
+                        "a function word written both ways",
+                        join(copies("We saw It there.", 4), copies("it was late.", 4)),
+                        List.of()),
+                Arguments.of(
+                        "the more frequent term comes first",
+                        join(
+                                copies("Sir Hale, a Lord, nodded.", 3),
+                                copies("the lord sat.", 4),
+                                copies("Sir wept.", 3)),
+                        List.of("lord", "sir")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("books")
+    void candidates_bookText_proposesExactlyTheTerms(
+            final String description, final List<String> lines, final List<String> expected) {
+        final List<String> terms =
+                termsOf(lines, "en").stream().map(NameCandidate::term).toList();
+
+        assertThat(terms).containsExactlyElementsOf(expected);
+    }
+
+    @Test
+    void candidates_aLanguageWithoutATitleList_proposesOnlyDualUseWords() {
+        final List<String> lines = copies("Mr. Hale nodded.", 5);
+
+        assertThat(termsOf(lines, "xx")).isEmpty();
+    }
+
+    @Test
+    void newTerms_termsTheGlossaryOrTheLexiconHold_areLeftOut() {
+        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
+        final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
+        glossary.add(new GlossaryEntry("p1:imp", "p1", "Imp", "біс", TermType.TERM, Gender.UNKNOWN, false));
+        lexicon.put(LexiconEntry.of("p1", "MR"));
+        final List<String> lines = join(
+                copies("Then Mr. Hale nodded.", 3), copies("We saw the Imp again.", 3), copies("the imp laughed.", 3));
+        final BookSlice book = GlossaryTestSegments.of(join(lines, copies("Sir Hale left.", 3)));
+
+        final var proposed = Objects.requireNonNull(
+                KeyTermScan.newTerms("p1", book.index(), book.ordinals(), "en", glossary, lexicon)
+                        .data());
+
+        assertThat(proposed).extracting(LexiconEntry::term).containsExactly("sir");
+    }
+
+    // IF contractions, reflexive pronouns and ordinals were offered as terms, THEN the model would be asked to keep
+    // "itself" and "first" the same way across a book.
+    @ParameterizedTest
+    @ValueSource(strings = {"we'd", "she'd", "don't", "myself", "itself", "himself", "first", "second"})
+    void frequentWords_functionWordClass_isNeverACandidate(final String word) {
+        final List<String> lines = join(copies("He saw the " + word + " furnace today.", 8));
+
+        final List<String> terms =
+                frequentOf(lines, "en", 20).stream().map(NameCandidate::term).toList();
+
+        assertThat(terms).contains("furnace").doesNotContain(word);
+    }
+
+    private static List<NameCandidate> termsOf(final List<String> lines, final String language) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return KeyTermScan.candidates(book.index(), book.ordinals(), language);
+    }
+
+    private static List<NameCandidate> frequentOf(final List<String> lines, final String language, final int limit) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return KeyTermScan.frequentWords(book.index(), book.ordinals(), language, limit);
+    }
+}

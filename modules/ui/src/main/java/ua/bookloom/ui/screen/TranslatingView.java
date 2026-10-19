@@ -1,48 +1,56 @@
 package ua.bookloom.ui.screen;
 
-import java.text.NumberFormat;
-import java.util.Arrays;
-import java.util.List;
+import java.util.EnumSet;
 import java.util.Objects;
-import java.util.concurrent.Callable;
+import java.util.Set;
 import java.util.function.Function;
-import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ReviewFilter;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.LiveCallPanel;
+import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
-import ua.bookloom.ui.state.LogEntry;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.RecoveryState;
+import ua.bookloom.ui.state.ReviewPauseFollower;
+import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.RunInterventions;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.StateMirror;
-import ua.bookloom.ui.state.StatusRole;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * Builds the translating dashboard: the banner, the progress card, the four count tiles, the activity log and the run
- * controls.
+ * Builds the translating dashboard: the banner, the ready card before a run, the progress card and tiles while one
+ * lives, the outcome once it ends, the live panel and log, and the run controls.
  *
  * <p>Everything that follows a property is bound to it, and the bindings hold their sources weakly, so a screen that
- * is replaced on the next visit is not kept alive by the mirror it observed. The log's cells log nothing, since they
- * are refreshed on every scroll, and only change their text and role class as they are reused. The screen shows the
- * segments decided out of the total and the four counts, and nothing about a rate or a finishing time, because the
- * engine reports neither.
+ * is replaced on the next visit is not kept alive by the mirror it observed. Which cards show is decided by the run
+ * state alone: the ready card while idle, the progress card and tiles while a run is under way or stopped, the
+ * outcome once it completed or failed. The log's cells log nothing, since they are refreshed on every scroll.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -55,163 +63,314 @@ final class TranslatingView {
     private static final double CARD_SPACING = 8;
     private static final double TILE_SPACING = 12;
     private static final double ACTION_SPACING = 10;
-    private static final double BANNER_SPACING = 2;
-    private static final double LOG_HEIGHT = 220;
-    private static final List<String> ROLE_CLASSES =
-            Arrays.stream(StatusRole.values()).map(StatusRole::styleClass).toList();
+
+    private static final Set<RunState> UNDER_WAY =
+            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPING, RunState.STOPPED);
+    private static final Set<RunState> ENDED = Set.of(RunState.COMPLETED, RunState.FAILED);
+    private static final Set<RunState> REVIEWABLE =
+            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPED, RunState.COMPLETED);
+    private static final Set<RunState> WATCHED = EnumSet.complementOf(EnumSet.of(RunState.IDLE));
 
     /** One run control: its id suffix, its look, its label and which part of the view model's table decides it. */
     private record Control(
-            String name, String styleClass, MessageKey label, Function<Controls, ControlState> availability) {}
+            String name,
+            String styleClass,
+            MessageKey label,
+            MessageKey tip,
+            Function<Controls, ControlState> availability) {}
 
-    private static final Control START =
-            new Control("start", "btn-primary", MessageKey.TRANSLATING_START, Controls::start);
-    private static final Control NEW_RUN =
-            new Control("new-run", "btn-primary", MessageKey.TRANSLATING_NEW_RUN, Controls::newRun);
-    private static final Control PAUSE =
-            new Control("pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, Controls::pause);
-    private static final Control RESUME =
-            new Control("resume", "btn-primary", MessageKey.TRANSLATING_RESUME, Controls::resume);
-    private static final Control STOP = new Control("stop", "btn-ghost", MessageKey.TRANSLATING_STOP, Controls::stop);
+    private static final Control START = new Control(
+            "start", "btn-primary", MessageKey.TRANSLATING_START, MessageKey.TRANSLATING_START_TIP, Controls::start);
+    private static final Control PAUSE = new Control(
+            "pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, MessageKey.TRANSLATING_PAUSE_TIP, Controls::pause);
+    private static final Control RESUME = new Control(
+            "resume",
+            "btn-primary",
+            MessageKey.TRANSLATING_RESUME,
+            MessageKey.TRANSLATING_RESUME_TIP,
+            Controls::resume);
+    private static final Control STOP = new Control(
+            "stop", "btn-ghost", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, Controls::stop);
+
+    /** One action the banner may offer: its node id, its label, its hover explanation and whether it is a ghost. */
+    private record BannerAction(String id, MessageKey label, MessageKey tip, boolean ghost) {}
+
+    private static final BannerAction RETRY_NOW = new BannerAction(
+            "translating-retry-now", MessageKey.TRANSLATING_RETRY_NOW, MessageKey.TRANSLATING_RETRY_NOW_TIP, false);
+    private static final BannerAction SKIP_SEGMENT = new BannerAction(
+            "translating-skip-segment",
+            MessageKey.TRANSLATING_SKIP_SEGMENT,
+            MessageKey.TRANSLATING_SKIP_SEGMENT_TIP,
+            false);
+    private static final BannerAction OPEN_SETTINGS = new BannerAction(
+            "translating-open-settings",
+            MessageKey.TRANSLATING_OPEN_SETTINGS,
+            MessageKey.TRANSLATING_OPEN_SETTINGS_TIP,
+            false);
+    private static final BannerAction STAY_PAUSED = new BannerAction(
+            "translating-stay-paused",
+            MessageKey.TRANSLATING_STAY_PAUSED,
+            MessageKey.TRANSLATING_STAY_PAUSED_TIP,
+            true);
+    private static final BannerAction SEND_AGAIN = new BannerAction(
+            "translating-send-again", MessageKey.TRANSLATING_RETRY_CALL, MessageKey.TRANSLATING_RETRY_CALL_TIP, false);
+    private static final BannerAction STOP_RUN = new BannerAction(
+            "translating-stop-run", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, true);
+    private static final BannerAction PAUSE_STUCK = new BannerAction(
+            "translating-pause-stuck",
+            MessageKey.TRANSLATING_PAUSE_STUCK,
+            MessageKey.TRANSLATING_PAUSE_STUCK_TIP,
+            true);
+
+    /**
+     * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
+     * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card; and
+     * the session's memory of which sections the person left open, which outlives the rebuilt screen.
+     */
+    record Exits(
+            Navigator navigator,
+            Runnable openSettings,
+            ReviewViewModel review,
+            TranslatingDialogs dialogs,
+            ReviewPauseFollower pauses,
+            RunInterventions interventions,
+            SectionMemory sections) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
             final Messages messages,
-            final Runnable openSettings) {
+            final Exits exits) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(mirror, "mirror");
+        Objects.requireNonNull(current, "current");
+        Objects.requireNonNull(names, "names");
         Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(openSettings, "openSettings");
+        Objects.requireNonNull(exits, "exits");
         log.debug("building the translating dashboard");
-        final TranslatingDashboard.Banner banner = banner(messages, openSettings);
-        final ListView<LogEntry> logList = logList(mirror, messages);
+        final ReadOnlyObjectProperty<RunState> state = mirror.runState();
+        final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits);
+        final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
+        final ObservableValue<String> sourceName =
+                languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
+        final ObservableValue<String> targetName =
+                languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
+        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                banner.box(),
-                progressCard(mirror, messages),
-                tiles(mirror, messages),
-                logCard(logList, messages),
-                actions(viewModel, messages));
-        return new TranslatingDashboard(screen, banner, logList, messages);
+                head(banner, actions(viewModel, mirror, exits.review(), review, exits.dialogs(), messages)),
+                review,
+                StateVisibility.shownIn(
+                        TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
+                StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
+                StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
+                StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
+                StateVisibility.shownIn(
+                        watch(logList, mirror, sourceName, targetName, messages, exits), state, WATCHED),
+                footer(mirror, messages, exits.navigator()));
+        return new TranslatingDashboard(screen, banner, messages, mirror);
     }
 
-    private static TranslatingDashboard.Banner banner(final Messages messages, final Runnable openSettings) {
-        final Label icon = new Label();
-        icon.getStyleClass().add("banner-icon");
-        final Label title = wrapped("banner-title");
-        final Label text = wrapped("banner-text");
-        final Button settings = new Button(messages.get(MessageKey.TRANSLATING_OPEN_SETTINGS));
-        settings.setId("translating-open-settings");
-        settings.getStyleClass().add("btn-secondary");
-        settings.setOnAction(event -> openSettings.run());
-        settings.setVisible(false);
-        settings.setManaged(false);
-        final HBox box = new HBox(icon, new VBox(BANNER_SPACING, title, text, settings));
-        box.setId("translating-banner");
-        title.setId("translating-banner-title");
-        text.setId("translating-banner-text");
-        box.setAlignment(Pos.TOP_LEFT);
-        box.getStyleClass().add("banner");
-        return new TranslatingDashboard.Banner(box, icon, title, text, settings);
+    // The run controls sit under the banner, so they stay in view above the live panel during a long stall.
+    private static Node head(final TranslatingDashboard.LiveBanner banner, final Node actions) {
+        final VBox head = new VBox(CARD_SPACING, banner.banner(), actions);
+        head.setId("translating-head");
+        return head;
     }
 
-    private static Node progressCard(final StateMirror mirror, final Messages messages) {
-        final ProgressBar bar = new ProgressBar();
-        bar.setId("translating-progress");
-        bar.setMaxWidth(Double.MAX_VALUE);
-        bar.progressProperty().bind(mirror.progressFraction());
-        final Label processed = boundLabel(
-                "translating-progress-text",
-                "muted",
-                () -> messages.get(
-                        MessageKey.TRANSLATING_PROGRESS,
-                        mirror.accepted().get() + mirror.flagged().get(),
-                        mirror.total().get()),
-                mirror.accepted(),
-                mirror.flagged(),
-                mirror.total());
-        final Label remaining = boundLabel(
-                "translating-remaining-text",
-                "muted",
-                () -> messages.get(
-                        MessageKey.TRANSLATING_SEGMENTS_REMAINING,
-                        mirror.remaining().get()),
-                mirror.remaining());
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        final VBox card = new VBox(CARD_SPACING, bar, new HBox(ACTION_SPACING, processed, spacer, remaining));
-        card.setId("translating-progress-card");
-        card.getStyleClass().add("card");
-        return card;
+    private static TranslatingDashboard.LiveBanner banner(
+            final TranslatingViewModel viewModel, final Messages messages, final Exits exits) {
+        final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
+        final RunInterventions interventions = exits.interventions();
+        final Button retry = action(RETRY_NOW, messages, () -> {
+            log.debug("retry now pressed: resuming the paused run");
+            viewModel.resume();
+        });
+        final Button skip = action(SKIP_SEGMENT, messages, interventions::skipSegment);
+        final Button settings = action(OPEN_SETTINGS, messages, exits.openSettings());
+        final Button stay = action(STAY_PAUSED, messages, () -> {});
+        final Button again = action(SEND_AGAIN, messages, interventions::sendAgain);
+        final Button pause = action(PAUSE_STUCK, messages, viewModel::pause);
+        final Button stop = action(STOP_RUN, messages, () -> exits.dialogs().askToStop(viewModel));
+        final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay, stop);
+        row.setId("translating-banner-actions");
+        row.setAlignment(Pos.CENTER_LEFT);
+        banner.addDetail(row);
+        return new TranslatingDashboard.LiveBanner(banner, retry, skip, settings, stay, again, pause, stop);
     }
 
-    private static Node tiles(final StateMirror mirror, final Messages messages) {
-        final HBox row = new HBox(
-                TILE_SPACING,
-                tile("accepted", mirror.accepted(), MessageKey.TRANSLATING_COUNT_ACCEPTED, messages),
-                tile("flagged", mirror.flagged(), MessageKey.TRANSLATING_COUNT_FLAGGED, messages),
-                tile("remaining", mirror.remaining(), MessageKey.TRANSLATING_COUNT_REMAINING, messages),
-                tile("total", mirror.total(), MessageKey.TRANSLATING_COUNT_TOTAL, messages));
-        row.setId("translating-tiles");
+    // Hidden until a look offers it; the ghost ones take only their own class, as the plain secondary look would
+    // otherwise frame them.
+    private static Button action(final BannerAction spec, final Messages messages, final Runnable run) {
+        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
+        button.setId(spec.id());
+        if (spec.ghost()) {
+            button.getStyleClass().setAll("btn-ghost");
+        } else {
+            button.getStyleClass().add("btn-secondary");
+        }
+        button.setOnAction(event -> run.run());
+        Banner.setActionShown(button, false);
+        return button;
+    }
+
+    private static Node watch(
+            final TaggedLog logList,
+            final StateMirror mirror,
+            final ObservableValue<String> sourceName,
+            final ObservableValue<String> targetName,
+            final Messages messages,
+            final Exits exits) {
+        final LiveCallPanel live = new LiveCallPanel(
+                "translating-live-card", mirror.live().calls(), mirror.runState(), sourceName, targetName, messages);
+        live.rememberSectionsIn(exits.sections());
+        final Node logCard = TranslatingLogCard.build(logList, messages);
+        final VBox row = new VBox(TILE_SPACING, live, logCard);
+        row.setId("translating-watch");
+        VBox.setVgrow(row, Priority.ALWAYS);
         return row;
     }
 
-    private static Node tile(
-            final String name, final ReadOnlyIntegerProperty count, final MessageKey caption, final Messages messages) {
-        final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
-        final Label number =
-                boundLabel("translating-count-" + name, "stat-number", () -> grouping.format(count.get()), count);
-        return tile("translating-tile-" + name, number, messages.get(caption));
+    private static ObservableValue<String> languageName(
+            final CurrentProject current,
+            final Function<BookBrief, @Nullable String> tagOf,
+            final MessageKey fallback,
+            final LanguageNames names,
+            final Messages messages) {
+        return Bindings.createStringBinding(
+                () -> {
+                    final BookBrief brief = current.brief().get();
+                    final String tag = brief == null ? null : tagOf.apply(brief);
+                    return tag == null ? messages.get(fallback) : names.nameOf(tag, messages.locale());
+                },
+                current.brief());
     }
 
-    /** A count tile: the number above its caption, on the stat surface, sharing its row equally. */
-    static VBox tile(final String id, final Label number, final String caption) {
-        final Label label = new Label(caption);
-        label.getStyleClass().add("stat-caption");
-        final VBox tile = new VBox(number, label);
-        tile.setId(id);
-        tile.getStyleClass().add("stat");
-        HBox.setHgrow(tile, Priority.ALWAYS);
-        tile.setMaxWidth(Double.MAX_VALUE);
-        return tile;
+    // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
+    // button. It opens right under the run controls, where Review flagged is, so pressing it always shows something —
+    // with nothing flagged, the empty state that says so.
+    private static ReviewPanel reviewPanel(
+            final Exits exits,
+            final ObservableValue<String> sourceName,
+            final ObservableValue<String> targetName,
+            final Messages messages,
+            final ReadOnlyObjectProperty<RunState> state) {
+        final ReviewPanel panel =
+                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.dialogs(), exits.pauses());
+        panel.visibleProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),
+                        panel.openProperty(),
+                        state));
+        panel.managedProperty().bind(panel.visibleProperty());
+        return panel;
     }
 
-    private static Node logCard(final ListView<LogEntry> logList, final Messages messages) {
-        final Label heading = new Label(messages.get(MessageKey.TRANSLATING_LOG_TITLE));
-        heading.getStyleClass().add("card-title");
-        final VBox card = new VBox(CARD_SPACING, heading, logList);
-        card.setId("translating-log-card");
-        card.getStyleClass().add("card");
-        VBox.setVgrow(card, Priority.ALWAYS);
-        return card;
-    }
-
-    private static ListView<LogEntry> logList(final StateMirror mirror, final Messages messages) {
-        final ListView<LogEntry> list = new ListView<>(mirror.activityLog());
-        list.setId("translating-log");
-        list.getStyleClass().add("activity-log");
-        list.setPrefHeight(LOG_HEIGHT);
-        list.setFocusTraversable(false);
-        final Label empty = new Label(messages.get(MessageKey.TRANSLATING_LOG_EMPTY));
-        empty.getStyleClass().add("muted");
-        list.setPlaceholder(empty);
-        list.setCellFactory(view -> new EntryCell(messages));
-        VBox.setVgrow(list, Priority.ALWAYS);
-        return list;
-    }
-
-    private static Node actions(final TranslatingViewModel viewModel, final Messages messages) {
+    private static Node actions(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final ReviewViewModel review,
+            final ReviewPanel panel,
+            final TranslatingDialogs dialogs,
+            final Messages messages) {
         final ReadOnlyObjectProperty<Controls> controls = viewModel.controls();
         final HBox row = new HBox(
                 ACTION_SPACING,
-                control(START, viewModel::start, controls, messages),
-                control(NEW_RUN, viewModel::start, controls, messages),
+                control(START, () -> dialogs.narrator().startAfterAsking(viewModel::start), controls, messages),
                 control(PAUSE, viewModel::pause, controls, messages),
-                control(RESUME, viewModel::resume, controls, messages),
-                control(STOP, viewModel::stop, controls, messages));
+                retryNowWhileRecovering(control(RESUME, viewModel::resume, controls, messages), mirror, messages),
+                control(STOP, () -> dialogs.askToStop(viewModel), controls, messages),
+                reviewFlagged(mirror, review, panel, messages));
         row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+        return new VBox(CARD_SPACING, row, heldNote(viewModel, messages));
+    }
+
+    // While the run waits for the provider by itself, resuming is trying the provider at once, and says so.
+    private static Button retryNowWhileRecovering(
+            final Button resume, final StateMirror mirror, final Messages messages) {
+        resume.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                RecoveryState.waits(mirror.review().recovery().get())
+                                        ? MessageKey.TRANSLATING_RETRY_NOW
+                                        : MessageKey.TRANSLATING_RESUME),
+                        mirror.review().recovery()));
+        return resume;
+    }
+
+    // Says why start or resume is off while other model work (a scan, an export, a provider test, a retry) runs.
+    private static Label heldNote(final TranslatingViewModel viewModel, final Messages messages) {
+        final Label note = new Label();
+        note.setId("translating-held");
+        note.getStyleClass().add("muted");
+        note.setWrapText(true);
+        note.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> {
+                            final ActivityKind kind = viewModel.otherWork().get();
+                            return kind == null
+                                    ? ""
+                                    : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(kind.label()));
+                        },
+                        viewModel.otherWork()));
+        note.visibleProperty().bind(note.textProperty().isNotEmpty());
+        note.managedProperty().bind(note.visibleProperty());
+        return note;
+    }
+
+    private static Button reviewFlagged(
+            final StateMirror mirror, final ReviewViewModel review, final ReviewPanel panel, final Messages messages) {
+        final Button button = new Button();
+        button.setId("translating-review-flagged");
+        Tips.install(messages, button, MessageKey.TRANSLATING_REVIEW_FLAGGED_TIP);
+        button.getStyleClass().add("btn-secondary");
+        button.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> reviewLabel(
+                                messages,
+                                review.flaggedCount().get(),
+                                mirror.live().suspicious().get()),
+                        review.flaggedCount(),
+                        mirror.live().suspicious()));
+        button.setOnAction(event -> {
+            final int flagged = review.flaggedCount().get();
+            final int suspicious = mirror.live().suspicious().get();
+            log.debug(
+                    "review pressed with {} flagged and {} suspicious segments: opening the panel",
+                    flagged,
+                    suspicious);
+            review.selectFilter(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
+            panel.setOpen(true);
+        });
+        return StateVisibility.shownIn(button, mirror.runState(), REVIEWABLE);
+    }
+
+    // The suspicious segments are accepted ones the audit doubts: the button names them beside the flagged, so the
+    // number a person sees here is the number the outcome card shows.
+    private static String reviewLabel(final Messages messages, final int flagged, final int suspicious) {
+        return suspicious > 0
+                ? messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED_SUSPICIOUS, flagged, suspicious)
+                : messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED, flagged);
+    }
+
+    private static Node footer(final StateMirror mirror, final Messages messages, final Navigator navigator) {
+        final StepFooter footer = StepFooter.of(
+                new StepFooter.Action(
+                        "translating-back",
+                        messages.get(MessageKey.TRANSLATING_BACK),
+                        messages.get(MessageKey.TRANSLATING_BACK_TIP),
+                        "btn-ghost",
+                        () -> navigator.navigate(ViewNames.NAMES_STYLE)),
+                new StepFooter.Action(
+                        "translating-continue",
+                        messages.get(MessageKey.TRANSLATING_CONTINUE),
+                        messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
+                        "btn-primary",
+                        () -> navigator.navigate(ViewNames.EXPORT)));
+        StateVisibility.shownIn(footer.forwardButton(), mirror.runState(), Set.of(RunState.COMPLETED));
+        return footer;
     }
 
     private static Button control(
@@ -219,7 +378,7 @@ final class TranslatingView {
             final Runnable action,
             final ReadOnlyObjectProperty<Controls> controls,
             final Messages messages) {
-        final Button button = new Button(messages.get(spec.label()));
+        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
         button.setId("translating-" + spec.name());
         button.getStyleClass().add(spec.styleClass());
         button.setOnAction(event -> action.run());
@@ -231,44 +390,5 @@ final class TranslatingView {
                 .bind(Bindings.createBooleanBinding(
                         () -> !spec.availability().apply(controls.get()).isEnabled(), controls));
         return button;
-    }
-
-    private static Label boundLabel(
-            final String id, final String styleClass, final Callable<String> text, final Observable... sources) {
-        final Label label = new Label();
-        label.setId(id);
-        label.getStyleClass().add(styleClass);
-        label.textProperty().bind(Bindings.createStringBinding(text, sources));
-        return label;
-    }
-
-    private static Label wrapped(final String styleClass) {
-        final Label label = new Label();
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
-    }
-
-    /** Draws one log entry as its mark and its catalogue message, in the role's colour, and does nothing else. */
-    private static final class EntryCell extends ListCell<LogEntry> {
-
-        private final Messages messages;
-
-        EntryCell(final Messages messages) {
-            this.messages = messages;
-        }
-
-        @Override
-        protected void updateItem(final @Nullable LogEntry entry, final boolean empty) {
-            super.updateItem(entry, empty);
-            getStyleClass().removeAll(ROLE_CLASSES);
-            if (empty || entry == null) {
-                setText(null);
-                return;
-            }
-            setText(entry.kind().mark() + " "
-                    + messages.get(entry.messageKey(), entry.args().toArray()));
-            getStyleClass().add(entry.role().styleClass());
-        }
     }
 }

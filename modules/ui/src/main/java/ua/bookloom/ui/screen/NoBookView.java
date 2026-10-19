@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -42,6 +43,7 @@ final class NoBookView {
         report.getStyleClass().add("muted");
         final Button open = new Button(messages.get(MessageKey.NOBOOK_OPEN));
         open.setId("nobook-open");
+        Tips.install(messages, open, MessageKey.NOBOOK_OPEN_TIP);
         open.getStyleClass().add("btn-primary");
         open.setOnAction(event -> {
             log.debug("no book is open: going to the import screen");

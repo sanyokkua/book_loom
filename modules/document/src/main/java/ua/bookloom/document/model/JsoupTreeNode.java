@@ -118,4 +118,37 @@ public final class JsoupTreeNode implements TreeNode {
         }
         return "</" + element.tagName() + ">";
     }
+
+    /**
+     * jsoup's {@link Element#attr(String)} returns the empty string for an absent attribute rather than null —
+     * translated here so an absent declaration reads the same way both adapters report it.
+     */
+    @Override
+    public @Nullable String attribute(String qualifiedName) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        if (!(node instanceof Element element)) {
+            return null;
+        }
+        final String value = element.attr(qualifiedName);
+        return value.isEmpty() ? null : value;
+    }
+
+    @Override
+    public void setAttribute(String qualifiedName, String plainValue) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        Objects.requireNonNull(plainValue, "plainValue");
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has attributes to set");
+        }
+        element.attr(qualifiedName, plainValue);
+    }
+
+    @Override
+    public void setText(String plainText) {
+        Objects.requireNonNull(plainText, "plainText");
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has text to set");
+        }
+        element.text(plainText);
+    }
 }

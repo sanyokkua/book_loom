@@ -113,3 +113,173 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
   local storage.
 - Side files: the glossary, the bilingual copy and the quality report (FR-EXPORT-05, FR-EXPORT-06 stay shown-disabled).
 - Adding and editing a provider (the settings screen offers the two built-in local providers only).
+
+## Requirements implemented by `complete-translation-workflow`
+
+Built and verified by the scripted checks at the change's final commit and by the owner's hand checks (tasks 16.3 and
+16.5). The change was archived on 2026-10-19 and its delta specs are merged into `openspec/specs/`. Three of the capabilities below — `glossary`, `quality-gates` and
+`review-queue` — are new; the others extend capabilities that already sit under `openspec/specs/`. The work that was not planned up front (groups 15a–15j) is in `additional-work.md`, beside the change.
+
+| Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |
+|---|---|---|---|---|
+| FR-A11Y-6 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-A11Y-8 | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-ALGO-01 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-02 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-03 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-04 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-06 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `translation-pipeline`. |
+| FR-ALGO-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. |
+| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-12 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-B2 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C10 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C11 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `translation-pipeline`. |
+| FR-ALGO-C12 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `translation-pipeline`. |
+| FR-ALGO-C13 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C2 | implemented | `complete-translation-workflow` | `document-round-trip` | Also cited by `translation-pipeline`. |
+| FR-ALGO-C2b | implemented | `complete-translation-workflow` | `document-round-trip` | Also cited by `translation-pipeline`. |
+| FR-ALGO-C4 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C4b | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C5 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C7 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C8 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-C9 | implemented | `complete-translation-workflow` | `translation-pipeline` | Also cited by `glossary`. |
+| FR-ALGO-D1 | implemented | `complete-translation-workflow` | `translation-pipeline` | Also cited by `glossary`, `review-queue`. |
+| FR-ALGO-D3 | implemented | `complete-translation-workflow` | `translation-pipeline` | Also cited by `review-queue`. |
+| FR-BRIEF-01 | implemented | `complete-translation-workflow` | `book-brief` | Also cited by `app-shell`, `translation-pipeline`. |
+| FR-BRIEF-02 | implemented | `complete-translation-workflow` | `book-brief` | Also cited by `translation-pipeline`. |
+| FR-BRIEF-03 | implemented | `complete-translation-workflow` | `book-brief` |  |
+| FR-BRIEF-04 | implemented | `complete-translation-workflow` | `book-brief` |  |
+| FR-BRIEF-05 | implemented | `complete-translation-workflow` | `book-brief` |  |
+| FR-BRIEF-06 | implemented | `complete-translation-workflow` | `book-brief` |  |
+| FR-BRIEF-07 | implemented | `complete-translation-workflow` | `book-brief` | Also cited by `translation-pipeline`. |
+| FR-BRIEF-08 | implemented | `complete-translation-workflow` | `book-brief` | Also cited by `export`, `translation-pipeline`. |
+| FR-BRIEF-09 | implemented | `complete-translation-workflow` | `export` | Also cited by `book-brief`, `translation-pipeline`. |
+| FR-DOC-01 | implemented | `complete-translation-workflow` | `document-round-trip` | Also cited by `book-brief`. |
+| FR-DOC-02 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-03 | implemented | `complete-translation-workflow` | `document-round-trip` | Also cited by `translation-pipeline`. |
+| FR-DOC-04 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-05 | implemented | `complete-translation-workflow` | `document-round-trip` | The placeholder gate checks the multiset and the order of paired placeholders (ADR-0040). Also cited by `translation-pipeline`. |
+| FR-DOC-06 | implemented | `complete-translation-workflow` | `export` |  |
+| FR-DOC-07 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-08 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-09 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-10 | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-11 | implemented | `complete-translation-workflow` | `document-round-trip` | Auxiliary text is produced for every format (ADR-0041). Also cited by `book-brief`, `translation-pipeline`. |
+| FR-DOC-EPUB | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-MD | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-DOC-TXT | implemented | `complete-translation-workflow` | `document-round-trip` |  |
+| FR-EXPORT-01 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. |
+| FR-EXPORT-02 | implemented | `complete-translation-workflow` | `export` |  |
+| FR-EXPORT-03 | implemented | `complete-translation-workflow` | `export` |  |
+| FR-EXPORT-04 | implemented | `complete-translation-workflow` | `export` | Export is its own action with Save to on the Export screen (ADR-0035). Also cited by `book-brief`. |
+| FR-EXPORT-05 | implemented | `complete-translation-workflow` | `export` | Glossary CSV, bilingual HTML and quality report side files are written. |
+| FR-EXPORT-06 | implemented | `complete-translation-workflow` | `export` | The consistency pass runs on request at export, and after the last segment on Max. |
+| FR-GLOSS-01 | implemented | `complete-translation-workflow` | `glossary` | Also cited by `translation-pipeline`. |
+| FR-GLOSS-02 | implemented | `complete-translation-workflow` | `glossary` |  |
+| FR-GLOSS-03 | implemented | `complete-translation-workflow` | `glossary` | Also cited by `quality-gates`. |
+| FR-GLOSS-04 | implemented | `complete-translation-workflow` | `glossary` | Also cited by `export`. |
+| FR-GLOSS-05 | implemented | `complete-translation-workflow` | `glossary` |  |
+| FR-IMPORT-01 | implemented | `complete-translation-workflow` | `book-import` |  |
+| FR-IMPORT-02 | implemented | `complete-translation-workflow` | `book-import` |  |
+| FR-IMPORT-03 | implemented | `complete-translation-workflow` | `book-import` | The source language comes from the metadata evidence, or Auto (ADR-0042, ADR-0037). Also cited by `book-brief`, `document-round-trip` and `translation-pipeline`. |
+| FR-IMPORT-04 | implemented | `complete-translation-workflow` | `book-import` | Also cited by `document-round-trip`. |
+| FR-IMPORT-05 | implemented | `complete-translation-workflow` | `book-import` | Refusal kinds are data (ADR-0039). Also cited by `document-round-trip` and `notifications`. |
+| FR-IMPORT-06 | implemented | `complete-translation-workflow` | `book-import` |  |
+| FR-IMPORT-07 | implemented | `complete-translation-workflow` | `document-round-trip` | Also cited by `book-import`. |
+| FR-INFER-01 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `inference`, `translation-pipeline`. |
+| FR-INFER-02 | implemented | `complete-translation-workflow` | `llm-provider` |  |
+| FR-INFER-03 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `inference`. |
+| FR-INFER-04a | implemented | `complete-translation-workflow` | `llm-provider` |  |
+| FR-INFER-05 | implemented | `complete-translation-workflow` | `llm-provider` |  |
+| FR-INFER-06 | implemented | `complete-translation-workflow` | `review-queue` | Also cited by `translation-pipeline`. |
+| FR-INFER-08 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `translation-pipeline`. |
+| FR-INFER-09 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `inference`, `translation-pipeline`. |
+| FR-MODEL-01 | implemented | `complete-translation-workflow` | `settings` | Also cited by `app-shell`. |
+| FR-MODEL-02 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-MODEL-03 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-MODEL-05 | implemented | `complete-translation-workflow` | `llm-provider` |  |
+| FR-MODEL-06 | implemented | `complete-translation-workflow` | `llm-provider` |  |
+| FR-NOTIF-01 | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-NOTIF-02 | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-NOTIF-04a | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-NOTIF-04c | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-NOTIF-05 | implemented | `complete-translation-workflow` | `export` |  |
+| FR-NOTIF-6a | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-NOTIF-6b | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-NOTIF-6c | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-PROV-01 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-PROV-04 | partial | `complete-translation-workflow` | `settings` | Nothing chosen on the Providers tab is remembered beyond the session; storage is not built. |
+| FR-PROV-06 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `settings`. |
+| FR-PROV-07 | implemented | `complete-translation-workflow` | `llm-provider` | Also cited by `settings`. |
+| FR-QA-01 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `document-round-trip`, `translation-pipeline`. |
+| FR-QA-02 | implemented | `complete-translation-workflow` | `quality-gates` |  |
+| FR-QA-03 | implemented | `complete-translation-workflow` | `quality-gates` |  |
+| FR-QA-04 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `document-round-trip`. |
+| FR-QA-05 | implemented | `complete-translation-workflow` | `quality-gates` |  |
+| FR-QA-07 | implemented | `complete-translation-workflow` | `quality-gates` |  |
+| FR-RESUME-02 | implemented | `complete-translation-workflow` | `resume` |  |
+| FR-RESUME-03 | implemented | `complete-translation-workflow` | `resume` | Also cited by `translation-pipeline`. |
+| FR-RESUME-05 | partial | `complete-translation-workflow` | `resume` | A stopped run resumes within the session, from its first pending segment; resuming after a restart arrives with SQLite. Also cited by `translation-pipeline`. |
+| FR-REVIEW-01 | implemented | `complete-translation-workflow` | `review-queue` | Also cited by `resume`, `translation-pipeline`. |
+| FR-REVIEW-02 | implemented | `complete-translation-workflow` | `quality-gates` |  |
+| FR-REVIEW-03 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-04 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-05 | implemented | `complete-translation-workflow` | `review-queue` | Review is a panel inside Translating (D-8). Also cited by `resume`. |
+| FR-REVIEW-06 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-07 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
+| FR-REVIEW-08 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-09 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`, `translation-pipeline`. |
+| FR-REVIEW-A1 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-A2 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-A3 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-Q4 | implemented | `complete-translation-workflow` | `review-queue` |  |
+| FR-REVIEW-X1 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
+| FR-REVIEW-X2 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
+| FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-THEME-10 | implemented | `complete-translation-workflow` | `notifications` |  |
+| FR-THEME-4 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-TRANS-05 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-UI-01 | implemented | `complete-translation-workflow` | `app-shell` | Six numbered workflow steps with a provider and model footer; review is a panel inside Translating (D-8). Projects is the one inert entry. |
+| FR-UI-03 | implemented | `complete-translation-workflow` | `app-shell` |  |
+| FR-UI-04 | implemented | `complete-translation-workflow` | `app-shell` |  |
+| FR-UI-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| NFR-PRIV-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Book text, prompts and replies are logged at TRACE only. Also cited by `app-shell`. |
+| NFR-PRIV-06 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| NFR-PRIV-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+
+### Owner decisions this change built
+
+These are decisions the owner took for this change; each is built and none is a requirement id of its own.
+
+- **D-2 — Markdown frontmatter.** Only the text values of Markdown frontmatter become segments. A key is never a
+  segment, and neither is `lang` or `language`, a number, a boolean (YAML `yes` and `on` included), a null, a date, a
+  URL, a list or a map. On export an existing top-level `lang` value is replaced by the target language tag, written
+  in the quotes it already had, and a `lang` key is never added to a file that had none.
+- **D-4 — Text the source encoding cannot hold.** A TXT or Markdown export whose translation the source's own text
+  encoding cannot represent is written whole as UTF-8 instead of being refused, with a byte-order mark exactly when the
+  source had one (ADR-0029). EPUB keeps writing numeric character references for such characters and FB2 keeps its
+  existing switch to UTF-8.
+- **D-5 — Names grow as the run goes.** At the end of each body unit a deterministic re-scan adds the new capitalised
+  candidates it finds to the glossary as unlocked entries with no target. It never changes an entry the person has
+  kept and never brings back one the person removed.
+- **D-6 — Foreign passages come from metadata only.** Under the Keep policy, an inline element whose own `lang` or
+  `xml:lang` differs from the book's source language is kept verbatim as one protected token. The application does not
+  guess that a passage is foreign from its letters.
+
+## Deferred by this change
+
+These were left out on purpose and are ordered in `docs/implementation_plan/CHANGE_BACKLOG.md`:
+
+- Saving anything across a restart (SQLite persistence): resume after a restart, remembered settings and brief, the
+  in-app language switch, the Projects screen, and add / edit / delete provider with credentials.
+- Settings tabs Models, Generation, Automation and Storage.
+- The translation pipeline redesign, the next change `redesign-translation-pipeline`
+  (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`).
+- Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
+  is single-flight).

@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -34,6 +35,9 @@ import ua.bookloom.ui.notify.Toasts;
  *
  * <p>Typing a model name never depends on this list, so a failure is said in place beside the entry rather than
  * blocking it; only an unexpected refusal ({@code internal}, {@code busy}) opens the error dialog.
+ *
+ * <p>A listing in flight is registered with the {@link ActivityTracker} (it may run during a run), and is cancelled —
+ * its request interrupted — when another provider is chosen, when it is discarded and from the title bar's Stop.
  */
 @Slf4j
 @Singleton
@@ -56,6 +60,9 @@ public final class ModelListing {
     private long epoch;
 
     private @Nullable String inFlightProvider;
+    private @Nullable Future<?> inFlight;
+    private ActivityTracker.@Nullable Handle handle;
+    private final ActivityTracker activities;
 
     /**
      * Creates a listing that has asked for nothing yet.
@@ -64,17 +71,20 @@ public final class ModelListing {
      * @param toasts where an unreadable list is announced
      * @param errors where an unexpected refusal is shown
      * @param executor the daemon executor the catalogue is asked on, never the FX thread
+     * @param activities where a listing in flight is registered
      */
     @Inject
     public ModelListing(
             final ModelCatalog catalog,
             final Toasts toasts,
             final ErrorPresenter errors,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     /**
@@ -129,10 +139,21 @@ public final class ModelListing {
             log.debug("listing of '{}' already in flight, not asking again", providerId);
             return;
         }
+        cancelInFlight();
         epoch++;
         inFlightProvider = providerId;
         listing.set(true);
+        handle = activities.begin(ActivityKind.MODEL_LISTING, this::stop);
         submit(providerId, epoch);
+    }
+
+    /** Stops the listing in flight, as the title bar's Stop asks; the list on show stays. FX thread only. */
+    void stop() {
+        log.debug("the model listing in flight is stopped");
+        cancelInFlight();
+        epoch++;
+        inFlightProvider = null;
+        listing.set(false);
     }
 
     /**
@@ -141,6 +162,7 @@ public final class ModelListing {
      */
     public void discard() {
         log.debug("model listing discarded, {} id(s) forgotten", offered.size());
+        cancelInFlight();
         epoch++;
         inFlightProvider = null;
         offered.clear();
@@ -151,7 +173,7 @@ public final class ModelListing {
 
     private void submit(final String providerId, final long requested) {
         try {
-            executor.execute(() -> listOffThread(providerId, requested));
+            inFlight = executor.submit(() -> listOffThread(providerId, requested));
         } catch (RuntimeException rejected) {
             log.error("the model listing could not be submitted", rejected);
             publish(requested, Result.err(internalError(rejected)));
@@ -192,11 +214,31 @@ public final class ModelListing {
         }
         listing.set(false);
         inFlightProvider = null;
+        settle();
         final AppError failure = result.error();
         if (failure == null) {
             accept(Objects.requireNonNull(result.data()));
         } else {
             route(failure);
+        }
+    }
+
+    // Interrupts the request in flight, if any, and ends its registration; its answer, if one still comes, is dropped.
+    private void cancelInFlight() {
+        final Future<?> running = inFlight;
+        if (running != null && !running.isDone()) {
+            log.debug("interrupting the model listing in flight");
+            running.cancel(true);
+        }
+        settle();
+    }
+
+    private void settle() {
+        inFlight = null;
+        final ActivityTracker.Handle registered = handle;
+        handle = null;
+        if (registered != null) {
+            registered.end();
         }
     }
 

@@ -19,7 +19,7 @@ recorded in ADR-0032. See also `testing.md`.
 - **MUST** write requirements in **EARS** (R1) — `The <system> SHALL …` / `WHEN <trigger>, the <system> SHALL …` /
   `WHILE <state>, …` / `IF <condition>, THEN …` / `WHERE <feature>, …` — decomposing a dense FR into **several atomic
   requirements** rather than transcribing it. — Rationale: one requirement, one testable obligation.
-- **MUST** end every requirement with a **`Source:` block** (R2): the spec file and anchor it comes from, and an
+- **MUST** end every requirement with **one unwrapped `**Source**: … In plain words: …` line** (R2; colon outside the bold, so OpenSpec reads it as metadata and the statement itself stays within its 500-character limit): the spec file and anchor it comes from, and an
   **"In plain words:"** sentence saying what it means and why it matters. — Rationale: the pointer locates, the gloss
   explains.
 - **MUST** write scenarios with **concrete values** (R3) — `ErrorCode.validation`, not "an error"; `⟦g1⟧⟦g2⟧` vs
@@ -57,7 +57,7 @@ recorded in ADR-0032. See also `testing.md`.
 
 - A requirement is copied from the FR table rather than rewritten in EARS, or a dense FR is transcribed instead of
   decomposed.
-- A requirement has no `Source:` block, or its `Source:` block is ids with no plain-words gloss.
+- A requirement has no `**Source**:` line, its Source line is ids with no plain-words gloss, or the Source is a wrapped or `**Source:**` block (it then counts as requirement text).
 - A scenario uses an abstraction where a concrete value belongs, uses three hashes instead of four, or a requirement
   ships with no scenario at all.
 - A `tasks.md` checkbox is a bare ID, or the final group is not the gate plus the app run by hand.

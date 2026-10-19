@@ -2,330 +2,372 @@ package ua.bookloom.pipeline;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.pipeline.chunk.OversizedSplit;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.heal.GateResult;
+import ua.bookloom.pipeline.heal.PieceRedraft;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
-import ua.bookloom.pipeline.prompt.DraftSchema;
+import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.run.PauseDecider;
 
-/** Makes one model call and decides one segment. */
+/**
+ * The draft step: one draft call, with at most one structural and one placeholder repair, whose reply is read by
+ * design D3's reply precedence. It decides nothing — a reply it can use goes to the quality loop, which accepts,
+ * repairs or flags it — so the chunk runner and a review retry share one draft step.
+ */
 @Slf4j
-final class SegmentTranslator {
+public final class SegmentTranslator {
 
-    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
-    private final DocumentPort documents;
-    private final ChatModel model;
+    private final GateFunction gate;
+    private final ModelCalls calls;
     private final BookFormat format;
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
+    private final DraftRequests requests;
 
-    SegmentTranslator(
-            final DocumentPort documents,
-            final ChatModel model,
+    /** Creates the draft step of one run over its placeholder gate, call seam, format, prompts and reply reader. */
+    public SegmentTranslator(
+            final GateFunction gate,
+            final ModelCalls calls,
             final BookFormat format,
             final DraftPromptBuilder promptBuilder,
             final DraftReplyParser replyParser) {
-        this.documents = Objects.requireNonNull(documents, "documents");
-        this.model = Objects.requireNonNull(model, "model");
+        this.gate = Objects.requireNonNull(gate, "gate");
+        this.calls = Objects.requireNonNull(calls, "calls");
         this.format = Objects.requireNonNull(format, "format");
         this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder");
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
+        this.requests = new DraftRequests(gate, promptBuilder, replyParser);
     }
 
-    Result<Decision> translate(final Segment segment) {
-        return translate(segment, DraftContext.empty());
+    Result<DraftOutcome> translate(final Segment segment) {
+        return translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()));
     }
 
-    /** Translates one segment with previously accepted targets supplied solely as context. */
-    Result<Decision> translate(final Segment segment, final DraftContext context) {
+    /**
+     * The same draft step restoring every reply through {@code chunkGate}, which knows the protected spans of one
+     * chunk's segments.
+     *
+     * @param chunkGate the non-null gate of the chunk about to be drafted
+     * @return a draft step sharing this one's seam, format, prompts and reply reader
+     */
+    public SegmentTranslator gatedBy(final GateFunction chunkGate) {
+        return new SegmentTranslator(
+                Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, promptBuilder, replyParser);
+    }
+
+    /** The run's draft of one segment: no extra instruction, at the draft's own temperature. */
+    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
+        return translate(segment, context, mask, "", false);
+    }
+
+    /**
+     * Drafts one segment showing the model its mask's text — the segment's masked text with its protected spans
+     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text. A review retry
+     * passes the person's note, which the draft and its repairs carry, and may ask the draft call alone for its lower
+     * temperature.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the non-null context the draft is shown
+     * @param mask the non-null spans hidden in the segment; its text carries every token the reply must return
+     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
+     * @param lowerTemperature whether the draft call asks for its lower temperature
+     * @return the draft's outcome, or the error a call answered, which the run routes
+     */
+    public Result<DraftOutcome> translate(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
-        log.debug("Translating segment id={} format={}", segment.id(), format);
-        final ChatRequest request = requestFor(segment, context, RequestKind.DRAFT, "", "");
-        final Result<ChatResponse> reply = callModel(segment, request);
+        Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
+        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
+        log.debug(
+                "Translating segment id={} format={} shownLength={} extraInstruction={} lowerTemperature={}",
+                segment.id(),
+                format,
+                attempt.shownText().length(),
+                !extraInstruction.isEmpty(),
+                lowerTemperature);
+        return send(attempt, DraftStep.DRAFT, "", "");
+    }
+
+    // A structural repair follows only a draft, a placeholder repair a draft or a structural repair, so the step tells
+    // which repairs are already used.
+    private Result<DraftOutcome> send(
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                step, attempt.segment(), request, requests.descriptor(attempt, step, rejected, diagnostic), calls);
         if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
+            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), false, false);
+        return decideResponse(
+                attempt,
+                Objects.requireNonNull(reply.data()),
+                step != DraftStep.DRAFT,
+                step == DraftStep.PLACEHOLDER_REPAIR);
     }
 
-    private ChatRequest requestFor(
-            final Segment segment,
-            final DraftContext context,
-            final RequestKind kind,
-            final String rejected,
-            final String diagnostic) {
-        log.debug(
-                "Building chat request segmentId={} maskedLength={}",
-                segment.id(),
-                segment.masked().length());
-        final ChatRequest request = new ChatRequest(
-                messagesFor(segment, context, kind, rejected, diagnostic),
-                DraftPromptBuilder.TEMPERATURE,
-                new ResponseFormat("draft_translation", DraftSchema.SCHEMA),
-                false);
-        log.debug(
-                "Built chat request segmentId={} messageCount={}",
-                segment.id(),
-                request.messages().size());
-        return request;
+    /**
+     * Takes one batch item's target as the segment's draft, with none of the repairs a single draft makes.
+     *
+     * @param segment the non-null segment the item stands for
+     * @param mask the non-null spans hidden in the segment
+     * @param maskedTarget the non-null target the batch reply gave, whose tokens are in place
+     * @return the draft's outcome, or empty when the gate refused the target, which is then drafted on its own
+     */
+    public Optional<DraftOutcome> adopt(final Segment segment, final ProtectedMask mask, final String maskedTarget) {
+        return BatchAdoption.adopt(gate, segment, mask, maskedTarget);
     }
 
-    private List<ua.bookloom.api.llm.ChatMessage> messagesFor(
+    /** The run's draft of one segment, in pieces when it is alone above the budget: no note, the draft's temperature. */
+    public Result<DraftOutcome> translateSplit(
             final Segment segment,
             final DraftContext context,
-            final RequestKind kind,
-            final String rejected,
-            final String diagnostic) {
-        return switch (kind) {
-            case DRAFT -> promptBuilder.messagesFor(segment, context);
-            case STRUCTURAL_REPAIR -> promptBuilder.messagesForStructuredRepair(segment, context, rejected, diagnostic);
-            case PLACEHOLDER_REPAIR -> promptBuilder.messagesForPlaceholderRepair(segment, context, rejected);
+            final ProtectedMask mask,
+            final SentenceSplitter splitter,
+            final int budgetTokens) {
+        return translateSplit(segment, context, mask, splitter, budgetTokens, "", false);
+    }
+
+    /**
+     * Drafts a segment, in sentence-aligned pieces when the text it is shown is alone above the budget. The pieces are
+     * joined and gated once as that one segment, because the translation goes back into the node it came from. A
+     * review retry passes the person's note and its temperature choice, so every piece's draft carries them as the
+     * whole segment's draft would.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the non-null context each piece is shown
+     * @param mask the non-null spans hidden in the segment; the pieces are cut from its text
+     * @param splitter the non-null sentence splitter of the source language
+     * @param budgetTokens the chunk budget a piece must fit
+     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
+     * @param lowerTemperature whether each draft call asks for its lower temperature
+     * @return the draft's outcome, or the error a call answered, which the run routes
+     */
+    public Result<DraftOutcome> translateSplit(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final SentenceSplitter splitter,
+            final int budgetTokens,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(splitter, "splitter");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
+        final String shown = mask.maskedText();
+        final int estimate = TokenEstimator.estimate(shown, promptBuilder.sourceLanguage());
+        if (estimate <= budgetTokens) {
+            log.debug(
+                    "Segment id={} estimate={} within budget={}, drafted whole", segment.id(), estimate, budgetTokens);
+            return translate(segment, context, mask, extraInstruction, lowerTemperature);
+        }
+        final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
+        return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
+            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces());
+            case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
         };
     }
 
-    private Result<ChatResponse> callModel(final Segment segment, final ChatRequest request) {
-        log.debug(
-                "Calling chat model segmentId={} messageCount={}",
+    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without preceding
+    // targets or memory hits to leave it room, keeping the note and temperature the draft was asked with.
+    private Result<DraftOutcome> unsplittable(
+            final DraftAttempt attempt, final ProtectedMask mask, final int estimate, final int budgetTokens) {
+        final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
+        log.warn(
+                "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
+                        + " preceding targets or memory hits",
                 segment.id(),
-                request.messages().size());
-        try {
-            final Result<ChatResponse> result = Objects.requireNonNull(model.chat(request), "model result");
-            log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
-            return result;
-        } catch (Throwable cause) {
-            final AppError error = AppError.of(
-                    ErrorCode.internal,
-                    "Translation failed",
-                    "The model could not translate this segment.",
-                    null,
-                    cause);
-            log.debug("Chat model completed segmentId={} result=thrown errorCode={}", segment.id(), error.code());
-            log.error("Unexpected model failure segment={} code={}", segment.id(), error.code(), cause);
-            return Result.err(error);
-        }
+                estimate,
+                budgetTokens);
+        return translate(
+                segment,
+                new DraftContext(
+                        List.of(), context.summary(), context.glossaryLines(), List.of(), context.suggestedLines()),
+                mask,
+                attempt.extraInstruction(),
+                attempt.lowerTemperature());
     }
 
-    private Result<Decision> decideModelError(final Segment segment, final AppError error) {
+    /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
+    private Result<DraftOutcome> translatePieces(final DraftAttempt attempt, final List<String> pieces) {
+        final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
+        log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
+        final PieceRedraft redraft = (findings, redraftCalls) ->
+                PieceDrafter.redraft(this, replyParser, segment, context, pieces, findings, redraftCalls);
+        final DraftAttempt whole = attempt.redraftedBy(redraft);
+        final Result<PieceDrafter.Piece> drafted = new PieceDrafter(
+                        this, replyParser, calls, attempt.extraInstruction(), attempt.lowerTemperature())
+                .draftAll(segment, context, pieces);
+        if (drafted.isErr()) {
+            return decideModelError(whole, Objects.requireNonNull(drafted.error()));
+        }
+        return switch (Objects.requireNonNull(drafted.data())) {
+            case PieceDrafter.Unusable(final AppError unusable) ->
+                DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
+            case PieceDrafter.Text(final String joined) -> restore(whole, joined, true);
+        };
+    }
+
+    ChatRequest requestFor(
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        return requests.build(attempt, step, rejected, diagnostic);
+    }
+
+    String targetLanguage() {
+        return promptBuilder.targetLanguage();
+    }
+
+    /** The requests this draft step sends, which a prompt eval builds the same way. */
+    public DraftRequests requests() {
+        return requests;
+    }
+
+    // Design D3 rule 1: an error the routing table flags at once is the segment's, every other one is the run's.
+    private Result<DraftOutcome> decideModelError(final DraftAttempt attempt, final AppError error) {
+        final Segment segment = attempt.segment();
         log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
-        return switch (error.code()) {
-            case validation, emptyCompletion, contextWindow -> flag(segment, error, "model-error", "[]");
-            default -> terminal(segment, error, "model-error");
+        return switch (PauseDecider.route(error.code())) {
+            case FLAG_AT_ONCE -> DraftOutcomes.flaggedAtOnce(attempt, error, "model-error", "[]");
+            case CANCELLED, PAUSE_OR_FAIL, FAIL -> DraftOutcomes.routed(segment, error, "model-error");
         };
     }
 
-    private Result<Decision> decideResponse(
-            final Segment segment,
-            final DraftContext context,
+    // Design D3 rules 2-4, in their order: blank content, then an abnormal finish, then a reply that is not the JSON
+    // object — so a cut-off reply is flagged at once rather than sent to a structural repair.
+    private Result<DraftOutcome> decideResponse(
+            final DraftAttempt attempt,
             final ChatResponse response,
             final boolean structuralRepairUsed,
             final boolean placeholderRepairUsed) {
-        if (response.content().isBlank()) {
-            return flag(segment, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
+        if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
+            return DraftOutcomes.unfinished(attempt, response);
         }
-        final ParsedReply parsed = replyParser.parse(response.content());
+        final ParsedReply parsed =
+                replyParser.parse(response.content(), attempt.segment().masked(), promptBuilder.targetLanguage());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
             return structuralRepairUsed
-                    ? invalidStructuredReply(segment, response)
-                    : repairStructured(segment, context, response.content(), parsed.diagnostic());
+                    ? DraftOutcomes.invalidStructuredReply(attempt, response)
+                    : repairStructured(attempt, response.content(), parsed.diagnostic());
         }
         final String trimmed = parsed.translation().strip();
-        logTraceReply(response.content(), trimmed);
+        DraftOutcomes.traceReply(response.content(), trimmed);
         log.debug(
-                "Model reply segment={} kind={} finish={} empty={}",
-                segment.id(),
+                "Model reply segment={} kind={} finish={} empty={} replyLength={} placeholderRepair={}",
+                attempt.segment().id(),
                 parsed.kind(),
                 response.finishReason(),
-                trimmed.isEmpty());
-        if (trimmed.isEmpty()) {
-            return flag(segment, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
-        }
-        if (response.finishReason() != FinishReason.STOP) {
-            return flag(segment, invalidFinish(), response.finishReason().name(), observedTokens(response.content()));
-        }
-        return restore(segment, context, trimmed, placeholderRepairUsed);
+                trimmed.isEmpty(),
+                trimmed.length(),
+                placeholderRepairUsed);
+        return trimmed.isEmpty()
+                ? DraftOutcomes.unfinished(attempt, response)
+                : restore(attempt, trimmed, placeholderRepairUsed);
     }
 
-    private Result<Decision> repairStructured(
-            final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
+    private Result<DraftOutcome> repairStructured(
+            final DraftAttempt attempt, final String rejectedReply, final String diagnostic) {
+        final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
-        final ChatRequest request =
-                requestFor(segment, context, RequestKind.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
-        final Result<ChatResponse> reply = callModel(segment, request);
-        if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
-        }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), true, false);
+        return send(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
     }
 
-    private Result<Decision> invalidStructuredReply(final Segment segment, final ChatResponse response) {
-        logTraceReply(response.content(), "");
-        return flag(
-                segment,
-                AppError.of(
-                        ErrorCode.validation,
-                        "Invalid structured model response",
-                        "The model did not return the required translation JSON object."),
-                response.finishReason().name(),
-                observedTokens(response.content()));
-    }
-
-    private Result<Decision> restore(
-            final Segment segment,
-            final DraftContext context,
-            final String trimmed,
-            final boolean placeholderRepairUsed) {
+    private Result<DraftOutcome> restore(
+            final DraftAttempt attempt, final String trimmed, final boolean placeholderRepairUsed) {
+        final Segment segment = attempt.segment();
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
-        final String restoredWhitespace = restoreWhitespace(segment.masked(), trimmed);
+        final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
-        final Result<String> unmasked = documents.unmask(format, segment, restoredWhitespace);
-        if (unmasked.isErr()) {
-            final AppError error = Objects.requireNonNull(unmasked.error());
-            log.debug("Unmask completed segmentId={} result=error code={}", segment.id(), error.code());
-            if (error.code() != ErrorCode.validation) {
-                return terminal(segment, error, "unmask");
+        return switch (gate.restore(segment, restoredWhitespace)) {
+            case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
+            case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed, placeholderRepairUsed);
+            case GateResult.StepError stepError -> {
+                log.debug(
+                        "Gate completed segmentId={} result=StepError code={}",
+                        segment.id(),
+                        stepError.error().code());
+                yield DraftOutcomes.routed(segment, stepError.error(), "unmask");
             }
-            return placeholderRepairUsed
-                    ? flag(segment, error, FinishReason.STOP.name(), observedTokens(restoredWhitespace))
-                    : repairPlaceholder(segment, context, restoredWhitespace);
-        }
-        final String target = Objects.requireNonNull(unmasked.data());
-        log.debug("Unmask completed segmentId={} result=success targetLength={}", segment.id(), target.length());
-        logTraceUnmask(restoredWhitespace, target);
-        final Decision decision = new Decision(segment.withDecision(SegmentStatus.ACCEPTED, target), null);
-        log.debug("Segment decision id={} decision={} errorCode={}", segment.id(), SegmentStatus.ACCEPTED, null);
-        return Result.ok(decision);
+        };
     }
 
-    private Result<Decision> repairPlaceholder(
-            final Segment segment, final DraftContext context, final String rejectedTarget) {
+    // The order for a reply the placeholder gate refused: put back what it lost without a call; then one model repair
+    // told exactly which tokens are wrong; on that repair's reply, the same deterministic repair and then every token
+    // placed again by position; only then the quality loop's directed fix, and failing that the source is kept.
+    private Result<DraftOutcome> recover(
+            final DraftAttempt attempt,
+            final String rejected,
+            final GateResult.GateFailed failed,
+            final boolean placeholderRepairUsed) {
+        final Segment segment = attempt.segment();
+        log.debug(
+                "Gate completed segmentId={} result=GateFailed code={} placeholderRepairUsed={}",
+                segment.id(),
+                failed.error().code(),
+                placeholderRepairUsed);
+        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
+                instanceof GateResult.Restored restored) {
+            return DraftOutcomes.drafted(attempt, rejected, restored);
+        }
+        if (!placeholderRepairUsed) {
+            return repairPlaceholder(attempt, rejected, failed);
+        }
+        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.REWRAP_ALL)
+                instanceof GateResult.Restored restored) {
+            return DraftOutcomes.drafted(attempt, rejected, restored);
+        }
+        return DraftOutcomes.stillFailingTheGate(attempt, rejected, failed);
+    }
+
+    // A repair whose own reply is unusable leaves the draft's reply, which the gate refused only for its markup: its
+    // words are kept and every token is placed again by position before the segment is given up.
+    private Result<DraftOutcome> repairPlaceholder(
+            final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
+        final Segment segment = attempt.segment();
+        final String note = DraftRequests.placeholderNote(attempt, rejectedTarget, failed);
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request = requestFor(segment, context, RequestKind.PLACEHOLDER_REPAIR, rejectedTarget, "");
-        final Result<ChatResponse> reply = callModel(segment, request);
-        if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
+        final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);
+        if (repaired.isOk()
+                && repaired.data() instanceof DraftOutcome.FlaggedAtOnce
+                && gate.restoreRepairing(segment, rejectedTarget, PlaceholderRepair.REWRAP_ALL)
+                        instanceof GateResult.Restored restored) {
+            log.info("Placeholder repair reply unusable; draft kept with re-placed tokens segmentId={}", segment.id());
+            return DraftOutcomes.drafted(attempt, rejectedTarget, restored);
         }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), true, true);
-    }
-
-    private Result<Decision> flag(
-            final Segment segment, final AppError error, final String finish, final String observedTokens) {
-        final String expectedTokens = expectedTokens(segment);
-        log.warn(
-                "Flagged segment id={} code={} expectedTokens={} observedTokens={}",
-                segment.id(),
-                error.code(),
-                expectedTokens,
-                observedTokens);
-        log.debug(
-                "Segment decision id={} replyFinish={} decision={} errorCode={}",
-                segment.id(),
-                finish,
-                SegmentStatus.FLAGGED,
-                error.code());
-        return Result.ok(new Decision(segment.withDecision(SegmentStatus.FLAGGED, null), error));
-    }
-
-    private static Result<Decision> terminal(final Segment segment, final AppError error, final String replyKind) {
-        log.debug(
-                "Segment decision id={} replyKind={} decision=terminal errorCode={}",
-                segment.id(),
-                replyKind,
-                error.code());
-        return Result.err(error);
-    }
-
-    private static String restoreWhitespace(final String source, final String trimmed) {
-        log.debug("Restoring whitespace sourceLength={} trimmedLength={}", source.length(), trimmed.length());
-        int leadingEnd = 0;
-        while (leadingEnd < source.length() && Character.isWhitespace(source.charAt(leadingEnd))) {
-            leadingEnd++;
-        }
-        int trailingStart = source.length();
-        while (trailingStart > leadingEnd && Character.isWhitespace(source.charAt(trailingStart - 1))) {
-            trailingStart--;
-        }
-        final String restored = source.substring(0, leadingEnd) + trimmed + source.substring(trailingStart);
-        log.debug(
-                "Restored whitespace leadingLength={} trailingLength={} restoredLength={}",
-                leadingEnd,
-                source.length() - trailingStart,
-                restored.length());
-        return restored;
-    }
-
-    private static String expectedTokens(final Segment segment) {
-        log.debug(
-                "Collecting expected tokens segmentId={} placeholderCount={}",
-                segment.id(),
-                segment.placeholders().size());
-        final String tokens = DraftPromptBuilder.expectedTokenSequence(segment);
-        log.debug(
-                "Collected expected tokens segmentId={} tokenCount={}",
-                segment.id(),
-                segment.placeholders().size());
-        return tokens;
-    }
-
-    private static String observedTokens(final String text) {
-        log.debug("Collecting observed tokens textLength={}", text.length());
-        final Matcher matcher = PLACEHOLDER.matcher(text);
-        final List<String> tokens = new java.util.ArrayList<>();
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
-        log.debug("Collected observed tokens textLength={} tokenCount={}", text.length(), tokens.size());
-        return tokens.toString();
-    }
-
-    private static AppError emptyCompletion() {
-        log.debug("Creating segment error code={} reason=empty-reply", ErrorCode.emptyCompletion);
-        return AppError.of(ErrorCode.emptyCompletion, "Empty model response", "The model returned no translated text.");
-    }
-
-    private static AppError invalidFinish() {
-        log.debug("Creating segment error code={} reason=non-stop-finish", ErrorCode.validation);
-        return AppError.of(
-                ErrorCode.validation, "Incomplete model response", "The model response did not finish normally.");
-    }
-
-    private static void logTraceReply(final String raw, final String trimmed) {
-        if (log.isTraceEnabled()) {
-            log.trace("Segment reply raw={} trimmed={}", raw, trimmed);
-        }
+        return repaired;
     }
 
     private static void logTraceRestoration(final String restored) {
         if (log.isTraceEnabled()) {
             log.trace("Segment reply restored={}", restored);
         }
-    }
-
-    private static void logTraceUnmask(final String input, final String output) {
-        if (log.isTraceEnabled()) {
-            log.trace("Segment unmask input={} output={}", input, output);
-        }
-    }
-
-    private enum RequestKind {
-        DRAFT,
-        STRUCTURAL_REPAIR,
-        PLACEHOLDER_REPAIR
     }
 }

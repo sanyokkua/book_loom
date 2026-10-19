@@ -15,7 +15,7 @@ import ua.bookloom.ui.i18n.Messages;
 // (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ProviderNames {
+public final class ProviderNames {
 
     private static final Map<String, MessageKey> NAMES =
             Map.of("ollama", MessageKey.SETTINGS_PROVIDER_OLLAMA, "lmstudio", MessageKey.SETTINGS_PROVIDER_LMSTUDIO);
@@ -28,7 +28,7 @@ final class ProviderNames {
      * @return the catalogue name for a known provider, otherwise the id itself, so a provider added later still
      *     shows something recognisable
      */
-    static String displayName(final Messages messages, final String id) {
+    public static String displayName(final Messages messages, final String id) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(id, "id");
         final MessageKey key = NAMES.get(id);

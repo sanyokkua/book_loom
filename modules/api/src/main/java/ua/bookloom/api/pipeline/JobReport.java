@@ -1,6 +1,5 @@
 package ua.bookloom.api.pipeline;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -12,11 +11,10 @@ import ua.bookloom.api.document.BookFormat;
  *
  * @param format the source book format
  * @param end the terminal job state
- * @param segments total number of segments in the job
- * @param accepted number of accepted segments
+ * @param segments the project's segments that are translated, as the project holds them when the run ends
+ * @param accepted number of accepted segments, revised ones included
  * @param flagged number of flagged segments
  * @param flaggedSegments flagged segment identities and reasons, defensively copied
- * @param written the output path for a completed job, or null otherwise
  * @param error the terminal error for a failed job, or null otherwise
  */
 public record JobReport(
@@ -26,7 +24,6 @@ public record JobReport(
         int accepted,
         int flagged,
         List<FlaggedSegment> flaggedSegments,
-        @Nullable Path written,
         @Nullable AppError error) {
 
     /**
@@ -42,9 +39,6 @@ public record JobReport(
         }
         if ((end == JobState.FAILED) != (error != null)) {
             throw new IllegalArgumentException("error must be present exactly when end is FAILED");
-        }
-        if ((end == JobState.COMPLETED) != (written != null)) {
-            throw new IllegalArgumentException("written must be present exactly when end is COMPLETED");
         }
     }
 

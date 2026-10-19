@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,15 +11,20 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
+import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.ScriptedChatModelFactory;
-import ua.bookloom.ui.ScriptedDocumentPort;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
+import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * What the translating view model tests share, on top of the runner fixtures: a real {@link TranslationRunner}
@@ -38,12 +44,14 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     static final String PROVIDER = "ProviderError";
     static final String NONE = "none";
 
-    protected ScriptedDocumentPort port;
+    protected CurrentProject current;
     protected RecordingToasts toasts;
     protected RecordingErrorPresenter errors;
     protected ScriptedChatModelFactory models;
     protected ScriptedTranslationEngine engine;
+    protected ScriptedProjectService projects;
     protected ExecutorService prepExecutor;
+    protected ReviewMode reviewMode = ReviewMode.UNATTENDED;
     protected QueuedExecutor queued;
     protected ImportViewModel imports;
     protected BookBriefViewModel brief;
@@ -52,45 +60,76 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     @BeforeEach
     void setUpTranslatingFixtures() {
-        port = ScriptedDocumentPort.idle();
+        current = new CurrentProject();
         toasts = new RecordingToasts();
         errors = new RecordingErrorPresenter();
         models = ScriptedChatModelFactory.ok();
         engine = ScriptedTranslationEngine.returning(job);
+        projects = new ScriptedProjectService();
         queued = new QueuedExecutor();
         prepExecutor = queued;
-        imports = onFx(() ->
-                new ImportViewModel(port, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(imports, new DirectExecutor()));
-        settings = onFx(() -> new SettingsViewModel(
+        imports = onFx(() -> new ImportViewModel(
+                projects,
+                current,
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor(),
+                new ActivityTracker(new StateMirror())));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
+        settings = onFx(() -> newSettings(activities));
+    }
+
+    private static SettingsViewModel newSettings(final ActivityTracker activities) {
+        return new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
                 new ModelListing(
                         ScriptedModelCatalog.idle(),
                         new RecordingToasts(),
                         new RecordingErrorPresenter(),
-                        new DirectExecutor()),
+                        new DirectExecutor(),
+                        activities),
                 new RecordingToasts(),
                 new RecordingErrorPresenter(),
-                new DirectExecutor()));
+                new DirectExecutor(),
+                activities);
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
+        final RunStarter starter = new RunStarter(
+                current,
+                models,
+                engine,
+                reviewMode,
+                runner,
+                new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
+                prepExecutor,
+                ScriptedProviderVerifier.idle(),
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()),
+                activities);
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, brief, settings, models, engine, toasts, errors, prepExecutor));
+                mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    /** Opens the book and chooses a model, so that {@code start()} has everything it needs. */
+    /** Opens the book (declaring English) and chooses a target and a model, so that {@code start()} has all it needs. */
     protected void openBookAndChooseModel() {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        openBook();
+        onFx(() -> {
+            brief.setTargetLanguage("uk");
+            return null;
+        });
+        chooseModel(MODEL);
+    }
+
+    protected void openBook() {
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         onFx(() -> {
             imports.open(BOOK);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
-        chooseModel(MODEL);
     }
 
     protected void chooseModel(final String model) {
@@ -123,6 +162,13 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     /** The notice the dashboard is showing instead of the plain state banner, if any. */
     protected Optional<RunNotice> notice() {
         return onFx(() -> Optional.ofNullable(viewModel.notice().get()));
+    }
+
+    /** The messages raised other than the one that announces a run has begun. */
+    protected List<Raised> outcomeToasts() {
+        return toasts.raised().stream()
+                .filter(raised -> raised.key() != MessageKey.TOAST_RUN_STARTED)
+                .toList();
     }
 
     protected boolean preparing() {

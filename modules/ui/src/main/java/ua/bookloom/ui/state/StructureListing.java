@@ -2,47 +2,85 @@ package ua.bookloom.ui.state;
 
 import java.util.List;
 import java.util.Objects;
-import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Unit;
+import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.document.BookProfile;
+import ua.bookloom.api.document.StructureNode;
 
 /**
- * What the structure screen shows for an opened book: one flat row per unit in reading order and, on request, the sum of
- * their segment counts. It is built here, away from the scene graph, so the numbers a person reads can be checked without a
- * window and cannot drift from the parse.
+ * What the structure screen shows for an opened book: the top-level nodes of its structure tree, in navigation order,
+ * and the sum of their segment counts. It is built here, away from the scene graph, so the numbers a person reads can
+ * be checked without a window and cannot drift from the profile.
  *
- * @param rows the units in reading order, unmodifiable
+ * @param roots the top-level nodes in navigation order, unmodifiable; each carries its own children
  */
-public record StructureListing(List<StructureRow> rows) {
+@Slf4j
+public record StructureListing(List<StructureNode> roots) {
 
-    /** Copies the rows so a caller's later change cannot alter what the screen shows. */
+    /** Copies the roots so a caller's later change cannot alter what the screen shows. */
     public StructureListing {
-        Objects.requireNonNull(rows, "rows");
-        rows = List.copyOf(rows);
+        Objects.requireNonNull(roots, "roots");
+        roots = List.copyOf(roots);
     }
 
     /**
-     * Lists the units of a parsed book.
+     * Lists the structure of a book.
      *
-     * @param document the opened book; its units are taken in the order it holds them
-     * @return the rows and their total; no rows and a zero total when the book has no units
+     * @param profile the opened book's profile; its structure is taken in the order it holds it
+     * @return the tree and its total; no roots and a zero total when the book has no structure
      */
-    public static StructureListing of(final Document document) {
-        Objects.requireNonNull(document, "document");
-        final List<StructureRow> rows =
-                document.units().stream().map(StructureListing::rowOf).toList();
-        return new StructureListing(rows);
+    public static StructureListing of(final BookProfile profile) {
+        Objects.requireNonNull(profile, "profile");
+        final StructureListing listing = new StructureListing(profile.structure());
+        log.debug(
+                "structure listing built with {} top-level node(s), {} node(s) in all, {} segment(s)",
+                listing.roots.size(),
+                listing.nodeCount(),
+                listing.totalSegments());
+        return listing;
     }
 
     /**
-     * Sums the rows rather than storing a figure, so the total cannot disagree with them.
+     * Sums the top-level counts rather than storing a figure, so the total cannot disagree with them; a node's count
+     * already includes its children, and a node that only points into a unit another node counts adds nothing.
      *
-     * @return the segments across every row; zero when there are none
+     * @return the segments across every top-level node; zero when there are none
      */
     public int totalSegments() {
-        return rows.stream().mapToInt(StructureRow::segmentCount).sum();
+        return roots.stream()
+                .map(StructureNode::segmentCount)
+                .mapToInt(count -> count == null ? 0 : count)
+                .sum();
     }
 
-    private static StructureRow rowOf(final Unit unit) {
-        return new StructureRow(unit.href(), unit.order(), unit.segments().size());
+    /**
+     * Counts every node of the tree at any depth.
+     *
+     * @return the number of nodes; zero when the book has no structure
+     */
+    public int nodeCount() {
+        return roots.stream().mapToInt(StructureListing::sizeOf).sum();
+    }
+
+    /**
+     * The units whose segments a node stands for: its own unit, or, for a grouping node with none, those of its
+     * descendants in reading order.
+     *
+     * @param node the node picked in the tree
+     * @return the unit ids without repeats; empty when neither the node nor anything under it points into a unit
+     */
+    public static List<String> unitsOf(final StructureNode node) {
+        Objects.requireNonNull(node, "node");
+        final String own = node.unitId();
+        if (own != null) {
+            return List.of(own);
+        }
+        return node.children().stream()
+                .flatMap(child -> unitsOf(child).stream())
+                .distinct()
+                .toList();
+    }
+
+    private static int sizeOf(final StructureNode node) {
+        return 1 + node.children().stream().mapToInt(StructureListing::sizeOf).sum();
     }
 }

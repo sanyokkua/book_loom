@@ -53,7 +53,8 @@ class ProviderClientFactoryTest {
     }
 
     private static ProviderClientFactory factory() {
-        return new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        return new ProviderClientFactory(
+                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 
     private static ProviderConfig ollamaConfig() {

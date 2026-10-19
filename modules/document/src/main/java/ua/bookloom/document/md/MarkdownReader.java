@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.commonmark.ext.autolink.AutolinkExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.IncludeSourceSpans;
@@ -20,6 +22,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -31,6 +34,7 @@ import ua.bookloom.util.hash.HashUtil;
  * spelling: {@code *em*} and {@code _em_} are the same document, so re-rendering would normalise formatting
  * everywhere, in parts of the file nobody translated.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class MarkdownReader {
 
@@ -50,7 +54,7 @@ public final class MarkdownReader {
      */
     static Parser parser() {
         return Parser.builder()
-                .extensions(List.of(TablesExtension.create()))
+                .extensions(List.of(TablesExtension.create(), AutolinkExtension.create()))
                 .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
                 .build();
     }
@@ -67,14 +71,10 @@ public final class MarkdownReader {
         final byte[] fileBytes = readAllBytes(source);
         final CharsetLadder.Resolution resolution = CharsetLadder.resolve(fileBytes);
         final Charset charset = resolution.charset();
-        final String text =
-                new String(fileBytes, resolution.bomLength(), fileBytes.length - resolution.bomLength(), charset);
-
-        final Frontmatter.Split split = Frontmatter.split(text);
+        final Frontmatter.Split split = Frontmatter.split(textOf(fileBytes, resolution));
         final Map<String, String> metadata = Frontmatter.scan(split.block());
-        // Source spans index the body, so the offset map is built over the body and the two things in front of it
-        // — the byte-order mark and the frontmatter block — are added as a fixed prefix.
-        final int bodyByteOffset = resolution.bomLength() + split.block().getBytes(charset).length;
+        log.debug("Markdown frontmatter keys={}", metadata.keySet());
+        final int bodyByteOffset = bodyByteOffset(split, resolution, charset);
         final int[] byteOffsets = MarkdownSpans.byteOffsets(split.body(), charset);
 
         final String sourceName = source.getFileName().toString();
@@ -82,8 +82,11 @@ public final class MarkdownReader {
         final List<Segment> segments =
                 MarkdownWalker.walk(parsed, split.body(), bodyByteOffset, byteOffsets, sourceName);
 
+        final MarkdownAuxiliary.Layout layout =
+                new MarkdownAuxiliary.Layout(split, charset, resolution.bomLength(), bodyByteOffset, byteOffsets);
+        final MarkdownAuxiliary.Collected auxiliary = MarkdownAuxiliary.collect(sourceName, layout, parsed, segments);
         final String documentId = UUID.randomUUID().toString();
-        registry.put(documentId, new ParsedMarkdown(fileBytes, charset));
+        registry.put(documentId, new ParsedMarkdown(fileBytes, charset, auxiliary.slots()));
         return new Document(
                 documentId,
                 BookFormat.MARKDOWN,
@@ -93,7 +96,26 @@ public final class MarkdownReader {
                 resolution.hasBom(),
                 HashUtil.sha256Hex(fileBytes),
                 metadata,
-                List.of(unitOf(sourceName, segments)));
+                unitsOf(sourceName, segments, auxiliary.segments()));
+    }
+
+    private static String textOf(byte[] fileBytes, CharsetLadder.Resolution resolution) {
+        final int bom = resolution.bomLength();
+        return new String(fileBytes, bom, fileBytes.length - bom, resolution.charset());
+    }
+
+    private static List<Unit> unitsOf(String sourceName, List<Segment> body, List<Segment> auxiliary) {
+        return List.of(
+                unitOf(sourceName, body),
+                AuxiliaryUnit.of(sourceName, 1, UUID.randomUUID().toString(), auxiliary));
+    }
+
+    /**
+     * Source spans index the body, so the offset map is built over the body and the two things in front of it — the
+     * byte-order mark and the frontmatter block — are added as a fixed prefix.
+     */
+    private static int bodyByteOffset(Frontmatter.Split split, CharsetLadder.Resolution resolution, Charset charset) {
+        return resolution.bomLength() + split.block().getBytes(charset).length;
     }
 
     /**

@@ -15,7 +15,6 @@ import java.util.stream.IntStream;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -24,30 +23,35 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.ProgressFixtures;
+import ua.bookloom.ui.ScriptedReviewDesk;
 
 /**
  * Shared fixtures for the {@link TranslationRunner} tests: a real mirror, a recording job, a cadence the test fires by
  * hand, and a listener recording every run-state change and every progress-figure change the mirror publishes.
  */
-abstract class RunnerTestBase extends ApplicationTest {
+abstract class RunnerTestBase extends FxTestBase {
 
     static final long WAIT_SECONDS = 10;
     static final int BURST = 5000;
     static final int BATCH = 450;
     static final int TICKS = 10;
     static final Path SOURCE = Path.of("/books/in.txt");
-    static final Path DESTINATION = Path.of("/books/out.uk.txt");
-    static final TranslationRequest REQUEST = new TranslationRequest(SOURCE, DESTINATION, "uk", "en", false);
+    static final String PROJECT_ID = "project-1";
+    static final String FILE_NAME = "Frankenstein.epub";
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
     protected StateMirror mirror;
+    protected ActivityTracker activities;
     protected ManualTicks ticks;
     protected ExecutorService executor;
     protected TranslationRunner runner;
+    protected ScriptedReviewDesk desk;
     protected List<RunState> states;
     protected AtomicInteger acceptedChanges;
     protected AtomicInteger flaggedChanges;
@@ -62,13 +66,15 @@ abstract class RunnerTestBase extends ApplicationTest {
     @BeforeEach
     void setUpRunner() {
         mirror = new StateMirror();
+        activities = new ActivityTracker(mirror);
         ticks = new ManualTicks();
-        executor = Executors.newSingleThreadExecutor(task -> {
+        executor = Executors.newFixedThreadPool(2, task -> {
             final Thread thread = new Thread(task, "runner-test-job");
             thread.setDaemon(true);
             return thread;
         });
-        runner = new TranslationRunner(mirror, executor, ticks);
+        desk = new ScriptedReviewDesk();
+        runner = new TranslationRunner(mirror, executor, ticks, desk);
         states = new CopyOnWriteArrayList<>();
         acceptedChanges = new AtomicInteger();
         flaggedChanges = new AtomicInteger();
@@ -88,8 +94,13 @@ abstract class RunnerTestBase extends ApplicationTest {
         executor.shutdownNow();
     }
 
+    /** The context every started run in these tests carries: {@code Frankenstein.epub} under the pseudo model. */
+    static RunContext runContext() {
+        return new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, QualityDial.BALANCED, SELECTION);
+    }
+
     static JobProgress progress(final int accepted, final int flagged, final int pending) {
-        return new JobProgress(JobStage.TRANSLATE, 1, 1, accepted, flagged, pending);
+        return ProgressFixtures.progress(1, 1, accepted, flagged, pending);
     }
 
     static SegmentDecided decided(final String id, final SegmentStatus status, final JobProgress progress) {
@@ -101,15 +112,15 @@ abstract class RunnerTestBase extends ApplicationTest {
     }
 
     static JobReport completedReport(final int segments) {
-        return new JobReport(BookFormat.TXT, JobState.COMPLETED, segments, segments, 0, List.of(), DESTINATION, null);
+        return new JobReport(BookFormat.TXT, JobState.COMPLETED, segments, segments, 0, List.of(), null);
     }
 
     static JobReport cancelledReport() {
-        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null, null);
+        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null);
     }
 
     static JobReport failedReport(final AppError error) {
-        return new JobReport(BookFormat.TXT, JobState.FAILED, 10, 3, 0, List.of(), null, error);
+        return new JobReport(BookFormat.TXT, JobState.FAILED, 10, 3, 0, List.of(), error);
     }
 
     static LogEntry log(final LogKind kind, final String... args) {
@@ -123,7 +134,7 @@ abstract class RunnerTestBase extends ApplicationTest {
 
     /** Starts {@link #job}, and returns once the job thread is inside {@code run()}. */
     protected void startJob() throws InterruptedException {
-        assertThat(runner.start(job, REQUEST, SELECTION)).isTrue();
+        assertThat(runner.start(job, runContext())).isTrue();
         job.awaitRunStarted();
     }
 
@@ -138,7 +149,13 @@ abstract class RunnerTestBase extends ApplicationTest {
         return onFx(() -> mirror.runState().get());
     }
 
+    /** The log's lines by their wording only: no time and no repeat count. */
     protected List<LogEntry> logEntries() {
+        return onFx(() -> mirror.activityLog().stream().map(LogEntry::wording).toList());
+    }
+
+    /** The log's lines as shown: with their times and repeat counts. */
+    protected List<LogEntry> shownLogEntries() {
         return onFx(() -> List.copyOf(mirror.activityLog()));
     }
 

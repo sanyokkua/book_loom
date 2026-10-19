@@ -1,0 +1,17 @@
+<Input>
+{{#title}}
+Title: {{title}}
+{{/title}}
+{{#author}}
+Author: {{author}}
+{{/author}}
+Dialogue share, measured in the passage: {{dialogueShare}} % of its letters are in quoted speech.
+Read this one passage on its own:
+{{sample}}
+</Input>
+
+{{#askLanguage}}
+Start the object with "language": the language this passage is written in, as a BCP-47 tag such as "en" or "uk".
+
+{{/askLanguage}}
+Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender, each with evidence, value and confidence in that order; narratorGender also with name.

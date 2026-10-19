@@ -1,0 +1,136 @@
+package ua.bookloom.ui.state;
+
+import java.nio.file.Path;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import ua.bookloom.api.project.LexiconEntry;
+
+/**
+ * What the Recurring terms card of Names &amp; style shows and does: the rows, and the actions on them, each published
+ * only while the opening of the screen that asked is still current. The card's scan, review and translate run through
+ * the screen's model actions, so they are one at a time with the glossary's. FX thread only.
+ */
+public final class RecurringTerms {
+
+    private final LexiconActions actions;
+    private final ObservableList<LexiconEntry> rows;
+    private final Supplier<String> project;
+    private final Supplier<Consumer<Runnable>> current;
+    private final ModelActions model;
+
+    /**
+     * The screen's model actions on the recurring terms; each runs through the glossary's one-at-a-time model runs.
+     *
+     * @param scan finds terms in the book's text, then asks the model to choose more among its frequent words
+     * @param review asks the model which held terms are worth keeping consistent
+     * @param translate asks for a rendering of each term that has none
+     */
+    record ModelActions(Runnable scan, Runnable review, Runnable translate) {}
+
+    RecurringTerms(
+            final LexiconActions actions,
+            final Supplier<String> project,
+            final Supplier<Consumer<Runnable>> current,
+            final ModelActions model) {
+        this.actions = Objects.requireNonNull(actions, "actions");
+        this.rows = actions.rows();
+        this.project = Objects.requireNonNull(project, "project");
+        this.current = Objects.requireNonNull(current, "current");
+        this.model = Objects.requireNonNull(model, "model");
+    }
+
+    /**
+     * The rows, as the service listed them.
+     *
+     * @return a read-only list
+     */
+    public ObservableList<LexiconEntry> rows() {
+        return FXCollections.unmodifiableObservableList(rows);
+    }
+
+    /** Finds recurring terms in the book's text, then asks the chosen model to choose more among its frequent words. */
+    public void scan() {
+        model.scan().run();
+    }
+
+    /** Asks the chosen model which held terms are worth keeping consistent and removes the others. */
+    public void review() {
+        model.review().run();
+    }
+
+    /** Asks the chosen model for a rendering of each term that has none. */
+    public void translate() {
+        model.translate().run();
+    }
+
+    /**
+     * Adds a term by hand, refusing a blank one or one the glossary or the list holds.
+     *
+     * @param term the typed word or title
+     */
+    public void add(final String term) {
+        Objects.requireNonNull(term, "term");
+        actions.add(project.get(), term, current.get());
+    }
+
+    /**
+     * Sets the rendering the person wants kept; a blank text clears it.
+     *
+     * @param term the row's source term
+     * @param rendering the typed rendering
+     */
+    public void setRendering(final String term, final String rendering) {
+        Objects.requireNonNull(term, "term");
+        Objects.requireNonNull(rendering, "rendering");
+        actions.setRendering(project.get(), term, rendering, current.get());
+    }
+
+    /**
+     * Moves a term to the glossary with its rendering as the target.
+     *
+     * @param term the row's source term
+     */
+    public void promote(final String term) {
+        Objects.requireNonNull(term, "term");
+        actions.promote(project.get(), term, current.get());
+    }
+
+    /**
+     * Removes a term from the list.
+     *
+     * @param term the row's source term
+     */
+    public void remove(final String term) {
+        Objects.requireNonNull(term, "term");
+        actions.remove(project.get(), term, current.get());
+    }
+
+    /**
+     * Reads terms and renderings from a CSV file the person chose.
+     *
+     * @param source the file to read
+     */
+    public void importCsv(final Path source) {
+        Objects.requireNonNull(source, "source");
+        actions.importCsv(project.get(), source, current.get());
+    }
+
+    /**
+     * Writes the terms and their renderings to a CSV file the person chose.
+     *
+     * @param destination the file to write
+     */
+    public void exportCsv(final Path destination) {
+        Objects.requireNonNull(destination, "destination");
+        actions.exportCsv(project.get(), destination, current.get());
+    }
+
+    /** Loads the rows of a project, scanning when it has none; called as the screen opens. */
+    void show(final String projectId) {
+        actions.rows().clear();
+        actions.show(projectId, current.get());
+    }
+}

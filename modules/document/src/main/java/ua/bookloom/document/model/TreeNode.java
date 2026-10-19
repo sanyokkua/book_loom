@@ -88,4 +88,34 @@ public interface TreeNode {
      * @throws IllegalStateException if this node is not an element
      */
     String closeMarkup();
+
+    /**
+     * This element's declared value for {@code qualifiedName}, exactly as written — never normalized against any
+     * catalogue. Answers {@code "xml:lang"} from the XML namespace, as JDOM2 requires, and a plain {@code "lang"}
+     * as an ordinary attribute (design.md D11); a non-element node has no attribute to read.
+     *
+     * @param qualifiedName the attribute's qualified name, e.g. {@code "xml:lang"} or {@code "lang"}
+     * @return the declared value, or {@code null} when this node carries no such attribute or is not an element
+     */
+    @Nullable
+    String attribute(String qualifiedName);
+
+    /**
+     * Replaces this element's value for {@code qualifiedName}, leaving every other attribute and child untouched.
+     * The value is plain text: the tree escapes it on output, so the caller never pre-escapes it.
+     *
+     * @param qualifiedName the attribute's qualified name, e.g. {@code "alt"}
+     * @param plainValue the new value as plain text, not markup
+     * @throws IllegalStateException if this node is not an element
+     */
+    void setAttribute(String qualifiedName, String plainValue);
+
+    /**
+     * Replaces every child of this element with one text node holding {@code plainText}. The text is plain: the tree
+     * escapes it on output, so the caller never pre-escapes it.
+     *
+     * @param plainText the element's new character data
+     * @throws IllegalStateException if this node is not an element
+     */
+    void setText(String plainText);
 }

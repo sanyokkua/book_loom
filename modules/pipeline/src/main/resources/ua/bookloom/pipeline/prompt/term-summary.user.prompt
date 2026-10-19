@@ -1,0 +1,8 @@
+[Term — how often the story writes it]
+{{term}}
+
+[What each call read]
+{{calls}}
+
+Return JSON exactly as:
+{"quote":"<words copied from one window, or none>","usage":"name|word|part-of-name|title","kind":"person|place|organisation|thing|other"}

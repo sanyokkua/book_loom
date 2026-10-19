@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 
 /**
@@ -28,6 +29,19 @@ class DocumentModuleTest {
     }
 
     /**
+     * Without this binding, no other module's injector can reach any of group 4's work (task 4.5): a screen or
+     * pipeline service that asks for {@link BookInspector} would fail at injector-build time.
+     */
+    @Test
+    void configure_documentModule_buildsABookInspector() {
+        final Injector injector = Guice.createInjector(new DocumentModule());
+
+        final BookInspector inspector = injector.getInstance(BookInspector.class);
+
+        assertThat(inspector).isInstanceOf(ua.bookloom.document.inspect.BookInspectorService.class);
+    }
+
+    /**
      * A reader and its writer must share one registry, or a document opened through the port could never be found
      * again to write. Each registry is a Guice singleton, and this asserts that rather than trusting it.
      */
@@ -41,5 +55,14 @@ class DocumentModuleTest {
                 .isSameAs(injector.getInstance(ua.bookloom.document.md.OpenMarkdownRegistry.class));
         assertThat(injector.getInstance(ua.bookloom.document.txt.OpenTxtRegistry.class))
                 .isSameAs(injector.getInstance(ua.bookloom.document.txt.OpenTxtRegistry.class));
+    }
+
+    // WHEN the injector is built, THEN the sentence splitter port resolves to the ICU implementation.
+    @Test
+    void configure_documentModule_buildsASentenceSplitter() {
+        final Injector injector = Guice.createInjector(new DocumentModule());
+
+        assertThat(injector.getInstance(ua.bookloom.api.document.SentenceSplitter.class))
+                .isInstanceOf(ua.bookloom.document.split.IcuSentenceSplitter.class);
     }
 }

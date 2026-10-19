@@ -2,10 +2,12 @@ package ua.bookloom.document.golden;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
 
 /**
@@ -20,6 +22,8 @@ final class CorpusMutation {
     /** Cannot occur in real book text; deliberately exercises {@code TxtWriter}'s unrepresentable-character
      * refusal on a non-UTF-8 source, which the caller must record as a correct outcome, not a failure. */
     static final String MARKER = "⟪T⟫";
+
+    private static final Pattern NAME_PART_OPEN = Pattern.compile("(<[a-z-]+>)");
 
     /** The count of segments the marker-strip check found under the same id but with disagreeing stripped text,
      * and the count of P0 segment ids absent from the re-opened output entirely. */
@@ -50,16 +54,26 @@ final class CorpusMutation {
             final String reopenedSource = reopenedById.get(original.id());
             if (reopenedSource == null) {
                 missing++;
-            } else if (!strippedEquals(reopenedSource, original.sourceInner())) {
+            } else if (!strippedEquals(reopenedSource, original)) {
                 mismatch++;
             }
         }
         return new MarkerStrip(mismatch, missing);
     }
 
-    private static boolean strippedEquals(String reopenedSource, String originalSourceInner) {
+    /**
+     * Whether stripping the marker from the re-opened text restores the original. A multi-part author is written
+     * only for what each part encloses (a marker outside the parts is discarded by design), so its marker sits
+     * inside every part; any other segment gets the marker in front, plus one more inside each image alt text it
+     * carries, because that alt text is its own auxiliary segment written into the same place.
+     */
+    private static boolean strippedEquals(String reopenedSource, Segment original) {
+        final String source = original.sourceInner();
+        if (isNamePartMarkup(original)) {
+            return reopenedSource.equals(NAME_PART_OPEN.matcher(source).replaceAll("$1" + MARKER));
+        }
         return reopenedSource.startsWith(MARKER)
-                && reopenedSource.substring(MARKER.length()).equals(originalSourceInner);
+                && reopenedSource.replace(MARKER, "").equals(source);
     }
 
     static Document withMarkerTargets(Document source) {
@@ -83,6 +97,18 @@ final class CorpusMutation {
         return new Unit(unit.id(), unit.order(), unit.href(), unit.mediaType(), unit.skeleton(), segments);
     }
 
+    /** An FB2 author is name-part markup; an EPUB creator is plain text and takes the marker in front. */
+    private static boolean isNamePartMarkup(Segment segment) {
+        return segment.kind() == SegmentKind.METADATA_AUTHOR
+                && segment.sourceInner().startsWith("<");
+    }
+
+    private static String markedTargetOf(Segment segment) {
+        return isNamePartMarkup(segment)
+                ? NAME_PART_OPEN.matcher(segment.sourceInner()).replaceAll("$1" + MARKER)
+                : MARKER + segment.sourceInner();
+    }
+
     private static Segment withMarkerTarget(Segment segment) {
         return new Segment(
                 segment.id(),
@@ -96,7 +122,7 @@ final class CorpusMutation {
                 segment.prevKey(),
                 segment.nextKey(),
                 segment.anchor(),
-                MARKER + segment.sourceInner(),
+                markedTargetOf(segment),
                 segment.status(),
                 segment.confidence());
     }

@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
@@ -23,19 +23,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.StageStarted;
 
 /** Proves changing controls affects the next boundary without reusing the current one. */
 class TranslationJobPauseControlTest {
@@ -72,7 +68,7 @@ class TranslationJobPauseControlTest {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
         final TranslationJobImpl translation =
-                job(documents(), source, tempDir.resolve("Book.uk.epub"), replies("ONE.", "TWO.", "THREE."));
+                job(project(source, TranslationJobTestSupport.epubBrief()), replies("ONE.", "TWO.", "THREE."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SEGMENT, PausePoint.AFTER_SECTION));
@@ -115,8 +111,8 @@ class TranslationJobPauseControlTest {
     // Reading pause points before the model returns would miss this live AFTER_SEGMENT update.
     @Test
     void pauseAt_enabledDuringModelCall_appliesAtNextBoundary() {
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(replies("ONE.", "TWO.", "THREE."));
+        final BlockingModels.BlockingChatModel model =
+                new BlockingModels.BlockingChatModel(replies("ONE.", "TWO.", "THREE."));
         final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
@@ -197,24 +193,9 @@ class TranslationJobPauseControlTest {
         shutdown(workers);
     }
 
-    // Leaving pause armed after export begins would add a Paused event during this stage callback.
-    @Test
-    @Timeout(10)
-    void pause_afterExportStageStarts_isIgnored() {
-        final TranslationJobImpl translation = markdownJob(replies("ONE."), "One.");
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(event -> pauseAtExportStart(translation, events, event));
-
-        final Result<JobReport> result = translation.run();
-
-        assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(events).noneMatch(Paused.class::isInstance);
-        assertThat(events).noneMatch(Resumed.class::isInstance);
-    }
-
     private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), content);
-        return job(documents(), source, tempDir.resolve("Book.uk.md"), model);
+        return job(source, model);
     }
 
     private static void requestAndCapture(
@@ -243,13 +224,5 @@ class TranslationJobPauseControlTest {
             final TranslationJobImpl translation, final AtomicReference<Thread> runThread) {
         runThread.set(Thread.currentThread());
         return translation.run();
-    }
-
-    private static void pauseAtExportStart(
-            final TranslationJobImpl translation, final List<JobEvent> events, final JobEvent event) {
-        events.add(event);
-        if (event instanceof StageStarted started && started.stage() == JobStage.EXPORT) {
-            translation.pause();
-        }
     }
 }

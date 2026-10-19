@@ -1,0 +1,84 @@
+{
+  "id": "short-and-full-weak",
+  "about": "A woman is written 'Zephra Quillon' with three 'she' and 'Zephra' alone with two: neither spelling is a strong pronoun case, five of five pooled is. A model that is unsure of the short form leaves one person with two genders unless the spellings share their evidence.",
+  "title": "The Net Loft",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Tide",
+      "paragraphs": [
+        "Zephra Quillon opened the net loft before the tide turned. She hung the dry nets on the long pegs.",
+        "Halvard came in with the first basket of the day. He set it down by the scale and said nothing.",
+        "Zephra counted the baskets twice. She wrote the number on the slate with a stub of chalk.",
+        "Zephra Quillon sorted the catch by size. She threw the small ones back into the bucket.",
+        "Halvard weighed the largest fish on the brass scale. He grunted at the number and wrote it down.",
+        "The gulls wheeled over the quay and complained. A cart stood at the end of the planks with its shafts in the air.",
+        "Halvard hauled the empty baskets back to the boat. He stacked them in the stern, one inside the other.",
+        "Zephra mended a torn net by the open door. She knotted the cord with quick, practised fingers.",
+        "Halvard tied up the boat and checked the lines. He tested each knot with his thumb before he left it.",
+        "Zephra Quillon locked the loft at dusk and hung the key on its nail. She walked home along the sea wall.",
+        "Halvard sat on the quay and watched the last light go. He waited for the night boat as he did every evening.",
+        "Halvard carried the lamp to the end of the planks. He held it high so the night boat could find the landing.",
+        "Halvard coiled the rope at the foot of the post. He hung the lamp on its hook for the morning.",
+        "Halvard shut the gate of the quay behind him. He looked back once at the dark water.",
+        "In the village everyone knew Zephra Quillon, and nobody had a bad word for Zephra Quillon.",
+        "Years afterwards people still asked about Zephra Quillon, though few could say why.",
+        "In the village everyone knew Zephra, and nobody had a bad word for Zephra.",
+        "Years afterwards people still asked about Zephra, though few could say why.",
+        "In the village everyone knew Halvard, and nobody had a bad word for Halvard.",
+        "Years afterwards people still asked about Halvard, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Zephra Quillon",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "zephra"
+      },
+      {
+        "term": "Zephra",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "zephra"
+      },
+      {
+        "term": "Halvard",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "halvard"
+      }
+    ],
+    "junk": [],
+    "keep": [],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [
+      {
+        "term": "Zephra",
+        "verdict": "name",
+        "type": "person",
+        "gender": "unknown",
+        "windows": []
+      }
+    ],
+    "targets": {
+      "Zephra Quillon": "Зефра Квілон",
+      "Zephra": "Зефра",
+      "Halvard": "Гальвард"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

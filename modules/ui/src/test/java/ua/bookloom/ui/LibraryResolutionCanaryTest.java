@@ -9,7 +9,6 @@ import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * Proof that the two UI libraries this change depends on resolve and lay out under the JavaFX 26 headless platform.
@@ -18,7 +17,7 @@ import org.testfx.framework.junit5.ApplicationTest;
  * toolkit alone. Tests run on the classpath, so this cannot prove the JPMS {@code requires} names — that is
  * {@code :ui:compileJava}'s job, on the module path.
  */
-class LibraryResolutionCanaryTest extends ApplicationTest {
+class LibraryResolutionCanaryTest extends FxTestBase {
 
     private static final String TOGGLE_ID = "#canary-toggle";
     private static final String ICON_ID = "#canary-icon";

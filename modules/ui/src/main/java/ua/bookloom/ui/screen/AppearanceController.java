@@ -10,6 +10,9 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
+import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.theme.ThemeController;
 import ua.bookloom.ui.theme.ThemeMode;
 
@@ -24,6 +27,7 @@ import ua.bookloom.ui.theme.ThemeMode;
 public final class AppearanceController {
 
     private final ThemeController themeController;
+    private final Messages messages;
     private final ChangeListener<ThemeMode> onMode = (observed, was, now) -> showMode(now);
     private final ChangeListener<Toggle> onSelection = (observed, was, now) -> onToggleSelected(now);
 
@@ -43,17 +47,22 @@ public final class AppearanceController {
      * Receives the collaborator the injector owns.
      *
      * @param themeController the holder of the theme mode the selector shows and sets
+     * @param messages the catalogue the hover explanations are drawn from
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
-    public AppearanceController(final ThemeController themeController) {
+    public AppearanceController(final ThemeController themeController, final Messages messages) {
         this.themeController = Objects.requireNonNull(themeController, "themeController");
+        this.messages = Objects.requireNonNull(messages, "messages");
     }
 
     @FXML
     void initialize() {
         log.debug("building the appearance area, mode {}", themeController.mode());
+        Tips.install(messages, lightToggle, MessageKey.APPEARANCE_THEME_LIGHT_TIP);
+        Tips.install(messages, darkToggle, MessageKey.APPEARANCE_THEME_DARK_TIP);
+        Tips.install(messages, systemToggle, MessageKey.APPEARANCE_THEME_SYSTEM_TIP);
         toggleOf(themeController.mode()).setSelected(true);
         themeSelector.getToggleGroup().selectedToggleProperty().addListener(onSelection);
         themeController.modeProperty().addListener(new WeakChangeListener<>(onMode));

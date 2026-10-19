@@ -1,0 +1,88 @@
+{
+  "id": "misattributed-she",
+  "about": "Corin is a man whose name is followed, five times, by a 'she' that belongs to a woman the sentence leaves unnamed (the nurse, the aunt, the cook, the neighbour, the girl); his own pronouns are 'he' nine times. A model that cites those windows ends with FEMALE verified; the code's tally is mixed.",
+  "title": "The Night Ward",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Night",
+      "paragraphs": [
+        "Corin carried the tray to the nurse. She thanked him and went on folding sheets.",
+        "The ward was quiet in the early hours. Rain ticked against the long windows.",
+        "Corin sat on the low stool by the stove. He warmed his hands and watched the kettle.",
+        "Mara came in from the yard with a basket of apples. She set it on the table and counted them twice.",
+        "Corin opened the ledger. He read the day's entries aloud, slowly, to nobody in particular.",
+        "Corin passed the bread to his aunt. She broke it in two and gave half back.",
+        "Mara wiped the counter and hummed. She had a way of humming that made the room feel smaller.",
+        "Corin walked down to the river before noon. He stood on the old bridge for a long while.",
+        "A cart rattled over the stones. The driver lifted his hat and drove on.",
+        "Corin handed the keys to the cook. She weighed them in her palm and nodded.",
+        "Mara said nothing about the letter. She folded it into her sleeve and went to find the broom.",
+        "Corin repaired the shutter by lamplight. He worked without hurry and did not look up.",
+        "Corin asked the neighbour about the missing hens. She shrugged and pointed at the hill.",
+        "By evening the wind had turned. Smoke from the chimney lay flat along the roof.",
+        "Corin lit the lamps one by one. He counted the flames under his breath.",
+        "Mara laid the table for four. She put the good cups out, though nobody had said why.",
+        "Corin carried the empty pails back to the girl from the mill. She took them without a word.",
+        "The night shift came on at nine. Corin gave his report and hung up his coat.",
+        "Corin stayed to bank the fire. He stirred the ash and watched it settle.",
+        "Mara closed the shutters against the cold. She stood a moment with her hand on the latch.",
+        "Corin walked home by the lane. He whistled the old song and lost the tune at the gate.",
+        "At the end of the lane Corin met the postman. He nodded and handed over a single card.",
+        "Corin read the card twice. He put it in his pocket and said nothing to anyone.",
+        "Mara waited at the door with the lamp. She held it high until the lane was empty.",
+        "In the district everyone knew Corin, and nobody had a bad word for Corin.",
+        "Years afterwards people still asked about Corin, though few could say why.",
+        "In the district everyone knew Mara, and nobody had a bad word for Mara.",
+        "Years afterwards people still asked about Mara, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Corin",
+        "type": "CHARACTER",
+        "gender": "MALE",
+        "cluster": "corin"
+      },
+      {
+        "term": "Mara",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "mara"
+      }
+    ],
+    "junk": [],
+    "keep": [],
+    "recurringTerms": []
+  },
+  "model": {
+    "verdicts": [
+      {
+        "term": "Corin",
+        "verdict": "name",
+        "type": "person",
+        "gender": "female",
+        "windows": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ],
+    "targets": {
+      "Corin": "Корін",
+      "Mara": "Мара"
+    },
+    "terms": {}
+  }
+}

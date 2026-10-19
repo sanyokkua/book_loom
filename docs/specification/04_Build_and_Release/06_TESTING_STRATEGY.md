@@ -51,7 +51,7 @@ after the fact. No Testcontainers, no external database. Runs in CI.
 ### provider-integration-wiremock {#provider-integration-wiremock}
 
 Provider integration tests exercise `:llm` at the **HTTP seam with WireMock**, mocking the transport rather than the
-`Provider`/client class, so request shaping, response parsing, retry, `Retry-After`, per-attempt timeout, and every
+`ChatModel`/`ProviderClient` class, so request shaping, response parsing, retry, `Retry-After`, per-attempt timeout, and every
 HTTP→`ErrorCode` mapping are covered against a real HTTP client. The seam is stubbed for **both** dialects
 (`04_LLM_INTEGRATION.md`):
 
@@ -209,7 +209,7 @@ place it in a **separate `liveLocal` source set** with its own task. Concretely,
 `useJUnitPlatform { excludeTags("liveLocal", "promptEval", "visual") }`, and separate registered tasks (`liveLocal`,
 `promptEval`, `visual`) each `includeTags(...)` their own tag, are **not** wired into `check`, and are invoked manually
 (`./gradlew liveLocal` / `promptEval` / `visual`). Each documents its required env vars and no-ops (all-skipped) when
-they are absent. The same exclusion keeps the prompt-eval and visual sets out of the merge gate.
+they are absent. The same exclusion keeps the prompt-eval, visual, `corpus` and `soak` sets out of the merge gate.
 
 ### 2026-09-24 machine-local route observations
 
@@ -233,6 +233,19 @@ matrix rather than extrapolating these observations.
 
 ## prompt-evals {#prompt-evals}
 
+**Built today (Layers 0 and 1):** `ua.bookloom.pipeline.eval.PromptEvalTest` sends ~25 fixed English → Ukrainian cases
+— dialogue with a locked name, a heading, number-, symbol- and Roman-numeral-only paragraphs, a drop cap, nested
+emphasis, a footnote reference, a kept foreign run, glossary names, a long sentence, a link pair, two instruction-like
+texts that must be translated rather than obeyed, directed fixes (echo, missing token, omission, refusal) and judge
+cases (a good and a bad candidate each) — through `DraftPromptBuilder`, `DirectedFix` and `JudgeCall` to a real
+Ollama model via the production client. It measures, before any repair: the reply parses as its schema, the token
+sequence is intact with every pair still around words (gate), the target script, a per-case marker (a glossary
+rendering, a correct drop cap, a translated instruction), and judge separation (good ≥ 0.8, bad ≤ 0.6). It writes a
+table to `modules/pipeline/build/reports/promptEval/<model>.txt` and fails below parse 95%, gate 90% or judge
+separation 80%. Run it with `BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 [BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx]
+./gradlew :pipeline:promptEval`; with the URL unset it is skipped. The layered design below (embeddings, LLM judge)
+remains the target.
+
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from
 CI, env-gated like `liveLocal`). The eval calls the **same production prompt builder** the app uses to produce the
 `{system, user}` messages, sends them to a real local model, and scores the response with a **layered rubric** (DD-40).
@@ -244,7 +257,7 @@ Embeddings appear **only here**, in the test harness — never in the app runtim
 - **Layer 1 — field assertions on structured output.** For judge/directed-fix steps: verdict/enum in the allowed set,
   score in `[0,1]`, arrays present. Assert on fields, not prose.
 - **Layer 2 — embedding cosine similarity vs a reference answer.** Advisory-by-default, for free-text steps (draft,
-  reflect-rewrite). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
+  directed fix). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
   small labelled good/bad set, and assert against `threshold − margin`. Cosine is a **drift/aboutness** signal, not a
   correctness oracle.
 - **Layer 3 — local LLM-as-judge tie-breaker.** Only in the ambiguous cosine band: reference-guided binary PASS/FAIL
@@ -312,8 +325,9 @@ manual.
 | Smoke — jpackage app-image                                       | yes (`build.yml`/`release.yml` packaging matrix — runs on `main`/tags, not the PR gate) | —                            |
 | Visual snapshot + tolerant diff (`visual`, pinned env)           | **no** (nightly/on-demand)                                                              | yes (pinned)                 |
 | Visual vision-model assisted review (real app screenshots)       | **no**                                                                                  | yes (on-demand, late phases) |
-| Prompt evals (`promptEval`, real local model + embedding scorer) | **no** (excluded)                                                                       | yes (env-gated, per prompt)  |
+| Prompt evals (`promptEval`, real local model) | **no** (excluded)                                                                       | yes (env-gated, per prompt)  |
 | Live-local provider (`liveLocal`, real Ollama + LM Studio)       | **no** (excluded)                                                                       | yes (env-gated, manual)      |
+| Soak (`soak`, a generated 3,700-paragraph book under injected faults, scripted clock) | **no** (excluded; its fixture-book form `FixtureBookSoakTest` is `slow` and in the gate) | yes (`./gradlew :pipeline:soak`) |
 
 The pre-push hook runs the fast subset — unit tests excluding UI/TestFX plus the fast ArchUnit subset — and the full
 automated suite (including headless UI and coverage) runs in the CI quality job (`02_QUALITY_GATES.md#lefthook-stages`).

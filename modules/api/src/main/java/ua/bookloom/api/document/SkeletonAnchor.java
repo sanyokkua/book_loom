@@ -11,4 +11,4 @@ package ua.bookloom.api.document;
  * an exhaustive pattern-matching {@code switch} the natural way to branch, which is what names every consumer at
  * compile time if a fifth format ever adds a third skeleton kind.
  */
-public sealed interface SkeletonAnchor permits NodeAnchor, ByteSpanAnchor {}
+public sealed interface SkeletonAnchor permits NodeAnchor, ByteSpanAnchor, AttributeAnchor {}

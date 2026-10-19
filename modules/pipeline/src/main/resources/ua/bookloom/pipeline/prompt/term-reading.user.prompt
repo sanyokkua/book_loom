@@ -1,0 +1,9 @@
+[Term — how often the story writes it, the pronouns the code counted after it outside speech, and its other spellings]
+{{term}}
+
+[Windows]
+{{windows}}
+
+Return JSON exactly as:
+{"windows":[{"window":<number>,"quote":"<words copied from that window, or none>","usage":"name|word|part-of-name|title",
+ "kind":"person|place|organisation|thing|other","gender":"male|female|none"}],"speaking":<true or false>,"brand":<true or false>}

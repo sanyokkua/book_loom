@@ -1,0 +1,83 @@
+{
+  "id": "groups-nationalities-converter",
+  "about": "Plural group words ('Guildsmen'), nationality adjectives and nouns ('Velarian', 'Velarians', 'Ostrene') and a converter's name capitalised in the front matter ('Jorun Falk') are not names; the country Velar and the girl Tamsin are.",
+  "title": "The Grey Letter",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "About this edition",
+      "paragraphs": [
+        "Digital edition converted by Jorun Falk.",
+        "Jorun Falk Editions, with thanks to every reader who sends a correction.",
+        "Jorun Falk wishes you a pleasant read."
+      ]
+    },
+    {
+      "title": "Border",
+      "paragraphs": [
+        "Tamsin crossed the border into Velar on the last day of autumn. She carried one letter and one rule from the guild.",
+        "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week. She kept the coffee habit.",
+        "In the market the Guildsmen kept to their own side of the square. They wore grey coats and spoke quietly.",
+        "A Velarian porter carried her bag to the inn. Tamsin tipped the man and the man bowed twice.",
+        "The guild had agents in every town. Tamsin met three of them before the week was out. She liked none of them.",
+        "An Ostrene merchant offered her a seat at his table. The Ostrene always sat near the fire and never near the door.",
+        "Tamsin ate with the Ostrene and the Velarians together. She noticed that nobody mentioned the guild.",
+        "The Guildsmen came to her room on the fourth night. They asked about the letter and did not sit down.",
+        "Tamsin said the letter was for the guild alone. She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
+        "In the morning a Velarian child brought her bread and a note. The note was unsigned.",
+        "She read it twice by the window. It named a place in the old town, an hour, and nothing more.",
+        "Tamsin went to the old town at the hour named. The Ostrene merchant was waiting beside the fountain.",
+        "He said the guild could not be trusted, and that the Velarians knew it. Tamsin asked why the merchant was telling her.",
+        "Because you are honest, said the merchant, and the guild has no use for honest people.",
+        "Tamsin walked back through the market alone. The Guildsmen watched her pass and did not follow.",
+        "She burned the unsigned note in the inn's stove. The guild would never learn what it had said.",
+        "At the end of the month Tamsin returned the letter unopened. The guild accepted it without comment.",
+        "In the district everyone knew Tamsin, and nobody had a bad word for Tamsin.",
+        "Years afterwards people still asked about Tamsin, though few could say why."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {
+        "term": "Tamsin",
+        "type": "CHARACTER",
+        "gender": "FEMALE",
+        "cluster": "tamsin"
+      }
+    ],
+    "junk": [
+      "Velarian",
+      "Velarians",
+      "Ostrene",
+      "Guildsmen",
+      "Jorun Falk"
+    ],
+    "keep": [
+      "Velar"
+    ],
+    "recurringTerms": [
+      {
+        "term": "guild",
+        "keep": true
+      }
+    ]
+  },
+  "model": {
+    "verdicts": [],
+    "targets": {
+      "Tamsin": "Тамсін",
+      "Velar": "Велар"
+    },
+    "terms": {}
+  },
+  "knownFailure": false,
+  "fixedBy": null
+}

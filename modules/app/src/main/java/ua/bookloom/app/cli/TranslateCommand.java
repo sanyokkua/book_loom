@@ -1,52 +1,76 @@
 package ua.bookloom.app.cli;
 
 import java.io.PrintStream;
-import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.llm.ProviderConfig;
-import ua.bookloom.api.llm.ProviderConfigs;
-import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.ProviderVerifier;
-import ua.bookloom.api.llm.StageOutcome;
-import ua.bookloom.api.llm.VerificationPolicy;
-import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.RenderingConsistency;
 import ua.bookloom.util.paths.DestinationPath;
 
-/** Parses and executes the one-book translation command behind the public launcher. */
+/**
+ * Parses and executes the one-book translation command behind the public launcher — the headless proof tool: it checks
+ * the provider, opens the book with the brief the flags ask for, optionally reviews its names, runs it unattended
+ * (recovering from outages like a window run) and exports. A run that did not complete — failed, stopped, or
+ * interrupted with Ctrl+C — still exports what it translated unless {@code --no-partial} is given.
+ *
+ * <p>Exit codes: 0 the book completed and was written; 3 the run did not complete and what it translated was written;
+ * 1 nothing was written; 2 invalid arguments.
+ */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@com.google.inject.Inject})
 public final class TranslateCommand {
 
-    private static final String PSEUDO_PROVIDER = "pseudo";
-    private static final String PSEUDO_MODEL = "uppercase";
-    private static final String OPENAI_COMPATIBLE_PROVIDER = "openai-compatible";
+    /** The exit code of a run that did not complete but wrote what it translated. */
+    static final int PARTIAL_EXIT = 3;
+
+    /** How much longer a Ctrl+C waits for the export of what the stopped run translated. */
+    private static final Duration PARTIAL_EXPORT_WAIT = Duration.ofSeconds(60);
+
     private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
-            + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
-            + "[--base-url <url>] [--timeout <seconds>]";
+            + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] "
+            + "[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] "
+            + "[--review-names] [--max-outage <duration>] [--report <file>] [--stop-after <segments>] [--no-partial]";
 
     private final TranslationEngine engine;
     private final ChatModelFactory models;
-    private final ProviderConfigs providerConfigs;
-    private final ProviderVerifier verifier;
+    private final ProviderSetup providers;
+    private final BookOpener opener;
+    private final NameReview names;
+    private final ExportService exports;
+    private final ShutdownCancellation shutdown;
+    private final Clock clock;
+    private final ModelCapabilities capabilities;
+    private final LexiconService lexicon;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -59,6 +83,8 @@ public final class TranslateCommand {
             exit = parsed.isErr() ? usageFailure(errorOf(parsed), out) : execute(dataOf(parsed), out);
         } catch (Throwable cause) {
             exit = unexpectedFailure(out, cause);
+        } finally {
+            shutdown.finished();
         }
         log.info("translate command exitCode={}", exit);
         return exit;
@@ -68,169 +94,206 @@ public final class TranslateCommand {
         final Path destination =
                 DestinationPath.destinationFor(arguments.source(), arguments.format(), arguments.targetLanguage());
         log.debug(
-                "translate command parsed source={} destination={} targetLanguage={} sourceLanguage={} overwrite={}",
+                "translate command parsed source={} destination={} targetLanguage={} sourceLanguage={} overwrite={}"
+                        + " options={}",
                 arguments.source(),
                 destination,
                 arguments.targetLanguage(),
                 arguments.sourceLanguage(),
-                arguments.overwrite());
-        final Result<ModelSelection> selection = selectModel(arguments);
+                arguments.overwrite(),
+                arguments.options());
+        if (destinationOccupied(destination, arguments.overwrite())) {
+            return printError(destinationExists(), out);
+        }
+        final RunReport report = new RunReport(arguments, destination, clock.instant());
+        final int exit = selectAndRun(arguments, destination, report, out);
+        final @Nullable Path reportFile = arguments.options().report();
+        if (reportFile != null
+                && report.write(reportFile, clock.instant(), exit).isErr()) {
+            out.println("The run report could not be written to " + reportFile);
+        }
+        return exit;
+    }
+
+    private static boolean destinationOccupied(Path destination, boolean overwrite) {
+        final boolean occupied = Files.exists(destination, LinkOption.NOFOLLOW_LINKS);
+        log.debug("translate command check=destination-free occupied={} overwrite={}", occupied, overwrite);
+        return occupied && !overwrite;
+    }
+
+    private int selectAndRun(TranslateArguments arguments, Path destination, RunReport report, PrintStream out) {
+        final Result<ModelSelection> selection = providers.select(arguments);
         if (selection.isErr()) {
-            return selectionFailure(errorOf(selection), out);
+            final AppError error = errorOf(selection);
+            return error.code() == ErrorCode.validation ? usageFailure(error, out) : printError(error, out);
         }
         final ModelSelection selected = dataOf(selection);
+        report.selection(selected);
         log.info(
-                "translate command provider={} model={} targetLanguage={} sourceLanguage={} overwrite={} baseUrl={} requestTimeout={}",
+                "translate command provider={} model={} targetLanguage={} sourceLanguage={} baseUrl={}"
+                        + " requestTimeout={}",
                 selected.providerId(),
                 selected.modelId(),
                 arguments.targetLanguage(),
                 arguments.sourceLanguage(),
-                arguments.overwrite(),
                 arguments.baseUrl(),
                 arguments.requestTimeout());
-        if (!PSEUDO_PROVIDER.equals(selected.providerId()) && !preflight(selected, out)) {
+        final boolean pseudo = ProviderSetup.PSEUDO_PROVIDER.equals(selected.providerId());
+        if (!pseudo && !timed(report, "preflight", () -> providers.preflight(selected, out))) {
             return 1;
         }
-        return translate(arguments, destination, selected, out);
+        return translate(arguments, destination, selected, report, out);
     }
 
-    private Result<ModelSelection> selectModel(TranslateArguments arguments) {
-        if (PSEUDO_PROVIDER.equals(arguments.providerId())) {
-            return Result.ok(new ModelSelection(PSEUDO_PROVIDER, PSEUDO_MODEL));
-        }
-        final Result<ProviderConfig> configured = providerConfig(arguments);
-        if (configured.isErr()) {
-            return Result.err(errorOf(configured));
-        }
-        final Result<ProviderConfig> registered = providerConfigs.register(dataOf(configured));
-        if (registered.isErr()) {
-            return Result.err(usageError(errorOf(registered)));
-        }
-        return Result.ok(
-                new ModelSelection(arguments.providerId(), Objects.requireNonNull(arguments.modelId(), "modelId")));
-    }
-
-    private Result<ProviderConfig> providerConfig(TranslateArguments arguments) {
-        final ProviderConfig base = OPENAI_COMPATIBLE_PROVIDER.equals(arguments.providerId())
-                ? customConfig(arguments)
-                : presetConfig(arguments.providerId());
-        return Result.ok(applyOverrides(base, arguments));
-    }
-
-    private ProviderConfig customConfig(TranslateArguments arguments) {
-        return new ProviderConfig(
-                OPENAI_COMPATIBLE_PROVIDER,
-                ProviderKind.OPENAI_COMPATIBLE,
-                Objects.requireNonNull(arguments.baseUrl(), "baseUrl"),
-                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
-    }
-
-    private ProviderConfig presetConfig(String providerId) {
-        final Optional<ProviderConfig> preset = providerConfigs.find(providerId);
-        if (preset.isEmpty()) {
-            throw new IllegalStateException("missing configured provider: " + providerId);
-        }
-        return preset.orElseThrow();
-    }
-
-    private static ProviderConfig applyOverrides(ProviderConfig config, TranslateArguments arguments) {
-        final URI baseUrl = arguments.baseUrl();
-        final Duration requestTimeout = arguments.requestTimeout();
-        final ProviderConfig withUrl = baseUrl == null ? config : config.withBaseUrl(baseUrl);
-        return requestTimeout == null ? withUrl : withUrl.withRequestTimeout(requestTimeout);
-    }
-
-    private boolean preflight(ModelSelection selection, PrintStream out) {
-        final Result<VerificationReport> result = verifier.verify(selection, VerificationPolicy.PREFLIGHT);
-        if (result.isErr()) {
-            printError(errorOf(result), out);
-            return false;
-        }
-        for (StageOutcome outcome : dataOf(result).stages()) {
-            if (!printStage(outcome, out)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean printStage(StageOutcome outcome, PrintStream out) {
-        final String stage = outcome.stage().name().toLowerCase(Locale.ROOT);
-        log.debug("translate command preflight stage={} status={} note={}", stage, outcome.status(), outcome.note());
-        return switch (outcome.status()) {
-            case PASSED -> successfulStage(stage, outcome, out);
-            case SOFT_PASS -> softPassedStage(stage, outcome, out);
-            case SKIPPED -> skippedStage(stage, out);
-            case FAILED -> failedStage(stage, outcome, out);
-        };
-    }
-
-    private static boolean successfulStage(String stage, StageOutcome outcome, PrintStream out) {
-        final String note = outcome.note();
-        out.println(note == null ? stage + ": ok" : stage + ": ok (" + note + ")");
-        return true;
-    }
-
-    private static boolean softPassedStage(String stage, StageOutcome outcome, PrintStream out) {
-        out.println(stage + ": ok (" + Objects.requireNonNull(outcome.note(), "note") + ")");
-        return true;
-    }
-
-    private static boolean skippedStage(String stage, PrintStream out) {
-        out.println(stage + ": skipped");
-        return true;
-    }
-
-    private static boolean failedStage(String stage, StageOutcome outcome, PrintStream out) {
-        final AppError error = Objects.requireNonNull(outcome.error(), "failed stage error");
-        out.println(stage + ": failed - " + error.title());
-        out.println(error.message());
-        return false;
-    }
-
-    private int translate(TranslateArguments arguments, Path destination, ModelSelection selection, PrintStream out) {
+    private int translate(
+            TranslateArguments arguments,
+            Path destination,
+            ModelSelection selection,
+            RunReport report,
+            PrintStream out) {
         final Result<ChatModel> model = models.create(selection);
         if (model.isErr()) {
-            return errorFailure(model, out);
+            return printError(errorOf(model), out);
         }
-        final TranslationRequest request = new TranslationRequest(
-                arguments.source(),
-                destination,
-                arguments.targetLanguage(),
-                arguments.sourceLanguage(),
-                arguments.overwrite());
-        final Result<TranslationJob> job = engine.newJob(request, dataOf(model));
+        final Result<BookOpener.Opened> opened = opener.open(arguments);
+        if (opened.isErr()) {
+            return printError(errorOf(opened), out);
+        }
+        final String projectId = dataOf(opened).projectId();
+        report.brief(dataOf(opened).brief());
+        if (arguments.options().reviewNames()) {
+            report.names(timed(report, "names", () -> names.review(projectId, dataOf(model), out)));
+        }
+        final Integer detected = capabilities.detectedTokens(selection).orElse(null);
+        log.debug("translate command detectedContext={}", detected);
+        final Result<TranslationJob> job = engine.newJob(
+                new RunRequest(projectId, ReviewMode.UNATTENDED, detected, selection.modelId()), dataOf(model));
         if (job.isErr()) {
-            return errorFailure(job, out);
+            return printError(errorOf(job), out);
         }
-        final TranslationJob translationJob = dataOf(job);
-        translationJob.pauseAt(Set.of());
-        return report(translationJob.run(), out);
+        return runAndExport(dataOf(job), selection, new Target(projectId, destination, arguments), report, out);
     }
 
-    private int report(Result<JobReport> result, PrintStream out) {
+    /** Where a run's book goes and how. */
+    private record Target(String projectId, Path destination, TranslateArguments arguments) {}
+
+    private int runAndExport(
+            TranslationJob job, ModelSelection selection, Target target, RunReport report, PrintStream out) {
+        final RunOptions options = target.arguments().options();
+        final UnattendedRun watch =
+                UnattendedRun.attach(job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out);
+        shutdown.hold(job::cancel);
+        final Result<JobReport> result = timed(report, "translate", job::run);
+        report.run(result, watch);
+        report.lexicon(RenderingConsistency.of(lexiconOf(target.projectId())));
         if (result.isErr()) {
-            return errorFailure(result, out);
+            return printError(errorOf(result), out);
         }
-        final JobReport report = dataOf(result);
-        log.debug(
-                "translate command report state={} accepted={} flagged={} written={}",
-                report.end(),
-                report.accepted(),
-                report.flagged(),
-                report.written());
-        if (report.end() != JobState.COMPLETED) {
-            return printError(report.error() != null ? report.error() : stoppedError(report.end()), out);
+        final JobReport run = dataOf(result);
+        log.info(
+                "translate command run ended state={} accepted={} flagged={} stoppedBecause={}",
+                run.end(),
+                run.accepted(),
+                run.flagged(),
+                watch.stopReason());
+        final boolean completed = run.end() == JobState.COMPLETED;
+        if (!completed && !options.partialExport()) {
+            return printError(endingError(run, watch), out);
         }
-        final Path written = Objects.requireNonNull(report.written(), "completed report must have a written path");
-        out.println(
-                "Completed: " + written + " (accepted=" + report.accepted() + ", flagged=" + report.flagged() + ")");
-        return 0;
+        return exportAndReport(run, completed, target, report, out, watch);
     }
 
-    private int selectionFailure(AppError error, PrintStream out) {
-        return error.code() == ErrorCode.validation ? usageFailure(error, out) : printError(error, out);
+    // Silent when the audit is quiet, so a clean run's output stays the one line it was.
+    private static void printAudit(ExportReport written, PrintStream out) {
+        final int doubted = written.suspicious().size();
+        log.info("translate command audit suspicious={}", doubted);
+        if (doubted > 0) {
+            out.println("Audit: " + doubted + " accepted segment(s) look suspicious — "
+                    + written.suspicious().stream()
+                            .map(segment -> segment.locator() + " (" + String.join(", ", segment.checks()) + ")")
+                            .collect(Collectors.joining("; ")));
+        }
+    }
+
+    private List<LexiconEntry> lexiconOf(String projectId) {
+        final List<LexiconEntry> held = lexicon.entries(projectId).data();
+        return held == null ? List.of() : held;
+    }
+
+    private int exportAndReport(
+            JobReport run, boolean completed, Target target, RunReport report, PrintStream out, UnattendedRun watch) {
+        final Result<ExportReport> exported =
+                timed(report, "export", () -> export(target.projectId(), target.destination(), target.arguments()));
+        if (exported.isErr()) {
+            return printError(errorOf(exported), out);
+        }
+        final ExportReport written = dataOf(exported);
+        report.export(written, !completed);
+        report.audit(written.suspicious());
+        printAudit(written, out);
+        if (completed) {
+            out.println("Completed: " + written.destination() + " (accepted=" + run.accepted() + ", flagged="
+                    + run.flagged() + ")");
+            return 0;
+        }
+        final AppError ending = endingError(run, watch);
+        out.println("Partial: " + written.destination() + " (accepted=" + run.accepted() + ", flagged="
+                + run.flagged() + ", pending=" + written.pending() + ") — the run ended " + run.end() + ": "
+                + ending.title());
+        return PARTIAL_EXIT;
+    }
+
+    // After Ctrl+C the export of what the stopped run translated is not cancelled by the same stop; the stop waits
+    // for it a while longer instead.
+    private Result<ExportReport> export(String projectId, Path destination, TranslateArguments arguments) {
+        final Result<ExportJob> job = exports.newExport(
+                new ExportRequest(projectId, destination, arguments.overwrite(), Set.of(), false), null);
+        if (job.isErr()) {
+            return Result.err(errorOf(job));
+        }
+        final ExportJob exportJob = dataOf(job);
+        if (shutdown.isRequested()) {
+            shutdown.extendWaitBy(PARTIAL_EXPORT_WAIT);
+        } else {
+            shutdown.hold(exportJob::cancel);
+        }
+        return exportJob.run();
+    }
+
+    private <T> T timed(RunReport report, String phase, Supplier<T> work) {
+        final Instant started = clock.instant();
+        try {
+            return work.get();
+        } finally {
+            report.phase(phase, Duration.between(started, clock.instant()));
+        }
+    }
+
+    private static AppError endingError(JobReport run, UnattendedRun watch) {
+        final @Nullable AppError error = run.error();
+        if (error != null) {
+            return error;
+        }
+        final @Nullable String stopped = watch.stopReason();
+        if (stopped != null) {
+            return AppError.of(ErrorCode.cancelled, "Stopped: " + stopped, "The run was stopped: " + stopped + ".");
+        }
+        return run.end() == JobState.CANCELLED
+                ? AppError.of(
+                        ErrorCode.cancelled,
+                        "Translation cancelled",
+                        "The translation was cancelled before the book was written.")
+                : AppError.of(
+                        ErrorCode.internal,
+                        "Translation did not complete",
+                        "The translation ended without producing a completed book.");
+    }
+
+    private static AppError destinationExists() {
+        return AppError.of(
+                ErrorCode.validation,
+                "This destination already exists",
+                "Choose a new destination or allow the existing file to be replaced.");
     }
 
     private int usageFailure(AppError error, PrintStream out) {
@@ -238,10 +301,6 @@ public final class TranslateCommand {
         out.println(error.title() + ": " + error.message());
         out.println(USAGE);
         return 2;
-    }
-
-    private int errorFailure(Result<?> result, PrintStream out) {
-        return printError(errorOf(result), out);
     }
 
     private int unexpectedFailure(PrintStream out, Throwable cause) {
@@ -259,20 +318,6 @@ public final class TranslateCommand {
         log.debug("translate command error code={} title={}", error.code(), error.title());
         out.println(error.title() + ": " + error.message());
         return 1;
-    }
-
-    private static AppError usageError(AppError error) {
-        return AppError.of(
-                ErrorCode.validation, "Invalid command arguments", error.message(), error.details(), error.cause());
-    }
-
-    private static AppError stoppedError(JobState state) {
-        return AppError.of(
-                state == JobState.CANCELLED ? ErrorCode.cancelled : ErrorCode.internal,
-                state == JobState.CANCELLED ? "Translation cancelled" : "Translation did not complete",
-                state == JobState.CANCELLED
-                        ? "The translation was cancelled before the book was written."
-                        : "The translation ended without producing a completed book.");
     }
 
     private static <T> T dataOf(Result<T> result) {

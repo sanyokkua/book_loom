@@ -30,7 +30,7 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 |-------------|--------------------------------------------------------------------------------------------------------------------------|
 | NFR-PRIV-02 | No analytics, usage metrics, or telemetry of any kind are collected or transmitted.                                      |
 | NFR-PRIV-03 | No third-party SDKs that phone home are bundled (dependency license + behavior gate, `05_Dependencies/03_LICENSING.md`). |
-| NFR-PRIV-04 | Logs stay local (per-OS log dir); they are never uploaded.                                                               |
+| NFR-PRIV-04 | Logs stay local (per-OS log dir); they are never uploaded. The detailed diagnostic log (`bookloom-trace.log`, on in a development run, `BOOKLOOM_TRACE_FILE=1` in an installed app) holds book text at `TRACE` and stays on the machine; the About dialog says so, and its diagnostic bundle is only written to a file the user picks — the user decides whether to share it. |
 
 ## secrets-never-stored {#secrets-never-stored}
 
@@ -51,4 +51,6 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 
 These requirements are testable: a network-egress test (or WireMock with a deny-all default) asserts that no request is
 issued during import, parse, QA, persistence, or export, and that the sole request during a run targets the configured
-provider URL. A secret-leak test asserts no credential value appears in logs or `AppError.details`.
+provider URL. A secret-leak test asserts no credential value appears in logs or `AppError.details`; the detailed
+diagnostic log's redaction guard (`TraceRedactionTest`) runs a whole book through both provider clients at `TRACE` and
+asserts book text appears only on `TRACE` lines and no credential value appears at all.

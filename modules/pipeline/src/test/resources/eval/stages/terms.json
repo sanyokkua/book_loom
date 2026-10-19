@@ -1,0 +1,52 @@
+[
+  {
+    "id": "terms-en-uk-everyday-vs-jargon",
+    "source": "en",
+    "target": "uk",
+    "sentences": [
+      "She tried to keep the datavault quiet, but the datavault kept humming.",
+      "A black coat hung beside the black door, and the black light made it worse.",
+      "The screen flickered; she watched the screen until the screen went dark.",
+      "Her gridrunner crossed the datavault wall while the gridrunner team kept watch.",
+      "Nobody could keep a gridrunner out for long, and nobody could keep the secret.",
+      "Flint met Marta on Monday, and Flint gave Marta the key; Monday was cold."
+    ],
+    "terms": [
+      {"term": "keep", "keep": false},
+      {"term": "black", "keep": false},
+      {"term": "screen", "keep": false},
+      {"term": "datavault", "keep": true},
+      {"term": "gridrunner", "keep": true}
+    ],
+    "glossary": [
+      {"term": "Flint", "type": "CHARACTER", "keep": true},
+      {"term": "Marta", "type": "CHARACTER", "keep": true},
+      {"term": "Monday", "type": "OTHER", "keep": false}
+    ]
+  },
+  {
+    "id": "terms-ru-uk-everyday-vs-jargon",
+    "source": "ru",
+    "target": "uk",
+    "sentences": [
+      "Она старалась не шуметь возле нейрошунта, но нейрошунт гудел сам.",
+      "Чёрное пальто висело у чёрной двери, и чёрный свет делал всё хуже.",
+      "Экран мигнул; она смотрела на экран, пока экран не погас.",
+      "Её сетевик прошёл сквозь стену, и вся команда сетевиков следила за ним.",
+      "Никто не мог удержать сетевика надолго, и никто не мог удержать тайну.",
+      "Флинт встретила Марту в понедельник, и Флинт отдала Марте ключ."
+    ],
+    "terms": [
+      {"term": "экран", "keep": false},
+      {"term": "чёрный", "keep": false},
+      {"term": "ключ", "keep": false},
+      {"term": "нейрошунт", "keep": true},
+      {"term": "сетевик", "keep": true}
+    ],
+    "glossary": [
+      {"term": "Флинт", "type": "CHARACTER", "keep": true},
+      {"term": "Марта", "type": "CHARACTER", "keep": true},
+      {"term": "понедельник", "type": "OTHER", "keep": false}
+    ]
+  }
+]

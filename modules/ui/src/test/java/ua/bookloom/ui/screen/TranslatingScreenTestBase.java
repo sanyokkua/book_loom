@@ -16,12 +16,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedGlossaryService;
+import ua.bookloom.ui.ScriptedLexiconService;
+import ua.bookloom.ui.ScriptedNamesPass;
+import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
@@ -44,16 +48,36 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     static final String MODEL = "gemma3:12b";
     static final Path BOOK = Path.of("Frankenstein.epub");
-    static final List<String> BUTTON_IDS = List.of(
-            "translating-start", "translating-new-run", "translating-pause", "translating-resume", "translating-stop");
+    static final List<String> BUTTON_IDS =
+            List.of("translating-start", "translating-pause", "translating-resume", "translating-stop");
 
     final RecordingJob job = new RecordingJob();
     final ScriptedChatModelFactory models = ScriptedChatModelFactory.ok();
+    final ScriptedReviewDesk desk = new ScriptedReviewDesk();
+    final ScriptedGlossaryService glossary = new ScriptedGlossaryService();
+    final ScriptedLexiconService lexicon = new ScriptedLexiconService();
+    final ScriptedNamesPass namesPass = new ScriptedNamesPass();
     final ScriptedTranslationEngine engine = ScriptedTranslationEngine.returning(job);
+    private ReviewMode launchMode = ReviewMode.UNATTENDED;
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.create(locale, port, models, engine);
+        return UiTestInjector.builder(locale)
+                .projects(projects)
+                .models(models)
+                .engine(engine)
+                .glossary(glossary)
+                .lexicon(lexicon)
+                .namesPass(namesPass)
+                .reviewDesk(desk)
+                .reviewMode(launchMode)
+                .build();
+    }
+
+    /** Rebuilds the window from a graph launched with this review mode, as the launch flag would. */
+    void launchWith(final ReviewMode mode) {
+        launchMode = mode;
+        useLocale(Locale.ENGLISH);
     }
 
     /** Lets a job that is still waiting for instructions end, so its thread does not outlive the test. */
@@ -63,11 +87,11 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     }
 
     static JobReport cancelledReport() {
-        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null, null);
+        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null);
     }
 
     static JobReport completedReport() {
-        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), Path.of("out.txt"), null);
+        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
     }
 
     /** Shows the translating screen afresh, the way a person arrives from another screen. */
@@ -78,9 +102,10 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     /** Opens the book and chooses a model, so that the start control has everything it needs. */
     void readyToStart() throws TimeoutException {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
+        chooseTarget();
         ThemeTestSupport.onFx(() -> {
             injector.getInstance(SettingsViewModel.class).model().set(MODEL);
             return null;
@@ -97,7 +122,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     }
 
     void publishProgress(final int accepted, final int flagged, final int pending) {
-        mirror().publishProgress(new JobProgress(JobStage.TRANSLATE, 7, 11, accepted, flagged, pending));
+        mirror().publishProgress(ProgressFixtures.progress(7, 11, accepted, flagged, pending));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -114,7 +139,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
         return (ProgressBar) required("translating-progress");
     }
 
-    /** The ids of the five run controls that a person can see and press. */
+    /** The ids of the four run controls that a person can see and press. */
     List<String> enabledControls() {
         return BUTTON_IDS.stream()
                 .filter(this::isShown)
@@ -122,7 +147,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
                 .toList();
     }
 
-    /** The ids of the five run controls that a person can see but not press. */
+    /** The ids of the four run controls that a person can see but not press. */
     List<String> disabledControls() {
         return BUTTON_IDS.stream()
                 .filter(this::isShown)

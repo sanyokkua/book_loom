@@ -6,7 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.PausePoint;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.pipeline.RunRequest;
+import ua.bookloom.pipeline.chunk.TokenBudget;
+import ua.bookloom.pipeline.run.RunStart;
+import ua.bookloom.pipeline.run.WorkList;
 
 /** Records the two lifecycle milestones of a job: its start with its inputs, and its end with its outcome. */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
@@ -17,26 +20,31 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 final class JobLifecycleLogger {
 
     static void started(
-            final TranslationRequest request, final JobProgressTracker tracker, final Set<PausePoint> pausePoints) {
+            final RunRequest request,
+            final RunStart.Started run,
+            final WorkList work,
+            final Set<PausePoint> pausePoints) {
         log.info(
-                "Translation job started format={} source={} destination={} targetLanguage={} sourceLanguage={} pausePoints={} segments={} sections={}",
-                tracker.format(),
-                request.source(),
-                request.destination(),
-                request.targetLanguage(),
-                request.sourceLanguage(),
+                "Translation job started project={} format={} sourceLanguage={} targetLanguage={} mode={} dial={} contextSize={} pausePoints={} segments={} sections={}",
+                request.projectId(),
+                run.document().format(),
+                run.project().brief().sourceLanguage(),
+                run.project().brief().targetLanguage(),
+                request.mode(),
+                run.project().brief().dial(),
+                TokenBudget.EFFECTIVE_CONTEXT,
                 pausePoints,
-                tracker.segmentCount(),
-                tracker.sectionCount());
+                work.segmentCount(),
+                work.sectionCount());
     }
 
-    static void ended(final JobReport report) {
+    static void ended(final JobReport report, final long elapsedMillis) {
         log.info(
-                "Translation job ended state={} segments={} accepted={} flagged={} written={}",
+                "Translation job ended state={} segments={} accepted={} flagged={} elapsedMs={}",
                 report.end(),
                 report.segments(),
                 report.accepted(),
                 report.flagged(),
-                report.written());
+                elapsedMillis);
     }
 }

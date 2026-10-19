@@ -1,0 +1,29 @@
+{{#glossaryTerms}}
+[Glossary the translation had to use: source → target]
+{{glossaryTerms}}
+{{/glossaryTerms}}
+
+{{#suggestedTerms}}
+[Suggested renderings — not confirmed by the person]
+Not a rule; a different fitting rendering is not a defect.
+{{suggestedTerms}}
+{{/suggestedTerms}}
+
+{{#usualRenderings}}
+[Usual renderings in this book: source → target. Not a rule; a different fitting word is not a defect]
+{{usualRenderings}}
+{{/usualRenderings}}
+
+{{#characters}}
+[Characters in these pairs — who they are]
+{{characters}}
+{{/characters}}
+
+{{#passFocus}}
+{{passFocus}}
+
+{{/passFocus}}
+{{pairs}}
+
+Answer every pair once. Return one JSON object in this schema:
+{"results":[{"id":"<pair id>","status":"ok"|"edits"|"rewrite","edits":[{"criterion":"<defect word>","quote":"<exact text of the candidate>","replacement":"<corrected text>"}],"rewrite":"<the whole corrected candidate>"}]}

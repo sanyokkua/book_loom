@@ -9,14 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testfx.framework.junit5.ApplicationTest;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * The one registry of screens: which have a view resource, which are inert, how they are grouped and numbered. Runs
  * on the headless toolkit because "its resource loads" is only true once an FXML file has actually been parsed.
  */
-class ViewNamesTest extends ApplicationTest {
+class ViewNamesTest extends FxTestBase {
 
     @Override
     public void start(final Stage stage) {
@@ -63,13 +62,12 @@ class ViewNamesTest extends ApplicationTest {
                 .isNotNull();
     }
 
-    // IF the structure constant pointed at a misspelt path, THEN navigating to it would load nothing. (Its file is no
-    // longer a placeholder: it names a controller that only the application's injector can supply.)
+    // IF the names and style constant pointed at a misspelt path, THEN navigating to it would load nothing.
     @Test
-    void resource_structure_isItsFxmlFileAndTheConstantIsAvailable() {
-        assertThat(ViewNames.STRUCTURE.resource()).hasValue("/ua/bookloom/ui/screen/structure.fxml");
-        assertThat(ViewNames.STRUCTURE.isAvailable()).isTrue();
-        assertThat(ViewNames.class.getResource("/ua/bookloom/ui/screen/structure.fxml"))
+    void resource_namesStyle_isItsFxmlFileAndTheConstantIsAvailable() {
+        assertThat(ViewNames.NAMES_STYLE.resource()).hasValue("/ua/bookloom/ui/screen/names-style.fxml");
+        assertThat(ViewNames.NAMES_STYLE.isAvailable()).isTrue();
+        assertThat(ViewNames.class.getResource("/ua/bookloom/ui/screen/names-style.fxml"))
                 .isNotNull();
     }
 
@@ -88,7 +86,7 @@ class ViewNamesTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE", "REVIEW"})
+            names = {"PROJECTS"})
     void resource_inertConstant_isAbsentAndTheConstantIsUnavailable(final ViewNames view) {
         assertThat(view.resource()).isEmpty();
         assertThat(view.isAvailable()).isFalse();
@@ -101,10 +99,8 @@ class ViewNamesTest extends ApplicationTest {
         "PROJECTS, NAV_PROJECTS",
         "IMPORT, NAV_IMPORT",
         "BOOK_BRIEF, NAV_BRIEF",
-        "STRUCTURE, NAV_STRUCTURE",
         "NAMES_STYLE, NAV_NAMES_AND_STYLE",
         "TRANSLATING, NAV_TRANSLATING",
-        "REVIEW, NAV_REVIEW",
         "EXPORT, NAV_EXPORT",
         "SETTINGS, NAV_SETTINGS",
     })
@@ -117,11 +113,9 @@ class ViewNamesTest extends ApplicationTest {
     @CsvSource({
         "IMPORT, 1",
         "BOOK_BRIEF, 2",
-        "STRUCTURE, 3",
-        "NAMES_STYLE, 4",
-        "TRANSLATING, 5",
-        "REVIEW, 6",
-        "EXPORT, 7",
+        "NAMES_STYLE, 3",
+        "TRANSLATING, 4",
+        "EXPORT, 5",
     })
     void step_workflowConstant_isItsPositionInTheWorkflow(final ViewNames view, final int expected) {
         assertThat(view.step()).isEqualTo(OptionalInt.of(expected));
@@ -141,7 +135,7 @@ class ViewNamesTest extends ApplicationTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF STRUCTURE NAMES_STYLE TRANSLATING REVIEW EXPORT",
+                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF NAMES_STYLE TRANSLATING EXPORT",
                 "APPLICATION | SETTINGS",
             })
     void group_everyConstant_belongsToExactlyItsGroupInReadingOrder(final NavGroup group, final String expected) {
@@ -156,14 +150,6 @@ class ViewNamesTest extends ApplicationTest {
         // IF the order changed, THEN the generated navigation column and "next step" would follow the wrong sequence.
         assertThat(Arrays.stream(ViewNames.values()).map(ViewNames::name))
                 .containsExactly(
-                        "PROJECTS",
-                        "IMPORT",
-                        "BOOK_BRIEF",
-                        "STRUCTURE",
-                        "NAMES_STYLE",
-                        "TRANSLATING",
-                        "REVIEW",
-                        "EXPORT",
-                        "SETTINGS");
+                        "PROJECTS", "IMPORT", "BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT", "SETTINGS");
     }
 }

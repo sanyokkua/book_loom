@@ -1,0 +1,130 @@
+package ua.bookloom.ui.state;
+
+import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.MessageKey;
+
+/**
+ * The kinds of work that talk to the model or to the provider, and which of them may not run beside each other.
+ *
+ * <p>The local model serves one request at a time, so every kind that asks it for text — the run, the names' and terms' scan,
+ * review and translate, a review retry, the provider's inference test and an export (whose consistency pass may ask it) — is
+ * <em>exclusive</em>: one excludes every other. The light provider checks (connection, model list) and the model
+ * listing ask the server, not the model, so they may run during a run; any kind still excludes a second of its own
+ * kind. The relation is symmetric by construction ({@link #conflictsWith}).
+ */
+public enum ActivityKind {
+
+    /** A translation run while it is translating (running, pausing or stopping), not while it waits paused. */
+    TRANSLATION(MessageKey.ACTIVITY_TRANSLATION, true, false, ViewNames.TRANSLATING, false, true),
+    /** The glossary's model scan for names; abandoned work if the person leaves Names &amp; style. */
+    GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The glossary's model review of its rows; abandoned work if the person leaves Names &amp; style. */
+    GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The glossary's translate-only action; abandoned work if the person leaves Names &amp; style. */
+    GLOSSARY_TRANSLATE(MessageKey.ACTIVITY_GLOSSARY_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The recurring terms' scan (the text first, then the model); abandoned work if the person leaves the screen. */
+    TERM_SCAN(MessageKey.ACTIVITY_TERM_SCAN, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The recurring terms' model review; abandoned work if the person leaves Names &amp; style. */
+    TERM_REVIEW(MessageKey.ACTIVITY_TERM_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The model's suggestion of a rendering for each recurring term; abandoned work if the person leaves the screen. */
+    TERM_TRANSLATE(MessageKey.ACTIVITY_TERM_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** The autonomous names pass over both tables of Names &amp; style; abandoned work if the person leaves the screen. */
+    NAMES_PASS(MessageKey.ACTIVITY_NAMES_PASS, true, true, ViewNames.NAMES_STYLE, true, true),
+    /** One segment re-translated from the review panel. */
+    REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true, true),
+    /** The provider test that asks the chosen model for a short answer. */
+    PROVIDER_INFERENCE_TEST(MessageKey.ACTIVITY_PROVIDER_INFERENCE_TEST, true, true, ViewNames.SETTINGS, true, true),
+    /** The provider tests that ask only whether the server answers and lists the model. */
+    PROVIDER_CHECK(MessageKey.ACTIVITY_PROVIDER_CHECK, false, false, ViewNames.SETTINGS, false, false),
+    /** Reading the provider's model list for the settings. */
+    MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS, false, false),
+    /** Writing the translated book, whose consistency pass may ask the model. */
+    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT, true, true),
+    /** The model's proposal of the translated book's file name. */
+    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT, true, true),
+    /** The model's proposal of the Book Brief's tone and style. */
+    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF, true, true),
+    /** Opening a book and inspecting it, before the import screen has anything to show. */
+    IMPORT(MessageKey.ACTIVITY_IMPORT, false, false, ViewNames.IMPORT, true, false),
+    /** The work between pressing Start and the first segment: style sheet, name scan, chunking. */
+    RUN_PREPARATION(MessageKey.ACTIVITY_RUN_PREPARATION, false, false, ViewNames.TRANSLATING, true, true);
+
+    private final MessageKey label;
+    private final boolean exclusive;
+    private final boolean leaveSensitive;
+    private final ViewNames home;
+    private final boolean blocking;
+    private final boolean callingModel;
+
+    ActivityKind(
+            final MessageKey label,
+            final boolean exclusive,
+            final boolean leaveSensitive,
+            final ViewNames home,
+            final boolean blocking,
+            final boolean callingModel) {
+        this.label = label;
+        this.exclusive = exclusive;
+        this.leaveSensitive = leaveSensitive;
+        this.home = home;
+        this.blocking = blocking;
+        this.callingModel = callingModel;
+    }
+
+    /**
+     * Whether the window waits for this work behind a card with its progress: navigation and the actions that would
+     * change what it works on are refused while it runs. The translation run itself, the model listing and the light
+     * provider checks do not block, so the person can pause, browse and edit around them.
+     *
+     * @return {@code true} for work that changes or reads the book in one piece, {@code false} otherwise
+     */
+    public boolean isBlocking() {
+        return blocking;
+    }
+
+    /**
+     * How the activity is named in the title bar and in a reason a control is unavailable.
+     *
+     * @return the catalogue key of its short name
+     */
+    public MessageKey label() {
+        return label;
+    }
+
+    /**
+     * Whether leaving the activity's screen while it runs deserves a question, because its result is shown only there.
+     *
+     * @return {@code true} for the glossary's model actions and the provider's inference test, {@code false} otherwise
+     */
+    public boolean isLeaveSensitive() {
+        return leaveSensitive;
+    }
+
+    /**
+     * Whether the work asks the model for text, so the computer must not sleep while it runs.
+     *
+     * @return {@code true} for work that sends the model a request, {@code false} otherwise
+     */
+    public boolean isCallingModel() {
+        return callingModel;
+    }
+
+    /**
+     * The screen the activity is started from and shows its result on.
+     *
+     * @return the screen; never null
+     */
+    public ViewNames home() {
+        return home;
+    }
+
+    /**
+     * Whether this kind may not run while {@code other} runs; the same answer either way round.
+     *
+     * @param other the kind already running
+     * @return {@code true} if both are the same kind or both ask the model, {@code false} otherwise
+     */
+    public boolean conflictsWith(final ActivityKind other) {
+        return this == other || (exclusive && other.exclusive);
+    }
+}

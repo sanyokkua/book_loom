@@ -1,0 +1,8 @@
+[Term — how often the story writes it]
+{{term}}
+
+[Windows]
+{{windows}}
+
+Return JSON exactly as:
+{"windows":[{"window":<number>,"quote":"<words copied from that window>","usage":"term|word|name"}],"senses":<number>,"rendering":"<the one rendering, or empty>"}

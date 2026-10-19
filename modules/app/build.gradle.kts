@@ -22,6 +22,8 @@ dependencies {
     implementation(project(":pipeline"))
     implementation(project(":ui"))
     implementation(libs.guice)
+    // The command line's JSON run report.
+    implementation(libs.jackson.databind)
 
     // The SLF4J facade, used by every class in `:app` that is allowed to log at all.
     implementation(libs.slf4j.api)
@@ -33,6 +35,11 @@ dependencies {
     // `ua.bookloom.app.bootstrap`; everywhere else, including the rest of `:app`, logs through the facade.
     implementation(libs.logback.classic)
 }
+
+// Guice 7.0.0 defines its generated classes through sun.misc.Unsafe, and JDK 25 answers the first use with four
+// WARNING lines on the console of every launch: noise in front of the command's one report line, on a path a later JDK
+// may refuse. BookLoom uses no Guice AOP, so the reflection Guice falls back to loses nothing. Both launch tasks below
+// set the option, and the jpackage scripts pass the same option to the packaged launcher.
 
 // --- `./gradlew :app:run` ---------------------------------------------------------------------------------------
 //
@@ -51,6 +58,7 @@ val runApp =
 
         mainClass = "ua.bookloom.app.bootstrap.Launcher"
         classpath = sourceSets.main.get().runtimeClasspath
+        systemProperty("guice_bytecode_gen_option", "DISABLED")
 
         // No BOOKLOOM_ENV and no -Dbookloom.env=prod: an un-stamped run resolves the `-Dev` folder, which is the
         // safety property. A developer running this must not be able to touch their own production database.
@@ -67,9 +75,6 @@ val translateApp =
         javaLauncher = javaToolchains.launcherFor(java.toolchain)
         workingDir = rootDir
 
-        // Guice 7.0.0 defines its generated classes through sun.misc.Unsafe, and JDK 25 answers the first use with
-        // four WARNING lines on the console of every run: noise in front of the command's one report line, on a path
-        // a later JDK may refuse. BookLoom uses no Guice AOP, so the reflection Guice falls back to loses nothing.
         systemProperty("guice_bytecode_gen_option", "DISABLED")
     }
 

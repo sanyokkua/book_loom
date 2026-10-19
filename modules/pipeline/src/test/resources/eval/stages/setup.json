@@ -1,0 +1,379 @@
+[
+  {
+    "id": "setup-en-uk-first-person",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "j_ostler-the_glass_orchard-2009-v2-final",
+    "title": "The Glass Orchard",
+    "author": "Jane Ostler",
+    "paragraphs": [
+      "The rain had not stopped for three days, and I was beginning to think the town had forgotten the sun.",
+      "I counted the windows on the far side of the square, because counting was all I had left to do that evening.",
+      "My sister wrote that the orchard was sold, and I read her letter twice before I put it down on the table."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "drama",
+      "family"
+    ],
+    "year": 2009,
+    "publisher": null,
+    "classic": false,
+    "expectKnowledge": "unknown"
+  },
+  {
+    "id": "setup-ru-uk-third-person",
+    "source": "ru",
+    "target": "uk",
+    "fileStem": "ostrov_zabytyh_beregov_a_sorokin_2011",
+    "title": "Остров забытых берегов",
+    "author": "Артём Сорокин",
+    "paragraphs": [
+      "Дождь не прекращался три дня, и Лев начал думать, что город давно забыл о солнце.",
+      "Он считал окна на другой стороне площади, потому что считать было единственным делом на этот вечер.",
+      "Сестра писала, что сад продан, и Лев дважды прочёл её письмо, прежде чем положить его на стол."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "drama",
+      "family"
+    ],
+    "year": 2011,
+    "publisher": null,
+    "classic": false,
+    "expectKnowledge": "unknown"
+  },
+  {
+    "id": "invented-01-lantern-ledger",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "o_venn-the_lantern_ledger-2014",
+    "title": "The Lantern Ledger",
+    "author": "Orsolya Venn",
+    "year": 2014,
+    "publisher": "Harrowgate Press",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "Merrin Tallow kept the harbour ledger by the light of a single lantern, and she kept it better than any clerk the town had ever paid.",
+      "Every ship that passed the breakwater was entered in her small slanting hand, with its cargo, its captain and the weather it had met.",
+      "On the night the grey ketch came in with no name painted on her bow, Merrin set down her pen and did not write a word."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "fantasy",
+      "adventure"
+    ]
+  },
+  {
+    "id": "invented-02-small-clocks",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "t_brandt_aske-a_winter_of_small_clocks-2009",
+    "title": "A Winter of Small Clocks",
+    "author": "Teodor Brandt-Aske",
+    "year": 2009,
+    "publisher": null,
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "My father mended clocks in the back room of the shop, and all through that winter I fell asleep to the sound of forty of them disagreeing.",
+      "I was nine, and I believed that if I could only learn which clock was telling the truth, I would understand why my mother had left.",
+      "So I began to wind them one by one, and to write down on the back of a bill what each of them said."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "drama",
+      "family"
+    ]
+  },
+  {
+    "id": "invented-03-salt-road",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "i_calloway-salt_road_to_kellmoor-2017",
+    "title": "Salt Road to Kellmoor",
+    "author": "Idris Calloway",
+    "year": 2017,
+    "publisher": "Northfield Books",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "The salt caravan left the lowland pans before dawn, forty mules strung out along the white road, and Captain Brask rode at its head with his hat pulled low.",
+      "Behind him the drivers sang the old counting song, for the road to Kellmoor was long and the song made the miles seem fewer.",
+      "By noon the heat had risen from the stones, and the first of the mules began to stumble, and Brask called a halt beside the dry well."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "FORMAL_LITERARY",
+    "genreClass": [
+      "historical",
+      "adventure"
+    ]
+  },
+  {
+    "id": "invented-04-quiet-engine",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "n_harrowby-the_quiet_engine-2021",
+    "title": "The Quiet Engine",
+    "author": "Neve Harrowby",
+    "year": 2021,
+    "publisher": "Cinder Lane",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "The engine in the deep hold of the station had not made a sound for eleven years, and Dr. Sato Imre was the only person aboard who found that frightening.",
+      "She had checked the readings every morning, and every morning the numbers were perfect, which was exactly what troubled her.",
+      "On the twelfth anniversary of the silence the numbers changed, and the station's lights dimmed once, like a held breath let go."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "science fiction",
+      "thriller",
+      "mystery"
+    ]
+  },
+  {
+    "id": "invented-05-borrowed-garden",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "l_pyke-notes_from_a_borrowed_garden-2012",
+    "title": "Notes from a Borrowed Garden",
+    "author": "Lorcan Pyke",
+    "year": 2012,
+    "publisher": null,
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "So here is the thing about a garden you do not own: you get all of the weeds and none of the credit.",
+      "I took over the plot behind the laundrette when old Mr. Dunmore went into care, and I told myself I would grow a few beans.",
+      "By June I had beans, two kinds of kale I did not want, and a feud with the neighbour's cat that I fully expect to lose."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "CASUAL",
+    "genreClass": [
+      "memoir",
+      "essay",
+      "humor",
+      "humour",
+      "nonfiction",
+      "non-fiction"
+    ]
+  },
+  {
+    "id": "invented-06-thirteenth-weir",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "a_dray-the_thirteenth_weir-2006",
+    "title": "The Thirteenth Weir",
+    "author": "Anselm Dray",
+    "year": 2006,
+    "publisher": "Brackwater & Sons",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "Inspector Corvin Hale stood on the lock gate at first light and counted the weirs along the river, and counted them again, because the map said twelve.",
+      "The thirteenth lay half a mile below the old mill, hidden by alders, and the water running over it was black as ink.",
+      "Hale lowered himself down the bank and found, tied to the sluice with a length of green twine, a woman's glove and a folded note."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "FORMAL_LITERARY",
+    "genreClass": [
+      "mystery",
+      "crime",
+      "detective",
+      "thriller"
+    ]
+  },
+  {
+    "id": "invented-07-paper-moon",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "f_aldous-marigold_and_the_paper_moon-2019",
+    "title": "Marigold and the Paper Moon",
+    "author": "Fenna Aldous",
+    "year": 2019,
+    "publisher": "Little Kettle",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "Hello! My name is Marigold, and I have a secret, and the secret is that the moon over our house is made of paper.",
+      "I found out on Tuesday, when the wind blew and I saw one corner of it flap, just like the page of a book.",
+      "I told my grandpa, and he laughed, but then I saw him look up at the sky for a very long time."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "CASUAL",
+    "genreClass": [
+      "children",
+      "fantasy",
+      "adventure",
+      "picture"
+    ]
+  },
+  {
+    "id": "invented-08-watchmaker",
+    "source": "ru",
+    "target": "uk",
+    "fileStem": "b_yaroshov-chasovshchik_iz_verhnih_klyuchey-2015",
+    "title": "Часовщик из Верхних Ключей",
+    "author": "Богдан Ярошов",
+    "year": 2015,
+    "publisher": "Рябиновый дом",
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "Часовщик Назар Лукин жил на самом краю Верхних Ключей, там, где дорога переходила в тропу, и к нему редко кто заходил.",
+      "По утрам он открывал ставни и расставлял на подоконнике часы, чтобы все в посёлке знали, который час, не глядя на солнце.",
+      "В тот вторник к его двери подошла незнакомка в дорожном плаще и положила на прилавок часы, которых он никогда прежде не видел."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "drama",
+      "mystery"
+    ]
+  },
+  {
+    "id": "classic-pride-and-prejudice",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "austen-pride_and_prejudice",
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "year": 1813,
+    "publisher": null,
+    "classic": true,
+    "expectKnowledge": "known",
+    "paragraphs": [
+      "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+      "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.",
+      "\"My dear Mr. Bennet,\" said his lady to him one day, \"have you heard that Netherfield Park is let at last?\""
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "FORMAL_LITERARY",
+    "genreClass": [
+      "romance",
+      "classic"
+    ]
+  },
+  {
+    "id": "classic-moby-dick",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "melville-moby_dick",
+    "title": "Moby-Dick; or, The Whale",
+    "author": "Herman Melville",
+    "year": 1851,
+    "publisher": null,
+    "classic": true,
+    "expectKnowledge": "known",
+    "paragraphs": [
+      "Call me Ishmael. Some years ago, never mind how long precisely, having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world.",
+      "It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth, whenever it is a damp, drizzly November in my soul, then I account it high time to get to sea as soon as I can.",
+      "There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "FORMAL_LITERARY",
+    "genreClass": [
+      "adventure",
+      "classic",
+      "sea"
+    ]
+  },
+  {
+    "id": "classic-tom-sawyer",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "twain-the_adventures_of_tom_sawyer",
+    "title": "The Adventures of Tom Sawyer",
+    "author": "Mark Twain",
+    "year": 1876,
+    "publisher": null,
+    "classic": true,
+    "expectKnowledge": "known",
+    "paragraphs": [
+      "The old lady pulled her spectacles down and looked over them about the room; then she put them up and looked out under them.",
+      "She seldom or never looked through them for so small a thing as a boy; they were her state pair, the pride of her heart, and were built for style, not service.",
+      "\"TOM!\" No answer. \"TOM!\" No answer. \"What's gone with that boy, I wonder? You TOM!\""
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "adventure",
+      "children",
+      "classic",
+      "comedy",
+      "humor",
+      "humour"
+    ]
+  },
+  {
+    "id": "classic-dracula",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "stoker-dracula",
+    "title": "Dracula",
+    "author": "Bram Stoker",
+    "year": 1897,
+    "publisher": null,
+    "classic": true,
+    "expectKnowledge": "known",
+    "paragraphs": [
+      "3 May. Bistritz. Left Munich at 8:35 P.M., on 1st May, arriving at Vienna early next morning; should have arrived at 6:46, but train was an hour late.",
+      "Buda-Pesth seems a wonderful place, from the glimpse which I got of it from the train and the little I could walk through the streets.",
+      "I feared to go very far from the station, as we had arrived late and would start as near the correct time as possible."
+    ],
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "FORMAL_LITERARY",
+    "genreClass": [
+      "horror",
+      "gothic",
+      "classic",
+      "epistolary",
+      "thriller"
+    ]
+  },
+  {
+    "id": "setup-no-metadata",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "untitled-manuscript",
+    "title": "",
+    "author": "",
+    "year": null,
+    "publisher": null,
+    "classic": false,
+    "expectKnowledge": "unknown",
+    "paragraphs": [
+      "The ferry had stopped running at six, so Wilhelmina Orr walked the last four miles along the shore road with her bag on her shoulder.",
+      "The tide was out, and the long flats shone like tin under a low grey sky, and nothing moved on them but a few gulls.",
+      "At the end of the road stood a single house with every shutter closed, and Wilhelmina knocked three times before the door was opened a hand's breadth."
+    ],
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": [
+      "drama",
+      "mystery"
+    ]
+  }
+]

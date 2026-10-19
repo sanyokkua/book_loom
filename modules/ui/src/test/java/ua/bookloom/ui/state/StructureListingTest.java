@@ -5,93 +5,103 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
-import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.api.document.BookProfile;
+import ua.bookloom.api.document.BookStats;
+import ua.bookloom.api.document.StructureNode;
 
-/** The flat listing the structure screen shows, built from a parsed document with nothing invented. */
+/** The tree listing the structure screen shows, built from a book's profile with nothing invented. */
 class StructureListingTest {
 
-    private static final List<String> ELEVEN_HREFS = List.of(
-            "OEBPS/chapter-01.xhtml",
-            "OEBPS/chapter-02.xhtml",
-            "OEBPS/chapter-03.xhtml",
-            "OEBPS/chapter-04.xhtml",
-            "OEBPS/chapter-05.xhtml",
-            "OEBPS/chapter-06.xhtml",
-            "OEBPS/chapter-07.xhtml",
-            "OEBPS/chapter-08.xhtml",
-            "OEBPS/chapter-09.xhtml",
-            "OEBPS/chapter-10.xhtml",
-            "OEBPS/chapter-11.xhtml");
-
-    // IF the rows were reordered, renumbered or miscounted, THEN the screen would misreport how the book was parsed.
-    @Test
-    void of_elevenUnits_yieldsOneRowPerUnitInReadingOrderWithItsOwnCountAndTheSumAsTotal() {
-        final Document document = BookFixtures.book(
-                "eleven", BookFormat.EPUB, ELEVEN_HREFS, 120, 95, 130, 110, 100, 115, 105, 125, 135, 90, 115);
-
-        final StructureListing listing = StructureListing.of(document);
-
-        assertThat(listing.rows())
-                .containsExactly(
-                        new StructureRow("OEBPS/chapter-01.xhtml", 0, 120),
-                        new StructureRow("OEBPS/chapter-02.xhtml", 1, 95),
-                        new StructureRow("OEBPS/chapter-03.xhtml", 2, 130),
-                        new StructureRow("OEBPS/chapter-04.xhtml", 3, 110),
-                        new StructureRow("OEBPS/chapter-05.xhtml", 4, 100),
-                        new StructureRow("OEBPS/chapter-06.xhtml", 5, 115),
-                        new StructureRow("OEBPS/chapter-07.xhtml", 6, 105),
-                        new StructureRow("OEBPS/chapter-08.xhtml", 7, 125),
-                        new StructureRow("OEBPS/chapter-09.xhtml", 8, 135),
-                        new StructureRow("OEBPS/chapter-10.xhtml", 9, 90),
-                        new StructureRow("OEBPS/chapter-11.xhtml", 10, 115));
-        assertThat(listing.totalSegments()).isEqualTo(1240);
+    private static BookProfile profileOf(final StructureNode... nodes) {
+        return new BookProfile(
+                "Title", "Author", null, List.of(nodes), new BookStats(0, 0, 0, 0, 0, 0, 0, 0, Set.of()), Set.of());
     }
 
-    // IF a book with nothing in it invented a row or a count, THEN the screen would show structure that is not there.
-    @Test
-    void of_documentWithNoUnits_hasNoRowsAndAZeroTotal() {
-        final Document document = BookFixtures.book("empty", BookFormat.TXT, List.of());
-
-        final StructureListing listing = StructureListing.of(document);
-
-        assertThat(listing.rows()).isEmpty();
-        assertThat(listing.totalSegments()).isZero();
+    private static StructureNode node(final String title, final Integer segments) {
+        return new StructureNode(title, null, segments, List.of());
     }
 
-    // IF a unit without segments were dropped or counted as one, THEN the rows would not match the parse.
+    // IF the roots were reordered, retitled or miscounted, THEN the screen would misreport how the book is structured.
     @Test
-    void of_unitWithNoSegments_keepsItsRowWithACountOfZero() {
-        final Document document = BookFixtures.book("gap", BookFormat.EPUB, List.of("cover.xhtml", "ch1.xhtml"), 0, 2);
+    void of_threeTopLevelNodes_keepsThemInOrderAndSumsTheirCounts() {
+        final StructureListing listing =
+                StructureListing.of(profileOf(node("Letter 1", 2), node("Chapter 1", 3), node("Chapter 2", 4)));
 
-        final StructureListing listing = StructureListing.of(document);
+        assertThat(listing.roots())
+                .extracting(StructureNode::title)
+                .containsExactly("Letter 1", "Chapter 1", "Chapter 2");
+        assertThat(listing.totalSegments()).isEqualTo(9);
+    }
 
-        assertThat(listing.rows())
-                .containsExactly(new StructureRow("cover.xhtml", 0, 0), new StructureRow("ch1.xhtml", 1, 2));
+    // IF a child's count were added to the total besides its parent's, THEN the total would count it twice.
+    @Test
+    void totalSegments_nodeWithChildren_countsOnlyTheTopLevelNode() {
+        final StructureNode part =
+                new StructureNode("Part I", null, 8, List.of(node("Section 1", 2), node("Section 2", 3)));
+
+        final StructureListing listing = StructureListing.of(profileOf(part));
+
+        assertThat(listing.roots()).containsExactly(part);
+        assertThat(listing.totalSegments()).isEqualTo(8);
+        assertThat(listing.nodeCount()).isEqualTo(3);
+    }
+
+    // IF a node that only points into a unit counted elsewhere were given a count, THEN the total would count twice.
+    @Test
+    void totalSegments_nodeWithNoCountOfItsOwn_addsNothing() {
+        final StructureNode entry = new StructureNode("Chapter 1", "unit-0", null, List.of());
+
+        final StructureListing listing = StructureListing.of(profileOf(entry, node("Chapter 2", 2)));
+
         assertThat(listing.totalSegments()).isEqualTo(2);
+    }
+
+    // IF a book with nothing in it invented a node or a count, THEN the screen would show structure that is not there.
+    @Test
+    void of_profileWithNoStructure_hasNoRootsAndAZeroTotal() {
+        final StructureListing listing = StructureListing.of(profileOf());
+
+        assertThat(listing.roots()).isEmpty();
+        assertThat(listing.totalSegments()).isZero();
+        assertThat(listing.nodeCount()).isZero();
     }
 
     // IF the listing kept the caller's list, THEN a later change to it would silently alter what the screen shows.
     @Test
     void constructor_callersListChangedAfterwards_doesNotChangeTheListing() {
-        final List<StructureRow> source = new ArrayList<>(List.of(new StructureRow("a.xhtml", 0, 3)));
+        final List<StructureNode> source = new ArrayList<>(List.of(node("a", 3)));
 
         final StructureListing listing = new StructureListing(source);
-        source.add(new StructureRow("b.xhtml", 1, 4));
+        source.add(node("b", 4));
 
-        assertThat(listing.rows()).containsExactly(new StructureRow("a.xhtml", 0, 3));
-        assertThatThrownBy(() -> listing.rows().add(new StructureRow("c.xhtml", 2, 1)))
-                .isInstanceOf(UnsupportedOperationException.class);
+        assertThat(listing.roots()).containsExactly(node("a", 3));
+        assertThatThrownBy(() -> listing.roots().add(node("c", 1))).isInstanceOf(UnsupportedOperationException.class);
     }
 
-    // IF the total were stored beside the rows, THEN a caller could build a listing that contradicts itself.
+    // IF a grouping node listed nothing, THEN picking a part would show an empty list although its chapters have text.
     @Test
-    void totalSegments_builtFromRowsAlone_isTheSumOfTheirCounts() {
-        final StructureListing listing =
-                new StructureListing(List.of(new StructureRow("a.xhtml", 0, 3), new StructureRow("b.xhtml", 1, 4)));
+    void unitsOf_groupingNodeWithoutAUnit_listsItsDescendantsUnitsOnceInOrder() {
+        final StructureNode part = new StructureNode(
+                "Part I",
+                null,
+                null,
+                List.of(
+                        new StructureNode("Chapter 1", "u1", 3, List.of()),
+                        new StructureNode(
+                                "Chapter 2", "u2", 4, List.of(new StructureNode("Scene", "u2", null, List.of()))),
+                        new StructureNode("Notes", null, null, List.of())));
 
-        assertThat(listing.totalSegments()).isEqualTo(7);
+        assertThat(StructureListing.unitsOf(part)).containsExactly("u1", "u2");
+    }
+
+    // IF a chapter with a unit also listed its children's units, THEN a picked chapter would show other chapters' text.
+    @Test
+    void unitsOf_nodeWithItsOwnUnit_listsOnlyThatUnit() {
+        final StructureNode chapter =
+                new StructureNode("Chapter", "u1", 3, List.of(new StructureNode("Section", "u9", null, List.of())));
+
+        assertThat(StructureListing.unitsOf(chapter)).containsExactly("u1");
     }
 }

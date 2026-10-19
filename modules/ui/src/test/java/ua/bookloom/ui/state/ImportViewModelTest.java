@@ -1,7 +1,6 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -14,12 +13,13 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.LanguageEvidence.Verdict;
+import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -48,7 +48,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
         final ImportViewModel viewModel = viewModel();
 
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
         assertThat(isOpening(viewModel)).isFalse();
     }
 
@@ -58,16 +58,32 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_enBook_detectedCardCarriesEveryFieldAndCounts() {
         final Path source = dir.resolve("Frankenstein.epub");
-        final Document book = BookFixtures.frankenstein();
-        port.on(source, Result.ok(book));
+        final ImportedBook imported = BookFixtures.frankensteinInspected();
+        projects.on(source, Result.ok(imported));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
-                .isEqualTo(new ImportState.Detected(new BookCard(
-                        "Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9)));
-        assertThat(openedBookOf(viewModel)).isEqualTo(new OpenedBook(source, book));
+                .isEqualTo(new ImportState.Detected(
+                        new BookCard(
+                                "Frankenstein.epub",
+                                BookFormat.EPUB,
+                                "EPUB 2.0",
+                                "Frankenstein",
+                                "Mary Shelley",
+                                "en",
+                                11,
+                                78_214,
+                                BookFixtures.pngCover()),
+                        null));
+        assertThat(openedBook()).isNotNull().satisfies(book -> {
+            assertThat(book.projectId()).isEqualTo("p1");
+            assertThat(book.source()).isEqualTo(source);
+            assertThat(book.inspection()).isEqualTo(imported.inspection());
+            assertThat(book.profile()).isEqualTo(imported.profile());
+            assertThat(book.brief()).isEqualTo(BookBrief.defaults("en"));
+        });
         assertThat(isOpening(viewModel)).isFalse();
     }
 
@@ -76,13 +92,27 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_txtBook_reportsNameFormatAndCountsWithThreeFieldsAbsentAndNoError() {
         final Path source = dir.resolve("notes.txt");
-        port.on(source, Result.ok(BookFixtures.book("notes", BookFormat.TXT, null, null, null, 5, 1)));
+        projects.on(
+                source,
+                Result.ok(BookFixtures.inspected(
+                        "notes",
+                        BookFormat.TXT,
+                        null,
+                        null,
+                        null,
+                        BookFixtures.evidence(null, null, null, Verdict.ABSENT),
+                        1,
+                        640,
+                        0,
+                        0,
+                        null)));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
-                .isEqualTo(new ImportState.Detected(new BookCard("notes.txt", BookFormat.TXT, null, null, null, 2, 6)));
+                .isEqualTo(new ImportState.Detected(
+                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, null), null));
         assertThat(errors.presented()).isEmpty();
     }
 
@@ -90,14 +120,14 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_markdownWithoutFrontmatter_titleAndAuthorAreAbsentCountsReported() {
         final Path source = dir.resolve("notes.md");
-        port.on(source, Result.ok(BookFixtures.book("notes-md", BookFormat.MARKDOWN, null, null, null, 4)));
+        projects.on(source, Result.ok(BookFixtures.imported("notes-md", BookFormat.MARKDOWN, null, null, null, 4)));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, 1, 4)));
+                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, null, 1, 0, null), null));
     }
 
     // IF one missing metadata key hid or blanked the other, THEN a book declaring only its title would lose it.
@@ -110,14 +140,16 @@ class ImportViewModelTest extends ImportViewModelTestBase {
             final @Nullable String expectedTitle,
             final @Nullable String expectedAuthor) {
         final Path source = dir.resolve("book.epub");
-        port.on(source, Result.ok(BookFixtures.book("partial", BookFormat.EPUB, null, title, author, 1)));
+        projects.on(source, Result.ok(BookFixtures.imported("partial", BookFormat.EPUB, null, title, author, 1)));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("book.epub", BookFormat.EPUB, expectedTitle, expectedAuthor, null, 1, 1)));
+                        new BookCard(
+                                "book.epub", BookFormat.EPUB, null, expectedTitle, expectedAuthor, null, 1, 0, null),
+                        null));
     }
 
     // IF a book with a declared language of any value ended in the mismatch state, THEN a warning would appear that no
@@ -126,7 +158,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @ValueSource(strings = {"en", "uk", "fr"})
     void open_anyDeclaredLanguage_isDetectedNeverLanguageMismatch(final String declared) {
         final Path source = dir.resolve("any.epub");
-        port.on(source, Result.ok(BookFixtures.book("any", BookFormat.EPUB, declared, "T", "A", 1)));
+        projects.on(source, Result.ok(BookFixtures.imported("any", BookFormat.EPUB, declared, "T", "A", 1)));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -138,7 +170,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_refusedBook_isRefusedNeverLanguageMismatch() {
         final Path source = dir.resolve("secret.epub");
-        port.on(source, Result.err(protectedError()));
+        projects.on(source, Result.err(protectedError()));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -152,16 +184,32 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     void open_protectedBook_refusedInPlaceWithItsErrorAndNoBookOrToastOrDialog() {
         final Path source = dir.resolve("secret.epub");
         final AppError refusal = protectedError();
-        port.on(source, Result.err(refusal));
+        projects.on(source, Result.err(refusal));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Refused("secret.epub", refusal));
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
         assertThat(toasts.raised()).isEmpty();
         assertThat(errors.presented()).isEmpty();
         assertThat(isOpening(viewModel)).isFalse();
+    }
+
+    // IF a project answered without its brief were opened, THEN the brief screen would read a brief that is not there;
+    // the malformed answer is a fault, so it goes to the presenter and opens nothing.
+    @Test
+    void open_projectWithoutABrief_isAnInternalFaultAndOpensNothing() {
+        final Path source = dir.resolve("Frankenstein.epub");
+        final ImportedBook good = BookFixtures.frankensteinImport();
+        projects.on(source, Result.ok(new ImportedBook(good.projectId(), good.inspection(), good.profile(), null)));
+        final ImportViewModel viewModel = viewModel();
+
+        open(viewModel, source);
+
+        assertThat(errors.presented()).extracting(AppError::code).containsExactly(ErrorCode.internal);
+        assertThat(openedBook()).isNull();
+        assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
     }
 
     // IF a file the application cannot read were not refused with its typed validation code, THEN the screen could not
@@ -171,7 +219,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
         final Path source = dir.resolve("notes.pdf");
         final AppError refusal = AppError.of(
                 ErrorCode.validation, "This file could not be opened", "The file is damaged or not a supported book.");
-        port.on(source, Result.err(refusal));
+        projects.on(source, Result.err(refusal));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -180,7 +228,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
             assertThat(refused.fileName()).isEqualTo("notes.pdf");
             assertThat(refused.error().code()).isEqualTo(ErrorCode.validation);
         });
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
     }
 
     // IF a success raised no toast, or more than one, or named another file, THEN the confirmation would be missing or
@@ -188,7 +236,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_success_raisesExactlyOneSuccessToastNamingTheFile() {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -201,7 +249,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_refusal_raisesNoToast() {
         final Path source = dir.resolve("secret.epub");
-        port.on(source, Result.err(protectedError()));
+        projects.on(source, Result.err(protectedError()));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -218,14 +266,14 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     void open_internalOrBusyWithNoPreviousBook_goesToThePresenterAndStaysIdleWithNoRefusal(final ErrorCode code) {
         final Path source = dir.resolve("any.epub");
         final AppError fault = AppError.of(code, "Could not open", "The book could not be opened.");
-        port.on(source, Result.err(fault));
+        projects.on(source, Result.err(fault));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(errors.presented()).containsExactly(fault);
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
         assertThat(toasts.raised()).isEmpty();
         assertThat(isOpening(viewModel)).isFalse();
     }
@@ -235,7 +283,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_validationRefusal_neverReachesThePresenter() {
         final Path source = dir.resolve("notes.pdf");
-        port.on(source, Result.err(AppError.of(ErrorCode.validation, "This file could not be opened", "Damaged.")));
+        projects.on(source, Result.err(AppError.of(ErrorCode.validation, "This file could not be opened", "Damaged.")));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -248,32 +296,15 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     void open_goodBookAfterARefusal_replacesTheRefusalWithTheCard() {
         final Path bad = dir.resolve("secret.epub");
         final Path good = dir.resolve("Frankenstein.epub");
-        port.on(bad, Result.err(protectedError()));
-        port.on(good, Result.ok(BookFixtures.frankenstein()));
+        projects.on(bad, Result.err(protectedError()));
+        projects.on(good, Result.ok(BookFixtures.frankensteinImport()));
         final ImportViewModel viewModel = viewModel();
         open(viewModel, bad);
 
         open(viewModel, good);
 
         assertThat(stateOf(viewModel)).isInstanceOf(ImportState.Detected.class);
-        assertThat(openedBookOf(viewModel)).isNotNull();
-    }
-
-    // IF the mismatch state could not be put on the screen directly, THEN its rendering would be covered by nothing;
-    // the view model must publish exactly the card and detected language it was given.
-    @Test
-    void showLanguageMismatch_cardAndDetectedLanguage_publishesThatState() {
-        final BookCard card =
-                new BookCard("Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9);
-        final ImportViewModel viewModel = viewModel();
-
-        onFx(() -> {
-            viewModel.showLanguageMismatch(card, "uk");
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(stateOf(viewModel)).isEqualTo(new ImportState.LanguageMismatch(card, "uk"));
+        assertThat(openedBook()).isNotNull();
     }
 
     private static AppError protectedError() {

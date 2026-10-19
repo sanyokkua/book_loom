@@ -284,6 +284,16 @@ class GoldenComparisonMetaTest {
                 .isInstanceOf(AssertionError.class);
     }
 
+    // a changed <html> class attribute still fails the comparison (task 4.6).
+    @Test
+    void epubComparison_changedHtmlClassAttribute_isCaught() {
+        final String withClass = SELF_CLOSED_SCRIPT_CONTENT_DOCUMENT.replace("<html xmlns", "<html class=\"%s\" xmlns");
+        final Path source = epubWithContentDocument("class-source.epub", withClass.formatted("a"));
+        final Path output = epubWithContentDocument("class-output.epub", withClass.formatted("b"));
+        assertThatThrownBy(() -> EpubCanonicalAssert.assertCanonicalEqual(source, output))
+                .isInstanceOf(AssertionError.class);
+    }
+
     // WHEN a source content document holding <script src="js/book.js"/> and two <p> elements
     // is compared against an output holding <script src="js/book.js"></script> and only one of those <p>
     // elements, THEN the EPUB golden round-trip comparison fails.

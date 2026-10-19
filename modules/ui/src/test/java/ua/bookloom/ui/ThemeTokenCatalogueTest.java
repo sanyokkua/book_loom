@@ -17,7 +17,6 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The published token catalogue is carried whole, by its published names, with a light and a dark value each.
@@ -27,7 +26,7 @@ import org.testfx.framework.junit5.ApplicationTest;
  * {@code theme.css}, so a wrong value or a missing role fails instead of agreeing with itself. The colour values
  * are asserted on what a real node resolves, not on the text of the stylesheet.
  */
-class ThemeTokenCatalogueTest extends ApplicationTest {
+class ThemeTokenCatalogueTest extends FxTestBase {
 
     /** Set by {@code modules/ui/build.gradle.kts}, which also declares the mockup as an input of the test task. */
     private static final Path MOCKUP = Path.of(Objects.requireNonNull(
@@ -37,9 +36,9 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
     private static final Pattern MOCKUP_LIGHT_BLOCK =
             Pattern.compile(":root\\[data-theme=\"light\"]\\s*\\{([^}]*)}", Pattern.DOTALL);
     private static final Pattern MOCKUP_DECLARATION = Pattern.compile("--([a-z0-9-]+)\\s*:");
-    private static final Pattern STATUS_ROLE = Pattern.compile("(ok|warn|err|info)(-bg|-bd)?");
+    private static final Pattern STATUS_ROLE = Pattern.compile("(ok|warn|err|info)(-bg|-bd|-fg)?");
 
-    /** The 41 roles that are looked-up colours, exactly as published. */
+    /** The 50 roles that are looked-up colours, exactly as published. */
     private static final Set<String> COLOUR_ROLES = Set.of(
             "bg",
             "surface",
@@ -67,29 +66,41 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
             "nav-active-bg",
             "nav-active-fg",
             "nav-accent",
+            "nav-accent-fg",
             "title-bg",
             "title-fg",
+            "title-ok-fg",
+            "title-warn-fg",
+            "input-border",
             "focus",
+            "nav-focus",
             "ok",
             "ok-bg",
             "ok-bd",
+            "ok-fg",
             "warn",
             "warn-bg",
             "warn-bd",
+            "warn-fg",
             "err",
             "err-bg",
             "err-bd",
+            "err-fg",
             "info",
             "info-bg",
-            "info-bd");
+            "info-bd",
+            "info-fg");
 
     /** The three elevation roles: published as roles, expressed as style classes rather than colours (D10). */
     private static final Set<String> ELEVATION_ROLES = Set.of("shadow-sm", "shadow", "shadow-lg");
 
+    /** Three roles the mockup paints from literals: the switch's off and on tracks and its thumb. */
+    private static final Set<String> SWITCH_ROLES = Set.of("toggle-off", "toggle-on", "toggle-thumb");
+
     private static final Set<String> BRAND_ANCHORS =
             Set.of("brand-charcoal", "brand-slate", "brand-sand", "brand-cognac");
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 
@@ -102,31 +113,33 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
 
     // ===== the role names ================================================================================
 
-    // IF the stylesheet is read for its role names, THEN there are exactly 44: 41 colours plus 3 elevations.
+    // IF the stylesheet is read for its role names, THEN there are 53 published (50 colours, 3 elevations) plus 3
+    // switch.
     @Test
-    void catalogue_declaredRoles_areExactlyFortyFour() {
-        assertThat(catalogueNames()).hasSize(44);
+    void catalogue_declaredRoles_areFiftyThreePublishedPlusThreeSwitchRoles() {
+        assertThat(catalogueNames()).hasSize(56);
     }
 
-    // IF the 41 colour roles are counted on .root without the brand anchors, THEN there are exactly 41.
+    // IF the colour roles are counted on .root without the brand anchors, THEN there are 50 published plus 3 switch.
     @Test
-    void catalogue_colourRolesOnRoot_areExactlyFortyOne() {
-        assertThat(colourNames(rootBlock())).hasSize(41);
+    void catalogue_colourRolesOnRoot_areFiftyPublishedPlusThreeSwitchRoles() {
+        assertThat(colourNames(rootBlock())).hasSize(53);
     }
 
-    // IF the catalogue's roles are classified, THEN exactly 12 are status roles (4 statuses x 3 shades).
+    // IF the catalogue's roles are classified, THEN exactly 16 are status roles (4 statuses x 4 shades).
     @Test
-    void catalogue_statusRoles_areTwelve() {
+    void catalogue_statusRoles_areSixteen() {
         assertThat(catalogueNames())
                 .filteredOn(name -> STATUS_ROLE.matcher(name).matches())
-                .hasSize(12);
+                .hasSize(16);
     }
 
-    // IF the catalogue is compared with the published role list, THEN they are the same 44 names.
+    // IF the catalogue is compared with the published role list, THEN they are the same names plus the switch roles.
     @Test
-    void catalogue_names_equalThePublishedList() {
+    void catalogue_names_equalThePublishedListPlusSwitchRoles() {
         final Set<String> published = new TreeSet<>(COLOUR_ROLES);
         published.addAll(ELEVATION_ROLES);
+        published.addAll(SWITCH_ROLES);
 
         assertThat(catalogueNames()).containsExactlyInAnyOrderElementsOf(published);
     }
@@ -136,11 +149,13 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
     void catalogue_names_equalTheMockupLightBlockDeclarations() throws IOException {
         final Set<String> mockup = mockupLightNames();
 
-        assertThat(mockup).as("the mockup's light block declares 44 roles").hasSize(44);
-        assertThat(catalogueNames()).containsExactlyInAnyOrderElementsOf(mockup);
+        assertThat(mockup).as("the mockup's light block declares 53 roles").hasSize(53);
+        final Set<String> withoutSwitchRoles = new TreeSet<>(catalogueNames());
+        withoutSwitchRoles.removeAll(SWITCH_ROLES);
+        assertThat(withoutSwitchRoles).containsExactlyInAnyOrderElementsOf(mockup);
     }
 
-    // IF the dark block is read, THEN it defines the same 41 colour names as the light block, no more, no fewer.
+    // IF the dark block is read, THEN it defines the same 53 colour names as the light block, no more, no fewer.
     @Test
     void darkBlock_colourNames_equalTheLightBlockNames() {
         assertThat(colourNames(darkBlock())).containsExactlyInAnyOrderElementsOf(colourNames(rootBlock()));
@@ -215,12 +230,12 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
             divider       | #eae4d8                 | #3c4a51
             text          | #2c3941                 | #e6ebed
             text-strong   | #22303a                 | #f4f7f8
-            muted         | #6f7c82                 | #9fb0b7
-            muted-2       | #95928a                 | #7f9098
+            muted         | #5d686d                 | #bdc9cd
+            muted-2       | #6f6c65                 | #a2afb4
             primary       | #a58075                 | #c4917e
-            primary-hover | #916b60                 | #d4a593
-            primary-press | #7e5b51                 | #b47e6b
-            primary-fg    | #ffffff                 | #241c19
+            primary-hover | #b58f83                 | #d4a593
+            primary-press | #c39e92                 | #b47e6b
+            primary-fg    | #241c19                 | #241c19
             primary-soft  | #f0e5dd                 | #3f3733
             sand-soft     | #f2e9db                 | #3a3a37
             sand-strong   | #dcc4a3                 | #6d5f4a
@@ -228,25 +243,37 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
             nav-bg        | #3a4a52                 | #20292e
             nav-bg-2      | #324148                 | #1c2429
             nav-fg        | #cdd5d8                 | #cdd6da
-            nav-fg-muted  | #859399                 | #7d8f97
+            nav-fg-muted  | #b0b9bd                 | #8d9ea6
             nav-active-bg | rgba(231,214,192,.13)   | rgba(231,214,192,.10)
             nav-active-fg | #f3ede3                 | #f3ede3
             nav-accent    | #c99a86                 | #c99a86
+            nav-accent-fg | #1c2429                 | #1c2429
             title-bg      | #324148                 | #1c2429
             title-fg      | #dfe4e6                 | #dfe4e6
-            focus         | #a58075                 | #c4917e
+            title-ok-fg   | #9cc4a6                 | #9cc4a6
+            title-warn-fg | #e0b56f                 | #e0b56f
+            input-border  | #988462                 | #7d949e
+            toggle-off    | #87939a                 | #87939a
+            toggle-on     | #a58075                 | #ad8679
+            toggle-thumb  | #ffffff                 | #ffffff
+            focus         | #3d6b80                 | #8cc0d6
+            nav-focus     | #9fd0e4                 | #9fd0e4
             ok            | #5f8a6b                 | #7faa8a
             ok-bg         | #e7efe8                 | #2b3a33
             ok-bd         | #bcd4c1                 | #3f5a49
+            ok-fg         | #4a6c54                 | #b0d0b7
             warn          | #bd863a                 | #d0a25a
             warn-bg       | #f6ecd8                 | #3a3327
             warn-bd       | #e4cfa2                 | #5c4d31
+            warn-fg       | #835d27                 | #e6c086
             err           | #b0574c                 | #cc7a6f
             err-bg        | #f7e4df                 | #3b2b28
             err-bd        | #e4b6ad                 | #5e3f39
+            err-fg        | #a04f45                 | #edbbb4
             info          | #4d6b78                 | #7a9dab
             info-bg       | #e5edf0                 | #293940
             info-bd       | #b7cbd2                 | #3d525b
+            info-fg       | #4d6b78                 | #b3cbd4
             """)
     void role_underLightAndDark_resolvesToThePublishedValues(final String role, final String light, final String dark) {
         ThemeTestSupport.applyTheme(scene, false);
@@ -256,16 +283,16 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
         ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, role), dark, role + " under dark");
     }
 
-    /** Guards the hard-coded lists themselves: 41 colours, 3 elevations, 12 statuses among them. */
+    /** Guards the hard-coded lists themselves: 50 colours, 3 elevations, 16 statuses among them. */
     @Test
     void publishedLists_asTranscribed_haveTheSpecifiedSizes() {
         final List<String> statuses = COLOUR_ROLES.stream()
                 .filter(name -> STATUS_ROLE.matcher(name).matches())
                 .toList();
 
-        assertThat(COLOUR_ROLES).hasSize(41);
+        assertThat(COLOUR_ROLES).hasSize(50);
         assertThat(ELEVATION_ROLES).hasSize(3);
-        assertThat(statuses).hasSize(12);
+        assertThat(statuses).hasSize(16);
     }
 
     // ===== helpers =======================================================================================

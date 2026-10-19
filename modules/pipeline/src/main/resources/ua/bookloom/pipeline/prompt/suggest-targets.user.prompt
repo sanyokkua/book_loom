@@ -1,0 +1,5 @@
+[Names and terms — each with its type, its gender when known, what is already rendered of its person, and sentences from the book]
+{{terms}}
+
+Return JSON exactly as:
+{"suggestions":[{"term":"<term as listed>","target":"<rendering, or empty>","gender":"male|female|neuter|unknown"}]}

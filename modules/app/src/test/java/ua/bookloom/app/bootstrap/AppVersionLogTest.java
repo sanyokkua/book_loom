@@ -73,7 +73,8 @@ class AppVersionLogTest {
         LoggingBootstrap.configure(
                 logDir, false, new ResolvedLogLevel(Level.INFO, ResolvedLogLevel.Source.DEFAULT, null));
         Launcher.logStartup(paths, AppEnvironment.DEV);
-        StartupContext.publish(new StartupContext(paths, AppEnvironment.DEV));
+        StartupContext.publish(
+                new StartupContext(paths, AppEnvironment.DEV, ReviewModeResolver.resolve(name -> null, name -> null)));
         FxToolkit.registerPrimaryStage();
 
         final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);

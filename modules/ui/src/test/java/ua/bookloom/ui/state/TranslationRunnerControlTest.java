@@ -16,11 +16,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
-import ua.bookloom.api.pipeline.StageStarted;
 
 /** Pause, resume and cancel: the requested state shows at once, the reached state only when the engine acts. */
 class TranslationRunnerControlTest extends RunnerTestBase {
@@ -152,23 +150,6 @@ class TranslationRunnerControlTest extends RunnerTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(states).containsExactly(RunState.RUNNING, RunState.STOPPING);
-        assertThat(job.calls()).doesNotContain("pause");
-        job.finish(Result.ok(cancelledReport()));
-        awaitState(RunState.STOPPED);
-    }
-
-    // IF pause() were honoured in the export stage, THEN the screen would show a pending pause the engine ignores.
-    @Test
-    void pause_afterTheExportStageStarted_publishesNothingAndDoesNotAskTheJob() throws Exception {
-        startJob();
-        job.emit(new StageStarted(JobStage.EXPORT, progress(10, 0, 0)));
-        job.drain();
-        WaitForAsyncUtils.waitForFxEvents();
-
-        runner.pause();
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(states).containsExactly(RunState.RUNNING);
         assertThat(job.calls()).doesNotContain("pause");
         job.finish(Result.ok(cancelledReport()));
         awaitState(RunState.STOPPED);

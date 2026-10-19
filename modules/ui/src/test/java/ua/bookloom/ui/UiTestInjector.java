@@ -3,22 +3,42 @@ package ua.bookloom.ui;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import ua.bookloom.api.document.DocumentPort;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.NamesPass;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.state.CsvFileChooser;
+import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
@@ -33,8 +53,15 @@ import ua.bookloom.ui.theme.ThemeBlock;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UiTestInjector {
 
+    /** A provider that never says what window its model has, so a run sizes against its default. */
+    private static final ModelCapabilities UNKNOWN_CONTEXT =
+            (providerId, modelId) -> Result.ok(ContextLength.unknown());
+
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
+
+    /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
+    public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
 
     // Two, so that a held provider check and a held model listing never block each other.
     private static final int BACKGROUND_THREADS = 2;
@@ -42,173 +69,247 @@ public final class UiTestInjector {
     /**
      * Creates an injector over {@link UiModule} whose display locale is fixed, whose operating system always reports
      * the light scheme, whose build version is {@value #DEV_VERSION}, whose {@link BackgroundExecutor} is two daemon
-     * threads, and whose provider registry, verifier, model catalogue and document port are the default test fakes (the
-     * two built-in presets, a verifier nobody is expected to ask, a catalogue that lists no models, a port that
-     * answers every book with an error, a model factory that hands out a model and an engine that refuses every job).
+     * threads, and whose every port is the idle test fake.
      *
      * @param locale the language every message renders in
      * @return a fresh injector; never shares singletons with another call
      */
     public static Injector create(final Locale locale) {
-        return create(locale, new FakeProviderConfigs(), ScriptedProviderVerifier.idle(), ScriptedModelCatalog.idle());
+        return builder(locale).build();
     }
 
     /**
-     * As {@link #create(Locale)} with a scripted document port, for a test that opens books.
+     * Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake: the two built-in
+     * provider presets, a verifier nobody is expected to ask, a catalogue that lists no models, a project service that
+     * answers every import with an error, an export service nobody is expected to ask, a model factory that hands out
+     * a model and an engine that refuses every job.
      *
      * @param locale the language every message renders in
-     * @param documents what the graph's {@link DocumentPort} is
-     * @return a fresh injector; never shares singletons with another call
+     * @return the builder
      */
-    public static Injector create(final Locale locale, final DocumentPort documents) {
-        return create(
-                locale,
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                ScriptedModelCatalog.idle(),
-                documents);
+    public static Builder builder(final Locale locale) {
+        return new Builder(Objects.requireNonNull(locale, "locale"));
     }
 
-    /**
-     * As {@link #create(Locale)} with a scripted verifier, for a test that drives or observes provider checks.
-     *
-     * @param locale the language every message renders in
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderVerifier verifier) {
-        return create(locale, new FakeProviderConfigs(), verifier, ScriptedModelCatalog.idle());
+    /** Collects the collaborators of one test graph; {@link #build()} makes a fresh injector from them. */
+    public static final class Builder {
+
+        private final Locale locale;
+        private ProviderConfigs configs = new FakeProviderConfigs();
+        private ProviderVerifier verifier = ScriptedProviderVerifier.idle();
+        private ModelCatalog catalog = ScriptedModelCatalog.idle();
+        private ProjectService projects = new ScriptedProjectService();
+        private LanguageSupport languages = tag -> true;
+        private ExportService exports = new ScriptedExportService();
+        private ChatModelFactory models = ScriptedChatModelFactory.ok();
+        private TranslationEngine engine = ScriptedTranslationEngine.idle();
+        private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
+        private ScriptedLexiconService lexicon = new ScriptedLexiconService();
+        private ScriptedNamesPass namesPass = new ScriptedNamesPass();
+        private ScriptedReviewDesk desk = new ScriptedReviewDesk();
+        private ReviewMode reviewMode = ReviewMode.UNATTENDED;
+        private @Nullable ReplaceRunPrompt prompt;
+        private boolean gated;
+        private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
+
+        private Builder(final Locale locale) {
+            this.locale = locale;
+        }
+
+        /** What the graph's {@link ProviderConfigs} is. */
+        public Builder configs(final ProviderConfigs value) {
+            configs = Objects.requireNonNull(value, "configs");
+            return this;
+        }
+
+        /** What the graph's {@link ProviderVerifier} is. */
+        public Builder verifier(final ProviderVerifier value) {
+            verifier = Objects.requireNonNull(value, "verifier");
+            return this;
+        }
+
+        /** What the graph's {@link ModelCatalog} is. */
+        public Builder catalog(final ModelCatalog value) {
+            catalog = Objects.requireNonNull(value, "catalog");
+            return this;
+        }
+
+        /** What the graph's {@link ProjectService} is, so the test can read what the window asked of it. */
+        public Builder projects(final ProjectService value) {
+            projects = Objects.requireNonNull(value, "projects");
+            return this;
+        }
+
+        /** What the graph's {@link LanguageSupport} is; by default every language has tested rules. */
+        public Builder languages(final LanguageSupport value) {
+            languages = Objects.requireNonNull(value, "languages");
+            return this;
+        }
+
+        /** What the graph's {@link ExportService} is. */
+        public Builder exports(final ExportService value) {
+            exports = Objects.requireNonNull(value, "exports");
+            return this;
+        }
+
+        /** What the graph's {@link ChatModelFactory} is. */
+        public Builder models(final ChatModelFactory value) {
+            models = Objects.requireNonNull(value, "models");
+            return this;
+        }
+
+        /** What the graph's {@link TranslationEngine} is. */
+        public Builder engine(final TranslationEngine value) {
+            engine = Objects.requireNonNull(value, "engine");
+            return this;
+        }
+
+        /** What the graph's {@link GlossaryService} is, so the test can script what the names screen is answered. */
+        public Builder glossary(final ScriptedGlossaryService value) {
+            glossary = Objects.requireNonNull(value, "glossary");
+            return this;
+        }
+
+        /** What the graph's {@link LexiconService} is, so the test can fill and read the recurring terms. */
+        public Builder lexicon(final ScriptedLexiconService value) {
+            lexicon = Objects.requireNonNull(value, "lexicon");
+            return this;
+        }
+
+        /** What the graph's {@link NamesPass} is, so the test can script the estimate and the pass it is answered. */
+        public Builder namesPass(final ScriptedNamesPass value) {
+            namesPass = Objects.requireNonNull(value, "namesPass");
+            return this;
+        }
+
+        /** What the graph's {@link ReviewDesk} is, so the test can script the counts and the queue it is answered. */
+        public Builder reviewDesk(final ScriptedReviewDesk value) {
+            desk = Objects.requireNonNull(value, "desk");
+            return this;
+        }
+
+        /** The review mode the graph was launched with. */
+        public Builder reviewMode(final ReviewMode value) {
+            reviewMode = Objects.requireNonNull(value, "reviewMode");
+            return this;
+        }
+
+        /** Where the graph says its logs are, and whether the detailed log is on. */
+        public Builder diagnosticLog(final DiagnosticLog value) {
+            diagnosticLog = Objects.requireNonNull(value, "diagnosticLog");
+            return this;
+        }
+
+        /** Replaces the real replace-run card with this question, so the test can read what was asked. */
+        public Builder prompt(final ReplaceRunPrompt value) {
+            prompt = Objects.requireNonNull(value, "prompt");
+            return this;
+        }
+
+        /**
+         * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
+         * first opening a book and choosing languages; only a test of the gating itself asks for it.
+         */
+        public Builder gated() {
+            gated = true;
+            return this;
+        }
+
+        /**
+         * Makes the graph.
+         *
+         * @return a fresh injector; never shares singletons with another call
+         */
+        public Injector build() {
+            final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
+            return Guice.createInjector(Modules.override(new UiModule())
+                    .with(
+                            new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
+                            scriptedPorts(prompt),
+                            open));
+        }
+
+        private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
+            return new AbstractModule() {
+                @Override
+                protected void configure() {
+                    bind(LocaleProvider.class).toInstance(() -> locale);
+                    bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                    bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                    bind(DiagnosticLog.class).toInstance(diagnosticLog);
+                    bind(ExecutorService.class)
+                            .annotatedWith(BackgroundExecutor.class)
+                            .toInstance(daemonExecutor());
+                    bind(ProviderConfigs.class).toInstance(configs);
+                    bind(ProviderVerifier.class).toInstance(verifier);
+                    bind(ModelCatalog.class).toInstance(catalog);
+                    bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
+                    bind(ChatModelFactory.class).toInstance(models);
+                    bind(TranslationEngine.class).toInstance(engine);
+                    bind(ProjectService.class).toInstance(projects);
+                    bind(LanguageSupport.class).toInstance(languages);
+                    bind(ExportService.class).toInstance(exports);
+                    install(new ExportExtrasModule());
+                    if (replacement != null) {
+                        bind(ReplaceRunPrompt.class).toInstance(replacement);
+                    }
+                }
+            };
+        }
     }
 
-    /**
-     * As {@link #create(Locale)} with a scripted verifier and a scripted model catalogue, for a test that drives or
-     * observes model listing.
-     *
-     * @param locale the language every message renders in
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderVerifier verifier, final ModelCatalog catalog) {
-        return create(locale, new FakeProviderConfigs(), verifier, catalog);
+    /** Every workflow step open, whatever the book and its languages. */
+    private static final class OpenStepsModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(StepLocks.class)
+                    .toInstance(step -> new ReadOnlyObjectWrapper<@Nullable MessageKey>().getReadOnlyProperty());
+        }
     }
 
-    /**
-     * As {@link #create(Locale)} with a scripted provider registry and verifier.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderConfigs configs, final ProviderVerifier verifier) {
-        return create(locale, configs, verifier, ScriptedModelCatalog.idle());
+    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the choosers. */
+    private static final class ExportExtrasModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
+            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
+            bind(CsvFileChooser.class).toInstance(new RecordingCsvChooser());
+        }
     }
 
-    /**
-     * As {@link #create(Locale)} with a scripted provider registry, verifier and model catalogue.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog) {
-        return create(locale, configs, verifier, catalog, ScriptedDocumentPort.idle());
-    }
+    /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
+    private static final class ReviewPortsModule extends AbstractModule {
 
-    /**
-     * As {@link #create(Locale)} with every collaborator scripted.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @param documents what the graph's {@link DocumentPort} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog,
-            final DocumentPort documents) {
-        return create(
-                locale,
-                configs,
-                verifier,
-                catalog,
-                documents,
-                ScriptedChatModelFactory.ok(),
-                ScriptedTranslationEngine.idle());
-    }
+        private final GlossaryService glossary;
+        private final LexiconService lexicon;
+        private final NamesPass namesPass;
+        private final ReviewDesk desk;
+        private final ReviewMode reviewMode;
 
-    /**
-     * As {@link #create(Locale, DocumentPort)} with a scripted model factory and translation engine, for a test that
-     * starts runs.
-     *
-     * @param locale the language every message renders in
-     * @param documents what the graph's {@link DocumentPort} is
-     * @param models what the graph's {@link ChatModelFactory} is
-     * @param engine what the graph's {@link TranslationEngine} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final DocumentPort documents,
-            final ChatModelFactory models,
-            final TranslationEngine engine) {
-        return create(
-                locale,
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                ScriptedModelCatalog.idle(),
-                documents,
-                models,
-                engine);
-    }
+        ReviewPortsModule(
+                final GlossaryService glossary,
+                final LexiconService lexicon,
+                final NamesPass namesPass,
+                final ReviewDesk desk,
+                final ReviewMode reviewMode) {
+            this.glossary = glossary;
+            this.lexicon = lexicon;
+            this.namesPass = namesPass;
+            this.desk = desk;
+            this.reviewMode = reviewMode;
+        }
 
-    private static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog,
-            final DocumentPort documents,
-            final ChatModelFactory models,
-            final TranslationEngine engine) {
-        Objects.requireNonNull(locale, "locale");
-        Objects.requireNonNull(configs, "configs");
-        Objects.requireNonNull(verifier, "verifier");
-        Objects.requireNonNull(catalog, "catalog");
-        Objects.requireNonNull(documents, "documents");
-        Objects.requireNonNull(models, "models");
-        Objects.requireNonNull(engine, "engine");
-        final LocaleProvider fixed = () -> locale;
-        final ColorSchemeProvider light = () -> Optional.of(ThemeBlock.LIGHT);
-        final FileRevealer revealer = new RecordingFileRevealer();
-        return Guice.createInjector(Modules.override(new UiModule()).with(new AbstractModule() {
-            @Override
-            protected void configure() {
-                bind(LocaleProvider.class).toInstance(fixed);
-                bind(ColorSchemeProvider.class).toInstance(light);
-                bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                bind(ExecutorService.class)
-                        .annotatedWith(BackgroundExecutor.class)
-                        .toInstance(daemonExecutor());
-                bind(ProviderConfigs.class).toInstance(configs);
-                bind(ProviderVerifier.class).toInstance(verifier);
-                bind(ModelCatalog.class).toInstance(catalog);
-                bind(DocumentPort.class).toInstance(documents);
-                bind(ChatModelFactory.class).toInstance(models);
-                bind(TranslationEngine.class).toInstance(engine);
-                bind(FileRevealer.class).toInstance(revealer);
-            }
-        }));
+        @Override
+        protected void configure() {
+            bind(GlossaryService.class).toInstance(glossary);
+            bind(LexiconService.class).toInstance(lexicon);
+            bind(NamesPass.class).toInstance(namesPass);
+            bind(ReviewDesk.class).toInstance(desk);
+            bind(ReviewMode.class).toInstance(reviewMode);
+        }
     }
 
     private static ExecutorService daemonExecutor() {

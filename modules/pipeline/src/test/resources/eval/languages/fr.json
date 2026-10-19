@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "fr",
+ "drafts": [
+  {
+   "name": "fr-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)^(?!.*[“”]).*«.*».*$",
+    "injection": false
+   }
+  },
+  {
+   "name": "fr-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)fatigu[ée]e",
+    "injection": false
+   }
+  },
+  {
+   "name": "fr-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)chapitre",
+    "injection": false
+   }
+  },
+  {
+   "name": "fr-false-friend",
+   "masked": "He is currently reading a book.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)actuellement|en ce moment|à présent",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "fr-gender",
+   "kind": "gender",
+   "source": "She was tired, but she kept walking.",
+   "candidate": "Elle était fatigué, mais elle continuait de marcher.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "fr-gender-clean",
+   "kind": "gender",
+   "source": "She was tired, but she kept walking.",
+   "candidate": "Elle était fatiguée, mais elle continuait de marcher.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "fr-false-friend",
+   "kind": "false-friend",
+   "source": "He is currently reading a book.",
+   "candidate": "Il lit couramment un livre.",
+   "defective": true,
+   "rationale": "couramment is fluently"
+  },
+  {
+   "id": "fr-false-friend-clean",
+   "kind": "false-friend",
+   "source": "He is currently reading a book.",
+   "candidate": "Il lit actuellement un livre.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

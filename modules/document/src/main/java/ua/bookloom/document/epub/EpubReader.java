@@ -13,18 +13,25 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.MetadataKey;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.inspect.LanguageEvidenceReader;
+import ua.bookloom.document.model.AuxiliarySlots;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.JsoupTreeNode;
+import ua.bookloom.document.model.PublicationYear;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.TreeDialect;
+import ua.bookloom.document.model.TreeNode;
 import ua.bookloom.document.model.ZipEntryReader;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -72,13 +79,18 @@ public final class EpubReader {
 
         final UnitsResult unitsResult = readUnits(opf, byName);
         final String documentId = UUID.randomUUID().toString();
-        registry.put(documentId, new ParsedEpub(entries, opfPath, opf.jdomDocument(), unitsResult.jsoupTrees()));
+        registry.put(documentId, parsedEpub(entries, opfPath, opf, unitsResult));
+
+        final String declaredRaw =
+                opf.dcLanguages().isEmpty() ? null : opf.dcLanguages().get(0);
+        final LanguageEvidence evidence =
+                LanguageEvidenceReader.evaluate(declaredRaw, rootDeclarations(unitsResult.jsoupTrees()));
 
         return new Document(
                 documentId,
                 BookFormat.EPUB,
-                opf.dcLanguages().isEmpty() ? null : opf.dcLanguages().get(0),
-                null,
+                declaredRaw,
+                evidence.contentMajority(),
                 // A container format records no document-level encoding and no byte-order-mark flag: each spine
                 // document declares its own charset, so the container as a whole has no answer to give (design.md D5).
                 null,
@@ -152,7 +164,36 @@ public final class EpubReader {
                     skipped,
                     units.size());
         }
-        return new UnitsResult(units, trees);
+        return withAuxiliaryUnit(opf, byName, EpubUnitRoles.assign(opf, byName, units, trees), trees);
+    }
+
+    private static ParsedEpub parsedEpub(
+            List<RawEntry> entries, String opfPath, ParsedOpf opf, UnitsResult unitsResult) {
+        return new ParsedEpub(
+                entries,
+                opfPath,
+                opf.jdomDocument(),
+                unitsResult.jsoupTrees(),
+                Map.of(unitsResult.auxiliaryHandleId(), unitsResult.auxiliarySlots()),
+                unitsResult.navigation());
+    }
+
+    /** Appends the auxiliary unit after every body unit, so body ids, positions and orders stay as they were. */
+    private static UnitsResult withAuxiliaryUnit(
+            ParsedOpf opf,
+            Map<String, RawEntry> byName,
+            List<Unit> bodyUnits,
+            Map<String, org.jsoup.nodes.Document> trees) {
+        final EpubAuxiliary.Collected collected = EpubAuxiliary.collect(opf, byName, bodyUnits, trees);
+        final AuxiliarySlots.Collected auxiliary = collected.slots();
+        final String handleId = UUID.randomUUID().toString();
+        final List<Unit> units = new ArrayList<>(bodyUnits);
+        units.add(AuxiliaryUnit.of(opf.opfPath(), bodyUnits.size(), handleId, auxiliary.segments()));
+        log.debug(
+                "EPUB auxiliary unit href={} segments={}",
+                opf.opfPath(),
+                auxiliary.segments().size());
+        return new UnitsResult(units, trees, handleId, auxiliary.slots(), collected.navigation());
     }
 
     private static void addUnit(
@@ -170,6 +211,29 @@ public final class EpubReader {
         units.add(new Unit(href, order, href, item.mediaType(), new SkeletonHandle(handleId), segments));
     }
 
+    /**
+     * Each spine document's own root-tag declaration — {@code xml:lang}, else {@code lang} — never the whole body:
+     * this reads only the root element, not any content, so filling {@code detectedSourceLang} adds no real work
+     * beyond the parse every spine document already gets for segmentation.
+     */
+    private static List<@Nullable String> rootDeclarations(Map<String, org.jsoup.nodes.Document> jsoupTrees) {
+        final List<@Nullable String> declarations = new ArrayList<>(jsoupTrees.size());
+        for (final org.jsoup.nodes.Document doc : jsoupTrees.values()) {
+            declarations.add(rootDeclaredLanguage(doc));
+        }
+        return declarations;
+    }
+
+    private static @Nullable String rootDeclaredLanguage(org.jsoup.nodes.Document doc) {
+        final Element html = doc.selectFirst("html");
+        if (html == null) {
+            return null;
+        }
+        final TreeNode root = JsoupTreeNode.of(html);
+        final String xmlLang = root.attribute("xml:lang");
+        return xmlLang != null ? xmlLang : root.attribute("lang");
+    }
+
     private static Map<String, String> metadata(ParsedOpf opf) {
         final Map<String, String> metadata = new LinkedHashMap<>();
         if (opf.title() != null) {
@@ -178,8 +242,22 @@ public final class EpubReader {
         if (opf.author() != null) {
             metadata.put(MetadataKey.AUTHOR.key(), opf.author());
         }
+        PublicationYear.of(opf.date()).ifPresent(year -> metadata.put(MetadataKey.DATE.key(), year));
+        if (opf.publisher() != null && !opf.publisher().isBlank()) {
+            metadata.put(MetadataKey.PUBLISHER.key(), opf.publisher());
+        }
+        log.debug(
+                "EPUB metadata keys={} declaredDate={} hasPublisher={}",
+                metadata.keySet(),
+                opf.date(),
+                metadata.containsKey(MetadataKey.PUBLISHER.key()));
         return metadata;
     }
 
-    private record UnitsResult(List<Unit> units, Map<String, org.jsoup.nodes.Document> jsoupTrees) {}
+    private record UnitsResult(
+            List<Unit> units,
+            Map<String, org.jsoup.nodes.Document> jsoupTrees,
+            String auxiliaryHandleId,
+            AuxiliarySlots auxiliarySlots,
+            NavigationResources navigation) {}
 }

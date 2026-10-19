@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-26
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
 `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/mockups/ui-mockup.html`
@@ -39,8 +39,8 @@ navigation column, content host, modal host and toast host (`AppShellView`) — 
 host (the About card, the error-with-details dialog) are built in code. The chrome's navigation entries are generated
 from the `ViewNames` enum, and a dialog card is short static content assembled with the shell and shown in the shell's
 own host, so an FXML file for either would be an empty container or a controller with no state of its own. The chrome
-still observes properties (the navigator's current view and content, the theme block) rather than owning state, and no
-screen is built this way.
+still observes properties (the navigator's current view and content, the theme block, the run status) rather than
+owning state, and no screen is built this way.
 
 ## observable-state-mirror {#state-mirror}
 
@@ -53,39 +53,87 @@ core's worker threads and the scene graph (`08_THREADING_CONCURRENCY.md`).
 ### JobProgress snapshot {#jobprogress}
 
 The Translating dashboard binds to the mirror's fixed, explicit observable surface, so its contract is stable and
-testable. The engine reports counts only; the dashboard shows those counts and derives nothing else.
+testable.
 
-**The engine's events** (`ua.bookloom.api.pipeline`): `JobEvent` is sealed over `StageStarted`, `ModelCallStarted`,
-`SegmentDecided`, `Paused`, `Resumed` and `Finished`. The point-in-time count snapshot they carry is
-`JobProgress(JobStage stage, int section, int sections, int accepted, int flagged, int pending)`, where `JobStage` is
-`TRANSLATE` or `EXPORT`; it rides on `StageStarted`, `SegmentDecided` and `Paused`. `ModelCallStarted(segmentId)` marks
-that a model call started (a draft and each repair announce once each; the client's own retries of one call do not). The engine names no throughput, no ETA, no in-flight text and no judge score, so
-none of those appears on the dashboard.
+**The engine's events** (`ua.bookloom.api.pipeline`, design.md D5): `JobEvent` is sealed over `SegmentStarted`,
+`SegmentDrafted`, `ModelCallStarted`, `ModelCallFinished`, `SegmentDecided`, `MemoryUpdated`, `Paused`, `Resumed` and
+`Finished`.
+
+- `SegmentStarted(segmentId, locator, displaySource, ChunkPosition(section, sections, chunk, chunks))` announces a
+  segment's text as its translation starts.
+- `SegmentDrafted(segmentId, displayTarget, confidence)` announces the drafted text once the model returns it.
+- `ModelCallStarted(segmentId?, CallKind, segmentIds, attempt, maxAttempts, timeout?, RequestSummary(messageChars,
+  contextWindow?, maxOutputTokens?)?)` and `ModelCallFinished(segmentId?, CallKind, elapsed, usage?, outputChars,
+  usageEstimated, segmentIds, attempt, failure?)` bracket each **attempt** of a model call by its kind (draft, repair,
+  judge, name scan, summary): the provider client reports every request it sends through a `CallAttemptListener`
+  (`:api`), so a retry after a timeout is announced as attempt 2 with its own clock; a chunk's judge call names every
+  segment it judges in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
+  count the client estimated rather than one the provider reported.
+- `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with besides its
+  source (preceding translations, rolling summary, glossary names, memory hits, recurring terms, character sheet);
+  the review desk shows it collapsed, in prompt order (style sheet, summary, glossary names, locked names, suggested
+  renderings, recurring terms, memory hits, characters, preceding translations).
+- `CallSnapshotUpdated(CallSnapshot)` announces one model call as a person inspects it, under one `callId` per call:
+  `WAITING` when its first attempt goes out (and again for a later attempt), then `ANSWERED` with the reply and usage,
+  or `FAILED`/`CANCELLED`; each `SegmentOutcomeNote` noted afterwards (a batch item `ADOPTED` or `FELL_BACK` with its
+  reason, a segment `ACCEPTED` or `FLAGGED` on the draft call that last drafted it) sends it again. It carries the
+  segments the call is about (`CallSegment(id, locator, displaySource)`) and the prompt's filled parts in the order
+  they were sent (`PromptSection(slot, heading, origin SYSTEM|USER, lines)`, the system style sheet first). Only the
+  run's described calls are shown — the drafts (single and batch, with their repairs), the reviewer, the directed fix
+  and the backward revision and consistency calls; the name scans and the summary are not.
+- `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
+  enters, for the log.
+- `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
+  snapshot, announcing a segment as decided.
+- `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one
+  glossary entry (label `+n`), on each memory reuse (labelled with the segment's locator), and on each summary
+  refresh (labelled with its version).
+- `Paused` names the segment the run paused on — for a pause on a provider error, the segment whose step failed (a
+  chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what Retry
+  now and Skip segment will do.
+
+The count snapshot is `JobProgress(JobStage stage, int section, int sections, int chunk, int chunks, int
+autoAccepted, int repairedAccepted, int accepted, int flagged, int pending)`, where `JobStage` is `PREP | TRANSLATE |
+REVISE`; it rides on `SegmentDecided` and `Paused`. `section, sections` is the 1-based position and count of **body**
+units — the auxiliary unit is never counted, and `section = sections` while it runs; the screen labels this column
+"Chapter" (no separate chapter field exists — the screen supplies the label). `chunk, chunks` is the position and
+count within the current section's chunking. `pending` leaves out segments kept as source by choice.
 
 **The mirror's properties** (`StateMirror`, read-only, read on the FX thread):
 
-| Property          | Meaning                                                                                               |
-|-------------------|-------------------------------------------------------------------------------------------------------|
-| `runState`        | `RunState`: `IDLE`, `RUNNING`, `PAUSING`, `PAUSED`, `STOPPING`, `STOPPED`, `COMPLETED`, `FAILED`      |
-| `accepted`        | segments accepted so far                                                                              |
-| `flagged`         | segments flagged so far                                                                               |
-| `remaining`       | segments not yet decided (the engine's `pending`)                                                     |
-| `total`           | accepted + flagged + remaining, derived once by `RunFigures`                                          |
-| `progressFraction`| decided segments over the total, `0.0` when the total is zero; the section columns never move the bar |
-| `waitingSeconds`  | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)               |
-| `failure`         | the run's `AppError`, when it ended on one                                                            |
-| `report`          | the run's `JobReport`, when it returned one                                                           |
-| `activityLog`     | unmodifiable `ObservableList<LogEntry>` of the newest 500 entries                                     |
+| Property             | Meaning                                                                                                          |
+|------------------------|---------------------------------------------------------------------------------------------------------------|
+| `runState`            | `RunState`: `IDLE`, `RUNNING`, `PAUSED`, `STOPPED`, `PROVIDER_ERROR`, `COMPLETED`, `FAILED`                     |
+| `currentFile`         | the file name the run is translating                                                                            |
+| `section`, `sections` | the 1-based body-unit position and count (`#jobprogress`)                                                       |
+| `chunk`, `chunks`     | the position and count within the current section's chunking                                                    |
+| `autoAccepted`        | segments accepted without a repair                                                                              |
+| `repairedAccepted`    | segments accepted after a repair                                                                                |
+| `accepted`            | segments accepted so far (auto-accepted + repaired-accepted)                                                    |
+| `flagged`             | segments flagged so far                                                                                          |
+| `remaining`           | segments not yet decided, leaving out segments kept as source by choice (the engine's `pending`)                |
+| `total`               | accepted + flagged + remaining, derived once by `RunFigures`                                                    |
+| `progressFraction`    | decided segments over the total, `0.0` when the total is zero                                                   |
+| `tokensPerSecond`     | derived from the recent drafts' `ModelCallFinished` usage                                                       |
+| `timeLeft`, `elapsed` | the run's estimated time left and time spent                                                                    |
+| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds, for the "Model calls (live)" panel; published at most once per cadence tick, and only when it changed |
+| `reviewQueue`         | the flagged (and, on the "All segments" filter, kept-as-source) segments the review panel lists                 |
+| `waitingSeconds`      | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)                         |
+| `providerErrorNotice` | the failure's error code, while the run is auto-paused on a provider error                                      |
+| `failure`             | the run's `AppError`, when it ended on one                                                                       |
+| `report`              | the run's `JobReport`, when it returned one                                                                      |
+| `activityLog`         | unmodifiable `ObservableList<LogEntry>` of the newest 500 entries, each tagged `ok`/`fix`/`mem`/`sum`/`retry`/`err`/`info` |
 
 Counts are locale-formatted for display (`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
 
 **The publishers** (each wraps `Platform.runLater`, so engine threads call plain methods): `publishRunStarted()`,
 `publishRunState(RunState)`, `publishWaitingSeconds(int)`, `publishProgress(JobProgress)`,
-`publishLogEntries(List<LogEntry>)` and `publishOutcome(RunState, JobReport, AppError)`. A per-run `RunSession` receives
-the engine events on the engine's thread and coalesces them into **one publish per 100 ms tick**, so a fast job never
-floods the FX queue. `TranslationRunner` treats the `Result<JobReport>` the job **returns** as authoritative for the
-terminal state — a run refused before it starts emits no `Finished` event — and publishes it last, so a late tick cannot
-overwrite it. Toasts and banners are surfaced by the notification components, not the mirror
+`publishLivePanel(SegmentStarted, SegmentDrafted?)`, `publishLogEntries(List<LogEntry>)` and
+`publishOutcome(RunState, JobReport, AppError)`. A per-run `RunSession` receives the engine events on the engine's
+thread and coalesces them into **one publish per 100 ms tick**, so a fast job never floods the FX queue.
+`TranslationRunner` treats the `Result<JobReport>` the job **returns** as authoritative for the terminal state — a
+run refused before it starts emits no `Finished` event — and publishes it last, so a late tick cannot overwrite it.
+Toasts and banners are surfaced by the notification components, not the mirror
 (`11_NOTIFICATIONS_AND_ERRORS.md`).
 
 Views bind read-only to these; no other channel mutates the dashboard. This fixed surface is what `#ui-conformance`
@@ -93,10 +141,10 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
 
 ## navigation {#navigation}
 
-- **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`, `STRUCTURE`, `NAMES_STYLE`,
-  `TRANSLATING`, `REVIEW`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. `PROJECTS`,
-  `NAMES_STYLE` and `REVIEW` carry none in this build: they are inert entries, and `Navigator.nextAvailableStep` skips
-  them.
+- **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`,
+  `NAMES_STYLE`, `TRANSLATING`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. Only
+  `PROJECTS` carries none in this build: it is the one inert entry, and `Navigator.nextAvailableStep` skips it. The
+  review panel is reached from inside `TRANSLATING`, not through its own `ViewNames` constant.
 - A `Navigator` (`@Singleton`) swaps the root content region by `ViewNames`, using the controller factory to construct
   the target view. Back/forward and deep-linking to a screen state (e.g. Import → language-mismatch) are driven by view
   state, not separate FXML.
@@ -122,7 +170,7 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
 Every mockup widget maps to a real JavaFX/ControlsFX control:
 
 | Mockup element                   | Control                           |
-|----------------------------------|-----------------------------------|
+|-------------------------------------|---------------------------------------|
 | segmented pickers                | `SegmentedButton` / `ToggleGroup` |
 | side-by-side panes               | two `TextArea`                    |
 | tables (glossary, flagged queue) | `TableView` (virtualized)         |
@@ -139,28 +187,25 @@ Enumerated against the mockup (each is a P6 visual-reference acceptance target);
 build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 
 - **Projects** (+ empty state) — project list, new/import entry. Inert in this build (no screen yet).
-- **Import** — states: idle, opening, detected, refused (DRM and unsupported, with the typed error code),
-  `language-mismatch` (built, no trigger yet — nothing detects a source language); detected-file card with file,
-  format, title/author/declared language when present, and unit and segment counts. No cover.
-- **Book Brief** — source language (read-only, as declared by the book), target language, the destination path with
-  overwrite, and the cards nothing reads yet, shown disabled: genre, register, voice/era, audience, name policy,
-  foreign-passage policy (keep-as-is / translate / translate+note), footnote/unit policy, faithful↔natural slider,
-  quality dial, and the **"Also translate"** toggle group (ToC/navigation labels [on], image alt-text [on], book
-  metadata title/author [on], frontmatter values [off]). A no-book state exists.
-- **Structure** — a read-only flat list of units (resource path, position, segment count), the segment total, Back and
-  Continue. No translate-vs-preserve confirmation.
-- **Names & Style (glossary)** — glossary `TableView`, lock, add/import/export. Inert in this build.
-- **Translating** — states: `idle`, `running`, `pausing`, `paused`, `stopping`, `stopped` (terminal: nothing is written
-  and the run cannot be resumed), `completed`, `failed`; provider-error, refused and missing-input are notices in the
-  state banner, not states. The dashboard (`#jobprogress`) shows the accepted / flagged / remaining / total counts and a
-  progress bar, a "Waiting for the model… m:ss" cue after 10 s on one request, and the activity log. There is no
-  throughput, ETA or in-flight panel.
-- **Review** — flagged list + side-by-side compare (two `TextArea`, no diff); actions Save-edit / Accept /
-  Revert-to-machine-target / Retry / Retry-with-note / Skip, with dirty-edit tracking
-  (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`). Inert in this build.
-- **Export** — reports the finished file rather than triggering it: format, written path, accepted and flagged counts,
-  and an action that shows the file in the system file manager. No save path and no Export button (the path is chosen on
-  the Book Brief); the glossary/bilingual/report options and the final consistency toggle are shown disabled.
+- **Import** — states: idle, opening, detected, `language-mismatch` (an EPUB's own language declarations disagree, or
+  the book declares a language the application does not recognize), refused (DRM and unsupported, each with the typed
+  error code). Detected-file card with file, format and version, title/author, declared language, chapter/word
+  counts, image/font counts, and DRM status, plus a cover thumbnail or a neutral placeholder.
+- **Book Brief** — source and target language, both editable and searchable over the same 34 languages; every card
+  live (Tone & style, Translation policies, Also translate, Quality vs speed). No destination card — the save path
+  lives on Export.
+- **Structure** — a nested, titled tree (resource path, position, segment count per node), the statistics card, the
+  background round-trip/resource-id checks, the oversized-segment warning, Back and Continue.
+- **Names & Style (glossary)** — glossary `TableView`, lock (target-only), add/model-scan/CSV import/export,
+  `Start translation`. Live in this build.
+- **Translating** — states: `idle`, `running`, `paused`, `stopped` (resumable — it re-enters at the first pending
+  segment), `provider error` (auto-paused), `completed`, `failed`. The dashboard (`#jobprogress`) shows the progress
+  line, time left, tokens per second, the four count tiles, the two-block live call panel (current and previous call), and the tagged activity log. The
+  review panel lives inside this screen (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`).
+- **Export** — chooses the destination and exports: save path with overwrite, format, the three side-file boxes, the
+  final consistency-pass switch, the carried-over checks, the accepted/flagged/pending/kept-as-source counts, and
+  `Export book` (unavailable while a run of the project is translating). The export-complete dialog is the only
+  success notice.
 - **Settings** — `TabPane`: Providers / Models / Generation / Appearance / Automation / Storage & logs.
 
 ## dialogs-and-notifications {#dialogs-notifications}
@@ -168,12 +213,27 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 - **Dialogs:** welcome, add/edit provider (with the Test connection/models/inference trio →
   `04_LLM_INTEGRATION.md#three-stage-verification`), the two **provider-binding** prompts (bound provider/model
   unavailable → confirm fallback; settings-differ-from-last-used → apply vs continue — DD-31,
-  `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-provider-binding`), add glossary term, retry-with-note, confirm-delete,
-  unsaved-changes, error-with-details (expandable technical detail), export-complete (specified but not shipped — the
-  Export screen reports the written file itself), about.
+  `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-provider-binding`), add glossary term, retry-with-note,
+  confirm-delete, unsaved-changes, error-with-details (expandable technical detail), export-complete (shipped in
+  this build — the export's only success notice, `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`),
+  about.
 - **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`; banners `info/warn/err`;
   empty states per screen. Errors surface as a dialog (with expandable typed `AppError.details`) plus a toast, per
   `09_ERROR_HANDLING.md#ui-surfacing`.
+
+## motion {#motion}
+
+Short transitions ease a change in; none carries meaning on its own (NFR-A11Y-09), and every duration lives in
+`ua.bookloom.ui.control.Motion`: **120 ms** (`QUICK`) for a screen's content fading in on a switch and the current
+navigation step settling; **160 ms** (`STANDARD`) for a dialog card fading and growing in (scale 0.96 → 1) over its
+fading scrim, a banner appearing or changing role, a toast sliding in and out and the busy card; **200 ms** (`SLOW`)
+for a progress bar gliding to its new fraction (a reset or an indeterminate value is shown at once) and the switch's
+sliding thumb (ControlsFX). Closing is immediate. Motion is reduced — every transition skipped and the final state set at
+once — when `BOOKLOOM_REDUCE_MOTION` / `-Dbookloom.reduceMotion` says so (`1`/`true`/`yes` on, `0`/`false`/`no` off),
+otherwise when the operating system asks (`Platform.Preferences#isReducedMotion`); the shell root then carries
+`reduce-motion`, which stills the switch thumb in CSS. The test tasks set the property, so TestFX reads final states; a
+test of a transition turns it off for its own duration. Nothing animates inside a cell's `updateItem` or a
+`layoutChildren`, and nothing logs per frame.
 
 ## i18n {#i18n}
 

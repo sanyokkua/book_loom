@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "pt",
+ "drafts": [
+  {
+   "name": "pt-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)«.*»|“.*”|^—",
+    "injection": false
+   }
+  },
+  {
+   "name": "pt-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cansada",
+    "injection": false
+   }
+  },
+  {
+   "name": "pt-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cap[ií]tulo",
+    "injection": false
+   }
+  },
+  {
+   "name": "pt-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cansado",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "pt-gender",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Ela estava cansado.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "pt-gender-clean",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Ela estava cansada.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "pt-false-friend",
+   "kind": "false-friend",
+   "source": "The bookshop was closed.",
+   "candidate": "A biblioteca estava fechada.",
+   "defective": true,
+   "rationale": "library for bookshop"
+  },
+  {
+   "id": "pt-false-friend-clean",
+   "kind": "false-friend",
+   "source": "The bookshop was closed.",
+   "candidate": "A livraria estava fechada.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

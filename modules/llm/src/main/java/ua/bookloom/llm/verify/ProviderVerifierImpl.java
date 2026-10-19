@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -43,7 +44,9 @@ import ua.bookloom.llm.retry.RetryPolicy;
 @Slf4j
 public final class ProviderVerifierImpl implements ProviderVerifier {
 
-    private static final String MODEL_LIST_UNAVAILABLE = "model list unavailable";
+    /** The probe's output cap: the smallest cap a run's call has, ample for {@code {"status":"ok"}}. */
+    static final int PROBE_OUTPUT_CAP = 64;
+
     private static final String INFERENCE_PROBE_MESSAGE = "Return exactly one JSON object: {\"status\":\"ok\"}.";
     private static final String STRUCTURED_OUTPUT_SUPPORTED = "structured output: supported";
     private static final String STRUCTURED_OUTPUT_NOT_CONFIRMED = "structured output: not confirmed";
@@ -56,20 +59,23 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final InferenceGate gate;
     private final RetryPolicy retryPolicy;
     private final ObjectMapper mapper;
+    private final LongSupplier nanoTime;
 
-    /** Shares the provider registry, real dialect clients, process-wide gate, and retry policy. */
+    /** Shares the provider registry, real dialect clients, process-wide gate, retry policy, and time source. */
     @Inject
     public ProviderVerifierImpl(
             ProviderConfigs providerConfigs,
             ProviderClientFactory clients,
             InferenceGate gate,
             RetryPolicy retryPolicy,
-            ObjectMapper mapper) {
+            ObjectMapper mapper,
+            LongSupplier nanoTime) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
     @Override
@@ -84,29 +90,58 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return verifyConfigured(selection, policy, configured.orElseThrow());
     }
 
+    @Override
+    public Result<VerificationReport> verifyConnection(String providerId) {
+        Objects.requireNonNull(providerId, "providerId");
+        final Optional<ProviderConfig> configured = providerConfigs.find(providerId);
+        log.info(
+                "Provider connection check started provider={} kind={} host={}",
+                providerId,
+                configured.map(value -> value.kind().name()).orElse("unknown"),
+                configured.map(value -> value.baseUrl().getHost()).orElse("unknown"));
+        if (configured.isEmpty()) {
+            final AppError error =
+                    AppError.of(ErrorCode.validation, "Unknown provider", "The selected provider is not registered.");
+            log.warn("Provider connection check refused unknown provider={} code={}", providerId, error.code());
+            return Result.err(error);
+        }
+        final ProviderClient client = clients.create(configured.orElseThrow());
+        final StageOutcome connection = timed(() -> verifyConnection(client, providerId));
+        log.info("Provider connection check finished provider={} stage={}", providerId, stageSummary(connection));
+        return Result.ok(new VerificationReport(List.of(connection)));
+    }
+
     private Result<VerificationReport> verifyConfigured(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config) {
         final ProviderClient client = clients.create(config);
         final List<StageOutcome> stages = new ArrayList<>(3);
-        final StageOutcome connection = verifyConnection(client, config.id());
+        final StageOutcome connection = timed(() -> verifyConnection(client, config.id()));
         stages.add(connection);
-        if (connection.status() == StageStatus.FAILED) {
+        if (connection.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
             return completed(selection, policy, stages);
         }
-        final StageOutcome models = verifyModels(client, config.id(), selection.modelId());
+        final StageOutcome models = timed(() -> verifyModels(client, config.id(), selection.modelId()));
         stages.add(models);
-        if (models.status() == StageStatus.FAILED) {
+        if (models.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION_AND_MODELS) {
             return completed(selection, policy, stages);
         }
         return verifyInferencePolicy(selection, policy, client, config.id(), stages, models);
+    }
+
+    private StageOutcome timed(Supplier<StageOutcome> stage) {
+        final long start = nanoTime.getAsLong();
+        final StageOutcome outcome = stage.get();
+        final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - start);
+        return new StageOutcome(
+                outcome.stage(), outcome.status(), outcome.error(), outcome.note(), elapsed, outcome.count());
     }
 
     private StageOutcome verifyConnection(ProviderClient client, String providerId) {
         log.debug("Provider verification connection stage started provider={} kind={}", providerId, client.kind());
         final ProviderCallResult<Boolean> call = callWithRetry(client::probe, VerificationStage.CONNECTION, providerId);
         return call.result().isErr()
-                ? failed(VerificationStage.CONNECTION, error(call.result()))
-                : passed(VerificationStage.CONNECTION);
+                ? StageOutcomes.failed(VerificationStage.CONNECTION, error(call.result()))
+                : StageOutcomes.passed(VerificationStage.CONNECTION);
     }
 
     private StageOutcome verifyModels(ProviderClient client, String providerId, String modelId) {
@@ -116,8 +151,8 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         if (call.result().isErr()) {
             final AppError failure = error(call.result());
             return failure.code() == ErrorCode.discoveryFailed
-                    ? softPass(failure)
-                    : failed(VerificationStage.MODELS, failure);
+                    ? StageOutcomes.softPass(failure, 0)
+                    : StageOutcomes.failed(VerificationStage.MODELS, failure);
         }
         return listedModels(Objects.requireNonNull(call.result().data(), "model list"), providerId, modelId);
     }
@@ -125,7 +160,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private StageOutcome listedModels(List<ModelInfo> models, String providerId, String modelId) {
         if (models.isEmpty()) {
             log.debug("Provider verification models stage soft pass provider={} reason=empty-list", providerId);
-            return softPass(null);
+            return StageOutcomes.softPass(null, 0);
         }
         final boolean selectedModelListed = models.stream().map(ModelInfo::id).anyMatch(modelId::equals);
         log.debug(
@@ -134,14 +169,16 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 modelId,
                 models.size(),
                 selectedModelListed);
-        return selectedModelListed
-                ? passed(VerificationStage.MODELS)
-                : failed(
-                        VerificationStage.MODELS,
-                        AppError.of(
-                                ErrorCode.modelUnavailable,
-                                "Model unavailable",
-                                "The selected model is not available from this provider."));
+        return StageOutcomes.withCount(
+                selectedModelListed
+                        ? StageOutcomes.passed(VerificationStage.MODELS)
+                        : StageOutcomes.failed(
+                                VerificationStage.MODELS,
+                                AppError.of(
+                                        ErrorCode.modelUnavailable,
+                                        "Model unavailable",
+                                        "The selected model is not available from this provider.")),
+                models.size());
     }
 
     private Result<VerificationReport> verifyInferencePolicy(
@@ -156,7 +193,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 providerId,
                 policy,
                 models.status());
-        stages.add(verifyInference(client, providerId, selection.modelId()));
+        stages.add(timed(() -> verifyInference(client, providerId, selection.modelId())));
         return completed(selection, policy, stages);
     }
 
@@ -170,15 +207,15 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         if (call.result().isErr()) {
             final AppError failure = error(call.result());
             return failure.code() == ErrorCode.modelNotFound
-                    ? modelUnavailable(failure)
-                    : failed(VerificationStage.INFERENCE, failure);
+                    ? StageOutcomes.modelUnavailable(failure)
+                    : StageOutcomes.failed(VerificationStage.INFERENCE, failure);
         }
         final ChatResponse response = Objects.requireNonNull(call.result().data(), "chat response");
         if (call.rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
             return inferenceContent(response, STRUCTURED_OUTPUT_NOT_CONFIRMED);
         }
         if (validStructuredProbe(response)) {
-            return passed(VerificationStage.INFERENCE, STRUCTURED_OUTPUT_SUPPORTED);
+            return StageOutcomes.passed(VerificationStage.INFERENCE, STRUCTURED_OUTPUT_SUPPORTED);
         }
         return plainProbeOutcome(client, providerId, modelId);
     }
@@ -206,8 +243,8 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         if (plain.result().isErr()) {
             final AppError failure = error(plain.result());
             return failure.code() == ErrorCode.modelNotFound
-                    ? modelUnavailable(failure)
-                    : failed(VerificationStage.INFERENCE, failure);
+                    ? StageOutcomes.modelUnavailable(failure)
+                    : StageOutcomes.failed(VerificationStage.INFERENCE, failure);
         }
         return inferenceContent(
                 Objects.requireNonNull(plain.result().data(), "chat response"), STRUCTURED_OUTPUT_NOT_CONFIRMED);
@@ -227,12 +264,12 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     private StageOutcome inferenceContent(ChatResponse response, String note) {
         if (response.content().isBlank()) {
-            return failed(
+            return StageOutcomes.failed(
                     VerificationStage.INFERENCE,
                     AppError.of(
                             ErrorCode.emptyCompletion, "Empty completion", "The provider returned an empty response."));
         }
-        return passed(VerificationStage.INFERENCE, note);
+        return StageOutcomes.passed(VerificationStage.INFERENCE, note);
     }
 
     private boolean validStructuredProbe(ChatResponse response) {
@@ -250,16 +287,26 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     }
 
     private static ChatRequest structuredProbeRequest(@Nullable Boolean reasoningEnabled) {
-        return new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)),
-                null,
-                INFERENCE_PROBE_FORMAT,
-                reasoningEnabled);
+        return probeRequest(INFERENCE_PROBE_FORMAT, reasoningEnabled);
     }
 
     private static ChatRequest plainProbeRequest(@Nullable Boolean reasoningEnabled) {
+        return probeRequest(null, reasoningEnabled);
+    }
+
+    // Capped like a run's calls: an uncapped probe let a thinking model reason to the end and answer, hiding a server
+    // that ignores the reasoning control and then spends every capped call of the run on reasoning.
+    private static ChatRequest probeRequest(@Nullable ResponseFormat format, @Nullable Boolean reasoningEnabled) {
         return new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)), null, null, reasoningEnabled);
+                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)),
+                null,
+                format,
+                reasoningEnabled,
+                null,
+                null,
+                PROBE_OUTPUT_CAP,
+                null,
+                null);
     }
 
     private <T> ProviderCallResult<T> callWithRetry(
@@ -292,38 +339,6 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             }
             attempt++;
         }
-    }
-
-    private static StageOutcome passed(VerificationStage stage) {
-        return new StageOutcome(stage, StageStatus.PASSED, null, null);
-    }
-
-    private static StageOutcome passed(VerificationStage stage, String note) {
-        return new StageOutcome(stage, StageStatus.PASSED, null, note);
-    }
-
-    private static StageOutcome softPass(@Nullable AppError error) {
-        log.warn(
-                "Provider verification stage soft-passed stage={} code={} note={}",
-                VerificationStage.MODELS,
-                error == null ? "none" : error.code(),
-                MODEL_LIST_UNAVAILABLE);
-        return new StageOutcome(VerificationStage.MODELS, StageStatus.SOFT_PASS, error, MODEL_LIST_UNAVAILABLE);
-    }
-
-    private static StageOutcome failed(VerificationStage stage, AppError error) {
-        log.warn("Provider verification stage failed stage={} code={}", stage, error.code());
-        return new StageOutcome(stage, StageStatus.FAILED, error, null);
-    }
-
-    private static StageOutcome modelUnavailable(AppError original) {
-        final AppError unavailable = AppError.of(
-                ErrorCode.modelUnavailable,
-                "Model unavailable",
-                "The provider could not find the selected model.",
-                original.details(),
-                original.cause());
-        return failed(VerificationStage.INFERENCE, unavailable);
     }
 
     private static <T> AppError error(Result<T> result) {

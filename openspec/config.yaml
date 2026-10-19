@@ -27,11 +27,11 @@ context: |
 
   ## Stack
 
-  Java 25 (LTS) - JavaFX 25 (LTS) - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
+  Java 25 (LTS) - JavaFX 26 - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
   + dependency locking - Guice DI (constructor injection only) - SQLite (sqlite-jdbc, WAL) + Flyway
   (additive `V{ver}__desc.sql` migrations) + JDBI 3 (no ORM) - JDOM2/dom4j + jsoup + `java.util.zip`
-  (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - Lingua +
-  ICU4J (language detect / segmentation) - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
+  (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - ICU4J for
+  segmentation and charset detection - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
   Error Prone/NullAway (JSpecify `@NullMarked`) + Checkstyle + SpotBugs/FindSecBugs + ArchUnit - Lefthook -
   JUnit 5 + AssertJ + WireMock + TestFX (JavaFX 26 built-in headless) - jpackage (unsigned, per-OS; Windows is a
   portable app-image zip, never an installer). MIT license; permissive dependencies only
@@ -58,9 +58,11 @@ context: |
   ## Non-negotiable invariants (true after every change)
 
   - **FX-free core.** No class in `:api/:util/:document/:llm/:pipeline/:persistence` imports `javafx..`.
-  - **Skeleton is never regenerated.** Only text nodes change; structure/IDs/images/fonts survive a
-    canonical-equal round trip (TXT is exact bytes, DD-43). Inline tags and locked terms mask to `gN`
-    placeholders, are validated as a tag-multiset hard gate on return, then unmasked.
+  - **Skeleton is never regenerated.** Only text nodes and the attribute values DD-47 lists (image alt
+    text) change, plus the EPUB package's language rewrite and the removal of a changed title or creator's stale sort keys; structure/IDs/images/fonts survive a canonical-equal round trip (TXT is exact bytes,
+    DD-43). Inline tags and locked terms mask to `gN` placeholders, are validated as a hard gate on
+    return — the multiset, plus each pair's order and nesting, a pair that held text still holding text,
+    and a line break staying inside its innermost pair (ADR-0040 as amended) — then unmasked.
   - **Uniform error envelope.** Boundaries return `Result<T>{data,error}` with one typed
     `AppError{code,title,message,details,retryable,cause}` + `ErrorCode`. No exception crosses a module
     edge. `details` is built only from the safe-details allowlist and never contains secrets. Partial
@@ -71,10 +73,12 @@ context: |
     code. No `synchronized` in new code.
   - **Credentials are a reference, never a secret.** Persist an env-var name or an OS-keychain reference;
     resolve just before the call; never store or log the secret.
-  - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`, `tryAcquire`) guards all inference,
-    real runs and diagnostics alike. The gate is released across backoff/`Retry-After` sleeps. Retry is
-    service-owned, keyed on typed retryable errors, with a fresh timeout per attempt.
-  - **Token-only theming.** Looked-up colors on `.root`; light + dark from one token set; stylesheets
+  - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`) blocks and guards all inference —
+    real runs and diagnostics alike; no call is ever refused by it. The one `busy` outcome in this system
+    is a review retry asked while the project's own run is RUNNING, refused from the run record and never
+    queued behind that run (`design.md` D9). The gate is released across backoff/`Retry-After` sleeps.
+    Retry is service-owned, keyed on typed retryable errors, with a fresh timeout per attempt.
+  - **Token-only theming.** Looked-up colors on `.root`, light + dark from one token set; stylesheets
     attached at Scene level; never `node.setStyle(...)`.
   - **Offline.** No background, scheduled, or unsolicited network call; no telemetry. The only outbound
     traffic ever is user-triggered provider communication (inference, model discovery, verification) with
@@ -85,10 +89,11 @@ context: |
   - **UI thread discipline.** Scene graph only on the JavaFX Application Thread; long work in `Task`/
     `Service` on an injected daemon executor; `Platform.runLater` (via the singleton state mirror) to
     bridge; virtual threads for I/O fan-out.
-  - **Persistence.** SQLite (WAL) via JDBI, Flyway additive migrations, a generic typed KV settings table,
-    atomic per-chunk commits (process-crash-safe and forced-quit-safe; NOT power-loss-proof, DD-20). The
-    single-instance lock `bookloom.lock` is acquired pre-injector by `:app`/`:util`, never by
-    `:persistence`.
+  - **Persistence.** Today, every `:api` repository port (`ua.bookloom.api.persistence`) is bound to an
+    in-memory adapter (ADR-0034) — nothing survives a restart. SQLite (WAL) via JDBI, Flyway additive
+    migrations, a generic typed KV settings table, and atomic per-chunk commits (process-crash-safe and
+    forced-quit-safe; NOT power-loss-proof, DD-20) are the planned SQLite adapter. The single-instance lock
+    `bookloom.lock` is acquired pre-injector by `:app`/`:util`, never by `:persistence`.
   - **Paths first.** A `:util` resolver picks the per-OS data/log dirs and runs BEFORE logging and SQLite
     (DD-39, ADR-0015).
   - **Green gate, no exceptions.** Every change leaves `./gradlew clean build check spotlessCheck` green
@@ -121,7 +126,7 @@ context: |
   | `book-import`          | fr-import                      |
   | `document-round-trip`  | fr-doc                         |
   | `book-brief`           | fr-brief                       |
-  | `llm-provider`         | fr-prov, fr-model              |
+  | `llm-provider`         | fr-prov, fr-model               |
   | `inference`            | fr-infer                       |
   | `translation-pipeline` | fr-algo                        |
   | `quality-gates`        | fr-qa                          |
@@ -177,9 +182,12 @@ rules:
     - R1 - Decompose a dense FR into several atomic EARS requirements rather than transcribing it. One
       requirement states one testable obligation. Several requirements may share the same `FR-*` citation,
       and that shared citation is what keeps coverage checkable across the split.
-    - "R2 - Every requirement ends with a `**Source:**` block before its scenarios: the spec file and
-      anchor it comes from, and an `In plain words:` sentence saying what the requirement means and why
-      it matters. The pointer locates; the gloss explains. A Source block that is only ids is incomplete."
+    - "R2 - Every requirement ends with ONE line, `**Source**: <spec file#anchor or task id>. In plain words:
+      <what the requirement means and why it matters>`, before its scenarios. The pointer locates; the gloss
+      explains. A Source line that is only ids is incomplete. It is one unwrapped line written `**Source**:`
+      (colon outside the bold) because OpenSpec reads such a line as metadata, not as requirement text, so
+      the requirement's own statement stays within the validator's 500-character limit; a wrapped or
+      `**Source:**` block counts against that limit."
     - R3 - Scenarios use concrete values, never abstractions. Not "invalid input" but the actual string;
       not "an error" but `ErrorCode.validation`; not "a large file" but a stated size. If you cannot name a
       concrete value, the requirement is still too vague.

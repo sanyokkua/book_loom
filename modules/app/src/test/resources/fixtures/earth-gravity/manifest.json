@@ -1,0 +1,4265 @@
+{
+ "binary_files": {
+  "fonts/BookLoomTestFont-DUMMY.otf": "debb925b92a234412979cc5c30a5f6e22b40a9c165d053caf170b1f1fcbcb090",
+  "images/cover.png": "b094202f958c865372fa1a992edad816704f5e7e1cb7469dcb8a1c66ba410ed7",
+  "images/diagram.png": "9b907003aaf253b0fc0773ea630a7a31c7f0c8864f1df55e807098d4e1d4ddf8",
+  "images/earth.jpg": "53d58c28370806538e4ed0f8b45eaa2f363c11a3fb359ce10b26bd0cdc105e98"
+ },
+ "book": {
+  "author": "Dr. Eleanor Vance",
+  "generator": "scripts/make-fixtures.py",
+  "language": "en",
+  "title": "Earth Gravity",
+  "validator": "scripts/validate-translated-book.py"
+ },
+ "footnotes": [
+  "The standard value adopted in 1901 is exactly 9.80665 m/s²; 9.81 is the rounded figure most textbooks use.",
+  "An orbit is a fall that never ends: the ground curves away as fast as the satellite drops.",
+  "The difference between the equator and the poles is about 0.5%, mostly because Earth spins and bulges at the equator."
+ ],
+ "foreign": {
+  "blocks": [
+   {
+    "id": "ch4-p7",
+    "lang": "la",
+    "text": "Gravitas omnia trahit, sed nemo videt."
+   }
+  ],
+  "inline": [
+   {
+    "lang": "fr",
+    "text": "La pesanteur ne prend jamais de vacances."
+   },
+   {
+    "lang": "fr",
+    "text": "« Ce n’est qu’un poids »"
+   }
+  ]
+ },
+ "formats": {
+  "epub": {
+   "aux": {
+    "dc_creator": "Dr. Eleanor Vance",
+    "dc_description": "A short practical introduction to Earth’s gravity, told through the notes of Dr. Eleanor Vance and her team at Harrow Vale.",
+    "dc_title": "Earth Gravity",
+    "head_titles": [
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity",
+     "Earth Gravity"
+    ],
+    "image_alts": [
+     "Cover",
+     "Earth from space",
+     "diagram",
+     "diagram",
+     "diagram"
+    ],
+    "nav_labels": [
+     "Earth Gravity",
+     "Copyright",
+     "Contents",
+     "Chapter One: What Is Gravity?",
+     "Chapter Two: How Earth’s Gravity Works",
+     "Chapter Three: The Gravity Formula",
+     "Chapter Four: The Harrow Vale Expedition",
+     "Chapter Five: Gravity and Distance",
+     "Chapter Six: The Long Night at the Observatory",
+     "Chapter Seven: Songs of Falling Things",
+     "Notes"
+    ],
+    "ncx_labels": [
+     "Earth Gravity",
+     "Copyright",
+     "Contents",
+     "Chapter One: What Is Gravity?",
+     "Chapter Two: How Earth’s Gravity Works",
+     "Chapter Three: The Gravity Formula",
+     "Chapter Four: The Harrow Vale Expedition",
+     "Chapter Five: Gravity and Distance",
+     "Chapter Six: The Long Night at the Observatory",
+     "Chapter Seven: Songs of Falling Things",
+     "Notes"
+    ]
+   },
+   "block_count": 144,
+   "blocks": [
+    {
+     "category": "translatable",
+     "id": "tp-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Earth Gravity"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "A Practical Introduction"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "by Dr. Eleanor Vance"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Copyright"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Copyright © 2026 The Meridian Survey Institute. All rights reserved."
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "This edition was prepared as a test book for BookLoom. Any resemblance to a real survey, a real valley or a real amulet is a coincidence."
+    },
+    {
+     "category": "verbatim",
+     "id": "cr-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "978-0-00-000000-2"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "First edition, Harrow Vale, 2026."
+    },
+    {
+     "category": "translatable",
+     "id": "toc-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Contents"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-1",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-2",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-3",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-4",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-5",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-6",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-7",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-q1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "quote",
+     "text": "Summary: Gravity is the force that attracts objects with mass toward one another. On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p1",
+     "inline": {
+      "dc": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is one of the fundamental interactions in nature. Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p3",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "For everyday objects this attraction is extremely small. However, Earth has a mass of approximately 5.972 × 10²⁴ kg, and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Well, that is the whole trick,” Vance said. “Mass pulls on mass — always, everywhere, without exception.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p5",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "“Don’t say everywhere,” Tomas Reyes objected. “Say everywhere we have measured.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Mass and weight"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "Mass describes how much matter an object contains."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-2",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "Weight describes the gravitational force acting on that mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p7",
+     "inline": {
+      "b": 1,
+      "code": 1,
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "The average gravitational acceleration near Earth’s surface is approximately 9.81 metres per second every second, written g = 9.81 m/s².1"
+    },
+    {
+     "category": "code",
+     "id": "ch1-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "g = 9.81 m/s²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Earth seen from space, about 29,000 km away."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon — roughly one sixth of what the bathroom scale shows at home."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p9",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "Words matter here. Words like heavy and light describe weight, not mass, and Vance never let a student mix them up."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "Earth attracts objects toward its centre of mass. Nell drew it on the board as a single dot with arrows pointing inward from every direction."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 1. Arrows pointing toward the centre of mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For example:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "You release an object."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth’s gravity accelerates the object toward Earth’s centre."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The ground prevents the object from continuing farther."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The object therefore remains on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Some important consequences of gravity include:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Objects fall toward Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The Moon remains in orbit around Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth remains in orbit around the Sun."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Oceans remain on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-5",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth’s atmosphere remains gravitationally bound to the planet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield your eyes when you look at the tide charts, Reyes liked to joke, because the numbers are blinding: the Moon lifts the open ocean by less than a metre, and yet it moves whole bays."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p1",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "Newton’s law of universal gravitation is usually written F = G × (m₁ × m₂) / r², and every symbol in it has a plain meaning."
+    },
+    {
+     "category": "code",
+     "id": "ch3-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "F = G × (m₁ × m₂) / r²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Symbol"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Meaning"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c2",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Typical unit"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r1c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "F"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational force"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "newton (N)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "G"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational constant"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "N·m²/kg²"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r3c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₁"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the first object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r4c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₂"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the second object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r5c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "r"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Distance between the centres of mass"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "metre (m)"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The gravitational constant is approximately 6.674×10⁻¹¹ N·m²/kg². It is so small that two people standing a metre apart attract each other with less force than a grain of dust exerts on a table."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For an 80 kg person on Earth’s surface, the force comes out at about 784.8 N — the familiar weight of that person."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Vance kept the worked example pinned above her desk as a numbered plate:"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "XIV"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "§"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every result in this section assumes that Earth is a perfect sphere; the next chapter shows what happens when it is not."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "***"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p10",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "9.81"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is the Amulet really in the crate?” Reyes asked on the first morning."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“It is,” said Nell, “and it stays there — wrapped, sealed and logged — until we have measured the valley without it.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet was not magic, whatever the villagers said. It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Above the door of the old field station someone had carved a line in Latin:"
+    },
+    {
+     "category": "foreign",
+     "id": "ch4-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravitas omnia trahit, sed nemo videt."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes translated it at once — “weight pulls everything, but nobody sees it” — and Vance said that the motto was more accurate than most textbooks."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p9",
+     "inline": {
+      "f": 1
+     },
+     "kind": "paragraph",
+     "text": "In the station log, a French visitor had added a note of her own: La pesanteur ne prend jamais de vacances. Nobody ever crossed it out."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p10",
+     "inline": {
+      "f": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "On the next page she had written « Ce n’est qu’un poids » — it is only a weight — beside a sketch of the Amulet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Field notes"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Day one: wind from the west, light rain, readings steady. Day two: the gravimeter drifted by 0.02 mGal an hour and Reyes recalibrated it twice against the Amulet. Day three: the readings at the north end of Harrow Vale were lower than the readings at the south end, exactly as the slate maps predicted."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p12",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p1",
+     "inline": {
+      "b": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity becomes weaker as distance increases. According to the inverse-square law, doubling the distance from Earth’s centre leaves only a quarter of the pull."
+    },
+    {
+     "category": "code",
+     "id": "ch5-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "Gravity ∝ 1 / distance²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Distance from Earth’s centre"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Relative strength"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r1c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "1 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "100%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r2c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "2 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r3c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "3 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "11.1%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r4c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "4 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "6.25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "image",
+     "id": "ch5-imgp1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The same diagram, drawn again at a larger scale, shows the arrows thinning out as they spread over a bigger sphere."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 2. The same arrows, spread over a sphere twice as large."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-q1-1",
+     "inline": {},
+     "kind": "quote",
+     "text": "“What goes up must come down” is a useful everyday approximation, although orbital mechanics makes the real situation far more interesting."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p4",
+     "inline": {
+      "a": 2
+     },
+     "kind": "paragraph",
+     "text": "Read more at NASA Solar System Exploration or in the article on Newton’s law."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p5",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Satellites stay in orbit because they are always falling toward Earth and always missing it.2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of the ceiling and a floor that was levelled, the plaque says, by a man who did not believe in rushing. We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us. The bob swung, the counter clicked, the thermometer said eleven degrees, and the barometer said that the weather would hold. I wrote down the period every five minutes, and Reyes read it back to me so that neither of us could blame the other later. At eleven the wind rose, and the dome began to hum a low note that we could feel in our teeth. The pendulum did not care. That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument. The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises. We must have looked strange to it: two people in coats, sitting on folding stools beside a brass weight that swung and swung and never arrived anywhere. I thought about the Amulet, locked in its crate in the station below, and about the villagers who said that it pulled harder than any honest weight should. It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before. When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook. At three the clouds cleared and the stars came out over the open slot of the dome, so many of them that the room seemed to tilt. I remember thinking that every one of those stars was pulling on our little brass bob too, each from its own enormous distance, and that the inverse-square law had made all of their pulls together smaller than the pull of the hill we were sitting on. That is the second thing a person learns about gravity at night: distance is a kind of mercy. If the stars pulled as hard as the Earth, nothing would ever fall in a straight line, and no one could ever hang a pendulum and trust it. At four o’clock we were both too tired to talk, so we took turns reading the numbers aloud, and the numbers became a kind of song, the same four digits rising and falling with the swing. Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that somebody would always be watching it. He did not laugh, which I took as a sign of how tired he was. We talked instead about the first people who had done this kind of work, the surveyors who carried brass pendulums across mountains on the backs of mules and lay awake in tents counting swings by candlelight, and about how little the method has changed since then: a weight, a wire, a clock, patience, and the honesty to write down the number that the instrument gives you rather than the number you hoped for. Reyes said that patience was the only part of the kit the Institute had never managed to requisition. At five the sky in the east turned the colour of weak tea, and the first birds began to argue in the heather. We had nine hours of readings, two broken pencils, one repaired counter and a result that differed from the textbook value by a little less than two parts in ten thousand, which is exactly what the slate under the valley predicted. Nell, I told myself, this is the night you will describe to every student who asks why anyone measures gravity by hand. I wrote the final figure on the inside cover of the notebook in ink, so that nobody could rub it out, and underneath it I wrote the date, the place and both our names."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "When the sun rose, the pendulum was still swinging."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes, who wrote verse when the instruments were quiet, left a short poem in the log of Harrow Vale."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-t",
+     "inline": {},
+     "kind": "poem-title",
+     "text": "The Plumb Line"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v1",
+     "inline": {},
+     "kind": "verse",
+     "text": "A stone let go will find the ground,"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v2",
+     "inline": {},
+     "kind": "verse",
+     "text": "it never asks the way;"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v3",
+     "inline": {},
+     "kind": "verse",
+     "text": "the Earth is calling all around"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v4",
+     "inline": {},
+     "kind": "verse",
+     "text": "and every stone obeys."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v1",
+     "inline": {},
+     "kind": "verse",
+     "text": "The Moon is falling, so they say,"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v2",
+     "inline": {},
+     "kind": "verse",
+     "text": "and missing us for good —"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v3",
+     "inline": {},
+     "kind": "verse",
+     "text": "it has been falling night and day"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v4",
+     "inline": {},
+     "kind": "verse",
+     "text": "the way a planet should."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": " "
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Words."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "​"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Well…"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is that all?” asked Tomas. “That is all,” Dr. Vance replied, ‘and it is enough.’"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p10",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is identical everywhere on Earth — or so the old textbook claimed.3 The Harrow Vale survey proved it wrong by a few parts in ten thousand."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures."
+    },
+    {
+     "category": "translatable",
+     "id": "notes-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Notes"
+    },
+    {
+     "category": "translatable",
+     "id": "note-1",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "The standard value adopted in 1901 is exactly 9.80665 m/s²; 9.81 is the rounded figure most textbooks use. ↩"
+    },
+    {
+     "category": "translatable",
+     "id": "note-2",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "An orbit is a fall that never ends: the ground curves away as fast as the satellite drops. ↩"
+    },
+    {
+     "category": "translatable",
+     "id": "note-3",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "The difference between the equator and the poles is about 0.5%, mostly because Earth spins and bulges at the equator. ↩"
+    }
+   ],
+   "blocks_by_category": {
+    "code": 9,
+    "foreign": 1,
+    "image": 1,
+    "invisible": 2,
+    "translatable": 121,
+    "verbatim": 10
+   },
+   "file": "earth-gravity.epub",
+   "footnote_refs": 3,
+   "footnotes": 3,
+   "images": 5,
+   "translatable_blocks": 121
+  },
+  "fb2": {
+   "aux": {
+    "annotation": [
+     "A short practical introduction to Earth’s gravity, told through the notes of Dr. Eleanor Vance and her team at Harrow Vale."
+    ],
+    "author": [
+     "Eleanor",
+     "Vance",
+     "Nell"
+    ],
+    "book_title": "Earth Gravity",
+    "image_alts": [
+     "Earth from space",
+     "diagram",
+     "diagram",
+     "diagram"
+    ]
+   },
+   "block_count": 147,
+   "blocks": [
+    {
+     "category": "translatable",
+     "id": "tp-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Earth Gravity"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "A Practical Introduction"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "by Dr. Eleanor Vance"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Copyright"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Copyright © 2026 The Meridian Survey Institute. All rights reserved."
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "This edition was prepared as a test book for BookLoom. Any resemblance to a real survey, a real valley or a real amulet is a coincidence."
+    },
+    {
+     "category": "verbatim",
+     "id": "cr-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "978-0-00-000000-2"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "First edition, Harrow Vale, 2026."
+    },
+    {
+     "category": "translatable",
+     "id": "toc-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Contents"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-1",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-2",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-3",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-4",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-5",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-6",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-7",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-q1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "quote",
+     "text": "Summary: Gravity is the force that attracts objects with mass toward one another. On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p1",
+     "inline": {
+      "dc": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is one of the fundamental interactions in nature. Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p3",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "For everyday objects this attraction is extremely small. However, Earth has a mass of approximately 5.972 × 10²⁴ kg, and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Well, that is the whole trick,” Vance said. “Mass pulls on mass — always, everywhere, without exception.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p5",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "“Don’t say everywhere,” Tomas Reyes objected. “Say everywhere we have measured.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Mass and weight"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "• Mass describes how much matter an object contains."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-2",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "• Weight describes the gravitational force acting on that mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p7",
+     "inline": {
+      "b": 1,
+      "code": 1,
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "The average gravitational acceleration near Earth’s surface is approximately 9.81 metres per second every second, written g = 9.81 m/s².1"
+    },
+    {
+     "category": "code",
+     "id": "ch1-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "g = 9.81 m/s²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Earth seen from space, about 29,000 km away."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon — roughly one sixth of what the bathroom scale shows at home."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p9",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "Words matter here. Words like heavy and light describe weight, not mass, and Vance never let a student mix them up."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "Earth attracts objects toward its centre of mass. Nell drew it on the board as a single dot with arrows pointing inward from every direction."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 1. Arrows pointing toward the centre of mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For example:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "1. You release an object."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "2. Earth’s gravity accelerates the object toward Earth’s centre."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "3. The ground prevents the object from continuing farther."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "4. The object therefore remains on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Some important consequences of gravity include:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "• Objects fall toward Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "• The Moon remains in orbit around Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "• Earth remains in orbit around the Sun."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "• Oceans remain on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-5",
+     "inline": {},
+     "kind": "list-item",
+     "text": "• Earth’s atmosphere remains gravitationally bound to the planet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield your eyes when you look at the tide charts, Reyes liked to joke, because the numbers are blinding: the Moon lifts the open ocean by less than a metre, and yet it moves whole bays."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p1",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "Newton’s law of universal gravitation is usually written F = G × (m₁ × m₂) / r², and every symbol in it has a plain meaning."
+    },
+    {
+     "category": "code",
+     "id": "ch3-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "F = G × (m₁ × m₂) / r²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Symbol"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Meaning"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c2",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Typical unit"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r1c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "F"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational force"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "newton (N)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "G"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational constant"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "N·m²/kg²"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r3c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₁"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the first object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r4c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₂"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the second object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r5c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "r"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Distance between the centres of mass"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "metre (m)"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The gravitational constant is approximately 6.674×10⁻¹¹ N·m²/kg². It is so small that two people standing a metre apart attract each other with less force than a grain of dust exerts on a table."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For an 80 kg person on Earth’s surface, the force comes out at about 784.8 N — the familiar weight of that person."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Vance kept the worked example pinned above her desk as a numbered plate:"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "XIV"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "§"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every result in this section assumes that Earth is a perfect sphere; the next chapter shows what happens when it is not."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "***"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p10",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "9.81"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is the Amulet really in the crate?” Reyes asked on the first morning."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“It is,” said Nell, “and it stays there — wrapped, sealed and logged — until we have measured the valley without it.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet was not magic, whatever the villagers said. It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Above the door of the old field station someone had carved a line in Latin:"
+    },
+    {
+     "category": "foreign",
+     "id": "ch4-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravitas omnia trahit, sed nemo videt."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes translated it at once — “weight pulls everything, but nobody sees it” — and Vance said that the motto was more accurate than most textbooks."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p9",
+     "inline": {
+      "f": 1
+     },
+     "kind": "paragraph",
+     "text": "In the station log, a French visitor had added a note of her own: La pesanteur ne prend jamais de vacances. Nobody ever crossed it out."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p10",
+     "inline": {
+      "f": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "On the next page she had written « Ce n’est qu’un poids » — it is only a weight — beside a sketch of the Amulet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Field notes"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Day one: wind from the west, light rain, readings steady. Day two: the gravimeter drifted by 0.02 mGal an hour and Reyes recalibrated it twice against the Amulet. Day three: the readings at the north end of Harrow Vale were lower than the readings at the south end, exactly as the slate maps predicted."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p12",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p1",
+     "inline": {
+      "b": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity becomes weaker as distance increases. According to the inverse-square law, doubling the distance from Earth’s centre leaves only a quarter of the pull."
+    },
+    {
+     "category": "code",
+     "id": "ch5-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "Gravity ∝ 1 / distance²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Distance from Earth’s centre"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Relative strength"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r1c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "1 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "100%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r2c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "2 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r3c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "3 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "11.1%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r4c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "4 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "6.25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "image",
+     "id": "ch5-imgp1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The same diagram, drawn again at a larger scale, shows the arrows thinning out as they spread over a bigger sphere."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 2. The same arrows, spread over a sphere twice as large."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-q1-1",
+     "inline": {},
+     "kind": "quote",
+     "text": "“What goes up must come down” is a useful everyday approximation, although orbital mechanics makes the real situation far more interesting."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p4",
+     "inline": {
+      "a": 2
+     },
+     "kind": "paragraph",
+     "text": "Read more at NASA Solar System Exploration or in the article on Newton’s law."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p5",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Satellites stay in orbit because they are always falling toward Earth and always missing it.2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of the ceiling and a floor that was levelled, the plaque says, by a man who did not believe in rushing. We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us. The bob swung, the counter clicked, the thermometer said eleven degrees, and the barometer said that the weather would hold. I wrote down the period every five minutes, and Reyes read it back to me so that neither of us could blame the other later. At eleven the wind rose, and the dome began to hum a low note that we could feel in our teeth. The pendulum did not care. That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument. The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises. We must have looked strange to it: two people in coats, sitting on folding stools beside a brass weight that swung and swung and never arrived anywhere. I thought about the Amulet, locked in its crate in the station below, and about the villagers who said that it pulled harder than any honest weight should. It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before. When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook. At three the clouds cleared and the stars came out over the open slot of the dome, so many of them that the room seemed to tilt. I remember thinking that every one of those stars was pulling on our little brass bob too, each from its own enormous distance, and that the inverse-square law had made all of their pulls together smaller than the pull of the hill we were sitting on. That is the second thing a person learns about gravity at night: distance is a kind of mercy. If the stars pulled as hard as the Earth, nothing would ever fall in a straight line, and no one could ever hang a pendulum and trust it. At four o’clock we were both too tired to talk, so we took turns reading the numbers aloud, and the numbers became a kind of song, the same four digits rising and falling with the swing. Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that somebody would always be watching it. He did not laugh, which I took as a sign of how tired he was. We talked instead about the first people who had done this kind of work, the surveyors who carried brass pendulums across mountains on the backs of mules and lay awake in tents counting swings by candlelight, and about how little the method has changed since then: a weight, a wire, a clock, patience, and the honesty to write down the number that the instrument gives you rather than the number you hoped for. Reyes said that patience was the only part of the kit the Institute had never managed to requisition. At five the sky in the east turned the colour of weak tea, and the first birds began to argue in the heather. We had nine hours of readings, two broken pencils, one repaired counter and a result that differed from the textbook value by a little less than two parts in ten thousand, which is exactly what the slate under the valley predicted. Nell, I told myself, this is the night you will describe to every student who asks why anyone measures gravity by hand. I wrote the final figure on the inside cover of the notebook in ink, so that nobody could rub it out, and underneath it I wrote the date, the place and both our names."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "When the sun rose, the pendulum was still swinging."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes, who wrote verse when the instruments were quiet, left a short poem in the log of Harrow Vale."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-t",
+     "inline": {},
+     "kind": "poem-title",
+     "text": "The Plumb Line"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v1",
+     "inline": {},
+     "kind": "verse",
+     "text": "A stone let go will find the ground,"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v2",
+     "inline": {},
+     "kind": "verse",
+     "text": "it never asks the way;"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v3",
+     "inline": {},
+     "kind": "verse",
+     "text": "the Earth is calling all around"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1v4",
+     "inline": {},
+     "kind": "verse",
+     "text": "and every stone obeys."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v1",
+     "inline": {},
+     "kind": "verse",
+     "text": "The Moon is falling, so they say,"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v2",
+     "inline": {},
+     "kind": "verse",
+     "text": "and missing us for good —"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v3",
+     "inline": {},
+     "kind": "verse",
+     "text": "it has been falling night and day"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2v4",
+     "inline": {},
+     "kind": "verse",
+     "text": "the way a planet should."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": " "
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Words."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "​"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Well…"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is that all?” asked Tomas. “That is all,” Dr. Vance replied, ‘and it is enough.’"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p10",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is identical everywhere on Earth — or so the old textbook claimed.3 The Harrow Vale survey proved it wrong by a few parts in ten thousand."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures."
+    },
+    {
+     "category": "translatable",
+     "id": "notes-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Notes"
+    },
+    {
+     "category": "verbatim",
+     "id": "note-1-title",
+     "inline": {},
+     "kind": "note-title",
+     "text": "1"
+    },
+    {
+     "category": "translatable",
+     "id": "note-1",
+     "inline": {},
+     "kind": "note",
+     "text": "The standard value adopted in 1901 is exactly 9.80665 m/s²; 9.81 is the rounded figure most textbooks use."
+    },
+    {
+     "category": "verbatim",
+     "id": "note-2-title",
+     "inline": {},
+     "kind": "note-title",
+     "text": "2"
+    },
+    {
+     "category": "translatable",
+     "id": "note-2",
+     "inline": {},
+     "kind": "note",
+     "text": "An orbit is a fall that never ends: the ground curves away as fast as the satellite drops."
+    },
+    {
+     "category": "verbatim",
+     "id": "note-3-title",
+     "inline": {},
+     "kind": "note-title",
+     "text": "3"
+    },
+    {
+     "category": "translatable",
+     "id": "note-3",
+     "inline": {},
+     "kind": "note",
+     "text": "The difference between the equator and the poles is about 0.5%, mostly because Earth spins and bulges at the equator."
+    }
+   ],
+   "blocks_by_category": {
+    "code": 9,
+    "foreign": 1,
+    "image": 1,
+    "invisible": 2,
+    "translatable": 121,
+    "verbatim": 13
+   },
+   "file": "earth-gravity.fb2",
+   "footnote_refs": 3,
+   "footnotes": 3,
+   "images": 5,
+   "translatable_blocks": 121
+  },
+  "md": {
+   "aux": {
+    "frontmatter": {
+     "author": "Dr. Eleanor Vance",
+     "description": "A short practical introduction to Earth’s gravity, told through the notes of Dr. Eleanor Vance and her team at Harrow Vale.",
+     "title": "Earth Gravity"
+    },
+    "image_alts": [
+     "Earth from space",
+     "diagram",
+     "diagram",
+     "diagram"
+    ]
+   },
+   "block_count": 141,
+   "blocks": [
+    {
+     "category": "translatable",
+     "id": "tp-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Earth Gravity"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "A Practical Introduction"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "by Dr. Eleanor Vance"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Copyright"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Copyright © 2026 The Meridian Survey Institute. All rights reserved."
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "This edition was prepared as a test book for BookLoom. Any resemblance to a real survey, a real valley or a real amulet is a coincidence."
+    },
+    {
+     "category": "verbatim",
+     "id": "cr-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "978-0-00-000000-2"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "First edition, Harrow Vale, 2026."
+    },
+    {
+     "category": "translatable",
+     "id": "toc-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Contents"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-1",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-2",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-3",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-4",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-5",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-6",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1-7",
+     "inline": {
+      "a": 1
+     },
+     "kind": "list-item",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-q1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "quote",
+     "text": "Summary: Gravity is the force that attracts objects with mass toward one another. On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p1",
+     "inline": {
+      "dc": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is one of the fundamental interactions in nature. Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p3",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "For everyday objects this attraction is extremely small. However, Earth has a mass of approximately 5.972 × 10²⁴ kg, and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Well, that is the whole trick,” Vance said. “Mass pulls on mass — always, everywhere, without exception.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p5",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "“Don’t say everywhere,” Tomas Reyes objected. “Say everywhere we have measured.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Mass and weight"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "Mass describes how much matter an object contains."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1-2",
+     "inline": {
+      "b": 1
+     },
+     "kind": "list-item",
+     "text": "Weight describes the gravitational force acting on that mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p7",
+     "inline": {
+      "b": 1,
+      "code": 1,
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "The average gravitational acceleration near Earth’s surface is approximately 9.81 metres per second every second, written g = 9.81 m/s².1"
+    },
+    {
+     "category": "code",
+     "id": "ch1-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "g = 9.81 m/s²"
+    },
+    {
+     "category": "image",
+     "id": "ch1-fig1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Earth seen from space, about 29,000 km away."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon — roughly one sixth of what the bathroom scale shows at home."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p9",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "Words matter here. Words like heavy and light describe weight, not mass, and Vance never let a student mix them up."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "Earth attracts objects toward its centre of mass. Nell drew it on the board as a single dot with arrows pointing inward from every direction."
+    },
+    {
+     "category": "image",
+     "id": "ch2-fig1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 1. Arrows pointing toward the centre of mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For example:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "You release an object."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth’s gravity accelerates the object toward Earth’s centre."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The ground prevents the object from continuing farther."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The object therefore remains on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Some important consequences of gravity include:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-1",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Objects fall toward Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-2",
+     "inline": {},
+     "kind": "list-item",
+     "text": "The Moon remains in orbit around Earth."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-3",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth remains in orbit around the Sun."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-4",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Oceans remain on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2-5",
+     "inline": {},
+     "kind": "list-item",
+     "text": "Earth’s atmosphere remains gravitationally bound to the planet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield your eyes when you look at the tide charts, Reyes liked to joke, because the numbers are blinding: the Moon lifts the open ocean by less than a metre, and yet it moves whole bays."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p1",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "Newton’s law of universal gravitation is usually written F = G × (m₁ × m₂) / r², and every symbol in it has a plain meaning."
+    },
+    {
+     "category": "code",
+     "id": "ch3-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "F = G × (m₁ × m₂) / r²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Symbol"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Meaning"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r0c2",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Typical unit"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r1c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "F"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational force"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r1c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "newton (N)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "G"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Gravitational constant"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r2c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "N·m²/kg²"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r3c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₁"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the first object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r3c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r4c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "m₂"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Mass of the second object"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r4c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "kilogram (kg)"
+    },
+    {
+     "category": "code",
+     "id": "ch3-t1-r5c0",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "r"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "Distance between the centres of mass"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1-r5c2",
+     "inline": {
+      "code": 1
+     },
+     "kind": "table-cell",
+     "text": "metre (m)"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The gravitational constant is approximately 6.674×10⁻¹¹ N·m²/kg². It is so small that two people standing a metre apart attract each other with less force than a grain of dust exerts on a table."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For an 80 kg person on Earth’s surface, the force comes out at about 784.8 N — the familiar weight of that person."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Vance kept the worked example pinned above her desk as a numbered plate:"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "XIV"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "§"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every result in this section assumes that Earth is a perfect sphere; the next chapter shows what happens when it is not."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "***"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p10",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "9.81"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is the Amulet really in the crate?” Reyes asked on the first morning."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“It is,” said Nell, “and it stays there — wrapped, sealed and logged — until we have measured the valley without it.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet was not magic, whatever the villagers said. It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Above the door of the old field station someone had carved a line in Latin:"
+    },
+    {
+     "category": "foreign",
+     "id": "ch4-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravitas omnia trahit, sed nemo videt."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes translated it at once — “weight pulls everything, but nobody sees it” — and Vance said that the motto was more accurate than most textbooks."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p9",
+     "inline": {
+      "f": 1
+     },
+     "kind": "paragraph",
+     "text": "In the station log, a French visitor had added a note of her own: La pesanteur ne prend jamais de vacances. Nobody ever crossed it out."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p10",
+     "inline": {
+      "f": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "On the next page she had written « Ce n’est qu’un poids » — it is only a weight — beside a sketch of the Amulet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Field notes"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Day one: wind from the west, light rain, readings steady. Day two: the gravimeter drifted by 0.02 mGal an hour and Reyes recalibrated it twice against the Amulet. Day three: the readings at the north end of Harrow Vale were lower than the readings at the south end, exactly as the slate maps predicted."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p12",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p1",
+     "inline": {
+      "b": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity becomes weaker as distance increases. According to the inverse-square law, doubling the distance from Earth’s centre leaves only a quarter of the pull."
+    },
+    {
+     "category": "code",
+     "id": "ch5-pre1",
+     "inline": {},
+     "kind": "pre",
+     "text": "Gravity ∝ 1 / distance²"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c0",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Distance from Earth’s centre"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r0c1",
+     "inline": {},
+     "kind": "table-header",
+     "text": "Relative strength"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r1c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "1 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r1c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "100%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r2c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "2 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r2c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r3c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "3 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r3c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "11.1%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1-r4c0",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "4 × radius"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch5-t1-r4c1",
+     "inline": {},
+     "kind": "table-cell",
+     "text": "6.25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "image",
+     "id": "ch5-imgp1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The same diagram, drawn again at a larger scale, shows the arrows thinning out as they spread over a bigger sphere."
+    },
+    {
+     "category": "image",
+     "id": "ch5-fig1",
+     "inline": {
+      "img": 1
+     },
+     "kind": "image-paragraph",
+     "text": ""
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 2. The same arrows, spread over a sphere twice as large."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-q1-1",
+     "inline": {},
+     "kind": "quote",
+     "text": "“What goes up must come down” is a useful everyday approximation, although orbital mechanics makes the real situation far more interesting."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p4",
+     "inline": {
+      "a": 2
+     },
+     "kind": "paragraph",
+     "text": "Read more at NASA Solar System Exploration or in the article on Newton’s law."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p5",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Satellites stay in orbit because they are always falling toward Earth and always missing it.2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of the ceiling and a floor that was levelled, the plaque says, by a man who did not believe in rushing. We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us. The bob swung, the counter clicked, the thermometer said eleven degrees, and the barometer said that the weather would hold. I wrote down the period every five minutes, and Reyes read it back to me so that neither of us could blame the other later. At eleven the wind rose, and the dome began to hum a low note that we could feel in our teeth. The pendulum did not care. That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument. The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises. We must have looked strange to it: two people in coats, sitting on folding stools beside a brass weight that swung and swung and never arrived anywhere. I thought about the Amulet, locked in its crate in the station below, and about the villagers who said that it pulled harder than any honest weight should. It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before. When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook. At three the clouds cleared and the stars came out over the open slot of the dome, so many of them that the room seemed to tilt. I remember thinking that every one of those stars was pulling on our little brass bob too, each from its own enormous distance, and that the inverse-square law had made all of their pulls together smaller than the pull of the hill we were sitting on. That is the second thing a person learns about gravity at night: distance is a kind of mercy. If the stars pulled as hard as the Earth, nothing would ever fall in a straight line, and no one could ever hang a pendulum and trust it. At four o’clock we were both too tired to talk, so we took turns reading the numbers aloud, and the numbers became a kind of song, the same four digits rising and falling with the swing. Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that somebody would always be watching it. He did not laugh, which I took as a sign of how tired he was. We talked instead about the first people who had done this kind of work, the surveyors who carried brass pendulums across mountains on the backs of mules and lay awake in tents counting swings by candlelight, and about how little the method has changed since then: a weight, a wire, a clock, patience, and the honesty to write down the number that the instrument gives you rather than the number you hoped for. Reyes said that patience was the only part of the kit the Institute had never managed to requisition. At five the sky in the east turned the colour of weak tea, and the first birds began to argue in the heather. We had nine hours of readings, two broken pencils, one repaired counter and a result that differed from the textbook value by a little less than two parts in ten thousand, which is exactly what the slate under the valley predicted. Nell, I told myself, this is the night you will describe to every student who asks why anyone measures gravity by hand. I wrote the final figure on the inside cover of the notebook in ink, so that nobody could rub it out, and underneath it I wrote the date, the place and both our names."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "When the sun rose, the pendulum was still swinging."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes, who wrote verse when the instruments were quiet, left a short poem in the log of Harrow Vale."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-t",
+     "inline": {},
+     "kind": "poem-title",
+     "text": "The Plumb Line"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1",
+     "inline": {},
+     "kind": "stanza",
+     "lines": 4,
+     "text": "A stone let go will find the ground, it never asks the way; the Earth is calling all around and every stone obeys."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2",
+     "inline": {},
+     "kind": "stanza",
+     "lines": 4,
+     "text": "The Moon is falling, so they say, and missing us for good — it has been falling night and day the way a planet should."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": " "
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Words."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "​"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Well…"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is that all?” asked Tomas. “That is all,” Dr. Vance replied, ‘and it is enough.’"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p10",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is identical everywhere on Earth — or so the old textbook claimed.3 The Harrow Vale survey proved it wrong by a few parts in ten thousand."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures."
+    },
+    {
+     "category": "translatable",
+     "id": "notes-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Notes"
+    },
+    {
+     "category": "translatable",
+     "id": "note-1",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "The standard value adopted in 1901 is exactly 9.80665 m/s²; 9.81 is the rounded figure most textbooks use. ↩"
+    },
+    {
+     "category": "translatable",
+     "id": "note-2",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "An orbit is a fall that never ends: the ground curves away as fast as the satellite drops. ↩"
+    },
+    {
+     "category": "translatable",
+     "id": "note-3",
+     "inline": {
+      "a": 1
+     },
+     "kind": "note",
+     "text": "The difference between the equator and the poles is about 0.5%, mostly because Earth spins and bulges at the equator. ↩"
+    }
+   ],
+   "blocks_by_category": {
+    "code": 9,
+    "foreign": 1,
+    "image": 4,
+    "invisible": 2,
+    "translatable": 115,
+    "verbatim": 10
+   },
+   "file": "earth-gravity.md",
+   "footnote_refs": 3,
+   "footnotes": 3,
+   "images": 4,
+   "translatable_blocks": 115
+  },
+  "txt": {
+   "aux": {},
+   "block_count": 94,
+   "blocks": [
+    {
+     "category": "translatable",
+     "id": "tp-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Earth Gravity"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "A Practical Introduction"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "by Dr. Eleanor Vance"
+    },
+    {
+     "category": "translatable",
+     "id": "tp-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Copyright"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Copyright © 2026 The Meridian Survey Institute. All rights reserved."
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "This edition was prepared as a test book for BookLoom. Any resemblance to a real survey, a real valley or a real amulet is a coincidence."
+    },
+    {
+     "category": "verbatim",
+     "id": "cr-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "978-0-00-000000-2"
+    },
+    {
+     "category": "translatable",
+     "id": "cr-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "First edition, Harrow Vale, 2026."
+    },
+    {
+     "category": "translatable",
+     "id": "toc-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Contents"
+    },
+    {
+     "category": "translatable",
+     "id": "toc-l1",
+     "inline": {},
+     "kind": "list",
+     "lines": 7,
+     "text": "Chapter One: What Is Gravity? Chapter Two: How Earth’s Gravity Works Chapter Three: The Gravity Formula Chapter Four: The Harrow Vale Expedition Chapter Five: Gravity and Distance Chapter Six: The Long Night at the Observatory Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter One: What Is Gravity?"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-q1-1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "quote",
+     "text": "Summary: Gravity is the force that attracts objects with mass toward one another. On Earth, it keeps people, oceans, and the atmosphere close to the planet and causes unsupported objects to fall toward the ground."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p1",
+     "inline": {
+      "dc": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is one of the fundamental interactions in nature. Dr. Eleanor Vance liked to begin every lecture with that sentence, and then with a pause long enough for somebody at the back to drop a pen."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p3",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "For everyday objects this attraction is extremely small. However, Earth has a mass of approximately 5.972 × 10²⁴ kg, and because Earth is so massive, its gravitational attraction is strong enough to keep us on its surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Well, that is the whole trick,” Vance said. “Mass pulls on mass — always, everywhere, without exception.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p5",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "“Don’t say everywhere,” Tomas Reyes objected. “Say everywhere we have measured.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "She laughed. Her friends had called her Nell since school, and only Reyes still dared to argue with Dr. Vance in front of a lecture hall."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Mass and weight"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-l1",
+     "inline": {},
+     "kind": "list",
+     "lines": 2,
+     "text": "• Mass describes how much matter an object contains. • Weight describes the gravitational force acting on that mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p7",
+     "inline": {
+      "b": 1,
+      "code": 1,
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "The average gravitational acceleration near Earth’s surface is approximately 9.81 metres per second every second, written g = 9.81 m/s².[1]"
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Earth seen from space, about 29,000 km away."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Your mass would remain the same on Earth and on the Moon, but your weight would be much lower on the Moon — roughly one sixth of what the bathroom scale shows at home."
+    },
+    {
+     "category": "translatable",
+     "id": "ch1-p9",
+     "inline": {
+      "i": 2
+     },
+     "kind": "paragraph",
+     "text": "Words matter here. Words like heavy and light describe weight, not mass, and Vance never let a student mix them up."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Two: How Earth’s Gravity Works"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "Earth attracts objects toward its centre of mass. Nell drew it on the board as a single dot with arrows pointing inward from every direction."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 1. Arrows pointing toward the centre of mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For example:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l1",
+     "inline": {},
+     "kind": "list",
+     "lines": 4,
+     "text": "1. You release an object. 2. Earth’s gravity accelerates the object toward Earth’s centre. 3. The ground prevents the object from continuing farther. 4. The object therefore remains on Earth’s surface."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Some important consequences of gravity include:"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-l2",
+     "inline": {},
+     "kind": "list",
+     "lines": 5,
+     "text": "• Objects fall toward Earth. • The Moon remains in orbit around Earth. • Earth remains in orbit around the Sun. • Oceans remain on Earth’s surface. • Earth’s atmosphere remains gravitationally bound to the planet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravity keeps the oceans in place"
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield your eyes when you look at the tide charts, Reyes liked to joke, because the numbers are blinding: the Moon lifts the open ocean by less than a metre, and yet it moves whole bays."
+    },
+    {
+     "category": "translatable",
+     "id": "ch2-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal the instrument case before the descent, the checklist said, and Nell always read it aloud."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Three: The Gravity Formula"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p1",
+     "inline": {
+      "code": 1
+     },
+     "kind": "paragraph",
+     "text": "Newton’s law of universal gravitation is usually written F = G × (m₁ × m₂) / r², and every symbol in it has a plain meaning."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-t1",
+     "inline": {},
+     "kind": "table",
+     "lines": 6,
+     "text": "Symbol | Meaning | Typical unit F | Gravitational force | newton (N) G | Gravitational constant | N·m²/kg² m₁ | Mass of the first object | kilogram (kg) m₂ | Mass of the second object | kilogram (kg) r | Distance between the centres of mass | metre (m)"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The gravitational constant is approximately 6.674×10⁻¹¹ N·m²/kg². It is so small that two people standing a metre apart attract each other with less force than a grain of dust exerts on a table."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "2"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "For an 80 kg person on Earth’s surface, the force comes out at about 784.8 N — the familiar weight of that person."
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Vance kept the worked example pinned above her desk as a numbered plate:"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "XIV"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "§"
+    },
+    {
+     "category": "translatable",
+     "id": "ch3-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every result in this section assumes that Earth is a perfect sphere; the next chapter shows what happens when it is not."
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "***"
+    },
+    {
+     "category": "verbatim",
+     "id": "ch3-p10",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "9.81"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Four: The Harrow Vale Expedition"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p1",
+     "inline": {
+      "b": 1
+     },
+     "kind": "paragraph",
+     "text": "The Meridian Survey Institute sent its first gravity team to Harrow Vale in the spring, and Dr. Eleanor Vance led it."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Harrow Vale is a long valley of slate and heather about 40 km from the coast. Its floor lies 212 m above sea level, and its gravity is a fraction weaker than the textbook value."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is the Amulet really in the crate?” Reyes asked on the first morning."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“It is,” said Nell, “and it stays there — wrapped, sealed and logged — until we have measured the valley without it.”"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet was not magic, whatever the villagers said. It was a dense brass weight, polished by a century of hands, that the Institute used to calibrate its gravimeters."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Above the door of the old field station someone had carved a line in Latin:"
+    },
+    {
+     "category": "foreign",
+     "id": "ch4-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Gravitas omnia trahit, sed nemo videt."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes translated it at once — “weight pulls everything, but nobody sees it” — and Vance said that the motto was more accurate than most textbooks."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p9",
+     "inline": {
+      "f": 1
+     },
+     "kind": "paragraph",
+     "text": "In the station log, a French visitor had added a note of her own: La pesanteur ne prend jamais de vacances. Nobody ever crossed it out."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p10",
+     "inline": {
+      "f": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "On the next page she had written « Ce n’est qu’un poids » — it is only a weight — beside a sketch of the Amulet."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-h1",
+     "inline": {},
+     "kind": "heading",
+     "text": "Field notes"
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Day one: wind from the west, light rain, readings steady. Day two: the gravimeter drifted by 0.02 mGal an hour and Reyes recalibrated it twice against the Amulet. Day three: the readings at the north end of Harrow Vale were lower than the readings at the south end, exactly as the slate maps predicted."
+    },
+    {
+     "category": "translatable",
+     "id": "ch4-p12",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Don’t trust a single reading, Vance wrote in the margin. Trust the pattern."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Five: Gravity and Distance"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p1",
+     "inline": {
+      "b": 1,
+      "i": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity becomes weaker as distance increases. According to the inverse-square law, doubling the distance from Earth’s centre leaves only a quarter of the pull."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-t1",
+     "inline": {},
+     "kind": "table",
+     "lines": 5,
+     "text": "Distance from Earth’s centre | Relative strength 1 × radius | 100% 2 × radius | 25% 3 × radius | 11.1% 4 × radius | 6.25%"
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The same diagram, drawn again at a larger scale, shows the arrows thinning out as they spread over a bigger sphere."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-fig1-cap",
+     "inline": {},
+     "kind": "caption",
+     "text": "Figure 2. The same arrows, spread over a sphere twice as large."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-q1-1",
+     "inline": {},
+     "kind": "quote",
+     "text": "“What goes up must come down” is a useful everyday approximation, although orbital mechanics makes the real situation far more interesting."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p4",
+     "inline": {
+      "a": 2
+     },
+     "kind": "paragraph",
+     "text": "Read more at NASA Solar System Exploration or in the article on Newton’s law."
+    },
+    {
+     "category": "translatable",
+     "id": "ch5-p5",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Satellites stay in orbit because they are always falling toward Earth and always missing it.[2]"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Six: The Long Night at the Observatory"
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Nell kept a diary during the night the Institute’s pendulum was moved to the observatory. One entry ran on for pages."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "At nine o’clock in the evening we carried the pendulum up the hill, four of us on the poles and Reyes walking backwards in front, calling out every stone on the path as if it were a personal enemy. The observatory at Harrow Vale is older than the Institute itself; its dome was built for a telescope that was sold a century ago, and what remains is a round stone room with a hook in the centre of the ceiling and a floor that was levelled, the plaque says, by a man who did not believe in rushing. We hung the bob from the hook at ten, and for the first hour nothing happened that would interest anyone but us. The bob swung, the counter clicked, the thermometer said eleven degrees, and the barometer said that the weather would hold. I wrote down the period every five minutes, and Reyes read it back to me so that neither of us could blame the other later. At eleven the wind rose, and the dome began to hum a low note that we could feel in our teeth. The pendulum did not care. That is the first thing a person learns about gravity at night: it does not care about the wind, the cold, the hour, or the number of cups of tea the observers have drunk. It pulls the bob toward the centre of the Earth with the same quiet insistence it applied to the stones of the hill when the glaciers left them there. At midnight we changed the length of the wire by exactly one centimetre and began again, because a single measurement is an opinion and two measurements are the beginning of an argument. The new period was longer, as it should have been, and the difference matched the formula to the fourth decimal place. Reyes wanted to celebrate; I made him write the number down twice first. Around one o’clock a fox came to the door and watched us for a long time with the polite suspicion of a neighbour who has heard noises. We must have looked strange to it: two people in coats, sitting on folding stools beside a brass weight that swung and swung and never arrived anywhere. I thought about the Amulet, locked in its crate in the station below, and about the villagers who said that it pulled harder than any honest weight should. It does not, of course. We weighed it on three separate balances before we left the Institute, and it weighs exactly what a piece of brass of its size ought to weigh, no more and no less. But I understood the villagers better that night than I had before. When you watch a pendulum for long enough, the steadiness of it begins to feel like intention, as if something under the floor were patiently drawing the bob back each time it tried to escape. At two o’clock the counter jammed, and we lost eleven minutes of data while Reyes took it apart on his knees with a torch in his mouth. He fixed it with a hairpin borrowed from me and a word I will not write in an Institute notebook. At three the clouds cleared and the stars came out over the open slot of the dome, so many of them that the room seemed to tilt. I remember thinking that every one of those stars was pulling on our little brass bob too, each from its own enormous distance, and that the inverse-square law had made all of their pulls together smaller than the pull of the hill we were sitting on. That is the second thing a person learns about gravity at night: distance is a kind of mercy. If the stars pulled as hard as the Earth, nothing would ever fall in a straight line, and no one could ever hang a pendulum and trust it. At four o’clock we were both too tired to talk, so we took turns reading the numbers aloud, and the numbers became a kind of song, the same four digits rising and falling with the swing. Reyes said afterwards that he dreamed of them for a week. Somewhere after half past four he asked me, very seriously, whether the pendulum would still swing if nobody were watching it, and I told him that the Institute had been founded precisely so that somebody would always be watching it. He did not laugh, which I took as a sign of how tired he was. We talked instead about the first people who had done this kind of work, the surveyors who carried brass pendulums across mountains on the backs of mules and lay awake in tents counting swings by candlelight, and about how little the method has changed since then: a weight, a wire, a clock, patience, and the honesty to write down the number that the instrument gives you rather than the number you hoped for. Reyes said that patience was the only part of the kit the Institute had never managed to requisition. At five the sky in the east turned the colour of weak tea, and the first birds began to argue in the heather. We had nine hours of readings, two broken pencils, one repaired counter and a result that differed from the textbook value by a little less than two parts in ten thousand, which is exactly what the slate under the valley predicted. Nell, I told myself, this is the night you will describe to every student who asks why anyone measures gravity by hand. I wrote the final figure on the inside cover of the notebook in ink, so that nobody could rub it out, and underneath it I wrote the date, the place and both our names."
+    },
+    {
+     "category": "translatable",
+     "id": "ch6-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "When the sun rose, the pendulum was still swinging."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Chapter Seven: Songs of Falling Things"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p1",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Reyes, who wrote verse when the instruments were quiet, left a short poem in the log of Harrow Vale."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-t",
+     "inline": {},
+     "kind": "poem-title",
+     "text": "The Plumb Line"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s1",
+     "inline": {},
+     "kind": "stanza",
+     "lines": 4,
+     "text": "A stone let go will find the ground, it never asks the way; the Earth is calling all around and every stone obeys."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-poem1-s2",
+     "inline": {},
+     "kind": "stanza",
+     "lines": 4,
+     "text": "The Moon is falling, so they say, and missing us for good — it has been falling night and day the way a planet should."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p2",
+     "inline": {},
+     "kind": "paragraph",
+     "text": " "
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p3",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Seal."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p4",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Shield."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p5",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Words."
+    },
+    {
+     "category": "invisible",
+     "id": "ch7-p6",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "​"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p7",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Well…"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p8",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "Every object with mass attracts every other object with mass."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p9",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "“Is that all?” asked Tomas. “That is all,” Dr. Vance replied, ‘and it is enough.’"
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p10",
+     "inline": {
+      "fn": 1
+     },
+     "kind": "paragraph",
+     "text": "Gravity is identical everywhere on Earth — or so the old textbook claimed.[3] The Harrow Vale survey proved it wrong by a few parts in ten thousand."
+    },
+    {
+     "category": "translatable",
+     "id": "ch7-p11",
+     "inline": {},
+     "kind": "paragraph",
+     "text": "The Amulet went back into its case, the case went back to the Institute, and Nell went back to her lectures."
+    },
+    {
+     "category": "translatable",
+     "id": "notes-title",
+     "inline": {},
+     "kind": "heading",
+     "text": "Notes"
+    },
+    {
+     "category": "translatable",
+     "id": "note-1",
+     "inline": {},
+     "kind": "note",
+     "text": "[1] The standard value adopted in 1901 is exactly 9.80665 m/s²; 9.81 is the rounded figure most textbooks use."
+    },
+    {
+     "category": "translatable",
+     "id": "note-2",
+     "inline": {},
+     "kind": "note",
+     "text": "[2] An orbit is a fall that never ends: the ground curves away as fast as the satellite drops."
+    },
+    {
+     "category": "translatable",
+     "id": "note-3",
+     "inline": {},
+     "kind": "note",
+     "text": "[3] The difference between the equator and the poles is about 0.5%, mostly because Earth spins and bulges at the equator."
+    }
+   ],
+   "blocks_by_category": {
+    "foreign": 1,
+    "invisible": 2,
+    "translatable": 85,
+    "verbatim": 6
+   },
+   "file": "earth-gravity.txt",
+   "footnote_refs": 3,
+   "footnotes": 3,
+   "images": 0,
+   "translatable_blocks": 85
+  }
+ },
+ "glossary_bait": [
+  "Well",
+  "Don’t",
+  "Words",
+  "Seal",
+  "Shield"
+ ],
+ "heading_equals_body": {
+  "ids": [
+   "ch2-h1",
+   "ch2-p4"
+  ],
+  "text": "Gravity keeps the oceans in place"
+ },
+ "invisible_blocks": [
+  "ch7-p2",
+  "ch7-p6"
+ ],
+ "links": [
+  "https://science.nasa.gov/solar-system/",
+  "https://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation"
+ ],
+ "long_paragraph": {
+  "chars": 5107,
+  "chunk_budget_tokens": 1200,
+  "estimated_tokens_en": 1469,
+  "estimated_tokens_unknown_language": 1958,
+  "id": "ch6-p2",
+  "words": 965
+ },
+ "names": [
+  {
+   "forms": [
+    "Eleanor",
+    "Vance",
+    "Nell"
+   ],
+   "kind": "person",
+   "name": "Dr. Eleanor Vance",
+   "note": "forename + surname + nickname; the narrator of chapter six"
+  },
+  {
+   "forms": [
+    "Tomas",
+    "Reyes"
+   ],
+   "kind": "person",
+   "name": "Tomas Reyes",
+   "note": "forename + surname"
+  },
+  {
+   "forms": [
+    "Harrow"
+   ],
+   "kind": "place",
+   "name": "Harrow Vale",
+   "note": "two-word place; 'Vale' is also a common noun"
+  },
+  {
+   "forms": [
+    "Meridian"
+   ],
+   "kind": "organisation",
+   "name": "The Meridian Survey Institute",
+   "note": "also referred to as 'the Institute'"
+  },
+  {
+   "forms": [
+    "Amulet"
+   ],
+   "kind": "object",
+   "name": "the Amulet",
+   "note": "an object with a capital"
+  }
+ ],
+ "repeated_sentence": {
+  "ids": [
+   "ch1-p2",
+   "ch5-p2",
+   "ch7-p8"
+  ],
+  "text": "Every object with mass attracts every other object with mass."
+ },
+ "terms": [
+  "km",
+  "m/s²",
+  "9.81",
+  "6.674×10⁻¹¹",
+  "N·m²/kg²",
+  "mGal",
+  "784.8 N"
+ ],
+ "verbatim_texts": [
+  "***",
+  "100%",
+  "11.1%",
+  "2",
+  "25%",
+  "6.25%",
+  "9.81",
+  "978-0-00-000000-2",
+  "XIV",
+  "§"
+ ]
+}

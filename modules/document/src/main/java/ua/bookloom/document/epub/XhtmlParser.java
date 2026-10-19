@@ -30,6 +30,10 @@ final class XhtmlParser {
     private static final int PROLOG_PROBE_BYTES = 200;
     private static final Pattern ENCODING_DECLARATION = Pattern.compile("encoding=[\"']([^\"']+)[\"']");
 
+    private static final Pattern START_TAG = Pattern.compile("<[a-zA-Z][a-zA-Z0-9:-]*(?:\"[^\"]*\"|'[^']*'|[^\"'>])*>");
+
+    private static final Pattern QUOTED_VALUE = Pattern.compile("\"[^\"]*\"|'[^']*'");
+
     /**
      * Matches any element written in XML self-closing form — {@code <name .../>} — for any tag name. Originally
      * (task 4.1) this pattern's tag-name group was the fixed alternation {@code (script|style|noscript)}; task
@@ -72,11 +76,41 @@ final class XhtmlParser {
      */
     static Document parse(byte[] content, String baseUri) {
         final Charset charset = detectCharset(content);
-        final String decoded = new String(content, charset);
-        final Document doc = Jsoup.parse(expandSelfClosedNonVoidElement(decoded), baseUri);
+        final String decoded = withoutByteOrderMark(new String(content, charset));
+        final Document doc =
+                Jsoup.parse(expandSelfClosedNonVoidElement(normalizeAttributeWhitespace(decoded)), baseUri);
         clearSeenSelfCloseOnNonVoidElements(doc);
         doc.outputSettings().prettyPrint(false).charset(charset).syntax(Document.OutputSettings.Syntax.xml);
         return doc;
+    }
+
+    /**
+     * Turns a raw line feed, carriage return or tab inside a start tag's quoted attribute value into a space (a
+     * carriage-return-line-feed pair counts once), as an XML reader does. jsoup keeps the raw character, and
+     * {@link AttributeLineFeedEscaper} writes every line feed back as a character reference — which an XML reader
+     * reads as a line feed, not the space the source meant. Doing this before jsoup is the only point where a raw
+     * character can still be told apart from a reference such as a decimal line-feed reference, which is left for jsoup to decode.
+     */
+    private static String normalizeAttributeWhitespace(String xhtml) {
+        final Matcher tags = START_TAG.matcher(xhtml);
+        final StringBuilder normalized = new StringBuilder();
+        while (tags.find()) {
+            final Matcher values = QUOTED_VALUE.matcher(tags.group());
+            final String tag = values.replaceAll(value ->
+                    Matcher.quoteReplacement(value.group().replace("\r\n", " ").replaceAll("[\\n\\r\\t]", " ")));
+            tags.appendReplacement(normalized, Matcher.quoteReplacement(tag));
+        }
+        tags.appendTail(normalized);
+        return normalized.toString();
+    }
+
+    /**
+     * A leading byte-order mark is not document text: left in, jsoup keeps it as a text node, opens an implicit
+     * {@code body} around it and pushes the whole {@code head} into that body. {@link XhtmlProlog} already writes
+     * the mark back as part of the source's own prolog, so dropping it here keeps it written exactly once.
+     */
+    private static String withoutByteOrderMark(String decoded) {
+        return !decoded.isEmpty() && decoded.charAt(0) == '\uFEFF' ? decoded.substring(1) : decoded;
     }
 
     /**

@@ -41,4 +41,14 @@ public interface Toasts {
      * @param args the arguments the entry's pattern names, in order
      */
     void error(MessageKey key, Object... args);
+
+    /**
+     * Raises a message of any severity with a button that runs an action, for a message the person can act on at once.
+     *
+     * @param severity how the message is drawn and how long it stays
+     * @param key the catalogue entry to show
+     * @param action the button's label and what pressing it does; the message goes away when it is pressed
+     * @param args the arguments the entry's pattern names, in order
+     */
+    void raise(Severity severity, MessageKey key, ToastAction action, Object... args);
 }

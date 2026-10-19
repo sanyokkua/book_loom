@@ -1,0 +1,230 @@
+package ua.bookloom.pipeline.glossary;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.IntPredicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.StyleSheet;
+
+/** The model's keep-or-drop choice among recurring words: what it is shown, and what is taken from its answer. */
+class TermChoiceTest {
+
+    private static final CallFrame FRAME =
+            new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
+    private static final BookSlice BOOK = GlossaryTestSegments.of(List.of(
+            "The master drew the pentacle on the floor.",
+            "A pentacle needs a circle.",
+            "She put the table by the door."));
+
+    private final TermChoice choice = new TermChoice(new PromptTemplates(), new ObjectMapper());
+    private final List<JobEvent> events = new ArrayList<>();
+
+    private ModelCalls calls(final ScriptedChatModel model) {
+        return new ModelCalls() {
+            @Override
+            public Result<ChatResponse> call(
+                    final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+                return model.chat(request);
+            }
+
+            @Override
+            public void announce(final JobEvent event) {
+                events.add(event);
+            }
+        };
+    }
+
+    private static TermChoice.Choice ok(final Result<TermChoice.Choice> result) {
+        return Objects.requireNonNull(result.data(), "verdicts");
+    }
+
+    private static Result<ChatResponse> reply(final String content) {
+        return Result.ok(new ChatResponse(Objects.requireNonNull(content), FinishReason.STOP));
+    }
+
+    // IF the model were not shown how the book uses a word, THEN it could not tell a term from an ordinary word.
+    @Test
+    void choose_candidates_areShownWithTheirUsesAndAnExampleAndTheKeptOnesComeBack() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(
+                        "{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}"));
+
+        final Result<TermChoice.Choice> verdicts =
+                choice.choose(List.of("pentacle", "table"), BOOK, FRAME, calls(model));
+
+        assertThat(ok(verdicts).kept()).containsExactly("pentacle");
+        assertThat(ok(verdicts).dropped()).containsExactly("table");
+        final String user = model.requests().getFirst().messages().get(1).content();
+        assertThat(user).contains("- pentacle · 2 uses — \"The master drew the pentacle on the floor.\"");
+        assertThat(model.requests().getFirst().callKind()).isEqualTo(CallKind.TERM_CHOICE);
+    }
+
+    // IF the model could add words of its own, THEN the lexicon would fill with whatever it invented.
+    @Test
+    void choose_modelNamesAWordNobodyAsked_isNotKept() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(
+                        "{\"terms\":[{\"term\":\"dragon\",\"keep\":true},{\"term\":\"pentacle\",\"keep\":true}]}"));
+
+        assertThat(ok(choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model)))
+                        .kept())
+                .containsExactly("pentacle");
+    }
+
+    // IF an unreadable answer counted as "drop everything", THEN one bad reply would wipe a person's list.
+    @ParameterizedTest
+    @ValueSource(strings = {"They are all terms.", "{\"terms\":[{\"term\":\"pentacle\",\"keep\":tru"})
+    void choose_replyThatIsNotReadable_isAnErrorAndDecidesNothing(final String reply) {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(reply));
+
+        final Result<TermChoice.Choice> verdicts = choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model));
+
+        assertThat(verdicts.error()).isNotNull();
+        assertThat(verdicts.error().code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // A word the model left out of its answer is neither kept nor dropped.
+    @Test
+    void choose_modelLeavesAWordOut_isInNeitherSet() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true}]}"));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(List.of("pentacle", "table"), BOOK, FRAME, calls(model)));
+
+        assertThat(verdicts.kept()).containsExactly("pentacle");
+        assertThat(verdicts.dropped()).isEmpty();
+    }
+
+    @Test
+    void choose_twentyFiveCandidates_areSentInBatchesOfTenAndEachAnnounced() {
+        final List<String> terms =
+                IntStream.range(0, 25).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"terms\":[]}"))
+                .answer(reply("{\"terms\":[]}"))
+                .answer(reply("{\"terms\":[]}"));
+
+        choice.choose(terms, BOOK, FRAME, calls(model));
+
+        assertThat(model.requests()).hasSize(3);
+        assertThat(events)
+                .containsExactly(
+                        new BatchStarted(CallKind.TERM_CHOICE, 1, 3),
+                        new BatchStarted(CallKind.TERM_CHOICE, 2, 3),
+                        new BatchStarted(CallKind.TERM_CHOICE, 3, 3));
+    }
+
+    private static String verdictsJson(final int from, final int to, final IntPredicate keep) {
+        return IntStream.range(from, to)
+                .mapToObj(n -> "{\"term\":\"word" + n + "\",\"keep\":" + keep.test(n) + "}")
+                .collect(Collectors.joining(",", "{\"terms\":[", "]}"));
+    }
+
+    // A model that says "keep" to ten words in a row is not reading them; it is asked again on half a batch.
+    @Test
+    void choose_batchAnsweredAllTrue_isAskedAgainInHalvesAndTheSecondAnswerDecides() {
+        final List<String> terms =
+                IntStream.range(0, 10).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> true)))
+                .answer(reply(verdictsJson(0, 5, n -> n < 2)))
+                .answer(reply(verdictsJson(5, 10, n -> false)));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
+
+        assertThat(model.requests()).hasSize(3);
+        assertThat(verdicts.kept()).containsExactlyInAnyOrder("word0", "word1");
+        assertThat(verdicts.dropped()).hasSize(8);
+    }
+
+    // IF a batch still uniform after halving failed the whole choice, THEN one lazy answer would throw away every other
+    // batch's verdicts; that batch alone is left undecided — neither added by a scan nor removed by a review.
+    @Test
+    void choose_batchStillUniformAfterHalving_leavesOnlyThatBatchUndecided() {
+        final List<String> terms =
+                IntStream.range(0, 10).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> false)))
+                .answer(reply(verdictsJson(0, 5, n -> false)))
+                .answer(reply(verdictsJson(5, 10, n -> false)));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
+
+        assertThat(verdicts.kept()).isEmpty();
+        assertThat(verdicts.dropped()).isEmpty();
+        assertThat(verdicts.undecided()).hasSize(10);
+    }
+
+    @Test
+    void choose_threeBatchesWithTheMiddleOneUniform_appliesTheOtherTwoBatchesVerdicts() {
+        final List<String> terms =
+                IntStream.range(0, 30).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> n < 3)))
+                .answer(reply(verdictsJson(10, 20, n -> true)))
+                .answer(reply(verdictsJson(10, 15, n -> true)))
+                .answer(reply(verdictsJson(15, 20, n -> true)))
+                .answer(reply(verdictsJson(20, 30, n -> n >= 28)));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
+
+        assertThat(verdicts.kept()).containsExactlyInAnyOrder("word0", "word1", "word2", "word28", "word29");
+        assertThat(verdicts.dropped()).hasSize(15).doesNotContain("word10", "word19");
+        assertThat(verdicts.undecided()).hasSize(10).contains("word10", "word19");
+    }
+
+    // Fewer than six answers can honestly be all alike.
+    @Test
+    void choose_fiveAnswersAllTrue_isTakenAsGiven() {
+        final List<String> terms =
+                IntStream.range(0, 5).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(verdictsJson(0, 5, n -> true)));
+
+        assertThat(ok(choice.choose(terms, BOOK, FRAME, calls(model))).kept()).hasSize(5);
+        assertThat(model.requests()).hasSize(1);
+    }
+
+    @Test
+    void choose_failedCall_endsWithItsErrorAndKeepsNothing() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Down", "The server is not answering.")));
+
+        final Result<TermChoice.Choice> kept = choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model));
+
+        assertThat(kept.error()).isNotNull();
+        assertThat(kept.error().code()).isEqualTo(ErrorCode.unreachable);
+    }
+
+    @Test
+    void choose_noCandidates_asksNothing() {
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        assertThat(ok(choice.choose(List.of(), BOOK, FRAME, calls(model))).kept())
+                .isEmpty();
+        assertThat(model.requests()).isEmpty();
+    }
+}

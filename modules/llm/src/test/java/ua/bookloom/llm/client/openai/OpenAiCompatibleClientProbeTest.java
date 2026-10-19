@@ -24,7 +24,7 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientProbeTest {
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {
@@ -73,6 +73,7 @@ class OpenAiCompatibleClientProbeTest {
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(2));
-        return new OpenAiCompatibleClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 }

@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "hr",
+ "drafts": [
+  {
+   "name": "hr-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "„[^„“]*“",
+    "injection": false
+   }
+  },
+  {
+   "name": "hr-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)umorna|umorila",
+    "injection": false
+   }
+  },
+  {
+   "name": "hr-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)poglavlje",
+    "injection": false
+   }
+  },
+  {
+   "name": "hr-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)umoran|umorio",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "hr-gender",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bila je umoran.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "hr-gender-clean",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bila je umorna.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "hr-word",
+   "kind": "wrong-word",
+   "source": "The deadline was Friday.",
+   "candidate": "Godina je bila u petak.",
+   "defective": true,
+   "rationale": "year for deadline"
+  },
+  {
+   "id": "hr-word-clean",
+   "kind": "wrong-word",
+   "source": "The deadline was Friday.",
+   "candidate": "Rok je bio u petak.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

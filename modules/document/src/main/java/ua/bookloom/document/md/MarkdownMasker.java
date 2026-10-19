@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.commonmark.node.Emphasis;
 import org.commonmark.node.HardLineBreak;
 import org.commonmark.node.Link;
@@ -40,7 +41,18 @@ import ua.bookloom.document.mask.MaskedContent;
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Slf4j
 final class MarkdownMasker {
+
+    /** The third element of a range: what kind of token its source fragment becomes. */
+    private static final int ATOMIC = 0;
+
+    private static final int OPEN = 1;
+    private static final int CLOSE = 2;
+    private static final int LINE_BREAK = 3;
+
+    private static final Pattern BARE_WWW =
+            Pattern.compile("(?<![\\w./@-])www\\.[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+(?:[/?#][^\\s<>]*)?");
 
     /** A GFM task marker and the horizontal whitespace that makes its following label a task-list label. */
     private static final Pattern TASK_LIST_MARKER = Pattern.compile("\\[[ xX]\\][\\t ]+");
@@ -68,11 +80,21 @@ final class MarkdownMasker {
         int cursor = charStart;
         for (final int[] range : ranges) {
             writer.appendCharacterData(text.substring(cursor, range[0]));
-            writer.appendAtomic(text.substring(range[0], range[1]));
+            appendRange(writer, text.substring(range[0], range[1]), range[2]);
             cursor = range[1];
         }
         writer.appendCharacterData(text.substring(cursor, charEnd));
         return writer.build();
+    }
+
+    /** Mints one token for a range's source fragment, as an atomic token, a pair's edge or a line break. */
+    private static void appendRange(MaskWriter writer, String fragment, int role) {
+        switch (role) {
+            case OPEN -> writer.appendPairOpen(fragment, null);
+            case CLOSE -> writer.appendPairClose(fragment);
+            case LINE_BREAK -> writer.appendLineBreak(fragment);
+            default -> writer.appendAtomic(fragment);
+        }
     }
 
     /** Adds a task marker before inline child ranges, keeping the task state outside model-controlled text. */
@@ -84,7 +106,7 @@ final class MarkdownMasker {
         final Matcher matcher = TASK_LIST_MARKER.matcher(text);
         matcher.region(charStart, charEnd);
         if (matcher.lookingAt()) {
-            ranges.add(new int[] {charStart, matcher.end()});
+            ranges.add(new int[] {charStart, matcher.end(), ATOMIC});
         }
     }
 
@@ -100,13 +122,17 @@ final class MarkdownMasker {
      * paired construct's delimiters, and every other construct's full span are each appended here.
      */
     private static void collectNode(Node node, String text, List<int[]> ranges) {
-        if (node instanceof Text || node instanceof SoftLineBreak) {
+        if (node instanceof Text plain) {
+            collectBareWww(plain, text, ranges);
+            return;
+        }
+        if (node instanceof SoftLineBreak) {
             return;
         }
         if (node instanceof HardLineBreak hardLineBreak) {
             final int @Nullable [] range = hardLineBreakRange(hardLineBreak, text);
             if (range != null) {
-                ranges.add(range);
+                ranges.add(new int[] {range[0], range[1], LINE_BREAK});
             }
             return;
         }
@@ -115,6 +141,36 @@ final class MarkdownMasker {
         } else {
             collectAtomic(node, ranges);
         }
+    }
+
+    /**
+     * Masks each bare {@code www.} address in a plain text run as one atomic token. The autolink extension
+     * recognizes {@code https://…} addresses but not this shorter form, and a model asked to translate a sentence
+     * would re-case or translate the address inside it (task 5.7). A run inside a link's own label is left alone: a
+     * token there would empty the label's pair.
+     */
+    private static void collectBareWww(Text plain, String text, List<int[]> ranges) {
+        if (plain.getSourceSpans().isEmpty() || plain.getParent() instanceof Link) {
+            return;
+        }
+        final int start = MarkdownSpans.firstSpanStart(plain);
+        final Matcher matcher = BARE_WWW.matcher(text.substring(start, MarkdownSpans.lastSpanEnd(plain)));
+        int masked = 0;
+        while (matcher.find()) {
+            final int end = start + matcher.end() - trailingPunctuationLength(matcher.group());
+            ranges.add(new int[] {start + matcher.start(), end, ATOMIC});
+            masked++;
+        }
+        log.debug("bare www addresses masked in one text run: {}", masked);
+    }
+
+    private static int trailingPunctuationLength(String address) {
+        int length = 0;
+        while (length < address.length()
+                && ".,;:!?)]}'\"".indexOf(address.charAt(address.length() - 1 - length)) >= 0) {
+            length++;
+        }
+        return length;
     }
 
     /**
@@ -130,9 +186,9 @@ final class MarkdownMasker {
             collectAtomic(node, ranges);
             return;
         }
-        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.firstSpanStart(firstSpanned)});
+        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.firstSpanStart(firstSpanned), OPEN});
         collectChildren(node, text, ranges);
-        ranges.add(new int[] {MarkdownSpans.lastSpanEnd(lastSpanned), MarkdownSpans.lastSpanEnd(node)});
+        ranges.add(new int[] {MarkdownSpans.lastSpanEnd(lastSpanned), MarkdownSpans.lastSpanEnd(node), CLOSE});
     }
 
     /** The catch-all: any construct that is not paired is masked as one atomic token over its full span. */
@@ -140,7 +196,7 @@ final class MarkdownMasker {
         if (node.getSourceSpans().isEmpty()) {
             return;
         }
-        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.lastSpanEnd(node)});
+        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.lastSpanEnd(node), ATOMIC});
     }
 
     /**
@@ -160,6 +216,7 @@ final class MarkdownMasker {
 
     /**
      * A link is atomic when its source substring is delimited by {@code <} and {@code >} (every autolink form), or
+     * does not open with {@code [} at all (a bare web address the autolink extension recognized), or
      * when its sole child is a {@code Text} whose literal equals the destination. Neither test alone suffices: an
      * email autolink {@code <me@example.com>} has destination {@code mailto:me@example.com}, which the equality
      * test misses, while {@code [https://x.org](https://x.org)} carries no angle brackets at all (task 6.2).
@@ -167,6 +224,10 @@ final class MarkdownMasker {
     private static boolean isAtomicLink(Link link, String text) {
         final String source = text.substring(MarkdownSpans.firstSpanStart(link), MarkdownSpans.lastSpanEnd(link));
         if (source.startsWith("<") && source.endsWith(">")) {
+            return true;
+        }
+        if (!source.startsWith("[")) {
+            // The autolink extension's bare address (task 5.7): no bracket or angle delimiter opens the span.
             return true;
         }
         // link.getFirstChild() is non-null here (isPaired already checked); "sole child" is tested as

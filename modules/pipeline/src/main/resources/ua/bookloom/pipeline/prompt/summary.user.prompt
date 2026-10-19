@@ -1,0 +1,13 @@
+{{#previousSummary}}
+[Running summary so far]
+{{previousSummary}}
+
+{{/previousSummary}}
+[This chapter — source]
+{{chapterSource}}
+
+[This chapter — accepted target]
+{{chapterTarget}}
+
+Return one JSON object:
+{"summary":{"source":"<updated summary in the source language>","target":"<updated summary in the target language>"},"facts":["<key fact>"]}

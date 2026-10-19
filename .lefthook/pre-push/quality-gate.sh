@@ -4,7 +4,7 @@
 #
 # This is EXACTLY the command the CI quality job runs (.github/workflows/ci.yml) — identical, never a faster
 # hook-only subset. That identity is the point: a green push implies a green CI quality job for the same tree
-# (design.md D8). CI may add gates it alone can run (license report, OWASP SCA — both need network); it never
+# (design.md D8). CI may add gates it alone can run (the license report, which needs network); it never
 # runs a weaker variant of this one.
 #
 # It lives here rather than inline in lefthook.yml because lefthook filters pre-push *jobs* against

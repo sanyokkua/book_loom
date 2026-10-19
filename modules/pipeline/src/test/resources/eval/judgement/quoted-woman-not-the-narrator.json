@@ -1,0 +1,59 @@
+{
+  "id": "quoted-woman-not-the-narrator",
+  "about": "A first-person narrator, a man, who speaks a woman's name in his own quoted words ('Mind the step, Lucy'); that name is a woman's, not the narrator's, and the narrator's gender shows only in how he is addressed ('sir').",
+  "title": "The Night Ferry",
+  "author": "Hollis Craymer",
+  "chapters": [
+    {
+      "title": "Crossing",
+      "paragraphs": [
+        "I took the night ferry because it was the only boat that would carry a man with a horse and no papers.",
+        "The deckhand looked me over twice. \"Straight down the ramp, sir, and mind the rope,\" he said at last.",
+        "I led the horse aboard and tied her at the rail. Lucy was already there, sitting on a crate with her bag on her knees.",
+        "\"Mind the step, Lucy,\" I said, and held out my hand. She took it without a word.",
+        "We had not spoken since the harbour. I had told myself that silence was a kind of courtesy.",
+        "The engine shook the deck. Somewhere below us a pump began to knock, and the lamps swung on their hooks.",
+        "\"Hang on to that crate, Lucy,\" I said when the first swell came, and she laughed for the first time that night.",
+        "The deckhand passed again with a lantern. \"Rough water ahead, sir, you may want to go below,\" he told me.",
+        "I stayed on deck. I had spent too many years below deck on too many boats, and I wanted to see the far shore come.",
+        "Lucy fell asleep against my shoulder some time after midnight. I did not move for fear of waking her.",
+        "At dawn the coast showed grey and low on the water. I counted the lights of the town and found there were nine.",
+        "\"Time to go ashore, sir,\" said the deckhand, and I woke Lucy and untied the horse."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "Adventure",
+      "genreClass": ["adventure", "historical fiction"],
+      "register": "NEUTRAL",
+      "narrator": "FIRST",
+      "narratorGender": "MALE"
+    },
+    "characters": [
+      {
+        "term": "Lucy",
+        "type": "CHARACTER",
+        "gender": "FEMALE"
+      }
+    ]
+  },
+  "expect": {
+    "narrator": "FIRST",
+    "pronouns": {},
+    "sampleStartsWith": "I took the night ferry",
+    "sampleNever": []
+  },
+  "narratorQuotes": [
+    {
+      "quote": "Straight down the ramp, sir, and mind the rope",
+      "name": ""
+    },
+    {
+      "quote": "Rough water ahead, sir, you may want to go below",
+      "name": ""
+    }
+  ]
+}

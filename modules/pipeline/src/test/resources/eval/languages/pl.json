@@ -1,0 +1,90 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "pl",
+ "drafts": [
+  {
+   "name": "pl-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "„[^„”]*”",
+    "injection": false
+   }
+  },
+  {
+   "name": "pl-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)zmęczona",
+    "injection": false
+   }
+  },
+  {
+   "name": "pl-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)rozdzia[łl]",
+    "injection": false
+   }
+  },
+  {
+   "name": "pl-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)zmęczony",
+    "injection": false
+   }
+  },
+  {
+   "name": "pl-numeral",
+   "masked": "He saw five dogs.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)pięć psów",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "pl-case",
+   "kind": "case",
+   "source": "He saw five dogs.",
+   "candidate": "Zobaczył pięć psy.",
+   "defective": true,
+   "rationale": "wrong case after five"
+  },
+  {
+   "id": "pl-case-clean",
+   "kind": "case",
+   "source": "He saw five dogs.",
+   "candidate": "Zobaczył pięć psów.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "pl-gender",
+   "kind": "gender",
+   "source": "She said she was tired.",
+   "candidate": "Powiedziała, że jest zmęczony.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "pl-gender-clean",
+   "kind": "gender",
+   "source": "She said she was tired.",
+   "candidate": "Powiedziała, że jest zmęczona.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

@@ -17,7 +17,7 @@ One `AbstractModule` per Gradle module, co-located with the implementation it bi
 | Guice module                         | Binds (port → impl)                                                  |
 |--------------------------------------|----------------------------------------------------------------------|
 | `DocumentModule` (`:document`)       | `DocumentPort → DocumentService`                                     |
-| `LlmModule` (`:llm`)                 | **built:** `ChatModelFactory → ChatModelFactoryImpl` (resolves only the offline `pseudo` provider); still to come: `ProviderFactory → ProviderFactoryImpl`, `InferenceGate` (singleton) |
+| `LlmModule` (`:llm`)                 | **built:** `ChatModelFactory → ChatModelFactoryImpl` (resolves the offline `pseudo` provider and every registered real one), `ProviderClientFactory` and `InferenceGate` (singletons), `ProviderVerifier`, `ModelCatalog`, `ProviderConfigs`; still to come: credential resolution |
 | `PersistenceModule` (`:persistence`) | repository ports → JDBI DAOs, `Jdbi`, `DataSource`                   |
 | `PipelineModule` (`:pipeline`)       | **built:** `TranslationEngine → TranslationEngineImpl`; still to come: assemblers, QA          |
 | `UiModule` (`:ui`)                   | viewmodels, `Navigator`, state mirror, controllers via factory       |

@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.llm.client.ollama.OllamaClient;
@@ -17,13 +18,15 @@ public final class ProviderClientFactory {
 
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
+    private final LongSupplier nanoTime;
     private final ConcurrentMap<String, CachedClient> clients = new ConcurrentHashMap<>();
 
-    /** Shares the configured HTTP exchange and tolerant mapper across all clients created by this factory. */
+    /** Shares the configured HTTP exchange, tolerant mapper, and time source across all clients created by this factory. */
     @Inject
-    public ProviderClientFactory(HttpExchange exchange, ObjectMapper mapper) {
+    public ProviderClientFactory(HttpExchange exchange, ObjectMapper mapper, LongSupplier nanoTime) {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
     /** Returns the cached dialect client for a provider id, constructing it once on the first lookup. */
@@ -51,7 +54,7 @@ public final class ProviderClientFactory {
         log.debug("Creating provider client id={} kind={}", config.id(), config.kind());
         return switch (config.kind()) {
             case OLLAMA -> new OllamaClient(config, exchange, mapper);
-            case OPENAI_COMPATIBLE -> new OpenAiCompatibleClient(config, exchange, mapper);
+            case OPENAI_COMPATIBLE -> new OpenAiCompatibleClient(config, exchange, mapper, nanoTime);
         };
     }
 

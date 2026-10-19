@@ -17,7 +17,9 @@ import ua.bookloom.api.document.Document;
 /** Exercises document-port diagnostics through the real service and test Logback appender. */
 class DocumentServiceDiagnosticsTest {
 
-    private static final Path TEST_LOG = Path.of("build/test-logs/test.log");
+    // This JVM's own file (logback-test.xml): parallel forks each write one, so only this fork's lines are read back.
+    private static final Path TEST_LOG =
+            Path.of("build/test-logs/test-" + System.getProperty("org.gradle.test.worker", "0") + ".log");
 
     @TempDir
     private Path tempDir;

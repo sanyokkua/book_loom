@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Singleton;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -41,16 +42,34 @@ public final class StateMirror {
     private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper remaining = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper section = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper sections = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
+    private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
     private final ReadOnlyDoubleWrapper progressFraction = new ReadOnlyDoubleWrapper();
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable RunMode> runMode = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
+    private final LiveSection live = new LiveSection();
+    private final ReviewSection review = new ReviewSection();
 
     /** Creates an idle, empty mirror. */
     public StateMirror() {
         // Every property starts at its default; a run's first publish fills them.
+    }
+
+    /**
+     * The whole set of figures, which tells auto-accepted from repaired segments.
+     *
+     * @return the read-only figures; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<RunFigures> figures() {
+        return figures.getReadOnlyProperty();
     }
 
     /**
@@ -99,6 +118,42 @@ public final class StateMirror {
     }
 
     /**
+     * The 1-based body unit the run is translating.
+     *
+     * @return the read-only position, zero before the first; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty section() {
+        return section.getReadOnlyProperty();
+    }
+
+    /**
+     * How many body units the book has.
+     *
+     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty sections() {
+        return sections.getReadOnlyProperty();
+    }
+
+    /**
+     * The 1-based chunk within the section being translated.
+     *
+     * @return the read-only position, zero before the first; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty chunk() {
+        return chunk.getReadOnlyProperty();
+    }
+
+    /**
+     * How many chunks the section has.
+     *
+     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty chunks() {
+        return chunks.getReadOnlyProperty();
+    }
+
+    /**
      * Decided segments over the total.
      *
      * @return the read-only proportion between 0.0 and 1.0; read on the FX thread
@@ -136,6 +191,24 @@ public final class StateMirror {
     }
 
     /**
+     * The name of the book file the run started on.
+     *
+     * @return a read-only property holding {@code null} while no run exists; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable String> runFileName() {
+        return runFileName.getReadOnlyProperty();
+    }
+
+    /**
+     * The quality dial and review mode the run started with.
+     *
+     * @return a read-only property, {@code null} while no run exists or none was named; FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable RunMode> runMode() {
+        return runMode.getReadOnlyProperty();
+    }
+
+    /**
      * The newest activity-log entries, oldest first.
      *
      * @return an unmodifiable list of at most {@link #MAX_LOG_ENTRIES} entries; read on the FX thread
@@ -144,10 +217,44 @@ public final class StateMirror {
         return readOnlyLog;
     }
 
-    /** Resets every figure, the log, the failure and the report for a fresh run, and shows it running. */
-    public void publishRunStarted() {
-        log.debug("publishing run started");
-        Platform.runLater(this::resetForNewRun);
+    /**
+     * The live rows, pace, kept-as-source count and flagged queue.
+     *
+     * @return the section, whose properties are read on the FX thread
+     */
+    public LiveSection live() {
+        return live;
+    }
+
+    /**
+     * Why a paused run is waiting: the model error it paused on or the segment a review pause names.
+     *
+     * @return the section, whose properties are read on the FX thread
+     */
+    public ReviewSection review() {
+        return review;
+    }
+
+    /**
+     * Resets every figure, the log, the failure, the report and the written file for a fresh run, names the book it
+     * runs on, and shows it running.
+     *
+     * @param fileName the non-null name of the book file the run translates
+     * @param mode the dial and review mode the title bar names, or {@code null} when the caller names none
+     */
+    public void publishRunStarted(final String fileName, final @Nullable RunMode mode) {
+        Objects.requireNonNull(fileName, "fileName");
+        log.debug("publishing run started on {} with mode {}", fileName, mode);
+        Platform.runLater(() -> resetTo(fileName, mode, RunState.RUNNING));
+    }
+
+    /**
+     * Forgets the run altogether: the state returns to idle, no file is named, and every figure, the log, the failure
+     * and the report are reset, as at the start of the application.
+     */
+    public void publishRunCleared() {
+        log.debug("publishing run cleared");
+        Platform.runLater(() -> resetTo(null, null, RunState.IDLE));
     }
 
     /**
@@ -173,6 +280,10 @@ public final class StateMirror {
         Platform.runLater(() -> waitingSeconds.set(seconds));
     }
 
+    void showFlagged(final int count) {
+        applyFigures(figures.get().withFlagged(count));
+    }
+
     /**
      * Shows the figures derived from a snapshot.
      *
@@ -185,7 +296,8 @@ public final class StateMirror {
     }
 
     /**
-     * Appends entries to the activity log, dropping the oldest beyond {@link #MAX_LOG_ENTRIES}.
+     * Appends entries to the activity log, counting a line that repeats the one before it on that line, and dropping the
+     * oldest beyond {@link #MAX_LOG_ENTRIES}.
      *
      * @param entries the entries in the order they happened
      */
@@ -233,29 +345,53 @@ public final class StateMirror {
         });
     }
 
-    private void resetForNewRun() {
+    private void resetTo(final @Nullable String fileName, final @Nullable RunMode mode, final RunState state) {
         applyFigures(RunFigures.EMPTY);
+        runFileName.set(fileName);
+        runMode.set(mode);
         logEntries.clear();
         failure.set(null);
         report.set(null);
         waitingSeconds.set(NOT_WAITING);
-        runState.set(RunState.RUNNING);
+        live.reset();
+        review.reset();
+        runState.set(state);
     }
 
     private void applyFigures(final RunFigures figures) {
+        this.figures.set(figures);
         accepted.set(figures.accepted());
         flagged.set(figures.flagged());
         remaining.set(figures.remaining());
         total.set(figures.total());
+        section.set(figures.section());
+        sections.set(figures.sections());
+        chunk.set(figures.chunk());
+        chunks.set(figures.chunks());
         progressFraction.set(figures.fraction());
     }
 
+    // A line that says what the previous one said is counted on it instead of repeated, so a stalled call that fails
+    // four times reads as one line with "×4".
     private void appendToLog(final List<LogEntry> entries) {
-        if (entries.size() >= MAX_LOG_ENTRIES) {
-            logEntries.setAll(entries.subList(entries.size() - MAX_LOG_ENTRIES, entries.size()));
+        final List<LogEntry> merged = new ArrayList<>();
+        for (final LogEntry entry : entries) {
+            final int last = merged.size() - 1;
+            if (last >= 0 && merged.get(last).saysTheSameAs(entry)) {
+                merged.set(last, merged.get(last).repeatedBy(entry));
+            } else {
+                merged.add(entry);
+            }
+        }
+        final int shown = logEntries.size() - 1;
+        if (shown >= 0 && !merged.isEmpty() && logEntries.get(shown).saysTheSameAs(merged.getFirst())) {
+            logEntries.set(shown, logEntries.get(shown).repeatedBy(merged.removeFirst()));
+        }
+        if (merged.size() >= MAX_LOG_ENTRIES) {
+            logEntries.setAll(merged.subList(merged.size() - MAX_LOG_ENTRIES, merged.size()));
             return;
         }
-        logEntries.addAll(entries);
+        logEntries.addAll(merged);
         final int excess = logEntries.size() - MAX_LOG_ENTRIES;
         if (excess > 0) {
             logEntries.remove(0, excess);

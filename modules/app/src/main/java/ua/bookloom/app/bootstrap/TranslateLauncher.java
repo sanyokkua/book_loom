@@ -4,6 +4,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import lombok.AccessLevel;
@@ -15,8 +17,10 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.app.AppLifecycle;
+import ua.bookloom.app.AppVersion;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.cli.ShutdownCancellation;
 import ua.bookloom.app.cli.TranslateCommand;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
@@ -90,8 +94,7 @@ public final class TranslateLauncher {
             PrintStream out,
             AppPaths paths,
             AppEnvironment environment) {
-        final ResolvedLogLevel level = LoggingLevelResolver.resolve(getEnv, getProperty, environment);
-        LoggingBootstrap.configure(paths.logDir(), false, level);
+        final ResolvedLogLevel level = configureLogging(getEnv, getProperty, paths, environment);
         final Logger log = LoggerFactory.getLogger(TranslateLauncher.class);
         log.info(
                 "translate launcher started arguments={} dataDir={} logDir={} level={} levelSource={}",
@@ -101,11 +104,13 @@ public final class TranslateLauncher {
                 level.level(),
                 level.source());
         try {
-            final Injector injector = Guice.createInjector(new CoreModules(new StartupContext(paths, environment)));
+            final ResolvedReviewMode reviewMode = resolveIgnoredReviewMode(log, getEnv, getProperty);
+            final Injector injector =
+                    Guice.createInjector(new CoreModules(new StartupContext(paths, environment, reviewMode)));
             final AppLifecycle lifecycle = new AppLifecycle();
             lifecycle.phaseOne(injector);
             lifecycle.phaseTwo(injector);
-            final int exit = injector.getInstance(TranslateCommand.class).run(args, out);
+            final int exit = runWithShutdownHook(injector, args, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
         } catch (Throwable cause) {
@@ -114,6 +119,55 @@ public final class TranslateLauncher {
             final int exit = printError(error, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
+        }
+    }
+
+    /** Configures logging as the desktop launch does, with the detailed log when it is switched on. */
+    private static ResolvedLogLevel configureLogging(
+            Function<String, @Nullable String> getEnv,
+            Function<String, @Nullable String> getProperty,
+            AppPaths paths,
+            AppEnvironment environment) {
+        final ResolvedLogLevel level = LoggingLevelResolver.resolve(getEnv, getProperty, environment);
+        final ResolvedTraceFile trace = TraceFileResolver.resolve(getEnv, getProperty, environment);
+        // The command line opens no window, so its session facts stay empty; the header still names the build.
+        final SessionHeader header =
+                new SessionHeader(AppVersion.current(), environment, level, trace, getProperty, Map::of);
+        LoggingBootstrap.configure(paths.logDir(), false, level, trace, header::render);
+        return level;
+    }
+
+    /** A run here has no window to pause in, so a configured mode changes nothing; say so once instead of silently. */
+    private static ResolvedReviewMode resolveIgnoredReviewMode(
+            Logger log, Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+        final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(getEnv, getProperty);
+        final String rejected = reviewMode.rejectedValue();
+        if (rejected != null) {
+            log.info("review mode ignored by the command line value={}", rejected);
+        } else if (reviewMode.source() != ResolvedReviewMode.Source.DEFAULT) {
+            log.info(
+                    "review mode ignored by the command line value={}",
+                    reviewMode.mode().name().toLowerCase(Locale.ROOT));
+        }
+        return reviewMode;
+    }
+
+    /** Lets Ctrl+C cancel the running job or export and wait for it, then removes the hook so a caller can run again. */
+    private static int runWithShutdownHook(Injector injector, List<String> args, PrintStream out) {
+        final Thread hook = new Thread(injector.getInstance(ShutdownCancellation.class), "translate-shutdown");
+        Runtime.getRuntime().addShutdownHook(hook);
+        try {
+            return injector.getInstance(TranslateCommand.class).run(args, out);
+        } finally {
+            removeHook(hook);
+        }
+    }
+
+    private static void removeHook(Thread hook) {
+        try {
+            Runtime.getRuntime().removeShutdownHook(hook);
+        } catch (IllegalStateException shuttingDown) {
+            // The JVM is already stopping and is running the hook itself; nothing is left to remove.
         }
     }
 

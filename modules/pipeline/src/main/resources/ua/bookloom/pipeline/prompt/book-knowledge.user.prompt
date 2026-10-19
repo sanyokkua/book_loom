@@ -1,0 +1,8 @@
+<Input>
+Title: {{title}}
+{{#author}}
+Author: {{author}}
+{{/author}}
+</Input>
+
+What do you know of this book? Return one JSON object with the fields known, title, author, year, genre, audience, era, narration, summary and confidence.

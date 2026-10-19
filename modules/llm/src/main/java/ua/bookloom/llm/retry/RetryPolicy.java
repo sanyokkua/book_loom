@@ -19,6 +19,12 @@ public final class RetryPolicy {
     /** Maximum number of provider requests for one logical chat. */
     public static final int MAX_ATTEMPTS = 3;
 
+    /**
+     * Maximum number of those requests that may end in a timeout: a call that timed out twice is stuck, and a third
+     * wait of the same length only delays the pause or flag that follows.
+     */
+    public static final int MAX_TIMEOUT_ATTEMPTS = 2;
+
     private static final long BASE_DELAY_MILLIS = 500;
     private static final long MAX_BACKOFF_MILLIS = 8_000;
     private static final double MIN_JITTER_FACTOR = 0.75;
@@ -47,6 +53,24 @@ public final class RetryPolicy {
                 code,
                 failedAttempt,
                 MAX_ATTEMPTS,
+                retry);
+        return retry;
+    }
+
+    /**
+     * Whether a timed-out request may be retried.
+     *
+     * @param failedAttempt the attempt that just timed out, counted from one
+     * @param timedOutAttempts how many attempts of this chat timed out, the one that just did included
+     * @return {@code true} when both the total and the timeout budget leave room for another attempt
+     */
+    public boolean shouldRetryTimeout(int failedAttempt, int timedOutAttempts) {
+        final boolean retry = shouldRetry(ErrorCode.timeout, failedAttempt) && timedOutAttempts < MAX_TIMEOUT_ATTEMPTS;
+        log.debug(
+                "Timeout retry decision failedAttempt={} timedOutAttempts={} maxTimeoutAttempts={} retry={}",
+                failedAttempt,
+                timedOutAttempts,
+                MAX_TIMEOUT_ATTEMPTS,
                 retry);
         return retry;
     }

@@ -1,0 +1,99 @@
+{
+  "storySegments" : 22,
+  "nameScan" : [ {
+    "term" : "Perpetua",
+    "count" : 17,
+    "firstSentence" : "Perpetua rose before the household and lit the stove.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Anselm",
+    "count" : 8,
+    "firstSentence" : "Anselm came down the back stairs in his socks.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Perpetua",
+    "count" : 1,
+    "firstSentence" : "At the gate Perpetua stopped and looked back at the house.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Perpetua" : {
+      "count" : 17,
+      "windows" : [ {
+        "text" : "Perpetua rose before the household and lit the stove. She stirred the porridge until it shone.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Perpetua set a bowl in front of him. She watched him eat the first spoonful.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "At the gate Perpetua stopped and looked back at the house. She had lived there for eleven years.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "At the inn Perpetua asked for two beds. She paid in advance, as her mother had taught her.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she", "she", "she", "she" ],
+        "male" : [ "he" ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ "him", "him" ]
+      }
+    },
+    "Anselm" : {
+      "count" : 8,
+      "windows" : [ {
+        "text" : "Anselm came down the back stairs in his socks. He sat at the kitchen table and yawned.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Anselm tied his boots by the stove. He was late, and he knew it.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Anselm lifted the trunk into the wagon. He helped Perpetua up and climbed in after her.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "In the district everyone knew Anselm, and nobody had a bad word for Anselm.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "his", "his", "his" ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Perpetua" : {
+      "count" : 17,
+      "examples" : [ "Perpetua rose before the household and lit the stove.", "Perpetua set a bowl in front of him." ]
+    },
+    "Anselm" : {
+      "count" : 8,
+      "examples" : [ "Anselm came down the back stairs in his socks.", "Anselm tied his boots by the stove." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Perpetua",
+    "mentions" : 17
+  }, {
+    "term" : "Anselm",
+    "mentions" : 8
+  } ],
+  "pronouns" : {
+    "Perpetua" : {
+      "female" : [ "she", "she", "she", "she", "she", "she", "she" ],
+      "male" : [ "he" ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ "him", "him" ]
+    },
+    "Anselm" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "his", "his", "his" ]
+    }
+  }
+}

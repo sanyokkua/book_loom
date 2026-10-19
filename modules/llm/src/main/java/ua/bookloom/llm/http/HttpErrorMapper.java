@@ -32,6 +32,15 @@ public final class HttpErrorMapper {
     private static final Pattern OLLAMA_MODEL_NOT_FOUND = Pattern.compile(
             "\"error\"\\s*:\\s*\"[^\"]{0,512}\\bmodel\\b[^\"]{0,256}\\bnot\\s+found\\b[^\"]*\"",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    // A local server that has no model loaded to answer: LM Studio's "Model unloaded" after an idle unload or a JIT
+    // eviction, "No models loaded", or a model "not loaded". Loading the model fixes it, so it is never a bad request.
+    private static final Pattern UNLOADED_MODEL = Pattern.compile(
+            "\\bmodel\\s+(?:is\\s+|was\\s+|has\\s+been\\s+)?unloaded\\b"
+                    + "|\\bno\\s+models?\\s+(?:are\\s+|is\\s+)?loaded\\b"
+                    + "|\\bmodel\\b[^\"]{0,256}\\bnot\\s+(?:currently\\s+)?loaded\\b",
+            Pattern.CASE_INSENSITIVE);
+    private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_NOT_FOUND = 404;
     private static final int HTTP_SUCCESS_MIN = 200;
     private static final int HTTP_SUCCESS_MAX = 299;
     private static final int HTTP_SERVER_ERROR_MIN = 500;
@@ -140,10 +149,24 @@ public final class HttpErrorMapper {
         if (status == 401 || status == 403) {
             return authenticationFailure();
         }
-        if ((purpose == CallPurpose.CHAT && status == 404) || isOllamaModelNotFound(reply, config)) {
+        if (isUnloadedModel(reply, purpose)) {
+            return mapping(
+                    ErrorCode.modelUnavailable,
+                    "model-unloaded",
+                    "Provider model is not loaded",
+                    "The provider has no model loaded to answer the request.");
+        }
+        if ((purpose == CallPurpose.CHAT && status == HTTP_NOT_FOUND) || isOllamaModelNotFound(reply, config)) {
             return modelNotFoundFailure();
         }
         return classifyRemainingStatus(reply, status);
+    }
+
+    private static boolean isUnloadedModel(HttpReply reply, CallPurpose purpose) {
+        final int status = reply.status();
+        return purpose == CallPurpose.CHAT
+                && (status == HTTP_BAD_REQUEST || status == HTTP_NOT_FOUND)
+                && UNLOADED_MODEL.matcher(reply.body()).find();
     }
 
     private static boolean isOllamaModelNotFound(HttpReply reply, ProviderConfig config) {
@@ -166,7 +189,7 @@ public final class HttpErrorMapper {
                     "Provider server error",
                     "The provider could not complete the request.");
         }
-        if (status == 400) {
+        if (status == HTTP_BAD_REQUEST) {
             return classifyBadRequest(reply.body());
         }
         return mapping(

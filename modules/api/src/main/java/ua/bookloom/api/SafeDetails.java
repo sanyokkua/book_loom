@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * response body, or an {@code Authorization} header has no syntax to arrive by.
  *
  * <p>Two further defences apply to the components that hold text at all. {@link #withEndpoint(URI)} keeps only the
- * URI's host, so credentials embedded as user-info and tokens carried in a query string are dropped structurally
+ * URI's host and port, so credentials embedded as user-info and tokens carried in a query string are dropped structurally
  * rather than by pattern-matching. {@link #withModelName(String)} and {@link #withQaFindings(List)} flatten control
  * characters and cap length, so even a value passed to the wrong field cannot inject a newline into a log line or
  * dump a multi-kilobyte payload into a dialog. {@link #withPlaceholderMultiset(List, List)} is the one exception to
@@ -37,7 +37,7 @@ import org.jspecify.annotations.Nullable;
  * }
  *
  * @param httpStatus the HTTP status of the failed call, or {@code null}
- * @param endpointHost the endpoint's host with every other URI part discarded, or {@code null}
+ * @param endpointHost the endpoint's host, with its port when one is given, and every other URI part discarded, or {@code null}
  * @param modelName the model identifier, flattened and capped, or {@code null}
  * @param timeoutMillis the configured or elapsed timeout in milliseconds, or {@code null}
  * @param attempt the rendered {@code attempt/max} pair, or {@code null}
@@ -102,9 +102,9 @@ public record SafeDetails(
     }
 
     /**
-     * Records the endpoint's host, discarding every other part of the URI.
+     * Records the endpoint's host and port, discarding every other part of the URI.
      *
-     * <p>Only {@link URI#getHost()} is kept. User-info, path, query and fragment are dropped without being
+     * <p>Only {@link URI#getHost()} and {@link URI#getPort()} are kept. User-info, path, query and fragment are dropped without being
      * inspected, because those are exactly where an API key ends up when someone pastes a full endpoint URL.
      *
      * @param endpoint the configured endpoint
@@ -113,11 +113,12 @@ public record SafeDetails(
     public SafeDetails withEndpoint(URI endpoint) {
         Objects.requireNonNull(endpoint, "endpoint");
         final String host = endpoint.getHost();
+        final int port = endpoint.getPort();
         return host == null
                 ? this
                 : new SafeDetails(
                         httpStatus,
-                        sanitize(host),
+                        sanitize(port < 0 ? host : host + ":" + port),
                         modelName,
                         timeoutMillis,
                         attempt,

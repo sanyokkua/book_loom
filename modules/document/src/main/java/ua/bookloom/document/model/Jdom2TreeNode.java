@@ -28,6 +28,9 @@ public final class Jdom2TreeNode implements TreeNode {
     /** The wrapper element a translated fragment is parsed inside; never appears in any output. */
     private static final String FRAGMENT_ROOT = "bookloom-fragment";
 
+    /** The one qualified name this adapter reads out of the XML namespace rather than as a plain attribute. */
+    private static final String XML_LANG_QUALIFIED_NAME = "xml:lang";
+
     /**
      * The line separator every serialization through this adapter uses.
      *
@@ -182,6 +185,57 @@ public final class Jdom2TreeNode implements TreeNode {
             throw new IllegalStateException("Only an element has a closing tag");
         }
         return "</" + element.getQualifiedName() + ">";
+    }
+
+    /**
+     * {@code xml:lang} lives in {@link Namespace#XML_NAMESPACE} in JDOM2, never as a plain string-named attribute —
+     * looking it up with {@link Element#getAttributeValue(String)} alone silently returns null even when the
+     * source declares it.
+     */
+    @Override
+    public @Nullable String attribute(String qualifiedName) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        if (!(content instanceof Element element)) {
+            return null;
+        }
+        if (XML_LANG_QUALIFIED_NAME.equals(qualifiedName)) {
+            return element.getAttributeValue("lang", Namespace.XML_NAMESPACE);
+        }
+        return element.getAttributeValue(qualifiedName);
+    }
+
+    /**
+     * {@code xml:lang} and any other prefixed name are resolved through the namespace in scope, because JDOM2
+     * stores a prefixed attribute under its namespace and a plain string-named write would add a second, unrelated
+     * attribute beside it.
+     */
+    @Override
+    public void setAttribute(String qualifiedName, String plainValue) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        Objects.requireNonNull(plainValue, "plainValue");
+        if (!(content instanceof Element element)) {
+            throw new IllegalStateException("Only an element has attributes to set");
+        }
+        final int colon = qualifiedName.indexOf(':');
+        if (colon < 0) {
+            element.setAttribute(qualifiedName, plainValue);
+            return;
+        }
+        final String prefix = qualifiedName.substring(0, colon);
+        final Namespace namespace = "xml".equals(prefix) ? Namespace.XML_NAMESPACE : element.getNamespace(prefix);
+        if (namespace == null) {
+            throw new IllegalArgumentException("No namespace is declared for the prefix " + prefix);
+        }
+        element.setAttribute(qualifiedName.substring(colon + 1), plainValue, namespace);
+    }
+
+    @Override
+    public void setText(String plainText) {
+        Objects.requireNonNull(plainText, "plainText");
+        if (!(content instanceof Element element)) {
+            throw new IllegalStateException("Only an element has text to set");
+        }
+        element.setText(plainText);
     }
 
     /**

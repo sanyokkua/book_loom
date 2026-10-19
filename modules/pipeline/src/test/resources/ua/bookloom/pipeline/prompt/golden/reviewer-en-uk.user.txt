@@ -1,0 +1,8 @@
+[Glossary the translation had to use: source → target]
+Hale → Гейл
+
+<Pair id="s1"><Source>He opened the ⟦g0⟧old⟦g1⟧ door.</Source><Candidate>Він відчинив ⟦g0⟧старі⟦g1⟧ двері.</Candidate></Pair>
+<Pair id="s2"><Source>Hale smiled.</Source><Candidate>Гейл усміхнувся.</Candidate></Pair>
+
+Answer every pair once. Return one JSON object in this schema:
+{"results":[{"id":"<pair id>","status":"ok"|"edits"|"rewrite","edits":[{"criterion":"<defect word>","quote":"<exact text of the candidate>","replacement":"<corrected text>"}],"rewrite":"<the whole corrected candidate>"}]}

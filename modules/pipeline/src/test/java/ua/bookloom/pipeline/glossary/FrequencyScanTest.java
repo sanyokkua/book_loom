@@ -1,0 +1,256 @@
+package ua.bookloom.pipeline.glossary;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+
+import com.google.inject.Guice;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.document.DocumentModule;
+import ua.bookloom.persistence.PersistenceModule;
+
+/** The deterministic name scan: which capitalised words and runs it proposes, and in what order. */
+class FrequencyScanTest {
+
+    private static final int THRESHOLD = 3;
+
+    static Stream<Arguments> books() {
+        return Stream.of(
+                Arguments.of("names, runs and a name seen twice", namesAndRuns(), List.of("Hale", "Baker Street")),
+                Arguments.of(
+                        "a tie is ranked by first occurrence",
+                        interleaved("Then Moreau left.", "Then Hale left.", THRESHOLD),
+                        List.of("Moreau", "Hale")),
+                Arguments.of("sentence-initial word only", List.of(forty("The dog barked. ")), List.of()),
+                Arguments.of("an empty book", List.of(), List.of()),
+                Arguments.of("a lone capital letter is a pronoun, not a name", copies("Then I left.", 5), List.of()),
+                Arguments.of("after an honorific at a sentence start", copies("Mr. Hale nodded.", 3), List.of("Hale")),
+                Arguments.of("after an honorific mid-sentence", copies("She asked Mr. Hale.", 3), List.of("Hale")),
+                Arguments.of(
+                        "a token between words reads as a space",
+                        copies("see Hale⟦g3⟧Street now.", 3),
+                        List.of("Hale Street")),
+                Arguments.of("a script without capitals", copies("哈尔打开了门。", 5), List.of()),
+                Arguments.of("one chapter with two mentions", copies("Then Moreau left.", 2), List.of()),
+                Arguments.of("two chapters with two mentions each", copies("Then Moreau left.", 4), List.of("Moreau")),
+                Arguments.of(
+                        "a run of four is cut into three and one",
+                        copies("Then Ann Bea Cy Di sang.", 3),
+                        List.of("Ann Bea Cy", "Di")),
+                Arguments.of("a comma does not join a run", copies("Then Ann, Bea sang.", 3), List.of("Ann", "Bea")),
+                Arguments.of("a lower-case word ends a run", copies("Then Ann sang to Bea.", 3), List.of("Ann", "Bea")),
+                Arguments.of(
+                        "a pair always joined by 'and' is one name (15i.N3)",
+                        copies("Then Ann and Bea sang.", 3),
+                        List.of("Ann and Bea")));
+    }
+
+    static Stream<Arguments> sentenceBreakBooks() {
+        return Stream.of(
+                Arguments.of("after a quoted full stop", copies("Go. \"Hale left.\"", 3), List.of()),
+                Arguments.of(
+                        "after an exclamation and an opening quote", copies("Stop! \"Hale, wait.\"", 3), List.of()),
+                Arguments.of("after an ellipsis", copies("Wait… Hale ran.", 3), List.of()));
+    }
+
+    static Stream<Arguments> wordBooks() {
+        return Stream.of(
+                Arguments.of("a hyphenated place is one word", copies("We rode to El-Barun.", 3), List.of("El-Barun")),
+                Arguments.of(
+                        "a possessive is not part of the name", copies("We saw Hale’s house.", 3), List.of("Hale")),
+                Arguments.of("an apostrophe inside a name", copies("We met O'Brien there.", 3), List.of("O'Brien")),
+                Arguments.of("after an em dash", copies("He paused—Hale ran.", 3), List.of()),
+                Arguments.of("after an opening quote", copies("He said, “Hale ran.”", 3), List.of()),
+                Arguments.of(
+                        "a word written in lower case a fifth of the time",
+                        withLine(copies("We crossed the Bridge.", 4), "The bridge fell."),
+                        List.of()),
+                Arguments.of(
+                        "a sentence start counts once the word is seen mid-sentence twice",
+                        withLine(copies("Hale ran.", 3), "We saw Hale.", "We saw Hale."),
+                        List.of("Hale")),
+                Arguments.of(
+                        "a sentence start seen mid-sentence once",
+                        withLine(copies("Hale ran.", 3), "We saw Hale."),
+                        List.of()));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+        "uk, Він сказав Так тихо., ''",
+        "en, Він сказав Так тихо., Так",
+        "en, They said Yes loudly., ''",
+        "xx, They said Yes loudly., ''",
+        "de, Sie sah Herr Brandt dort., Brandt",
+        "fr, Il vit Monsieur Hale ici., Hale",
+        "es, Vio a Don Diego allí., Diego",
+        "pl, Widział Pan Kowalski tam., Kowalski"
+    })
+    void candidates_stopWordOfTheLanguage_isNeverAName(
+            final String language, final String line, final String expected) {
+        final List<String> terms = namesOf(copies(line, 3), THRESHOLD, language).stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(String.join(",", terms)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource({"books", "sentenceBreakBooks", "wordBooks"})
+    void candidates_bookText_proposesExactlyTheTerms(
+            final String description, final List<String> lines, final List<String> expectedTerms) {
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyElementsOf(expectedTerms);
+    }
+
+    @Test
+    void candidates_minimumOne_returnsCountAndFirstSentenceOfTheFirstMention() {
+        final List<String> lines = List.of("She met Moreau in the hall. He left.", "Then Moreau left.");
+
+        final List<NameCandidate> candidates = namesOf(lines, 1, "en");
+
+        assertThat(candidates).containsExactly(new NameCandidate("Moreau", 2, "She met Moreau in the hall."));
+    }
+
+    @Test
+    void candidates_possessiveEndsARun_nextNameIsSeparate() {
+        final List<String> lines = copies("We saw Ember’s Zurich office again.", 3);
+
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder("Ember", "Zurich");
+    }
+
+    @Test
+    void candidates_pluralOfAnotherName_isItsAliasAndAddsToItsCount() {
+        final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
+        lines.addAll(copies("We saw the Embers at the door.", 3));
+
+        final List<NameCandidate> candidates = namesOf(lines, THRESHOLD, "en");
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.getFirst().term()).isEqualTo("Ember");
+        assertThat(candidates.getFirst().count()).isEqualTo(9);
+        assertThat(candidates.getFirst().aliases()).containsExactly("Embers");
+    }
+
+    @Test
+    void candidates_oneEditAtAFifthOfTheCount_isAnAlias() {
+        final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 15));
+        lines.addAll(copies("We saw Zurish at the door.", 3));
+
+        final List<NameCandidate> candidates = namesOf(lines, THRESHOLD, "en");
+
+        assertThat(candidates).extracting(NameCandidate::term).containsExactly("Zurich");
+        assertThat(candidates.getFirst().aliases()).containsExactly("Zurish");
+    }
+
+    @Test
+    void candidates_oneEditAtMoreThanAFifthOfTheCount_isAnotherName() {
+        final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 10));
+        lines.addAll(copies("We saw Zurish at the door.", 4));
+
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder("Zurich", "Zurish");
+    }
+
+    // IF a name were folded into a shorter one nearly as common, THEN Andrews would take Andrew's target.
+    @ParameterizedTest(name = "{0} x{1} beside {2} x{3}")
+    @CsvSource({"Andrew,5,Andrews,4", "Han,3,Hans,4"})
+    void candidates_pluralShapedNameNotMateriallyRarer_isAnotherName(
+            final String base, final int baseCount, final String plural, final int pluralCount) {
+        final List<String> lines = new ArrayList<>(copies("We saw " + base + " at the door.", baseCount));
+        lines.addAll(copies("We saw " + plural + " at the door.", pluralCount));
+
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder(base, plural);
+    }
+
+    // IF the scan's fold stopped at the candidate, THEN the alias never reached the glossary entry that shares its
+    // target.
+    @Test
+    void newTerms_pluralAlias_isHeldByTheProposedEntry() {
+        final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
+        lines.addAll(copies("We saw the Embers at the door.", 3));
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+                .getInstance(GlossaryRepository.class);
+        final BookSlice book = GlossaryTestSegments.of(lines);
+
+        final List<GlossaryEntry> entries = FrequencyScan.newTerms("p1", book.index(), book.ordinals(), "en", glossary)
+                .data();
+
+        assertThat(entries)
+                .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
+                .containsExactly(tuple("Ember", List.of("Embers")));
+    }
+
+    // A first name mostly written inside its full name is still a name of its own when the book writes it alone often
+    // enough (15i.N gate: a narrator's brother written alone 34 times was lost); written alone a few times it is only
+    // part of the longer name.
+    @ParameterizedTest(name = "alone {0} times -> {1}")
+    @CsvSource(
+            value = {"10;Orrel Danby,Orrel", "3;Orrel Danby"},
+            delimiter = ';')
+    void candidates_firstNameMostlyInsideItsFullName_isProposedWhenOftenAlone(final int alone, final String expected) {
+        final List<String> lines = new ArrayList<>(copies("Then Orrel Danby sang.", 30));
+        lines.addAll(copies("Then Orrel left.", alone));
+
+        final List<String> terms = namesOf(lines, THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(String.join(",", terms)).isEqualTo(expected);
+    }
+
+    private static List<String> namesAndRuns() {
+        final List<String> lines = new ArrayList<>(copies("We saw Hale at the door.", 5));
+        lines.addAll(copies("They walked to Baker Street later.", 3));
+        lines.addAll(copies("She met Moreau there.", 2));
+        return lines;
+    }
+
+    private static List<String> interleaved(final String first, final String second, final int times) {
+        return Collections.nCopies(times, List.of(first, second)).stream()
+                .flatMap(List::stream)
+                .toList();
+    }
+
+    private static List<String> withLine(final List<String> lines, final String... more) {
+        final List<String> all = new ArrayList<>(lines);
+        all.addAll(List.of(more));
+        return all;
+    }
+
+    private static List<String> copies(final String line, final int times) {
+        return Collections.nCopies(times, line);
+    }
+
+    private static String forty(final String sentence) {
+        return sentence.repeat(40);
+    }
+
+    private static List<NameCandidate> namesOf(final List<String> lines, final int minCount, final String language) {
+        final BookSlice book = GlossaryTestSegments.of(lines);
+        return FrequencyScan.candidates(book.index(), book.ordinals(), minCount, language);
+    }
+}

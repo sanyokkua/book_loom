@@ -1,0 +1,68 @@
+{
+  "storySegments" : 23,
+  "nameScan" : [ {
+    "term" : "Lorna",
+    "count" : 8,
+    "firstSentence" : "Lorna came in out of the rain and shook her coat.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ ],
+  "keyTerms" : [ {
+    "term" : "mark",
+    "count" : 21,
+    "firstSentence" : "Mark wiped the counter and hung the cloth over the tap.",
+    "aliases" : [ ]
+  } ],
+  "frequentWords" : [ {
+    "term" : "mark",
+    "count" : 21,
+    "firstSentence" : "Mark wiped the counter and hung the cloth over the tap.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Lorna" : {
+      "count" : 8,
+      "windows" : [ {
+        "text" : "Lorna came in out of the rain and shook her coat. She asked for the usual and Mark poured it without a word.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Lorna drank slowly and watched the door. She had the look of someone who expected a letter.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Mark told him it was an old burn. Lorna said it was a hand, and that she could see the fingers.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Lorna, and nobody had a bad word for Lorna.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "mark" : {
+      "count" : 21,
+      "examples" : [ "Mark wiped the counter and hung the cloth over the tap.", "There was a mark on the wall behind the bar, a long grey smear at shoulder height." ]
+    },
+    "Lorna" : {
+      "count" : 8,
+      "examples" : [ "Lorna came in out of the rain and shook her coat.", "Lorna drank slowly and watched the door." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Lorna",
+    "mentions" : 8
+  } ],
+  "pronouns" : {
+    "Lorna" : {
+      "female" : [ "she", "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ ]
+    }
+  }
+}

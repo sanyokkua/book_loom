@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.DocumentModule;
 
 /** Proves every pipeline book builder produces a real document the document module can open. */
@@ -46,8 +47,12 @@ class TestBooksTest {
 
         assertThat(document.format()).isEqualTo(format);
         assertThat(document.declaredLang()).isEqualTo(language);
-        assertThat(document.units()).hasSize(units);
-        assertThat(document.units()).flatExtracting(unit -> unit.segments()).hasSize(segments);
+        assertThat(document.units()).last().extracting(Unit::isAuxiliary).isEqualTo(true);
+        assertThat(document.units()).filteredOn(unit -> !unit.isAuxiliary()).hasSize(units);
+        assertThat(document.units())
+                .filteredOn(unit -> !unit.isAuxiliary())
+                .flatExtracting(unit -> unit.segments())
+                .hasSize(segments);
         assertThat(documents.close(document).data()).isTrue();
     }
 

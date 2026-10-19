@@ -18,6 +18,7 @@ import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.Fb2Fixtures;
 import ua.bookloom.document.fixture.MarkdownFixtures;
+import ua.bookloom.document.fixture.TargetedDocuments;
 import ua.bookloom.document.fixture.TxtFixtures;
 
 /**
@@ -69,6 +70,64 @@ class FormatGoldenRoundTripTest {
                 .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
     }
 
+    // WHEN an FB2 book that begins with a UTF-8 byte-order mark is reassembled with no edits, THEN the output is
+    // canonical-equal to it and begins with the same mark.
+    @Test
+    void golden_fb2WithByteOrderMark_isCanonicalEqualAndKeepsTheMark() throws IOException {
+        final Path source = tempDir.resolve("Bom.fb2");
+        Fb2Fixtures.writeFb2(
+                source,
+                Fb2Fixtures.PRIMARY_XML.replace("encoding=\"windows-1251\"", "encoding=\"utf-8\""),
+                StandardCharsets.UTF_8);
+        final byte[] body = Files.readAllBytes(source);
+        final byte[] marked = new byte[body.length + 3];
+        System.arraycopy(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, 0, marked, 0, 3);
+        System.arraycopy(body, 0, marked, 3, body.length);
+        Files.write(source, marked);
+
+        final RoundTrip result = roundTrip(source);
+
+        Fb2CanonicalAssert.assertCanonicalEqual(result.source(), result.output(), result.targetLanguage());
+        assertThat(Files.readAllBytes(result.output())).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
+    }
+
+    private static final String LATIN_PROSE =
+            "Le café du coin était fermé ce matin-là, et personne ne savait pourquoi. "
+                    + "Les élèves attendaient devant la porte, sous la pluie fine et froide.";
+
+    // WHEN a Latin-1 TXT export holds a character Latin-1 lacks, THEN the written file, decoded as UTF-8, reads as
+    // the source text with only that paragraph replaced (compared as text, not as the source's bytes).
+    @Test
+    void golden_txtWithAnEncodingSwitch_isEqualToTheExpectedTextReParsed() throws IOException {
+        final Path source = tempDir.resolve("latin.txt");
+        Files.write(source, (LATIN_PROSE + "\n\nSecond paragraph, café.\n").getBytes(StandardCharsets.ISO_8859_1));
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = Objects.requireNonNull(service.open(source).data());
+
+        final Result<Path> written =
+                service.write(TargetedDocuments.withTarget(opened, 1, "第二段."), tempDir.resolve("out.txt"), "zh");
+
+        assertThat(written.isOk()).isTrue();
+        assertThat(Files.readString(tempDir.resolve("out.txt"), StandardCharsets.UTF_8))
+                .isEqualTo(LATIN_PROSE + "\n\n第二段.\n");
+    }
+
+    // WHEN a Latin-1 Markdown export holds a character Latin-1 lacks, THEN re-parsing the written file yields the
+    // paragraph texts the switch should have produced.
+    @Test
+    void golden_markdownWithAnEncodingSwitch_isReParseEqualToTheExpectedText() throws IOException {
+        final Path source = tempDir.resolve("latin.md");
+        Files.write(source, ("# Café\n\n" + LATIN_PROSE + "\n").getBytes(StandardCharsets.ISO_8859_1));
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = Objects.requireNonNull(service.open(source).data());
+
+        service.write(TargetedDocuments.withTarget(opened, 1, "Ÿ voilà."), tempDir.resolve("out.md"), "uk");
+
+        final Document reopened =
+                Objects.requireNonNull(service.open(tempDir.resolve("out.md")).data());
+        assertThat(allSegmentsOf(reopened)).extracting(Segment::sourceInner).containsExactly("Café", "Ÿ voilà.");
+    }
+
     // WHERE the source's title information declares no language element, THEN the output
     // SHALL carry one declaring the target language, and the golden comparison SHALL treat that single added
     // element as expected rather than as a difference.
@@ -108,6 +167,21 @@ class FormatGoldenRoundTripTest {
         assertThat(allSegmentsOf(result.document()))
                 .as("at least one Markdown segment was genuinely masked on the way through")
                 .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
+    }
+
+    // WHEN a Markdown book holding bare web addresses in prose is reassembled with zero edits, THEN re-parsing the
+    // output equals the source's tree and the bytes are identical.
+    @Test
+    void golden_markdownWithBareUrls_isReParseEqualAndByteIdentical() throws IOException {
+        final Path source = tempDir.resolve("urls.md");
+        Files.writeString(source, "# Links\n\nSee https://example.com/path and visit www.example.com today.\n");
+
+        final RoundTrip result = roundTrip(source);
+
+        MarkdownAstAssert.assertReParseEqual(result.source(), result.output());
+        assertThat(Files.readAllBytes(result.output())).isEqualTo(Files.readAllBytes(source));
+        assertThat(allSegmentsOf(result.document()))
+                .anySatisfy(segment -> assertThat(segment.masked()).isEqualTo("See ⟦g0⟧ and visit ⟦g1⟧ today."));
     }
 
     // WHEN a fixture TXT book with a byte-order mark and CRLF endings is reassembled with

@@ -14,7 +14,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -39,6 +38,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -52,7 +52,7 @@ class OllamaClientTest {
             {"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
             """;
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {
@@ -83,7 +83,7 @@ class OllamaClientTest {
                         {
                           "model":"gemma4:e4b-mlx",
                           "messages":[{"role":"system","content":"Translate faithfully."},{"role":"user","content":"hello"},{"role":"assistant","content":"prior"}],
-                          "stream":false,
+                          "stream":true,
                           "options":{"temperature":0.2},
                           "format":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
                         }
@@ -99,7 +99,7 @@ class OllamaClientTest {
         sendChat(messageOnlyRequest());
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(equalToJson("""
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true}
                         """)));
     }
 
@@ -370,9 +370,7 @@ class OllamaClientTest {
                 arguments(400, "private invalid body", ErrorCode.validation));
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return URI.create("http://127.0.0.1:" + socket.getLocalPort());
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 }

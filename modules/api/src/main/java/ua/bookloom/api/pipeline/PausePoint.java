@@ -11,9 +11,12 @@ public enum PausePoint {
     /** After the last segment in a non-empty section. */
     AFTER_SECTION,
 
-    /** After translation and before export. */
+    /** After translation, before revision or the end. */
     BETWEEN_STAGES,
 
     /** When an otherwise terminal error occurs. */
-    ON_ERROR
+    ON_ERROR,
+
+    /** When a segment is flagged. */
+    ON_FLAGGED
 }

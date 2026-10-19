@@ -1,57 +1,58 @@
 package ua.bookloom.ui.screen;
 
-import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
-import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.layout.HBox;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.api.AppError;
+import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 
 /**
- * The built translating screen, and the two things about it that change with events rather than with a bound
- * property: the banner that says where the run is, and the log's scroll position.
+ * The built translating screen, and the one thing about it that changes with events rather than with a bound
+ * property: the banner that says where the run is.
  *
  * <p>The banner is one node whose words and role class are replaced, not one node per state, so that a state change
  * moves nothing on screen. Its role is never the only carrier of meaning: each state also has its own glyph and title.
- * A notice, when there is one, is worded in the same banner in place of the plain state; only a provider failure
- * shows the button that opens the provider settings.
+ * A notice, when there is one, is worded in the same banner in place of the plain state; a provider failure offers the
+ * route to the provider settings, and a paused run also Retry now, Skip segment and Stay paused; a run that waits for
+ * the provider by itself offers Retry now, Skip segment and Stop. A request that has waited too long offers Skip
+ * segment, Retry now and Pause. {@link BannerLooks} chooses the words.
  */
+@Slf4j
 final class TranslatingDashboard {
 
-    private static final String INFO = "banner-info";
-    private static final String OK = "banner-ok";
-    private static final String WARN = "banner-warn";
-    private static final String ERR = "banner-err";
-    private static final List<String> ROLE_CLASSES = List.of(INFO, OK, WARN, ERR);
-    private static final int SECONDS_PER_MINUTE = 60;
-
-    /** How the banner is told: its glyph, its role class, its words and whether it offers the provider settings. */
-    private record Look(String glyph, String roleClass, String title, String text, boolean offersSettings) {}
-
-    /** The nodes of the banner, which {@link #render(RunState, RunNotice, int)} rewrites. */
-    record Banner(HBox box, Label icon, Label title, Label text, Button settings) {}
+    /** The banner, which {@link #render(RunState, RunNotice, int)} rewrites, and every action it may offer. */
+    record LiveBanner(
+            Banner banner,
+            Button retry,
+            Button skip,
+            Button settings,
+            Button stay,
+            Button sendAgain,
+            Button pauseNow,
+            Button stopRun) {}
 
     private final Node root;
-    private final Banner banner;
-    private final ListView<LogEntry> log;
-    private final Messages messages;
-    private boolean scrollQueued;
+    private final LiveBanner banner;
+    private final StateMirror mirror;
+    private final BannerLooks looks;
+    private RunState shownState = RunState.IDLE;
+    private @Nullable RunNotice shownNotice;
+    private int shownWait = StateMirror.NOT_WAITING;
+    private BannerLooks.@Nullable Offer shownOffer;
+    private @Nullable AppError stayedPausedOn;
 
-    TranslatingDashboard(final Node root, final Banner banner, final ListView<LogEntry> log, final Messages messages) {
+    TranslatingDashboard(final Node root, final LiveBanner banner, final Messages messages, final StateMirror mirror) {
         this.root = Objects.requireNonNull(root, "root");
         this.banner = Objects.requireNonNull(banner, "banner");
-        this.log = Objects.requireNonNull(log, "log");
-        this.messages = Objects.requireNonNull(messages, "messages");
+        banner.stay().setOnAction(event -> stayPaused());
+        this.mirror = Objects.requireNonNull(mirror, "mirror");
+        this.looks = new BannerLooks(Objects.requireNonNull(messages, "messages"), mirror);
     }
 
     Node root() {
@@ -70,104 +71,49 @@ final class TranslatingDashboard {
      */
     void render(final RunState state, final @Nullable RunNotice notice, final int waitingSeconds) {
         Objects.requireNonNull(state, "state");
-        final Look look = lookOf(state, notice, waitingSeconds);
-        banner.icon().setText(look.glyph());
-        banner.title().setText(look.title());
-        banner.text().setText(look.text());
-        banner.box().getStyleClass().removeAll(ROLE_CLASSES);
-        banner.box().getStyleClass().add(look.roleClass());
-        banner.settings().setVisible(look.offersSettings());
-        banner.settings().setManaged(look.offersSettings());
+        shownState = state;
+        shownNotice = notice;
+        shownWait = waitingSeconds;
+        final BannerLooks.Look look = looks.lookOf(
+                state, notice, waitingSeconds, mirror.live().waitingCall().get(), !isStayedPausedOn(notice));
+        banner.banner().setGlyph(look.glyph());
+        banner.banner().setTitle(look.title());
+        banner.banner().setText(look.text());
+        banner.banner().setRole(look.role());
+        offer(look.offer());
     }
 
-    /**
-     * Brings the newest entry into view once the list has caught up with the change that announced it. The list's own
-     * skin listens to the same items after this class's owner did, so scrolling at once would aim at the old size; the
-     * scroll is therefore queued, and one queued scroll serves every change that arrives before it runs.
-     */
-    void scrollToNewest() {
-        if (scrollQueued) {
-            return;
+    private void offer(final BannerLooks.Offer offer) {
+        if (offer != shownOffer) {
+            log.debug("banner offers {}", offer);
+            shownOffer = offer;
         }
-        scrollQueued = true;
-        Platform.runLater(() -> {
-            scrollQueued = false;
-            final int last = log.getItems().size() - 1;
-            if (last >= 0) {
-                log.scrollTo(last);
-            }
-        });
+        final boolean provider = offer == BannerLooks.Offer.PROVIDER;
+        final boolean stuck = offer == BannerLooks.Offer.STUCK;
+        final boolean recovering = offer == BannerLooks.Offer.RECOVERING;
+        Banner.setActionShown(banner.retry(), provider || recovering);
+        Banner.setActionShown(banner.skip(), provider || stuck || recovering);
+        Banner.setActionShown(banner.stopRun(), recovering);
+        Banner.setActionShown(banner.settings(), provider || offer == BannerLooks.Offer.SETTINGS_ONLY);
+        Banner.setActionShown(banner.stay(), provider);
+        Banner.setActionShown(banner.sendAgain(), stuck);
+        Banner.setActionShown(banner.pauseNow(), stuck);
     }
 
-    private Look lookOf(final RunState state, final @Nullable RunNotice notice, final int waitingSeconds) {
-        if (notice != null) {
-            return lookOf(notice);
+    // The withdrawal belongs to the error it was pressed on: the next error published is a new value and offers again.
+    private void stayPaused() {
+        if (shownNotice instanceof RunNotice.ProviderError provider) {
+            log.debug(
+                    "stay paused pressed: withdrawing the provider-error actions for {}",
+                    provider.error().code());
+            stayedPausedOn = provider.error();
+            render(shownState, shownNotice, shownWait);
         }
-        final Look plain = lookOf(state);
-        if (state != RunState.RUNNING || waitingSeconds == StateMirror.NOT_WAITING) {
-            return plain;
-        }
-        return new Look(
-                plain.glyph(),
-                plain.roleClass(),
-                plain.title(),
-                messages.get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, clock(waitingSeconds)),
-                false);
     }
 
-    private static String clock(final int seconds) {
-        return String.format(Locale.ROOT, "%d:%02d", seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE);
-    }
-
-    private Look lookOf(final RunNotice notice) {
-        return switch (notice) {
-            case RunNotice.ProviderError provider ->
-                new Look(
-                        "⛔",
-                        ERR,
-                        messages.get(
-                                MessageKey.TRANSLATING_PROVIDER_TITLE,
-                                provider.error().code().name()),
-                        provider.error().message(),
-                        true);
-            case RunNotice.Refused refused ->
-                new Look(
-                        "⚠",
-                        WARN,
-                        messages.get(MessageKey.TRANSLATING_REFUSED_TITLE),
-                        refused.error().message(),
-                        false);
-            case RunNotice.MissingInput missing ->
-                new Look(
-                        "⚠",
-                        WARN,
-                        messages.get(MessageKey.TRANSLATING_MISSING_TITLE),
-                        messages.get(
-                                MessageKey.TRANSLATING_MISSING_TEXT,
-                                missing.which().token()),
-                        false);
-        };
-    }
-
-    private Look lookOf(final RunState state) {
-        return switch (state) {
-            case IDLE -> stateLook("ℹ", INFO, "idle");
-            case RUNNING -> stateLook("▶", INFO, "running");
-            case PAUSING -> stateLook("⏸", INFO, "pausing");
-            case PAUSED -> stateLook("⏸", INFO, "paused");
-            case STOPPING -> stateLook("⏹", INFO, "stopping");
-            case STOPPED -> stateLook("⏹", INFO, "stopped");
-            case COMPLETED -> stateLook("✓", OK, "completed");
-            case FAILED -> stateLook("⚠", WARN, "failed");
-        };
-    }
-
-    private Look stateLook(final String glyph, final String roleClass, final String token) {
-        return new Look(
-                glyph,
-                roleClass,
-                messages.get(MessageKey.TRANSLATING_STATE_TITLE, token),
-                messages.get(MessageKey.TRANSLATING_STATE_TEXT, token),
-                false);
+    // Identity, not equality: a later pause with an equal error is still a new pause and offers the actions again.
+    @SuppressWarnings("ReferenceEquality")
+    private boolean isStayedPausedOn(final @Nullable RunNotice notice) {
+        return notice instanceof RunNotice.ProviderError provider && provider.error() == stayedPausedOn;
     }
 }

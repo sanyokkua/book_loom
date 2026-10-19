@@ -2,11 +2,14 @@ package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.inject.Injector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
@@ -15,13 +18,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.StepLocks;
 
 /**
  * The navigator swaps the content region by enum constant and refuses an inert one. It is built by the real
  * {@link UiModule} graph and loads the real placeholder FXML on the headless toolkit.
  */
-class NavigatorTest extends ApplicationTest {
+class NavigatorTest extends FxTestBase {
 
     private Navigator navigator;
 
@@ -68,7 +77,7 @@ class NavigatorTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE", "REVIEW"})
+            names = {"PROJECTS"})
     void navigate_inertView_isRefusedAndNothingChanges(final ViewNames inert) {
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         final Parent before = navigator.content().get();
@@ -83,7 +92,7 @@ class NavigatorTest extends ApplicationTest {
     @Test
     void navigate_inertViewBeforeAnyNavigation_leavesTheCurrentViewEmpty() {
         // IF a refusal recorded its target, THEN the shell would mark an inert entry as current.
-        final boolean accepted = navigateOnFxThread(navigator, ViewNames.REVIEW);
+        final boolean accepted = navigateOnFxThread(navigator, ViewNames.PROJECTS);
 
         assertThat(accepted).isFalse();
         assertThat(navigator.currentView().get()).isNull();
@@ -124,7 +133,7 @@ class NavigatorTest extends ApplicationTest {
         navigator.currentView().addListener((observable, previous, current) -> seen.add(current));
 
         navigateOnFxThread(navigator, ViewNames.IMPORT);
-        navigateOnFxThread(navigator, ViewNames.REVIEW);
+        navigateOnFxThread(navigator, ViewNames.PROJECTS);
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         navigateOnFxThread(navigator, ViewNames.BOOK_BRIEF);
 
@@ -152,8 +161,8 @@ class NavigatorTest extends ApplicationTest {
     @ParameterizedTest
     @CsvSource({
         "IMPORT, BOOK_BRIEF",
-        "BOOK_BRIEF, STRUCTURE",
-        "STRUCTURE, TRANSLATING",
+        "BOOK_BRIEF, NAMES_STYLE",
+        "NAMES_STYLE, TRANSLATING",
         "TRANSLATING, EXPORT",
     })
     void nextAvailableStep_workflowEntry_skipsInertEntries(final ViewNames after, final ViewNames expected) {
@@ -167,5 +176,78 @@ class NavigatorTest extends ApplicationTest {
             names = {"EXPORT", "SETTINGS"})
     void nextAvailableStep_lastStepOrNonWorkflowEntry_isEmpty(final ViewNames after) {
         assertThat(navigator.nextAvailableStep(after)).isEmpty();
+    }
+
+    // IF a click could leave the screen while blocking work runs, THEN the work's result would land on a screen nobody
+    // is looking at; the refusal changes nothing, and navigation resumes when the work ends.
+    @Test
+    void navigate_blockingWorkRunning_isRefusedUntilItEnds() {
+        final Injector graph = UiTestInjector.create(Locale.ENGLISH);
+        final ActivityTracker tracker = graph.getInstance(ActivityTracker.class);
+        final Navigator guarded = graph.getInstance(Navigator.class);
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        interact(() -> handle.set(tracker.begin(ActivityKind.EXPORT, null)));
+
+        final boolean whileBusy = navigateOnFxThread(guarded, ViewNames.EXPORT);
+        interact(() -> Objects.requireNonNull(handle.get()).end());
+        final boolean afterwards = navigateOnFxThread(guarded, ViewNames.EXPORT);
+
+        assertThat(whileBusy).isFalse();
+        assertThat(afterwards).isTrue();
+    }
+
+    private Navigator guardedNavigator(final Injector graph, final RecordingToasts toasts) {
+        return new Navigator(
+                graph.getInstance(GuiceControllerFactory.class),
+                graph.getInstance(Messages.class),
+                graph.getInstance(LeaveGuard.class),
+                graph.getInstance(ActivityTracker.class),
+                graph.getInstance(StepLocks.class),
+                toasts);
+    }
+
+    // IF a locked entry opened, THEN a screen would show a book that is not there; the toast is the click's feedback.
+    @ParameterizedTest
+    @EnumSource(
+            value = ViewNames.class,
+            names = {"BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
+    void navigate_noBook_isRefusedWithAnInfoToastNamingTheReason(final ViewNames locked) {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final RecordingToasts toasts = new RecordingToasts();
+        final Navigator guarded = guardedNavigator(graph, toasts);
+
+        final boolean accepted = navigateOnFxThread(guarded, locked);
+
+        assertThat(accepted).isFalse();
+        assertThat(guarded.currentView().get()).isNull();
+        assertThat(toasts.raised())
+                .containsExactly(new RecordingToasts.Raised("info", MessageKey.NAV_LOCKED_NO_BOOK, List.of()));
+    }
+
+    @Test
+    void navigate_bookWithoutLanguages_refusesTranslatingButAllowsTheBrief() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final RecordingToasts toasts = new RecordingToasts();
+        final Navigator guarded = guardedNavigator(graph, toasts);
+        interact(() -> OpenBookForTest.open(graph.getInstance(CurrentProject.class), "en", null));
+
+        final boolean translating = navigateOnFxThread(guarded, ViewNames.TRANSLATING);
+        final boolean brief = navigateOnFxThread(guarded, ViewNames.BOOK_BRIEF);
+
+        assertThat(translating).isFalse();
+        assertThat(brief).isTrue();
+        assertThat(toasts.raised())
+                .containsExactly(new RecordingToasts.Raised("info", MessageKey.NAV_LOCKED_NO_LANGUAGES, List.of()));
+    }
+
+    @Test
+    void navigate_importAndSettingsWithNoBook_areNeverLocked() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final RecordingToasts toasts = new RecordingToasts();
+        final Navigator guarded = guardedNavigator(graph, toasts);
+
+        assertThat(navigateOnFxThread(guarded, ViewNames.IMPORT)).isTrue();
+        assertThat(navigateOnFxThread(guarded, ViewNames.SETTINGS)).isTrue();
+        assertThat(toasts.raised()).isEmpty();
     }
 }

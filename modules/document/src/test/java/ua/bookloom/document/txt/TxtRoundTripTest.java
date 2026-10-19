@@ -1,7 +1,6 @@
 package ua.bookloom.document.txt;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -14,13 +13,14 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.document.model.CorruptContainerException;
 
 /**
  * The plain-text read and write paths.
@@ -103,12 +103,46 @@ class TxtRoundTripTest {
         assertThat(segmentsOf(document)).extracting(Segment::kind).containsOnly(SegmentKind.PARAGRAPH);
     }
 
+    // A paragraph of only invisible characters is no segment, and writing the book back keeps its bytes.
+    @ParameterizedTest
+    @ValueSource(strings = {"\u00A0", "\u200B", "\uFEFF\u00AD", "\u00A0 \u200B"})
+    void read_paragraphOfInvisibleCharactersOnly_yieldsNoSegmentAndKeepsItsBytes(String invisible) {
+        final String text = "One.\n\n" + invisible + "\n\nTwo.\n";
+        final Document document = open(text, StandardCharsets.UTF_8, "notes.txt");
+
+        assertThat(segmentsOf(document)).extracting(Segment::sourceInner).containsExactly("One.", "Two.");
+        assertThat(bytesOf(writeOut(document, "en"))).isEqualTo(text.getBytes(StandardCharsets.UTF_8));
+    }
+
     // a run of several blank lines yields no extra segment.
     @Test
     void read_runOfSeveralBlankLines_yieldsNoExtraSegment() {
         final Document document = open("One.\r\n\r\n\r\n\r\nTwo.\r\n", StandardCharsets.UTF_8, "notes.txt");
 
         assertThat(segmentsOf(document)).hasSize(2);
+    }
+
+    // TXT carries no notion of a declared language at all, so no segment ever records one.
+    @Test
+    void read_anyTxtSegment_recordsNoDeclaredLanguage() {
+        assertThat(segmentsOf(openPrimary()))
+                .extracting(Segment::declaredLanguage)
+                .containsOnlyNulls();
+    }
+
+    // Every book ends with an auxiliary unit; a plain-text book has nothing auxiliary, so its unit is empty.
+    @Test
+    void read_plainTextFile_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+        final Document document = openPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(2);
+        assertThat(document.units().get(0).id()).isEqualTo("notes.txt");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("notes.txt");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.order()).isEqualTo(1);
+        assertThat(last.segments()).isEmpty();
     }
 
     // a plain-text file is one unit named for the file, with the plain-text media type.
@@ -182,17 +216,18 @@ class TxtRoundTripTest {
         assertThat(bytesOf(writeOut(openPrimary(), "uk"))).isEqualTo(PRIMARY.getBytes(StandardCharsets.UTF_8));
     }
 
-    // IF a segment's target text contains a character the source encoding cannot
-    // represent, THEN the export fails with a validation outcome and no output file is written.
+    // WHEN a segment's target holds a character the source encoding cannot represent, THEN the export succeeds and
+    // the whole file is written as UTF-8 with that character in it.
     @Test
-    void write_unrepresentableTargetCharacter_failsAndWritesNoFile() {
+    void write_unrepresentableTargetCharacter_writesTheWholeFileAsUtf8() {
         final Document document = withTarget(open(CYRILLIC_PROSE, WINDOWS_1251, "notes.txt"), 1, "Два 車.");
-        final Path destination = tempDir.resolve("out.txt");
 
-        assertThatThrownBy(() -> new TxtWriter(registry).write(document, destination, "uk"))
-                .isInstanceOf(CorruptContainerException.class)
-                .hasMessageContaining("cannot represent");
-        assertThat(Files.exists(destination)).isFalse();
+        final Path output = writeOut(document, "uk");
+
+        assertThat(new String(bytesOf(output), StandardCharsets.UTF_8))
+                .contains("Два 車.")
+                .doesNotContain("?")
+                .startsWith("Он бегал по улице");
     }
 
     // a representable translation into the source's own encoding is written in it.

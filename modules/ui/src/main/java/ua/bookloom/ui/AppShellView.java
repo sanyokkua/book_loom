@@ -4,11 +4,13 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Arrays;
 import java.util.Objects;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
@@ -17,14 +19,27 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.ActivityChip;
+import ua.bookloom.ui.control.Motion;
+import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.control.ScrollAnchor;
+import ua.bookloom.ui.control.SmoothScroll;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
+import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.DiagnosticActions;
+import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StepLocks;
+import ua.bookloom.ui.state.WorkflowProgress;
+import ua.bookloom.ui.theme.MonoFont;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -41,6 +56,8 @@ import ua.bookloom.ui.theme.ThemeController;
 @Slf4j
 @Singleton
 public final class AppShellView {
+
+    static final String REDUCED_MOTION_CLASS = "reduce-motion";
 
     /**
      * The smallest <em>outer</em> window width. The content area that leaves a person is smaller (borders and title
@@ -59,6 +76,7 @@ public final class AppShellView {
             .flatMapToInt(view -> view.step().stream())
             .max()
             .orElse(0);
+    private static final double ACTION_SPACING = 10;
     private static final String CRUMB_SEPARATOR = " / ";
     private static final String STEP_SEPARATOR = " · ";
 
@@ -67,10 +85,17 @@ public final class AppShellView {
     private final ThemeController themeController;
     private final String version;
     private final ModalHost modalHost;
+    private final BusyHost busyHost;
+    private final ActivityTracker activities;
     private final ToastStack toasts;
+    private final RunStatusBar runStatus;
+    private final ActivityChip activityChip;
+    private final DiagnosticActions diagnostics;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
-    private final StackPane contentHost = new StackPane();
+    private final StackPane contentHost = new ContentHost();
+    private final ScrollPane contentScroll = new ScrollPane(contentHost);
+    private final ScrollAnchor contentAnchor = ScrollAnchor.install(contentScroll);
     private final ToggleButton themeToggle = new ToggleButton();
     private @Nullable StackPane root;
 
@@ -81,7 +106,15 @@ public final class AppShellView {
      * @param messages the catalogue every label comes from
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
-     * @param toasts the transient-message surface whose host the shell places above everything else
+     * @param busyHost the layer between the frame and the dialogs that shows the work the window waits for
+     * @param activities the running work, whose blocking state disables the navigation and the toolbar actions
+     * @param toasts the transient-message surface whose host the shell places over the content area
+     * @param runStatus the run's status and control, placed between the product name and the theme control
+     * @param activityChip the other model work under way, with its Stop, placed before the run's status
+     * @param progress the completed steps the navigation marks
+     * @param settings the chosen provider and model the navigation footer names
+     * @param locks which steps are closed, for the navigation to draw
+     * @param diagnostics the log settings and actions the About dialog offers
      * @param version the build version the About dialog reports
      */
     @Inject
@@ -90,15 +123,28 @@ public final class AppShellView {
             final Messages messages,
             final ThemeController themeController,
             final ModalHost modalHost,
+            final BusyHost busyHost,
+            final ActivityTracker activities,
             final ToastStack toasts,
+            final RunStatusBar runStatus,
+            final ActivityChip activityChip,
+            final WorkflowProgress progress,
+            final SettingsViewModel settings,
+            final StepLocks locks,
+            final DiagnosticActions diagnostics,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+        this.busyHost = Objects.requireNonNull(busyHost, "busyHost");
+        this.activities = Objects.requireNonNull(activities, "activities");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
+        this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
+        this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
+        this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
         this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate);
+        this.navColumn = new NavColumn(messages, this::activate, progress, settings, locks);
     }
 
     /**
@@ -161,11 +207,27 @@ public final class AppShellView {
         final BorderPane frame = new BorderPane();
         frame.setTop(titleBar());
         frame.setLeft(navColumn.view());
+        // Work the window waits for leaves nothing to navigate to; the busy card says why, and Navigator refuses too.
+        navColumn.view().disableProperty().bind(activities.blocking());
         frame.setCenter(main());
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final StackPane shell = new StackPane(frame, modalHost.view(), toasts.view());
+        final Node toastLayer = toasts.view();
+        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
+        final StackPane shell = new StackPane(frame, busyHost.view(), toastLayer, modalHost.view());
+        keepOverTheContent(toastLayer);
+        MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
+            log.debug("the activity log is set in {}", face.family());
+            shell.getStyleClass().add(face.styleClass());
+        });
+        if (Motion.isReduced()) {
+            // The switches' sliding thumb is the one transition the stylesheet plays; this class stills it.
+            log.info("reduced motion: transitions are off");
+            shell.getStyleClass().add(REDUCED_MOTION_CLASS);
+        }
+        // Once at the top: a wheel notch glides whichever pane, list, table or tree is under the pointer.
+        SmoothScroll.install(shell);
         navigator.currentView().addListener((observed, old, current) -> showCurrent(current));
         navigator.content().addListener((observed, old, content) -> showContent(content));
         themeController.activeBlockProperty().addListener((observed, old, block) -> syncThemeToggle(block));
@@ -173,6 +235,16 @@ public final class AppShellView {
         showContent(navigator.content().get());
         syncThemeToggle(themeController.activeBlock());
         return shell;
+    }
+
+    // The toasts rise from the bottom and are centred over the content, so none covers the navigation column.
+    private void keepOverTheContent(final Node toastLayer) {
+        final Node nav = navColumn.view();
+        StackPane.setMargin(
+                toastLayer, new Insets(0, 0, 0, nav.getLayoutBounds().getWidth()));
+        nav.layoutBoundsProperty()
+                .addListener(
+                        (observed, was, now) -> StackPane.setMargin(toastLayer, new Insets(0, 0, 0, now.getWidth())));
     }
 
     private Node titleBar() {
@@ -185,9 +257,15 @@ public final class AppShellView {
         themeToggle.setOnAction(event -> themeController.toggle());
         final Button about = new Button(messages.get(MessageKey.SHELL_ABOUT), new FontIcon(Feather.INFO));
         about.setId("shell-about");
+        Tips.install(messages, about, MessageKey.SHELL_ABOUT_TIP);
         about.getStyleClass().add("shell-title-button");
         about.setOnAction(event -> openAbout());
-        final HBox bar = new HBox(product, spacer, themeToggle, about);
+        // Only the run status gives way in a narrow window (it shortens the book name and hides its lesser parts);
+        // the product name, the theme toggle and About keep their words whole.
+        for (final Region whole : new Region[] {product, themeToggle, about}) {
+            whole.setMinWidth(Region.USE_PREF_SIZE);
+        }
+        final HBox bar = new HBox(product, spacer, activityChip.view(), runStatus.view(), themeToggle, about);
         bar.setId("shell-title-bar");
         bar.getStyleClass().add("shell-title-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
@@ -203,23 +281,29 @@ public final class AppShellView {
         actions.setId("shell-actions");
         actions.getStyleClass().add("shell-actions");
         actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setSpacing(ACTION_SPACING);
+        actions.setMinWidth(Region.USE_PREF_SIZE);
+        actions.disableProperty().bind(activities.blocking());
+        breadcrumb.setMinWidth(0);
+        breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        final ScrollPane scroll = contentScroll();
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        return new VBox(toolbar, scroll);
+        final ScrollPane scroll = configuredContentScroll();
+        final StackPane contentArea = new StackPane(scroll);
+        VBox.setVgrow(contentArea, Priority.ALWAYS);
+        return new VBox(toolbar, contentArea);
     }
 
-    private ScrollPane contentScroll() {
+    private ScrollPane configuredContentScroll() {
         contentHost.setId("shell-content");
         contentHost.getStyleClass().add("shell-content");
         contentHost.setAlignment(Pos.TOP_LEFT);
-        final ScrollPane scroll = new ScrollPane(contentHost);
+        final ScrollPane scroll = contentScroll;
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
-        // Both dimensions fit, so a screen whose list grows still fills the viewport; it only scrolls once its own
-        // minimum is taller or wider than the window.
+        // Both dimensions fit, so a screen whose list grows still fills the viewport; it scrolls once the screen's
+        // minimum, which showContent makes its preferred height, is taller than the window.
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -229,7 +313,7 @@ public final class AppShellView {
 
     private void openAbout() {
         log.debug("opening the About dialog");
-        modalHost.show(new AboutDialog(messages, version, modalHost::hide).card(), true);
+        modalHost.show(new AboutDialog(messages, version, diagnostics, modalHost::hide).card(), true);
     }
 
     private void showCurrent(final @Nullable ViewNames current) {
@@ -238,12 +322,21 @@ public final class AppShellView {
         breadcrumb.setText(current == null ? "" : crumb(current));
     }
 
+    // A screen that is not its own scroll pane is never squeezed below its preferred height: fitting the height clamps
+    // the content only to its minimum, which would otherwise crush lists and text areas into the window instead of
+    // letting the shell scroll. A screen that scrolls itself (import, brief) keeps fitting the window.
     private void showContent(final @Nullable Node content) {
         if (content == null) {
             contentHost.getChildren().clear();
         } else {
+            if (content instanceof Region region && !(content instanceof ScrollPane)) {
+                log.debug("screen {} keeps its preferred height; the shell scrolls it", content.getId());
+                region.setMinHeight(Region.USE_PREF_SIZE);
+            }
             contentHost.getChildren().setAll(content);
+            Motion.fadeIn(content, Motion.QUICK);
         }
+        contentAnchor.reset();
     }
 
     private String crumb(final ViewNames view) {
@@ -259,7 +352,23 @@ public final class AppShellView {
     private void syncThemeToggle(final ThemeBlock block) {
         final boolean dark = block == ThemeBlock.DARK;
         themeToggle.setText(messages.get(dark ? MessageKey.SHELL_THEME_TO_LIGHT : MessageKey.SHELL_THEME_TO_DARK));
+        Tips.install(
+                messages, themeToggle, dark ? MessageKey.SHELL_THEME_TO_LIGHT_TIP : MessageKey.SHELL_THEME_TO_DARK_TIP);
         themeToggle.setGraphic(new FontIcon(dark ? Feather.SUN : Feather.MOON));
         themeToggle.setSelected(dark);
+    }
+
+    /**
+     * The padded host the shell scrolls. JavaFX's {@code StackPane.computeMinHeight(width)} hands its children the
+     * full width instead of the width left inside the padding, so for a screen whose text wraps it answers a height for
+     * a wider page than the one it fills; the scroll pane takes that answer as the floor of the content height, and
+     * the screen was laid out shorter than it needs (the last rows crushed) whenever a wrap line fell in between.
+     */
+    private static final class ContentHost extends StackPane {
+        @Override
+        protected double computeMinHeight(final double width) {
+            final Insets padding = getInsets();
+            return super.computeMinHeight(width == -1 ? -1 : width - padding.getLeft() - padding.getRight());
+        }
     }
 }

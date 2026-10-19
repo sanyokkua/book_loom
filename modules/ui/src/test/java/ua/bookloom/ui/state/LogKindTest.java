@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,17 +22,46 @@ class LogKindTest {
     @ParameterizedTest
     @CsvSource({
         "ACCEPTED, SUCCESS, LOG_ACCEPTED",
-        "REPAIRED, INFO, LOG_REPAIRED",
+        "MODEL_CALL, INFO, LOG_MODEL_CALL",
+        "CALL_FAILED, WARNING, LOG_CALL_FAILED",
+        "ROUND, INFO, LOG_ROUND",
         "GLOSSARY_APPLIED, INFO, LOG_GLOSSARY_APPLIED",
         "SUMMARY_UPDATED, INFO, LOG_SUMMARY_UPDATED",
         "RETRIED, WARNING, LOG_RETRIED",
+        "WAITING, WARNING, LOG_WAITING",
         "SEGMENT_ERROR, DANGER, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
-    void kind_eachOfTheSeven_hasItsRoleAndCatalogueKey(
-            final LogKind kind, final StatusRole role, final MessageKey key) {
+    void kind_eachOfTheNine_hasItsRoleAndCatalogueKey(final LogKind kind, final StatusRole role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
+    }
+
+    // IF a kind carried the wrong tag, THEN the log's tag column would mislabel the entry.
+    @ParameterizedTest
+    @CsvSource({
+        "ACCEPTED, ok",
+        "MODEL_CALL, call",
+        "CALL_FAILED, fail",
+        "ROUND, round",
+        "GLOSSARY_APPLIED, mem",
+        "SUMMARY_UPDATED, sum",
+        "RETRIED, retry",
+        "WAITING, wait",
+        "SEGMENT_ERROR, err",
+        "MILESTONE, info"
+    })
+    void tag_eachOfTheNine_isItsFixedWord(final LogKind kind, final String tag) {
+        assertThat(kind.tag()).isEqualTo(tag);
+    }
+
+    // IF two kinds shared a tag or one were not lower-case, THEN the column could not be read at a glance.
+    @Test
+    void tag_allKinds_areDistinctAndLowerCase() {
+        final List<String> tags =
+                Arrays.stream(LogKind.values()).map(LogKind::tag).collect(Collectors.toList());
+
+        assertThat(tags).doesNotHaveDuplicates().allMatch(tag -> tag.equals(tag.toLowerCase(Locale.ROOT)));
     }
 
     // IF a kind had no glyph, THEN its meaning would rest on colour alone, which a colour-blind reader cannot use.
@@ -47,7 +77,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
 
-        assertThat(LogKind.values()).hasSize(7);
+        assertThat(LogKind.values()).hasSize(11);
         assertThat(marks).doesNotHaveDuplicates();
     }
 

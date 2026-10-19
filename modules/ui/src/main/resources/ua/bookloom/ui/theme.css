@@ -5,8 +5,8 @@
  * declaring the role set once, with the value blocks applied on `.root`. Never add a second one beside it.
  *
  * The full published token catalogue (01_Product/09_THEMING.md#token-catalog and #status-colours) is carried here:
- * 41 looked-up colour roles as `-color-<role>`, plus the three elevation roles. The light values sit on `.root`;
- * `.root.theme-dark` overrides the same 41 names, so switching theme is one style-class toggle on the Scene root
+ * 49 looked-up colour roles as `-color-<role>` (and three switch roles), plus the three elevation roles. The light values sit on `.root`;
+ * `.root.theme-dark` overrides the same names, so switching theme is one style-class toggle on the Scene root
  * (`Theme.DARK_STYLE_CLASS`) and never a second stylesheet. Colours may hold `rgba(...)`, but a box-shadow is not a
  * colour: `shadow-sm`, `shadow` and `shadow-lg` are drop-shadow effects on the `.elevation-sm`, `.elevation` and
  * `.elevation-lg` style classes, because a looked-up colour holding a shadow triple is silently dropped and the
@@ -37,14 +37,15 @@
     /* Text */
     -color-text: #2c3941;
     -color-text-strong: #22303a;
-    -color-muted: #6f7c82;
-    -color-muted-2: #95928a;
+    -color-muted: #5d686d;
+    -color-muted-2: #6f6c65;
 
     /* Primary (Cognac) and warm tints */
     -color-primary: #a58075;
-    -color-primary-hover: #916b60;
-    -color-primary-press: #7e5b51;
-    -color-primary-fg: #ffffff;
+    /* Charcoal words on Cognac (4.7:1): white measured 3.5:1. The hover and pressed fills lighten, as the dark block's do. */
+    -color-primary-hover: #b58f83;
+    -color-primary-press: #c39e92;
+    -color-primary-fg: #241c19;
     -color-primary-soft: #f0e5dd;
     -color-sand-soft: #f2e9db;
     -color-sand-strong: #dcc4a3;
@@ -54,18 +55,45 @@
     -color-nav-bg: #3a4a52;
     -color-nav-bg-2: #324148;
     -color-nav-fg: #cdd5d8;
-    -color-nav-fg-muted: #859399;
+    -color-nav-fg-muted: #b0b9bd;
     -color-nav-active-bg: rgba(231,214,192,.13);
     -color-nav-active-fg: #f3ede3;
     -color-nav-accent: #c99a86;
+    -color-nav-accent-fg: #1c2429;
     -color-title-bg: #324148;
     -color-title-fg: #dfe4e6;
+    /* The connection chip's words on the title bar, which is dark in both blocks. */
+    -color-title-ok-fg: #9cc4a6;
+    -color-title-warn-fg: #e0b56f;
 
-    /* Keyboard focus */
-    -color-focus: #a58075;
+    /* Keyboard focus: a slate-blue ring, never the primary colour, so it shows around a primary button too. It is drawn
+       outside the control with a gap, so it is held to 3:1 against the surface around the control, not the control. The
+       navigation column and the title bar are dark in both blocks and take a light ring of their own. */
+    -color-focus: #3d6b80;
+    -color-nav-focus: #9fd0e4;
     /* Modena's own focus colours, pointed at the role so no blue ring leaks on a control the rules below miss. */
     -fx-focus-color: -color-focus;
     -fx-faint-focus-color: transparent;
+
+    /* Switch: a darker slate off track and a Cognac on track, each 3:1 against both the white thumb and the surface. */
+    -color-toggle-off: #87939a;
+    -color-toggle-on: #a58075;
+    -color-toggle-thumb: #ffffff;
+
+    /* An input's edge (text field, combo box, check box, segmented picker): 3:1 against its fill and the card. Cards and
+       dividers keep the quieter border roles; they are decoration, told apart by their fill. */
+    -color-input-border: #988462;
+
+    /* Modena re-based on the roles: every control it derives from these (labels, cells, text fields, scroll panes,
+       selection) follows the active value block instead of staying near-white with near-black text. */
+    -fx-base: -color-surface-2;
+    -fx-background: -color-bg;
+    -fx-control-inner-background: -color-surface;
+    -fx-text-background-color: -color-text;
+    -fx-text-base-color: -color-text;
+    -fx-text-inner-color: -color-text;
+    -fx-accent: -color-primary;
+    -fx-box-border: -color-border;
 
     /* Status (desaturated): success, warning, danger, info */
     -color-ok: #5f8a6b;
@@ -80,11 +108,17 @@
     -color-info: #4d6b78;
     -color-info-bg: #e5edf0;
     -color-info-bd: #b7cbd2;
+    /* A status as WORDS: the brand hues above are for fills, edges and icons; as text they measure under 4.5:1, so
+       text takes these darker shades (4.5:1 on the surfaces, the selected row and the status's own -bg). */
+    -color-ok-fg: #4a6c54;
+    -color-warn-fg: #835d27;
+    -color-err-fg: #a04f45;
+    -color-info-fg: #4d6b78;
 
     -fx-background-color: -color-bg;
 }
 
-/* --- The dark value block: the same 41 names, applied when the root carries `theme-dark` ------------------ */
+/* --- The dark value block: the same names, applied when the root carries `theme-dark` ------------------ */
 .root.theme-dark {
     /* Surfaces and borders */
     -color-bg: #283237;
@@ -98,8 +132,8 @@
     /* Text */
     -color-text: #e6ebed;
     -color-text-strong: #f4f7f8;
-    -color-muted: #9fb0b7;
-    -color-muted-2: #7f9098;
+    -color-muted: #bdc9cd;
+    -color-muted-2: #a2afb4;
 
     /* Primary (Cognac) and warm tints */
     -color-primary: #c4917e;
@@ -115,15 +149,26 @@
     -color-nav-bg: #20292e;
     -color-nav-bg-2: #1c2429;
     -color-nav-fg: #cdd6da;
-    -color-nav-fg-muted: #7d8f97;
+    -color-nav-fg-muted: #8d9ea6;
     -color-nav-active-bg: rgba(231,214,192,.10);
     -color-nav-active-fg: #f3ede3;
     -color-nav-accent: #c99a86;
+    -color-nav-accent-fg: #1c2429;
     -color-title-bg: #1c2429;
     -color-title-fg: #dfe4e6;
+    -color-title-ok-fg: #9cc4a6;
+    -color-title-warn-fg: #e0b56f;
+
+    /* Switch: the light block's slate and white; the on track a darker Cognac so the white thumb keeps 3:1 */
+    -color-toggle-off: #87939a;
+    -color-toggle-on: #ad8679;
+    -color-toggle-thumb: #ffffff;
+
+    -color-input-border: #7d949e;
 
     /* Keyboard focus */
-    -color-focus: #c4917e;
+    -color-focus: #8cc0d6;
+    -color-nav-focus: #9fd0e4;
 
     /* Status (desaturated): success, warning, danger, info */
     -color-ok: #7faa8a;
@@ -138,6 +183,10 @@
     -color-info: #7a9dab;
     -color-info-bg: #293940;
     -color-info-bd: #3d525b;
+    -color-ok-fg: #b0d0b7;
+    -color-warn-fg: #e6c086;
+    -color-err-fg: #edbbb4;
+    -color-info-fg: #b3cbd4;
 }
 
 /* --- Elevation roles: light ---------------------------------------------------------------------------------- */
@@ -166,6 +215,78 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.5), 40, 0, 0, 16);
 }
 
+/* --- Baselines: what a control shows when no rule below names it ------------------------------------------- */
+/* They sit before every component rule on purpose: a one-class baseline is out-ranked by a later one-class rule,
+   so `.muted`, `.card-title` and the other role classes keep winning over `.label`. */
+.label {
+    -fx-text-fill: -color-text;
+}
+
+.scroll-pane,
+.scroll-pane > .viewport,
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button,
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-shape: " ";
+}
+
+.list-view,
+.table-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.list-cell,
+.table-row-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text;
+}
+
+.list-cell:filled:selected,
+.table-row-cell:filled:selected {
+    -fx-background-color: -color-selected;
+    -fx-text-fill: -color-text;
+}
+
+.table-cell {
+    -fx-text-fill: -color-text;
+}
+
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: -color-surface-2;
+}
+
 /* --- Placeholder screens: the one label style the FXML stand-ins share ---------------------------------- */
 .placeholder-label {
     -fx-text-fill: -color-text;
@@ -189,6 +310,28 @@
     -fx-font-weight: bold;
 }
 
+.run-status {
+    -fx-spacing: 10px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 6px 0 6px;
+}
+
+.run-status-text {
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+}
+
+/* The model work under way beside the run status ("Model scan · 12 requests"): title-bar words, not body text. */
+.activity-chip-text {
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+}
+
+.run-status-detail {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 12px;
+}
+
 .shell-title-button,
 .shell-title-button:selected {
     -fx-background-color: transparent;
@@ -209,8 +352,11 @@
     -fx-opacity: 1;
 }
 
-.shell-title-button:focused {
-    -fx-border-color: -color-focus;
+.shell-title-button:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 6px;
     -fx-opacity: 1;
 }
 
@@ -276,7 +422,7 @@
 
 .nav-brand-sub {
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10.5px;
+    -fx-font-size: 12px;
 }
 
 .nav-group {
@@ -285,7 +431,7 @@
 
 .nav-label {
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10px;
+    -fx-font-size: 12px;
     -fx-padding: 6px 8px 4px 8px;
 }
 
@@ -308,8 +454,11 @@
     -fx-background-color: -color-nav-bg-2;
 }
 
-.nav-item:focused {
-    -fx-border-color: -color-focus;
+.nav-item:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent;
+    -fx-border-width: 2px, 1px 1px 1px 3px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 7px;
 }
 
 .nav-item .ikonli-font-icon {
@@ -319,16 +468,39 @@
 
 .nav-step {
     -fx-background-color: -color-nav-bg-2;
-    -fx-background-radius: 8px;
+    -fx-background-radius: 9px;
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10px;
+    -fx-font-size: 11px;
     -fx-alignment: center;
-    -fx-min-width: 16px;
-    -fx-pref-width: 16px;
-    -fx-max-width: 16px;
-    -fx-min-height: 16px;
-    -fx-pref-height: 16px;
-    -fx-max-height: 16px;
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-max-width: 18px;
+    -fx-min-height: 18px;
+    -fx-pref-height: 18px;
+    -fx-max-height: 18px;
+}
+
+.nav-step-done .nav-step {
+    -fx-background-color: -color-nav-bg-2;
+}
+
+.nav-step-done .nav-step .ikonli-font-icon {
+    -fx-icon-color: -color-nav-accent;
+    -fx-icon-size: 10;
+}
+
+.nav-item-current.nav-step-done .nav-step {
+    -fx-background-color: -color-nav-accent;
+}
+
+.nav-item-current.nav-step-done .nav-step .ikonli-font-icon {
+    -fx-icon-color: -color-nav-accent-fg;
+}
+
+.nav-footer {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 10px 18px 12px 18px;
 }
 
 .nav-item-current,
@@ -339,13 +511,16 @@
     -fx-font-weight: bold;
 }
 
-.nav-item-current:focused {
-    -fx-border-color: -color-focus -color-focus -color-focus -color-nav-accent;
+.nav-item-current:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent transparent transparent -color-nav-accent;
+    -fx-border-width: 2px, 1px 1px 1px 3px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 7px;
 }
 
 .nav-item-current .nav-step {
     -fx-background-color: -color-nav-accent;
-    -fx-text-fill: -color-nav-bg;
+    -fx-text-fill: -color-nav-accent-fg;
     -fx-font-weight: bold;
 }
 
@@ -353,14 +528,20 @@
     -fx-icon-color: -color-nav-active-fg;
 }
 
+/* An entry that cannot be opened now is dimmed as a whole, so it is told from an open one at a glance; its hover text
+   says why. (An inactive control is exempt from the contrast floor, ContrastTest skips it.) */
 .nav-item-unavailable,
-.nav-item-unavailable:hover {
+.nav-item-unavailable:hover,
+.nav-item-locked,
+.nav-item-locked:hover {
     -fx-background-color: transparent;
     -fx-text-fill: -color-nav-fg-muted;
+    -fx-opacity: 0.7;
     -fx-cursor: default;
 }
 
-.nav-item-unavailable .ikonli-font-icon {
+.nav-item-unavailable .ikonli-font-icon,
+.nav-item-locked .ikonli-font-icon {
     -fx-icon-color: -color-nav-fg-muted;
 }
 
@@ -423,9 +604,22 @@
     -fx-opacity: 0.45;
 }
 
+/* Bottom centre of the content area, the newest toast lowest. */
 .shell-toast-host {
-    -fx-padding: 52px 18px 0 0;
+    -fx-padding: 0 0 18px 0;
     -fx-spacing: 8px;
+}
+
+/* --- Hover explanations: the title bar's pair, so the bubble is dark on the light block and stays readable on the dark one ---- */
+.tooltip {
+    -fx-background-color: -color-title-bg;
+    -fx-background-radius: 5px;
+    -fx-background-insets: 0;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 5px;
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 10px 6px 10px;
 }
 
 /* --- Toasts: a status-coloured left edge and icon, the rest neutral surface --------------------------------- */
@@ -483,6 +677,23 @@
     -fx-font-size: 12.5px;
 }
 
+/* The "×3" of identical messages folded into one. */
+.toast-count {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.toast-close {
+    -fx-padding: 2px 4px 2px 4px;
+    -fx-min-width: 0;
+}
+
+.toast-action {
+    -fx-padding: 2px 8px 2px 8px;
+    -fx-font-size: 12px;
+}
+
 /* The card is a DialogPane; Modena styles its header panel, content and button bar, so each is reset here. */
 .dialog-card {
     -fx-background-color: -color-surface;
@@ -526,11 +737,43 @@
 
 .dialog-sub {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 .dialog-text {
     -fx-text-fill: -color-text;
+}
+
+/* The busy card: a bar over a line of elapsed time and time left, then the work's facts as key/value rows. */
+.busy-body {
+    -fx-spacing: 10px;
+}
+
+/* The model calls window: its own scene, so it paints the page colour itself and scrolls its two calls inside. */
+.model-calls-window {
+    -fx-background-color: -color-bg;
+    -fx-padding: 12px;
+}
+
+.model-calls-window > .scroll-pane,
+.model-calls-window > .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.busy-body > .progress-bar {
+    -fx-pref-width: 480px;
+}
+
+/* The About card's diagnostic-log section: set apart from the description, its actions wrapping on a narrow card. */
+.about-diagnostics {
+    -fx-spacing: 8px;
+    -fx-padding: 14px 0 0 0;
+}
+
+.about-actions {
+    -fx-hgap: 8px;
+    -fx-vgap: 8px;
 }
 
 .btn-primary {
@@ -552,8 +795,13 @@
     -fx-background-color: -color-primary-press;
 }
 
-.btn-primary:focused {
-    -fx-border-color: -color-focus;
+/* Keyboard focus is a 2px ring 1px outside the control (a second border layer at negative insets), shown only when
+   focus came from the keyboard, so a click leaves no ring behind. */
+.btn-primary:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .btn-secondary {
@@ -575,8 +823,11 @@
     -fx-background-color: -color-sand-soft;
 }
 
-.btn-secondary:focused {
-    -fx-border-color: -color-focus;
+.btn-secondary:focus-visible {
+    -fx-border-color: -color-focus, -color-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* --- Error dialog ------------------------------------------------------------------------------------------ */
@@ -606,6 +857,11 @@
     -fx-font-weight: bold;
 }
 
+/* Two cards side by side or stacked (ui.control.TwoColumns): the one gap between the columns and between the cards. */
+.two-columns {
+    -fx-gap: 16px;
+}
+
 .card {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
@@ -629,7 +885,7 @@
 
 .hint {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* Modena draws the tab strip with its own greys; the strip is reset so only roles show through. */
@@ -641,24 +897,30 @@
     -fx-background-color: transparent;
 }
 
+/* The selected tab is marked by an underline of the primary role, nothing else changes about it. */
 .tab {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-background-radius: 7px 7px 0 0;
+    -fx-background-radius: 0;
     -fx-border-color: transparent;
-    -fx-border-width: 1px;
-    -fx-border-radius: 7px 7px 0 0;
+    -fx-border-width: 0 0 2px 0;
+    -fx-border-radius: 0;
     -fx-padding: 5px 12px 5px 12px;
 }
 
+/* Three looks, so an available tab never passes for an unavailable one: the chosen tab is strong and underlined, an
+   available one is ordinary text, and an unavailable one is muted and dimmed. */
 .tab .tab-label {
-    -fx-text-fill: -color-muted;
+    -fx-text-fill: -color-text;
     -fx-font-size: 12.5px;
 }
 
+.tab:disabled .tab-label {
+    -fx-text-fill: -color-muted;
+}
+
 .tab:selected {
-    -fx-background-color: -color-surface;
-    -fx-border-color: -color-border -color-border transparent -color-border;
+    -fx-border-color: transparent transparent -color-primary transparent;
 }
 
 .tab:selected .tab-label {
@@ -677,6 +939,8 @@
 /* Modena paints a blue ring on the selected tab while the pane has focus; it is recoloured to the focus role. */
 .tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
     -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
     -fx-background-color: transparent;
 }
 
@@ -687,7 +951,7 @@
     -fx-border-color: transparent;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
-    -fx-padding: 8px 10px 8px 10px;
+    -fx-padding: 6px 10px 6px 10px;
     -fx-cursor: hand;
 }
 
@@ -695,8 +959,11 @@
     -fx-background-color: -color-surface-2;
 }
 
-.list-item:focused {
-    -fx-border-color: -color-focus;
+.list-item:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .list-item-selected,
@@ -705,8 +972,11 @@
     -fx-border-color: -color-sand-strong;
 }
 
-.list-item-selected:focused {
-    -fx-border-color: -color-focus;
+.list-item-selected:focus-visible {
+    -fx-border-color: -color-focus, -color-sand-strong;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .provider-name {
@@ -717,7 +987,7 @@
 
 .provider-endpoint {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* --- Chips: a status is told by its own glyph and words as well as by these roles ------------------------ */
@@ -726,31 +996,37 @@
     -fx-border-width: 1px;
     -fx-border-radius: 10px;
     -fx-padding: 2px 9px 2px 9px;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 .chip-ok {
     -fx-background-color: -color-ok-bg;
     -fx-border-color: -color-ok-bd;
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .chip-warn {
     -fx-background-color: -color-warn-bg;
     -fx-border-color: -color-warn-bd;
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .chip-err {
     -fx-background-color: -color-err-bg;
     -fx-border-color: -color-err-bd;
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 .chip-neutral {
     -fx-background-color: -color-surface-2;
     -fx-border-color: -color-border;
     -fx-text-fill: -color-muted;
+}
+
+.chip-info {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info-fg;
 }
 
 /* --- Buttons that sit beside the primary and secondary ones --------------------------------------------- */
@@ -769,8 +1045,16 @@
     -fx-background-color: -color-surface-2;
 }
 
-.btn-ghost:focused {
-    -fx-border-color: -color-focus;
+.btn-ghost:pressed {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+}
+
+.btn-ghost:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .btn-danger-outline {
@@ -780,7 +1064,7 @@
     -fx-border-color: -color-err-bd;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
     -fx-cursor: hand;
 }
 
@@ -788,8 +1072,16 @@
     -fx-background-color: -color-err-bg;
 }
 
-.btn-danger-outline:focused {
-    -fx-border-color: -color-focus;
+.btn-danger-outline:pressed {
+    -fx-background-color: -color-err-bd;
+    -fx-text-fill: -color-text-strong;
+}
+
+.btn-danger-outline:focus-visible {
+    -fx-border-color: -color-focus, -color-err-bd;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* An unavailable button is dimmed, not recoloured, so its role stays readable and no colour is invented. */
@@ -807,7 +1099,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-text-fill: -color-text;
@@ -818,8 +1110,12 @@
     -fx-padding: 7px 10px 7px 10px;
 }
 
+/* A field being typed in shows the ring however it got focus. */
 .text-field:focused {
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .combo-box,
@@ -827,7 +1123,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-font-size: 13px;
@@ -842,7 +1138,10 @@
 .combo-box:focused,
 .combo-box:editable:focused {
     -fx-background-color: -color-surface;
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* The editor sits inside the combo's own border, so it draws none of its own. */
@@ -852,6 +1151,8 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
     -fx-padding: 7px 10px 7px 10px;
 }
 
@@ -907,7 +1208,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 0;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px 0 1px 1px;
     -fx-border-radius: 0;
     -fx-text-fill: -color-muted;
@@ -925,7 +1226,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 0 7px 7px 0;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 0 7px 7px 0;
     -fx-text-fill: -color-muted;
@@ -954,11 +1255,30 @@
     -fx-font-weight: bold;
 }
 
-.segmented-button .toggle-button:focused,
-.segmented-button .toggle-button.left-pill:focused,
-.segmented-button .toggle-button.center-pill:focused,
-.segmented-button .toggle-button.right-pill:focused {
-    -fx-border-color: -color-focus;
+/* A pill's ring is drawn above its neighbours (view order), which would otherwise paint over its outer edge. */
+.segmented-button .toggle-button:focus-visible,
+.segmented-button .toggle-button.center-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px 0 1px 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 4px, 0;
+    -fx-view-order: -1;
+}
+
+.segmented-button .toggle-button.left-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px 0 1px 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px 4px 4px 10px, 7px 0 0 7px;
+    -fx-view-order: -1;
+}
+
+.segmented-button .toggle-button.right-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 4px 10px 10px 4px, 0 7px 7px 0;
+    -fx-view-order: -1;
 }
 
 /* --- Screen scroll host (book brief, import), the multi-line input, the switch and the slider ------------ */
@@ -995,7 +1315,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-text-fill: -color-text;
@@ -1003,6 +1323,18 @@
     -fx-highlight-fill: -color-primary-soft;
     -fx-highlight-text-fill: -color-text-strong;
     -fx-font-size: 13px;
+}
+
+/* The text area wraps its own scroll pane: its frame, corner square and bar buttons would otherwise show as Modena greys. */
+.text-area.brief-input {
+    -fx-control-inner-background: -color-surface;
+}
+
+.text-area.brief-input .scroll-pane,
+.text-area.brief-input .scroll-pane > .viewport,
+.text-area.brief-input .scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
 }
 
 .text-area.brief-input .content {
@@ -1013,7 +1345,10 @@
 }
 
 .text-area.brief-input:focused {
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .text-area.brief-input:focused .content {
@@ -1029,26 +1364,70 @@
 }
 
 .toggle-switch .thumb-area {
-    -fx-background-color: -color-border-cool;
+    -fx-background-color: -color-toggle-off;
     -fx-background-insets: 0;
-    -fx-background-radius: 1em;
+    -fx-background-radius: 11px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 11px;
+    -fx-padding: 0;
+    -fx-min-width: 38px;
+    -fx-pref-width: 38px;
+    -fx-max-width: 38px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
 }
 
 .toggle-switch:selected .thumb-area {
-    -fx-background-color: -color-primary;
+    -fx-background-color: -color-toggle-on;
 }
 
+/* The thumb box is the whole height of the track and the painted circle is inset 2px inside it, so the skin's own
+   travel (track width minus thumb box) leaves the same 2px gap at both ends. */
 .toggle-switch .thumb {
-    -fx-background-color: -color-surface;
-    -fx-background-insets: 0;
-    -fx-background-radius: 1em;
-    -fx-border-color: transparent;
+    -fx-background-color: -color-toggle-thumb;
+    -fx-background-insets: 2px;
+    -fx-background-radius: 11px;
+    -fx-padding: 0;
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
 }
 
-.toggle-switch:focused .thumb {
+/* The thumb's shadow is a colour literal, so it lives under `.root` with the elevation effects. */
+.root .toggle-switch .thumb {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
+}
+
+/* A glossary row's switch draws no shadow until it has focus: an effect on every row is repainted on every scroll
+   frame, and the table's switches sit in a row of text where position and colour already tell the state. */
+.root .glossary-table .toggle-switch .thumb {
+    -fx-effect: null;
+}
+
+.root .glossary-table .toggle-switch:focused .thumb {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
+}
+
+/* A pooled glossary row is rebound to another entry while it scrolls: the thumb must be where the state says at once,
+   not slide there over 200 ms, or a row shows the previous row's switch for a moment. */
+.glossary-table .toggle-switch {
+    -thumb-move-animation-time: 1;
+}
+
+/* Reduced motion (Motion.isReduced): the switch's thumb jumps to its side instead of sliding there. */
+.reduce-motion .toggle-switch {
+    -thumb-move-animation-time: 1;
+}
+
+.toggle-switch:focus-visible .thumb-area {
     -fx-border-color: -color-focus;
-    -fx-border-radius: 1em;
-    -fx-border-width: 1px;
+    -fx-border-width: 2px;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 14px;
 }
 
 .slider .track {
@@ -1072,6 +1451,13 @@
     -fx-background-radius: 1em;
 }
 
+.slider:focus-visible .thumb {
+    -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 1em;
+}
+
 /* An unavailable box is dimmed, not recoloured, like a button; a chosen one is the primary role with a light tick. */
 .check-box {
     -fx-text-fill: -color-text;
@@ -1083,7 +1469,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 4px;
-    -fx-border-color: -color-border-cool;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 4px;
 }
@@ -1093,15 +1479,35 @@
     -fx-border-color: -color-primary;
 }
 
+/* The tick is painted only on a chosen box: painted always, the light tick showed on the dark surface of an unchosen
+   box in the dark theme and read as checked. */
 .check-box .mark {
+    -fx-background-color: transparent;
+}
+
+.check-box:selected .mark {
     -fx-background-color: -color-primary-fg;
 }
 
-.check-box:focused .box {
-    -fx-border-color: -color-focus;
+.check-box:focus-visible .box {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 7px, 4px;
 }
 
-.check-box:disabled {
+.check-box:selected:focus-visible .box {
+    -fx-border-color: -color-focus, -color-primary;
+}
+
+/* Every unavailable input is dimmed alike, as an unavailable button is (Modena's own 0.4 is replaced). */
+.check-box:disabled,
+.text-field:disabled,
+.text-area:disabled,
+.combo-box:disabled,
+.toggle-switch:disabled,
+.slider:disabled,
+.segmented-button .toggle-button:disabled {
     -fx-opacity: 0.45;
 }
 
@@ -1127,7 +1533,7 @@
     -fx-border-width: 1px;
     -fx-border-radius: 5px;
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-padding: 2px 7px 2px 7px;
 }
 
@@ -1152,6 +1558,28 @@
 .dropzone-glyph {
     -fx-text-fill: -color-muted;
     -fx-font-size: 26px;
+}
+
+/* Once a book is open the zone is one line: the structure below it needs the room, and Browse stays in reach. */
+.dropzone-compact {
+    -fx-padding: 10px 16px 10px 16px;
+}
+
+.dropzone-compact .dropzone-glyph {
+    -fx-font-size: 16px;
+}
+
+/* The details card shares a row with the facts, so its keys give up part of their width to the values. */
+.import-details .kv-key {
+    -fx-min-width: 112px;
+}
+
+.cover-placeholder {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
 }
 
 .kv {
@@ -1192,12 +1620,12 @@
 }
 
 .banner-err .banner-icon {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
     -fx-font-size: 15px;
 }
 
 .banner-warn .banner-icon {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
     -fx-font-size: 15px;
 }
 
@@ -1214,19 +1642,19 @@
 
 /* --- Status roles: the text colour of a log entry, told apart by its glyph as well (LogKind#mark) ------------- */
 .status-ok {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .status-info {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .status-warn {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .status-err {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 /* --- Banner roles the translating dashboard adds: neutral information and success ---------------------------- */
@@ -1241,12 +1669,12 @@
 }
 
 .banner-info .banner-icon {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
     -fx-font-size: 15px;
 }
 
 .banner-ok .banner-icon {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
     -fx-font-size: 15px;
 }
 
@@ -1276,6 +1704,11 @@
     -fx-padding: 0;
 }
 
+/* A pause on a provider error paints the bar in the danger role. */
+.progress-bar.bar-err > .bar {
+    -fx-background-color: -color-err;
+}
+
 .stat {
     -fx-min-width: 120px;
     -fx-background-color: -color-surface;
@@ -1293,9 +1726,13 @@
     -fx-font-weight: bold;
 }
 
+.stat-number-warn {
+    -fx-text-fill: -color-warn-fg;
+}
+
 .stat-caption {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* A cell's colour comes from its status class, so the cell rule sets none: an author rule of two classes would */
@@ -1304,7 +1741,10 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-padding: 0;
-    -fx-min-height: 120px;
+    -fx-min-height: 240px;
+    /* One fixed row height lets the list skip measuring every row as it scrolls: 7px + 7px padding, 1px divider and
+       the 13px monospaced line with its repeat count (31px measured), with room so no font clips it. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .activity-log .list-cell {
@@ -1312,8 +1752,61 @@
     -fx-background-insets: 0;
     -fx-border-color: transparent transparent -color-divider transparent;
     -fx-border-width: 0 0 1px 0;
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 13px;
+    -fx-padding: 7px 10px 7px 10px;
+    -fx-pref-width: 0;
+    -fx-text-overrun: ellipsis;
+}
+
+.live-body {
+    -fx-padding: 12px;
+    -fx-font-size: 14px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: -color-text-strong;
+}
+
+.live-row {
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 10px 4px 12px 4px;
+}
+
+/* One live call block: a quiet divider under it, its segments in a framed scroll area; the viewport only scrolls, */
+/* so it stays clear. */
+.live-call {
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.live-call-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text-strong;
+}
+
+.live-call .scroll-pane.edge-to-edge {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
+.live-call .scroll-pane.edge-to-edge > .viewport {
+    -fx-background-color: transparent;
+}
+
+.context-origin {
+    -fx-text-fill: -color-text-strong;
     -fx-font-size: 12px;
-    -fx-padding: 5px 6px 5px 6px;
+}
+
+.review-list .list-cell:empty,
+.activity-log .list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .activity-log .list-cell:filled:selected,
@@ -1322,19 +1815,19 @@
 }
 
 .activity-log .list-cell.status-ok:filled:selected {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .activity-log .list-cell.status-info:filled:selected {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .activity-log .list-cell.status-warn:filled:selected {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .activity-log .list-cell.status-err:filled:selected {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 .activity-log .scroll-bar {
@@ -1351,12 +1844,201 @@
     -fx-background-color: transparent;
 }
 
-/* --- Structure: the flat, read-only tree of a book's units (ui-mockup.html: the chapter tree) --------------- */
+/* The log line's parts: the time is muted, the tag and mark carry the role, the words stay in the text colour so a */
+/* line reads on both themes; a repeated line ends in a neutral count. */
+.activity-log .list-cell .label {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 13px;
+}
+
+/* The sturdy monospaced face the system has (MonoFont, a class on the shell root); "Monospaced" above is the fallback. */
+.mono-menlo .activity-log .list-cell,
+.mono-menlo .activity-log .list-cell .label {
+    -fx-font-family: "Menlo";
+}
+
+.mono-consolas .activity-log .list-cell,
+.mono-consolas .activity-log .list-cell .label {
+    -fx-font-family: "Consolas";
+}
+
+.mono-cascadia .activity-log .list-cell,
+.mono-cascadia .activity-log .list-cell .label {
+    -fx-font-family: "Cascadia Mono";
+}
+
+.mono-dejavu .activity-log .list-cell,
+.mono-dejavu .activity-log .list-cell .label {
+    -fx-font-family: "DejaVu Sans Mono";
+}
+
+.mono-liberation .activity-log .list-cell,
+.mono-liberation .activity-log .list-cell .label {
+    -fx-font-family: "Liberation Mono";
+}
+
+.activity-log .list-cell .log-time {
+    -fx-text-fill: -color-muted;
+}
+
+.activity-log .list-cell .log-text {
+    -fx-text-fill: -color-text;
+}
+
+.activity-log .list-cell .log-tag.status-ok {
+    -fx-text-fill: -color-ok-fg;
+}
+
+.activity-log .list-cell .log-tag.status-info {
+    -fx-text-fill: -color-info-fg;
+}
+
+.activity-log .list-cell .log-tag.status-warn {
+    -fx-text-fill: -color-warn-fg;
+}
+
+.activity-log .list-cell .log-tag.status-err {
+    -fx-text-fill: -color-err-fg;
+}
+
+.activity-log .list-cell .log-repeats {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 8px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-text-fill: -color-text-strong;
+    -fx-padding: 0 6px 0 6px;
+}
+
+/* A pane that says why it has no text (none visible, none yet, waiting) is slanted, never an empty box; it keeps the */
+/* body text colour so it stays readable at body size. */
+.live-body.live-placeholder {
+    -fx-text-fill: -color-text;
+    -fx-font-style: italic;
+}
+
+/* A review source with nothing visible in it is worded and slanted. */
+.text-area:placeholder {
+    -fx-font-style: italic;
+}
+
+/* The context a draft was sent with: a quiet titled section whose body is selectable, scrolling text. */
+.context-section > .title {
+    -fx-background-color: transparent;
+    -fx-padding: 4px 2px 4px 2px;
+}
+
+.context-section > .title > .text {
+    -fx-fill: -color-muted;
+    -fx-font-size: 12px;
+}
+
+.context-section > .title > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+}
+
+.context-section > .content {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4px 0 0 0;
+}
+
+.context-body,
+.context-body .content {
+    -fx-background-color: -color-surface-alt;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12.5px;
+}
+
+.context-body {
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 6px;
+}
+
+.context-body > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* The prompt and reply bodies are one read-only text area: its own scroll pane is a frame only, painted by the body. */
+.text-area.context-body {
+    -fx-control-inner-background: -color-surface-alt;
+    -fx-highlight-fill: -color-primary-soft;
+    -fx-highlight-text-fill: -color-text-strong;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.text-area.context-body .scroll-pane,
+.text-area.context-body .scroll-pane > .viewport,
+.text-area.context-body .scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.text-area.context-body .content {
+    -fx-background-insets: 0;
+    -fx-padding: 8px 10px 8px 10px;
+}
+
+.context-sections {
+    -fx-padding: 8px 10px 8px 10px;
+}
+
+.context-heading {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.context-quote {
+    -fx-text-fill: -color-text;
+    -fx-border-color: transparent transparent transparent -color-border;
+    -fx-border-width: 0 0 0 3px;
+    -fx-padding: 0 0 0 8px;
+}
+
+.context-text,
+.context-term {
+    -fx-text-fill: -color-text;
+}
+
+.context-term {
+    -fx-font-weight: bold;
+}
+
+.context-none {
+    -fx-text-fill: -color-muted;
+    -fx-font-style: italic;
+}
+
+.context-lock {
+    -fx-icon-color: -color-muted;
+    -fx-icon-size: 12px;
+}
+
+/* The connection chip in the title bar: its dot and words in the role of how the server has been answering. */
+.connection-chip.conn-steady {
+    -fx-text-fill: -color-title-ok-fg;
+}
+
+.connection-chip.conn-unsteady {
+    -fx-text-fill: -color-title-warn-fg;
+}
+
+.connection-chip.conn-unknown {
+    -fx-text-fill: -color-title-fg;
+}
+
+/* --- Structure: the read-only tree of a book's own structure and its side cards (ui-mockup.html: the chapter tree) --- */
 .structure-tree {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
+    /* One fixed row height, like the segment list beside it: 6px + 6px padding, 1px divider and a 13px title,
+       rounded up. A long chapter name ends in an ellipsis and is read whole in its hover text. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .structure-tree .tree-cell {
@@ -1366,7 +2048,7 @@
     -fx-border-width: 0 0 1px 0;
     -fx-text-fill: -color-text;
     -fx-font-size: 13px;
-    -fx-padding: 7px 10px 7px 10px;
+    -fx-padding: 6px 10px 6px 10px;
 }
 
 .structure-tree .tree-cell:filled:hover {
@@ -1392,6 +2074,389 @@
     -fx-background-color: transparent;
 }
 
-.structure-row-href {
+.structure-row-title {
     -fx-text-fill: -color-text-strong;
+}
+
+/* --- Structure: the segment browser beside the tree (ui-mockup.html: the chapter tree and its segment list) --- */
+.structure-segments {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fixed-cell-size: 34px;
+}
+
+.structure-segments .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 6px 6px 6px;
+}
+
+/* A planned chunk opens with a rule in the accent role, so the boundary is seen without reading the badges. */
+.structure-segments .list-cell.chunk-start {
+    -fx-border-color: -color-primary transparent -color-divider transparent;
+    -fx-border-width: 2px 0 1px 0;
+    -fx-padding: 5px 6px 6px 6px;
+}
+
+.structure-segments .list-cell:filled:hover {
+    -fx-background-color: -color-surface-alt;
+}
+
+.structure-segments .list-cell:filled:selected,
+.structure-segments .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.structure-segments .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.structure-segments .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.structure-segments .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.structure-seg-text {
+    -fx-text-fill: -color-text;
+}
+
+.chip-chunk-a {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info-fg;
+}
+
+.chip-chunk-b {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+    -fx-text-fill: -color-text;
+}
+
+.structure-preview {
+    -fx-background-color: -color-surface-alt;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
+.structure-preview > .viewport {
+    -fx-background-color: transparent;
+}
+
+.structure-preview-flow {
+    -fx-padding: 8px 10px 8px 10px;
+}
+
+.count-pill {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 11px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 11px;
+    -fx-padding: 1px 9px 1px 9px;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.stats-value {
+    -fx-text-fill: -color-text;
+}
+
+.stats-value-strong {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+/* --- Names & style: the glossary table and the Add term card's fields ------------------------------------------ */
+.glossary-table {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-table-cell-border-color: -color-divider;
+}
+
+.glossary-table .column-header-background,
+.glossary-table .column-header,
+.glossary-table .filler {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-divider;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.glossary-table .column-header .label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 6px;
+}
+
+/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. */
+.glossary-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.glossary-table .table-row-cell:empty {
+    -fx-border-color: transparent;
+}
+
+.glossary-table .table-row-cell:hover {
+    -fx-background-color: -color-surface-alt;
+}
+
+.glossary-table .table-row-cell:selected {
+    -fx-background-color: -color-selected;
+}
+
+.glossary-term {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.glossary-table .table-cell {
+    -fx-text-fill: -color-text;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-width: 0;
+    -fx-padding: 0 8px 0 8px;
+}
+
+.glossary-empty {
+    -fx-text-fill: -color-text;
+}
+
+/* The three-dot menu that holds Import and Export while a term card is narrow: a ghost button and a plain list. */
+.menu-more {
+    -fx-text-fill: -color-text;
+    -fx-padding: 0 4px 0 8px;
+}
+
+.menu-more .label {
+    -fx-text-fill: -color-text;
+}
+
+.menu-more > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+}
+
+.context-menu {
+    -fx-background-color: -color-border, -color-surface;
+    -fx-background-insets: 0, 1px;
+    -fx-background-radius: 8px, 7px;
+    -fx-padding: 4px;
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 5px;
+    -fx-padding: 6px 12px 6px 12px;
+}
+
+.context-menu .menu-item > .label {
+    -fx-text-fill: -color-text;
+}
+
+.context-menu .menu-item:focused {
+    -fx-background-color: -color-selected;
+}
+
+.context-menu .menu-item:focused > .label {
+    -fx-text-fill: -color-text-strong;
+}
+
+/* A target the model suggested and nobody confirmed is slanted and badged until the person accepts it. */
+.glossary-table .text-field:suggested {
+    -fx-font-style: italic;
+}
+
+.glossary-suggested-badge {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info-fg;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 1px 6px 1px 6px;
+}
+
+.glossary-table .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+/* A row's type and gender read as text until used; a frame on hover and focus says they can be changed, and the
+   combo box takes the label's place only then, so a scrolling table repaints labels rather than combo boxes. */
+.glossary-choice {
+    -fx-text-fill: -color-text;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 4px 8px 4px 0;
+    -fx-cursor: hand;
+}
+
+.glossary-choice:hover {
+    -fx-border-color: -color-border;
+}
+
+.glossary-choice:focused {
+    -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+}
+
+/* A field that must be filled says so in the warning role while it is empty. */
+.hint.field-required {
+    -fx-text-fill: -color-warn-fg;
+}
+
+.field-label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* --- Review panel: the filter chips and the list of flagged segments beside the compare ---------------- */
+.review-chip {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 2px 9px 2px 9px;
+    -fx-cursor: hand;
+}
+
+.review-chip:selected {
+    -fx-background-color: -color-primary-soft;
+    -fx-border-color: -color-primary;
+    -fx-text-fill: -color-text-strong;
+}
+
+.review-chip:focus-visible {
+    -fx-border-color: -color-focus, -color-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 13px, 10px;
+}
+
+.review-chip:selected:focus-visible {
+    -fx-border-color: -color-focus, -color-primary;
+}
+
+.finding-kind {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.finding-note {
+    -fx-text-fill: -color-text;
+}
+
+/* The readable view of a segment: formatting tokens as chips, a finding's quoted words marked. Tokens only. */
+.flow-text {
+    -fx-fill: -color-text;
+}
+
+.placeholder-chip {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 0px 6px 0px 6px;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-text;
+}
+
+.evidence-mark {
+    -fx-background-color: -color-warn-bg;
+    -fx-border-color: -color-warn-bd;
+    -fx-border-width: 1px;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+    -fx-padding: 0px 3px 0px 3px;
+    -fx-text-fill: -color-warn-fg;
+}
+
+.diff-removed {
+    -fx-background-color: -color-err-bg;
+    -fx-text-fill: -color-err-fg;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px 2px 6px;
+}
+
+.diff-added {
+    -fx-background-color: -color-ok-bg;
+    -fx-text-fill: -color-ok-fg;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px 2px 6px;
+}
+
+.review-locator {
+    -fx-text-fill: -color-text-strong;
+}
+
+.review-list {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-height: 140px;
+    /* A fixed row height spares measuring rows while scrolling: 6px + 6px padding, 1px divider and a locator with its
+       badge chip (33px measured), rounded up so no font clips it. */
+    -fx-fixed-cell-size: 34px;
+}
+
+.review-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 6px 6px 6px;
+}
+
+.review-list .list-cell:filled:selected,
+.review-list .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.review-list .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.review-list .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.review-list .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+/* --- Keyboard focus inside lists, tables and trees: the focused row is framed in the focus role, inside its own
+   edges (a row is clipped by its list), once the list was reached with the keyboard. --------------------------- */
+.list-view:focus-visible .list-cell:filled:focused,
+.table-view:focus-visible .table-row-cell:filled:focused,
+.tree-view:focus-visible .tree-cell:filled:focused {
+    -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-insets: 0;
 }

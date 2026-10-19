@@ -4,13 +4,21 @@
 #
 # "The artifact exists" is not the claim being tested. `:app:run` launches from the classpath, where a missing
 # `requires` or an unopened package cannot fail — so a green `:app:run` says nothing about whether the JPMS graph
-# resolves. Only the packaged image, running on the module path against its own jlinked runtime, can answer that.
+# resolves. The packaged image runs on the MODULE PATH (jpackage --module-path/--module, scripts/jpackage-common.sh), so
+# module-info.java is enforced and this smoke does see a missing `requires`, `exports` or `opens` (task 16.2): with
+# `opens ua.bookloom.ui.screen` removed the image dies at start instead of printing the startup lines.
 #
 # Headless via `-Dglass.platform=Headless`, JavaFX 26's BUILT-IN headless platform (ADR-0019). The frozen
 # 03_PACKAGING_JPACKAGE.md#verification names `-Dglass.platform=Monocle -Dmonocle.platform=Headless`, but
 # `org.testfx:openjfx-monocle` has no release past 21.0.2 and works by patching javafx.graphics internals, so it
 # cannot run against a JavaFX 26 runtime at all. Writing the spec's literal flags would produce a smoke that fails
 # on every platform.
+#
+# `-J-Dbookloom.smoke.resolveAll=true` makes the image build its injector in Guice's production stage and, once the
+# window is shown, load every screen and resolve every port (ResolveAll in :app). That is the check that sees a
+# binding that fails only in the production stage, a screen that cannot load, or a resource left out of the image
+# (a missing `requires`, `exports` or `opens` fails the start itself, on the module path): the three startup lines alone are
+# printed by a development-stage injector that loads a screen's FXML only when it is first shown.
 #
 # "Did not actually launch" is a HARD FAILURE, never a skip (02_QUALITY_GATES.md#jpackage-smoke).
 #
@@ -55,21 +63,32 @@ fi
 echo "==> launching ${LAUNCHER}"
 echo "    data dir: ${SMOKE_DATA_DIR}"
 
+# The macOS jpackage launcher does not read `-J` options (it hands them to the app as arguments), so the property also
+# travels in JAVA_TOOL_OPTIONS, which every JVM reads itself; without it that smoke would never switch the step on and
+# would wait for a line nobody writes.
+export JAVA_TOOL_OPTIONS="-Dbookloom.smoke.resolveAll=true${JAVA_TOOL_OPTIONS:+ ${JAVA_TOOL_OPTIONS}}"
+
 # BOOKLOOM_DATA_DIR overrides the per-OS layout verbatim, so the log lands somewhere known and disposable.
 BOOKLOOM_DATA_DIR="${SMOKE_DATA_DIR}" \
-    "${LAUNCHER}" -J-Dglass.platform=Headless >"${SMOKE_DATA_DIR}/stdout.txt" 2>&1 &
+    "${LAUNCHER}" -J-Dglass.platform=Headless -J-Dbookloom.smoke.resolveAll=true >"${SMOKE_DATA_DIR}/stdout.txt" 2>&1 &
 APP_PID=$!
 
 LOG_FILE="${SMOKE_DATA_DIR}/logs/bookloom.log"
 
 # --- Wait for the positive startup signal ---------------------------------------------------------------------------
 
-# All three, not just the first: "the process started" is not "the application started". The window line is the one
+# All four, not just the first: "the process started" is not "the application started". The window line is the one
 # that proves the toolkit initialized and a window was actually shown.
 required_signals() {
     grep -q "app started version=" "${LOG_FILE}" 2>/dev/null &&
         grep -q "injector built and two-phase init complete" "${LOG_FILE}" 2>/dev/null &&
-        grep -q "window shown, initialView=" "${LOG_FILE}" 2>/dev/null
+        grep -q "window shown, initialView=" "${LOG_FILE}" 2>/dev/null &&
+        grep -q "resolve-all passed" "${LOG_FILE}" 2>/dev/null
+}
+
+# A failed resolve-all will never become a pass, so waiting out the timeout would only hide the diagnosis.
+resolve_all_failed() {
+    grep -q "resolve-all FAILED" "${LOG_FILE}" 2>/dev/null
 }
 
 deadline=$((SECONDS + TIMEOUT_SECONDS))
@@ -78,6 +97,13 @@ while [ "${SECONDS}" -lt "${deadline}" ]; do
     if required_signals; then
         started=1
         break
+    fi
+    if resolve_all_failed; then
+        kill "${APP_PID}" 2>/dev/null || true
+        wait "${APP_PID}" 2>/dev/null || true
+        echo "error: resolve-all FAILED inside the image: a screen or port could not be loaded." >&2
+        sed 's/^/    /' "${LOG_FILE}" >&2
+        exit 1
     fi
     if ! kill -0 "${APP_PID}" 2>/dev/null; then
         # The process died before signalling. Its output is the only diagnosis available.
@@ -112,4 +138,5 @@ if ! printf '%s' "${STARTUP_LINE}" | grep -q "environment=PROD"; then
     exit 1
 fi
 
+echo "==> $(grep "resolve-all passed" "${LOG_FILE}" | head -1)"
 echo "==> launch smoke passed"

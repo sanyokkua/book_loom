@@ -1,0 +1,15 @@
+<Source>
+He opened the ⟦g0⟧old⟦g1⟧ door.
+</Source>
+
+[Defects to fix — address each exactly]
+markup (HIGH): missing ⟦g1⟧
+
+[Expected tokens — your translation contains exactly this sequence]
+⟦g0⟧ ⟦g1⟧
+
+<Translation>
+Він відчинив ⟦g0⟧старі двері.
+</Translation>
+
+Return one JSON object: {"target":"<the full corrected translation>"}

@@ -1,0 +1,9 @@
+{"hash":"ae38e2085eb18a1a2cb886793321700acd51f9c23911c6c3b38c0db4730e444c","classes":[],"expect":[]}
+{"hash":"fadaf958d7320eb86d04867d89114900bf78cefbf1ba3e398d3011675cc6a75a","classes":["dropped-sentence"],"expect":["sentence-count","audit:sentence-count"]}
+{"hash":"9631eb92f8f1037bcdb93bf7e741341af2d651e25854aef87564cc973354b669","classes":["untranslated"],"expect":["language-identity","audit:language-identity"]}
+{"hash":"d3cd74cc231fd0a0c2402366bbf570ac4760c0f6ea765939236817539ee2c2d3","classes":[],"expect":[]}
+{"hash":"31271eb2c41a1fe4b3328d8ed8a1c36ee3a6f9bbc88050611ce9e31747f653ba","classes":["changed-number"],"expect":["number","audit:number"]}
+
+{"hash":"0f279529ee6c7e962354cba4bf4f27863aea4f144ff866233f5761b390b482fd","classes":["wrong-meaning"],"expect":[]}
+{"hash":"d4dacb70edfde935e424f187b403367c84294794cf7d4745656b91a9b08d307d","classes":[],"expect":[]}
+{"hash":"0000000000000000000000000000000000000000000000000000000000000000","classes":["dropped-sentence"],"expect":["sentence-count"]}

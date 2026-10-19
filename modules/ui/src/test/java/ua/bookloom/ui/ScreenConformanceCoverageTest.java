@@ -14,20 +14,29 @@ class ScreenConformanceCoverageTest {
     // IF a screen were added to the application without a conformance case, THEN it would ship unchecked against the
     // reference rendering; this fails until the case exists.
     @Test
-    void screens_shippedSet_coversEverySeenScreenAndBothDialogs() {
-        assertThat(ScreenConformanceTest.SCREENS.stream()
-                        .map(ScreenConformanceTest.Screen::name)
+    void screens_shippedSet_coversEverySeenScreenAndEveryDialog() {
+        assertThat(ConformanceCases.SCREENS.stream()
+                        .map(ConformanceCases.Screen::name)
                         .distinct())
                 .contains(
                         "SHELL",
+                        "SHELL_RUN_STATUS",
                         "SETTINGS",
                         "IMPORT",
                         "BOOK_BRIEF",
-                        "STRUCTURE",
+                        "IMPORT_DETECTED",
+                        "IMPORT_CHECKED",
+                        "NAMES_STYLE",
+                        "NAMES_STYLE_AUTO",
                         "TRANSLATING",
                         "EXPORT",
                         "ABOUT_DIALOG",
-                        "ERROR_DIALOG");
+                        "ERROR_DIALOG",
+                        "REPLACE_RUN_DIALOG",
+                        "RETRY_DIALOG",
+                        "EXPORT_COMPLETE_DIALOG",
+                        "ADD_TERM_DIALOG",
+                        "RESULTS_DIALOG");
     }
 
     // IF a reachable view had no case here, THEN a screen added later would not be measured against the mockup.
@@ -35,8 +44,8 @@ class ScreenConformanceCoverageTest {
     void screens_everyAvailableView_hasAtLeastOneConformanceCase() {
         final Set<ViewNames> available =
                 Arrays.stream(ViewNames.values()).filter(ViewNames::isAvailable).collect(Collectors.toSet());
-        final Set<ViewNames> covered = ScreenConformanceTest.SCREENS.stream()
-                .map(ScreenConformanceTest.Screen::view)
+        final Set<ViewNames> covered = ConformanceCases.SCREENS.stream()
+                .map(ConformanceCases.Screen::view)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 

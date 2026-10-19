@@ -380,7 +380,7 @@ class DocumentServiceTest {
 
         assertThat(result.isOk()).isTrue();
         final Document document = Objects.requireNonNull(result.data(), "data");
-        assertThat(document.units()).hasSize(1);
+        assertThat(document.units()).filteredOn(unit -> !unit.isAuxiliary()).hasSize(1);
     }
 
     private static AppError errorOf(Result<?> result) {

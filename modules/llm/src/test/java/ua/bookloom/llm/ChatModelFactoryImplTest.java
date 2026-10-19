@@ -55,7 +55,7 @@ class ChatModelFactoryImplTest {
     private static final String OPENAI_REPLY =
             "{\"model\":\"google/gemma-4-e4b\",\"choices\":[{\"message\":{\"content\":\"hello\"},\"finish_reason\":\"stop\"}]}";
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private ProviderConfigs configs;
 
     @BeforeEach
@@ -269,8 +269,8 @@ class ChatModelFactoryImplTest {
     }
 
     private ChatModelFactory factory() {
-        final ProviderClientFactory clients =
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        final ProviderClientFactory clients = new ProviderClientFactory(
+                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retries = new RetryPolicy(
                 Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC), () -> 0.5, ignored -> {});
         return new ChatModelFactoryImpl(configs, clients, new InferenceGate(), retries, new LlmModule().objectMapper());

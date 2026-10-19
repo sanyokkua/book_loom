@@ -224,14 +224,16 @@ jobs:
             distribution: temurin
             java-package: jdk
             script: ./scripts/package-linux.sh
-          # Liberica "Full" (jdk+fx) on exactly the two legs where a plain JDK lacks the JavaFX jmods jpackage
-          # needs. A jpackage run without them fails fast, and the fix is always the JDK selection — never
-          # hand-copying jmods (EC-REL-4, 03_PACKAGING_JPACKAGE.md#jdk-and-javafx-runtime).
+          # Plain Temurin, like every module-path leg: the image takes JavaFX from the Maven jars in app/mods, and a
+          # JDK that bundles JavaFX (Liberica Full) links a java.base that records its own javafx.* hashes, so the
+          # image refuses the Maven javafx.base at boot ("Hash of javafx.base differs").
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
-            distribution: liberica
-            java-package: jdk+fx
+            distribution: temurin
+            java-package: jdk
             script: ./scripts/package-linux.sh
+          # Liberica "Full" (jdk+fx) on Windows only: its image still runs on the classpath with the JDK's own
+          # JavaFX jmods (EC-REL-4, 03_PACKAGING_JPACKAGE.md#jdk-and-javafx-runtime).
           - target: windows-x86_64
             runner: windows-2025
             distribution: liberica

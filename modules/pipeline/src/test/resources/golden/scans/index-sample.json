@@ -1,0 +1,85 @@
+{
+  "storySegments" : 4,
+  "nameScan" : [ {
+    "term" : "Ivo",
+    "count" : 1,
+    "firstSentence" : "He told Mark to bring Ivo’s coat.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Great Hall",
+    "count" : 1,
+    "firstSentence" : "Ivo and Mark met at the Great Hall.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Ivo" : {
+      "count" : 4,
+      "windows" : [ {
+        "text" : "Ivo walked to the mark. A mark was cut in the stone.",
+        "pronoun" : null
+      }, {
+        "text" : "The old bridge held. Ivo crossed the Bridge slowly.",
+        "pronoun" : null
+      }, {
+        "text" : "He told Mark to bring Ivo’s coat.",
+        "pronoun" : null
+      }, {
+        "text" : "Ivo and Mark met at the Great Hall. Hall doors stood open.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "Great Hall" : {
+      "count" : 1,
+      "windows" : [ {
+        "text" : "Ivo and Mark met at the Great Hall. Hall doors stood open.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Ivo" : {
+      "count" : 4,
+      "examples" : [ "Ivo walked to the mark.", "Ivo crossed the Bridge slowly." ]
+    },
+    "Great Hall" : {
+      "count" : 1,
+      "examples" : [ "Ivo and Mark met at the Great Hall." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Ivo",
+    "mentions" : 4
+  }, {
+    "term" : "Great Hall",
+    "mentions" : 1
+  } ],
+  "pronouns" : {
+    "Ivo" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "Great Hall" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

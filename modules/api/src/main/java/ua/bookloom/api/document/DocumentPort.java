@@ -1,6 +1,7 @@
 package ua.bookloom.api.document;
 
 import java.nio.file.Path;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 
 /**
@@ -34,6 +35,25 @@ public interface DocumentPort {
     Result<Path> write(Document document, Path destination, String targetLanguage);
 
     /**
+     * Reassembles {@code document} as {@link #write(Document, Path, String)} does, but rewrites a document's
+     * source-language metadata and attributes only where they carry {@code sourceLanguage} rather than the target
+     * writer's default of the package's own declared language — the export job's language-aware overload (design.md
+     * D13). The default implementation ignores {@code sourceLanguage} and delegates to the three-argument method,
+     * so an implementor written before this overload existed keeps compiling and behaves exactly as before.
+     *
+     * @param document the document to reassemble, in the state its segments should be written back in
+     * @param destination the file to write
+     * @param sourceLanguage the language the run translated from, or {@code null} to fall back to the writer's own
+     *     reading of the package's declared language
+     * @param targetLanguage the language to declare in the written book (for example an ISO 639-1 code)
+     * @return the path written, or a failed result
+     */
+    default Result<Path> write(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
+        return write(document, destination, targetLanguage);
+    }
+
+    /**
      * Releases the parsed state retained for {@code document}.
      *
      * @param document the document whose parsed state should be released
@@ -63,4 +83,17 @@ public interface DocumentPort {
      *     multiset does not match — nothing is restored and {@code translatedMasked} is left unaltered
      */
     Result<String> unmask(BookFormat format, Segment segment, String translatedMasked);
+
+    /**
+     * Repairs {@code translatedMasked}'s placeholder tokens without a model, so a reply that only lost, repeated or
+     * invented a token keeps its words. The result passes the same placeholder gate {@link #unmask} applies; the
+     * caller still restores it through {@link #unmask}.
+     *
+     * @param segment the segment whose masked form, pairs and line-break tokens define the tokens to restore
+     * @param translatedMasked the reply the gate refused, with the segment's own tokens in place
+     * @param mode how much of the reply's own placement is kept
+     * @return the repaired masked text, or {@code ErrorCode.validation} when no placement passes the gate; an
+     *     unexpected failure is {@code ErrorCode.internal}
+     */
+    Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode);
 }

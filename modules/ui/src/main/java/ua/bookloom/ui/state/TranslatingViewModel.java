@@ -4,28 +4,25 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.value.ChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -41,13 +38,14 @@ import ua.bookloom.ui.notify.Toasts;
  * screen's own listeners are weak, as they must be for a controller the mirror outlives.
  *
  * <p>Everything here that touches a property runs on the FX Application Thread. Building the model and the job can
- * load a model, so it goes to the background executor, and the busy flag is cleared only by a task the FX queue runs,
- * on every way out, so that it can never be seen cleared before the run it guards has been published.
+ * load a model, so the {@link RunStarter} does it on the background executor, and the busy flag is cleared only by a
+ * task the FX queue runs, on every way out, so that it can never be seen cleared before the run it guards has been
+ * published. Resuming a stopped run asks for a new job over the same project, which begins at its first pending
+ * segment; resuming a paused one continues the same job.
  *
- * <p>A failed preparation and a run that returns a failure go through the same {@code route} method, so one code can
- * never reach two different surfaces depending on when it happened. A start is refused by naming the first missing
- * input, book before model. The target language is not among them: the brief defaults it and accepts only the
- * supported languages, so it can never be blank when a start is pressed.
+ * <p>A failed preparation is routed by its code through {@link FailureSurface}; a run that ends on a failure is routed
+ * by its state, and a pause on a model error is the provider-error state that Resume continues from. A start is
+ * refused by naming the first missing input, in the order book, source language, target language, model.
  */
 @Slf4j
 @Singleton
@@ -55,59 +53,77 @@ public final class TranslatingViewModel {
 
     private final StateMirror mirror;
     private final TranslationRunner runner;
-    private final BookBriefViewModel brief;
+    private final CurrentProject current;
     private final SettingsViewModel settings;
-    private final ChatModelFactory models;
-    private final TranslationEngine engine;
+    private final RunStarter starter;
     private final Toasts toasts;
     private final ErrorPresenter errors;
-    private final ExecutorService executor;
     private final ReadOnlyBooleanWrapper preparing = new ReadOnlyBooleanWrapper(false);
+    private final PendingCount pending;
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
+    private final ObjectBinding<@Nullable ActivityKind> otherWork;
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
+    private final ChangeListener<@Nullable BookBrief> onBrief = (observed, was, now) -> onBriefChanged(now);
+    private final ChangeListener<@Nullable AppError> onProviderError = (observed, was, now) -> onPausedOnError(now);
 
     /**
      * Registers the completion listener on the mirror and derives the first set of controls.
      *
      * @param mirror the state every run publishes into and this view model observes
      * @param runner the runner that owns the one active run
-     * @param brief where the request is assembled from
+     * @param current the open book a run is started on
      * @param settings where the provider and model come from
-     * @param models the port a model is created through
-     * @param engine the port a job is created through
+     * @param starter what builds a run on the open book and starts it
      * @param toasts where a finished run is announced
      * @param errors where a failure whose code is assigned the blocking dialog is shown
-     * @param executor the daemon executor a run is prepared on, never the FX thread
+     * @param desk where the count of undecided segments is read
+     * @param executor the daemon executor that read runs on, never the FX thread
+     * @param activities the model work under way, which holds start and resume while it runs
      */
     @Inject
     public TranslatingViewModel(
             final StateMirror mirror,
             final TranslationRunner runner,
-            final BookBriefViewModel brief,
+            final CurrentProject current,
             final SettingsViewModel settings,
-            final ChatModelFactory models,
-            final TranslationEngine engine,
+            final RunStarter starter,
             final Toasts toasts,
             final ErrorPresenter errors,
-            @BackgroundExecutor final ExecutorService executor) {
+            final ReviewDesk desk,
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
-        this.brief = Objects.requireNonNull(brief, "brief");
+        this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.models = Objects.requireNonNull(models, "models");
-        this.engine = Objects.requireNonNull(engine, "engine");
+        this.starter = Objects.requireNonNull(starter, "starter");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.pending = new PendingCount(desk, executor);
+        // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
+        final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);
+        this.otherWork = Bindings.createObjectBinding(
+                () -> blocker.get() == ActivityKind.TRANSLATION ? null : blocker.get(), blocker);
         refreshControls();
         preparing.addListener((observed, was, now) -> refreshControls());
+        pending.remains().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
+        otherWork.addListener((observed, was, now) -> refreshControls());
+        mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
+        // The countdown republishes the recovery every second; only whether it still waits changes the controls.
+        mirror.review().recovery().addListener((observed, was, now) -> {
+            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
+                refreshControls();
+            }
+        });
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
-        brief.openedBook().addListener(onOpenedBook);
+        current.book().addListener(onOpenedBook);
+        current.brief().addListener(onBrief);
+        mirror.review().providerError().addListener(onProviderError);
         log.debug("translating view model ready");
     }
 
@@ -118,6 +134,15 @@ public final class TranslatingViewModel {
      */
     public ReadOnlyObjectProperty<Controls> controls() {
         return controls.getReadOnlyProperty();
+    }
+
+    /**
+     * The other model work that holds start and resume while it runs.
+     *
+     * @return a binding holding {@code null} while nothing but the run itself is under way; FX thread only
+     */
+    public ObjectBinding<@Nullable ActivityKind> otherWork() {
+        return otherWork;
     }
 
     /**
@@ -140,36 +165,65 @@ public final class TranslatingViewModel {
     }
 
     /**
+     * Whether segments remain undecided, which a completed run needs to offer a start; false until read.
+     *
+     * @return a read-only property; FX thread only
+     */
+    public ReadOnlyBooleanProperty pendingRemain() {
+        return pending.remains();
+    }
+
+    /**
+     * How many segments the open project has not decided.
+     *
+     * @return a read-only property, zero until read; FX thread only
+     */
+    public ReadOnlyIntegerProperty pendingCount() {
+        return pending.count();
+    }
+
+    /** Reads the pending count in the background, on each showing and when a run ends; FX thread only. */
+    public void refreshPending() {
+        final OpenedBook book = current.book().get();
+        if (book == null) {
+            pending.clear();
+        } else {
+            pending.refresh(book.projectId());
+        }
+    }
+
+    /**
+     * The review mode of this launch, for the ready card.
+     *
+     * @return the mode; never null
+     */
+    public ReviewMode reviewMode() {
+        return starter.reviewMode();
+    }
+
+    /**
+     * The model text, for the ready card.
+     *
+     * @return a read-only property, empty while none is chosen; FX thread only
+     */
+    public ReadOnlyStringProperty modelText() {
+        return settings.model();
+    }
+
+    /**
      * Starts a run from the brief and the chosen model, if the state allows it. Returns at once; the run is prepared in
      * the background and appears through the mirror. A start with no book or no model starts nothing and publishes a
      * notice naming the first of them that is missing. FX thread only.
      */
     public void start() {
-        final Controls offered = controls.get();
-        if (!offered.start().isEnabled() && !offered.newRun().isEnabled()) {
+        if (!controls.get().start().isEnabled()) {
             log.debug(
                     "start refused: not offered in state {}, preparing {}",
                     mirror.runState().get(),
                     preparing.get());
             return;
         }
-        final Optional<ModelSelection> selection = settings.selection();
-        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
-        if (missing.isPresent()) {
-            log.debug("start refused: {} is missing", missing.get());
-            notice.set(new RunNotice.MissingInput(missing.get()));
-            return;
-        }
-        notice.set(null);
-        final Optional<TranslationRequest> request = brief.request();
-        if (request.isEmpty()) {
-            log.debug("start refused: the brief could not be turned into a request");
-            return;
-        }
-        final ModelSelection chosen = selection.orElseThrow();
-        log.info("start requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
-        preparing.set(true);
-        submit(request.get(), chosen);
+        begin(true);
     }
 
     /** Asks the run to pause at its next boundary, if the pause control is offered. FX thread only. */
@@ -179,9 +233,19 @@ public final class TranslatingViewModel {
         }
     }
 
-    /** Asks a paused run to continue, if the resume control is offered. FX thread only. */
+    /**
+     * Continues a run, if the resume control is offered: a paused run resumes the same job, while a stopped one gets a
+     * new job over the same project that begins at its first pending segment. FX thread only.
+     */
     public void resume() {
-        if (offered("resume", controls.get().resume())) {
+        if (!offered("resume", controls.get().resume())) {
+            return;
+        }
+        if (mirror.runState().get() == RunState.STOPPED) {
+            log.debug("resume after a stop: a new job over the same project");
+            begin(false);
+        } else {
+            log.debug("resume from a pause: the same job continues");
             runner.resume();
         }
     }
@@ -201,6 +265,10 @@ public final class TranslatingViewModel {
         clearIfSupplied(RunNotice.Input.BOOK, () -> book != null);
     }
 
+    private void onBriefChanged(final @Nullable BookBrief brief) {
+        clearIfSupplied(RunNotice.Input.TARGET_LANGUAGE, () -> brief != null && brief.targetLanguage() != null);
+    }
+
     /** Withdraws a refusal that named {@code input} once that input exists, so a ready start never reads as refused. */
     private void clearIfSupplied(final RunNotice.Input input, final BooleanSupplier supplied) {
         if (notice.get() instanceof RunNotice.MissingInput missing
@@ -212,8 +280,12 @@ public final class TranslatingViewModel {
     }
 
     private Optional<RunNotice.Input> missingInput(final boolean modelChosen) {
-        if (brief.openedBook().get() == null) {
+        final BookBrief brief = current.brief().get();
+        if (brief == null) {
             return Optional.of(RunNotice.Input.BOOK);
+        }
+        if (brief.targetLanguage() == null) {
+            return Optional.of(RunNotice.Input.TARGET_LANGUAGE);
         }
         return modelChosen ? Optional.empty() : Optional.of(RunNotice.Input.MODEL);
     }
@@ -228,124 +300,91 @@ public final class TranslatingViewModel {
         return enabled;
     }
 
-    private void submit(final TranslationRequest request, final ModelSelection selection) {
-        try {
-            executor.execute(() -> prepareOffThread(request, selection));
-        } catch (RejectedExecutionException rejected) {
-            log.error("the run could not be submitted for preparation", rejected);
-            finishPreparing(internalError(rejected));
+    private void begin(final boolean announce) {
+        final Optional<ModelSelection> selection = settings.selection();
+        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
+        if (missing.isPresent()) {
+            log.debug("run refused: {} is missing", missing.get());
+            notice.set(new RunNotice.MissingInput(missing.get()));
+            return;
         }
-    }
-
-    private void prepareOffThread(final TranslationRequest request, final ModelSelection selection) {
-        log.debug("preparing a run on {}", Thread.currentThread().getName());
-        AppError failure = null;
-        try {
-            failure = prepare(request, selection);
-        } catch (RuntimeException thrown) {
-            log.error("preparing the run threw instead of returning a result", thrown);
-            failure = internalError(thrown);
-        } finally {
-            // Also on an Error: the busy flag must never outlive a preparation that will not publish anything.
-            finishPreparing(failure);
-        }
-    }
-
-    private @Nullable AppError prepare(final TranslationRequest request, final ModelSelection selection) {
-        final Result<ChatModel> model = models.create(selection);
-        if (model.isErr()) {
-            log.debug("no model was created: code {}", errorCode(model));
-            return model.error();
-        }
-        final Result<TranslationJob> created = engine.newJob(request, Objects.requireNonNull(model.data(), "model"));
-        if (created.isErr()) {
-            log.debug("no job was created: code {}", errorCode(created));
-            return created.error();
-        }
-        final TranslationJob job = Objects.requireNonNull(created.data(), "job");
-        // Same as the command line: the job may pause only when this screen asks it to.
-        job.pauseAt(Set.of());
-        final boolean began = runner.start(job, request, selection);
-        log.debug("the runner accepted the run: {}", began);
-        return null;
+        notice.set(null);
+        final ModelSelection chosen = selection.orElseThrow();
+        log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
+        preparing.set(true);
+        starter.start(chosen, failure -> finishPreparing(failure, announce));
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */
-    private void finishPreparing(final @Nullable AppError failure) {
+    private void finishPreparing(final @Nullable AppError failure, final boolean announce) {
         Platform.runLater(() -> {
             preparing.set(false);
             if (failure != null) {
                 route(failure);
+            } else if (announce) {
+                toasts.info(MessageKey.TOAST_RUN_STARTED);
             }
         });
     }
 
     /**
-     * The one place a failure chooses its surface, for a failed preparation and a run that ends on an error alike. Only
-     * the code is logged, never the cause or the details.
+     * The surface of a failed preparation, chosen from its code. A preparation has no segment to flag and no review
+     * retry to warn about, so those two surfaces fall back to the blocking dialog. Only the code is logged, never the
+     * cause or the details.
      */
     private void route(final AppError error) {
         final FailureSurface surface = FailureSurface.of(error.code());
-        log.debug("failure code {} -> surface {}", error.code(), surface);
+        log.debug("preparation failure code {} -> surface {}", error.code(), surface);
         switch (surface) {
-            case PROVIDER_ERROR -> {
-                log.warn("provider error: code {}", error.code());
-                notice.set(new RunNotice.ProviderError(error));
-            }
+            case PROVIDER_ERROR -> notice.set(new RunNotice.ProviderError(error));
             case IN_PLACE -> notice.set(new RunNotice.Refused(error));
-            case DIALOG -> errors.present(error);
+            case DIALOG, FLAGGED_SEGMENT, WARNING_TOAST -> errors.present(error);
             case STOPPED -> log.debug("a stop is shown by the stopped state; nothing more to show");
             case SETTINGS_ONLY ->
-                log.warn("code {} belongs to the model list, not to a run; the run's own banner stands", error.code());
+                log.debug("code {} belongs to the model list, not to a run; the run's own banner stands", error.code());
         }
     }
 
     private void refreshControls() {
-        controls.set(Controls.of(mirror.runState().get(), preparing.get()));
+        final RunState state = mirror.runState().get();
+        final Controls table = state == RunState.PAUSED
+                        && RecoveryState.waits(mirror.review().recovery().get())
+                ? Controls.waitingForProvider()
+                : Controls.of(state, preparing.get(), pending.remains().get());
+        final boolean held =
+                otherWork.get() != null || mirror.review().retryInFlight().get();
+        final Controls next = held ? table.heldByOtherWork() : table;
+        log.debug(
+                "controls for state {} preparing {} pending remain {} other work {}: {}",
+                state,
+                preparing.get(),
+                pending.remains().get(),
+                otherWork.get(),
+                next);
+        controls.set(next);
+    }
+
+    private void onPausedOnError(final @Nullable AppError error) {
+        if (error != null) {
+            log.debug("paused on error {}: showing the provider-error state", error.code());
+            notice.set(new RunNotice.ProviderError(error));
+        }
     }
 
     private void onRunStateChanged(final RunState now) {
+        if (now == RunState.FAILED || now == RunState.COMPLETED || now == RunState.STOPPED) {
+            refreshPending();
+        }
         switch (now) {
             case RUNNING -> notice.set(null);
-            case FAILED -> routeRunFailure();
-            case COMPLETED -> announceCompletion();
+            case FAILED -> {
+                final RunNotice.Refused refused = RunEnding.routeFailure(mirror, errors);
+                if (refused != null) {
+                    notice.set(refused);
+                }
+            }
+            case COMPLETED -> RunEnding.announce(mirror, toasts);
             default -> log.debug("run state is now {}; nothing to route or announce", now);
         }
-    }
-
-    private void routeRunFailure() {
-        final AppError failure = mirror.failure().get();
-        if (failure == null) {
-            log.warn("the run failed but no failure was published to route");
-            return;
-        }
-        route(failure);
-    }
-
-    private void announceCompletion() {
-        final JobReport report = mirror.report().get();
-        final int accepted =
-                report != null ? report.accepted() : mirror.accepted().get();
-        final int flagged = report != null ? report.flagged() : mirror.flagged().get();
-        log.debug("run completed: {} accepted, {} flagged", accepted, flagged);
-        if (flagged > 0) {
-            toasts.warning(MessageKey.TOAST_RUN_FINISHED_FLAGGED, accepted, flagged);
-        } else {
-            toasts.success(MessageKey.TOAST_RUN_FINISHED, accepted);
-        }
-    }
-
-    private static @Nullable ErrorCode errorCode(final Result<?> result) {
-        final AppError error = result.error();
-        return error == null ? null : error.code();
-    }
-
-    private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The run could not be started because of an unexpected error.",
-                null,
-                cause);
     }
 }

@@ -5,11 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -22,6 +24,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ThemeMode;
 
 /**
@@ -31,6 +36,9 @@ import ua.bookloom.ui.theme.ThemeMode;
  * display server or a pointer robot.
  */
 class AboutDialogTest extends ShellTestBase {
+
+    // More presses than the card has controls, so focus wraps round at least once.
+    private static final int WRAPPING_PRESSES = 8;
 
     private static final double CLICK_X = 4;
     private static final double CLICK_Y = 4;
@@ -206,6 +214,23 @@ class AboutDialogTest extends ShellTestBase {
         assertThat(ancestorsOf(owner)).doesNotContain(required("shell-nav"));
     }
 
+    // IF Tab inside a dialog moved focus the way a click does, THEN no focus ring would show and a keyboard user would
+    // not see which control is next; and Tab past the last control comes round to the first, still showing the ring.
+    @ParameterizedTest(name = "after {0} presses")
+    @ValueSource(ints = {1, 2, 3, 4, 5, 6, 7, WRAPPING_PRESSES})
+    void tab_insideTheCard_showsTheFocusRingEvenWhenItWrapsRound(final int presses) {
+        openAbout();
+
+        pressTab(presses);
+
+        assertThat(scene.getFocusOwner().isFocusVisible()).isTrue();
+        assertThat(ancestorsOf(scene.getFocusOwner())).contains(required("about-card"));
+    }
+
+    private void pressTab(final int times) {
+        IntStream.range(0, times).forEach(press -> pressTab());
+    }
+
     private static List<Node> ancestorsOf(final Node node) {
         final List<Node> chain = new ArrayList<>();
         for (Node at = node; at != null; at = at.getParent()) {
@@ -234,5 +259,51 @@ class AboutDialogTest extends ShellTestBase {
 
         ThemeTestSupport.assertSameColour(fill, surface, "about card background under " + mode);
         ThemeTestSupport.assertSameColour(stroke, border, "about card border under " + mode);
+    }
+    // IF the card did not say whether the detailed log is written, THEN a person asked for "the log" could not tell
+    // whether there is one, nor how to switch it on in an installed app.
+    @Test
+    void about_detailedLogOff_saysSoAndHowToSwitchItOn() {
+        openAbout();
+
+        assertThat(((Label) required("about-log-state")).getText())
+                .startsWith("Detailed log: off.")
+                .contains("BOOKLOOM_TRACE_FILE=1");
+    }
+
+    // IF the card hid what the detailed log holds, THEN a person could share book text without knowing it.
+    @Test
+    void about_card_saysTheLogHoldsBookTextStaysLocalAndNamesTheFolder() {
+        openAbout();
+
+        assertThat(textsUnder(required("about-card")))
+                .contains("The detailed log contains text from your book. It stays on this computer unless you share"
+                        + " it yourself.")
+                .contains("Log folder: " + UiTestInjector.TEST_LOG_DIR);
+    }
+
+    // IF Open log folder did not reach the file manager seam, THEN the person would have to hunt for the folder.
+    @Test
+    void about_openLogFolder_asksTheFileManagerToOpenTheLogFolder() {
+        openAbout();
+
+        onFx(() -> ((Button) required("about-open-log-folder")).fire());
+
+        assertThat(((RecordingFileRevealer) injector.getInstance(FileRevealer.class)).opened())
+                .containsExactly(UiTestInjector.TEST_LOG_DIR);
+    }
+
+    // IF Save diagnostic bundle did not ask where to save, THEN the bundle would land somewhere the person did not
+    // pick.
+    @Test
+    void about_saveBundle_asksWhereToSaveADatedZip() {
+        openAbout();
+
+        onFx(() -> ((Button) required("about-save-bundle")).fire());
+
+        assertThat(((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).initials())
+                .singleElement()
+                .satisfies(initial -> assertThat(initial.getFileName().toString())
+                        .matches("bookloom-diagnostics-\\d{8}-\\d{6}\\.zip"));
     }
 }

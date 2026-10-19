@@ -15,7 +15,8 @@ import org.jspecify.annotations.Nullable;
  * @param stream whether Ollama should stream the reply; inference clients send {@code false}
  * @param options optional native generation controls, omitted when absent
  * @param format optional structured-output format, omitted when absent
- * @param think optional native reasoning-output control, omitted when unsupported or unspecified
+ * @param think optional native reasoning-output control, omitted when unsupported or unspecified: a boolean, or a
+ *     level string such as {@code low} for a model that cannot turn reasoning off
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OllamaChatRequest(
@@ -24,14 +25,22 @@ public record OllamaChatRequest(
         @JsonProperty("stream") boolean stream,
         @JsonProperty("options") @Nullable Options options,
         @JsonProperty("format") @Nullable JsonNode format,
-        @JsonProperty("think") @Nullable Boolean think) {
+        @JsonProperty("think") @Nullable Object think) {
 
     /** Rejects incomplete requests, omits empty options, and protects message order from caller mutation. */
     public OllamaChatRequest {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(messages, "messages");
         messages = List.copyOf(messages);
-        if (options != null && options.temperature() == null) {
+        if (options != null
+                && options.temperature() == null
+                && options.numCtx() == null
+                && options.numPredict() == null
+                && options.seed() == null
+                && options.topP() == null
+                && options.topK() == null
+                && options.minP() == null
+                && options.repeatPenalty() == null) {
             options = null;
         }
     }
@@ -58,8 +67,32 @@ public record OllamaChatRequest(
      * Ollama-native optional generation controls used by this change.
      *
      * @param temperature nullable so an unspecified temperature is omitted from the wire body
+     * @param numCtx nullable so an unspecified context size is omitted from the wire body
+     * @param numPredict nullable so an unspecified output cap is omitted from the wire body
+     * @param seed nullable so an unspecified sampling seed is omitted from the wire body
+     * @param topP nullable so an unspecified nucleus mass is omitted from the wire body
+     * @param topK nullable so an unspecified kept-token count is omitted from the wire body
+     * @param minP nullable so an unspecified minimum relative probability is omitted from the wire body
+     * @param repeatPenalty nullable so an unspecified repeat penalty is omitted from the wire body
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Options(
-            @JsonProperty("temperature") @Nullable Double temperature) {}
+            @JsonProperty("temperature") @Nullable Double temperature,
+            @JsonProperty("num_ctx") @Nullable Integer numCtx,
+            @JsonProperty("num_predict") @Nullable Integer numPredict,
+            @JsonProperty("seed") @Nullable Integer seed,
+            @JsonProperty("top_p") @Nullable Double topP,
+            @JsonProperty("top_k") @Nullable Integer topK,
+            @JsonProperty("min_p") @Nullable Double minP,
+            @JsonProperty("repeat_penalty") @Nullable Double repeatPenalty) {
+
+        /** Options with no sampling controls beyond temperature, so the server's own defaults apply. */
+        public Options(
+                @Nullable Double temperature,
+                @Nullable Integer numCtx,
+                @Nullable Integer numPredict,
+                @Nullable Integer seed) {
+            this(temperature, numCtx, numPredict, seed, null, null, null, null);
+        }
+    }
 }

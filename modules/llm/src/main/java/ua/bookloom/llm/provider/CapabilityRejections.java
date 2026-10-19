@@ -14,8 +14,9 @@ public final class CapabilityRejections {
 
     private static final int BAD_REQUEST = 400;
     private static final Pattern REASONING_REJECTION = Pattern.compile(
-            "\\bthink\\b.{0,256}\\b(unsupported|unknown|unrecognized|invalid|not supported)\\b"
-                    + "|\\b(unsupported|unknown|unrecognized|invalid|not supported)\\b.{0,256}\\bthink\\b",
+            "\\b(think|reasoning_effort|reasoning)\\b.{0,256}\\b(unsupported|unknown|unrecognized|invalid|not supported)\\b"
+                    + "|\\b(unsupported|unknown|unrecognized|invalid|not supported)\\b.{0,256}"
+                    + "\\b(think|reasoning_effort|reasoning)\\b",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final Pattern STRUCTURED_OUTPUT_REJECTION = Pattern.compile(
             "\\b(format|response_format|json[ _-]?schema|structured[ _-]?output)\\b.{0,256}"

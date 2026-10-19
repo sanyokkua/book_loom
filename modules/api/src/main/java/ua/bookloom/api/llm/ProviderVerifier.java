@@ -13,4 +13,13 @@ public interface ProviderVerifier {
      * @return the stage report, or an error if the selection cannot be verified
      */
     Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy);
+
+    /**
+     * Runs the connection stage alone, for a provider with no model chosen yet.
+     *
+     * @param providerId the registry id of the provider to reach
+     * @return a report of one {@link VerificationStage#CONNECTION} stage carrying its elapsed time, or a
+     *     {@code validation} error for an id nobody registered
+     */
+    Result<VerificationReport> verifyConnection(String providerId);
 }

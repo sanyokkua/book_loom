@@ -15,25 +15,41 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 
-/** Parsed, validated arguments for one translate command invocation. */
+/**
+ * Parsed, validated arguments for one translate command invocation, its {@link RunOptions} included.
+ *
+ * @param sourceLanguage the language {@code --from} named, or null when it named none or asked for Auto
+ * @param isSourceAuto whether {@code --from auto} asked the model to identify the language, overriding the one the
+ *     import preselected; with no {@code --from} at all the preselected language stays
+ */
 @Slf4j
 record TranslateArguments(
         Path source,
         BookFormat format,
         String targetLanguage,
         @Nullable String sourceLanguage,
+        boolean isSourceAuto,
         boolean overwrite,
         String providerId,
         @Nullable String modelId,
         @Nullable URI baseUrl,
-        @Nullable Duration requestTimeout) {
+        @Nullable Duration requestTimeout,
+        RunOptions options) {
 
     private static final String DEFAULT_TARGET_LANGUAGE = "uk";
+    private static final String AUTO_SOURCE = "auto";
     private static final String PSEUDO_PROVIDER = "pseudo";
     private static final String OLLAMA_PROVIDER = "ollama";
     private static final String LM_STUDIO_PROVIDER = "lmstudio";
     private static final String OPENAI_COMPATIBLE_PROVIDER = "openai-compatible";
     private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
+
+    /** Refuses a request for Auto that also names a language, since Auto means no language is chosen. */
+    TranslateArguments {
+        if (isSourceAuto && sourceLanguage != null) {
+            throw new IllegalArgumentException("--from auto names no source language");
+        }
+    }
 
     /** Parses one complete argument list or returns a user-facing validation error. */
     static Result<TranslateArguments> parse(List<String> args) {
@@ -44,9 +60,12 @@ record TranslateArguments(
     private static final class Parser {
 
         private final List<String> args;
+        private final RunOptionsParser runOptions = new RunOptionsParser();
         private @Nullable Path source;
         private String targetLanguage = DEFAULT_TARGET_LANGUAGE;
         private @Nullable String sourceLanguage;
+        private boolean sourceLanguageSpecified;
+        private boolean isSourceAuto;
         private boolean targetSpecified;
         private boolean sourceSpecified;
         private boolean overwrite;
@@ -90,7 +109,7 @@ record TranslateArguments(
                 case "--model" -> consumeModel(index);
                 case "--base-url" -> consumeBaseUrl(index);
                 case "--timeout" -> consumeTimeout(index);
-                default -> invalidOption(argument, "unknown option");
+                default -> runOptions.consume(args, index).orElseGet(() -> invalidOption(argument, "unknown option"));
             };
         }
 
@@ -115,14 +134,16 @@ record TranslateArguments(
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
-            if (target ? targetSpecified : sourceLanguage != null) {
+            if (target ? targetSpecified : sourceLanguageSpecified) {
                 return invalidOption(option, target ? "--to was repeated" : "--from was repeated");
             }
             if (target) {
                 targetLanguage = dataOf(value);
                 targetSpecified = true;
             } else {
-                sourceLanguage = dataOf(value);
+                sourceLanguageSpecified = true;
+                isSourceAuto = AUTO_SOURCE.equalsIgnoreCase(dataOf(value));
+                sourceLanguage = isSourceAuto ? null : dataOf(value);
             }
             log.debug("translate parser option={} value={} outcome=accepted", option, dataOf(value));
             return Result.ok(index + 2);
@@ -232,11 +253,13 @@ record TranslateArguments(
                     dataOf(format),
                     targetLanguage,
                     sourceLanguage,
+                    isSourceAuto,
                     overwrite,
                     providerId,
                     modelId,
                     baseUrl,
-                    requestTimeout));
+                    requestTimeout,
+                    runOptions.options()));
         }
 
         private Result<BookFormat> validateSource(Path selectedSource) {
@@ -266,6 +289,7 @@ record TranslateArguments(
             }
             final boolean validSource = sourceLanguage == null
                     || LANGUAGE_CODE.matcher(sourceLanguage).matches();
+            log.debug("translate parser check=source-auto value={}", isSourceAuto);
             log.debug(
                     "translate parser check=source-language value={} outcome={}", sourceLanguage, outcome(validSource));
             return validSource ? Result.ok(Boolean.TRUE) : invalid("source language is invalid");

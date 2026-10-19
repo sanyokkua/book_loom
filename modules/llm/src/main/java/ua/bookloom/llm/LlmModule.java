@@ -6,7 +6,9 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.time.Clock;
+import java.util.function.LongSupplier;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
@@ -32,6 +34,7 @@ public final class LlmModule extends AbstractModule {
         bind(ChatModelFactory.class).to(ChatModelFactoryImpl.class);
         bind(ProviderVerifier.class).to(ProviderVerifierImpl.class);
         bind(ModelCatalog.class).to(ModelCatalogService.class);
+        bind(ModelCapabilities.class).to(ModelCapabilityService.class);
         bind(ProviderConfigs.class).to(InMemoryProviderConfigs.class).in(Singleton.class);
         bind(InferenceGate.class).in(Singleton.class);
         bind(ProviderClientFactory.class).in(Singleton.class);
@@ -42,6 +45,13 @@ public final class LlmModule extends AbstractModule {
     @Singleton
     public RetryPolicy retryPolicy() {
         return new RetryPolicy(Clock.systemUTC(), Math::random, delay -> Thread.sleep(delay.toMillis()));
+    }
+
+    /** Provides the monotonic nanosecond time source used to measure OpenAI-compatible chat calls. */
+    @Provides
+    @Singleton
+    public LongSupplier nanoTimeSource() {
+        return System::nanoTime;
     }
 
     /** Provides one shared HTTP client cache for both dialect clients. */

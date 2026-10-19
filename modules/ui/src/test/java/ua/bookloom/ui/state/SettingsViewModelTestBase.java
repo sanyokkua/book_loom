@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.StageOutcome;
@@ -19,6 +18,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
@@ -29,7 +29,7 @@ import ua.bookloom.ui.ScriptedProviderVerifier;
  * error presenter, and the helpers that drive a check. The FX toolkit runs so that publishing back to the FX thread is
  * the real thing.
  */
-abstract class SettingsViewModelTestBase extends ApplicationTest {
+abstract class SettingsViewModelTestBase extends FxTestBase {
 
     static final long WAIT_SECONDS = 10;
     static final String MODEL = "gemma3:12b";
@@ -38,6 +38,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     RecordingToasts toasts;
     RecordingErrorPresenter errors;
     ExecutorService executor;
+    final ActivityTracker activities = new ActivityTracker(new StateMirror());
 
     @Override
     public final void start(final Stage stage) {
@@ -91,19 +92,19 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     void startCheck(final SettingsViewModel viewModel) {
         onFx(() -> {
             viewModel.model().set(MODEL);
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
     }
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
         return onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor));
+                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
     }
 
     /** A listing over whatever {@link #catalog} the test scripted before calling this. */
     ModelListing newModelListing() {
-        return onFx(() -> new ModelListing(catalog, toasts, errors, executor));
+        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities));
     }
 
     /** A view model over the idle verifier and whatever {@link #catalog} the test scripted before calling this. */
@@ -131,7 +132,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     void checkWithModel(final SettingsViewModel viewModel) {
         onFx(() -> {
             viewModel.model().set(MODEL);
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -146,7 +147,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     }
 
     static List<StageChip> stagesOf(final SettingsViewModel viewModel) {
-        return onFx(() -> List.copyOf(viewModel.stages()));
+        return onFx(() -> List.copyOf(viewModel.tests().stages()));
     }
 
     static Result<VerificationReport> allPassed() {

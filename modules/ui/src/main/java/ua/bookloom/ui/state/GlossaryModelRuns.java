@@ -1,0 +1,374 @@
+package ua.bookloom.ui.state;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.collections.ObservableList;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.EntryChanges;
+import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.NamesPass;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
+
+/**
+ * The model actions of both cards of the names and style screen — scan, review and translate of the names and of the
+ * recurring terms — and the automatic pass over both, as the screen runs them: one at a time,
+ * with the chosen model, a waiting line that counts the requests and, while targets are suggested, the batches, and a stop that interrupts the request in flight. A
+ * stopped action changes nothing, since the service writes only after every request has answered. Neither starts while
+ * other model work runs ({@link ActivityTracker}); each registers itself while it runs, so the title bar can name and
+ * stop it and leaving the screen asks first.
+ *
+ * <p>An answer is shown for the project it started on even when the screen was opened again meanwhile, since the stored
+ * glossary already holds its result. FX thread only.
+ */
+@Slf4j
+final class GlossaryModelRuns {
+
+    /** One model action: given the model and the receiver of its progress, its answer. */
+    @FunctionalInterface
+    private interface Work<T> {
+
+        Result<T> run(ChatModel model, Consumer<JobEvent> progress);
+    }
+
+    /**
+     * Where the actions read and show what they do.
+     *
+     * @param glossary the port the scan and review call
+     * @param lexicon the port the suggestion of recurring-term renderings calls
+     * @param namesPass the port that prepares both tables in one pass
+     * @param detection asks the provider for a chosen model's context length, off the FX thread
+     * @param models where the chosen model is built
+     * @param settings where the chosen provider and model are read
+     * @param messages the catalogue the lines are worded from
+     * @param rows the screen's rows
+     * @param lexiconRows the recurring-terms card's rows
+     * @param notice the line the screen reports in place
+     * @param project the project the screen shows now
+     * @param activities the model work under way, which a scan or review must not overlap
+     * @param changes where the exact changes of an operation are kept for the results dialog
+     */
+    record Screen(
+            GlossaryService glossary,
+            LexiconService lexicon,
+            NamesPass namesPass,
+            Function<ModelSelection, Optional<Integer>> detection,
+            ChatModelFactory models,
+            SettingsViewModel settings,
+            Messages messages,
+            ObservableList<GlossaryEntry> rows,
+            ObservableList<LexiconEntry> lexiconRows,
+            ObjectProperty<@Nullable GlossaryNotice> notice,
+            Supplier<String> project,
+            ActivityTracker activities,
+            ChangeLog changes) {}
+
+    private static final long NO_TICKET = -1;
+
+    private final Screen screen;
+    private final GlossaryCalls calls;
+    private final ModelAnswers answers;
+    private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
+    private final ModelBlock block;
+    private final RunProgress runProgress;
+    private @Nullable Future<?> running;
+    private ActivityTracker.@Nullable Handle handle;
+    private long ticket;
+    // The ticket of an automatic pass that was stopped, whose late answer is still shown (see lateAfterStop).
+    private long stoppedPass = NO_TICKET;
+    private ChangeOperation operation = ChangeOperation.NAME_SCAN;
+    private Set<String> termsBefore = Set.of();
+
+    GlossaryModelRuns(final Screen screen, final GlossaryCalls calls) {
+        this.screen = Objects.requireNonNull(screen, "screen");
+        this.calls = Objects.requireNonNull(calls, "calls");
+        this.answers = new ModelAnswers(screen, calls);
+        this.runProgress = new RunProgress(screen.messages(), screen.notice());
+        this.block = new ModelBlock(screen.activities(), screen.messages(), busy.getReadOnlyProperty());
+    }
+
+    ReadOnlyBooleanProperty busy() {
+        return busy.getReadOnlyProperty();
+    }
+
+    /** Why the model actions are not offered because other model work runs; empty otherwise. FX thread only. */
+    ReadOnlyStringProperty blockedReason() {
+        return block.reason();
+    }
+
+    void scan() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.GLOSSARY_SCAN,
+                ChangeOperation.NAME_SCAN,
+                MessageKey.NAMES_STYLE_NO_MODEL,
+                (model, progress) -> screen.glossary().prescan(project, model, progress),
+                changes -> answers.scanned(operation, changes));
+    }
+
+    void review() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.GLOSSARY_REVIEW,
+                ChangeOperation.NAME_REVIEW,
+                MessageKey.NAMES_STYLE_NO_MODEL_REVIEW,
+                (model, progress) -> screen.glossary().review(project, model, progress),
+                report -> answers.reviewed(operation, report));
+    }
+
+    void translate() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.GLOSSARY_TRANSLATE,
+                ChangeOperation.NAME_TRANSLATE,
+                MessageKey.NAMES_STYLE_NO_MODEL_TRANSLATE,
+                (model, progress) -> screen.glossary().translate(project, model, progress),
+                changes -> answers.translated(operation, changes));
+    }
+
+    void translateTerms() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.TERM_TRANSLATE,
+                ChangeOperation.TERM_TRANSLATE,
+                MessageKey.RECURRING_NO_MODEL,
+                (model, progress) -> screen.lexicon()
+                        .suggest(project, model, progress)
+                        .flatMap(done -> answers.terms(project, List.of(), done)),
+                answer -> answers.renderingsSuggested(operation, answer));
+    }
+
+    // The text step needs no model and stores what it finds before the model is asked, so it is the scan's first step
+    // and the only one that runs when no model is chosen.
+    void scanTerms() {
+        final String project = screen.project().get();
+        final boolean modelless = screen.settings().selection().isEmpty();
+        termsBefore = ModelAnswers.keysOf(screen.lexiconRows());
+        start(
+                ActivityKind.TERM_SCAN,
+                ChangeOperation.TERM_SCAN,
+                MessageKey.RECURRING_NO_MODEL_TERMS,
+                (model, progress) -> screen.lexicon()
+                        .scan(project)
+                        .flatMap(found -> screen.lexicon()
+                                .scanWithModel(project, model, progress)
+                                .flatMap(done -> answers.terms(project, found.added(), done))),
+                () -> screen.lexicon()
+                        .scan(project)
+                        .flatMap(found -> answers.terms(project, found.added(), EntryChanges.<LexiconEntry>none())),
+                answer -> answers.termsScanned(operation, answer, modelless));
+    }
+
+    void reviewTerms() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.TERM_REVIEW,
+                ChangeOperation.TERM_REVIEW,
+                MessageKey.RECURRING_NO_MODEL_TERMS,
+                (model, progress) -> screen.lexicon()
+                        .review(project, model, progress)
+                        .flatMap(done -> answers.terms(project, List.of(), done)),
+                answer -> answers.termsChanged(
+                        operation, answer, answer.changes().removed().size(), MessageKey.RECURRING_MODEL_REVIEWED));
+    }
+
+    // The model's context length is asked for off the FX thread, in the job; the selection is read here, on it.
+    void autoNames() {
+        final String project = screen.project().get();
+        final Optional<ModelSelection> chosen = screen.settings().selection();
+        start(
+                ActivityKind.NAMES_PASS,
+                ChangeOperation.AUTO_NAMES,
+                MessageKey.NAMES_STYLE_AUTO_NO_MODEL,
+                (model, progress) -> answers.prepare(
+                        project, model, chosen.flatMap(screen.detection()).orElse(null), progress),
+                answer -> answers.autoPrepared(operation, answer));
+    }
+
+    /** Stops the action under way, if any; the glossary keeps what it had. */
+    void stop() {
+        final Future<?> current = running;
+        if (current == null) {
+            log.debug("stop of the model action ignored: none is running");
+            return;
+        }
+        log.info("model action stopped by the person after {} requests", runProgress.requests());
+        current.cancel(true);
+        running = null;
+        stoppedPass = operation == ChangeOperation.AUTO_NAMES ? ticket : NO_TICKET;
+        ticket++;
+        endActivity();
+        busy.set(false);
+        line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.NAMES_STYLE_MODEL_STOPPED));
+        if (operation == ChangeOperation.TERM_SCAN) {
+            answers.reloadTerms(operation, termsBefore, true);
+        } else {
+            screen.changes().stopped(operation);
+        }
+    }
+
+    private <T> void start(
+            final ActivityKind what,
+            final ChangeOperation which,
+            final MessageKey noModel,
+            final Work<T> work,
+            final Consumer<T> onOk) {
+        start(what, which, noModel, work, null, onOk);
+    }
+
+    private <T> void start(
+            final ActivityKind what,
+            final ChangeOperation which,
+            final MessageKey noModel,
+            final Work<T> work,
+            final @Nullable Supplier<Result<T>> textOnly,
+            final Consumer<T> onOk) {
+        final Optional<ModelSelection> selection = screen.settings().selection();
+        if (selection.isEmpty() && textOnly == null) {
+            log.debug("the model {} was not started: no model is chosen", what);
+            line(GlossaryNotice.Level.ERROR, screen.messages().get(noModel));
+            return;
+        }
+        if (isRefusedBecauseOtherWorkRuns(what)) {
+            return;
+        }
+        final String project = screen.project().get();
+        log.info(
+                "model {} of project {} started with provider {}",
+                what,
+                project,
+                selection.map(ModelSelection::providerId).orElse("none (text step only)"));
+        final long mine = ++ticket;
+        stoppedPass = NO_TICKET;
+        reset(which);
+        handle = screen.activities().begin(what, this::stop);
+        runProgress.begin(new CallFeed(handle, screen.activities()::now));
+        busy.set(true);
+        screen.notice().set(null);
+        running = calls.start(
+                what.name(), job(selection, work, textOnly, mine), answer -> ended(mine, what, project, answer, onOk));
+    }
+
+    private <T> Supplier<Result<T>> job(
+            final Optional<ModelSelection> selection,
+            final Work<T> work,
+            final @Nullable Supplier<Result<T>> textOnly,
+            final long mine) {
+        if (selection.isEmpty() && textOnly != null) {
+            return textOnly;
+        }
+        return () -> screen.models()
+                .create(selection.orElseThrow())
+                .flatMap(model -> work.run(model, event -> Platform.runLater(() -> progress(mine, event))));
+    }
+
+    private void reset(final ChangeOperation which) {
+        operation = which;
+        screen.changes().begin();
+    }
+
+    private boolean isRefusedBecauseOtherWorkRuns(final ActivityKind what) {
+        final Optional<String> refusal = block.refusalFor(what);
+        refusal.ifPresent(text -> line(GlossaryNotice.Level.ERROR, text));
+        return refusal.isPresent();
+    }
+
+    private <T> void ended(
+            final long mine,
+            final ActivityKind what,
+            final String project,
+            final Result<T> answer,
+            final Consumer<T> onOk) {
+        if (mine != ticket) {
+            lateAfterStop(mine, what, project, answer, onOk);
+            return;
+        }
+        running = null;
+        endActivity();
+        busy.set(false);
+        final AppError failure = answer.error();
+        log.info("model {} ended ok={} requests={}", what, failure == null, runProgress.requests());
+        if (!project.equals(screen.project().get()) || (failure != null && failure.code() == ErrorCode.cancelled)) {
+            log.debug(
+                    "the model {} answer is not shown: project {} now {}",
+                    what,
+                    project,
+                    screen.project().get());
+            return;
+        }
+        if (failure != null) {
+            log.warn("the model {} failed with {}", what, failure.code());
+            line(GlossaryNotice.Level.ERROR, failure.message());
+            answers.reloadTerms(operation, termsBefore, false);
+            return;
+        }
+        screen.notice().set(null);
+        onOk.accept(Objects.requireNonNull(answer.data(), "data"));
+    }
+
+    // The pass writes both tables at its very end, so a Stop that came after it stored them but before its answer
+    // reached the FX thread would leave the screen on the old rows with nothing to undo. That answer is shown as if
+    // Stop had not come, and a stopped pass that failed is read back, so the tables on screen are the stored ones.
+    // Any other stopped action wrote nothing, and its late answer is dropped.
+    private <T> void lateAfterStop(
+            final long mine,
+            final ActivityKind what,
+            final String project,
+            final Result<T> answer,
+            final Consumer<T> onOk) {
+        final boolean isStoppedPass = mine == stoppedPass;
+        if (!isStoppedPass || busy.get() || !project.equals(screen.project().get())) {
+            log.debug("the stopped model {} answered late; its answer is dropped", what);
+            return;
+        }
+        stoppedPass = NO_TICKET;
+        if (answer.isOk()) {
+            log.info("the stopped model {} had already stored its answer; it is shown", what);
+            onOk.accept(Objects.requireNonNull(answer.data(), "data"));
+            return;
+        }
+        log.debug("the stopped model {} failed after Stop; both tables are read back", what);
+        answers.reloadBoth(project);
+    }
+
+    private void progress(final long mine, final JobEvent event) {
+        if (mine != ticket || running == null) {
+            return;
+        }
+        runProgress.accept(event, handle);
+    }
+
+    private void endActivity() {
+        final ActivityTracker.Handle registered = handle;
+        handle = null;
+        if (registered != null) {
+            registered.end();
+        }
+    }
+
+    private void line(final GlossaryNotice.Level level, final String text) {
+        screen.notice().set(new GlossaryNotice(level, text));
+    }
+}

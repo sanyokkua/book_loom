@@ -1,6 +1,8 @@
 package ua.bookloom.app.cli;
 
+import com.google.inject.Injector;
 import java.net.URI;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -18,11 +21,46 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.LexiconService;
+import ua.bookloom.api.pipeline.TranslationEngine;
 
 /** Recording seams for translate-command provider tests. */
 final class TranslateCommandTestFakes {
 
+    /** The usage line the command prints after an argument error. */
+    static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
+            + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] "
+            + "[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] "
+            + "[--review-names] [--max-outage <duration>] [--report <file>] [--stop-after <segments>] [--no-partial]";
+
     private TranslateCommandTestFakes() {}
+
+    /** The command over the real engine, project and export services of {@code core} and the given provider seams. */
+    static TranslateCommand commandOver(
+            Injector core, ChatModelFactory models, ProviderConfigs configs, ProviderVerifier verifier) {
+        return commandOver(core, models, configs, verifier, core.getInstance(ExportService.class));
+    }
+
+    /** As above, over the given export service, which may wrap the real one. */
+    static TranslateCommand commandOver(
+            Injector core,
+            ChatModelFactory models,
+            ProviderConfigs configs,
+            ProviderVerifier verifier,
+            ExportService exports) {
+        return new TranslateCommand(
+                core.getInstance(TranslationEngine.class),
+                models,
+                new ProviderSetup(configs, verifier),
+                core.getInstance(BookOpener.class),
+                core.getInstance(NameReview.class),
+                exports,
+                core.getInstance(ShutdownCancellation.class),
+                core.getInstance(Clock.class),
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()),
+                core.getInstance(LexiconService.class));
+    }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {
 
@@ -74,6 +112,11 @@ final class TranslateCommandTestFakes {
         public Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy) {
             selections.add(selection);
             policies.add(policy);
+            return Result.ok(report);
+        }
+
+        @Override
+        public Result<VerificationReport> verifyConnection(String providerId) {
             return Result.ok(report);
         }
 

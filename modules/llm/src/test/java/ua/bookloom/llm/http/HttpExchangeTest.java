@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -20,12 +19,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.ClosedPorts;
 
 /** Exercises the real JDK HTTP exchange at a WireMock server boundary. */
 class HttpExchangeTest {
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {
@@ -70,6 +70,24 @@ class HttpExchangeTest {
         final AppError error = Objects.requireNonNull(result.error(), "error");
         assertThat(error.code()).isEqualTo(ErrorCode.timeout);
         assertThat(error.details()).contains("timeoutMs=1000");
+    }
+
+    // The OpenAI-compatible client reads its reply whole: a server that sends the head at once and then stalls in the
+    // body must still end at the request timeout, which the JDK client applies to the body too, not only the head.
+    @Test
+    void post_headSentThenBodyStalls_endsAsTimeoutNearTheRequestTimeout() {
+        server.stubFor(com.github.tomakehurst.wiremock.client.WireMock.post("/chat")
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody("{\"choices\":[{\"message\":{\"content\":\"a long reply\"}}]}")
+                        .withChunkedDribbleDelay(5, 6000)));
+        final long started = System.nanoTime();
+
+        final Result<HttpReply> result =
+                exchange().post(config(URI.create(server.baseUrl()), Duration.ofSeconds(1)), "/chat", "{}");
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(4));
+        assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.timeout);
     }
 
     @Test
@@ -138,10 +156,7 @@ class HttpExchangeTest {
                 "test-provider", ProviderKind.OPENAI_COMPATIBLE, baseUrl, Duration.ofSeconds(2), requestTimeout);
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            final int port = socket.getLocalPort();
-            return URI.create("http://127.0.0.1:" + port);
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 }

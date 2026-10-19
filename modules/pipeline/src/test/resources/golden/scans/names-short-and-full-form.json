@@ -1,0 +1,139 @@
+{
+  "storySegments" : 29,
+  "nameScan" : [ {
+    "term" : "Ysolde",
+    "count" : 12,
+    "firstSentence" : "Ysolde was already there with the tide tables.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Dax",
+    "count" : 11,
+    "firstSentence" : "Dax read the first table slowly.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Dax Orlo",
+    "count" : 8,
+    "firstSentence" : "Dax Orlo arrived at the harbour office before dawn.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Orlo",
+    "count" : 3,
+    "firstSentence" : "Dax Orlo arrived at the harbour office before dawn.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Ysolde" : {
+      "count" : 12,
+      "windows" : [ {
+        "text" : "Ysolde was already there with the tide tables. She had marked three of them in red.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Ysolde unrolled the chart. She pinned its corners with four brass weights.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Ysolde brought him the second tide table. She did not argue about the ink this time.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Ysolde, and nobody had a bad word for Ysolde.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she", "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "him" ]
+      }
+    },
+    "Dax" : {
+      "count" : 19,
+      "windows" : [ {
+        "text" : "Dax Orlo arrived at the harbour office before dawn. He hung his wet coat on the nail by the door.",
+        "pronoun" : null
+      }, {
+        "text" : "Dax read the first table slowly. He disliked red ink and said so.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "At the door Dax turned and looked back at the room. He nodded to Ysolde, who did not look up.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "In the district everyone knew Dax, and nobody had a bad word for Dax.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "his", "his" ]
+      }
+    },
+    "Dax Orlo" : {
+      "count" : 8,
+      "windows" : [ {
+        "text" : "Dax Orlo arrived at the harbour office before dawn. He hung his wet coat on the nail by the door.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Dax Orlo drank his tea standing up. He had never learned to sit while the harbour was awake.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Dax Orlo put on his coat again. He checked the nail twice before he left.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "In the district everyone knew Dax Orlo, and nobody had a bad word for Dax Orlo.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "his", "his", "his" ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Ysolde" : {
+      "count" : 12,
+      "examples" : [ "Ysolde was already there with the tide tables.", "Ysolde took it off the stove and poured two cups." ]
+    },
+    "Dax" : {
+      "count" : 19,
+      "examples" : [ "Dax Orlo arrived at the harbour office before dawn.", "Dax read the first table slowly." ]
+    },
+    "Dax Orlo" : {
+      "count" : 8,
+      "examples" : [ "Dax Orlo arrived at the harbour office before dawn.", "Dax Orlo drank his tea standing up." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Dax",
+    "mentions" : 19
+  }, {
+    "term" : "Ysolde",
+    "mentions" : 12
+  }, {
+    "term" : "Dax Orlo",
+    "mentions" : 8
+  } ],
+  "pronouns" : {
+    "Ysolde" : {
+      "female" : [ "she", "she", "she", "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "him" ]
+    },
+    "Dax" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "his", "his" ]
+    },
+    "Dax Orlo" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "his", "his", "his" ]
+    }
+  }
+}

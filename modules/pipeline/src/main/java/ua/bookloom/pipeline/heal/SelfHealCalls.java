@@ -1,0 +1,149 @@
+package ua.bookloom.pipeline.heal;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
+import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.OutputLimit;
+import ua.bookloom.pipeline.prompt.PromptName;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
+
+/**
+ * What {@link DirectedFix} and backward revision's re-render
+ * otherwise each repeated: rendering a
+ * call's system/user messages from the catalogue, computing its output limit, and reading a classified
+ * {@link RepairReply} back into one consistent set of log lines. Each caller passes its own {@code @Slf4j} logger
+ * so a log line still names the class that made the call, not this shared helper.
+ */
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class SelfHealCalls {
+
+    /**
+     * Renders {@code name}'s system and user messages from the catalogue; the system message shows the run's bundled
+     * examples when its template does.
+     *
+     * @param templates the catalogue's template renderer
+     * @param name which call's templates to render
+     * @param frame the run's language pair, style sheet and foreign-passage policy, for the system slots
+     * @param userValues the user template's slot values
+     * @return the two-message list every self-heal call sends
+     */
+    public static List<ChatMessage> messagesFor(
+            final PromptTemplates templates,
+            final PromptName name,
+            final CallFrame frame,
+            final Map<String, String> userValues) {
+        final String system = templates.renderSystem(name, frame).strip();
+        final String user = templates.renderUser(name, userValues).strip();
+        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+    }
+
+    /**
+     * What a self-heal call's shown snapshot names besides its request, built from the same values as
+     * {@link #messagesFor}.
+     *
+     * @param templates the catalogue's template renderer
+     * @param name which call's templates are rendered
+     * @param frame the run's language pair, style sheet and foreign-passage policy
+     * @param maskedSource the segment's masked source, shown as a person reads it
+     * @param userValues the user template's slot values
+     * @return the call's descriptor, naming no chunk
+     */
+    public static CallDescriptor descriptor(
+            final PromptTemplates templates,
+            final PromptName name,
+            final CallFrame frame,
+            final String maskedSource,
+            final Map<String, String> userValues) {
+        return CallDescriptor.of(
+                name, DisplayText.of(maskedSource), () -> templates.sectionsOf(name, frame, userValues));
+    }
+
+    /**
+     * The immutable-token list a rewrite of {@code maskedSource} must keep.
+     *
+     * @param maskedSource the segment's non-null masked source
+     * @return the source's tokens in order, separated by spaces, or empty when it has none, which leaves the list out
+     */
+    public static String immutableTokens(final String maskedSource) {
+        return Tokens.inOrder(Objects.requireNonNull(maskedSource, "maskedSource"))
+                        .isEmpty()
+                ? ""
+                : DraftPromptBuilder.expectedTokenSequence(maskedSource);
+    }
+
+    /**
+     * The expected output and its cap for a call whose source is {@code maskedSource}.
+     *
+     * @param maskedSource the segment's masked source
+     * @param frame the run's language pair
+     * @return the limit, or {@code null} when the source has no display text (no expected-output constraint sent)
+     */
+    public static @Nullable OutputLimit outputLimit(final String maskedSource, final CallFrame frame) {
+        return OutputLimit.forSource(maskedSource, frame.sourceLanguage(), frame.targetLanguage());
+    }
+
+    /** Logs {@code request}'s messages at TRACE, prefixed with {@code label}. */
+    public static void logTraceMessages(final Logger log, final String label, final ChatRequest request) {
+        if (log.isTraceEnabled()) {
+            log.trace("{} messages {}", label, request.messages());
+        }
+    }
+
+    /** Logs a successful reply's raw content at TRACE, prefixed with {@code label}. */
+    public static void logTraceReply(final Logger log, final String label, final Result<ChatResponse> reply) {
+        if (log.isTraceEnabled() && reply.isOk()) {
+            log.trace(
+                    "{} raw reply {}",
+                    label,
+                    Objects.requireNonNull(reply.data()).content());
+        }
+    }
+
+    /** Logs a classified {@link RepairReply} outcome at DEBUG, prefixed with {@code label}. */
+    public static void logOutcome(
+            final Logger log, final String label, final String segmentId, final Result<RepairReply> outcome) {
+        if (outcome.isErr()) {
+            log.debug(
+                    "{} reply segmentId={} outcome=error code={}",
+                    label,
+                    segmentId,
+                    Objects.requireNonNull(outcome.error()).code());
+            return;
+        }
+        switch (Objects.requireNonNull(outcome.data())) {
+            case RepairReply.Rewritten rewritten ->
+                log.debug(
+                        "{} reply segmentId={} outcome=Rewritten targetLength={}",
+                        label,
+                        segmentId,
+                        rewritten.maskedTarget().length());
+            case RepairReply.Malformed malformed ->
+                log.debug(
+                        "{} reply segmentId={} outcome=Malformed diagnostic={}",
+                        label,
+                        segmentId,
+                        malformed.diagnostic());
+            case RepairReply.FlagNow flagNow ->
+                log.debug(
+                        "{} reply segmentId={} outcome=FlagNow code={}",
+                        label,
+                        segmentId,
+                        flagNow.error().code());
+        }
+    }
+}

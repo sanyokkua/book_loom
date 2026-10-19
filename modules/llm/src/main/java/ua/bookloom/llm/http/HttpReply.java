@@ -10,8 +10,14 @@ import java.util.Objects;
  * @param status the response status, preserved even when it is not successful
  * @param headers the response headers, copied deeply so retry metadata remains immutable
  * @param body the response body, retained for dialect parsing and classification
+ * @param cut whether a streamed body was cut short as a runaway, so the body ends without the provider's last part
  */
-public record HttpReply(int status, Map<String, List<String>> headers, String body) {
+public record HttpReply(int status, Map<String, List<String>> headers, String body, boolean cut) {
+
+    /** A whole reply, not cut. */
+    public HttpReply(int status, Map<String, List<String>> headers, String body) {
+        this(status, headers, body, false);
+    }
 
     /** Copies both map and value lists so a response cannot be changed after it crosses the exchange boundary. */
     public HttpReply {

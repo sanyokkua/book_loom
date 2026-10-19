@@ -1,0 +1,100 @@
+package ua.bookloom.ui.state;
+
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ModelCallFinished;
+
+/**
+ * Tokens per second over the last draft calls, from the usage each call reported.
+ *
+ * <p>Only drafts count: a judge's short answer would make a slow model look fast. When a provider reported no usage
+ * the pipeline has already estimated the completion tokens and stamped the call, so this class never estimates. Not
+ * thread-safe: {@link RunSession} calls it under its publish lock.
+ */
+@Slf4j
+final class ThroughputMeter {
+
+    /** How many finished draft calls the rate is taken over. */
+    static final int WINDOW = 20;
+
+    private record Sample(int completionTokens, Duration generation, boolean estimated) {}
+
+    private final Deque<Sample> samples = new ArrayDeque<>();
+    private final CallKind counted;
+    private long runTokens;
+    private long runNanos;
+    private boolean runEstimated;
+
+    /** A meter of the drafts, which the pace figures are taken from. */
+    ThroughputMeter() {
+        this(CallKind.DRAFT);
+    }
+
+    /**
+     * A meter of the calls of one kind.
+     *
+     * @param counted the kind whose answered calls are counted
+     */
+    ThroughputMeter(final CallKind counted) {
+        this.counted = Objects.requireNonNull(counted, "counted");
+    }
+
+    void finished(final ModelCallFinished event) {
+        final TokenUsage usage = event.usage();
+        final Integer tokens = usage == null ? null : usage.completion();
+        if (usage == null || tokens == null) {
+            log.debug("throughput: a {} call reported no completion tokens, not counted", event.kind());
+            return;
+        }
+        final Duration reported = usage.generation();
+        final Duration generation = reported == null ? event.elapsed() : reported;
+        runTokens += tokens;
+        runNanos += generation.toNanos();
+        runEstimated |= event.usageEstimated();
+        if (event.kind() != counted) {
+            return;
+        }
+        samples.addLast(new Sample(tokens, generation, event.usageEstimated()));
+        if (samples.size() > WINDOW) {
+            samples.removeFirst();
+        }
+        log.debug("throughput: {} call counted, {} tokens, window {}", counted, tokens, samples.size());
+    }
+
+    @Nullable
+    Double tokensPerSecond() {
+        long tokens = 0;
+        long nanos = 0;
+        for (final Sample sample : samples) {
+            tokens += sample.completionTokens();
+            nanos += sample.generation().toNanos();
+        }
+        return nanos <= 0 ? null : tokens * (double) Duration.ofSeconds(1).toNanos() / nanos;
+    }
+
+    /** Tokens per second over every call of the run so far, whatever its kind; null before one is known. */
+    @Nullable
+    Double averageTokensPerSecond() {
+        return runNanos <= 0 ? null : runTokens * (double) Duration.ofSeconds(1).toNanos() / runNanos;
+    }
+
+    boolean isEstimated() {
+        return runEstimated || samples.stream().anyMatch(Sample::estimated);
+    }
+
+    /** Builds the figure for a snapshot; {@code timeLeft} and {@code elapsed} come from the run clock. */
+    Throughput snapshot(final @Nullable Duration timeLeft, final Duration elapsed) {
+        return new Throughput(
+                tokensPerSecond(),
+                isEstimated(),
+                timeLeft,
+                Objects.requireNonNull(elapsed, "elapsed"),
+                averageTokensPerSecond());
+    }
+}

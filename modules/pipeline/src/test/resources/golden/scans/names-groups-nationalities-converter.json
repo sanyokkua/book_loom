@@ -1,0 +1,105 @@
+{
+  "storySegments" : 24,
+  "nameScan" : [ {
+    "term" : "Tamsin",
+    "count" : 13,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Velar",
+    "count" : 1,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Velarian",
+    "count" : 3,
+    "firstSentence" : "A Velarian porter carried her bag to the inn.",
+    "aliases" : [ "Velarians" ]
+  }, {
+    "term" : "Velar",
+    "count" : 1,
+    "firstSentence" : "Tamsin crossed the border into Velar on the last day of autumn.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Guildsmen",
+    "count" : 1,
+    "firstSentence" : "In the market the Guildsmen kept to their own side of the square.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ {
+    "term" : "guild",
+    "count" : 8,
+    "firstSentence" : "She carried one letter and one rule from the guild.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Tamsin" : {
+      "count" : 13,
+      "windows" : [ {
+        "text" : "Tamsin crossed the border into Velar on the last day of autumn. She carried one letter and one rule from the guild.",
+        "pronoun" : null
+      }, {
+        "text" : "The Velarians drank their coffee black and their wine warm. Tamsin learned both habits in a week. She kept the coffee habit.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Tamsin said the letter was for the guild alone. She did not raise her voice. The Guildsmen exchanged a glance and withdrew.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Tamsin, and nobody had a bad word for Tamsin.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Velar" : {
+      "count" : 1,
+      "windows" : [ {
+        "text" : "Tamsin crossed the border into Velar on the last day of autumn. She carried one letter and one rule from the guild.",
+        "pronoun" : "FEMALE"
+      } ],
+      "pronouns" : {
+        "female" : [ "she" ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Tamsin" : {
+      "count" : 13,
+      "examples" : [ "Tamsin crossed the border into Velar on the last day of autumn.", "Tamsin learned both habits in a week." ]
+    },
+    "Velar" : {
+      "count" : 1,
+      "examples" : [ "Tamsin crossed the border into Velar on the last day of autumn." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Tamsin",
+    "mentions" : 13
+  }, {
+    "term" : "Velar",
+    "mentions" : 1
+  } ],
+  "pronouns" : {
+    "Tamsin" : {
+      "female" : [ "she", "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ "her" ],
+      "maleObject" : [ ]
+    },
+    "Velar" : {
+      "female" : [ "she" ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

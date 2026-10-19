@@ -50,6 +50,16 @@ final class DrmAdjudicator {
     private static final int PERCENT_ESCAPE_LENGTH = 3;
     private static final int HEX_RADIX = 16;
 
+    /** Adobe's ADEPT DRM scheme's own namespace (task 4.2). */
+    private static final Namespace ADEPT_NS = Namespace.getNamespace("http://ns.adobe.com/adept");
+
+    private static final String ADEPT_SCHEME = "Adobe ADEPT";
+    private static final String LCP_SCHEME = "Readium LCP";
+    private static final String FAIRPLAY_SCHEME = "Apple FairPlay";
+    private static final String RIGHTS_XML_ENTRY = "META-INF/rights.xml";
+    private static final String LCP_LICENSE_ENTRY = "META-INF/license.lcpl";
+    private static final String FAIRPLAY_ENTRY = "META-INF/sinf.xml";
+
     /**
      * Adjudicates the book's encryption manifest against its package manifest.
      *
@@ -66,6 +76,93 @@ final class DrmAdjudicator {
         for (final String cipherPath : encryptedResourcePaths(encryptionEntry)) {
             refuseUnlessFont(cipherPath, mediaTypesByPath.get(cipherPath));
         }
+    }
+
+    /**
+     * The non-throwing counterpart {@link ua.bookloom.api.document.BookInspector} inspection needs (task 4.2):
+     * whether any encrypted resource is content rather than a font, and — when it is — which DRM scheme it can be
+     * named as. Never called from {@code open}; a malformed encryption manifest here answers "encrypted,
+     * unidentified" rather than failing, because an inspection must always produce a verdict.
+     *
+     * @param encryptionEntry {@code META-INF/encryption.xml}'s raw entry, or {@code null} if the archive has none
+     * @param opf the already-parsed OPF, needed for its manifest media types
+     * @param archiveEntries every other archive entry, keyed by name, used to look for a rights/license marker
+     *     file that names a scheme even where the encryption manifest itself does not
+     * @return the finding: whether content is encrypted, and the scheme's name when it can be identified
+     */
+    static EncryptionFinding probeEncryption(
+            @Nullable RawEntry encryptionEntry, ParsedOpf opf, Map<String, RawEntry> archiveEntries) {
+        if (encryptionEntry == null || !probeContentEncrypted(encryptionEntry, opf)) {
+            return EncryptionFinding.notEncrypted();
+        }
+        return EncryptionFinding.encrypted(schemeOf(encryptionEntry, archiveEntries));
+    }
+
+    /**
+     * Whether any encrypted resource is content rather than a manifest-declared font — the same question
+     * {@link #adjudicate} refuses on, answered instead of thrown. A manifest {@link #adjudicate} would refuse as
+     * malformed is reported here as encrypted, since the manifest states that something is protected and cannot be
+     * read well enough to say it is only a font.
+     */
+    private static boolean probeContentEncrypted(RawEntry encryptionEntry, ParsedOpf opf) {
+        try {
+            final Map<String, String> mediaTypesByPath = manifestMediaTypesByContainerPath(opf);
+            for (final String cipherPath : encryptedResourcePaths(encryptionEntry)) {
+                final String mediaType = mediaTypesByPath.get(cipherPath);
+                if (mediaType == null || !FontMediaTypes.isFont(mediaType)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (DrmRefusedException malformedManifest) {
+            return true;
+        }
+    }
+
+    /**
+     * Names the DRM scheme from what the encryption manifest and the archive's own marker files say, in the order
+     * the requirement fixes: an ADEPT {@code KeyInfo}, else an ADEPT {@code META-INF/rights.xml}, else a Readium
+     * LCP license, else an Apple FairPlay marker, else no identifiable scheme.
+     */
+    private static @Nullable String schemeOf(RawEntry encryptionEntry, Map<String, RawEntry> archiveEntries) {
+        if (declaresNamespace(encryptionEntry.content(), ADEPT_NS)) {
+            return ADEPT_SCHEME;
+        }
+        final RawEntry rightsXml = archiveEntries.get(RIGHTS_XML_ENTRY);
+        if (rightsXml != null && declaresNamespace(rightsXml.content(), ADEPT_NS)) {
+            return ADEPT_SCHEME;
+        }
+        if (archiveEntries.containsKey(LCP_LICENSE_ENTRY)) {
+            return LCP_SCHEME;
+        }
+        if (archiveEntries.containsKey(FAIRPLAY_ENTRY)) {
+            return FAIRPLAY_SCHEME;
+        }
+        return null;
+    }
+
+    private static boolean declaresNamespace(byte[] xmlContent, Namespace ns) {
+        try {
+            return elementOrDescendantInNamespace(
+                    SecureXml.builder()
+                            .build(new ByteArrayInputStream(xmlContent))
+                            .getRootElement(),
+                    ns);
+        } catch (JDOMException | IOException malformed) {
+            return false;
+        }
+    }
+
+    private static boolean elementOrDescendantInNamespace(Element element, Namespace ns) {
+        if (element.getNamespace().equals(ns)) {
+            return true;
+        }
+        for (final Element child : element.getChildren()) {
+            if (elementOrDescendantInNamespace(child, ns)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void refuseUnlessFont(String cipherPath, @Nullable String mediaType) {

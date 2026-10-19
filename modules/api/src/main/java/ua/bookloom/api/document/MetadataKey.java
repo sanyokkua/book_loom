@@ -13,7 +13,17 @@ public enum MetadataKey {
     TITLE("title"),
 
     /** The book's author, as the EPUB and FB2 readers write it; a Markdown or plain-text book never supplies one. */
-    AUTHOR("author");
+    AUTHOR("author"),
+
+    /**
+     * The year the book was written or published: the first four-digit year of the EPUB package's first {@code dc:date},
+     * FB2 {@code title-info/date} (else {@code publish-info/year}) or a Markdown frontmatter {@code date:} line. Always a
+     * bare year, never a full date; absent when the source holds no four-digit year.
+     */
+    DATE("date"),
+
+    /** The publisher, as an EPUB {@code dc:publisher}, an FB2 {@code publish-info/publisher} or a frontmatter {@code publisher:} line. */
+    PUBLISHER("publisher");
 
     private final String key;
 

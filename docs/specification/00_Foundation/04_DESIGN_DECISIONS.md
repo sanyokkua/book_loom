@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, engineering, QA **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, engineering, QA **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md`,
 `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`, `docs/adr`
@@ -98,10 +98,10 @@ FR-INFER-02.
 
 ### DD-10 — Provider abstraction with two client implementations
 
-**Decision:** A `Provider` port + `ProviderFactory` hide two concrete client implementations selected by provider
+**Decision:** A `ChatModel` port + `ChatModelFactory` (over the internal `ProviderClient` seam and its `ProviderClientFactory`) hide two concrete client implementations selected by provider
 **kind** (`OLLAMA | OPENAI_COMPATIBLE`): an **Ollama-native** client (Ollama's own `/api/*` and native `options`) and an
-**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). Per-kind `ProviderProfile` data
-still carries endpoint/credential/model details. The abstraction already admits future providers (e.g. Gemini, Claude)
+**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). A `ProviderConfig` carries the
+endpoint and timeouts (credential and model details are planned). The abstraction already admits future providers (e.g. Gemini, Claude)
 as new implementations without changing callers; those are not implemented in this scope. **Why:** Ollama's
 OpenAI-compatible endpoint does not fully honour options such as num_ctx, so Ollama needs its native API; other servers
 are well served by the OpenAI-compatible client. **Consequences:** Two client classes behind one interface plus a
@@ -295,10 +295,15 @@ replace the source and re-run both scripts; no `.icns`/`.ico`/`.png` is edited b
 
 **Decision:** Export always writes the book back in its **original format** (EPUB→EPUB, FB2→FB2, Markdown→Markdown,
 TXT→TXT), structure-and-text-preserving via the skeleton (canonical-equal, DD-43). **Converting between document formats
-is out of scope** (it is lossy); the export path offers no target-format choice. **Why:** Cross-format conversion cannot
-preserve structure/metadata faithfully and adds tooling and failure modes with little value for a book translator.
-**Consequences:** The only export contract to verify is the same-format round trip; no conversion code paths exist.
-**ADR:** ADR-0004 **Requirements:** FR-EXPORT-01, FR-EXPORT-02.
+is out of scope** (it is lossy); the export path offers no target-format choice. Export is its own action, started
+from the Export screen and runnable at any time — before a run starts, mid-run once paused, or on a finished book —
+including on a partial book whose undecided segments are still written in the source language; it is never a step the
+translation job performs itself. **Why:** Cross-format conversion cannot preserve structure/metadata faithfully and adds
+tooling and failure modes with little value for a book translator; separating export from the run lets a person take
+the book out at any point without waiting for or blocking translation. **Consequences:** The only export contract to
+verify is the same-format round trip; no conversion code paths exist; the translation job carries no destination or
+overwrite flag — those live on the Export screen. **ADR:** ADR-0004, ADR-0035 **Requirements:** FR-EXPORT-01,
+FR-EXPORT-02, FR-EXPORT-04.
 
 ## dd-31-per-project-provider-model {#dd-31-per-project-provider-model}
 
@@ -319,7 +324,7 @@ provider/model. **ADR:** ADR-0012 **Requirements:** FR-PROV-08, FR-PROV-09, FR-P
 
 ### DD-32 — Two LLM client implementations behind one abstraction
 
-**Decision:** Inference is issued through a `Provider` port with a `ProviderFactory` selecting one of two client
+**Decision:** Inference is issued through a `ChatModel` port with a `ChatModelFactory` selecting one of two client
 implementations by kind: an **Ollama-native** client and an **OpenAI-compatible** client. The abstraction is defined so
 future providers (Gemini, Claude, …) can be added as new implementations without changing callers; none are implemented
 in this scope. **Why:** Ollama's OpenAI-compatible endpoint is not fully faithful (e.g. `num_ctx`), so Ollama uses its
@@ -391,7 +396,7 @@ template, injected variables, required/optional fields, parameters, and output s
 
 ### DD-38 — Manual model-ID entry when discovery is unavailable
 
-**Decision:** `ProviderProfile` carries a `supportsModelDiscovery` capability. When discovery is absent, fails, is
+**Decision:** A provider's capability data (`supportsModelDiscovery`, planned) says whether discovery is available. When discovery is absent, fails, is
 unauthenticated, or returns empty, the user enters model IDs **manually** (free-text), and manual entry is always
 available as an override. **Why:** Some providers expose no model-listing endpoint; configuration must never be blocked.
 **Consequences:** The Models UI and add/edit-provider dialog always allow manual model IDs; discovery is a convenience,
@@ -424,12 +429,16 @@ shape); (1) field-level assertions on structured output; (2) **embedding cosine 
 calibrated per model and advisory-by-default; (3) an optional local LLM-as-judge tie-breaker in the ambiguous band. Runs
 at temperature 0 with multi-sample averaging and threshold margins. **Embeddings appear only in this test harness —
 never in the app runtime** (preserves DD-18). Default eval embedding model is a small multilingual one (e.g.
-`embeddinggemma:300m`); chat model defaults to the smallest viable, configurable per story. **Why:** Prompts are
-load-bearing and must be regression-tested against real local models; cosine alone is a drift signal, so structural
-checks catch what it hides. **Consequences:** A test-scope embedding client (java.net.http + Jackson, no new runtime
-dep); reference-answer fixtures maintained as test resources; evals are advisory tripwires, not a substitute for human
-review. **ADR:** — **Requirements:** NFR-MAINT-05, FR-ALGO-02. Normative: `04_Build_and_Release/06_TESTING_STRATEGY.md`,
-`01_Product/12_PROMPT_CATALOG.md`.
+`embeddinggemma:300m`); chat model defaults to the smallest viable, configurable per story. `complete-translation-workflow`
+ships the **first harness, Layers 0 and 1 only**: `PromptEvalTest` (`:pipeline`, tag `promptEval`, env-gated on
+`BOOKLOOM_EVAL_OLLAMA_URL`, model `BOOKLOOM_EVAL_MODEL`) sends a fixed English → Ukrainian case set through the
+production prompt builders to a real Ollama model and fails below parse 95%, gate 90% and judge separation 80%; its
+prompts are also pinned by golden files and `PromptShapeTest`. The embedding (Layer 2) and LLM-judge (Layer 3) layers
+stay planned. **Why:** Prompts are load-bearing and must be regression-tested against real
+local models; cosine alone is a drift signal, so structural checks catch what it hides. **Consequences:** A test-scope
+embedding client (java.net.http + Jackson, no new runtime dep); reference-answer fixtures maintained as test resources;
+evals are advisory tripwires, not a substitute for human review. **ADR:** — **Requirements:** NFR-MAINT-05, FR-ALGO-02.
+Normative: `04_Build_and_Release/06_TESTING_STRATEGY.md`, `01_Product/12_PROMPT_CATALOG.md`.
 
 ## dd-41-visual-ui-validation {#dd-41-visual-ui-validation}
 
@@ -478,41 +487,63 @@ wording is replaced by canonical-equal; the golden gate compares canonical forms
 
 ## dd-44-token-budget-heuristic {#dd-44-token-budget-heuristic}
 
-### DD-44 — Token budget by heuristic + per-provider effective context
+### DD-44 — Token budget by heuristic; a fixed effective context in this build
 
 **Decision:** No tokenizer is shipped. Tokens are estimated with a deterministic `chars ÷ K` heuristic (per-script K
-table + a 0.15 safety margin). The **effective context window** is a per-provider value resolved: Ollama `num_ctx`/
-`/api/show` → discovery → a manual "effective context (tokens)" provider field → a conservative default. The Generation
-chunk-budget setting is a **cap**: `chunkBudget = min(effectiveContext − reservedHeadroom, chunkBudgetSetting)`.
-**Why:** The user's model tokenizer is unknown and OpenAI-compatible servers don't expose a context size; a heuristic +
-explicit per-provider value is deterministic and offline. **Consequences:** `providers.effective_context` column; K
-table + margin + rolling-summary K are fixed constants, not settings. **ADR:** — **Requirements:** FR-ALGO-02,
-FR-INFER-02, FR-MODEL-06a.
+table + a 0.15 safety margin). **This build uses one fixed effective context of 8192 tokens** for every run, sent to
+Ollama as `num_ctx`; an OpenAI-compatible server receives no context-size field. The Generation chunk-budget setting is
+a **cap**: `chunkBudget = min(8192 − reservedHeadroom, chunkBudgetSetting)`. Resolving a genuinely **per-provider**
+effective context — from Ollama `num_ctx`/`/api/show`, model discovery, or a manual "effective context (tokens)"
+provider field — is **not built in this version**; it arrives with the Generation settings screen (future work).
+**Why:** The user's model tokenizer is unknown and OpenAI-compatible servers don't expose a context size; a fixed,
+generous constant is deterministic, offline, and simple to reason about until per-provider resolution is built.
+**Consequences:** No `providers.effective_context` column in this build; K table + margin + rolling-summary K are fixed
+constants, not settings. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07.
 
 ## dd-45-acceptance-model {#dd-45-acceptance-model}
 
 ### DD-45 — Acceptance model: review-mode dial owns τ; deterministic confidence gate
 
-**Decision:** The **review-mode dial** (Unattended/Assisted/Manual) is the sole owner of the trust threshold τ; the
-**quality dial** (Fast/Balanced/Max) owns only mechanics (chunk size, preceding-target count, repair budget N, judge
-on/off, backward-revision on/off) and never sets τ. Manual Settings τ / τ_judge are advanced overrides of highest
-precedence. Accept = `hardGatesPass ∧ confidence ≥ τ ∧ (judgeOff ∨ judgeScore ≥ τ_judge)`, where `confidence` is a
-documented weighted blend of the soft deterministic-QA check margins (hard gates excluded; the judge score is not folded
-into confidence). The judge returns `{score, verdict}`; `score ≥ τ_judge` decides, `verdict` is advisory. **Why:** τ had
-three owners and three meanings; the accept gate must be single-sourced and testable, including when the judge is off.
-**Consequences:** Quality-dial mapping loses its τ row; τ_judge defaults to τ. **ADR:** ADR-0007 **Requirements:**
-FR-ALGO-01, FR-QA-02, FR-REVIEW-02.
+**Decision:** The **review-mode dial** (Unattended/Assisted/Manual) is the sole owner of the trust threshold τ — 0.60,
+0.75 and 0.85 respectively; the **quality dial** (Fast/Balanced/Max) owns only mechanics (chunk size, preceding-target
+count, repair budget N, judge on/off, backward-revision on/off) and never sets τ. A manual Settings override of τ is
+**not offered in this build**. The judge scores a **chunk** once; a **segment** — not a chunk — is accepted only when
+its hard gates pass, no soft check failed outright (a failed check raises at least a medium finding and sends the
+segment to a directed fix, except that a failed untranslated-echo check on a source under 20 code points only lowers
+confidence), and no verified reviewer blocker is left — 15d.6 retired the confidence threshold and the judge score; a
+context-matched translation-memory reuse is accepted without the reviewer.
+`confidence` is a documented weighted blend of the soft deterministic-QA check margins (hard gates excluded; the judge
+score is not folded into it, and it only orders segments). The reviewer returns per segment `ok`, verified edits or a rewrite.
+**Why:** τ had three owners and three meanings; the accept gate must be single-sourced and testable, including when the
+judge is off, and a soft-check failure must never be outvoted by a high confidence score. **Consequences:**
+Quality-dial mapping loses its τ row; τ_judge defaults to τ; acceptance is per-segment even though scoring is per-chunk.
+**ADR:** ADR-0038, ADR-0036 **Requirements:** FR-ALGO-01, FR-QA-02, FR-QA-07, FR-REVIEW-02.
 
 ## dd-46-glossary-llm-pre-scan {#dd-46-glossary-llm-pre-scan}
 
-### DD-46 — Glossary seeded by an LLM pre-scan (deterministic fallback)
+### DD-46 — Glossary seeded by a deterministic scan; the LLM pre-scan is the person's button
 
-**Decision:** Names/terms with type and provisional **gender** are proposed by a dedicated **LLM pre-scan call** (a
-normative prompt-catalog entry), surfaced user-editable in the Names & Style step. The offline/disabled fallback is
-deterministic frequency + capitalization extraction with `gender = unknown` (filled later by the user or backward
-revision). This is an app-runtime model call, distinct from the eval-only embeddings. **Why:** Type/gender are not
-deterministically derivable from source text without an LLM, and the app forbids NER libraries/embeddings (DD-18).
-**Consequences:** One more model call in Phase B; `glossary.gender` allows `unknown`. **ADR:** ADR-0007
+**Decision:** The glossary is seeded by a **deterministic frequency-and-capitalization scan** — run when a run prepares
+over an empty glossary, when Names & style opens on an empty glossary, and again at the end of each body unit as the
+run meets new names — proposing each candidate unlocked, with no target and gender unknown. The scan is language-agnostic at its core — a
+word the book writes in lower case at least 20% of the time is a common word, not a name — and adds a small bundled
+stop-word list per source language, apostrophe- and hyphen-aware words, dash and quotation marks as sentence starts, and
+an alias rule that does not propose a word mostly seen inside a longer name. An **LLM pre-scan**, which proposes type
+and provisional gender too, and an **LLM review**, which judges each open proposal a name, a term or not a name, exist
+only as buttons on Names & style: they never run automatically and never at a run's start (owner decision D-7,
+reversing this decision's earlier automatic-pre-scan shape). The scan reads running text only — never a heading or a
+title line, nor a block or run marked as another language — and never proposes a number word or a language name alone;
+the pre-scan's proposals pass through the review's verdict step in the same action before anything is written, since a
+small model asked once kept chapter-title words, numbers and language names as names (fixture run, 2026-10-02). Both
+buttons end with a third, separate call that **suggests a target** for each open entry by the Book Brief's name policy
+(Keep original suggests a name as written without a call); a suggestion is marked as the model's (`TargetOrigin`), is
+written only where the target is empty or was itself suggested, reaches a draft as a hint the model may inflect rather
+than a rendering to apply exactly, and becomes the person's when accepted, edited or locked. **Why:**
+Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER
+libraries/embeddings (DD-18), but an automatic model call at every run's start costs time and network the automatic-
+first pipeline should not spend without the person asking. **Consequences:** No model call in Phase B by default; the
+deterministic scan alone seeds and grows the glossary; `glossary.gender` allows `unknown`; the LLM pre-scan is a
+same-runtime model call once pressed, distinct from the eval-only embeddings. **ADR:** ADR-0007
 **Requirements:** FR-GLOSS-01, FR-ALGO-05.
 
 ## dd-47-metadata-nav-alt-translation {#dd-47-metadata-nav-alt-translation}
@@ -523,9 +554,26 @@ deterministically derivable from source text without an LLM, and the app forbids
 EPUB3)/NCX (EPUB2) ToC labels**, controlled by a Book-Brief **"Also translate" toggle group** (defaults: ToC/nav on, alt
 on, metadata title/author on, frontmatter values off). These are modelled as a synthetic **metadata unit** with kinds
 `METADATA_TITLE/METADATA_AUTHOR/FRONTMATTER_VALUE/ALT/NAV_LABEL` anchored to OPF/frontmatter/attribute/nav nodes;
-nav/NCX is carved out of the "out-of-spine = verbatim" rule. **Why:** An untranslated ToC/metadata over a translated
-book is a visible defect. **Consequences:** New segment kinds + toggle group + nav/NCX handling. **ADR:** ADR-0004
-**Requirements:** FR-DOC-07, FR-BRIEF-04.
+nav/NCX is carved out of the "out-of-spine = verbatim" rule. The auxiliary unit is always produced whatever the
+switches say — a switched-off kind is still parsed into segments, just kept as source by choice rather than translated.
+Two kinds ride along with the toggle they resemble rather than the mockup growing two more switches it does not draw:
+each EPUB/FB2 book's descriptions (the EPUB `dc:description` and the FB2 `annotation`) are a `METADATA_DESCRIPTION`
+segment kind governed by the metadata title/author switch, and each XHTML content document's own `<head><title>` is a
+`TITLE` segment governed by the navigation switch. **Why:** An untranslated ToC/metadata over a translated book is a
+visible defect, and a page title or a description reads like the kind of short text the switch it rides beside already
+governs. **Consequences:** New segment kinds + toggle group + nav/NCX handling; a switched-off kind's segments still
+exist and are counted apart from pending, never silently dropped. Auxiliary text repeats (one book's alt texts read
+`image` 58 times and its page titles the series name 80 times), so a run asks for each distinct auxiliary source once
+and gives an identical one the same answer, each slot keeping its own record. The book has **one translated title and
+one translated author**: the metadata segments' targets (the person's edit, else the model's answer — edited on the Book
+Brief) are written wherever the source title or author stands alone as a title, heading or navigation label (the NCX
+`docTitle`, the nav/NCX entry, a title page heading, a page `<title>`), and a suggested file name spells them as the
+book does. The EPUB package's sort keys follow the translated text: a title's `opf:file-as`, `calibre:title_sort` and
+file-as refine are removed (they described the old text); a creator's `file-as` is rewritten `Last, First` from the
+translated name when the source key was surname-first and the name has two or more words in an alphabetic script, and
+removed otherwise. Fixed labels (cover, contents, about, copyright, notes) are resolved from a per-language-pair table
+and cost no model call; a pair with no table is translated by the model. **ADR:** ADR-0004, ADR-0041
+**Requirements:** FR-DOC-07, FR-BRIEF-04, FR-BRIEF-09.
 
 ## dd-48-icu-i18n-messages {#dd-48-icu-i18n-messages}
 
@@ -543,16 +591,18 @@ messages. **ADR:** — **Requirements:** FR-UI-06, FR-I18N-*.
 
 ### DD-49 — Preserve code, math, and technical markup verbatim
 
-**Decision:** Beyond inline tags, locked terms, selective numerals, and URLs, the following are **preserved verbatim and
-never translated** (confirmed by the technical-book corpus, which is saturated with them): inline `<code>` (masked as an
-atomic protected placeholder, its text kept exactly), block code listings `<pre>`/`<pre><code>` (a non-translatable
-block — never a segment, skeleton-preserved), **MathML `<math>`**, and index-term/cross-reference anchors (targets/ids
-preserved; visible link text stays translatable). Admonitions/sidebars (`note`/`tip`/`warning`/`sidebar`) are ordinary
-translatable prose blocks; table cells and figure captions are translatable segments with structure preserved. **Why:**
-Technical books contain thousands of inline code spans and code listings; translating identifiers/keywords/math corrupts
-the book, and naive masking would explode the placeholder multiset. **Consequences:** The masking classifier gains a
-"code/math protected" category; `<pre>` blocks are excluded from segmentation and from the token budget; the
-translated-vs-preserved table is extended. **ADR:** ADR-0003 **Requirements:** FR-DOC-04, FR-DOC-05.
+**Decision:** Beyond inline tags, locked terms and URLs, the following are **preserved verbatim and never translated**
+(confirmed by the technical-book corpus, which is saturated with them): inline `<code>` (masked as an atomic protected
+placeholder, its text kept exactly), block code listings `<pre>`/`<pre><code>` (a non-translatable block — never a
+segment, skeleton-preserved), **MathML `<math>`**, and index-term/cross-reference anchors (targets/ids preserved;
+visible link text stays translatable). Admonitions/sidebars (`note`/`tip`/`warning`/`sidebar`) are ordinary
+translatable prose blocks; table cells and figure captions are translatable segments with structure preserved. No
+numeral, standalone or in prose, is masked in this build (owner decision D-7): every numeral stays translatable so it
+can inflect and localize. **Why:** Technical books contain thousands of inline code spans and code listings, and
+translating identifiers/keywords/math corrupts the book; naive masking would explode the placeholder multiset. **
+Consequences:** The masking classifier carries a "code/math protected" category; `<pre>` blocks are excluded from
+segmentation and from the token budget; the translated-vs-preserved table is extended. **ADR:** ADR-0003
+**Requirements:** FR-DOC-04, FR-DOC-05.
 
 ## dd-50-version-injection {#dd-50-version-injection}
 

@@ -3,4 +3,19 @@ package ua.bookloom.api.pipeline;
 /**
  * A lifecycle event emitted by a translation job on its execution thread.
  */
-public sealed interface JobEvent permits StageStarted, ModelCallStarted, SegmentDecided, Paused, Resumed, Finished {}
+public sealed interface JobEvent
+        permits StageStarted,
+                ModelCallStarted,
+                SegmentDecided,
+                Paused,
+                Resumed,
+                Finished,
+                SegmentStarted,
+                SegmentDrafted,
+                ModelCallFinished,
+                MemoryUpdated,
+                ContextAssembled,
+                RoundStarted,
+                RecoveryWaiting,
+                BatchStarted,
+                CallSnapshotUpdated {}

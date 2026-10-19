@@ -25,18 +25,26 @@ _Advisory guidance, not requirements in the gating sense:_
 | NFR-A11Y-06 | **Non-text cues** — errors/warnings pair color with an icon and text (`09_ERROR_HANDLING.md`); the flagged status uses shape/label, not hue alone.                                                                                                                        |
 | NFR-A11Y-07 | **Focus management** — opening a dialog moves focus into it and returns focus to the invoker on close; toasts do not steal focus.                                                                                                                                         |
 | NFR-A11Y-08 | **Labels & instructions** — every input has an associated label; validation errors are announced and programmatically associated with their field.                                                                                                                        |
-| NFR-A11Y-09 | **Motion** — no essential information is conveyed only by animation; progress has a textual/percentage equivalent.                                                                                                                                                        |
+| NFR-A11Y-09 | **Motion** — no essential information is conveyed only by animation; progress has a textual/percentage equivalent. Transitions are short (≤ 200 ms) and are turned off when the OS asks for reduced motion or `BOOKLOOM_REDUCE_MOTION=1` is set (`02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#motion`). |
 
 ## color-and-theming {#color-and-theming}
 
-Both light and dark themes derive from one token set (`07_UI_ARCHITECTURE_JAVAFX.md#theming`). Contrast should be
-checked per token pairing (text-on-surface, accent-on-surface, status-on-surface) in both themes; a token change that
-breaks a ratio warrants an advisory finding (not a build failure). Selected rows, chips, and draft/warm surfaces (Sand
-Dollar) are checked against their text color.
+Both light and dark themes derive from one token set (`07_UI_ARCHITECTURE_JAVAFX.md#theming`). Contrast is checked on
+what each conformance screen really paints, in both themes (`09_THEMING.md#contrast`, FR-THEME-11): text 4.5:1, icons and
+control edges 3:1, informative text at least 12px. Unlike the other checks below, this one is a **gate** — a token change
+that breaks a ratio fails the `:ui` tests. Selected rows, chips, and draft/warm surfaces (Sand Dollar) are covered, since
+the check reads the surface behind each piece of text.
 
 ## keyboard-and-focus {#keyboard-and-focus}
 
-- Primary flows (Import → Brief → Translate → Review → Export) are fully keyboard-navigable.
+- Primary flows (Import → Brief → Translate → Review → Export) are fully keyboard-navigable: on each workflow screen
+  Tab reaches every operable control and comes back round (`FocusTraversalTest`). Tab stops once in a group of
+  toggles (a segmented picker, the filter chips) and the arrow keys move within it; Tab leaves a text area instead of
+  typing a tab character (no text BookLoom asks for needs one), so a note field is never a keyboard trap.
+- Keyboard focus is a 2px ring in the `focus` role (`nav-focus` on the dark navigation column and title bar), drawn
+  1px outside the control so it holds 3:1 against the surface around it whatever the control's own fill, and shown only
+  when focus came from the keyboard (a field being typed in always shows it); a focused row of a list, table or tree is
+  framed inside its edges. Pressed quiet buttons darken; an unavailable input is dimmed to 0.45 like a button.
 - Review actions (accept/edit/retry/retry-with-note/skip) have accelerators so a reviewer can clear the flagged queue
   without the mouse.
 - The side-by-side compare panes are reachable and readable in sequence by a screen reader.

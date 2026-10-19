@@ -1,0 +1,109 @@
+{
+  "storySegments" : 23,
+  "nameScan" : [ {
+    "term" : "Valtern",
+    "count" : 13,
+    "firstSentence" : "Valtern lived on trade.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Hale",
+    "count" : 13,
+    "firstSentence" : "Hale came to Valtern in the spring of his twentieth year.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Valtern",
+    "count" : 6,
+    "firstSentence" : "Valtern lived on trade.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Hale",
+    "count" : 1,
+    "firstSentence" : "Her bankers called it prudence, and Hale learned to call it that too.",
+    "aliases" : [ ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ {
+    "term" : "bankers",
+    "count" : 12,
+    "firstSentence" : "Her bankers lent to kings and counted the interest in three languages.",
+    "aliases" : [ ]
+  } ],
+  "windows" : {
+    "Valtern" : {
+      "count" : 14,
+      "windows" : [ {
+        "text" : "Valtern",
+        "pronoun" : null
+      }, {
+        "text" : "Hale came to Valtern in the spring of his twentieth year. He carried one bag and a letter of introduction.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "The old banker died late in the summer. Hale walked behind the coffin through the empty streets of Valtern.",
+        "pronoun" : null
+      }, {
+        "text" : "In the district everyone knew Valtern, and nobody had a bad word for Valtern.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he" ],
+        "femaleObject" : [ "her", "her", "her", "her", "her", "her", "her", "her" ],
+        "maleObject" : [ "his" ]
+      }
+    },
+    "Hale" : {
+      "count" : 13,
+      "windows" : [ {
+        "text" : "Hale came to Valtern in the spring of his twentieth year. He carried one bag and a letter of introduction.",
+        "pronoun" : null
+      }, {
+        "text" : "Hale found a room above a chandler's shop. He paid a month in advance and slept until noon.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "Hale stayed behind with the ledgers. He learned the bankers' hand and then the bankers' silences.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "In the district everyone knew Hale, and nobody had a bad word for Hale.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ "he", "he", "he", "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "him" ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Valtern" : {
+      "count" : 14,
+      "examples" : [ "Valtern", "Valtern lived on trade." ]
+    },
+    "Hale" : {
+      "count" : 13,
+      "examples" : [ "Hale came to Valtern in the spring of his twentieth year.", "Hale found a room above a chandler's shop." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Valtern",
+    "mentions" : 14
+  }, {
+    "term" : "Hale",
+    "mentions" : 13
+  } ],
+  "pronouns" : {
+    "Valtern" : {
+      "female" : [ ],
+      "male" : [ "he" ],
+      "femaleObject" : [ "her", "her", "her", "her", "her", "her", "her", "her" ],
+      "maleObject" : [ "his" ]
+    },
+    "Hale" : {
+      "female" : [ ],
+      "male" : [ "he", "he", "he", "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "him" ]
+    }
+  }
+}

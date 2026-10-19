@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -47,7 +48,17 @@ public final class ModalErrorPresenter implements ErrorPresenter {
         show(error, onRetry);
     }
 
+    @Override
+    public void presentRunFailure(final AppError error) {
+        Objects.requireNonNull(error, "error");
+        show(error, null, MessageKey.ERROR_RUN_FAILURE_NOTE);
+    }
+
     private void show(final AppError error, final @Nullable Runnable onRetry) {
+        show(error, onRetry, null);
+    }
+
+    private void show(final AppError error, final @Nullable Runnable onRetry, final @Nullable MessageKey note) {
         log.debug(
                 "presenting a failure: code={}, retryable={}, hasDetails={}, retryAction={}, surface=modal",
                 error.code(),
@@ -55,7 +66,7 @@ public final class ModalErrorPresenter implements ErrorPresenter {
                 ErrorDialog.hasDetails(error),
                 onRetry != null);
         final Runnable retry = onRetry == null ? null : () -> retry(onRetry);
-        final ErrorDialog dialog = new ErrorDialog(messages, error, retry, this::dismiss);
+        final ErrorDialog dialog = new ErrorDialog(messages, error, retry, this::dismiss, note);
         modalHost.show(dialog.card(), false);
     }
 

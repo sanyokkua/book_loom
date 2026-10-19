@@ -13,8 +13,8 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 
 /** Formatting-repair regressions whose real Markdown restoration path is the contract under test. */
 class SegmentTranslatorFormattingRepairTest {
@@ -36,33 +36,50 @@ class SegmentTranslatorFormattingRepairTest {
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
                 "See translated chapter two ⟦g0⟧ ⟦g1⟧ now.", "See ⟦g0⟧translated chapter two⟦g1⟧ now.");
 
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
-        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("See [translated chapter two](ch2.md) now.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget())
+                .isEqualTo("See [translated chapter two](ch2.md) now.");
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("Paired placeholders must enclose nonblank translated text");
     }
 
-    // IF a task marker is dropped, THEN the one formatting repair restores its original checked state.
+    // The placeholder repair tells the model which rule the gate refused, not only which tokens are required.
     @Test
-    void translate_droppedTaskMarker_repairsAndAcceptsCorrectedTarget() {
-        final Segment segment = segmentOf("- [ ] Gravity is identical everywhere.");
-        final ScriptedChatModel model =
-                TranslationJobTestSupport.replies("Гравітація всюди однакова.", "⟦g0⟧Гравітація всюди однакова.");
+    void translate_emptiedPairReply_placeholderRepairNamesTheRule() {
+        final Segment segment = segmentOf("The *second* marked paragraph.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies(
+                "Другий ⟦g0⟧⟦g1⟧ позначений абзац.", "Другий ⟦g0⟧позначений⟦g1⟧ абзац.");
 
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
-        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("[ ] Гравітація всюди однакова.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("task-list marker placeholder begins <Text>, keep it first");
+                .contains("<RejectedTarget>\nДругий ⟦g0⟧⟦g1⟧ позначений абзац.\n</RejectedTarget>")
+                .contains(
+                        "Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n[What is wrong with the rejected target]\n")
+                .contains("emptied the formatting around its words");
+    }
+
+    // IF a task marker is dropped, THEN it is put back first without a model call, keeping its checked state.
+    @Test
+    void translate_droppedTaskMarker_putsItBackFirstWithoutACall() {
+        final Segment segment = segmentOf("- [ ] Gravity is identical everywhere.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("Гравітація всюди однакова.");
+
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
+                        documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("[ ] Гравітація всюди однакова.");
+        assertThat(model.requests()).hasSize(1);
     }
 
     private Segment segmentOf(String content) {
@@ -72,9 +89,5 @@ class SegmentTranslatorFormattingRepairTest {
                         .data(),
                 "opened document");
         return document.units().getFirst().segments().getFirst();
-    }
-
-    private static Decision decisionOf(Result<Decision> result) {
-        return Objects.requireNonNull(result.data(), "decision");
     }
 }

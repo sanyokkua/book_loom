@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.document.mask.MaskWriter;
 import ua.bookloom.document.mask.MaskedContent;
 
@@ -105,12 +106,26 @@ public final class TreeMasker {
             return;
         }
         if (element.childNodes().isEmpty()) {
-            writer.appendAtomic(element.markup());
+            appendChildless(element, writer);
             return;
         }
-        writer.appendAtomic(element.openMarkup());
+        writer.appendPairOpen(element.openMarkup(), declaredLanguageOf(element));
         maskNodes(element.childNodes(), dialect, writer);
-        writer.appendAtomic(element.closeMarkup());
+        writer.appendPairClose(element.closeMarkup());
+    }
+
+    private static void appendChildless(TreeNode element, MaskWriter writer) {
+        if (BlockRuns.isLineBreak(element)) {
+            writer.appendLineBreak(element.markup());
+        } else {
+            writer.appendAtomic(element.markup());
+        }
+    }
+
+    /** The language the element itself declares — {@code xml:lang}, else {@code lang} — as written, or null. */
+    private static @Nullable String declaredLanguageOf(TreeNode element) {
+        final String xmlLang = element.attribute("xml:lang");
+        return xmlLang != null ? xmlLang : element.attribute("lang");
     }
 
     /**

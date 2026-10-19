@@ -1,88 +1,188 @@
 package ua.bookloom.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
-import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
-import ua.bookloom.api.pipeline.PauseReason;
-import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.Resumed;
-import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.ProviderProbe;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchFormat;
+import ua.bookloom.pipeline.batch.BatchPromptBuilder;
+import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.lexicon.Lexicon;
+import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
+import ua.bookloom.pipeline.project.SegmentLocators;
+import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.run.ChunkRunner;
+import ua.bookloom.pipeline.run.JobModelCalls;
+import ua.bookloom.pipeline.run.MemoryEvents;
+import ua.bookloom.pipeline.run.NarratorStage;
+import ua.bookloom.pipeline.run.PendingCommit;
+import ua.bookloom.pipeline.run.PrepStage;
+import ua.bookloom.pipeline.run.RunAudit;
+import ua.bookloom.pipeline.run.RunEnd;
+import ua.bookloom.pipeline.run.RunRecorder;
+import ua.bookloom.pipeline.run.RunReports;
+import ua.bookloom.pipeline.run.RunSettings;
+import ua.bookloom.pipeline.run.RunSinks;
+import ua.bookloom.pipeline.run.RunStart;
+import ua.bookloom.pipeline.run.RunSteps;
+import ua.bookloom.pipeline.run.RunStores;
+import ua.bookloom.pipeline.run.StageRunner;
+import ua.bookloom.pipeline.run.WorkList;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
 @Slf4j
 final class TranslationJobImpl implements TranslationJob {
 
     private final DocumentPort documents;
-    private final TranslationRequest request;
+    private final RunRequest request;
     private final ChatModel model;
     private final ObjectMapper mapper;
-    private final ExportMoveOperation moves;
-    private final JobControl control = new JobControl();
+    private final PromptTemplates templates;
+    private final RunStores stores;
+    private final QualityLoop qualityLoop;
+    private final SentenceSplitter splitter;
+    private final ConsistencyPass revision;
+    private final Clock clock;
+    private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
+    // Used from the job thread only, like every event it is handed.
+    private final RunSummaryLogger runSummary;
+    private final AtomicBoolean skipRequested = new AtomicBoolean();
     private final String jobId = UUID.randomUUID().toString();
-    // Read and written only on the job thread: decide sets it, and the model decorator runs inside decide.
-    private @Nullable String decidingSegment;
+    private final RunRecorder recorder;
+    // Used from the job thread only.
+    private final PendingCommit pending;
+    // Written and read only on the job thread, from the claim on.
+    private Instant startedAt;
+    private final UnattendedRecovery recovery;
+    private final StallWatchdog watchdog;
+    private final RunTicks ticks;
+    private final int batchSize;
+    private final WordValidator words;
 
     TranslationJobImpl(
             final DocumentPort documents,
-            final TranslationRequest request,
-            final ChatModel model,
-            final ObjectMapper mapper) {
-        this(documents, request, model, mapper, ExportMoveOperation.nio());
-    }
-
-    TranslationJobImpl(
-            final DocumentPort documents,
-            final TranslationRequest request,
+            final RunRequest request,
             final ChatModel model,
             final ObjectMapper mapper,
-            final ExportMoveOperation moves) {
+            final PromptTemplates templates,
+            final RunStores stores,
+            final QualityLoop qualityLoop,
+            final SentenceSplitter splitter,
+            final ConsistencyPass revision,
+            final Clock clock) {
+        this(
+                documents,
+                request,
+                model,
+                mapper,
+                templates,
+                stores,
+                qualityLoop,
+                splitter,
+                revision,
+                clock,
+                RecoveryTimer.REAL,
+                RunTicks.DAEMON,
+                BatchDrafter.NO_BATCHING,
+                WordValidator.none());
+    }
+
+    /**
+     * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
+     * or a stall on a scripted clock, and that drafts in batches from the given first size;
+     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants. The
+     * quality checks ask {@code words} about doubtful words.
+     */
+    TranslationJobImpl(
+            final DocumentPort documents,
+            final RunRequest request,
+            final ChatModel model,
+            final ObjectMapper mapper,
+            final PromptTemplates templates,
+            final RunStores stores,
+            final QualityLoop qualityLoop,
+            final SentenceSplitter splitter,
+            final ConsistencyPass revision,
+            final Clock clock,
+            final RecoveryTimer timer,
+            final RunTicks ticks,
+            final int batchSize,
+            final WordValidator words) {
+        this.words = Objects.requireNonNull(words, "words");
+        this.batchSize = batchSize;
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
         this.model = Objects.requireNonNull(model, "model");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.moves = Objects.requireNonNull(moves, "moves");
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.stores = Objects.requireNonNull(stores, "stores");
+        this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
+        this.splitter = Objects.requireNonNull(splitter, "splitter");
+        this.revision = Objects.requireNonNull(revision, "revision");
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.control = new JobControl(request.mode().pausePoints());
+        this.runSummary = new RunSummaryLogger(clock);
+        this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.modelName());
+        this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
+        this.startedAt = clock.instant();
+        this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
+        this.watchdog = new StallWatchdog(control, clock);
+        this.ticks = Objects.requireNonNull(ticks, "ticks");
     }
 
     @Override
     public Result<JobReport> run() {
-        log.debug("Running translation job source={} destination={}", request.source(), request.destination());
+        log.debug("Running translation job project={} mode={}", request.projectId(), request.mode());
         if (!control.claimRun()) {
             return Result.err(TranslationJobErrors.alreadyRun());
         }
         MDC.put("job", jobId);
+        Runnable stopWatchdog = () -> {};
         try {
+            stopWatchdog = watchdog.start(ticks);
             return runClaimed();
         } catch (Throwable cause) {
-            return failAtBoundary(cause, null);
+            control.finish(JobState.FAILED);
+            return Result.err(unexpectedError(cause));
         } finally {
+            stopWatchdog.run();
             MDC.remove("segment");
             MDC.remove("job");
         }
@@ -90,288 +190,202 @@ final class TranslationJobImpl implements TranslationJob {
 
     @Override
     public void pause() {
-        log.debug("Pause requested for translation job source={}", request.source());
+        log.info("Pause requested for translation job project={}", request.projectId());
         control.pause();
     }
 
     @Override
     public void resume() {
-        log.debug("Resume requested for translation job source={}", request.source());
+        log.info("Resume requested for translation job project={}", request.projectId());
         control.resume();
     }
 
     @Override
+    public void skipSegment() {
+        final boolean paused = control.state() == JobState.PAUSED;
+        log.info("Skip requested for translation job project={} paused={}", request.projectId(), paused);
+        if (paused) {
+            skipRequested.set(true);
+            control.resume();
+        }
+    }
+
+    @Override
+    public void recoverWith(final ProviderProbe probe, final Duration maxOutage) {
+        log.debug("Recovery probe set for translation job project={} maxOutage={}", request.projectId(), maxOutage);
+        recovery.probeWith(probe, maxOutage);
+    }
+
+    @Override
     public void cancel() {
-        log.debug("Cancellation requested for translation job source={}", request.source());
+        log.info("Stop requested for translation job project={}", request.projectId());
         control.cancel();
     }
 
     @Override
     public void pauseAt(final Set<PausePoint> points) {
-        log.debug("Pause points requested for translation job source={} points={}", request.source(), points);
+        log.debug("Pause points requested for translation job project={} points={}", request.projectId(), points);
         control.pauseAt(points);
     }
 
     @Override
     public JobState state() {
-        log.debug("Reading translation job state source={}", request.source());
+        // Silent: a screen polls it as often as it draws.
         return control.state();
     }
 
     @Override
     public Subscription subscribe(final ua.bookloom.api.pipeline.JobListener listener) {
-        log.debug("Subscribing translation job listener source={}", request.source());
+        log.debug("Subscribing translation job listener project={}", request.projectId());
         return subscribers.add(listener);
     }
 
     private Result<JobReport> runClaimed() {
-        if (control.isCancellationRequested()) {
-            return finish(JobState.CANCELLED, null, null, null);
-        }
-        final Result<InitialSnapshot> snapshot = openSnapshot();
-        if (snapshot.isErr()) {
+        startedAt = clock.instant();
+        final Result<RunStart.Started> started = RunStart.check(stores, request.projectId());
+        if (started.isErr()) {
             control.finish(JobState.FAILED);
-            return Result.err(errorOf(snapshot));
+            return Result.err(errorOf(started));
         }
-        final InitialSnapshot initial = dataOf(snapshot);
-        final JobProgressTracker tracker = new JobProgressTracker(initial.document());
+        final RunStart.Started run = dataOf(started);
+        recorder.started();
         try {
-            JobLifecycleLogger.started(request, tracker, control.pausePoints());
-            emit(new StageStarted(JobStage.TRANSLATE, tracker.currentTranslationProgress()));
-            return initial.releaseError() == null
-                    ? translate(tracker)
-                    : finish(JobState.FAILED, tracker, null, initial.releaseError());
+            if (control.isCancellationRequested()) {
+                return finish(JobState.CANCELLED, run, null);
+            }
+            final Result<WorkList> read = WorkList.read(stores, request.projectId(), run.document());
+            if (read.isErr()) {
+                return finish(JobState.FAILED, run, errorOf(read));
+            }
+            final WorkList work = dataOf(read);
+            JobLifecycleLogger.started(request, run, work, control.pausePoints());
+            return translate(run, work);
         } catch (Throwable cause) {
-            return failAtBoundary(cause, tracker);
+            return finish(JobState.FAILED, run, unexpectedError(cause));
         }
     }
 
-    private Result<JobReport> translate(final JobProgressTracker tracker) {
+    private Result<JobReport> translate(final RunStart.Started run, final WorkList work) {
+        log.debug("Translation job stage change stage={} project={}", JobStage.PREP, request.projectId());
+        emit(new StageStarted(JobStage.PREP, work.preparationProgress()));
+        final Result<PrepStage.Prepared> prepared = PrepStage.prepare(
+                stores.glossary(),
+                stores.lexicon(),
+                request.projectId(),
+                run.project().brief(),
+                run.document(),
+                run.index());
+        if (prepared.isErr()) {
+            return finish(JobState.FAILED, run, errorOf(prepared));
+        }
+        final int proposed = dataOf(prepared).proposed();
+        if (proposed > 0) {
+            emit(MemoryEvents.namesAdded(proposed));
+        }
+        final RunEnd end = stages(run, dataOf(prepared).styleSheet()).run(work);
+        new Lexicon(stores.lexicon()).logConsistency(request.projectId());
+        return finish(end.state(), run, end.error());
+    }
+
+    private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
+        final BookBrief brief = run.project().brief();
+        final int window = ContextBudget.windowFor(request.detectedContext(), null);
+        log.debug("Run window={} detected={}", window, request.detectedContext());
+        final CallFrame frame = CallFrame.forRun(
+                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
+        final ModelCalls calls = new JobModelCalls(
+                onSent -> new CancellableChatModel(model, control, onSent, watchdog),
+                this::emit,
+                clock,
+                frame.targetLanguage(),
+                window,
+                SegmentLocators.of(run.document()));
+        final RunSettings settings = RunSettings.forRun(request, brief, frame, window);
+        final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
+        return new StageRunner(
+                chunkRunner(run, settings, sinks, calls),
+                revision,
+                settings,
+                sinks,
+                calls,
+                new NarratorStage(stores, sinks, run.document(), settings));
+    }
+
+    private ChunkRunner chunkRunner(
+            final RunStart.Started run, final RunSettings settings, final RunSinks sinks, final ModelCalls calls) {
+        final GateFunction gate = GateFunction.of(documents, run.document().format());
         final SegmentTranslator translator = new SegmentTranslator(
-                documents,
-                new CancellableChatModel(model, control, this::announceModelCall),
-                tracker.format(),
-                new DraftPromptBuilder(
-                        TranslationJobRequestContext.sourceLanguage(request, tracker.declaredLanguage()),
-                        request.targetLanguage()),
+                gate,
+                calls,
+                run.document().format(),
+                new DraftPromptBuilder(templates, settings.frame()),
                 new DraftReplyParser(mapper));
-        while (tracker.hasPending()) {
-            final Result<JobReport> before =
-                    honorBoundary(control.boundary(false, false, false), tracker.currentTranslationProgress(), tracker);
-            if (before != null) {
-                return before;
-            }
-            final Result<JobReport> result = translateOne(tracker, translator);
-            if (result != null) {
-                return result;
-            }
-        }
-        return beginExport(tracker);
+        final RollingSummaryKeeper summary = new RollingSummaryKeeper(
+                stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
+        final BatchDrafter batch = new BatchDrafter(
+                new BatchPromptBuilder(templates, settings.frame(), BatchFormat.current(), settings.relevantPairs()),
+                new BatchReplyParser(mapper),
+                calls,
+                settings.frame().sourceLanguage(),
+                settings.frame().targetLanguage(),
+                batchSize);
+        return new ChunkRunner(
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
+                settings,
+                stores,
+                sinks,
+                run.index(),
+                run.document());
     }
 
-    private @Nullable Result<JobReport> translateOne(
-            final JobProgressTracker tracker, final SegmentTranslator translator) {
-        final SegmentWork work = tracker.next();
-        final Result<Decision> result = decide(work, tracker.draftContextFor(work), translator);
-        if (result.isErr()) {
-            return errorOf(result).code() == ErrorCode.cancelled
-                    ? honorBoundary(control.abortedCallBoundary(), tracker.currentTranslationProgress(), tracker)
-                    : recoverOrFail(errorOf(result), tracker, work);
-        }
-        final Decision decision = dataOf(result);
-        final JobProgress progress = tracker.apply(work, decision);
-        emit(new SegmentDecided(decision.segment().id(), decision.segment().status(), flagCode(decision), progress));
-        return honorBoundary(
-                control.boundary(true, tracker.endsSection(work), tracker.isComplete()), progress, tracker);
+    private JobBoundaries boundaries() {
+        return new JobBoundaries(
+                control,
+                pending,
+                recorder,
+                this::emit,
+                stores.segments(),
+                request.projectId(),
+                skipRequested,
+                recovery);
     }
 
-    private Result<JobReport> beginExport(final JobProgressTracker tracker) {
-        final Result<JobReport> boundary =
-                honorBoundary(control.boundary(false, false, false), tracker.exportProgress(), tracker);
-        if (boundary != null) {
-            return boundary;
+    private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {
+        final Result<Integer> flushed = pending.flush();
+        final AppError unsaved = flushed.isErr() ? errorOf(flushed) : null;
+        if (unsaved != null && end != JobState.FAILED) {
+            return finish(JobState.FAILED, run, unsaved);
         }
-        control.markExportStarted();
-        emit(new StageStarted(JobStage.EXPORT, tracker.exportProgress()));
-        return export(tracker);
-    }
-
-    private Result<JobReport> export(final JobProgressTracker tracker) {
-        final BookExporter exporter = new BookExporter(documents, moves);
-        while (true) {
-            final Result<JobReport> attempt = exportAttempt(exporter, tracker);
-            if (attempt != null) {
-                return attempt;
-            }
-        }
-    }
-
-    private @Nullable Result<JobReport> exportAttempt(final BookExporter exporter, final JobProgressTracker tracker) {
-        final Result<Path> result =
-                exporter.export(request, tracker.decidedDocument(), control::isCancellationRequested);
-        if (result.isOk()) {
-            return finish(JobState.COMPLETED, tracker, dataOf(result), null);
-        }
-        final AppError error = errorOf(result);
-        return error.code() == ErrorCode.cancelled
-                ? finish(JobState.CANCELLED, tracker, null, null)
-                : recoverOrFail(error, tracker, null);
-    }
-
-    private @Nullable Result<JobReport> recoverOrFail(
-            final AppError error, final JobProgressTracker tracker, @Nullable final SegmentWork failedWork) {
-        if (error.code() == ErrorCode.cancelled) {
-            return finish(JobState.CANCELLED, tracker, null, null);
-        }
-        final BoundaryDecision decision = control.failureBoundary(error);
-        if (decision.cancelled()) {
-            return finish(JobState.CANCELLED, tracker, null, null);
-        }
-        if (decision.pauseReason() != null) {
-            final JobProgress progress =
-                    failedWork == null ? tracker.exportProgress() : tracker.currentTranslationProgress();
-            JobPauseLogger.recoveryPause(error, decision.pauseReason(), progress);
-            return pause(decision.pauseReason(), error, progress, tracker);
-        }
-        return finish(JobState.FAILED, tracker, null, error);
-    }
-
-    private @Nullable Result<JobReport> honorBoundary(
-            final BoundaryDecision decision, final JobProgress progress, final JobProgressTracker tracker) {
-        if (decision.cancelled()) {
-            return finish(JobState.CANCELLED, tracker, null, null);
-        }
-        return decision.pauseReason() == null ? null : pause(decision.pauseReason(), null, progress, tracker);
-    }
-
-    private @Nullable Result<JobReport> pause(
-            final PauseReason reason,
-            @Nullable final AppError error,
-            final JobProgress progress,
-            final JobProgressTracker tracker) {
-        emit(new Paused(reason, error, progress));
-        if (control.awaitPause() == PauseWait.CANCELLED) {
-            return finish(JobState.CANCELLED, tracker, null, null);
-        }
-        emit(new Resumed(progress));
-        return null;
-    }
-
-    private Result<Decision> decide(
-            final SegmentWork work,
-            final ua.bookloom.pipeline.prompt.DraftContext context,
-            final SegmentTranslator translator) {
-        MDC.put("segment", work.segment().id());
-        decidingSegment = work.segment().id();
-        try {
-            return translator.translate(work.segment(), context);
-        } finally {
-            decidingSegment = null;
-            MDC.remove("segment");
-        }
-    }
-
-    private void announceModelCall() {
-        emit(new ModelCallStarted(Objects.requireNonNull(decidingSegment, "segment being decided")));
-    }
-
-    private Result<InitialSnapshot> openSnapshot() {
-        final Result<Boolean> destination = checkDestination();
-        if (destination.isErr()) {
-            return Result.err(errorOf(destination));
-        }
-        try {
-            final Result<Document> opened = documents.open(request.source());
-            return opened.isErr() ? Result.err(errorOf(opened)) : snapshotAfterClose(dataOf(opened));
-        } catch (Throwable cause) {
-            return Result.err(snapshotError(cause));
-        }
-    }
-
-    private Result<Boolean> checkDestination() {
-        try {
-            if (!request.overwrite() && Files.exists(request.destination())) {
-                log.warn("Refusing translation job because destination already exists: {}", request.destination());
-                return Result.err(TranslationJobErrors.destinationExists());
-            }
-            return Result.ok(Boolean.TRUE);
-        } catch (Throwable cause) {
-            return Result.err(snapshotError(cause));
-        }
-    }
-
-    private Result<InitialSnapshot> snapshotAfterClose(final Document snapshot) {
-        try {
-            final Result<Boolean> closed = documents.close(snapshot);
-            return Result.ok(new InitialSnapshot(snapshot, closed.isErr() ? errorOf(closed) : null));
-        } catch (Throwable cause) {
-            return Result.ok(new InitialSnapshot(snapshot, snapshotError(cause)));
-        }
-    }
-
-    private Result<JobReport> finish(
-            final JobState end,
-            @Nullable final JobProgressTracker tracker,
-            @Nullable final Path written,
-            @Nullable final AppError error) {
-        control.finish(end);
-        final JobReport report = report(end, tracker, written, error);
-        if (end == JobState.FAILED) {
+        RunAudit.after(end, stores, words, run.project().id());
+        final JobReport report =
+                RunReports.of(stores, run.project().id(), run.document().format(), end, error);
+        recorder.ended(report.end());
+        control.finish(report.end());
+        if (report.end() == JobState.FAILED) {
             log.warn(
                     "Translation job ended failed code={}",
-                    Objects.requireNonNull(error, "error").code());
+                    Objects.requireNonNull(report.error(), "error").code());
         }
         emit(new Finished(report));
-        JobLifecycleLogger.ended(report);
+        JobLifecycleLogger.ended(
+                report, Duration.between(startedAt, clock.instant()).toMillis());
         return Result.ok(report);
-    }
-
-    private JobReport report(
-            final JobState end,
-            @Nullable final JobProgressTracker tracker,
-            @Nullable final Path written,
-            @Nullable final AppError error) {
-        return tracker == null
-                ? new JobReport(
-                        TranslationJobRequestContext.sourceFormat(request),
-                        end,
-                        0,
-                        0,
-                        0,
-                        java.util.List.of(),
-                        written,
-                        error)
-                : tracker.report(end, written, error);
-    }
-
-    private Result<JobReport> failAtBoundary(final Throwable cause, @Nullable final JobProgressTracker tracker) {
-        final AppError error = AppError.of(
-                ErrorCode.internal,
-                "Translation job failed",
-                "An unexpected failure stopped this translation job.",
-                null,
-                cause);
-        log.error("Unexpected translation job boundary failure source={}", request.source(), cause);
-        return finish(JobState.FAILED, tracker, null, error);
     }
 
     private void emit(final JobEvent event) {
         log.debug("Sending translation job event type={}", event.getClass().getSimpleName());
+        runSummary.onEvent(event);
+        watchdog.onEvent(event);
         subscribers.deliver(event);
     }
 
-    private @Nullable ErrorCode flagCode(final Decision decision) {
-        return decision.segment().status() == SegmentStatus.FLAGGED
-                ? Objects.requireNonNull(decision.flagReason(), "flag reason").code()
-                : null;
-    }
-
-    private static AppError snapshotError(final Throwable cause) {
-        log.error("Unexpected failure while preparing source snapshot", cause);
+    private AppError unexpectedError(final Throwable cause) {
+        log.error("Unexpected translation job boundary failure project={}", request.projectId(), cause);
         return AppError.of(
                 ErrorCode.internal,
-                "This book could not be opened",
-                "The source book could not be prepared for translation.",
+                "Translation job failed",
+                "An unexpected error stopped the run outside any segment, so it could not be retried. The segments"
+                        + " decided so far are kept, and the log names the error.",
                 null,
                 cause);
     }

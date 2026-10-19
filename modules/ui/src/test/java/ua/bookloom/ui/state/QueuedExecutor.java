@@ -31,6 +31,15 @@ final class QueuedExecutor extends AbstractExecutorService {
         tasks.forEach(Runnable::run);
     }
 
+    /** Runs the waiting task at this position (0 is the oldest) and leaves the others waiting. */
+    void runAt(final int index) {
+        final List<Runnable> tasks = new ArrayList<>(queued);
+        final Runnable chosen = tasks.remove(index);
+        queued.clear();
+        queued.addAll(tasks);
+        chosen.run();
+    }
+
     /** Runs every waiting task, the last one submitted first. */
     void runNewestFirst() {
         final List<Runnable> tasks = new ArrayList<>(queued);

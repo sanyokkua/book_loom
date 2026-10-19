@@ -1,0 +1,171 @@
+{
+  "storySegments" : 20,
+  "nameScan" : [ {
+    "term" : "Anneke",
+    "count" : 12,
+    "firstSentence" : "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Orrin & Vale",
+    "count" : 6,
+    "firstSentence" : "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Kessel Optik",
+    "count" : 6,
+    "firstSentence" : "She wrote to the makers of the Kessel Optik about a stiff shutter.",
+    "aliases" : [ "KESSEL OPTIK" ]
+  }, {
+    "term" : "June",
+    "count" : 1,
+    "firstSentence" : "Anneke photographed the regatta in June.",
+    "aliases" : [ ]
+  } ],
+  "nameScanFirstHalf" : [ {
+    "term" : "Orrin & Vale",
+    "count" : 6,
+    "firstSentence" : "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade.",
+    "aliases" : [ ]
+  }, {
+    "term" : "Kessel Optik",
+    "count" : 3,
+    "firstSentence" : "She wrote to the makers of the Kessel Optik about a stiff shutter.",
+    "aliases" : [ "KESSEL OPTIK" ]
+  } ],
+  "keyTerms" : [ ],
+  "frequentWords" : [ ],
+  "windows" : {
+    "Anneke" : {
+      "count" : 12,
+      "windows" : [ {
+        "text" : "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade. She paid in coins.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Anneke loaded a roll and walked down to the market. She photographed the fishmongers and the pigeons.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Anneke stopped to look at it on her way home. She thought the poster made a promise the camera could not keep.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "In the district everyone knew Anneke, and nobody had a bad word for Anneke.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she", "she" ],
+        "male" : [ ],
+        "femaleObject" : [ "her", "her" ],
+        "maleObject" : [ ]
+      }
+    },
+    "Orrin & Vale" : {
+      "count" : 6,
+      "windows" : [ {
+        "text" : "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade. She paid in coins.",
+        "pronoun" : "FEMALE"
+      }, {
+        "text" : "Orrin & Vale sold everything a photographer could want. Anneke went there on the first of every month.",
+        "pronoun" : null
+      }, {
+        "text" : "At Orrin & Vale the clerk shook his head over the shutter. He said the Kessel Optik had a famous weakness.",
+        "pronoun" : "MALE"
+      }, {
+        "text" : "The picture ran in the local paper. Orrin & Vale framed a copy and hung it by the till.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ "she" ],
+        "male" : [ "he" ],
+        "femaleObject" : [ ],
+        "maleObject" : [ "his" ]
+      }
+    },
+    "Kessel Optik" : {
+      "count" : 6,
+      "windows" : [ {
+        "text" : "The camera was a KESSEL OPTIK, heavy as a brick, with a lens cap on a string. The label said so in capital letters.",
+        "pronoun" : null
+      }, {
+        "text" : "She wrote to the makers of the Kessel Optik about a stiff shutter. They replied within a week.",
+        "pronoun" : null
+      }, {
+        "text" : "A new poster hung in the window of Orrin & Vale. KESSEL OPTIK, it said, in letters a foot high.",
+        "pronoun" : null
+      }, {
+        "text" : "Anneke photographed the regatta in June. The Kessel Optik jammed twice and caught the winning boat.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    },
+    "June" : {
+      "count" : 1,
+      "windows" : [ {
+        "text" : "Anneke photographed the regatta in June. The Kessel Optik jammed twice and caught the winning boat.",
+        "pronoun" : null
+      } ],
+      "pronouns" : {
+        "female" : [ ],
+        "male" : [ ],
+        "femaleObject" : [ ],
+        "maleObject" : [ ]
+      }
+    }
+  },
+  "termEvidence" : {
+    "Anneke" : {
+      "count" : 12,
+      "examples" : [ "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade.", "Anneke went there on the first of every month." ]
+    },
+    "Orrin & Vale" : {
+      "count" : 6,
+      "examples" : [ "Anneke bought her first camera from Orrin & Vale, the shop on the corner of the arcade.", "Orrin & Vale sold everything a photographer could want." ]
+    },
+    "Kessel Optik" : {
+      "count" : 6,
+      "examples" : [ "The camera was a KESSEL OPTIK, heavy as a brick, with a lens cap on a string.", "She wrote to the makers of the Kessel Optik about a stiff shutter." ]
+    }
+  },
+  "unknownGenderMentions" : [ {
+    "term" : "Anneke",
+    "mentions" : 12
+  }, {
+    "term" : "Orrin & Vale",
+    "mentions" : 6
+  }, {
+    "term" : "Kessel Optik",
+    "mentions" : 4
+  }, {
+    "term" : "June",
+    "mentions" : 1
+  } ],
+  "pronouns" : {
+    "Anneke" : {
+      "female" : [ "she", "she" ],
+      "male" : [ ],
+      "femaleObject" : [ "her", "her" ],
+      "maleObject" : [ ]
+    },
+    "Orrin & Vale" : {
+      "female" : [ "she" ],
+      "male" : [ "he" ],
+      "femaleObject" : [ ],
+      "maleObject" : [ "his" ]
+    },
+    "Kessel Optik" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    },
+    "June" : {
+      "female" : [ ],
+      "male" : [ ],
+      "femaleObject" : [ ],
+      "maleObject" : [ ]
+    }
+  }
+}

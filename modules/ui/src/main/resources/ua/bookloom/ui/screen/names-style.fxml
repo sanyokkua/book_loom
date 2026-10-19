@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.NamesStyleController" id="names-style-screen" spacing="14">
+    <Label id="names-style-title" styleClass="screen-title" text="%namesStyle.title"/>
+    <Label id="names-style-subtitle" styleClass="muted" wrapText="true" text="%namesStyle.subtitle"/>
+    <VBox fx:id="body" id="names-style-body" spacing="14" VBox.vgrow="ALWAYS"/>
+</VBox>

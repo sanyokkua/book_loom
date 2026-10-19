@@ -1,0 +1,85 @@
+package ua.bookloom.pipeline.prompt;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.PromptSection;
+
+/**
+ * What a call site knows about a model call besides its request, so the run can show the call as a person reads it.
+ * The sections are built from the same slot values the request was rendered from, and only when a seam shows them.
+ *
+ * @param label the name of the prompt the call was built from ({@link PromptName#resourceBaseName()})
+ * @param position the chunk the call is made in, or null when the call site does not know it
+ * @param sources each segment's source as a person reads it, in the order of the call's segment ids
+ * @param sections the parts of the prompt as sent, in order; called at most once, when the first attempt goes out
+ * @param targets each segment's translation as the call was given it, as a person reads it, in the order of the call's
+ *     segment ids; empty when the call is about no translation yet (a draft) or its site does not show one
+ */
+public record CallDescriptor(
+        String label,
+        @Nullable ChunkPosition position,
+        List<String> sources,
+        Supplier<List<PromptSection>> sections,
+        List<String> targets) {
+
+    /** Rejects a missing part and copies the sources and targets. */
+    public CallDescriptor {
+        Objects.requireNonNull(label, "label");
+        sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
+        Objects.requireNonNull(sections, "sections");
+        targets = List.copyOf(Objects.requireNonNull(targets, "targets"));
+    }
+
+    /**
+     * A descriptor of a call that is given no translation.
+     *
+     * @param label the name of the prompt the call was built from
+     * @param position the chunk the call is made in, or null
+     * @param sources each segment's source as a person reads it
+     * @param sections the parts of the prompt as sent
+     */
+    public CallDescriptor(
+            final String label,
+            @Nullable final ChunkPosition position,
+            final List<String> sources,
+            final Supplier<List<PromptSection>> sections) {
+        this(label, position, sources, sections, List.of());
+    }
+
+    /**
+     * This descriptor for a call that checks or revises translations.
+     *
+     * @param shown each segment's translation as a person reads it, in the order of the call's segment ids
+     * @return a copy that carries them
+     */
+    public CallDescriptor withTargets(final List<String> shown) {
+        return new CallDescriptor(label, position, sources, sections, shown);
+    }
+
+    /**
+     * A call about one segment, named by the prompt it renders.
+     *
+     * @param name the non-null prompt the call renders
+     * @param source the non-null segment's source as a person reads it
+     * @param sections the non-null parts of the prompt as sent
+     * @return the descriptor, with no chunk position
+     */
+    public static CallDescriptor of(
+            final PromptName name, final String source, final Supplier<List<PromptSection>> sections) {
+        return new CallDescriptor(name.resourceBaseName(), null, List.of(source), sections);
+    }
+
+    /**
+     * A call about no segment whose prompt is shown whole, because it has no parts of its own: a glossary scan, a
+     * summary, a setup proposal.
+     *
+     * @param name the non-null prompt the call renders
+     * @return the descriptor, with no segments, no chunk position and no parts
+     */
+    public static CallDescriptor whole(final PromptName name) {
+        return new CallDescriptor(name.resourceBaseName(), null, List.of(), List::of);
+    }
+}

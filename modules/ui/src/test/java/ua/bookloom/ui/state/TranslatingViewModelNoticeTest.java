@@ -2,11 +2,15 @@ package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedTranslationEngine;
 
 /**
  * The notice a refused start or a failed run leaves on the dashboard: a refused start names its missing input, and
@@ -26,9 +30,18 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
     }
 
     private void openBookWithoutChoosingAModel() {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         press(() -> imports.open(BOOK));
+        press(() -> brief.setTargetLanguage("uk"));
     }
+
+    private void openBookDeclaringNoLanguageAndChooseModel() {
+        projects.on(NOTES, Result.ok(BookFixtures.declaringNoLanguage("notes", BookFormat.TXT, 1)));
+        press(() -> imports.open(NOTES));
+        chooseModel(MODEL);
+    }
+
+    private static final Path NOTES = Path.of("notes.txt");
 
     // --- a start with an input missing ------------------------------------------------------------------------
 
@@ -133,33 +146,16 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
         assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.BOOK));
     }
 
-    // IF an unusable destination returned before the notice was cleared, THEN a stale "choose a model" banner would
-    // stay although the model is chosen.
-    @Test
-    void start_afterMissingModelThenUnusableDestination_leavesNoStaleNotice() {
-        buildViewModel();
-        openBookWithoutChoosingAModel();
-        press(viewModel::start);
-        chooseModel(MODEL);
-        press(() -> brief.editDestination(""));
-
-        press(viewModel::start);
-
-        assertThat(notice()).isEmpty();
-        assertThat(queued.pending()).isZero();
-        assertThat(preparing()).isFalse();
-    }
-
     // --- the notice belongs to the run that raised it ---------------------------------------------------------
 
     // IF the last run's notice stayed while a new run began, THEN a healthy run would still read as failed.
     @Test
-    void start_afterAProviderFailure_clearsTheNoticeAtOnce() throws Exception {
+    void start_afterAProviderFailure_clearsTheNoticeAtOnce() {
         openBookAndChooseModel();
+        models = ScriptedChatModelFactory.failing(failureOf(ErrorCode.unreachable));
         buildViewModel();
-        startAndPrepare();
-        job.finish(Result.err(failureOf(ErrorCode.unreachable)));
-        awaitState(RunState.FAILED);
+        press(viewModel::start);
+        queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(noticeKind()).isEqualTo(PROVIDER);
 
@@ -170,13 +166,16 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
 
     // IF the notice came back once the new run reported running, THEN a run in progress would show the old failure.
     @Test
-    void run_startsAfterAProviderFailure_showsNoNoticeOnceRunning() throws Exception {
+    void run_startsAfterARefusedRun_showsNoNoticeOnceRunning() throws Exception {
+        final RecordingJob again = new RecordingJob();
+        engine = ScriptedTranslationEngine.returning(job, again);
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
-        job.finish(Result.err(failureOf(ErrorCode.unreachable)));
+        job.finish(Result.err(failureOf(ErrorCode.validation)));
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
+        assertThat(noticeKind()).isEqualTo("Refused");
 
         press(viewModel::start);
         queued.runAll();
@@ -185,6 +184,34 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
 
         assertThat(notice()).isEmpty();
         assertThat(errors.presented()).isEmpty();
-        job.finish(Result.ok(cancelledReport()));
+        again.finish(Result.ok(cancelledReport()));
+    }
+
+    // --- a start with a language missing ----------------------------------------------------------------------
+
+    // IF Auto were refused at Start, THEN a book declaring no language could never be translated without a guess.
+    @Test
+    void start_autoSourceLanguage_isNotRefusedAndBeginsPreparing() {
+        buildViewModel();
+        openBookDeclaringNoLanguageAndChooseModel();
+        press(() -> brief.setTargetLanguage("uk"));
+
+        press(viewModel::start);
+
+        assertThat(notice()).isEmpty();
+        assertThat(queued.pending()).isEqualTo(1);
+        assertThat(preparing()).isTrue();
+    }
+
+    // IF a start with no target language asked for a job, THEN the run would translate into no language.
+    @Test
+    void start_autoSourceButNoTargetLanguage_isRefusedNamingTheTargetAndAsksForNoJob() {
+        buildViewModel();
+        openBookDeclaringNoLanguageAndChooseModel();
+
+        press(viewModel::start);
+
+        assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.TARGET_LANGUAGE));
+        assertThat(engine.requests()).isEmpty();
     }
 }
