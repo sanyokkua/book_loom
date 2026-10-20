@@ -218,7 +218,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - The test is red first: `SqliteBootTest` opens a `@TempDir` database on the module path, which also loads the
     native library.
   - Verify: `./gradlew -PstrictLocks verifyLocks` and `./gradlew checkLicense` (all Apache-2.0). → :persistence
-- [ ] 3.2 Build the database opener: per-connection pragmas, the one schema file, a single writer, and the pre-release
+- [x] 3.2 Build the database opener: per-connection pragmas, the one schema file, a single writer, and the pre-release
   rule that puts a mismatching file aside. Without these, a crash or a second connection can lose decisions or run
   without foreign keys.
   - **Satisfies:** local-storage "Set aside a database that cannot be used and start a fresh one"; local-storage "Keep

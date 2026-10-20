@@ -1,293 +1,76 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-10-20
 **Cross-references:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
 `docs/specification/02_Architecture/09_ERROR_HANDLING.md`, `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`,
 `docs/specification/02_Architecture/11_APP_ENVIRONMENT_AND_PATHS.md`,
-`docs/specification/03_NonFunctional/05_RELIABILITY_AND_RESUME.md`, `docs/adr/ADR-0009-durability.md`
+`docs/specification/03_NonFunctional/05_RELIABILITY_AND_RESUME.md`, `docs/adr/ADR-0009-persistence-sqlite.md`,
+`docs/adr/ADR-0043-state-in-sqlite-as-json-documents.md` (JSON-document tables, no migrations before the first release)
 
 # Data Model — SQLite
 
-> **Note (ADR-0043):** the typed tables below are superseded by JSON-document tables (ADR-0043, written in a later task): a document column holds what the code reads and writes whole, and real columns exist only where an index, a uniqueness rule or a cascade needs them. Until the first release there are no migrations: one schema file creates the tables, `PRAGMA user_version` holds its number, and a database with another number is renamed aside and a fresh one created. Flyway with additive migrations arrives with the first release, and the `V1__baseline.sql` normativity and every statement below about Flyway, `V{ver}__*.sql` files and migrations describes that later state. The schema itself is rewritten in a later task.
-
-`:persistence` stores all durable state in a single SQLite database (WAL mode) accessed through JDBI 3 DAOs, with schema
-evolved by Flyway from the first release (one schema file before it, ADR-0043). This document fixes the tables, the migration/DAO conventions, atomicity, the per-OS data dir, the
-DB-connection guard, and secret references. The DDL block under [ddl-normative](#ddl-normative) is **normative for
-`V1__baseline.sql`**: the checked-in baseline migration MUST match it column-for-column (later migrations extend it
-additively). Acquisition of the single-instance lock is a pre-injector `:app`/`:util` concern on the resolved data dir,
-not a `:persistence` DAO (`10_DI_AND_LIFECYCLE.md#single-instance-lock`,
-`11_APP_ENVIRONMENT_AND_PATHS.md#lock-and-atomic`); the only lock this document owns is the DB-connection guard
-described below.
+`:persistence` stores all durable state in a single SQLite database (WAL mode) accessed through JDBI 3 (fluent API, no
+ORM). State is kept as **JSON documents** in a few tables; a real column exists only where an index, a uniqueness rule
+or a cascade needs it (ADR-0043). **Before the first release there are no migrations and no Flyway:** one schema file,
+`db/schema.sql` (`CREATE … IF NOT EXISTS` statements ending in `PRAGMA user_version = N`), creates the tables, and a
+database whose `user_version` differs, that cannot be opened, or that fails `PRAGMA quick_check` is renamed aside and a
+fresh one created ([corruption-and-recovery](#corruption-and-recovery)). Flyway with additive `V{ver}__{desc}.sql`
+migrations arrives with the first release; until then no statement here about migrations applies.
 
 ## storage-conventions {#storage-conventions}
 
-- **Engine:** `org.xerial:sqlite-jdbc`, `PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`,
-  `PRAGMA synchronous=NORMAL`, `PRAGMA busy_timeout=<N ms>`.
-- **Per-connection pragma re-application:** the PRAGMAs above are **connection-scoped**, not database-scoped (only
-  `journal_mode=WAL` persists on the file). Every connection handed out by the pool MUST re-apply the full set —
-  `foreign_keys=ON`, `busy_timeout`, `synchronous=NORMAL`, and `journal_mode=WAL` — through a **connection-init hook**
-  (e.g. the pool's `connectionInitSql` / an init callback) so a recycled or newly-opened connection can never run with
-  `foreign_keys` off or without a busy timeout.
-- **Migrations (from the first release; until then one schema file and no migrations, ADR-0043):** Flyway, file convention `V{ver}__{desc}.sql` (e.g. `V1__baseline.sql`, `V2__add_tm_context_key.sql`)
-  on the classpath of `:persistence`. Migrations run in two-phase init after services construct
-  (`10_DI_AND_LIFECYCLE.md`). Never edit an applied migration; add a new one. `V1__baseline.sql` MUST match
-  the [normative DDL](#ddl-normative) exactly.
-- **DAOs:** JDBI 3 fluent-API DAOs (no SQL objects, ADR-0043), one per aggregate, bound to repository ports in `:api`. Records map columns via row
-  mappers; no ORM.
-- **Atomic writes:** each checkpoint (segment accept, status change, TM/summary update) is a single transaction. WAL +
-  `synchronous=NORMAL` gives per-chunk durability that is **process-crash-safe and forced-quit-safe**; on OS crash /
-  power loss at most the last in-flight commit may be lost, never earlier accepted work (`05_RELIABILITY_AND_RESUME.md`,
-  DD-20, ADR-0009).
-- **Single-writer discipline:** all write transactions are confined to a **single-writer executor** (a serialized
-  handle / one connection that owns writes); readers may run concurrently on other pooled connections. This keeps
-  SQLite's single-writer model explicit and turns lock contention into a bounded `busy_timeout` wait rather than an
-  immediate `SQLITE_BUSY`. See `08_THREADING_CONCURRENCY.md` for how this executor relates to the worker pool.
+- **Engine:** `org.xerial:sqlite-jdbc` through `SQLiteDataSource` and a `SQLiteConfig`; no pool library.
+- **Per-connection pragmas:** `journal_mode=WAL`, `foreign_keys=ON`, `synchronous=NORMAL`, `busy_timeout=5000`. They
+  are connection-scoped (only `journal_mode=WAL` persists on the file), so the data source applies the full set to
+  every connection it opens, and no connection can run with foreign keys off or without a busy timeout.
+- **Schema:** `src/main/resources/db/schema.sql` in `:persistence`, applied at startup (`AppLifecycle` phase 2).
+- **Single writer:** `WriteExecutor` is one daemon thread; every write runs on it as **one JDBI transaction** and the
+  caller blocks on the result. Reads use their own connections. Lock contention becomes queueing, not `SQLITE_BUSY`.
+- **Atomic writes:** a checkpoint (segments, TM entries, deferrals, glossary additions, run record) is one write
+  transaction. WAL + `synchronous=NORMAL` is **process-crash-safe and forced-quit-safe**; on OS crash or power loss at
+  most the last in-flight commit may be lost, never earlier accepted work (`05_RELIABILITY_AND_RESUME.md`, DD-20,
+  ADR-0009). Durability is never claimed to survive power loss.
+- **One document, one writer:** the glossary and the lexicon are one JSON document per project; every change to them is
+  a read-modify-write inside one write transaction, so a person's edit and a run's addition never overwrite each other.
+- **Errors:** a storage failure is `ErrorCode.internal` with the safe details `storage <operation>`; no SQL, path or
+  row content is put in `details`.
+- **FX-thread check:** a read or write on a thread named "JavaFX Application Thread" logs one WARN with the stack per
+  call site; with the system property `bookloom.storage.failOnFxThread=true` (set for every test task) it throws.
 - **Data dir:** per-OS — Windows `%LOCALAPPDATA%\BookLoom`, macOS `~/Library/Application Support/BookLoom`, Linux
-  `${XDG_DATA_HOME:-~/.local/share}/bookloom`; logs go to the per-OS log dir (macOS `~/Library/Logs/BookLoom`, Linux
-  `${XDG_STATE_HOME:-~/.local/state}/bookloom/logs`, Windows `%LOCALAPPDATA%\BookLoom\logs`). Dev builds resolve under a
-  `-Dev`/`-dev` sibling so they never collide with production. Resolution, dev/prod separation, the `BOOKLOOM_DATA_DIR`
-  override, and startup order are specified in `11_APP_ENVIRONMENT_AND_PATHS.md` (DD-39, ADR-0015) — this must be
-  established before SQLite is opened.
-- **Single-instance lock:** an exclusively-held lock file (`FileChannel.tryLock()` on `bookloom.lock`) in the data dir.
-  Its acquisition is owned by the pre-injector launcher (`:app`/`:util`), **not** by this persistence layer
-  (`10_DI_AND_LIFECYCLE.md#single-instance-lock`). A second launch detects the held lock, **shows a "BookLoom is already
-  running" dialog, and exits** — it does not focus or signal the first window (no IPC). `:persistence` only assumes the
-  lock has already been acquired for the resolved data dir before it opens the database.
-- **Network-filesystem caution:** the data dir is expected to be local. If it resolves onto a network filesystem
-  (SMB/NFS), SQLite's WAL locking is unreliable; startup **warns**, and the connection SHOULD fall back to
-  `PRAGMA journal_mode=TRUNCATE` (see `11_APP_ENVIRONMENT_AND_PATHS.md#edge-cases`).
+  `${XDG_DATA_HOME:-~/.local/share}/bookloom`; logs go to the per-OS log dir. Dev builds resolve under a `-Dev`/`-dev`
+  sibling. Resolution and the `BOOKLOOM_DATA_DIR` override are in `11_APP_ENVIRONMENT_AND_PATHS.md` (DD-39, ADR-0015).
+- **Single-instance lock:** `FileChannel.tryLock()` on `bookloom.lock` in the data dir, owned by the pre-injector
+  launcher (`:app`/`:util`), **not** by `:persistence`, which assumes it is held before the database is opened
+  (`10_DI_AND_LIFECYCLE.md#single-instance-lock`). A second launch shows "BookLoom is already running" and exits.
+- **Network-filesystem caution:** if the data dir is on SMB/NFS, WAL locking is unreliable; startup warns
+  (`11_APP_ENVIRONMENT_AND_PATHS.md#edge-cases`).
 
 ## tables {#tables}
 
-### projects {#projects}
+| Table | Key and columns | Holds |
+|---|---|---|
+| `settings` | `key` PK, `value`, `type` | preferences ([settings-serialization](#settings-serialization)) |
+| `providers` | `id` PK, `json` | `ProviderConfig`; the credential is an env-var name reference only |
+| `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included |
+| `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once |
+| `projects` | `id` PK, `content_hash` → `books`, `name`, `name_key`, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; `UNIQUE (content_hash, name_key)`; index (`content_hash`, `source_lang`, `target_lang`) | the project; a name is unique within its book, ignoring letter case |
+| `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, last export |
+| `segments` | PK (`project_id`, `segment_id`), `ord`, `unit_id`, `status`, `json`; index (`project_id`, `status`) | `SegmentRecord` |
+| `tm_entries` | PK (`project_id`, `source_hash`, `context_key`), `json` | `TmEntry` |
+| `deferrals` | PK (`project_id`, `segment_id`, `reason`, `waiting_on`), `json` | `Deferral` |
 
-One row per imported book/translation project. Each project carries its **own provider/model binding** (`provider_id`,
-`translator_model`, `judge_model`) copied from the settings defaults at creation and reused on every resume, plus a
-`last_used_json` snapshot that resume verifies and prompts against (DD-31,
-`01_Product/04_LLM_PROVIDERS_AND_MODELS.md#per-project-binding`). Settings changes never rewrite an existing project's
-binding without user confirmation. `provider_id` is a foreign key with **`ON DELETE SET NULL`**: deleting a provider
-does not delete its projects — it nulls the binding, and the next resume sees a null/missing binding and takes the **"
-provider unavailable → prompt"** path (`05_RELIABILITY_AND_RESUME.md#resume-on-launch`, DD-31) rather than silently
-falling back to a default. The project also stores a **document-level content hash** (`content_hash`) taken over the
-whole imported source at import time; it is distinct from the per-segment `source_hash` and is used on resume to detect
-that the underlying file changed since the skeleton was built (`EC-RESUME-*` in `05_RELIABILITY_AND_RESUME.md`).
+- **Cascade:** every child table (`project_docs`, `segments`, `tm_entries`, `deferrals`) has
+  `FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE`, so deleting a project removes all of it.
+- **The name key:** `name_key` is `strip().toLowerCase(Locale.ROOT)` computed in Java, because SQLite's `lower()` folds
+  only ASCII and Cyrillic must fold too.
+- **Document-level hash:** `books.content_hash` is taken over the whole imported source at import time; it is distinct
+  from the per-segment `source_hash` and detects on resume that the file changed (`EC-RESUME-*`).
+- **Run state:** the current run state lives in the project's latest-run document (`project_docs`, kind run), not in a
+  column of its own.
+- **Provider binding:** a project's provider and model are kept in its documents and re-verified on resume (DD-31,
+  `01_Product/04_LLM_PROVIDERS_AND_MODELS.md#per-project-binding`); deleting a provider never deletes a project.
 
-A run's **current state** — `RUNNING`, `PAUSED`, `COMPLETED`, `CANCELLED`, `FAILED`, or "no run yet" — lives on an
-in-memory `RunRecord` per project, which this change maps into SQLite alongside the tables below; review-desk actions
-such as retry read it to decide whether the project's own run is in progress (`ADR-0034`, `02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`).
-
-### units {#units}
-
-Spine units per project (skeleton lives on disk / blob; DB holds order + metadata).
-
-### segments {#segments}
-
-The ordered segment list with status and translation (mirrors `03_DOCUMENT_MODEL.md#data-model`). The primary key is the
-composite string **`{unitId}:{ord}`** (kept for stable, human-readable IDs and deterministic TM/context keys);
-`UNIQUE(unit_id, ord)` enforces spine ordering. `kind` is the segment classifier enum:
-`PARAGRAPH | HEADING | VERSE_LINE | …` plus the synthetic-metadata kinds
-`METADATA_TITLE | METADATA_AUTHOR | METADATA_DESCRIPTION | FRONTMATTER_VALUE | ALT | NAV_LABEL` (DD-47,
-`03_DOCUMENT_MODEL.md`), which anchor to OPF/frontmatter/attribute/nav nodes rather than spine prose. `prev_key`/
-`next_key` are the **TM context neighbours** — the `source_hash`-domain keys of the immediately preceding and
-following segments used to build `tm.context_key`; both are **null at spine ends** (first segment has no `prev_key`,
-last has no `next_key`), which the context hash represents with the `⟦BOS⟧`/`⟦EOS⟧` sentinels described under
-[tm](#tm).
-
-`machine_target` holds the **last target that passed every hard gate** — the machine's own answer, never overwritten by
-a person's edit; `target_inner` holds the person's edit, when there is one. The **effective target** a review screen or
-an export reads is `target_inner` when it is present, else `machine_target`. Beyond the columns below, the other
-in-memory fields of a segment's decision — its masked machine target and masked user target, judge score, QA findings,
-the path it was decided by, its repair-round count, whether a person has reviewed it, and the context snapshot holding
-the exact texts its first draft saw — are likewise mapped into this table or a sibling one by the same change
-(`design.md` D2). A record whose kind the Book-Brief "Also translate" switches currently exclude is **not** a stored
-status: "kept as source by choice" is derived, at the moment it is read, from the brief's current switches against the
-segment's `kind` (`design.md` D2) — no column records it.
-
-### glossary {#glossary}
-
-The name/term dictionary — term, type, gender, locked flag, target rendering. `type` accepts
-`character | place | term | title | other`. `gender` accepts
-`masculine | feminine | neuter | unknown` (the pre-scan/deterministic fallback yields `unknown` until the user or a
-backward-revision pass fills it in, DD-46).
-
-### tm {#tm}
-
-Context-keyed translation memory, keyed **`(project_id, source_hash, context_key)`**. `source_hash` is computed over the
-**unmasked, NFC-normalized** source text (so masking placeholders never perturb a TM hit and canonically-equal source
-always collides — see D1 canonical-equal wording). `context_key = hash(prev ⊕ next)` over the neighbour source hashes,
-using the sentinels `⟦BOS⟧` (no previous neighbour) and `⟦EOS⟧` (no next neighbour) so segments at spine ends key
-deterministically.
-
-### summaries {#summaries}
-
-Rolling bilingual summaries per chapter/unit, plus **rolling-summary trigger bookkeeping**: the marker that records
-where the last summary was taken (e.g. the last summarized unit/segment and token count since) so a resumed run knows
-whether a fresh summary is due at the next chapter boundary rather than re-summarizing or skipping.
-
-### deferrals {#deferrals}
-
-Segment **deferred-resolution** entries: when a segment cannot be finalized in the current pass because it depends on a
-not-yet-resolved decision (e.g. a glossary gender still `unknown`, a name whose rendering a later passage will
-disambiguate), a deferral row records the segment, the reason/kind, and the resolution it is waiting on. The pipeline
-drains these when the dependency resolves (backward revision) and the rows are cleared on resolution; they are separate
-from `FLAGGED`, which is a terminal-for-run review state.
-
-### providers {#providers}
-
-Provider configs with **credential references only** (never secrets). `kind` selects the client implementation
-(`OLLAMA` → native client; `OPENAI_COMPATIBLE` → OpenAI-compatible client); `supports_discovery` gates live model
-listing vs manual model-ID entry (DD-38). Two model slots only — `translator_model`, `judge_model` (no embedding slot).
-`effective_context` (nullable INTEGER) holds the manually-entered **"effective context (tokens)"** value used by the
-token-budget heuristic when discovery cannot supply it (DD-44, `04_LLM_INTEGRATION.md`); null means "unknown → use the
-conservative default". `supports_structured_output` (nullable) is a **capability cache** recording whether the
-provider/model accepts a structured-output/JSON-schema request; null means "not yet probed".
-
-### app_state {#app_state}
-
-Small singleton-ish table for runtime pointers, e.g. `current_provider`. `current_provider` is the **new-project default
-only** — the provider a freshly-created project copies its binding from. It is **never consulted at resume**: resume
-precedence is *project binding (`projects.provider_id` + models) > the resume "provider unavailable → prompt" path when
-that binding is null/unavailable*; `current_provider` sits below both and is only read when seeding a new project's
-binding (DD-31).
-
-### settings {#settings}
-
-Generic typed KV store: `(key, value, type)`. Holds the UI language under key `ui.language` (STRING, `en` | `uk`) — set
-from the OS locale on first start and thereafter from the user's choice (DD-34,
-`01_Product/10_I18N_AND_ACCESSIBILITY.md`). `value` is **`NOT NULL`**; a settings row always carries a concrete
-serialized value (absence is modeled by not having the row, not by a null value). Serialization is canonical and
-locale-independent — see [settings-serialization](#settings-serialization).
-
-## ddl-normative {#ddl-normative}
-
-The block below is **normative for `V1__baseline.sql`** — the checked-in baseline migration MUST match it
-column-for-column, constraint-for-constraint. It is no longer a sketch: any change to a column, type, default, or
-foreign-key action is a schema change that requires a new additive migration, never an edit here or to the applied
-baseline.
-
-```sql
--- V1__baseline.sql (NORMATIVE — the baseline migration must match this exactly)
-CREATE TABLE projects (
-  id            TEXT PRIMARY KEY,
-  title         TEXT NOT NULL,
-  format        TEXT NOT NULL,             -- EPUB|FB2|MD|TXT
-  source_lang   TEXT,                      -- detected
-  target_lang   TEXT,
-  brief_json    TEXT,                      -- Book Brief snapshot
-  content_hash  TEXT,                      -- document-level hash of the whole imported source (distinct from segments.source_hash)
-  quality_dial  TEXT NOT NULL DEFAULT 'BALANCED',
-  status        TEXT NOT NULL DEFAULT 'IMPORTED',
-  -- Per-project provider/model binding (DD-31): copied from the settings defaults at creation,
-  -- reused on every resume. last_used_* is the snapshot verified/prompted against on resume.
-  provider_id      TEXT REFERENCES providers(id) ON DELETE SET NULL, -- null binding on resume => "provider unavailable → prompt"
-  translator_model TEXT,                    -- the project's bound translator model id
-  judge_model      TEXT,                    -- the project's bound judge/helper model id
-  last_used_json   TEXT,                    -- {providerId, kind, baseUrl, translatorModel, judgeModel}
-  created_at    TEXT NOT NULL,
-  updated_at    TEXT NOT NULL
-);
-
-CREATE TABLE units (
-  id          TEXT PRIMARY KEY,
-  project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  ord         INTEGER NOT NULL,
-  href        TEXT,
-  media_type  TEXT,
-  UNIQUE(project_id, ord)
-);
-
-CREATE TABLE segments (
-  id             TEXT PRIMARY KEY,           -- {unitId}:{ord}  (composite string PK, stable & human-readable)
-  project_id     TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  unit_id        TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-  ord            INTEGER NOT NULL,
-  kind           TEXT NOT NULL,              -- PARAGRAPH|HEADING|VERSE_LINE|...|METADATA_TITLE|METADATA_AUTHOR|METADATA_DESCRIPTION|FRONTMATTER_VALUE|ALT|NAV_LABEL
-  source_inner   TEXT NOT NULL,
-  masked         TEXT NOT NULL,
-  placeholders   TEXT NOT NULL,              -- JSON map gN -> fragment
-  source_hash    TEXT NOT NULL,              -- over UNMASKED, NFC-normalized source_inner
-  prev_key       TEXT,                       -- TM context neighbour: preceding segment's source_hash-domain key; NULL at spine start (⟦BOS⟧)
-  next_key       TEXT,                       -- TM context neighbour: following segment's source_hash-domain key; NULL at spine end (⟦EOS⟧)
-  machine_target TEXT,                       -- the last target that passed every hard gate; never overwritten by a user edit
-  target_inner   TEXT,                       -- the user's edit, when present; the effective target is this, else machine_target
-  status         TEXT NOT NULL DEFAULT 'PENDING', -- PENDING|ACCEPTED|FLAGGED|REVISED
-  confidence     REAL,
-  updated_at     TEXT NOT NULL,
-  UNIQUE(unit_id, ord)
-);
-CREATE INDEX ix_seg_project_status ON segments(project_id, status);
-
-CREATE TABLE glossary (
-  id          TEXT PRIMARY KEY,
-  project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  term        TEXT NOT NULL,
-  type        TEXT,                        -- character|place|term|title|other
-  gender      TEXT,                        -- masculine|feminine|neuter|unknown  (unknown until user/backward-revision fills it, DD-46)
-  target      TEXT,                        -- chosen rendering
-  locked      INTEGER NOT NULL DEFAULT 0,
-  UNIQUE(project_id, term)
-);
-
-CREATE TABLE tm (
-  id           TEXT PRIMARY KEY,
-  project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  source_hash  TEXT NOT NULL,              -- over UNMASKED, NFC-normalized source
-  context_key  TEXT NOT NULL,              -- hash(prev ⊕ next) of neighbour source hashes, ⟦BOS⟧/⟦EOS⟧ at spine ends
-  source_inner TEXT NOT NULL,
-  target_inner TEXT NOT NULL,
-  UNIQUE(project_id, source_hash, context_key)
-);
-CREATE INDEX ix_tm_lookup ON tm(project_id, source_hash);
-
-CREATE TABLE summaries (
-  id            TEXT PRIMARY KEY,
-  project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  unit_id       TEXT,
-  summary_src   TEXT,
-  summary_tgt   TEXT,
-  -- rolling-summary trigger bookkeeping: where the last summary was taken so a resumed
-  -- run knows whether a fresh summary is due at the next chapter boundary.
-  last_summarized_key TEXT,                 -- last summarized unit/segment key
-  tokens_since  INTEGER,                    -- token count accumulated since the last summary
-  updated_at    TEXT NOT NULL
-);
-
-CREATE TABLE deferrals (
-  id            TEXT PRIMARY KEY,
-  project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  segment_id    TEXT NOT NULL REFERENCES segments(id) ON DELETE CASCADE,
-  reason        TEXT NOT NULL,              -- e.g. GENDER_UNKNOWN|NAME_UNRESOLVED
-  waiting_on    TEXT,                       -- the glossary term / decision the segment is blocked on
-  created_at    TEXT NOT NULL,
-  UNIQUE(project_id, segment_id, reason)
-);
-CREATE INDEX ix_deferral_project ON deferrals(project_id);
-
-CREATE TABLE providers (
-  id            TEXT PRIMARY KEY,
-  display_name  TEXT NOT NULL,
-  kind          TEXT NOT NULL,             -- OLLAMA (native client) | OPENAI_COMPATIBLE (LM Studio, llama.cpp, custom, …)
-  base_url      TEXT NOT NULL,
-  auth_scheme   TEXT NOT NULL,             -- NONE|BEARER|API_KEY_HEADER
-  credential_ref TEXT,                     -- ENV:NAME or KEYCHAIN:id  (NEVER the secret)
-  supports_discovery INTEGER NOT NULL DEFAULT 1, -- 0 => manual model-ID entry only (DD-38)
-  translator_model TEXT,
-  judge_model      TEXT,
-  num_ctx       INTEGER,
-  effective_context INTEGER,               -- manual "effective context (tokens)"; NULL => conservative default (DD-44)
-  supports_structured_output INTEGER       -- capability cache (JSON-schema/structured output); NULL => not yet probed
-);
-
-CREATE TABLE app_state (
-  k  TEXT PRIMARY KEY,                      -- e.g. 'current_provider' (new-project default only; never consulted at resume)
-  v  TEXT
-);
-
-CREATE TABLE settings (
-  key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL,                      -- canonical serialized value (Locale.ROOT); absence = missing row, never NULL
-  type  TEXT NOT NULL                       -- STRING|INT|BOOL|DOUBLE|JSON
-);
-```
+The exact statements are `modules/persistence/src/main/resources/db/schema.sql`; that file, not a copy here, is the
+schema.
 
 ## settings-serialization {#settings-serialization}
 
@@ -314,7 +97,7 @@ Rules:
 
 ## secret-references {#secret-references}
 
-`providers.credential_ref` holds only a reference: `ENV:<VAR_NAME>` (an environment-variable name) (a `KEYCHAIN:<id>` form, an OS-keychain entry,
+The `providers` document holds only a credential reference: `ENV:<VAR_NAME>` (an environment-variable name) (a `KEYCHAIN:<id>` form, an OS-keychain entry,
 is allowed later and not built; ADR-0043). The plaintext secret is resolved at request time by `:llm` (credential resolution is planned, not built) and is never written to any table,
 log, or export (`04_LLM_INTEGRATION.md#credentials-as-reference`). A row whose reference resolves to nothing yields
 `ErrorCode.missingCredential`.
@@ -323,19 +106,17 @@ log, or export (`04_LLM_INTEGRATION.md#credentials-as-reference`). A row whose r
 
 The database is opened defensively at startup:
 
-- **Integrity check on open.** Before the app accepts work, startup runs `PRAGMA integrity_check` (or catches an opening
-  `SQLITE_CORRUPT`). A corrupt or unreadable database is never a silent partial open: it is renamed aside as below.
-- **Quarantine and start fresh.** On detected corruption BookLoom **quarantines the corrupt `bookloom.db`** (renames it
-  aside as `bookloom.db.old-<yyyyMMdd-HHmmss>`, keeping the file for diagnosis) and starts fresh with a newly-created
-  database rather than crashing on every launch. One WARN line names the old file; no dialog is shown and no data is carried over (ADR-0043).
-- **Cross-release migration guardrails (from the first release; before it a database with another schema number is renamed aside, ADR-0043).** Flyway migrations are forward-only and **transactional**: a failed migration
-  **rolls back completely** — the schema is never left partially migrated. An **older app opening a newer schema**
-  (schema version ahead of what this build knows) **refuses to run with a clear typed error** rather than mangling data.
-  An **optional pre-migration backup** of `bookloom.db` may be taken before applying migrations so a bad upgrade is
-  recoverable.
+- **Checks on open.** A file that is absent or empty is simply created. Any other file must open, pass
+  `PRAGMA quick_check` and carry the build's `PRAGMA user_version`.
+- **Set aside and start fresh.** A file that fails any check is **renamed** `bookloom.db.old-<yyyyMMdd-HHmmss>` (time
+  from an injectable `Clock`; the `-wal` and `-shm` files of the old database are removed so they cannot corrupt the new
+  one) and a fresh database is created. One WARN line names the old file; no dialog is shown and no data is carried
+  over (ADR-0043). The renamed file stays for diagnosis.
+- **After the first release.** Flyway migrations are forward-only and transactional; a failed one rolls back
+  completely, and an older app opening a newer schema refuses to run with a clear typed error.
 
-Corruption/refusal errors map to the error model in `09_ERROR_HANDLING.md` (a startup-scoped `internal`/`validation`
--class `AppError`); the app surfaces them before the first scene rather than mid-run.
+A failure to create even the fresh file is an `internal` `AppError` surfaced before the first scene
+(`09_ERROR_HANDLING.md`).
 
 ## resume-support {#resume-support}
 

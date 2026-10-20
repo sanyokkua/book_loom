@@ -23,3 +23,9 @@ dependencies {
 
     testRuntimeOnly(libs.logback.classic)
 }
+
+// JDBI's classes carry Error Prone's `@GuardedBy`, which this module does not (and need not) have on its compile
+// classpath; javac reports that as a classfile warning, and the build treats warnings as errors.
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:-classfile")
+}
