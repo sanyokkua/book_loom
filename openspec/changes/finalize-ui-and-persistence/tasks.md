@@ -208,7 +208,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 3. Stored state in SQLite
 
-- [ ] 3.1 Add the SQLite, JDBI and Jackson time libraries to `:persistence`, with exact catalog versions and locks, so
+- [x] 3.1 Add the SQLite, JDBI and Jackson time libraries to `:persistence`, with exact catalog versions and locks, so
   the adapter code compiles on the module path.
   - **Satisfies:** enabling work for 3.2, 3.3, 3.4 and 3.5
   - `gradle/libs.versions.toml`: `sqlite-jdbc`, `jdbi3-core`, `jackson-datatype-jsr310` (Jackson 2.20.2's line),

@@ -5,8 +5,8 @@
 # (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
-# (sqlite-jdbc, Flyway, JDBI) are NOT here yet — each arrives with the change that first uses it, at the
-# narrowest scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency. AtlantaFX is declined outright, not deferred
+# (Flyway) is NOT here yet (ADR-0043: no migrations before release) — each arrives with the change that first
+# uses it, at the narrowest scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency. AtlantaFX is declined outright, not deferred
 # (add-ui-translation-workspace design.md D7).
 
 [versions]
@@ -19,6 +19,8 @@ guice = "7.0.0"
 # warns on JDK 25. Pinned here so the constraint that upgrades it has a catalog-backed version.
 guava = "33.6.0-jre"
 jackson = "2.20.2"
+sqlite-jdbc = "3.53.4.0"
+jdbi3 = "3.55.0"
 # JavaFX 26, not the 25 LTS that DD-02/ADR-0001 chose. JavaFX 26 is the first release with a first-class
 # headless glass platform built into `javafx.graphics`; `org.testfx:openjfx-monocle` — which the frozen spec
 # names for every headless UI test — has no build past 21.0.2 and none for 22–25. See ADR-0019.
@@ -121,6 +123,9 @@ licenseReportPlugin = "3.1.4"
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
+jdbi3-core = { module = "org.jdbi:jdbi3-core", version.ref = "jdbi3" }
 
 # --- Compiler-facing ----------------------------------------------------------------------------------------
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
