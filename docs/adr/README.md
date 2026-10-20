@@ -63,3 +63,6 @@ explicitly — read them before planning work.
 | ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
 | ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |
 | ADR-0042 | The source language may be Auto; the model identifies it, the code uses generic rules | EC-LANG-1           |
+| ADR-0043 | Application state in SQLite as JSON documents; no schema migrations before release     | DD-20               |
+| ADR-0044 | Look for a local AI program once, by itself, at first launch (amends ADR-0010)        | DD-01               |
+| ADR-0045 | Review is an in-window dialog; the review mode is a stored setting                    | DD-45               |

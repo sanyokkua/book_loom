@@ -1,0 +1,218 @@
+## ADDED Requirements
+
+### Requirement: Make the brief read-only while a translation is going on
+
+WHILE a translation of the open project is running, pausing or stopping, the Book Brief SHALL be read-only and SHALL show the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button.
+
+**Source**: docs/specification/mockups/README.md (Changes while translating; Step 2 · Book Brief), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (owner decision on the brief while translating). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
+
+#### Scenario: The brief is read-only during a translation
+
+- **WHEN** the translation of `Harbor Lights · EN → UK` is running and the person opens the Book Brief
+- **THEN** every control is disabled and the banner reads "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button
+
+#### Scenario: Pausing makes it editable again
+
+- **WHEN** the person presses Pause in that banner and the translation reaches Paused
+- **THEN** the controls are enabled and the banner is gone
+
+### Requirement: Lock the languages once translating has started
+
+WHILE a project has started translating — it holds at least one decided segment or a run is in progress — the Book Brief SHALL lock both language choices and SHALL point to "Translate into another language" on Projects for another target.
+
+**Source**: docs/specification/mockups/README.md (Changes while translating), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (Step 2 Book Brief). In plain words: changing the languages under finished segments would mix two translations in one book, so a new target is a new project.
+
+#### Scenario: Languages are locked after the first decided segment
+
+- **WHEN** the project `Harbor Lights · EN → UK` has 74 decided segments, is paused, and the Book Brief is shown
+- **THEN** the Translate from and Translate into choices are disabled with the hint "To translate into another language, use Translate into another language on Projects"
+
+#### Scenario: Languages are free before translating
+
+- **WHEN** a new project has no decided segment and no run
+- **THEN** both language choices can be changed
+
+### Requirement: Show the project name on the brief and let the person rename it
+
+The Book Brief's languages card SHALL show a Project name line reading "automatic — follows the languages" while the name is automatic, with a Rename… action, and an automatic name SHALL follow the chosen languages as `<title> · <SRC> → <TGT>`, ending in `→ …` until a target is chosen.
+
+**Source**: docs/specification/mockups/README.md (Project names — one book, several translations; Step 2 · Book Brief), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN1–PN2). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
+
+#### Scenario: The automatic name follows a language change
+
+- **WHEN** the project `Harbor Lights · EN → …` has the target changed to Ukrainian
+- **THEN** the Project name line reads "automatic — follows the languages" and the project is named `Harbor Lights · EN → UK`
+- **AND** a toast says that the name changed
+
+#### Scenario: A typed name never changes
+
+- **WHEN** the person renamed the project to `Harbor Lights, 26b` and then changes the target from Ukrainian to Polish
+- **THEN** the project is still named `Harbor Lights, 26b`
+
+### Requirement: Open Same language pair when the chosen pair is already used
+
+IF the person chooses a source and target that another project of the same book already uses, THEN the Book Brief SHALL open the dialog "Same language pair" naming that project, with "Open that project" and "Make a second translation" that requires a name of its own.
+
+**Source**: docs/specification/mockups/README.md (Project names — one book, several translations, rule 3), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN3). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
+
+#### Scenario: A used pair opens the dialog
+
+- **WHEN** `Harbor Lights · EN → UK` exists and the person sets the target of a second project of the same book to Ukrainian
+- **THEN** the dialog "Same language pair" names `Harbor Lights · EN → UK` and offers "Open that project" and "Make a second Ukrainian translation"
+
+#### Scenario: The second translation needs its own name
+
+- **WHEN** the person chooses "Make a second Ukrainian translation" and the name field is empty
+- **THEN** the primary button is disabled, and it becomes enabled once the name is filled in and unused (for example `Harbor Lights · 26b`)
+
+### Requirement: State a time estimate on the brief only when it is measured
+
+The Quality and speed card SHALL show an estimate line, such as "For this book on this computer: about 2 h 30 min (estimate from the model test)", only when a measured speed exists from the inference test or an earlier run, and otherwise SHALL show the relative cost of the choices.
+
+**Source**: docs/specification/mockups/README.md (Step 2 · Book Brief, Quality and speed; G10 point 5), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PR1–PR3). In plain words: a made-up number for hours of work misleads, so a time appears only when the computer was actually measured, and otherwise the card says how the choices compare.
+
+#### Scenario: A measured speed gives an estimate
+
+- **WHEN** the inference test measured 9.4 tokens per second for the chosen model
+- **THEN** the card shows an estimate line marked "estimate from the model test"
+
+#### Scenario: No measurement gives relative cost
+
+- **WHEN** no inference test and no earlier run exist for the chosen model
+- **THEN** the card shows no time and says Balanced costs about 1.5 times Fast and Max about 3 times
+
+### Requirement: Show the brief suggestion in a progress dialog that is not hideable
+
+The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (skipped when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max), and deciding genre, readers and voice; Esc SHALL cancel it and it SHALL NOT be hideable.
+
+**Source**: docs/specification/mockups/README.md (Dialog · Fill in the brief from the book; G4), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3). In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
+
+#### Scenario: The steps follow the dial and skip unknown knowledge
+
+- **WHEN** the person presses "✦ Fill in from the book" on Balanced for a book whose title is only its file name
+- **THEN** the dialog lists no "what the model knows" step, then Read sample 1 to Read sample 4 with their location ranges, then Decide genre, readers and voice
+
+#### Scenario: Esc cancels the suggestion
+
+- **WHEN** the person presses Esc in the dialog before it has ended
+- **THEN** the suggestion is cancelled and the brief is unchanged
+
+### Requirement: Show what the suggestion decides with its agreement and verified quote
+
+The dialog's "What it decides" group SHALL list genre, register, who tells the story and who reads it, each with its value so far and its agreement ("2 of 2 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without a quote SHALL NOT be used.
+
+**Source**: docs/specification/mockups/README.md (Dialog · Fill in the brief from the book, Group "What it decides"), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B2, B3). In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
+
+#### Scenario: A field shows its agreement and quote
+
+- **WHEN** two of two samples answer `formal` for the register and both quotes are found in their samples
+- **THEN** "What it decides" shows Register `Formal` with "2 of 2 samples agree", and selecting it shows each sample's answer with its quote
+
+### Requirement: Write nothing to the brief until the person applies the suggestion
+
+The application SHALL write nothing to the brief until the person presses "Apply to the brief", which SHALL be offered when all steps have ended, and Cancel SHALL leave the brief unchanged.
+
+**Source**: docs/specification/mockups/README.md (Dialog · Fill in the brief from the book, Footer), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1). In plain words: a model's suggestion is only a proposal; the brief changes when the person says so.
+
+#### Scenario: Nothing is written until Apply
+
+- **WHEN** all steps have ended and the person closes the dialog with Esc before pressing "Apply to the brief"
+- **THEN** the suggestion is cancelled and the brief is unchanged
+
+#### Scenario: Apply writes the decided fields
+
+- **WHEN** all steps have ended and the person presses "Apply to the brief"
+- **THEN** the decided genre, register, narrator and readers are written to the brief and the dialog closes
+
+## MODIFIED Requirements
+
+### Requirement: Suggest the tone and style from verified readings, one decision per field
+
+WHEN the person presses "✦ Fill in from the book", the application SHALL ask what the model knows of the book, read several samples with one `brief-suggestion` call each, ask one `brief-synthesis` call over the facts and the samples' verified readings, and decide each field once; a failed sample counts as no reading, and a stop leaves the brief unchanged.
+
+**Source**: FR-BRIEF-02; tasks 15h.G1, 15i.B2–B4; `docs/specification/01_Product/12_PROMPT_CATALOG.md#brief-synthesis`; docs/specification/mockups/README.md (Dialog · Fill in the brief from the book), docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3). In plain words: one window can be an odd stretch of a book, and a model's memory of a famous title can be wrong, so a field is kept only when most of the book's passages say it, or when the model's checked knowledge says the same.
+
+#### Scenario: Three of four windows decide the register
+
+- **WHEN** three of four windows answer `casual` with quotes found in them and the fourth answers `formal`
+- **THEN** the suggested register is `Casual`, shown as `from 3 of 4 passages`
+
+#### Scenario: A split register stays neutral and uncertain
+
+- **WHEN** two windows answer `casual` and two answer `formal`
+- **THEN** the suggested register is `Neutral` and shown as uncertain
+
+#### Scenario: One window alone does not decide the genre
+
+- **WHEN** the synthesis names `Mystery` citing one of four windows and the model does not know the book
+- **THEN** the genre stays empty and is shown as uncertain
+
+#### Scenario: A cited window that read another genre is no support
+
+- **WHEN** the synthesis names `Thriller` citing two windows that read `fantasy` and `romance`
+- **THEN** the genre stays empty and is shown as uncertain
+
+#### Scenario: One failed window does not fail the suggestion
+
+- **WHEN** one of four window calls fails and the other three answer
+- **THEN** the suggestion is made from the three, the failed window counting against every majority
+
+#### Scenario: A stop during the synthesis changes nothing
+
+- **WHEN** the person stops the suggestion while the synthesis call is running
+- **THEN** the suggestion ends as cancelled and the brief is unchanged
+
+#### Scenario: Knowledge that agrees keeps the audience
+
+- **WHEN** the model's accepted knowledge says `adult readers` and the synthesis names the audience `adult` on that
+  knowledge
+- **THEN** the audience is `adult`, shown as from what the model knows of this book
+
+#### Scenario: The detector's person outweighs the windows
+
+- **WHEN** the detector reads the book as third person and every window answers `first`
+- **THEN** the suggested narrator is third person
+
+#### Scenario: Under Auto the windows' language is only proposed
+
+- **WHEN** the source language is Auto and three of four windows say the passage is French
+- **THEN** the suggestion proposes French and the brief's source language stays Auto
+
+#### Scenario: Knowledge is accepted only by its echo check
+
+- **WHEN** the model answers what it knows of the book
+- **THEN** the answer is accepted only when the title (also by its part before `;` or `:`) and the author (in either name order) match the metadata, and the year is no later than five after a metadata year, because that year is often an edition's
+
+#### Scenario: The number of windows follows the dial
+
+- **WHEN** the suggestion is made on Fast, Balanced or Max
+- **THEN** 3, 4 or 5 single windows of the story are read, fewer for a short story
+
+#### Scenario: An answer is kept only with a quote found in its window
+
+- **WHEN** a window's answer is read
+- **THEN** it is kept only with a quote found in its window: a register's quote in the window's narration, outside the characters' speech, and a genre or an audience never without a quote
+
+#### Scenario: No synthesis for an unknown book that no window read
+
+- **WHEN** the book is unknown to the model and no window read genre, audience or voice
+- **THEN** no `brief-synthesis` call is made, because nothing could stand
+
+#### Scenario: The suggestion fails only when stopped or when every window fails
+
+- **WHEN** the person stopped it, or every window call failed
+- **THEN** the suggestion fails, whereas a failed knowledge question or synthesis only leaves its fields uncertain
+
+#### Scenario: A stop during the knowledge question changes nothing
+
+- **WHEN** the person stops the suggestion while the knowledge question is running
+- **THEN** the suggestion ends as cancelled and the brief is unchanged
+
+
+## REMOVED Requirements
+
+### Requirement: Say so when no book is open on the book brief
+
+**Reason**: The five workflow steps are locked until a project is open, so the Book Brief can no longer be reached without one and the "open a book first" state has no way to appear.
+
+**Migration**: The locked step in the navigation, with the hint "Steps unlock when a project is open", replaces it (the `app-shell` capability); the Projects screen is where a person starts or opens a project.

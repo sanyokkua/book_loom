@@ -1,0 +1,415 @@
+# Design: finalize-ui-and-persistence
+
+## Context
+
+See `proposal.md` for the motivation. The visual and interaction target is `docs/specification/mockups/README.md`. Its
+"Code" column names the existing classes each element builds on, and its "For AI agents" section is the method for
+building and checking every screen.
+
+### What exists today
+
+Paths are relative to `modules/<module>/src/main/java/ua/bookloom/<module>/`.
+
+**`:ui`**
+- **Dialogs and work.** `ModalHost` (scrim, focus trap, Esc, Tab wrap, one card), `dialog/ModalCard` (a `DialogPane`
+  with no size variants) and `BusyHost` (a small busy card plus `#busy-show-calls`, which opens
+  `control/ModelCallsWindow`, the only `new Stage` in `:ui`).
+- **Shell controls.** `ActivityChip`, `FigureLabel`, `StepFooter.claim()` (mounts into `#shell-actions`), `ToastStack`
+  (anchored bottom-centre) with `ToastAction`, `TwoColumns`, `PriorityRow`, `TaggedLog`, `StructureSegmentsPane`
+  (virtualised), `GlossaryCells`, `SmoothScroll`, `Motion`.
+- **Run state.** `RunState` (8 values), `RunNotice`, `RunInterventions`, `PauseNotice`, `ActivityTracker.Handle`,
+  `CallFeed`, `ThroughputMeter`, `RunClock` (the time-left window, `WINDOW = 20`), `RunFigures` (a segment percentage).
+- **Translating.** `LiveCallPanel` / `LiveCallView` (`SEGMENTS_HEIGHT = 220`) and `LiveCallState` (current and
+  previous call only).
+- **Settings.** `settings.fxml` has four tabs disabled; provider add, edit and delete are disabled.
+- **Layout.** No `SplitPane`, no `TextFormatter`. `AppShellView.showContent` forces `minHeight = USE_PREF_SIZE` on
+  every screen.
+
+**`:api` / `:persistence`**
+- Nine storage ports, each bound to an in-memory adapter over `InMemoryStore` (ADR-0034), proven by the
+  `RepositoryContractTest` chain. The `LexiconRepository` is not in that chain yet.
+- `Project(id, source, format, contentHash, brief)`. The id is the sha256 of the book's path
+  (`ProjectServiceImpl:355`).
+- `ProviderConfigs` and `ProviderConfig` live in `:api`, but `InMemoryProviderConfigs` (the two presets) is bound in
+  `:llm`'s `LlmModule:38`.
+- Settings ports do not exist. The theme is held in memory, the language comes from the OS, the review mode is a
+  launch flag, and reasoning and sampling are environment variables.
+
+**`:llm` / `:pipeline`**
+- **One header point.** `HttpExchange.buildRequest` is the single place request headers are set.
+- **Refused settings.** `CapabilityRejections` recognises a refused reasoning or structured-output setting on a 400
+  only. `GatedChatModel`'s downgrade set lives for one call.
+- **Batch replies.** `BatchReplyParser` parses a batch reply into items, but the items never reach `CallSnapshot`.
+- **Context snapshots.** A batch-adopted segment stores its own `ContextSnapshot`, not the batch sections that were
+  sent.
+- **Step names.** `NamesPassImpl` names its stages only in a DEBUG line. `BriefSuggester`'s phases are visible only as
+  call kinds. Export has `ExportProgress.Step`.
+
+### Constraints
+
+- **Layering.** `:ui` sees `:pipeline`, `:api` and `:util`. Only `:llm` uses HTTP. Only `:persistence` uses SQL or
+  JDBI. `:api` is framework-free (no Jackson).
+- **Coding rules.** Records for data; `Result` / `AppError` at every port; single-flight inference; credentials as
+  references; token-only theming; logging at every level; book-neutral fixtures; no mock of the boundary under test.
+
+## Goals / Non-Goals
+
+**Goals:**
+- The window matches the mockup at 960×640 through 1920×1080, in light and dark, in `en` and `uk`.
+- State and settings survive a restart, and a run continues after one.
+- The smallest pipeline and provider changes that give the UI its data.
+
+**Non-Goals:**
+- No change to how the pipeline translates: prompts, gates, batching and the dial stay as they are.
+- No schema migrations (owner, 2026-10-20; ADR-0043).
+- No keychain.
+- No new UI library: JavaFX 26, ControlsFX 11.2.5 and Ikonli Feather are enough, and RichTextFX is not added.
+- No OS windows beyond the native file choosers.
+
+## Decisions
+
+### D1 — Two dialog layers (README G1)
+
+- **The work layer:** `BusyHost` holds the progress dialogs of model work.
+- **The question layer:** `ModalHost`, above the work layer, holds everything else: questions, confirmations, errors,
+  the review desk, the provider tests and forms. A question opened during work appears above the progress dialog, which
+  keeps its state underneath.
+
+**Card sizes.** `ModalCard` gains `Size.DIALOG` (480 px), `Size.WIDE` (720 px) and `Size.XL`. XL is min(1180, 92 % of
+the window) wide with a **fixed** min(820, 90 %) height, so its footer never moves. Every size has a fixed header and
+footer and a `ScrollPane` body.
+
+**Keys, in `ModalHost`'s key filter:**
+- Enter runs the card's default button. Inside a `TextArea`, Ctrl/⌘+Enter does.
+- Esc runs the card's escape action. It closes the card, hides long work, or asks first ("Cancel the export?").
+- Only About closes on a click outside.
+
+**Unrequested dialogs.** `showWhenFree(card)` queues a dialog the person did not ask for, such as the review desk at
+the end of a run, until neither layer shows anything.
+
+**Removed:** `ModelCallsWindow` and `#busy-show-calls`. "Retry with a note" becomes an inline panel in the desk, so no
+dialog replaces another.
+
+**Alternative rejected:** a separate OS window for call logs, which the UX research suggested. The owner overrode it
+with decision 1.
+
+### D2 — One progress dialog (G4, decisions 2, 3, 11)
+
+**`control/ProgressDialog` and `state/ProgressDialogModel`.**
+- The model holds:
+  - grouped steps, each with a marker and a one-line result;
+  - the stored input and output of each step;
+  - the figures, the selection, the "follow current step" flag, the Simple/Detailed mode, and `hideable`.
+- The selection is changed by code only while follow is on. Only a person's click or key turns follow off.
+- It is fed by `CallFeed` / `ActivityTracker.Handle.calls` and by the step events (D4).
+- Publications are coalesced to about 10 a second. Figures tick in `FigureLabel`, so a tick never re-lays out the
+  dialog.
+- Full prompts are kept only for the last 50 calls. Max's consistency list is a virtualised `ListView` of small row
+  records whose detail is looked up by segment id.
+
+**Continue in background** exists for long work only (the names pass, the export pass).
+- `ActivityChip` gains an "open" action for hidden work.
+- A `HiddenWork` property names the screen the work writes to. Its editable controls bind `disable` to it, under a
+  read-only banner.
+- Other model work is refused with a toast that offers "Show progress". When the work ends, a toast offers "Review the
+  results".
+
+**Parsed views (G5).**
+- `control/PromptView` is one card per message role, with a `TitledPane` per `PromptSection`. Each slot has a renderer:
+  bullets for the rule lists, a Term | Rendering | Note grid, a Source | Translation grid, and an Id | Segment | Text
+  grid built from `<s id>` lines.
+- `control/ReplyView` is an Id | Segment | Translation returned | Result grid built from the call's items (H1).
+- Raw messages and the raw reply are collapsed blocks with Copy, in Detailed only.
+- These two replace `PromptContextPane` and `ReplyPane`.
+
+### D3 — Progress counts every step (G10, PR1–PR3)
+
+**`state/ProgressLedger`** is a pure class with a clock seam. It counts planned, added and done steps per kind.
+- **Time left** = Σ over kinds (steps left × the mean measured time per step of that kind over the whole operation,
+  pauses excluded).
+- **A kind not run yet** borrows the draft time scaled by its size (a check ≈ 0.6 × a draft).
+- **When it shows:** after 5 steps or 3 %, rounded, as "about …", moving at most 10 % a minute.
+- **The bar never moves back.** Added work holds the bar until the work catches up.
+- **What it replaces:** the window in `RunClock` and the percentage in `RunFigures`. Segment counts stay in
+  `RunFigures` for the text lines ("74 of 142 segments done"). `ThroughputMeter` stays.
+- **Estimates before Start** come only from a measured speed: the last inference test, stored in `ModelSettings`, or an
+  earlier run of the same project.
+
+**Alternative rejected:** a better smoothing of the 20-segment window. It still ignores checks, repairs and Max's
+after-work, and still projects one stretch over the book.
+
+### D4 — Step events and the hooks the UI needs
+
+Each hook is the smallest change that gives the UI data the pipeline already has. None changes what is translated.
+
+| Hook | Module | Change | Why the UI needs it |
+|---|---|---|---|
+| **H1** batch items | `:api`, `:pipeline` | An `api.pipeline.CallItem(id, segmentId, target, CallItemStatus, problems)` record and `CallSnapshot.items`. `CallItemStatus` mirrors `ItemStatus` (OK, MISSING, DUPLICATE, EXTRA, MERGED_SUSPECT). `ModelCalls.parsed(...)` (default no-op) is called right after `BatchReplyParser.parse` in `BatchDrafter`; `CallSnapshots` attaches the items and publishes again | Rows show a batch's per-segment results; the reply grid maps each id to its segment (T1, T4, G5) |
+| **H2** context sent | `:api`, `:pipeline` | `ContextSnapshot.sentSections @Nullable List<PromptSection>`, filled for batch-adopted segments from `BatchStage.adopt` (`prompts.sectionsFor(context, items)`). `RetryDraft` still replays from the snapshot's own fields | "What the model saw" shows what was really sent (T8) |
+| **H3** steps | `:api`, `:pipeline` | `JobEvent` gains `StepsPlanned(kind, added, estimated)` and `StepChanged(kind, label, index, state, @Nullable itemRef, @Nullable StepResult result)`. Emitted per source (below). The export keeps `ExportProgress`, which gains the item data; `:ui` maps both into one model | Every progress dialog and the run's ledger (G4, G10) |
+| **H4** provider form | `:api`, `:llm` | `ProviderConfig` + `displayName, auth (NONE / BEARER / API_KEY), apiKeyHeader, credentialRef, modelsPath, chatPath, headers, customModels`. Validation in the compact constructor and a pure `api.llm.ProviderConfigRules`. `HttpExchange.buildRequest` resolves `${env:NAME}` and adds auth and the headers. A missing variable is `ErrorCode.missingCredential` before any request. The draft overloads are `ProviderVerifier.verify(ProviderConfig, …)` and `ModelCatalog.listModels(ProviderConfig)`. `StageOutcome` + `VerificationExchange` (method, URL, bodies, status, first token, speed, structured), with the key masked | The Settings form, checks on an unsaved form, the test dialog (S2, S3, decision 7) |
+| **H5** per-model | `:api`, `:pipeline`, `:llm` | `ModelSettings` is read per chunk through the port (a cached read). Temperature `CHOOSE` keeps `PromptName`'s per-kind value, `VALUE` uses the person's value, `OMIT` sends null (the DTOs already omit null). The context override goes through `ContextBudget.windowFor(detected, override)`; the output cap through `OutputLimit`; `OutputLengthField` maps `max_tokens` → `max_completion_tokens` in `OpenAiRequestMapper` (never for Ollama) | The Models tab, applied to segments not translated yet (S6) |
+| **H6** refused settings | `:llm` | `RejectedCapability` gains TEMPERATURE, TOP_P, TOP_K, MIN_P, REPEAT_PENALTY, SEED, OUTPUT_FIELD and NUM_CTX. `CapabilityRejections` matches HTTP 400 **or 422** whose body names a setting that **was sent**; only the setting's name is kept. The `GatedChatModel` downgrade repeats once without counting an attempt. A `RefusalMemory` singleton over `ModelSettingsRepository` strips remembered settings before the first attempt. One WARN line | FR-INFER-09e; "Settings this model refused" |
+| **H7** projects | `:api`, `:pipeline` | `Project` + `name, nameKey, nameOrigin, createdAt, lastOpenedAt`; ids from an `IdSource` seam. `ProjectService` becomes id-based: `list, create, open, rename, remove, translateInto`, plus the existing `updateBrief, plan, segments, roundTrip, close`. `ProjectNames` builds and checks names. `RunRecord.model` becomes a `ModelSelection`; a `lastExport` record is added | Projects, project names, continue after a restart (PN, D11) |
+| **H8** title, files | `:ui`, `:pipeline` | `BookTitleViewModel` and `FileNameTargets` fall back to `aux:fm:title` / `aux:fm:author` and give a reason line. `ExportPathRules` adds a named project's suffix (`earth-gravity.uk.26b-max.md`) | E1, PN5 |
+| **H9** knobs | `:pipeline`, `:app` | `ReasoningPlan`, `SamplingMode` and the review-mode resolver read the stored setting, and the environment variable or flag still overrides it | The Generation and Automation tabs; the CLI and evaluations keep their env vars |
+| **H10** first launch | `:ui` | `state/LocalModelProbe` runs once when `firstLaunch.probed` is absent (ADR-0044) | First launch (decision 13) |
+
+**Where the step events come from:**
+- **The run.** At chunk entry (`WorkList.enterChunk`), the drafts and the planned checks from `DialParameters`
+  (reviewPasses × translated segments). Then added steps:
+  - a repair round (`RoundStarted`);
+  - a batch re-ask;
+  - a timeout resend (an attempt over 1);
+  - the REVISE stage and the summaries on Max.
+
+  A kept-as-is segment is a draft step done at once.
+- **The names pass.** `NamesPassImpl.step(name)` emits each of its 7 stages plus "write".
+- **The brief.** `BriefSuggester` emits book-knowledge (or skipped), K samples (3 / 4 / 5 by dial) with each sample's
+  value, agreement and quote, and synthesis.
+- **The export.** `ExportCalls` reports each item's before, after and verdict through `ExportProgress`.
+
+**Alternative rejected:** deriving steps in `:ui` from call kinds. The UI would duplicate the dial's plan and could not
+know the planned review passes.
+
+### D5 — Layout (L1–L10)
+
+- **`control/LayoutClass`.** One width listener on `#shell-content` sets the pseudo-classes `compact` (< 1040),
+  `regular` (1040–1439) and `wide` (≥ 1440), with 16 px hysteresis. It never logs. Regions still decide their own
+  two-column switch from their own width (`TwoColumns`). Names & style switches at 1440.
+- **`control/Overrun`.** It adds a tooltip to a `Labeled` only while its text is cut.
+- **`#shell-banners`.** A `VBox` between the toolbar and the content `ScrollPane`, fed by `state/ShellBanners`, which
+  is built from `RunStateView` (D8) and `HiddenWork`. Run banners show on every screen while they apply.
+- **`fills-viewport`.** The style class opts a screen out of `minHeight = USE_PREF_SIZE` in `AppShellView.showContent`.
+  Translating (live card min 460), Import (browser min 360), Names & style and Settings each declare their minimum
+  height, and below it the page scrolls.
+- **Sizes.** The content is capped at 1320 px on form and list screens; prose at 680 px. The nav column is 236 px, or
+  200 px under a 1200 px window.
+- **Splits.** List | detail `SplitPane`s never stack: the live card, the review desk, the progress dialogs and Settings
+  › Providers.
+
+### D6 — Tables, grids and markers (G9, G11)
+
+- **Editable tables.** `TermTables` moves to `CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN` with minimum widths (Term
+  140, Kind 96, Translation 170, Gender 110, Locked 64, action 36) and keeps its fixed 46 px rows.
+  - A changed row gets a `:changed` row pseudo-class (a left edge), which replaces the chip in the term cell
+    (`ChangedMarks`).
+  - The full text is in the tooltip.
+- **Read-only grids.** These are `GridPane`s with the `read-only-grid` style class and a small factory, not a new
+  component.
+- **State markers.** `control/StateMarker` is a `Label` with an Ikonli Feather icon and a word. Its six style classes
+  (`waiting`, `working`, `done`, `attention`, `failed`, `kept`) map onto the existing status token roles, so no token
+  is added.
+- **Links and selection.** Links are underlined in `-color-info-fg`. The selected segment of a `SegmentedButton` gets
+  a 2 px `-color-text-strong` bar.
+- **Scrollbars.** One 12 px rule with a `muted-2` thumb on a `surface-2` track; the nav column uses `nav-fg-muted` on
+  `nav-bg-2`. The eight regional copies in `theme.css` are aligned to it.
+- **Tests.** `ContrastTest` checks the thumb at 3:1, the links at 4.5:1 and the selected bar.
+
+### D7 — The protected editor (decision 12)
+
+**`control/ProtectedMarks`** is a `UnaryOperator<TextFormatter.Change>` filter on the review `TextArea`.
+- It widens a deletion, replacement or cut that touches part of a `⟦n⟧` mark to the whole mark.
+- On paste, it keeps only marks missing from the editor and drops duplicates.
+- It lets through a whole-text load (`setText`) unchanged.
+
+**Mark notation.** The stored masked text uses `⟦gN⟧`. The editor shows each as `⟦N⟧` with the same number
+(`⟦g0⟧` → `⟦0⟧`). Loading the editor maps `⟦gN⟧` → `⟦N⟧`, and saving maps it back before the placeholder gate runs.
+Detail panes keep their chips.
+
+**`state/MarkStatus`** compares the editor's marks with the source's: missing, doubled, or complete. The main button
+binds to "complete" and the strip below the editor shows what is wrong. Undo and redo skip the filter, which is safe
+because every change it recorded already covered whole marks.
+
+**Alternative rejected:** RichTextFX chips. It is a new library and a heavier control than the review editor needs.
+
+### D8 — The run-state table (README "Run states", theme A)
+
+**`state/RunStateView`** is one record per README row (16 rows). It is derived from:
+- `RunState`;
+- the recovery details (`RunNotice`, `RunInterventions`, `PauseNotice`);
+- whether stored progress exists;
+- the to-review count.
+
+Each row gives the title-bar text key, the AI-model chip's meaning, the toolbar actions, the banner, the live line and
+the current-call row marker. The title bar, the toolbar run actions (moved out of `TranslatingView`), `ShellBanners`,
+the nav footer and the live card all read it. `RunStateMappingTest` walks all 16 rows.
+
+### D9 — Persistence (ADR-0043)
+
+**Libraries.** `org.xerial:sqlite-jdbc`, `org.jdbi:jdbi3-core` (fluent API) and `jackson-datatype-jsr310` in
+`:persistence`; `jackson-databind` is already in the catalog. No Flyway before the first release.
+
+**`persistence.sqlite.SqliteDatabase`.**
+- **Connections.** `SQLiteDataSource` with a `SQLiteConfig` applies `journal_mode=WAL`, `foreign_keys=ON`,
+  `synchronous=NORMAL` and `busy_timeout=5000` on every connection it opens. There is no pool library.
+- **Schema.** At `AppLifecycle` phase 2, `db/schema.sql` runs with `CREATE … IF NOT EXISTS` and sets `PRAGMA
+  user_version = N`.
+- **A file that does not fit.** A different `user_version`, or a file that fails to open or fails `quick_check`, is
+  renamed `bookloom.db.old-<yyyyMMdd-HHmmss>` and a fresh database is created. That is one WARN line, with no dialog.
+
+**`WriteExecutor`.** A single-thread executor runs every write as one JDBI transaction. Reads use their own
+connections. Port methods block on the write future and return `Result`; they are never called on the FX thread (the
+`:ui` callers already use the background runner, and a test helper asserts it).
+
+**Schema (`db/schema.sql`):**
+
+| Table | Key and columns | Holds |
+|---|---|---|
+| `settings` | `key` PK, `value`, `type` | preferences (D12) |
+| `providers` | `id` PK, `json` | `ProviderConfig` |
+| `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included |
+| `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once |
+| `projects` | `id` PK, `content_hash` → books, `name`, `name_key` UNIQUE, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; index (`content_hash`, `source_lang`, `target_lang`) | the project |
+| `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, lastExport |
+| `segments` | PK (`project_id`, `segment_id`), `ord`, `unit_id`, `status`, `json`; index (`project_id`, `status`) | `SegmentRecord` |
+| `tm_entries` | PK (`project_id`, `source_hash`, `context_key`), `json` | `TmEntry` |
+| `deferrals` | PK (`project_id`, `segment_id`, `reason`, `waiting_on`), `json` | `Deferral` |
+
+- **Cascade.** Every child table has `FOREIGN KEY (project_id) REFERENCES projects ON DELETE CASCADE`.
+- **The name key.** `name_key` is `strip().toLowerCase(Locale.ROOT)` computed in Java, because SQLite's `lower()` folds
+  only ASCII and Cyrillic must fold too.
+
+**`persistence.sqlite.JsonCodec`.** A Jackson mapper with the jsr310 module and mix-ins for the sealed types, so `:api`
+carries no annotation. Public records in exported `:api` packages need no `opens`. A parameterised round-trip test
+covers every stored record, nested ones included.
+
+**Adapters.** The `Sqlite*` adapters cover project, segment, glossary, TM, summary, deferral, run, lexicon, settings,
+model settings and provider configs.
+- `SqliteCheckpoint` writes the segments, TM entries, deferrals, glossary additions and the run record in one write
+  transaction. This is ADR-0034's commit rule, unchanged.
+
+**Modules.**
+- `PersistenceModule` splits into `InMemoryPersistenceModule` and `SqlitePersistenceModule`. Each binds every storage
+  port, including `ProviderConfigs`, whose binding leaves `LlmModule`. `InMemoryProviderConfigs` moves to
+  `persistence.memory` with the presets.
+- `CoreModules` (the window) installs SQLite; `TranslateLauncher` (the CLI) installs in-memory.
+
+**One document, one writer.** The glossary and the lexicon are each one JSON document per project, and Names & style
+stays editable while translating. So every change to them, a checkpoint's glossary additions included, is a
+read-modify-write inside one `WriteExecutor` transaction. A person's edit and a run's addition never overwrite each
+other, and a contract case proves it.
+
+**Storage info.** `api.persistence.StorageInfo` (`location`, `sizeBytes`, `backupTo` = `VACUUM INTO`) serves Settings ›
+Storage & logs. `ProjectRepository.recordExport` / `lastExport` keep the `ExportRecord` in `project_docs`.
+
+**The FX-thread check.** The test helper `NotOnFxThread` compares the thread name with "JavaFX Application Thread"
+and imports nothing from JavaFX. It is enabled only in tests, so `:persistence` stays FX-free.
+
+**Errors.** A storage failure is `ErrorCode.internal`, with the safe details `storage <operation>`. `ErrorCode` stays
+at fifteen codes (ADR-0039).
+
+**Tests.** The contract chain plus `LexiconRepository` and the three new ports, run against both adapters. SQLite runs
+on a `@TempDir` file with the schema applied, and no Testcontainers.
+
+**Alternatives rejected:**
+- Typed entity tables plus Flyway now (ADR-0009 as written): a mapper and a migration for every field while the records
+  still change.
+- A single key/value table: uniqueness and lookups would move into Java.
+
+### D10 — Projects and the book (PN, decision 9)
+
+- **Ids.** Ids come from `IdSource` (a UUID in production, a counter in tests). A project no longer derives from its
+  path, so one book can have several projects.
+- **The book row** is shared by `content_hash`. It holds the book's metadata and file path, never its bytes: the
+  file is re-read at open. It goes when no project uses it. `books.source_path` is the one path. `Project.source` is
+  read from it, and "Find the book…" updates it.
+- **`open(projectId)`.**
+  - It re-reads the book from `books.source_path` into `OpenProjects` (the parsed-document cache stays) and checks the
+    hash.
+  - When the file is gone or changed, it returns a typed result that the UI turns into "Find the book…", which accepts
+    a file only when its hash matches.
+- **`ProjectNames`.**
+  - It builds `<title> · SRC → TGT`. The title is the metadata title before ":", or the file name. Under Auto the
+    source code is left out until known, and the name ends in `→ …` before a target is chosen.
+  - It follows the languages while the name is AUTO.
+  - It reports a used pair (same book, same languages) or a duplicate name as typed results, never as an exception.
+  - A named project returns to its automatic name only when no other project of the book has the pair.
+- **`translateInto(projectId, target, name)`.** It creates a project on the same book and copies the brief, the
+  Glossary and the Recurring terms (term, kind, gender, locked) with every target emptied. It never copies the
+  translation memory (owner, 2026-10-20).
+- **`remove(projectId)`.** It deletes the project's rows. It never touches the book file, the exported files or the
+  book's other projects.
+- **The "Used" count** for recurring terms comes from the book index's postings for the term.
+
+### D11 — Continue after a restart (resume)
+
+- **What is stored.** The run record and the segment decisions are stored with every checkpoint.
+- **What opening shows.** A project whose stored run reads RUNNING or PAUSED (a clean quit or a crash) is treated as
+  interrupted when it opens. It shows **Ready to continue** and never continues by itself.
+- **How it continues.** Continue translation starts at the first pending segment through the existing resume path
+  (`RunStarter`).
+- **The AI-model questions.** "AI model not answering" and "A different model is chosen" compare `RunRecord.model`
+  (now a `ModelSelection`) with `model.current`.
+- **Reopen last project.** With the setting on, the window opens `app.lastProject` at launch. With it off, the window
+  opens Projects.
+
+### D12 — Settings storage
+
+- **Port.** `api.persistence.SettingsRepository` has `get(key)`, `put(key, value)` and `all()`. `api.settings.AppSetting<T>`
+  is the typed registry of keys, types and defaults.
+- **Keys:**
+  - `ui.theme`, `ui.language`, `ui.technicalDetails`;
+  - `run.reviewMode`, `run.defaultDial`, `run.reasoning`, `run.sampling`;
+  - `automation.openReviewDesk`, `automation.lastCheck`, `automation.keepAwake`, `automation.reopenLastProject`;
+  - `model.current`, `app.lastProject`, `firstLaunch.probed`, `help.sleepLineClosed.<projectId>`;
+- **The detailed-log switch is not a database key.** Logging is configured before the injector and before the database
+  opens, so the switch is a marker file `detailed-log.on` in the data folder. `LoggingBootstrap` checks it with
+  `java.nio` after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it.
+- **When writes happen.** Providers and Models write on Save (the pinned footer, `LeaveGuard`'s dirty check). The other
+  tabs write at once, through the background runner.
+- **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale. 
+- **Restart now.** `:ui` calls an `api.AppRestart` port that `:app` implements. It releases the single-instance lock,
+  starts the same command from `ProcessHandle.current().info()`, and exits.
+- **The review mode is read per run.** `RunStarter` reads `run.reviewMode` at each start; a launch flag or environment
+  variable resolved by `ReviewModeResolver` overrides it.
+
+### D13 — Providers and per-model settings
+
+- **Provider configs.** `SqliteProviderConfigs` implements `ProviderConfigs`, which gains `save` and `delete`. The
+  window's providers list starts with what the first-launch look found, plus anything the person adds. The Add form's
+  Kind pre-fills the preset address.
+- **Per-model settings.** `api.llm.ModelSettings(providerId, modelId, TemperatureChoice choice, @Nullable Double value,
+  @Nullable Integer contextWindow, @Nullable Integer maxOutput, OutputLengthField field, List<RefusedSetting> refused,
+  @Nullable Double measuredSecondsPerSegment)`. `RefusedSetting` is `(name, at, insteadDid)`. "Send again" removes a
+  refusal.
+- **The key.** It is never stored: `credentialRef` is a variable name, and a header value that looks like a credential
+  must be `${env:NAME}`. The header and key values are resolved in `HttpExchange` just before the request and never
+  logged.
+
+### D14 — First-launch look (ADR-0044)
+
+`state/LocalModelProbe`, on a background thread after the window shows:
+1. It runs `ModelCatalog.listModels(ProviderConfig)` against `http://127.0.0.1:11434` (Ollama) and
+   `http://127.0.0.1:1234/v1` (OpenAI-compatible), with a 1 s connect timeout. It runs no inference and does not wait
+   for the `InferenceGate`.
+2. Found with models: it saves every program that answered, and Ollama becomes current when both answer. It
+   sets `model.current` when there is one model or asks which one when
+   there are several.
+3. It sets `firstLaunch.probed` whatever the result.
+4. Projects shows the result.
+
+The test fakes the catalog and asserts the exact addresses and a single call.
+
+## Risks / Trade-offs
+
+| Risk | Mitigation |
+|---|---|
+| JDBI is an automatic module; sqlite-jdbc loads a native library in the jpackage image | A module-path boot test in `:persistence`, and the packaged-image smoke (`resolve-all passed`) |
+| Jackson and records across JPMS modules; sealed types | Mix-ins plus a round-trip test of every stored record; public records only |
+| `:api` record changes ripple into many constructors and exhaustive switches | Each group-2 task runs `./gradlew build`; `JobEventContractsTest` |
+| Ids no longer derive from the path, so a moved file is not found | The hash check plus "Find the book…" |
+| The first-launch exception widens the offline rule | ADR-0044's limits (two addresses, once, a listing), an egress test, and the rule written into `AGENTS.md` and `.claude/rules/offline-and-privacy.md` |
+| A schema change discards a developer's database before release | Accepted by the owner (ADR-0043); the old file is renamed, never deleted |
+| The TestFX suite grows | `fastTest` / `slow` tags as today; `scripts/test-focused.sh` while coding |
+| Ukrainian labels are about 26 % longer | `LayoutFitTest` in `en` and `uk` at 960×640 and 1920×1080 for the title bar, toolbar, dialog footers and segmented controls |
+
+## Migration Plan
+
+- **No data migration.** No user has stored data yet. The window's first launch after this change creates the database.
+- **Rollback.** Revert the branch. The old in-memory adapters are still in `src/main`.
+
+## Open Questions
+
+None that change the specs or the tasks. One item is recorded for the owner's hand check: the sentence "After sleep,
+translating goes on by itself" ships only after one real laptop sleep on e4b (task 9.4).
