@@ -119,7 +119,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Test: `ProjectTest` (`Земля` and `земля` give one key) and contract cases for the finders: two books may hold the
     same name; one book may not.
   - Verify: `./gradlew build`. → :api, :persistence, :pipeline
-- [ ] 2.2 Add the settings port, its typed key registry and its in-memory twin, so preferences have one owner that both
+- [x] 2.2 Add the settings port, its typed key registry and its in-memory twin, so preferences have one owner that both
   adapters implement.
   - **Satisfies:** local-storage "Keep the application's work across a restart"; settings "Apply the other tabs at once
     and say when"

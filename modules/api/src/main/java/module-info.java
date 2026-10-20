@@ -16,4 +16,5 @@ module ua.bookloom.api {
     exports ua.bookloom.api.persistence;
     exports ua.bookloom.api.pipeline;
     exports ua.bookloom.api.project;
+    exports ua.bookloom.api.settings;
 }

@@ -16,6 +16,7 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.project.ChunkCommit;
@@ -42,6 +43,13 @@ class PersistenceModuleTest {
         assertThat(injector.getInstance(LexiconRepository.class)).isNotNull();
         assertThat(injector.getInstance(RunRepository.class)).isNotNull();
         assertThat(injector.getInstance(CheckpointPort.class)).isNotNull();
+        assertThat(injector.getInstance(SettingsRepository.class)).isNotNull();
+    }
+
+    @Test
+    void injector_answersOneSettingsRepositoryForEveryLookup() {
+        assertThat(injector.getInstance(SettingsRepository.class))
+                .isSameAs(injector.getInstance(SettingsRepository.class));
     }
 
     @Test
