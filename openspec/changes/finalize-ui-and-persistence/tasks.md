@@ -240,7 +240,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Log: INFO open and schema, WARN rename-aside.
   - Edit `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md` to the D9 schema and the pre-release rule, and fix
     its ADR link to `ADR-0009-persistence-sqlite.md`. → :persistence, docs
-- [ ] 3.3 Add the JSON codec with mix-ins for the sealed types, so every stored record reads back equal while `:api`
+- [x] 3.3 Add the JSON codec with mix-ins for the sealed types, so every stored record reads back equal while `:api`
   stays free of annotations.
   - **Satisfies:** local-storage "Keep the application's work across a restart"
   - `persistence.sqlite.JsonCodec` with `MapperFeature.CAN_OVERRIDE_ACCESS_MODIFIERS` and
