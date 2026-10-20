@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.RunRecord;
@@ -25,7 +26,7 @@ public final class RunRecorder {
     private final String runId;
     private final String projectId;
     private final Clock clock;
-    private final @Nullable String model;
+    private final @Nullable ModelSelection model;
     private Instant startedAt;
     private int accepted;
     private int flagged;
@@ -37,14 +38,14 @@ public final class RunRecorder {
      * @param runId the non-null id of the run
      * @param projectId the non-null id of the project it runs
      * @param clock the non-null clock the start and end are read from
-     * @param model the id of the model the run uses, or null when none was named
+     * @param model the provider and model the run uses, or null when none was named
      */
     public RunRecorder(
             final RunRepository runs,
             final String runId,
             final String projectId,
             final Clock clock,
-            @Nullable final String model) {
+            @Nullable final ModelSelection model) {
         this.runs = Objects.requireNonNull(runs, "runs");
         this.runId = Objects.requireNonNull(runId, "runId");
         this.projectId = Objects.requireNonNull(projectId, "projectId");

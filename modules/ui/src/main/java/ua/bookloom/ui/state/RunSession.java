@@ -32,6 +32,8 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 
 /**
  * Everything one run knows between the job thread and the mirror: the newest snapshot, the queued log lines, and
@@ -239,6 +241,8 @@ final class RunSession implements JobListener {
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
             case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
+            case StepsPlanned planned -> log.trace("{} {} steps planned", planned.added(), planned.kind());
+            case StepChanged changed -> log.trace("{} step {} is {}", changed.kind(), changed.index(), changed.state());
         }
     }
 

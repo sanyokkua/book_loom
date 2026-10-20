@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobState;
 
 /**
@@ -39,5 +40,19 @@ class RunRecordTest {
     void constructor_new_throws() {
         assertThatThrownBy(() -> new RunRecord("r1", "p1", STARTED, null, JobState.NEW, 0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructor_withModelSelection_keepsProviderAndModel() {
+        final RunRecord run = new RunRecord(
+                "r1", "p1", STARTED, null, JobState.RUNNING, 1, 0, new ModelSelection("ollama", "gemma3:12b"));
+
+        assertThat(run.model()).isEqualTo(new ModelSelection("ollama", "gemma3:12b"));
+    }
+
+    @Test
+    void constructor_sevenArgs_hasNoModel() {
+        assertThat(new RunRecord("r1", "p1", STARTED, null, JobState.RUNNING, 1, 0).model())
+                .isNull();
     }
 }

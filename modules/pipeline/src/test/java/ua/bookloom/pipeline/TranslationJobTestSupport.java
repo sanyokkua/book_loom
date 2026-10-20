@@ -26,6 +26,7 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -194,20 +195,7 @@ final class TranslationJobTestSupport {
     }
 
     static BookBrief withTarget(final BookBrief brief, final String targetLanguage) {
-        return new BookBrief(
-                brief.sourceLanguage(),
-                targetLanguage,
-                brief.genre(),
-                brief.register(),
-                brief.voiceEra(),
-                brief.audience(),
-                brief.names(),
-                brief.foreignPassages(),
-                brief.footnotes(),
-                brief.units(),
-                brief.balance(),
-                brief.alsoTranslate(),
-                brief.dial());
+        return brief.withLanguages(brief.sourceLanguage(), targetLanguage);
     }
 
     /** The model id every test job is started with, which its run record keeps. */
@@ -230,7 +218,7 @@ final class TranslationJobTestSupport {
             final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
                 project.documents(),
-                new RunRequest(projectId, mode, null, MODEL_NAME),
+                new RunRequest(projectId, mode, null, MODEL_NAME, new ModelSelection("scripted-provider", MODEL_NAME)),
                 model,
                 new ObjectMapper(),
                 new PromptTemplates(),

@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RunRecord;
@@ -85,7 +86,8 @@ final class QualityReport {
         final String time = run == null || run.endedAt() == null
                 ? NOT_RECORDED
                 : clock(Duration.between(run.startedAt(), run.endedAt()));
-        final String model = run == null || run.model() == null ? NOT_RECORDED : run.model();
+        final ModelSelection selection = run == null ? null : run.model();
+        final String model = selection == null ? NOT_RECORDED : selection.modelId();
         return "## Last run\n\n- Model: " + model + "\n- Run time: " + time + "\n";
     }
 

@@ -3,6 +3,7 @@ package ua.bookloom.api.project;
 import java.time.Instant;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobState;
 
 /**
@@ -17,7 +18,7 @@ import ua.bookloom.api.pipeline.JobState;
  * @param state the run's current state — never {@link JobState#NEW}
  * @param accepted the number of segments this run has accepted so far
  * @param flagged the number of segments this run has flagged so far
- * @param model the id of the model the run was started with, or null when the caller named none
+ * @param model the provider and model the run was started with, or null when the caller named none
  */
 public record RunRecord(
         String runId,
@@ -27,7 +28,7 @@ public record RunRecord(
         JobState state,
         int accepted,
         int flagged,
-        @Nullable String model) {
+        @Nullable ModelSelection model) {
 
     /**
      * Validates the invariants a caller is entitled to assume: {@code state} is never {@link JobState#NEW}, and

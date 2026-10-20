@@ -12,6 +12,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
 
 /**
@@ -125,6 +126,32 @@ public final class InMemoryProjectRepository implements ProjectRepository {
             moved.forEach(p -> store.projects().put(p.id(), p));
             log.debug("Book relocated hash={} projects={} path={}", contentHash, moved.size(), newPath);
             return Result.ok(moved);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<ExportRecord> recordExport(final String projectId, final ExportRecord record) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(record, "record");
+        try {
+            store.exports().put(projectId, record);
+            log.debug("Export recorded projectId={} written={}", projectId, record.written());
+            return Result.ok(record);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Optional<ExportRecord>> lastExport(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        try {
+            final Optional<ExportRecord> found =
+                    Optional.ofNullable(store.exports().get(projectId));
+            log.debug("Last export projectId={} found={}", projectId, found.isPresent());
+            return Result.ok(found);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

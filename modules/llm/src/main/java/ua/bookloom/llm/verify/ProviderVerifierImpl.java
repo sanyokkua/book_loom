@@ -132,8 +132,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         final long start = nanoTime.getAsLong();
         final StageOutcome outcome = stage.get();
         final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - start);
-        return new StageOutcome(
-                outcome.stage(), outcome.status(), outcome.error(), outcome.note(), elapsed, outcome.count());
+        return outcome.withElapsed(elapsed);
     }
 
     private StageOutcome verifyConnection(ProviderClient client, String providerId) {

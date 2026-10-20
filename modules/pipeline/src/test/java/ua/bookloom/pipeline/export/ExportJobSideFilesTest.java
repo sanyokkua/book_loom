@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SideFile;
@@ -115,7 +116,14 @@ class ExportJobSideFilesTest {
         final Instant started = Instant.parse("2026-10-09T08:00:00Z");
         ok(fixture.runs()
                 .save(new RunRecord(
-                        "run-1", id, started, started.plusSeconds(3725), JobState.COMPLETED, 2, 1, "gemma3:12b")));
+                        "run-1",
+                        id,
+                        started,
+                        started.plusSeconds(3725),
+                        JobState.COMPLETED,
+                        2,
+                        1,
+                        new ModelSelection("ollama", "gemma3:12b"))));
 
         ok(fixture.export(
                 request(id, tempDir.resolve("Frankenstein.uk.epub"), false, Set.of(SideFile.QUALITY_REPORT))));

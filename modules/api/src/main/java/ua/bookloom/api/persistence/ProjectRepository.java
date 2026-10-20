@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
 
 /**
@@ -72,4 +73,21 @@ public interface ProjectRepository {
      * @return the updated projects; empty when no project holds that book
      */
     Result<List<Project>> relocateBook(String contentHash, Path newPath);
+
+    /**
+     * Stores what a project's export wrote, replacing the one stored before.
+     *
+     * @param projectId the non-null project id
+     * @param record the non-null record of the export
+     * @return the stored record
+     */
+    Result<ExportRecord> recordExport(String projectId, ExportRecord record);
+
+    /**
+     * Reads what a project's last export wrote.
+     *
+     * @param projectId the non-null project id
+     * @return the record, or empty when the project was never exported
+     */
+    Result<Optional<ExportRecord>> lastExport(String projectId);
 }

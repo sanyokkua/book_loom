@@ -87,7 +87,46 @@ class JobEventContractsTest {
             case RecoveryWaiting waiting -> "RecoveryWaiting";
             case BatchStarted batch -> "BatchStarted";
             case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
+            case StepsPlanned planned -> "StepsPlanned";
+            case StepChanged changed -> "StepChanged";
         };
+    }
+
+    @Test
+    void stepsPlanned_keepsKindCountAndEstimateFlag() {
+        final StepsPlanned planned = new StepsPlanned(StepKind.DRAFT, 3, false);
+
+        assertThat(planned.kind()).isEqualTo(StepKind.DRAFT);
+        assertThat(planned.added()).isEqualTo(3);
+        assertThat(planned.estimated()).isFalse();
+    }
+
+    @Test
+    void stepsPlanned_negativeCount_isRejected() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.CHECK, -1, false));
+    }
+
+    @Test
+    void stepChanged_endedWithResult_keepsItemAndResult() {
+        final StepChanged changed =
+                new StepChanged(StepKind.DRAFT, "Draft", 2, StepState.ENDED, "Book.md:2", StepResult.NO_CALL);
+
+        assertThat(changed.itemRef()).isEqualTo("Book.md:2");
+        assertThat(changed.result()).isEqualTo(StepResult.NO_CALL);
+        assertThat(changed.index()).isEqualTo(2);
+    }
+
+    @Test
+    void stepChanged_startedWithResult_isRejected() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () -> new StepChanged(StepKind.CHECK, "Check", 0, StepState.STARTED, null, StepResult.DONE));
+    }
+
+    @Test
+    void stepChanged_negativeIndex_isRejected() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new StepChanged(StepKind.CHECK, "Check", -1, StepState.STARTED, null, null));
     }
 
     @ParameterizedTest

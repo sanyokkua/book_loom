@@ -22,6 +22,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -64,7 +65,8 @@ class TranslationJobRunRecordTest {
         assertThat(record.endedAt()).isNotNull();
         assertThat(record.startedAt()).isBeforeOrEqualTo(Objects.requireNonNull(record.endedAt()));
         assertThat(record).extracting(RunRecord::accepted, RunRecord::flagged).containsExactly(2, 0);
-        assertThat(record.model()).isEqualTo(TranslationJobTestSupport.MODEL_NAME);
+        assertThat(record.model())
+                .isEqualTo(new ModelSelection("scripted-provider", TranslationJobTestSupport.MODEL_NAME));
     }
 
     @Test

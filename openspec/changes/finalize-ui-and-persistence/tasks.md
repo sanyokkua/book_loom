@@ -185,7 +185,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Every constructor call site follows.
   - Test: `CallSnapshotTest` and `ContextSnapshotTest`.
   - Verify: `./gradlew build`. → :api, :pipeline, :ui
-- [ ] 2.6 Add the two step events, the verification exchange and the typed run model, so the progress dialogs, the
+- [x] 2.6 Add the two step events, the verification exchange and the typed run model, so the progress dialogs, the
   ledger, the test dialog and the AI-model questions on continue have their data.
   - **Satisfies:** translation-pipeline "Announce the planned steps and each step's state"; translation-pipeline "Plan a
     run's steps and count the time spent"; resume "Record whether a run is running, paused or ended"; resume "Ask when

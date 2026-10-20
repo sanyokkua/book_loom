@@ -12,6 +12,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.StorageInfo;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.persistence.memory.InMemoryCheckpoint;
@@ -24,6 +25,7 @@ import ua.bookloom.persistence.memory.InMemoryProviderConfigs;
 import ua.bookloom.persistence.memory.InMemoryRunRepository;
 import ua.bookloom.persistence.memory.InMemorySegmentRepository;
 import ua.bookloom.persistence.memory.InMemorySettingsRepository;
+import ua.bookloom.persistence.memory.InMemoryStorageInfo;
 import ua.bookloom.persistence.memory.InMemorySummaryRepository;
 import ua.bookloom.persistence.memory.InMemoryTmRepository;
 
@@ -55,6 +57,7 @@ public final class PersistenceModule extends AbstractModule {
                 .to(InMemoryModelSettingsRepository.class)
                 .in(Singleton.class);
         bind(ProviderConfigs.class).to(InMemoryProviderConfigs.class).in(Singleton.class);
+        bind(StorageInfo.class).to(InMemoryStorageInfo.class).in(Singleton.class);
         bind(CheckpointPort.class).to(InMemoryCheckpoint.class).in(Singleton.class);
     }
 }

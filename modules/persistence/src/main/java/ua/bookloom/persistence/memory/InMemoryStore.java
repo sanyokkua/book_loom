@@ -14,6 +14,7 @@ import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
@@ -46,12 +47,17 @@ final class InMemoryStore {
     private final Map<String, Map<String, TmEntry>> tmByProject = new ConcurrentHashMap<>();
     private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
+    private final Map<String, ExportRecord> exportByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, RunRecord>> runsByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
+    }
+
+    Map<String, ExportRecord> exports() {
+        return exportByProject;
     }
 
     Map<String, Project> projects() {

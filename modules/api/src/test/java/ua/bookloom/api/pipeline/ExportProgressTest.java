@@ -28,6 +28,27 @@ class ExportProgressTest {
         assertThat(new ExportProgress(ExportProgress.Step.WRITING, 3, 3).done()).isEqualTo(3);
     }
 
+    @Test
+    void new_threeArgs_hasNoItem() {
+        final ExportProgress progress = new ExportProgress(ExportProgress.Step.WRITING, 1, 2);
+
+        assertThat(progress.itemRef()).isNull();
+        assertThat(progress.before()).isNull();
+        assertThat(progress.after()).isNull();
+        assertThat(progress.verdict()).isNull();
+    }
+
+    @Test
+    void new_withItem_keepsReferenceTextsAndVerdict() {
+        final ExportProgress progress = new ExportProgress(
+                ExportProgress.Step.RETRY_DOUBTED, 1, 4, "Book.md:2", "Old text.", "New text.", "kept");
+
+        assertThat(progress.itemRef()).isEqualTo("Book.md:2");
+        assertThat(progress.before()).isEqualTo("Old text.");
+        assertThat(progress.after()).isEqualTo("New text.");
+        assertThat(progress.verdict()).isEqualTo("kept");
+    }
+
     // IF the default overload dropped the request, THEN a service that does not report progress could not export.
     @Test
     void newExport_serviceWithoutProgress_delegatesToTheTwoArgumentFactory() {

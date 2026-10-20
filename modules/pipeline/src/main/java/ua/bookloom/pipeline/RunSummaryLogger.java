@@ -31,6 +31,8 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.pipeline.reviewer.EditOutcome;
 
 /**
@@ -102,8 +104,14 @@ final class RunSummaryLogger {
                     RoundStarted _,
                     RecoveryWaiting _,
                     BatchStarted _,
-                    CallSnapshotUpdated _ -> {}
+                    CallSnapshotUpdated _,
+                    StepsPlanned _,
+                    StepChanged _ -> {}
         }
+        writeWhenDue();
+    }
+
+    private void writeWhenDue() {
         final Instant now = clock.instant();
         final Instant last = lastLine;
         if (last == null) {

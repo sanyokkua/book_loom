@@ -18,4 +18,6 @@ public sealed interface JobEvent
                 RoundStarted,
                 RecoveryWaiting,
                 BatchStarted,
-                CallSnapshotUpdated {}
+                CallSnapshotUpdated,
+                StepsPlanned,
+                StepChanged {}

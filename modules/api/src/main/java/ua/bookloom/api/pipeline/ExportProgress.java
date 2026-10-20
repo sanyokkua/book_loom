@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Where an export has got to, announced from the thread that runs it.
@@ -8,8 +9,30 @@ import java.util.Objects;
  * @param step what the export is doing now
  * @param done how many units of that step are finished
  * @param total how many units the step has in all, so a bar can be determinate; at least {@code done}
+ * @param itemRef the segment the step just handled, or null when the announcement covers none
+ * @param before the segment's text before the step, or null; book text, so a listener never logs it above TRACE
+ * @param after the segment's text after the step, or null; book text, same rule
+ * @param verdict the step's verdict on the segment (for example kept or dropped), or null
  */
-public record ExportProgress(Step step, int done, int total) {
+public record ExportProgress(
+        Step step,
+        int done,
+        int total,
+        @Nullable String itemRef,
+        @Nullable String before,
+        @Nullable String after,
+        @Nullable String verdict) {
+
+    /**
+     * An announcement that covers no single segment.
+     *
+     * @param step what the export is doing now
+     * @param done how many units of that step are finished
+     * @param total how many units the step has in all; at least {@code done}
+     */
+    public ExportProgress(final Step step, final int done, final int total) {
+        this(step, done, total, null, null, null, null);
+    }
 
     /** The stages an export passes through, in order. */
     public enum Step {
