@@ -578,7 +578,7 @@ also the largest stage by some distance: **twelve changes, and all three stub mo
 
 | # | Change | Capability |
 |---|---|---|
-| 8 | `add-local-storage` | `local-storage` **NEW** — repository ports and in-memory adapters landed with `complete-translation-workflow` (ADR-0034); the SQLite adapter, settings KV and Flyway remain |
+| 8 | `add-local-storage` | `local-storage` **NEW** — repository ports and in-memory adapters landed with `complete-translation-workflow` (ADR-0034); the SQLite adapter and settings KV remain (Flyway from the first release; until then one schema file and no migrations, ADR-0043) |
 | 9 | `add-resume-checkpoints` | `resume` MOD — in-session resume and the in-memory `CheckpointPort` were consumed by `complete-translation-workflow`; resume across a restart remains with SQLite |
 | 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** — consumed in reduced form by `add-real-llm-clients`; persistence and provider editing remain |
 | 11 | `add-inference-gate-and-response-contract` | `inference` MOD — consumed in reduced form by `add-real-llm-clients`; repair and interactive gate behavior remain |

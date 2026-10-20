@@ -151,8 +151,8 @@ module ua.bookloom.pipeline {
 
 ### persistence {#module-persistence}
 
-**Responsibility:** SQLite (Flyway migrations, JDBI DAOs), settings KV, project/segment/glossary/TM/summary stores,
-secret references (env-var name / OS keychain), atomic writes, and the **DB-connection guard** (the per-DB open/WAL
+**Responsibility:** SQLite (JDBI DAOs; Flyway migrations from the first release, until then one schema file, ADR-0043), settings KV, project/segment/glossary/TM/summary stores,
+secret references (env-var name; OS keychain not built), atomic writes, and the **DB-connection guard** (the per-DB open/WAL
 discipline). FX-free. Implements the repository ports. The **process-level single-instance lock is NOT owned here** — it
 is acquired pre-injector in `:app`/`:util` before the database opens (`10_DI_AND_LIFECYCLE.md#single-instance-lock`,
 `11_APP_ENVIRONMENT_AND_PATHS.md`); this module only guards its own database connection.
@@ -162,7 +162,7 @@ module ua.bookloom.persistence {
     requires ua.bookloom.api;
     requires ua.bookloom.util;
     requires org.xerial.sqlitejdbc;
-    requires org.flywaydb.core;
+    requires org.flywaydb.core;   // from the first release (ADR-0043); not on the path until then
     requires org.jdbi.v3.core;
     requires java.sql;
     requires com.google.guice;    // this module owns a Guice Module (constructor injection)
@@ -235,7 +235,7 @@ Enforced as JUnit tests in a shared `arch-test` source set, run in CI (and `pre-
 3. **ports-not-concretes** — no class in `:ui` or `:pipeline` depends on a concrete `..Impl`/`..Dao`/`..Service` class
    residing in a different module; they may depend only on `ua.bookloom.api..` interfaces.
 4. **no-http-in-core-except-llm** — only `:llm` may depend on `java.net.http..`.
-5. **no-sql-in-core-except-persistence** — only `:persistence` may depend on `java.sql..`/`org.jdbi..`/`org.flywaydb..`.
+5. **no-sql-in-core-except-persistence** — only `:persistence` may depend on `java.sql..`/`org.jdbi..`/`org.flywaydb..` (Flyway from the first release, ADR-0043).
 6. **api-is-framework-free** — no class in `:api` depends on Guice, Jackson, JavaFX, JDBI, or any parser library. This
    rule scopes only to `:api`: the **service impl modules** (`:document`/`:llm`/`:pipeline`/`:persistence`) now
    legitimately `requires com.google.guice` and `opens <impl-pkg> to com.google.guice` because each owns a Guice

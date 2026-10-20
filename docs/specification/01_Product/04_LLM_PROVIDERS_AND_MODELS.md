@@ -43,7 +43,7 @@ configuration, not code.
 
 | ID          | Requirement                                                                                                                         |
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| FR-PROV-05a | Credentials are stored only as a reference — an environment-variable name or an OS keychain entry — never the secret value (DD-11). |
+| FR-PROV-05a | Credentials are stored only as a reference — an environment-variable name (an OS keychain entry is allowed later, not built) — never the secret value (DD-11). |
 | FR-PROV-05b | The secret is resolved at call time from the referenced source (credential resolution is planned, not built); it is never written to the database, logs, or exports. |
 | FR-PROV-05c | Auth schemes supported: none, bearer token, and custom header, each resolving its value from the credential reference.              |
 

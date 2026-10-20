@@ -69,7 +69,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Mark ADR-0010 "Amended by ADR-0044".
   - Verify: `grep -rn "user-triggered" docs AGENTS.md .claude openspec/config.yaml .agents` shows each hit naming the
     exception; ArchUnit `no-http-in-core-except-llm` is unchanged. → docs
-- [ ] 1.2 Bring the storage rules to ADR-0043, so a later reader does not plan Flyway migrations or entity tables
+- [x] 1.2 Bring the storage rules to ADR-0043, so a later reader does not plan Flyway migrations or entity tables
   before the release.
   - `.claude/rules/persistence-sqlite.md`: the "Current status" section; the Flyway MUST becomes "from the first
     release; until then one schema file and no migrations"; JSON documents in a few tables replace "dedicated entity

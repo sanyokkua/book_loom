@@ -7,8 +7,10 @@
 
 # Data Model — SQLite
 
+> **Note (ADR-0043):** the typed tables below are superseded by JSON-document tables (ADR-0043, written in a later task): a document column holds what the code reads and writes whole, and real columns exist only where an index, a uniqueness rule or a cascade needs them. Until the first release there are no migrations: one schema file creates the tables, `PRAGMA user_version` holds its number, and a database with another number is renamed aside and a fresh one created. Flyway with additive migrations arrives with the first release, and the `V1__baseline.sql` normativity and every statement below about Flyway, `V{ver}__*.sql` files and migrations describes that later state. The schema itself is rewritten in a later task.
+
 `:persistence` stores all durable state in a single SQLite database (WAL mode) accessed through JDBI 3 DAOs, with schema
-evolved by Flyway. This document fixes the tables, the migration/DAO conventions, atomicity, the per-OS data dir, the
+evolved by Flyway from the first release (one schema file before it, ADR-0043). This document fixes the tables, the migration/DAO conventions, atomicity, the per-OS data dir, the
 DB-connection guard, and secret references. The DDL block under [ddl-normative](#ddl-normative) is **normative for
 `V1__baseline.sql`**: the checked-in baseline migration MUST match it column-for-column (later migrations extend it
 additively). Acquisition of the single-instance lock is a pre-injector `:app`/`:util` concern on the resolved data dir,
@@ -25,11 +27,11 @@ described below.
   `foreign_keys=ON`, `busy_timeout`, `synchronous=NORMAL`, and `journal_mode=WAL` — through a **connection-init hook**
   (e.g. the pool's `connectionInitSql` / an init callback) so a recycled or newly-opened connection can never run with
   `foreign_keys` off or without a busy timeout.
-- **Migrations:** Flyway, file convention `V{ver}__{desc}.sql` (e.g. `V1__baseline.sql`, `V2__add_tm_context_key.sql`)
+- **Migrations (from the first release; until then one schema file and no migrations, ADR-0043):** Flyway, file convention `V{ver}__{desc}.sql` (e.g. `V1__baseline.sql`, `V2__add_tm_context_key.sql`)
   on the classpath of `:persistence`. Migrations run in two-phase init after services construct
   (`10_DI_AND_LIFECYCLE.md`). Never edit an applied migration; add a new one. `V1__baseline.sql` MUST match
   the [normative DDL](#ddl-normative) exactly.
-- **DAOs:** JDBI 3 SQL-object DAOs, one per aggregate, bound to repository ports in `:api`. Records map columns via row
+- **DAOs:** JDBI 3 fluent-API DAOs (no SQL objects, ADR-0043), one per aggregate, bound to repository ports in `:api`. Records map columns via row
   mappers; no ORM.
 - **Atomic writes:** each checkpoint (segment accept, status change, TM/summary update) is a single transaction. WAL +
   `synchronous=NORMAL` gives per-chunk durability that is **process-crash-safe and forced-quit-safe**; on OS crash /
@@ -312,8 +314,8 @@ Rules:
 
 ## secret-references {#secret-references}
 
-`providers.credential_ref` holds only a reference: `ENV:<VAR_NAME>` (an environment-variable name) or `KEYCHAIN:<id>`
-(an OS-keychain entry). The plaintext secret is resolved at request time by `:llm` (credential resolution is planned, not built) and is never written to any table,
+`providers.credential_ref` holds only a reference: `ENV:<VAR_NAME>` (an environment-variable name) (a `KEYCHAIN:<id>` form, an OS-keychain entry,
+is allowed later and not built; ADR-0043). The plaintext secret is resolved at request time by `:llm` (credential resolution is planned, not built) and is never written to any table,
 log, or export (`04_LLM_INTEGRATION.md#credentials-as-reference`). A row whose reference resolves to nothing yields
 `ErrorCode.missingCredential`.
 
@@ -322,11 +324,11 @@ log, or export (`04_LLM_INTEGRATION.md#credentials-as-reference`). A row whose r
 The database is opened defensively at startup:
 
 - **Integrity check on open.** Before the app accepts work, startup runs `PRAGMA integrity_check` (or catches an opening
-  `SQLITE_CORRUPT`). A corrupt or unreadable database becomes a **typed startup error**, never a silent partial open.
+  `SQLITE_CORRUPT`). A corrupt or unreadable database is never a silent partial open: it is renamed aside as below.
 - **Quarantine and start fresh.** On detected corruption BookLoom **quarantines the corrupt `bookloom.db`** (renames it
-  aside, e.g. `bookloom.db.corrupt-<timestamp>`, keeping the file for diagnosis) and starts fresh with a newly-created
-  database rather than crashing on every launch. The user is told what happened and where the old file is.
-- **Cross-release migration guardrails.** Flyway migrations are forward-only and **transactional**: a failed migration
+  aside as `bookloom.db.old-<yyyyMMdd-HHmmss>`, keeping the file for diagnosis) and starts fresh with a newly-created
+  database rather than crashing on every launch. One WARN line names the old file; no dialog is shown and no data is carried over (ADR-0043).
+- **Cross-release migration guardrails (from the first release; before it a database with another schema number is renamed aside, ADR-0043).** Flyway migrations are forward-only and **transactional**: a failed migration
   **rolls back completely** — the schema is never left partially migrated. An **older app opening a newer schema**
   (schema version ahead of what this build knows) **refuses to run with a clear typed error** rather than mangling data.
   An **optional pre-migration backup** of `bookloom.db` may be taken before applying migrations so a bad upgrade is

@@ -112,7 +112,7 @@ FR-PROV-02, FR-PROV-03.
 
 ### DD-11 — Credentials stored as a reference, never the secret
 
-**Decision:** Persist only a reference to a credential (environment-variable name or OS keychain entry), never the
+**Decision:** Persist only a reference to a credential (environment-variable name; an OS keychain entry is allowed later but not built, ADR-0043), never the
 secret value. **Why:** Avoid storing plaintext secrets in the local database. **Consequences:** The secret is resolved
 at call time; export/backup never contains secrets. **ADR:** ADR-0006 **Requirements:** FR-PROV-05, FR-PERSIST-05,
 NFR-PRIV-02.
@@ -189,11 +189,11 @@ window is capped (~3 blocks). **ADR:** ADR-0007 **Requirements:** FR-ALGO-02, FR
 
 ## dd-20-sqlite-persistence {#dd-20-sqlite-persistence}
 
-### DD-20 — SQLite (WAL) + Flyway + JDBI, typed KV settings
+### DD-20 — SQLite (WAL) + JDBI, typed KV settings (Flyway from the first release)
 
-**Decision:** Persist with SQLite in WAL mode, Flyway migrations, JDBI access, a generic typed
+**Decision:** Persist with SQLite in WAL mode, JDBI access (Flyway migrations arrive with the first release; until then one schema file and no migrations, ADR-0043), a generic typed
 `settings(key,value,type)` KV table, atomic writes, a per-OS data dir, and a single-instance lock. **Why:** Embedded,
-robust, zero-admin local storage. **Consequences:** No external DB; schema evolves via migrations; `synchronous=NORMAL`
+robust, zero-admin local storage. **Consequences:** No external DB; schema evolves via additive migrations from the first release (until then the schema file is edited in place); `synchronous=NORMAL`
 makes checkpoints process-crash-safe and forced-quit-safe (on OS crash/power loss at most the last in-flight commit is
 lost — see reliability); the process single-instance lock is acquired pre-injector by `:app`/`:util`, not by
 `:persistence`. **ADR:** ADR-0009 **Requirements:** FR-PERSIST-01, FR-PERSIST-02, FR-SETTINGS-01.

@@ -50,7 +50,7 @@ decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case)
 | `02_Architecture/03_DOCUMENT_MODEL.md`            | Skeleton + segment model, masking, round-trip                            |
 | `02_Architecture/04_LLM_INTEGRATION.md`           | Provider architecture, inference, gate, retry, errors                    |
 | `02_Architecture/05_PIPELINE_ENGINE.md`           | The translation engine internals                                         |
-| `02_Architecture/06_DATA_MODEL_SQLITE.md`         | SQLite schema, Flyway, JDBI, KV settings                                 |
+| `02_Architecture/06_DATA_MODEL_SQLITE.md`         | SQLite schema (JSON documents), JDBI, KV settings; Flyway from the first release                                 |
 | `02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`    | JavaFX app structure, FXML, state mirror                                 |
 | `02_Architecture/08_THREADING_CONCURRENCY.md`     | FX thread rules, Task/Service, virtual threads, cancellation             |
 | `02_Architecture/09_ERROR_HANDLING.md`            | `Result`/`AppError` envelope, `ErrorCode`                                |

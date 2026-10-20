@@ -29,7 +29,7 @@ explicitly — read them before planning work.
 | ADR-0006 | Credentials stored as a reference                                                     | DD-11               |
 | ADR-0007 | Automatic-first tiered translation pipeline                                           | DD-15…DD-19         |
 | ADR-0008 | Inference concurrency — single-flight gate + typed retry                              | DD-12, DD-13        |
-| ADR-0009 | Persistence — SQLite + Flyway + JDBI                                                  | DD-20               |
+| ADR-0009 | Persistence — SQLite + Flyway + JDBI (amended by ADR-0043)                            | DD-20               |
 | ADR-0010 | Offline network policy                                                                | DD-01               |
 | ADR-0011 | App icon & branding — one background-removed master, per-OS derivation                | DD-29               |
 | ADR-0012 | Per-project provider/model binding + change confirmation + preflight verification     | DD-31               |

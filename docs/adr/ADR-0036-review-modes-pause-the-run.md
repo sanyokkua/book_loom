@@ -1,6 +1,6 @@
 # ADR-0036 — Review modes decide when the run pauses, as well as the trust threshold
 
-**Status:** accepted **Date:** 2026-09-26 **Deciders:** owner **Extends:** DD-45
+**Status:** accepted; superseded in part by ADR-0045 (review is a dialog and the review mode a setting) **Date:** 2026-09-26 **Deciders:** owner **Extends:** DD-45
 
 ## Context and problem statement
 

@@ -88,7 +88,7 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 | `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close; book inspection, sentence splitting, auxiliary text units; the placeholder gate checks the multiset and the order/nesting of paired placeholders (ADR-0040) |
 | `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
 | `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the judge and self-heal — built and tested but not yet wired into a run |
-| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034), proven by `RepositoryContractTest`; SQLite + Flyway + JDBI planned |
+| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034; command line, tests) and, planned by `finalize-ui-and-persistence`, SQLite + JDBI adapters for the window (ADR-0043; Flyway only from the first release); `RepositoryContractTest` will run against both |
 | `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
@@ -176,7 +176,7 @@ Translating screen's ready card and in the session facts of the detailed log.
 
 **What it cannot do yet.** Persist anything across a restart (`:persistence` binds every repository port to an
 in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme, provider, model and brief are not
-remembered), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
+remembered; ADR-0043 moves the window to SQLite), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
 Settings tabs Models, Generation, Automation and Storage.
 
 **Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else

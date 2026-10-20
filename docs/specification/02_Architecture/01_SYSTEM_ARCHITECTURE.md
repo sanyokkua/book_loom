@@ -90,7 +90,7 @@ flowchart TD
     subgraph Services
         DOC[":document<br/>parse · mask · reassemble · repackage"]
         LLM[":llm<br/>Provider · discovery · inference · gate · retry"]
-        PERS[":persistence<br/>SQLite · Flyway · JDBI · settings KV"]
+        PERS[":persistence<br/>SQLite · JDBI · JSON documents · settings KV"]
     end
     subgraph Foundation
         API[":api<br/>ports · records · Result · AppError · ErrorCode"]

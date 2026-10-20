@@ -1,6 +1,6 @@
 # ADR-0034 — Put the working state of a translation behind storage ports, with in-memory adapters until SQLite
 
-**Status:** accepted **Date:** 2026-09-26 **Deciders:** owner (plan approval for `complete-translation-workflow`)
+**Status:** accepted; superseded for the window by ADR-0043 (still holds for the command line and the tests) **Date:** 2026-09-26 **Deciders:** owner (plan approval for `complete-translation-workflow`)
 
 ## Context and problem statement
 
@@ -13,7 +13,7 @@ retry rebuilds the context a segment first saw.
 
 The specification puts all of it in SQLite (`02_Architecture/06_DATA_MODEL_SQLITE.md#tables`, seams F6/F7 in
 `00_Foundation/06_IMPLEMENTATION_STAGES.md#forward-compatibility-seams`), and ADR-0009 chose SQLite + Flyway + JDBI.
-The owner decided that this change builds no database: "we define only in-memory storages for now", but "the
+(Later, ADR-0043 builds the database and binds it in the window.) The owner decided that this change builds no database: "we define only in-memory storages for now", but "the
 interfaces can be developed now" because the Projects feature will store intermediate results in the database.
 
 ## Decision
@@ -56,7 +56,7 @@ interfaces can be developed now" because the Projects feature will store interme
   adapter plus migrations.
 - **Negative:** closing the application loses the work. Accepted for this change, and stated on the screens that could
   otherwise suggest otherwise (the stopped state says progress is kept until the application closes).
-- **Neutral:** `:persistence` stops being empty but still holds no database code.
+- **Neutral:** `:persistence` stops being empty but still holds no database code (at the time; ADR-0043 adds the SQLite adapters).
 
 ## What would falsify this decision
 

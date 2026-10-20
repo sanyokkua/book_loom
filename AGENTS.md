@@ -7,8 +7,8 @@ nothing; never duplicate a rule there. Humans start at `docs/DEVELOPMENT.md`.
 
 A local-first, offline desktop app that translates whole books (EPUB, FB2, Markdown, TXT) with a locally-run LLM
 (Ollama / LM Studio) or any OpenAI-compatible endpoint, preserving structure, IDs, images and fonts through a
-canonical-equal round trip. Java 25 + JavaFX 26, Gradle Kotlin DSL + Guice, JUnit 5 + AssertJ + TestFX; SQLite/JDBI/
-Flyway planned. Full inventory: `gradle/libs.versions.toml`.
+canonical-equal round trip. Java 25 + JavaFX 26, Gradle Kotlin DSL + Guice, JUnit 5 + AssertJ + TestFX; SQLite/JDBI
+(Flyway from the first release, ADR-0043). Full inventory: `gradle/libs.versions.toml`.
 
 ## Where it stands — keep this paragraph current
 
@@ -94,7 +94,7 @@ diagnose; never run two gates at once.
 | `:util` | paths, hashing, language catalogue | foundation |
 | `:document` | parse / mask / unmask / reassemble, per format | service |
 | `:llm` | provider port + Ollama-native and OpenAI-compatible clients | service |
-| `:persistence` | in-memory adapters behind the `:api` storage ports (ADR-0034); SQLite + Flyway + JDBI planned | service |
+| `:persistence` | in-memory adapters (command line, tests; ADR-0034) and SQLite + JDBI adapters (window; ADR-0043) behind the `:api` storage ports | service |
 | `:pipeline` | translation engine: prompts, chunking, QA, reviewer, self-heal | orchestration |
 | `:ui` | JavaFX views, theming | presentation |
 | `:app` | launcher, composition root, the `archTest` suite | presentation |
@@ -111,7 +111,7 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 | Records for data, Lombok only on services | ArchUnit `records-first` |
 | Opening a book never needs the network; provider calls are user-triggered; anything else must be optional, safe, and degrade without an error; plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models), no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered | ArchUnit `no-http-in-core-except-llm` |
 | `Result<T>` + typed `AppError` at every port; no exception crosses a module edge | advisory |
-| Credentials are a reference (env-var/keychain), never a persisted secret | advisory |
+| Credentials are a reference (env-var name; keychain not built), never a persisted secret | advisory |
 | Single-flight inference through one `InferenceGate` | advisory |
 | Scene graph touched only on the FX Application Thread | advisory |
 | Diagnostic logging at every level — INFO lifecycle, DEBUG each working method's parameters and each branch taken, TRACE values and book text; `BOOKLOOM_LOG_LEVEL` raises it; never a secret (`.claude/rules/logging.md`) | advisory |

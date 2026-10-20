@@ -221,7 +221,7 @@ across a restart, no remembered theme or language.
 **Where the code actually is, as of the final commit of `complete-translation-workflow` (2026-10-17).** All eight
 modules carry real production code. `:persistence` binds every `:api` repository port to an in-memory adapter
 (`ua.bookloom.persistence.memory`, ADR-0034), proven by the repository contract tests run against each adapter; nothing
-survives a restart, and SQLite + Flyway + JDBI is still the planned adapter behind the same ports. `:ui` has eight
+survives a restart, and SQLite + JDBI (Flyway from the first release, ADR-0043) is still the planned adapter behind the same ports. `:ui` has eight
 packages and six screens (Import, Book Brief, Names & style, Translating, Export, Settings); Projects is the one inert
 navigation entry, and review lives inside Translating. Within `:document`, all four formats read and write, inline
 masking and the placeholder gate (multiset and pair order, ADR-0040) are real, every book ends with an auxiliary unit
@@ -398,14 +398,14 @@ Implements `TranslationEngine`.
 
 ### :persistence {#module-persistence}
 
-SQLite (Flyway, JDBI DAOs) — planned; in-memory adapters (ADR-0034) — today. Settings KV, project/segment/glossary/
+SQLite (JDBI DAOs; Flyway from the first release, ADR-0043) — planned; in-memory adapters (ADR-0034) — today. Settings KV, project/segment/glossary/
 TM/summary stores, secret references, atomic writes, single-instance lock. FX-free. Implements repository ports.
 
 | Package path                                      | Layer    | Responsibility                                                                                                                                                                          | Test target · tier                                                                      |
 |------------------------------------------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
 | `:persistence/ua.bookloom.persistence`            | Services | **Today**: `PersistenceModule` — binds every `:api` repository port to its in-memory adapter (ADR-0034). **Planned**: DB bootstrap, connection/WAL config once the SQLite adapter replaces these bindings | `:persistence/src/test/java/ua/bookloom/persistence` · Integration (temp DB)            |
 | `:persistence/ua.bookloom.persistence.memory`     | Services | **Real** (`complete-translation-workflow`, ADR-0034): `InMemoryStore` (the shared singleton) and the eight in-memory repository adapters — `InMemoryProjectRepository`, `InMemorySegmentRepository`, `InMemoryGlossaryRepository`, `InMemoryTmRepository`, `InMemorySummaryRepository`, `InMemoryDeferralRepository`, `InMemoryRunRepository`, `InMemoryCheckpoint` — proven by `RepositoryContractTest`, run against each adapter | `:persistence/src/test/java/ua/bookloom/persistence/memory` · Integration |
-| `:persistence/ua.bookloom.persistence.migration`  | Services | **Planned**: Flyway migrations, schema versioning                                                                                                                                                    | `:persistence/src/test/java/ua/bookloom/persistence/migration` · Integration (temp DB)  |
+| `:persistence/ua.bookloom.persistence.migration`  | Services | **Planned, from the first release (ADR-0043)**: Flyway migrations, schema versioning                                                                                                                                                    | `:persistence/src/test/java/ua/bookloom/persistence/migration` · Integration (temp DB)  |
 | `:persistence/ua.bookloom.persistence.dao`        | Services | **Planned**: JDBI DAOs implementing repository ports, replacing the in-memory adapters above without changing the ports                                                                                                                                                 | `:persistence/src/test/java/ua/bookloom/persistence/dao` · Integration (temp DB)        |
 | `:persistence/ua.bookloom.persistence.settings`   | Services | **Planned**: typed `settings(key,value,type)` KV store (seam F7)                                                                                                                                     | `:persistence/src/test/java/ua/bookloom/persistence/settings` · Integration (temp DB)   |
 | `:persistence/ua.bookloom.persistence.checkpoint` | Services | **Planned**: per-chunk crash-safe checkpoints + resume reader (seam F6) — `InMemoryCheckpoint` above is the in-memory `CheckpointPort` adapter that precedes it                                                                                                                              | `:persistence/src/test/java/ua/bookloom/persistence/checkpoint` · Integration (temp DB) |

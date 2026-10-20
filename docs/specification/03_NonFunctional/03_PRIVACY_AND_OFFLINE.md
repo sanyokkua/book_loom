@@ -38,7 +38,7 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 
 | ID          | Requirement                                                                                                                                                                                                                                                    |
 |-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| NFR-PRIV-05 | API credentials are stored **only as a reference** (env-var name or OS-keychain id), never as plaintext, in any table, config file, or export (`02_Architecture/04_LLM_INTEGRATION.md#credentials-as-reference`, `06_DATA_MODEL_SQLITE.md#secret-references`). |
+| NFR-PRIV-05 | API credentials are stored **only as a reference** (env-var name; an OS-keychain id is allowed later, not built), never as plaintext, in any table, config file, or export (`02_Architecture/04_LLM_INTEGRATION.md#credentials-as-reference`, `06_DATA_MODEL_SQLITE.md#secret-references`). |
 | NFR-PRIV-06 | Secrets are resolved at request time, used for that call, and never logged. MDC is cleared in `finally`; parameterized logging never interpolates a secret.                                                                                                    |
 | NFR-PRIV-07 | `AppError.details` is built from a **safe-details allowlist** (`09_ERROR_HANDLING.md#safe-details-allowlist`); no secret or `Authorization` header ever reaches the UI or the logs, and no raw body reaches the UI. Raw request and response bodies and book text may reach only the local log file, at `TRACE`. |
 
@@ -47,7 +47,7 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 | ID          | Requirement                                                                                                                                                                                   |
 |-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | NFR-PRIV-08 | Book content leaves the machine only as the body of a user-triggered inference request to the user's chosen endpoint — nowhere else. For a local provider it never leaves the machine at all. The first-launch listing (NFR-OFFLINE-05) carries no book text. |
-| NFR-PRIV-09 | The user always sees which provider/endpoint is current before a run (Settings + the Translating screen), so any outbound destination is explicit and chosen.                                 |
+| NFR-PRIV-09 | The user always sees which provider/endpoint is current before a run (Settings + the Translating screen), so any outbound destination is explicit and chosen (the first-launch listing of NFR-OFFLINE-05 excepted).                                 |
 
 ## verification {#verification}
 

@@ -368,8 +368,9 @@ The Generation and Automation tabs carry only knobs the code has:
   switch, Save diagnostic bundle.
 - **Resume:** reopening a project whose provider or model is missing or changed shows the resume-binding dialog pair
   that already exists in the mockup.
-- The rules in `.claude/rules/persistence-sqlite.md` apply: WAL, Flyway, JDBI, a single writer, atomic per-chunk
-  checkpoints.
+- The rules in `.claude/rules/persistence-sqlite.md` apply: WAL, JDBI, a single writer, atomic per-chunk
+  checkpoints. There is no Flyway and no migration before the first release: one schema file, and a database with
+  another version is renamed aside (ADR-0043).
 
 ## Open questions for the owner
 

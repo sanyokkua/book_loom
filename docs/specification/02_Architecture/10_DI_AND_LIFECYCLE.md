@@ -60,16 +60,16 @@ Startup separates **construction** from **resource opening** so the object graph
   and SQLite needs the data dir, so it runs first.
 - **Phase 1 — construct services.** Create the injector; instantiate singletons (logging, settings, gate, executors,
   engine, viewmodels). No DB is open yet; repositories hold an unopened handle. This is pure and fast.
-- **Phase 2 — open resources + backfill.** Open the SQLite DataSource, run Flyway migrations, then **backfill** the
+- **Phase 2 — open resources + backfill.** Open the SQLite DataSource, create the schema from the schema file (Flyway migrations arrive with the first release, ADR-0043), then **backfill** the
   repositories with the live `Jdbi`/connection. Load persisted settings and the `current_provider` **new-project
   default** (it seeds a freshly-created project's binding and is never consulted at resume,
   `06_DATA_MODEL_SQLITE.md#app_state`). Only after Phase 2 is the app ready to accept work.
 
 Splitting the phases keeps DI wiring side-effect-free (safe to construct in tests without a DB) and gives a single,
-ordered place where migrations run before any DAO is used. **Migrations run to completion inside Phase 2, before any
-`TranslationJob` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel a migration
-(see [graceful-shutdown](#graceful-shutdown)). A failed migration rolls back completely and surfaces as a typed startup
-error (`06_DATA_MODEL_SQLITE.md#corruption-and-recovery`).
+ordered place where the schema is created before any DAO is used. **Schema creation (and, from the first release, migrations) runs to completion inside Phase 2, before any
+`TranslationJob` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel it
+(see [graceful-shutdown](#graceful-shutdown)). A database that cannot be opened is renamed aside and a fresh one created, with one WARN line
+(`06_DATA_MODEL_SQLITE.md#corruption-and-recovery`, ADR-0043).
 
 ## eager-singletons {#eager-singletons}
 
@@ -117,8 +117,8 @@ production instance hold distinct locks and can run at once.
    on expiry, stop waiting and let the daemon threads die with the JVM).
 4. Release the single-instance lock.
 
-`stop()` can only cancel work a `TranslationJob` is running; **migrations complete during Phase 2 before any
-`TranslationJob` exists**, so `stop()` never interrupts a migration (`two-phase-init`). Because accepted segments are already durable, an
+`stop()` can only cancel work a `TranslationJob` is running; **schema creation completes during Phase 2 before any
+`TranslationJob` exists**, so `stop()` never interrupts it (`two-phase-init`). Because accepted segments are already durable, an
 abrupt kill is also safe — graceful shutdown just avoids losing the last in-flight chunk and leaves WAL in a clean
 state; on OS crash / power loss at most the last in-flight commit is lost, never earlier accepted work
 (`06_DATA_MODEL_SQLITE.md#storage-conventions`, ADR-0009).

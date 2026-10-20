@@ -22,7 +22,7 @@ only — real servers. Every test that proves an acceptance criterion carries a 
 `traceCheck` binds it (`.claude/rules/testing.md`).
 
 The single stack is JUnit 5 + AssertJ + Mockito 5 for assertions and collaborators; WireMock for the LLM HTTP seam; a
-real temporary SQLite database with Flyway for persistence; and TestFX + Monocle (headless) for the UI. No
+real temporary SQLite database for persistence (Flyway from the first release, ADR-0043); and TestFX + Monocle (headless) for the UI. No
 Testcontainers — SQLite is embedded (`06_DATA_MODEL_SQLITE.md`). No test contacts a real network except the local-only
 live set, which is env-gated and excluded from CI.
 
@@ -42,10 +42,10 @@ are mocked; the class under test and pure domain logic are never mocked. Runs in
 ### persistence-integration {#persistence-integration}
 
 Persistence integration tests run the real DAO stack against a **real temporary SQLite database** — a temp file or
-`:memory:` — with **Flyway migrations applied** exactly as the app applies them in two-phase init
+`:memory:` — with **the schema file applied** exactly as the app applies it in two-phase init (Flyway migrations from the first release, ADR-0043)
 (`10_DI_AND_LIFECYCLE.md`). They prove the DDL and JDBI DAOs together: settings KV round-trips (including the persisted
 `ui.language` key), project/segment/glossary/TM/summary stores, the provider/model snapshot bound per project, atomic
-writes, and that every committed `V{ver}__{desc}.sql` migration applies cleanly on an empty database and is never edited
+writes, and, from the first release, that every committed `V{ver}__{desc}.sql` migration applies cleanly on an empty database and is never edited
 after the fact. No Testcontainers, no external database. Runs in CI.
 
 ### provider-integration-wiremock {#provider-integration-wiremock}
@@ -313,7 +313,7 @@ manual.
 | Test type                                                        | CI (merge gate)                                                                         | Local-only                   |
 |------------------------------------------------------------------|-----------------------------------------------------------------------------------------|------------------------------|
 | Unit                                                             | yes                                                                                     | —                            |
-| Persistence integration (temp SQLite + Flyway)                   | yes                                                                                     | —                            |
+| Persistence integration (temp SQLite, schema file)                  | yes                                                                                     | —                            |
 | Provider integration (WireMock, both dialects)                   | yes                                                                                     | —                            |
 | Document round-trip golden                                       | yes                                                                                     | —                            |
 | Pipeline e2e (stub/WireMock provider)                            | yes                                                                                     | —                            |
