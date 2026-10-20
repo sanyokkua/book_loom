@@ -8,6 +8,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -44,5 +45,34 @@ class SegmentEventsContextTest {
             assertThat(shown.precedingTargets()).containsExactly("Він пішов.");
             assertThat(shown.styleSheet()).isEqualTo("Plain prose.");
         });
+    }
+
+    @Test
+    void contextAssembled_sentSections_areForwardedInDisplayText() {
+        final PromptSection items =
+                new PromptSection("items", "Items:", PromptSection.Origin.USER, List.of("1: ⟦g0⟧Він⟦g1⟧ пішов."));
+        final ContextSnapshot snapshot =
+                new ContextSnapshot(List.of(), List.of(), List.of(), null, "s", List.of(), List.of(), List.of(items));
+
+        events.contextAssembled("Book.md:0", snapshot);
+
+        assertThat(emitted).singleElement().isInstanceOfSatisfying(ContextAssembled.class, assembled -> {
+            assertThat(assembled.context().sentSections()).singleElement().satisfies(section -> {
+                assertThat(section.slot()).isEqualTo("items");
+                assertThat(section.lines()).containsExactly("1: Він пішов.");
+            });
+        });
+    }
+
+    @Test
+    void contextAssembled_noSentSections_staysNull() {
+        events.contextAssembled("Book.md:0", new ContextSnapshot(List.of(), List.of(), List.of(), null, "s"));
+
+        assertThat(emitted)
+                .singleElement()
+                .isInstanceOfSatisfying(
+                        ContextAssembled.class,
+                        assembled ->
+                                assertThat(assembled.context().sentSections()).isNull());
     }
 }

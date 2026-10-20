@@ -162,4 +162,36 @@ class CallSnapshotTest {
     void isDecision_eachKind_isTrueOnlyForADecision(final SegmentOutcomeNote.Kind kind, final boolean decision) {
         assertThat(new SegmentOutcomeNote("s-1", kind, "").isDecision()).isEqualTo(decision);
     }
+
+    @Test
+    void waiting_firstAttempt_hasNoItems() {
+        assertThat(waiting().items()).isEmpty();
+    }
+
+    @Test
+    void withItems_parsedItems_replacesThemAndKeepsEverythingElse() {
+        final CallItem ok = new CallItem("1", "Book.md:0", "Він пішов.", CallItemStatus.OK, List.of());
+        final CallItem missing = new CallItem("2", "Book.md:1", null, CallItemStatus.MISSING, List.of("absent"));
+
+        final CallSnapshot parsed = waiting()
+                .withOutcome(new SegmentOutcomeNote("Book.md:0", SegmentOutcomeNote.Kind.ACCEPTED, ""))
+                .withItems(List.of(ok, missing))
+                .withItems(List.of(ok));
+
+        assertThat(parsed.items()).containsExactly(ok);
+        assertThat(parsed.callId()).isEqualTo(7);
+        assertThat(parsed.outcomes()).hasSize(1);
+        assertThat(parsed.answered("r", null, Duration.ofSeconds(1)).items()).containsExactly(ok);
+    }
+
+    @Test
+    void withItems_listMutatedAfterwards_doesNotChangeSnapshot() {
+        final List<CallItem> items = new ArrayList<>();
+        items.add(new CallItem("1", "Book.md:0", "x", CallItemStatus.OK, List.of()));
+
+        final CallSnapshot parsed = waiting().withItems(items);
+        items.clear();
+
+        assertThat(parsed.items()).hasSize(1);
+    }
 }

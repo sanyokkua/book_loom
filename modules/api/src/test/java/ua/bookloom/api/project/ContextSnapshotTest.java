@@ -34,4 +34,24 @@ class ContextSnapshotTest {
         assertThat(snapshot.glossary()).containsExactly(term);
         assertThat(snapshot.summary()).isEqualTo("Hale arrived in Milton.");
     }
+
+    @Test
+    void constructor_delegatingForms_leaveSentSectionsNull() {
+        final ContextSnapshot snapshot = new ContextSnapshot(List.of(), List.of(), List.of(), null, "style");
+
+        assertThat(snapshot.sentSections()).isNull();
+    }
+
+    @Test
+    void constructor_sentSections_areKeptAndCopied() {
+        final List<ua.bookloom.api.pipeline.PromptSection> sections = new ArrayList<>();
+        sections.add(new ua.bookloom.api.pipeline.PromptSection(
+                "items", "Items:", ua.bookloom.api.pipeline.PromptSection.Origin.USER, List.of("a")));
+        final ContextSnapshot snapshot =
+                new ContextSnapshot(List.of(), List.of(), List.of(), null, "style", List.of(), List.of(), sections);
+
+        sections.clear();
+
+        assertThat(snapshot.sentSections()).hasSize(1);
+    }
 }

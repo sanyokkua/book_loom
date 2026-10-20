@@ -175,7 +175,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     `X-Api-Key: ${env:LMS_KEY}` is accepted, `X-Monkey: abc` is refused because the check is a case-insensitive
     substring) and the moved `InMemoryProviderConfigsTest`.
   - Verify: `./gradlew build`. → :api, :llm, :persistence
-- [ ] 2.5 Add the parsed batch items to the call snapshot, and the batch context sent to the context snapshot, so the
+- [x] 2.5 Add the parsed batch items to the call snapshot, and the batch context sent to the context snapshot, so the
   live rows, the reply grid and "What the model saw" can show what really happened.
   - **Satisfies:** review-queue "Show on "What the model saw" the context the model was actually sent";
     translation-pipeline "Send a batch reply's per-segment results to the rows"; translation-pipeline "Announce each
