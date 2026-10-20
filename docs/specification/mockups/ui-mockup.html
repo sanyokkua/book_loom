@@ -1349,7 +1349,7 @@ function setSet(t) { if (ST.dirty && ['providers', 'models'].includes(ST.setting
 S.settings = () => `
 <div class="page">
 <h2 class="page-h">Settings</h2>
-<p class="page-sub">Your books stay on this computer. BookLoom talks only to the AI model you choose here.</p>
+<p class="page-sub">Your books stay on this computer. BookLoom sends your text only to the AI model you choose here.</p>
 <div class="tabs">${[['providers', 'Providers'], ['models', 'Models'], ['generation', 'Generation'], ['appearance', 'Appearance'], ['automation', 'Automation'], ['storage', 'Storage & logs']].map(([k, t]) => `<span class="tab ${ST.settingsTab === k ? 'on' : ''}" tabindex="0" onclick="setSet('${k}')">${t}</span>`).join('')}</div>
 <div class="settings-fill">${SET[ST.settingsTab]()}</div></div>`;
 const SET = {};
@@ -1504,8 +1504,8 @@ ${gridTable(['State', 'Code', 'Title bar', 'AI-model chip', 'Toolbar', 'Banner',
 <script>
 /* ============================================================ BOOK BRIEF — "Fill in from the book" (B1–B3) · short work, not hideable */
 const BRIEF_STEPS = [
-    {group: 'What it decides', name: 'Genre', state: mk('ok', 'so far'), res: 'Popular science — 2 of 2 samples agree', f: true},
-    {group: 'What it decides', name: 'Register', state: mk('ok', 'so far'), res: 'Neutral — 2 of 2 samples agree', f: true},
+    {group: 'What it decides', name: 'Genre', state: mk('ok', 'so far'), res: 'Popular science — 3 of 4 samples agree', f: true},
+    {group: 'What it decides', name: 'Register', state: mk('ok', 'so far'), res: 'Neutral — 3 of 4 samples agree', f: true},
     {group: 'What it decides', name: 'Who tells the story', state: mk('ok', 'so far'), res: 'Third person — 1 of 2 samples', f: true},
     {group: 'What it decides', name: 'Who reads it · voice', state: mk('wait'), res: 'Decided by the last step', f: true},
     {group: 'Steps', name: '1 · What the model knows about the book', state: mk('keep', 'skipped'), res: 'The title is the file name — nothing to look up', s: 'skip'},

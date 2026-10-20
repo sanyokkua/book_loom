@@ -33,19 +33,22 @@ application's state and settings stored on disk, so that a translation can be cl
   - "Show technical details", with plain words on the main screens (the Words table, decision 14).
 - **Projects (new; G6, PN1–PN3, decisions 8, 9, 13).**
   - A list grouped by book, the first launch, create, open, continue, rename and remove.
-  - Several translations of one book; automatic project names.
+  - Several translations of one book; automatic project names, unique within a book (two editions of one title may
+    both be "Earth Gravity · EN → UK"; owner, 2026-10-20).
   - One silent look for a local AI program at first launch.
   - Workflow steps stay locked until a project is open.
 - **Screens to the mockup.**
   - **Import (I1–I6):** a verdict line and a three-pane text browser.
-  - **Brief (B1–B3):** read-only while translating; languages locked once started; "Fill in from the book".
+  - **Brief (B1–B3):** read-only while translating (the recorded default for the source document's open question 7);
+    languages locked once started; "Fill in from the book".
   - **Names & style (N1–N5):** purpose lines, resizable tables, the names pass in the progress dialog with Results.
   - **Translating (T1–T5, C1):** a summary strip, and a live card with Simple and Detailed modes and per-segment
     markers for a batch.
   - **Review (T6–T12, decisions 5 and 12):** a large dialog that opens by itself, with protected formatting marks and
     one main button.
-  - **Export (E1–E3):** figures before export, partial export, and asking before a file is replaced. **BREAKING**: the
-    Replace switch is removed.
+  - **Export (E1–E3):** figures before export, partial export, and asking before a file is replaced. Esc hides the last
+    check's progress dialog and only its Cancel button asks (owner, 2026-10-20). **BREAKING**: the Replace switch is
+    removed.
 - **Settings (S1–S6, H1, decisions 6–7).**
   - Providers: add, edit, delete and save, with a summary card and the connection form (auth by environment-variable
     reference, two endpoint overrides, headers, custom models), checks, and a test dialog.
@@ -122,16 +125,19 @@ application's state and settings stored on disk, so that a translation can be cl
   `com.fasterxml.jackson.datatype:jackson-datatype-jsr310` (Jackson itself is already in the catalog). No Flyway yet.
 - **Decisions:**
   - ADR-0043: state in SQLite as JSON documents; no migrations before release.
-  - ADR-0044: the first-launch local look; amends ADR-0010.
+  - ADR-0044: the first-launch local look (window only; once, and once more after a fresh database); amends ADR-0010.
   - ADR-0045: review is a dialog and the review mode a stored setting; supersedes parts of ADR-0036.
   - Amended: ADR-0009, ADR-0034, ADR-0010, ADR-0036.
 - **Documents:**
   - `AGENTS.md`, plus `.claude/rules/offline-and-privacy.md`, `persistence-sqlite.md` and `testing.md`;
   - `openspec/config.yaml`'s stack line;
   - the specification clauses that lag (listed per group in `tasks.md`);
-  - `CHANGE_BACKLOG.md`: this change goes before `redesign-translation-pipeline`.
+  - `CHANGE_BACKLOG.md`: this change goes before `redesign-translation-pipeline` (already recorded).
 - **Not in this change:**
   - pipeline polish, including more frequent model summaries and rereading tone mid-run →
     `redesign-translation-pipeline`;
   - keychain credentials, packaging, OS notifications, a local language detector (none, by owner decision) and schema
-    migrations → the first release.
+    migrations → the first release;
+  - new formats and eval work → the backlog.
+- **Already listed elsewhere and covered here:** `docs/next_features.md` #15's truncated Ukrainian brief labels at
+  1024 px (task 8.2's Ukrainian fit checks).

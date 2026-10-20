@@ -469,7 +469,7 @@ Import) instead of the form.
 
 **Fill in the brief from the book** (progress dialog, short, B1–B3; `#busy-card`): header "50 % · 3 of 6 steps · Left about
 30 s"; group **What it decides** (Genre, Register, Who tells the story, Who reads it · voice, each with its value so far
-and its agreement, "2 of 2 samples agree"; selecting one shows each sample's answer with its **verified quote**, and a
+and its agreement, "3 of 4 samples agree"; selecting one shows each sample's answer with its **verified quote**, and a
 value without a quote is not used); group **Steps**: (1) what the model knows about the book — skipped when the title is
 the file name, (2) read sample 1…K (K = 3 / 4 / 5 for Fast / Balanced / Max) with the location range, (3) decide genre,
 readers and voice; Simple detail: a plain sentence, then Sent (the sample) \| Answer (a Field \| Value \| Quote grid);
@@ -786,7 +786,7 @@ Purpose: host the six settings tabs.
 Each tab's fields, defaults, and ranges are specified in `07_SETTINGS.md`. **Built today:** only the Providers tab is
 live; Models, Generation, Automation and Storage are not built, and nothing is remembered across a restart.
 **Planned — UI finalization + SQLite (S1–S5, H1, decisions 6–7):** all six tabs, with the contents below. Subtitle:
-"Your books stay on this computer. BookLoom talks only to the AI model you choose here." Keys are never saved, only
+"Your books stay on this computer. BookLoom sends your text only to the AI model you choose here." Keys are never saved, only
 environment-variable names.
 
 **How changes are saved (H1).** **Providers** and **Models** save explicitly through a pinned form footer: "● Unsaved

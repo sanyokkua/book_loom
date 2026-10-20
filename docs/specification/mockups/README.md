@@ -117,8 +117,8 @@ Everything else (layout, ids, content) is free to change; the conformance tests 
   - A dialog that replaces another returns to it: Retry with a note was such a case, and is now an inline panel (F1).
 - **Keys.**
   - Focus is trapped in the card (Tab wraps around).
-  - **Esc** closes a dialog. On a progress dialog it *hides* long work (E1), asks first before losing an export, and
-    closes short work.
+  - **Esc** closes a dialog. On a progress dialog it *hides* long work (E1), the export's last check included (only
+    its Cancel button asks "Cancel the export?"), and cancels short work.
   - **Enter** (or Ctrl/⌘+Enter inside a text area) runs the footer's main button.
   - Only About closes on a click outside.
 - **Sizes.**
@@ -350,7 +350,7 @@ tense for "you".
 | Stay paused | — (the toolbar's Pause does it) | — |
 | Suggest with model | "✦ Fill in from the book" | — |
 | Foreign-language passages | "Text in other languages" | — |
-| passages (brief samples) | "samples" ("2 of 2 samples agree") | — |
+| passages (brief samples) | "samples" ("3 of 4 samples agree") | — |
 | Transliterate | "Spell in Ukrainian letters" (by target language) | — |
 | Image alt-text, navigation labels, front matter | "Picture descriptions", "Table of contents and chapter titles", "Copyright and edition notes" | — |
 | consistency pass, canonical-equal, round trip | "Last check before saving", "checked: opens, nothing missing" | technical line on Import |
@@ -472,13 +472,14 @@ language more than once, for example with another model, quality or thinking set
        suggestion chips (`· 26b`, `· Max quality`, `· thinking low`, `· formal`, `· v2`).
    - The primary button stays disabled until the name is filled in and unused. The error shows only after the first
      edit (DL-1), and the placeholder never equals an existing name.
-4. **Names are unique** (trimmed, case-insensitive). A named project returns to its automatic name only when no other
+4. **Names are unique within one book** (trimmed, case-insensitive; two editions of one title may both be
+   "Earth Gravity · EN → UK"). A named project returns to its automatic name only when no other
    project of the book has the same pair.
 5. **Where it shows**: Projects (with an "open" chip on the open one), the title bar, the remove and continue dialogs,
    and the label of side files.
    - Exports of two projects with the same pair never collide: `earth-gravity.uk.md` and
      `earth-gravity.uk.26b-max.md`.
-- **Code (new).** `Project` gains `name` and `nameOrigin`. The store has a unique index on the lower-cased name and a
+- **Code (new).** `Project` gains `name` and `nameOrigin`. The store has a unique index on (book, lower-cased name) and a
   lookup by `(contentHash, source, target)`. A `ProjectNames` service in `:pipeline` builds the name and reports a
   conflict as a typed result.
 
@@ -524,7 +525,7 @@ language more than once, for example with another model, quality or thinking set
 ### Dialog · Fill in the brief from the book (G4, short) — B1–B3
 - **Header.** "50 % · 3 of 6 steps · Left about 30 s".
 - **Group "What it decides".** Genre, Register, Who tells the story, Who reads it · voice. Each shows its value so far
-  and its agreement ("2 of 2 samples agree"). Selecting one shows each sample's answer with its **verified quote**; a
+  and its agreement ("3 of 4 samples agree"). Selecting one shows each sample's answer with its **verified quote**; a
   value without a quote is not used.
 - **Group "Steps".**
   1. What the model knows about the book — skipped when the title is the file name.
@@ -594,7 +595,7 @@ language more than once, for example with another model, quality or thinking set
 | Simple detail | The segment's marker and location (a "to review" one names why), a bordered **Source \| Translation** grid ("Being translated now…" / "Not translated yet." when empty, **T4**), and **Being translated now**: the sources of the call in flight | — |
 | Detailed detail | The info grid (call, attempt, clock, first token, tokens in · cached · out, speed), **Sent to the model** (parsed, G5) \| **The model's reply** (grid by id); stacked in compact; Next call line | `PromptView`, `ReplyView`; per-item reply on `CallSnapshot` |
 | Show each segment when translated | On: when a reply arrives, the first newly translated segment is selected, unless the person clicked one (then "Follow again"). Only a click or key turns following off (JX-T3) | `LiveCallPanel` |
-| Scene summary (**T5**) | Always under the detail: the current summary and where it comes from ("Updated every 20 segments. On Max quality the model also writes one at the end of each chapter.") | `RollingSummaryKeeper` via `MemoryUpdated` |
+| Scene summary (**T5**) | Always under the detail: the current summary and where it comes from ("Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter.") | `RollingSummaryKeeper` via `MemoryUpdated` |
 | Activity log tab | All · Problems only. Plain lines ("Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review"); debug lines only with technical details | `control/TaggedLog`, `ActivityLogFeed` |
 | All calls… | The progress dialog listing the translation's calls, newest first (last 50 kept); Simple shows each reply matched to its segments, Detailed the full call | replaces `ModelCallsWindow` |
 
@@ -680,7 +681,7 @@ language more than once, for example with another model, quality or thinking set
 ## Settings — S1–S5, H1, decisions 6–7
 
 Six tabs: **Providers · Models · Generation · Appearance · Automation · Storage & logs**. Subtitle: "Your books stay on
-this computer. BookLoom talks only to the AI model you choose here."
+this computer. BookLoom sends your text only to the AI model you choose here."
 - **How changes are saved (H1).**
   - **Providers** and **Models** save explicitly through a pinned form footer: "● Unsaved changes" · Cancel · Save.
     Leaving them with changes (another provider, another tab, navigation, closing the window) asks: Keep editing ·

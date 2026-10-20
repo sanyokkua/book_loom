@@ -19,7 +19,7 @@ marked *built* describe the code today.
 ## settings-tabs {#settings-tabs}
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
-(`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom talks only to the AI
+(`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
 model you choose here." *Built today:* Providers (read-only presets with the three tests), Appearance (theme);
 the Models, Generation, Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
 

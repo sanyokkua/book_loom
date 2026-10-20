@@ -4,7 +4,7 @@
 
 The application SHALL show every state marker, chip and badge as an icon plus a word, in one colour per meaning: grey for waiting, queued or idle; blue for working; green for done; amber for needs you or slow; red for failed or unreachable; sand for kept as is. A colour SHALL mean the same thing on every screen and SHALL take its value from the existing status roles.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`). In plain words: a person learns the six colours once and they hold on a list row, a chip in the title bar and a banner. The word and the icon are always there too, so the state never depends on telling two colours apart.
+**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, FR-THEME-10 (`docs/specification/01_Product/09_THEMING.md#status-colours`), theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a person learns the six colours once and they hold on a list row, a chip in the title bar and a banner. The word and the icon are always there too, so the state never depends on telling two colours apart.
 
 #### Scenario: A queued segment is grey and says "waiting"
 
@@ -31,7 +31,7 @@ The application SHALL show every state marker, chip and badge as an icon plus a 
 
 The application SHALL underline every link and paint it with the information foreground role, which SHALL reach a contrast of at least 4.5 to 1 on every surface it appears on, in both the light and the dark block.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, FR-A11Y-8 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md`). In plain words: colour alone must not say "this is a link", and the colour chosen must be readable on the white cards and on a selected row. The existing information role already passes, so no new colour is added.
+**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: colour alone must not say "this is a link", and the colour chosen must be readable on the white cards and on a selected row. The existing information role already passes, so no new colour is added.
 
 #### Scenario: A link is underlined
 
@@ -41,13 +41,13 @@ The application SHALL underline every link and paint it with the information for
 #### Scenario: The weakest surface still passes
 
 - **WHEN** the information foreground is measured against every surface it appears on, in both blocks
-- **THEN** the lowest contrast found is at least 4.5 to 1 (4.60 on a selected row)
+- **THEN** the lowest contrast found is at least 4.5 to 1 (4.60 on a selected row) in both the light and the dark block
 
 ### Requirement: Mark the selected choice of a segmented control with a bar
 
 The application SHALL mark the selected segment of a segmented control with a 2-pixel bar in the strong-text role as well as its fill, because the fill alone differs from its neighbours by only 1.24 to 1.
 
-**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`. In plain words: the chosen option of Fast · Balanced · Max must be visible to someone who cannot tell the two fills apart. A bar in the primary colour would reach only 2.86 to 1, so the strong-text role is used.
+**Source**: `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the chosen option of Fast · Balanced · Max must be visible to someone who cannot tell the two fills apart. A bar in the primary colour would reach only 2.86 to 1, so the strong-text role is used.
 
 #### Scenario: The chosen quality shows a bar
 
@@ -58,12 +58,12 @@ The application SHALL mark the selected segment of a segmented control with a 2-
 
 The application SHALL paint a scrollbar's thumb with a contrast of at least 3 to 1 against its track in both the light and the dark block, in the navigation column as well as in the content.
 
-**Source**: `docs/specification/mockups/README.md#g3--visible-scrollbars`, WCAG 2.1 non-text contrast. In plain words: a scrollbar that is always shown is useless if the thumb fades into the track, so its colours are held to the same 3 to 1 as other control edges.
+**Source**: `docs/specification/mockups/README.md#g3--visible-scrollbars`, theme G (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: a scrollbar that is always shown is useless if the thumb fades into the track, so its colours are held to the same 3 to 1 as other control edges.
 
 #### Scenario: The thumb passes in both themes
 
-- **WHEN** the thumb and the track are measured in the light block and in the dark block
-- **THEN** each pair reaches at least 3 to 1
+- **WHEN** the thumb and the track are measured in the content and in the navigation column, in the light block and in the dark block
+- **THEN** each of the four pairs reaches at least 3 to 1
 
 ## MODIFIED Requirements
 

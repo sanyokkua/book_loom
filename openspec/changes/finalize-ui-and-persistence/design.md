@@ -23,7 +23,8 @@ Paths are relative to `modules/<module>/src/main/java/ua/bookloom/<module>/`.
   previous call only).
 - **Settings.** `settings.fxml` has four tabs disabled; provider add, edit and delete are disabled.
 - **Layout.** No `SplitPane`, no `TextFormatter`. `AppShellView.showContent` forces `minHeight = USE_PREF_SIZE` on
-  every screen.
+  every screen that is not itself a `ScrollPane` (`AppShellView.java:332`). `theme.css` has one base scrollbar rule and
+  seven regional copies.
 
 **`:api` / `:persistence`**
 - Nine storage ports, each bound to an in-memory adapter over `InMemoryStore` (ADR-0034), proven by the
@@ -44,6 +45,25 @@ Paths are relative to `modules/<module>/src/main/java/ua/bookloom/<module>/`.
   sent.
 - **Step names.** `NamesPassImpl` names its stages only in a DEBUG line. `BriefSuggester`'s phases are visible only as
   call kinds. Export has `ExportProgress.Step`.
+- **Requests.** `ChatRequests.build(PromptName, messages, OutputLimit, lowerTemperature)` is static, has 16 callers, and
+  reads `SamplingMode.current()` (`BOOKLOOM_SAMPLING`) and `ReasoningPlan.current()` (`BOOKLOOM_REASONING`) itself
+  (`ChatRequests.java:41,43`). The per-kind temperature is `PromptName.temperature`. Every run request passes
+  `JobModelCalls.send` (`:157`), which sizes it to the window. `ContextBudget.windowFor(detected, override)` already
+  takes an override, always `null` today (`TranslationJobImpl:292`, `BookSamples:78`, `NamesPassImpl:134`).
+- **Checks.** `DialParameters.reviewPasses` counts reviewer calls per **chunk** (Fast 0, Balanced 1, Max 2; chunk cap
+  8, 8, 2; Manual caps chunks at 1). Verbatim segments get no call.
+- **Failures.** A throwing step becomes `ErrorCode.internal` (`RoutedCalls:296`). `PauseDecider` pauses on internal (3
+  pauses, resumes by itself), timeout (2), outages (10) and validation (2, waits for the person); a segment's step that
+  reaches its budget is flagged and the run goes on. The command line always runs Unattended and ignores the
+  review-mode flag (`TranslateCommand:170`).
+- **Review mode.** `ReviewModeResolver` (`BOOKLOOM_REVIEW_MODE` over `bookloom.review.mode`, default Unattended) runs in
+  `Launcher:109` before the injector; `AppModule:54` binds the one `ReviewMode`, which `RunStarter:48`,
+  `ReviewViewModel:88`, `ReviewPauseFollower:47`, `ReviewAvailability:24` and `TranslatingViewModel:200` inject.
+- **Wiring.** `CoreModules` is shared by the window and the command line (`TranslateLauncher:109`). About nine `:llm`
+  and `:pipeline` test injectors are built from `LlmModule` alone and rely on its `ProviderConfigs` binding.
+  `ProviderConfigs` has `register`, `find` and `all`. The detailed log's switch is read by `TraceFileResolver`.
+- **Titles.** `aux:fm:title` / `aux:fm:author` exist for Markdown only (`MarkdownAuxiliary.java:99`); TXT has no
+  front matter.
 
 ### Constraints
 
@@ -81,7 +101,9 @@ footer and a `ScrollPane` body.
 
 **Keys, in `ModalHost`'s key filter:**
 - Enter runs the card's default button. Inside a `TextArea`, Ctrl/⌘+Enter does.
-- Esc runs the card's escape action. It closes the card, hides long work, or asks first ("Cancel the export?").
+- Esc runs the card's escape action. It closes a question card, hides long work (the names pass and the export's last
+  check), and cancels short work. Only the export dialog's Cancel button asks "Cancel the export? No file is written."
+  (owner, 2026-10-20).
 - Only About closes on a click outside.
 
 **Unrequested dialogs.** `showWhenFree(card)` queues a dialog the person did not ask for, such as the review desk at
@@ -118,7 +140,7 @@ with decision 1.
 - `control/PromptView` is one card per message role, with a `TitledPane` per `PromptSection`. Each slot has a renderer:
   bullets for the rule lists, a Term | Rendering | Note grid, a Source | Translation grid, and an Id | Segment | Text
   grid built from `<s id>` lines.
-- `control/ReplyView` is an Id | Segment | Translation returned | Result grid built from the call's items (H1).
+- `control/ReplyView` is an Id | Segment | Translation returned | Result grid built from the call's items (K1).
 - Raw messages and the raw reply are collapsed blocks with Copy, in Detailed only.
 - These two replace `PromptContextPane` and `ReplyPane`.
 
@@ -132,8 +154,12 @@ with decision 1.
 - **The bar never moves back.** Added work holds the bar until the work catches up.
 - **What it replaces:** the window in `RunClock` and the percentage in `RunFigures`. Segment counts stay in
   `RunFigures` for the text lines ("74 of 142 segments done"). `ThroughputMeter` stays.
-- **Estimates before Start** come only from a measured speed: the last inference test, stored in `ModelSettings`, or an
-  earlier run of the same project.
+- **Estimates before Start** come only from a measured speed in seconds per segment
+  (`ModelSettings.measuredSecondsPerSegment`). Two writers set it: the Settings inference test (seconds for its one
+  segment) and the end of every run (the run's draft time divided by its drafted segments). Nothing else estimates.
+- **After a restart** the ledger is rebuilt from the stored segment decisions: decided segments count as done draft
+  steps, the check steps of chunks whose segments are all decided count as done, the rest as planned; time left stays hidden until the new run has measured its own steps. The ledger itself
+  is not stored.
 
 **Alternative rejected:** a better smoothing of the 20-segment window. It still ignores checks, repairs and Max's
 after-work, and still projects one stretch over the book.
@@ -144,26 +170,27 @@ Each hook is the smallest change that gives the UI data the pipeline already has
 
 | Hook | Module | Change | Why the UI needs it |
 |---|---|---|---|
-| **H1** batch items | `:api`, `:pipeline` | An `api.pipeline.CallItem(id, segmentId, target, CallItemStatus, problems)` record and `CallSnapshot.items`. `CallItemStatus` mirrors `ItemStatus` (OK, MISSING, DUPLICATE, EXTRA, MERGED_SUSPECT). `ModelCalls.parsed(...)` (default no-op) is called right after `BatchReplyParser.parse` in `BatchDrafter`; `CallSnapshots` attaches the items and publishes again | Rows show a batch's per-segment results; the reply grid maps each id to its segment (T1, T4, G5) |
-| **H2** context sent | `:api`, `:pipeline` | `ContextSnapshot.sentSections @Nullable List<PromptSection>`, filled for batch-adopted segments from `BatchStage.adopt` (`prompts.sectionsFor(context, items)`). `RetryDraft` still replays from the snapshot's own fields | "What the model saw" shows what was really sent (T8) |
-| **H3** steps | `:api`, `:pipeline` | `JobEvent` gains `StepsPlanned(kind, added, estimated)` and `StepChanged(kind, label, index, state, @Nullable itemRef, @Nullable StepResult result)`. Emitted per source (below). The export keeps `ExportProgress`, which gains the item data; `:ui` maps both into one model | Every progress dialog and the run's ledger (G4, G10) |
-| **H4** provider form | `:api`, `:llm` | `ProviderConfig` + `displayName, auth (NONE / BEARER / API_KEY), apiKeyHeader, credentialRef, modelsPath, chatPath, headers, customModels`. Validation in the compact constructor and a pure `api.llm.ProviderConfigRules`. `HttpExchange.buildRequest` resolves `${env:NAME}` and adds auth and the headers. A missing variable is `ErrorCode.missingCredential` before any request. The draft overloads are `ProviderVerifier.verify(ProviderConfig, …)` and `ModelCatalog.listModels(ProviderConfig)`. `StageOutcome` + `VerificationExchange` (method, URL, bodies, status, first token, speed, structured), with the key masked | The Settings form, checks on an unsaved form, the test dialog (S2, S3, decision 7) |
-| **H5** per-model | `:api`, `:pipeline`, `:llm` | `ModelSettings` is read per chunk through the port (a cached read). Temperature `CHOOSE` keeps `PromptName`'s per-kind value, `VALUE` uses the person's value, `OMIT` sends null (the DTOs already omit null). The context override goes through `ContextBudget.windowFor(detected, override)`; the output cap through `OutputLimit`; `OutputLengthField` maps `max_tokens` → `max_completion_tokens` in `OpenAiRequestMapper` (never for Ollama) | The Models tab, applied to segments not translated yet (S6) |
-| **H6** refused settings | `:llm` | `RejectedCapability` gains TEMPERATURE, TOP_P, TOP_K, MIN_P, REPEAT_PENALTY, SEED, OUTPUT_FIELD and NUM_CTX. `CapabilityRejections` matches HTTP 400 **or 422** whose body names a setting that **was sent**; only the setting's name is kept. The `GatedChatModel` downgrade repeats once without counting an attempt. A `RefusalMemory` singleton over `ModelSettingsRepository` strips remembered settings before the first attempt. One WARN line | FR-INFER-09e; "Settings this model refused" |
-| **H7** projects | `:api`, `:pipeline` | `Project` + `name, nameKey, nameOrigin, createdAt, lastOpenedAt`; ids from an `IdSource` seam. `ProjectService` becomes id-based: `list, create, open, rename, remove, translateInto`, plus the existing `updateBrief, plan, segments, roundTrip, close`. `ProjectNames` builds and checks names. `RunRecord.model` becomes a `ModelSelection`; a `lastExport` record is added | Projects, project names, continue after a restart (PN, D11) |
-| **H8** title, files | `:ui`, `:pipeline` | `BookTitleViewModel` and `FileNameTargets` fall back to `aux:fm:title` / `aux:fm:author` and give a reason line. `ExportPathRules` adds a named project's suffix (`earth-gravity.uk.26b-max.md`) | E1, PN5 |
-| **H9** knobs | `:pipeline`, `:app` | `ReasoningPlan`, `SamplingMode` and the review-mode resolver read the stored setting, and the environment variable or flag still overrides it | The Generation and Automation tabs; the CLI and evaluations keep their env vars |
-| **H10** first launch | `:ui` | `state/LocalModelProbe` runs once when `firstLaunch.probed` is absent (ADR-0044) | First launch (decision 13) |
+| **K1** batch items | `:api`, `:pipeline` | An `api.pipeline.CallItem(id, segmentId, target, CallItemStatus, problems)` record, `CallSnapshot.items` (empty by default) and `CallSnapshot.withItems`, mirroring `withOutcome` (`CallSnapshot.java:240`). `CallItemStatus` mirrors `ItemStatus` (OK, MISSING, DUPLICATE, EXTRA, MERGED_SUSPECT). Right after `parser.parse` in `BatchDrafter` (`:164–177`) a new `ModelCalls.parsed(List<String> segmentIds, items)` (default no-op) is called; `JobModelCalls` forwards it to `CallSnapshots`, which finds the call through its `draftedBy` map (the same lookup `noted` uses, `CallSnapshots.java:73–87, 182–184`) and publishes `withItems` | Rows show a batch's per-segment results; the reply grid maps each id to its segment (T1, T4, G5) |
+| **K2** context sent | `:api`, `:pipeline` | `ContextSnapshot.sentSections @Nullable List<PromptSection>`, filled for batch-adopted segments from `BatchStage.adopt` (`prompts.sectionsFor(context, items)`). `RetryDraft` still replays from the snapshot's own fields | "What the model saw" shows what was really sent (T8) |
+| **K3** steps | `:api`, `:pipeline` | `JobEvent` gains `StepsPlanned(kind, added, estimated)` and `StepChanged(kind, label, index, state, @Nullable itemRef, @Nullable StepResult result)`. Emitted per source (below). The export keeps `ExportProgress`, which gains the item data; `:ui` maps both into one model | Every progress dialog and the run's ledger (G4, G10) |
+| **K4** provider form | `:api`, `:llm` | `ProviderConfig` + `displayName, auth (NONE / BEARER / API_KEY), apiKeyHeader, credentialRef, modelsPath, chatPath, headers, customModels`. Validation in the compact constructor and a pure `api.llm.ProviderConfigRules`. `HttpExchange.buildRequest` resolves `${env:NAME}` and adds auth and the headers. A missing variable is `ErrorCode.missingCredential` before any request. The draft overloads are `ProviderVerifier.verify(ProviderConfig, …)` and `ModelCatalog.listModels(ProviderConfig)`. `StageOutcome` + `VerificationExchange` (method, URL, bodies, status, first token, speed, structured), with the key masked | The Settings form, checks on an unsaved form, the test dialog (S2, S3, decision 7) |
+| **K5** per-model | `:api`, `:llm`, `:pipeline` | `ModelSettings` is applied in `:llm` where the bound model sends (`GatedChatModel`), so every caller — run, brief, names pass, export check — gets it without touching the 16 `ChatRequests.build` callers. A `llm.provider.ModelSettingsCache` over `ModelSettingsRepository` (shared with `RefusalMemory`, refreshed on every save) gives the current settings per provider + model; a save applies from the next request. Temperature `CHOOSE` keeps the request's per-kind value, `VALUE` replaces it, `OMIT` sends null (the DTOs already omit null); the answer cap lowers `maxOutputTokens`; it sets the new `ChatRequest.outputField` (`@Nullable OutputLengthField`, added in group 2), which `OpenAiRequestMapper` reads to write `max_completion_tokens` instead of `max_tokens` (never for Ollama); an OUTPUT_FIELD refusal (K6) flips it. `ChatModelFactoryImpl` passes the cache into the `GatedChatModel` it builds (`ChatModelFactoryImpl:74`). These apply from the next request. **The context window is not touched in `:llm`:** a chunk is packed for its window, so the override is read in `:pipeline` at chunk entry by the three `ContextBudget.windowFor` call sites and reaches the request through `JobModelCalls.send`'s sizing; a save applies from the next chunk | The Models tab, applied to requests not yet sent (S6) |
+| **K6** refused settings | `:llm` | `RejectedCapability` gains TEMPERATURE, TOP_P, TOP_K, MIN_P, REPEAT_PENALTY, SEED, OUTPUT_FIELD and NUM_CTX. `CapabilityRejections` matches HTTP 400 **or 422** whose body names a setting that **was sent**; only the setting's name is kept. The `GatedChatModel` downgrade repeats once without counting an attempt. `RefusalMemory` (bound in `LlmModule` over the `:api` port `ModelSettingsRepository`) strips remembered settings before the first attempt. `:llm` and `:pipeline` tests that build an injector from `LlmModule` alone install a small test module binding a fake `ModelSettingsRepository` and `ProviderConfigs` (`:llm` cannot see `:persistence`). One WARN line | FR-INFER-09e (`04_LLM_PROVIDERS_AND_MODELS.md`); "Settings this model refused" |
+| **K7** projects | `:api`, `:pipeline` | `Project` + `name, nameKey, nameOrigin, createdAt, lastOpenedAt`; ids from an `api.project.IdSource` (a UUID in production, bound in `PipelineModule`; a counter in tests), which also gives `TranslationJobImpl` its one `jobId`. `ProjectService` becomes id-based in two steps: first `list, create, open` replace `importBook / continueBook / decidedSegments` with behaviour unchanged (callers `ImportViewModel:172`, `ImportGuard:122`, `app/cli/BookOpener:44` and about 42 `:pipeline` tests), then `rename, remove, translateInto, relocate` are added. `ProjectNames` builds and checks names; a name is unique within its book. `ProjectRepository.relocateBook(contentHash, path)` stores the path "Find the book…" accepted. `RunRecord.model` becomes a `ModelSelection`; a `lastExport` record is added | Projects, project names, continue after a restart (PN, D11) |
+| **K8** title, files | `:ui`, `:pipeline` | `BookTitleViewModel` and `FileNameTargets` take the title in order: the book's metadata, then Markdown front matter (`aux:fm:title` / `aux:fm:author`), then the first Markdown heading, then the file name without its extension (so TXT uses the file name); each step gives a reason line. `ExportPathRules` adds a named project's suffix (`earth-gravity.uk.26b-max.md`) | E1, README "Project names" |
+| **K9** knobs | `:pipeline`, `:ui`, `:app` | **Reasoning and sampling:** `ChatRequests.build` takes a `RequestDefaults(reasoning, sampling)` argument; an injected `pipeline.prompt.RequestDefaultsSource` resolves each from its environment variable when set, else the stored `run.reasoning` / `run.sampling`, else today's default, and the 16 callers pass it. **Reasoning level:** `ChatRequest.reasoningEnabled` (a `Boolean`) becomes a `@Nullable ReasoningLevel` (OFF, LOW, ON; null = the provider's default); Ollama sends `think` false / `"low"` / true and the OpenAI-compatible client `reasoning_effort` `none` / `low` / `medium` (`OpenAiRequestMapper:29–32` today: none and medium). `ReasoningPlan` keeps its per-kind env syntax and gains `low`. **Review mode:** the startup instance binding of `ReviewMode` (`AppModule:54`) becomes a non-singleton `Provider<ReviewMode>` that returns the resolver's mode when its source is the environment or the property, else the stored `run.reviewMode`, else Unattended. `RunStarter` and `pipeline/review/RetryDraft` (`:83`) inject `Provider<ReviewMode>` and read it at each start or retry; `ReviewViewModel`, `ReviewPauseFollower`, `ReviewAvailability` and `TranslatingViewModel` read the run's mode from `RunContext.reviewMode()`. `UiModule:149`'s `requireBinding(ReviewMode.class)` and the tests' `ReviewModeTestModule` stay valid. The command line keeps ignoring the review-mode flag | The Generation and Automation tabs; the CLI and evaluations keep their env vars |
+| **K10** first launch | `:ui` | `state/LocalModelProbe` runs once when `firstLaunch.probed` is absent (ADR-0044: window only; a fresh database is a first launch); "Try again" on Projects calls it again on request | First launch (decision 13) |
 
 **Where the step events come from:**
-- **The run.** At chunk entry (`WorkList.enterChunk`), the drafts and the planned checks from `DialParameters`
-  (reviewPasses × translated segments). Then added steps:
+- **The run.** At chunk entry (`WorkList.enterChunk`), one draft step per segment of the chunk and `reviewPasses` check
+  steps for the chunk (Fast 0, Balanced 1, Max 2). Then added steps:
   - a repair round (`RoundStarted`);
   - a batch re-ask;
   - a timeout resend (an attempt over 1);
   - the REVISE stage and the summaries on Max.
 
-  A kept-as-is segment is a draft step done at once.
+  A kept-as-is (verbatim) segment is a draft step done at once with no call. Example: a 12-segment unit with 2 verbatim
+  segments under Balanced packs into 2 chunks (8 + 4): 12 draft steps (2 done at once) and 2 check steps.
 - **The names pass.** `NamesPassImpl.step(name)` emits each of its 7 stages plus "write".
 - **The brief.** `BriefSuggester` emits book-knowledge (or skipped), K samples (3 / 4 / 5 by dial) with each sample's
   value, agreement and quote, and synthesis.
@@ -233,7 +260,8 @@ because every change it recorded already covered whole marks.
 
 Each row gives the title-bar text key, the AI-model chip's meaning, the toolbar actions, the banner, the live line and
 the current-call row marker. The title bar, the toolbar run actions (moved out of `TranslatingView`), `ShellBanners`,
-the nav footer and the live card all read it. `RunStateMappingTest` walks all 16 rows.
+the nav footer and the live card all read it. It is a pure function of its inputs with no actions of its own, so it
+does not grow into a coordinator; each reader keeps its own commands. `RunStateMappingTest` walks all 16 rows.
 
 ### D9 — Persistence (ADR-0043)
 
@@ -250,7 +278,7 @@ the nav footer and the live card all read it. `RunStateMappingTest` walks all 16
 
 **`WriteExecutor`.** A single-thread executor runs every write as one JDBI transaction. Reads use their own
 connections. Port methods block on the write future and return `Result`; they are never called on the FX thread (the
-`:ui` callers already use the background runner, and a test helper asserts it).
+`:ui` callers already use the background runner; the FX-thread check below enforces it).
 
 **Schema (`db/schema.sql`):**
 
@@ -260,7 +288,7 @@ connections. Port methods block on the write future and return `Result`; they ar
 | `providers` | `id` PK, `json` | `ProviderConfig` |
 | `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included |
 | `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once |
-| `projects` | `id` PK, `content_hash` → books, `name`, `name_key` UNIQUE, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; index (`content_hash`, `source_lang`, `target_lang`) | the project |
+| `projects` | `id` PK, `content_hash` → books, `name`, `name_key`, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; UNIQUE (`content_hash`, `name_key`); index (`content_hash`, `source_lang`, `target_lang`) | the project; a name is unique within its book (owner, 2026-10-20) |
 | `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, lastExport |
 | `segments` | PK (`project_id`, `segment_id`), `ord`, `unit_id`, `status`, `json`; index (`project_id`, `status`) | `SegmentRecord` |
 | `tm_entries` | PK (`project_id`, `source_hash`, `context_key`), `json` | `TmEntry` |
@@ -271,8 +299,11 @@ connections. Port methods block on the write future and return `Result`; they ar
   only ASCII and Cyrillic must fold too.
 
 **`persistence.sqlite.JsonCodec`.** A Jackson mapper with the jsr310 module and mix-ins for the sealed types, so `:api`
-carries no annotation. Public records in exported `:api` packages need no `opens`. A parameterised round-trip test
-covers every stored record, nested ones included.
+carries no annotation. Jackson calls `setAccessible` on public members by default, which fails on a package `:api`
+exports but does not open; the mapper therefore disables `MapperFeature.CAN_OVERRIDE_ACCESS_MODIFIERS` and
+`OVERRIDE_PUBLIC_ACCESS_MODIFIERS`, so `:api`'s `module-info` stays as it is. `:persistence` adds `requires
+com.fasterxml.jackson.databind`. A parameterised round-trip test, run on the module path, covers every stored record,
+nested ones included.
 
 **Adapters.** The `Sqlite*` adapters cover project, segment, glossary, TM, summary, deferral, run, lexicon, settings,
 model settings and provider configs.
@@ -283,18 +314,27 @@ model settings and provider configs.
 - `PersistenceModule` splits into `InMemoryPersistenceModule` and `SqlitePersistenceModule`. Each binds every storage
   port, including `ProviderConfigs`, whose binding leaves `LlmModule`. `InMemoryProviderConfigs` moves to
   `persistence.memory` with the presets.
-- `CoreModules` (the window) installs SQLite; `TranslateLauncher` (the CLI) installs in-memory.
+- `CoreModules` takes the persistence module as a constructor argument: the window passes `SqlitePersistenceModule`,
+  `TranslateLauncher` (the CLI) passes `InMemoryPersistenceModule`.
+- Until the split (task group 3), `PersistenceModule` binds `ProviderConfigs` and the new settings and model-settings
+  ports to their in-memory adapters. `ProviderConfigs.register` is renamed `save` (insert or replace; the one caller is
+  `app/cli/ProviderSetup:55`) and `delete` is added.
+- The in-memory `ProviderConfigs` holds the two presets (the command line's providers). The SQLite one starts empty:
+  the window lists what the first-launch look found and what the person added (D13).
 
 **One document, one writer.** The glossary and the lexicon are each one JSON document per project, and Names & style
 stays editable while translating. So every change to them, a checkpoint's glossary additions included, is a
 read-modify-write inside one `WriteExecutor` transaction. A person's edit and a run's addition never overwrite each
 other, and a contract case proves it.
 
-**Storage info.** `api.persistence.StorageInfo` (`location`, `sizeBytes`, `backupTo` = `VACUUM INTO`) serves Settings ›
-Storage & logs. `ProjectRepository.recordExport` / `lastExport` keep the `ExportRecord` in `project_docs`.
+**Storage info.** `api.persistence.StorageInfo` (`location`, `sizeBytes`, `backupTo` = `VACUUM INTO` through the write
+executor) serves Settings › Storage & logs. The SQLite adapter's `location` and `sizeBytes` come with the other SQLite
+adapters; `backupTo` comes with the Storage tab. `ProjectRepository.recordExport` / `lastExport` keep the `ExportRecord` in `project_docs`.
 
-**The FX-thread check.** The test helper `NotOnFxThread` compares the thread name with "JavaFX Application Thread"
-and imports nothing from JavaFX. It is enabled only in tests, so `:persistence` stays FX-free.
+**The FX-thread check.** `SqliteDatabase` checks the calling thread's name at every read and write entry. On "JavaFX
+Application Thread" it writes one WARN line with the stack (once per call site); with the system property
+`bookloom.storage.failOnFxThread=true`, which every test task sets, it throws instead. It imports nothing from JavaFX,
+so `:persistence` stays FX-free.
 
 **Errors.** A storage failure is `ErrorCode.internal`, with the safe details `storage <operation>`. `ErrorCode` stays
 at fifteen codes (ADR-0039).
@@ -327,7 +367,11 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   - A named project returns to its automatic name only when no other project of the book has the pair.
 - **`translateInto(projectId, target, name)`.** It creates a project on the same book and copies the brief, the
   Glossary and the Recurring terms (term, kind, gender, locked) with every target emptied. It never copies the
-  translation memory (owner, 2026-10-20).
+  translation memory (the source document's open question 5, recorded default). The new project uses the current AI
+  model (`model.current`); there is no "start from" choice.
+- **Names are unique within a book.** Two books with the same title and pair both keep `Earth Gravity · EN → UK`;
+  inside one book a duplicate name, compared by `nameKey`, is `NameInUse`.
+- **"Find the book…"** accepts a file only when its hash matches, then calls `relocateBook`.
 - **`remove(projectId)`.** It deletes the project's rows. It never touches the book file, the exported files or the
   book's other projects.
 - **The "Used" count** for recurring terms comes from the book index's postings for the term.
@@ -341,24 +385,30 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   (`RunStarter`).
 - **The AI-model questions.** "AI model not answering" and "A different model is chosen" compare `RunRecord.model`
   (now a `ModelSelection`) with `model.current`.
-- **Reopen last project.** With the setting on, the window opens `app.lastProject` at launch. With it off, the window
-  opens Projects.
+- **Reopen last project.** `ProjectsViewModel` writes `app.lastProject` whenever a project opens. At launch, with
+  `automation.reopenLastProject` on and the project still stored, the window opens it; otherwise, or when it is gone,
+  the window opens Projects.
 
 ### D12 — Settings storage
 
 - **Port.** `api.persistence.SettingsRepository` has `get(key)`, `put(key, value)` and `all()`. `api.settings.AppSetting<T>`
-  is the typed registry of keys, types and defaults.
+  is the typed registry of keys, types and defaults. The new package `api.settings` is exported in `:api`'s
+  `module-info`. Until the persistence split, `PersistenceModule` binds the in-memory adapter.
 - **Keys:**
   - `ui.theme`, `ui.language`, `ui.technicalDetails`;
   - `run.reviewMode`, `run.defaultDial`, `run.reasoning`, `run.sampling`;
   - `automation.openReviewDesk`, `automation.lastCheck`, `automation.keepAwake`, `automation.reopenLastProject`;
   - `model.current`, `app.lastProject`, `firstLaunch.probed`, `help.sleepLineClosed.<projectId>`;
 - **The detailed-log switch is not a database key.** Logging is configured before the injector and before the database
-  opens, so the switch is a marker file `detailed-log.on` in the data folder. `LoggingBootstrap` checks it with
-  `java.nio` after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it.
+  opens, so the switch is a marker file `detailed-log.on` in the data folder. `TraceFileResolver` checks it with `java.nio`
+  after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it.
 - **When writes happen.** Providers and Models write on Save (the pinned footer, `LeaveGuard`'s dirty check). The other
   tabs write at once, through the background runner.
-- **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale. 
+- **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale, once
+  the database is open and before the first screen is built.
+- **The current AI model.** `model.current` (a `ModelSelection`) is what a new run and a new project use. The
+  first-launch look sets it when it finds one model, the person sets it with "Use this one" (Providers) or the
+  title-bar model chip, and a run stores the selection it started with in `RunRecord.model`.
 - **Restart now.** `:ui` calls an `api.AppRestart` port that `:app` implements. It releases the single-instance lock,
   starts the same command from `ProcessHandle.current().info()`, and exits.
 - **The review mode is read per run.** `RunStarter` reads `run.reviewMode` at each start; a launch flag or environment
@@ -366,9 +416,10 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
 
 ### D13 — Providers and per-model settings
 
-- **Provider configs.** `SqliteProviderConfigs` implements `ProviderConfigs`, which gains `save` and `delete`. The
-  window's providers list starts with what the first-launch look found, plus anything the person adds. The Add form's
-  Kind pre-fills the preset address.
+- **Provider configs.** `SqliteProviderConfigs` implements `ProviderConfigs` (`save`, `delete`, `find`, `all`). The
+  window's providers list starts empty, then holds what the first-launch look found plus anything the person adds; the
+  two presets stay the command line's providers. The Add form's Kind pre-fills the preset address (`localhost`), while
+  the look uses `127.0.0.1`.
 - **Per-model settings.** `api.llm.ModelSettings(providerId, modelId, TemperatureChoice choice, @Nullable Double value,
   @Nullable Integer contextWindow, @Nullable Integer maxOutput, OutputLengthField field, List<RefusedSetting> refused,
   @Nullable Double measuredSecondsPerSegment)`. `RefusedSetting` is `(name, at, insteadDid)`. "Send again" removes a
@@ -386,16 +437,20 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
 2. Found with models: it saves every program that answered, and Ollama becomes current when both answer. It
    sets `model.current` when there is one model or asks which one when
    there are several.
-3. It sets `firstLaunch.probed` whatever the result.
-4. Projects shows the result.
+3. It sets `firstLaunch.probed` whatever the result. The flag lives in the database, so a fresh database (another
+   schema version, renamed aside) runs the look once more (ADR-0044).
+4. Projects shows the result; "Try again" runs steps 1–3 again because the person asked.
+5. A program that answers with zero models counts as not found.
 
-The test fakes the catalog and asserts the exact addresses and a single call.
+Tests: `LocalModelProbeTest` fakes the catalog and asserts the exact addresses, one call each and no second look; a
+WireMock test of `ModelCatalog.listModels(ProviderConfig)` in both dialects asserts the server receives only `GET
+/api/tags` or `GET /v1/models`.
 
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
 |---|---|
-| JDBI is an automatic module; sqlite-jdbc loads a native library in the jpackage image | A module-path boot test in `:persistence`, and the packaged-image smoke (`resolve-all passed`) |
+| JDBI is an automatic module and brings `geantyref`; sqlite-jdbc loads a native library in the jpackage image | A module-path boot test in `:persistence`, the lock and licence checks for the transitive jars, and the packaged-image smoke (`resolve-all passed`) |
 | Jackson and records across JPMS modules; sealed types | Mix-ins plus a round-trip test of every stored record; public records only |
 | `:api` record changes ripple into many constructors and exhaustive switches | Each group-2 task runs `./gradlew build`; `JobEventContractsTest` |
 | Ids no longer derive from the path, so a moved file is not found | The hash check plus "Find the book…" |

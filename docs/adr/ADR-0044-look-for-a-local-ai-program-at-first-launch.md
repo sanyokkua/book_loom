@@ -24,6 +24,9 @@ same computer, on fixed ports.
   which is a person-started check. Nothing is shown as an error.
 - **A stored flag records that the look happened,** so it is never repeated by itself, whatever the result. Every later
   check is started by the person.
+- **A fresh database counts as a first launch.** Before the first release a database from another schema version is
+  renamed aside and a fresh one created (ADR-0043); the flag lives in that database, so the look runs once more after
+  such a reset. That is the only way it repeats by itself.
 - **It runs only in the desktop window,** never in the command line or the tests (the tests fake the catalog).
 - **The code stays where it is:** the listing goes through the existing `:llm` model catalog, so `:llm` is still the
   only module with HTTP code (ArchUnit `no-http-in-core-except-llm` is unchanged).
@@ -46,7 +49,7 @@ same computer, on fixed ports.
 ## What would falsify this decision
 
 - The look is seen reaching any address other than the two above.
-- Or it happens a second time without the person asking.
+- Or it happens a second time without the person asking, other than once after a fresh database.
 - Or it delays the first window by more than 1 second.
 
 ## Links

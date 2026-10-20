@@ -26,13 +26,14 @@ The owner asked for "the simplest schema, key/value, not overengineered" (2026-1
 - **JSON documents in a few tables.**
   - Everything the code only reads and writes whole is a JSON column, serialised with Jackson in `:persistence`. Mix-ins
     describe the sealed types, so `:api` stays framework-free.
-  - Real columns exist only where an index, a uniqueness rule or a cascade needs them: project name key, content hash,
-    language pair, segment status and order.
+  - Real columns exist only where an index, a uniqueness rule or a cascade needs them (project name key per book,
+    content hash, language pair, segment status and order), plus the few plain fields the Projects list shows without
+    reading a JSON document (book title and format, project name and origin, timestamps).
   - The tables are `settings(key, value, type)`, `providers`, `model_settings`, `books`, `projects`, `project_docs`,
     `segments`, `tm_entries` and `deferrals`.
 - **No migrations before the first release.**
   - One schema file creates every table with `IF NOT EXISTS`, and `PRAGMA user_version` holds its number.
-  - A database with another number, or one that cannot be opened, is renamed `bookloom.db.old-<time>` and a fresh one
+  - A database with another number, or one that cannot be opened, is renamed `bookloom.db.old-<yyyyMMdd-HHmmss>` and a fresh one
     is created. That produces one WARN line, no dialog, and no data carried over.
   - The schema file is edited in place until release. Flyway, with additive migrations as ADR-0009 describes, arrives
     with the first release.
