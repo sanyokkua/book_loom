@@ -86,7 +86,7 @@ sweep); and `./gradlew liveLocal | promptEval | visual` (local-only tagged sets,
 FX-free core (only `:ui`/`:app` touch JavaFX) · skeleton never semantically regenerated —
 translate text nodes only; round-trip is structure-and-text-preserving canonical-equal, not
 canonical-equal round trip (DD-43) · offline (the only outbound calls are user-triggered provider
-communication — inference, model discovery, verification — to the configured provider) ·
+communication — inference, model discovery, verification — to the configured provider, plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered) ·
 credentials-as-reference (never store the secret) · single-flight `InferenceGate` ·
 records-first · token-only theming · `Result`/`AppError` envelope everywhere · every
 requirement has a covering test whose name and comment say what it proves ·

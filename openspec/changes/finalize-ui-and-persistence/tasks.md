@@ -55,7 +55,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 1. Decisions and rules
 
-- [ ] 1.1 Write the offline exception for the first-launch look into the rules that state the offline invariant, so the
+- [x] 1.1 Write the offline exception for the first-launch look into the rules that state the offline invariant, so the
   one new outbound call is a documented exception and not a defect.
   - Files: `AGENTS.md` (the "Opening a book never needs the network…" non-negotiable), `.claude/rules/offline-and-privacy.md`
     (the first MUST and the first Reject-if: once, `127.0.0.1:11434` and `127.0.0.1:1234` only, a listing, silent,

@@ -82,7 +82,11 @@ context: |
     attached at Scene level; never `node.setStyle(...)`.
   - **Offline.** No background, scheduled, or unsolicited network call; no telemetry. The only outbound
     traffic ever is user-triggered provider communication (inference, model discovery, verification) with
-    the configured provider. All assets are bundled.
+    the configured provider, plus one exception (ADR-0044): on the very first launch only (a fresh
+    database counts), after the window is shown, one silent model listing of exactly
+    http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other
+    address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop
+    window only, only :llm holds HTTP code; every later check is user-triggered. All assets are bundled.
   - **Acceptance model.** The review-mode dial (Unattended/Assisted/Manual) is the sole owner of the trust
     threshold tau; the quality dial (Fast/Balanced/Max) owns mechanics only. Accept = hard gates pass AND
     confidence >= tau AND (judge off OR judge score >= tau_judge) (DD-45).
@@ -257,7 +261,12 @@ operations:
       - "`:ui` changes must match `docs/specification/mockups/ui-mockup.html` for each named screen, state,
         and theme, asserted structurally and by looked-up palette token."
       - The offline invariant must hold - no new background, scheduled, or unsolicited network call, and no
-        telemetry. The only egress is user-triggered provider communication with the configured provider.
+        telemetry. The only egress is user-triggered provider communication with the configured provider,
+        plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the
+        window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and
+        http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing
+        answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code;
+        every later check is user-triggered.
       - No secret may be persisted, logged, or placed in an `AppError`. Credentials stay env-var or keychain
         references resolved at call time.
       - Update `docs/implementation_plan/01_MODULE_INVENTORY.md` if the change adds a module or package.

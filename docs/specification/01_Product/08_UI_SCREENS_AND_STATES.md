@@ -328,9 +328,8 @@ program…", which opens Settings), and **＋ New translation**.
 for Ollama (`127.0.0.1:11434`) and LM Studio (`127.0.0.1:1234`) on this computer; if it finds one with models it creates
 the provider and selects the only model, or asks which one when there are several. This is the one exception to "no
 network call the person did not start": local only, once, no answer needed, degrading silently; every later check is
-user-triggered (Settings tests, "Try again"). The exception is not yet written into AGENTS.md's non-negotiable or
-`.claude/rules/offline-and-privacy.md`; the next change records it (an ADR) with the code. Until then the offline
-invariant stands as written: no unsolicited network call.
+user-triggered (Settings tests, "Try again"). The exception is written in AGENTS.md, `.claude/rules/offline-and-privacy.md`,
+`03_PRIVACY_AND_OFFLINE.md` (NFR-OFFLINE-05), DD-01 and ADR-0044.
 
 Requirements: FR-NOTIF-05. P6 reference: Projects and Projects-empty.
 

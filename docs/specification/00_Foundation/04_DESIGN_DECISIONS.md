@@ -14,7 +14,7 @@ realized.
 ### DD-01 — Local-first, offline by default
 
 **Decision:** The application runs fully offline; the only outbound traffic is user-triggered provider communication —
-inference, model discovery, and verification — with the configured local or OpenAI-compatible provider. **Why:** Book
+inference, model discovery, and verification — with the configured local or OpenAI-compatible provider, plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. **Why:** Book
 content and translations must stay under the user's control; there is no account or backend. **Consequences:** No
 telemetry, analytics, background updates, or remote crash reporting; an offline invariant must be enforced and testable.
 **ADR:** ADR-0010 **Requirements:** FR-INFER-01, NFR-OFFLINE-01, NFR-PRIV-01.

@@ -109,7 +109,7 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 | FX-free core — only `:ui`/`:app` see JavaFX | ArchUnit `fx-free-core` |
 | Skeleton never regenerated; only text nodes and the attribute values DD-47 lists (image alt text) change — plus, in the EPUB package, the language rewrite and the sort keys of a changed title or creator (a title's `opf:file-as`, `calibre:title_sort` and file-as refine are removed; a creator's `file-as` is rewritten from the translated name when it has two words or more in an alphabetic script and the source key was surname-first, else removed) | per-format golden round-trip test |
 | Records for data, Lombok only on services | ArchUnit `records-first` |
-| Opening a book never needs the network; provider calls are user-triggered; anything else must be optional, safe, and degrade without an error | ArchUnit `no-http-in-core-except-llm` |
+| Opening a book never needs the network; provider calls are user-triggered; anything else must be optional, safe, and degrade without an error; plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models), no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered | ArchUnit `no-http-in-core-except-llm` |
 | `Result<T>` + typed `AppError` at every port; no exception crosses a module edge | advisory |
 | Credentials are a reference (env-var/keychain), never a persisted secret | advisory |
 | Single-flight inference through one `InferenceGate` | advisory |
