@@ -133,6 +133,7 @@ class TranslationEngineImplTest {
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 ConsistencyPassFixture.over(project),
                 Clock.systemUTC(),
+                new UuidIdSource(),
                 RecoveryTimer.REAL,
                 WordValidator.none());
     }

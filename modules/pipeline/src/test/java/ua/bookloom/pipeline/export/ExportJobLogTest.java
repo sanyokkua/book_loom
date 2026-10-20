@@ -24,11 +24,11 @@ import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.TestProjects;
 
 /** A refused export is one failure, so the log holds one warning for it. */
 class ExportJobLogTest {
@@ -63,7 +63,7 @@ class ExportJobLogTest {
     @Test
     void run_refusedExport_logsTheRefusalOnce() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Source.");
-        projects.save(new Project("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
+        projects.save(TestProjects.of("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
         final ExportJob job = Objects.requireNonNull(
                 service.newExport(new ExportRequest("p1", tempDir.resolve("Book.uk.md"), true, Set.of(), false), null)
                         .data(),

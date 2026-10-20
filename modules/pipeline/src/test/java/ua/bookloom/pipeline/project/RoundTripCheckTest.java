@@ -10,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -142,7 +143,8 @@ class RoundTripCheckTest {
                 port,
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
-                new OpenProjects());
+                new OpenProjects(),
+                Clock.systemUTC());
     }
 
     private Path book(@Nullable final String language) {

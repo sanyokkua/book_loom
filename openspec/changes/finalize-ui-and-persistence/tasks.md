@@ -102,7 +102,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 2. `:api` shapes and their in-memory implementers
 
-- [ ] 2.1 Give a project a name, a fold key, a name origin and timestamps, and take its id from an injectable source,
+- [x] 2.1 Give a project a name, a fold key, a name origin and timestamps, and take its id from an injectable source,
   so one book can have several projects and names stay unique ignoring case in every script.
   - **Satisfies:** local-storage "Keep project names unique within one book, ignoring letter case"; app-shell "Allow one
     project per language pair of a book unless it is named"; app-shell "Refuse a project name already used by the same

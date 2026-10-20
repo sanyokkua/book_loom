@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +28,7 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
@@ -84,7 +84,7 @@ final class TranslationJobImpl implements TranslationJob {
     // Used from the job thread only, like every event it is handed.
     private final RunSummaryLogger runSummary;
     private final AtomicBoolean skipRequested = new AtomicBoolean();
-    private final String jobId = UUID.randomUUID().toString();
+    private final String jobId;
     private final RunRecorder recorder;
     // Used from the job thread only.
     private final PendingCommit pending;
@@ -106,7 +106,8 @@ final class TranslationJobImpl implements TranslationJob {
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
-            final Clock clock) {
+            final Clock clock,
+            final IdSource idSource) {
         this(
                 documents,
                 request,
@@ -118,18 +119,14 @@ final class TranslationJobImpl implements TranslationJob {
                 splitter,
                 revision,
                 clock,
+                idSource,
                 RecoveryTimer.REAL,
                 RunTicks.DAEMON,
                 BatchDrafter.NO_BATCHING,
                 WordValidator.none());
     }
 
-    /**
-     * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
-     * or a stall on a scripted clock, and that drafts in batches from the given first size;
-     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants. The
-     * quality checks ask {@code words} about doubtful words.
-     */
+    /** Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock. */
     TranslationJobImpl(
             final DocumentPort documents,
             final RunRequest request,
@@ -141,10 +138,12 @@ final class TranslationJobImpl implements TranslationJob {
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
             final Clock clock,
+            final IdSource idSource,
             final RecoveryTimer timer,
             final RunTicks ticks,
             final int batchSize,
             final WordValidator words) {
+        this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
         this.words = Objects.requireNonNull(words, "words");
         this.batchSize = batchSize;
         this.documents = Objects.requireNonNull(documents, "documents");

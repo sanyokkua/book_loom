@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,10 @@ class ProjectServiceImportFailureTest {
     // nothing is registered as open.
     @Test
     void importBook_storeThrows_closesTheDocumentAndRegistersNothing() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         final List<Document> closed = new CopyOnWriteArrayList<>();
         final List<String> projectIds = new CopyOnWriteArrayList<>();
         final OpenProjects openProjects = injector.getInstance(OpenProjects.class);
@@ -73,7 +77,8 @@ class ProjectServiceImportFailureTest {
                         throw new IllegalStateException("the store broke");
                     }
                 }),
-                injector.getInstance(OpenProjects.class));
+                injector.getInstance(OpenProjects.class),
+                Clock.systemUTC());
     }
 
     private interface Spy {

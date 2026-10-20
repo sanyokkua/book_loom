@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
@@ -51,7 +52,10 @@ class ProjectServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         documents = injector.getInstance(DocumentPort.class);
         projects = injector.getInstance(ProjectRepository.class);

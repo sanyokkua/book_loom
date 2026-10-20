@@ -1,10 +1,13 @@
 package ua.bookloom.persistence.memory;
 
 import com.google.inject.Inject;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -49,6 +52,79 @@ public final class InMemoryProjectRepository implements ProjectRepository {
             final boolean removed = store.projects().remove(projectId) != null;
             log.debug("Project delete projectId={} removed={}", projectId, removed);
             return Result.ok(removed);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<List<Project>> all() {
+        try {
+            return Result.ok(List.copyOf(store.projects().values()));
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Optional<Project>> findByPair(
+            final String contentHash, @Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
+        Objects.requireNonNull(contentHash, "contentHash");
+        try {
+            final Optional<Project> found = store.projects().values().stream()
+                    .filter(p -> p.contentHash().equals(contentHash))
+                    .filter(p -> Objects.equals(p.brief().sourceLanguage(), sourceLanguage)
+                            && Objects.equals(p.brief().targetLanguage(), targetLanguage))
+                    .findFirst();
+            log.debug(
+                    "Project findByPair hash={} source={} target={} found={}",
+                    contentHash,
+                    sourceLanguage,
+                    targetLanguage,
+                    found.isPresent());
+            return Result.ok(found);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Optional<Project>> findByNameKey(final String contentHash, final String nameKey) {
+        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(nameKey, "nameKey");
+        try {
+            final Optional<Project> found = store.projects().values().stream()
+                    .filter(p ->
+                            p.contentHash().equals(contentHash) && p.nameKey().equals(nameKey))
+                    .findFirst();
+            log.debug("Project findByNameKey hash={} nameKey={} found={}", contentHash, nameKey, found.isPresent());
+            return Result.ok(found);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<List<Project>> relocateBook(final String contentHash, final Path newPath) {
+        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(newPath, "newPath");
+        try {
+            final List<Project> moved = store.projects().values().stream()
+                    .filter(p -> p.contentHash().equals(contentHash))
+                    .map(p -> new Project(
+                            p.id(),
+                            newPath,
+                            p.format(),
+                            p.contentHash(),
+                            p.brief(),
+                            p.name(),
+                            p.nameOrigin(),
+                            p.createdAt(),
+                            p.lastOpenedAt()))
+                    .toList();
+            moved.forEach(p -> store.projects().put(p.id(), p));
+            log.debug("Book relocated hash={} projects={} path={}", contentHash, moved.size(), newPath);
+            return Result.ok(moved);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

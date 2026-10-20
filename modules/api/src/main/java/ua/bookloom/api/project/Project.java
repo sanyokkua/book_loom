@@ -1,6 +1,8 @@
 package ua.bookloom.api.project;
 
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Locale;
 import java.util.Objects;
 import ua.bookloom.api.document.BookFormat;
 
@@ -12,8 +14,21 @@ import ua.bookloom.api.document.BookFormat;
  * @param format the source book's format
  * @param contentHash a hash identifying the source file's content
  * @param brief the project's current Book Brief
+ * @param name the project's display name; unique within its book ignoring letter case
+ * @param nameOrigin whether the application or the person chose {@code name}
+ * @param createdAt when the project was first stored
+ * @param lastOpenedAt when the project was last opened
  */
-public record Project(String id, Path source, BookFormat format, String contentHash, BookBrief brief) {
+public record Project(
+        String id,
+        Path source,
+        BookFormat format,
+        String contentHash,
+        BookBrief brief,
+        String name,
+        NameOrigin nameOrigin,
+        Instant createdAt,
+        Instant lastOpenedAt) {
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -24,6 +39,29 @@ public record Project(String id, Path source, BookFormat format, String contentH
         Objects.requireNonNull(format, "format");
         Objects.requireNonNull(contentHash, "contentHash");
         Objects.requireNonNull(brief, "brief");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(nameOrigin, "nameOrigin");
+        Objects.requireNonNull(createdAt, "createdAt");
+        Objects.requireNonNull(lastOpenedAt, "lastOpenedAt");
+    }
+
+    /**
+     * Returns the fold key of the name, so {@code Земля} and {@code земля} are one name within a book.
+     *
+     * @return the stripped, lower-cased name; derived, so it can never disagree with {@code name}
+     */
+    public String nameKey() {
+        return keyOf(name);
+    }
+
+    /**
+     * Folds a name to its comparison key.
+     *
+     * @param name the non-null name
+     * @return the stripped name in lower case, locale-independent
+     */
+    public static String keyOf(final String name) {
+        return Objects.requireNonNull(name, "name").strip().toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -34,6 +72,6 @@ public record Project(String id, Path source, BookFormat format, String contentH
      */
     public Project withBrief(final BookBrief brief) {
         Objects.requireNonNull(brief, "brief");
-        return new Project(id, source, format, contentHash, brief);
+        return new Project(id, source, format, contentHash, brief, name, nameOrigin, createdAt, lastOpenedAt);
     }
 }

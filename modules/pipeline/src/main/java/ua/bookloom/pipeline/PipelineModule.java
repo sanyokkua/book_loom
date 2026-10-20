@@ -12,6 +12,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
@@ -48,6 +49,7 @@ public final class PipelineModule extends AbstractModule {
     protected void configure() {
         bind(PromptTemplates.class).asEagerSingleton();
         bind(LanguageSupport.class).toInstance(LanguageRules.bundled());
+        bind(IdSource.class).to(UuidIdSource.class);
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
         bind(ProjectService.class).to(ProjectServiceImpl.class);

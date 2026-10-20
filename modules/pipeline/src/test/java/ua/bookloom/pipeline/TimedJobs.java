@@ -40,6 +40,7 @@ final class TimedJobs {
                 TranslationJobTestSupport.SPLITTER,
                 ConsistencyPassFixture.over(project),
                 clock,
+                new UuidIdSource(),
                 timer,
                 ticks,
                 BatchDrafter.NO_BATCHING,

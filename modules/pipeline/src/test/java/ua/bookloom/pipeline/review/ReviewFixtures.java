@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -292,8 +293,7 @@ public final class ReviewFixtures {
         final ProjectRepository projects = injector.getInstance(ProjectRepository.class);
         final SegmentRepository segments = injector.getInstance(SegmentRepository.class);
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
-        final ProjectServiceImpl service = new ProjectServiceImpl(
-                injector.getInstance(BookInspector.class), documents, projects, segments, openProjects);
+        final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
         final ImportedBook imported =
                 Objects.requireNonNull(service.importBook(book).data(), "imported book");
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
@@ -312,5 +312,20 @@ public final class ReviewFixtures {
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(LexiconRepository.class),
                 injector.getInstance(SummaryRepository.class));
+    }
+
+    private static ProjectServiceImpl service(
+            final Injector injector,
+            final DocumentPort documents,
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final OpenProjects openProjects) {
+        return new ProjectServiceImpl(
+                injector.getInstance(BookInspector.class),
+                documents,
+                projects,
+                segments,
+                openProjects,
+                Clock.systemUTC());
     }
 }

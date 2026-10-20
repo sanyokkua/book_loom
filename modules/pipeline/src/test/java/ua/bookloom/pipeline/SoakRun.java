@@ -169,6 +169,7 @@ final class SoakRun {
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(ConsistencyPass.class),
                 clock,
+                new UuidIdSource(),
                 delay -> {
                     clock.advance(delay);
                     return 0;

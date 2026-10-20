@@ -22,6 +22,7 @@ import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -45,6 +46,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final SentenceSplitter splitter;
     private final ConsistencyPass revision;
     private final Clock clock;
+    private final IdSource idSource;
     private final RecoveryTimer timer;
     private final WordValidator words;
 
@@ -71,6 +73,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
             final Clock clock,
+            final IdSource idSource,
             final RecoveryTimer timer,
             final WordValidator words) {
         this.documents = Objects.requireNonNull(documents, "documents");
@@ -82,6 +85,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
         this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.idSource = Objects.requireNonNull(idSource, "idSource");
         this.timer = Objects.requireNonNull(timer, "timer");
         this.words = Objects.requireNonNull(words, "words");
     }
@@ -117,6 +121,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
                 splitter,
                 revision,
                 clock,
+                idSource,
                 timer,
                 RunTicks.DAEMON,
                 BatchDrafter.DEFAULT_INITIAL_SIZE,

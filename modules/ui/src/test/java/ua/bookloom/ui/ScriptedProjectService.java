@@ -1,6 +1,7 @@
 package ua.bookloom.ui;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,6 +21,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 
 /**
@@ -220,7 +222,16 @@ public final class ScriptedProjectService implements ProjectService {
         awaitGate(briefGate);
         briefs.add(brief);
         briefsOnFxThread.add(Platform.isFxApplicationThread());
-        return Result.ok(new Project(projectId, imports.getLast(), BookFormat.TXT, "hash", brief));
+        return Result.ok(new Project(
+                projectId,
+                imports.getLast(),
+                BookFormat.TXT,
+                "hash",
+                brief,
+                "Book",
+                NameOrigin.AUTO,
+                Instant.EPOCH,
+                Instant.EPOCH));
     }
 
     @Override

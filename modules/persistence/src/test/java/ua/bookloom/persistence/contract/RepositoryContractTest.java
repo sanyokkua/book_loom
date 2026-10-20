@@ -3,6 +3,7 @@ package ua.bookloom.persistence.contract;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
@@ -70,7 +72,11 @@ public abstract class RepositoryContractTest {
                 base.source(),
                 base.format(),
                 base.contentHash(),
-                base.brief().withNarrator(narrator)));
+                base.brief().withNarrator(narrator),
+                base.name(),
+                base.nameOrigin(),
+                base.createdAt(),
+                base.lastOpenedAt()));
 
         assertThat(repository.find("p1").data())
                 .isPresent()
@@ -266,7 +272,22 @@ public abstract class RepositoryContractTest {
     }
 
     protected static Project project(final String id) {
-        return new Project(id, Path.of(id + ".epub"), BookFormat.EPUB, "hash-" + id, BookBrief.defaults("en"));
+        return project(id, "hash-" + id, id, "en", "uk");
+    }
+
+    protected static Project project(
+            final String id, final String hash, final String name, final String source, final String target) {
+        final BookBrief brief = BookBrief.defaults(source).withLanguages(source, target);
+        return new Project(
+                id,
+                Path.of(hash + ".epub"),
+                BookFormat.EPUB,
+                hash,
+                brief,
+                name,
+                NameOrigin.USER,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-02T00:00:00Z"));
     }
 
     protected static SegmentRecord pending(

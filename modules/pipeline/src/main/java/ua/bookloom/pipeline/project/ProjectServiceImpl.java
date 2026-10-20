@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.project;
 import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ public final class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final OpenProjects openProjects;
+    private final Clock clock;
 
     @Override
     public Result<ImportedBook> importBook(final Path source) {
@@ -270,7 +272,7 @@ public final class ProjectServiceImpl implements ProjectService {
             final String id, final Path source, final BookInspection inspection, final Document document) {
         return inspector.profile(document).flatMap(profile -> {
             final BookBrief brief = BookBrief.defaults(preselectSource(inspection.languageEvidence()));
-            final Project project = new Project(id, source, document.format(), document.contentHash(), brief);
+            final Project project = StoredBooks.newProject(id, source, document, brief, clock.instant());
             final List<SegmentRecord> records = StoredBooks.pendingRecords(id, document);
             return projects.save(project)
                     .flatMap(saved -> segments.saveAll(id, records))

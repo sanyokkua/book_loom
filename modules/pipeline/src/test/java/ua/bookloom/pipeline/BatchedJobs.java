@@ -41,6 +41,7 @@ final class BatchedJobs {
                 TranslationJobTestSupport.SPLITTER,
                 ConsistencyPassFixture.over(project),
                 Clock.systemUTC(),
+                new UuidIdSource(),
                 RecoveryTimer.REAL,
                 RunTicks.DAEMON,
                 firstBatchSize,

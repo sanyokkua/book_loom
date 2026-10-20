@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -40,7 +41,10 @@ class ProjectServiceSegmentsTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
     }
 

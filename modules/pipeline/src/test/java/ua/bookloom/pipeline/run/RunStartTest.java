@@ -6,6 +6,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +45,10 @@ class RunStartTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         stores = new RunStores(
                 injector.getInstance(ProjectRepository.class),

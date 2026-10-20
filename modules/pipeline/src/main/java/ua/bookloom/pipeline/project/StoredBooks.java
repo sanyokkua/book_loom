@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.project;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -14,6 +15,8 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
@@ -45,6 +48,15 @@ final class StoredBooks {
         return (int) records.stream()
                 .filter(record -> record.status() != SegmentStatus.PENDING)
                 .count();
+    }
+
+    static Project newProject(
+            final String id, final Path source, final Document document, final BookBrief brief, final Instant now) {
+        final String fileName = String.valueOf(source.getFileName());
+        final int dot = fileName.lastIndexOf('.');
+        final String name = dot > 0 ? fileName.substring(0, dot) : fileName;
+        return new Project(
+                id, source, document.format(), document.contentHash(), brief, name, NameOrigin.AUTO, now, now);
     }
 
     static AppError nothingToContinue() {

@@ -99,7 +99,8 @@ final class TranslationJobTestSupport {
                 documents,
                 stores.projects(),
                 stores.segments(),
-                stores.openProjects());
+                stores.openProjects(),
+                Clock.systemUTC());
         final Result<ImportedBook> importResult = service.importBook(book);
         final ImportedBook imported =
                 Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());
@@ -237,7 +238,8 @@ final class TranslationJobTestSupport {
                 qualityLoop(),
                 SPLITTER,
                 ConsistencyPassFixture.over(project),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                new UuidIdSource());
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */

@@ -22,6 +22,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.TestProjects;
 
 /** Builds the documents, glossary entries and decided segments the glossary service tests read. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -93,7 +94,7 @@ final class GlossaryServiceFixtures {
     }
 
     static Project project(final BookBrief brief) {
-        return new Project(PROJECT, Path.of("book.txt"), BookFormat.TXT, "hash", brief);
+        return TestProjects.of(PROJECT, Path.of("book.txt"), BookFormat.TXT, "hash", brief);
     }
 
     static BookBrief withTarget(final BookBrief brief, final String target) {

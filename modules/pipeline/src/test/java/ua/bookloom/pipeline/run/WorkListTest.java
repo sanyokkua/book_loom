@@ -33,11 +33,11 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.TestProjects;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** What the run still has to decide, read from the stored records, and the counts that move as it decides. */
@@ -301,7 +301,7 @@ class WorkListTest {
                 defaults.balance(),
                 alsoTranslate,
                 QualityDial.FAST);
-        stores.projects().save(new Project(PROJECT, Path.of("Book.md"), BookFormat.MARKDOWN, "hash", brief));
+        stores.projects().save(TestProjects.of(PROJECT, Path.of("Book.md"), BookFormat.MARKDOWN, "hash", brief));
     }
 
     private static SegmentRecord record(final Segment segment, final SegmentStatus status) {

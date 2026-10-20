@@ -9,6 +9,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,10 @@ class OpenProjectsIndexTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);
         logEvents = new ListAppender<>();
