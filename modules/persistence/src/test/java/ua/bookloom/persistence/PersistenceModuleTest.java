@@ -13,6 +13,7 @@ import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -44,12 +45,19 @@ class PersistenceModuleTest {
         assertThat(injector.getInstance(RunRepository.class)).isNotNull();
         assertThat(injector.getInstance(CheckpointPort.class)).isNotNull();
         assertThat(injector.getInstance(SettingsRepository.class)).isNotNull();
+        assertThat(injector.getInstance(ModelSettingsRepository.class)).isNotNull();
     }
 
     @Test
     void injector_answersOneSettingsRepositoryForEveryLookup() {
         assertThat(injector.getInstance(SettingsRepository.class))
                 .isSameAs(injector.getInstance(SettingsRepository.class));
+    }
+
+    @Test
+    void injector_answersOneModelSettingsRepositoryForEveryLookup() {
+        assertThat(injector.getInstance(ModelSettingsRepository.class))
+                .isSameAs(injector.getInstance(ModelSettingsRepository.class));
     }
 
     @Test

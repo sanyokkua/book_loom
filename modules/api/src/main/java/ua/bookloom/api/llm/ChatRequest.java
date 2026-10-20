@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.CallKind;
  * @param callKind what the call is for, which chooses its timeout, or null when it is not a run's call (a
  *     verification probe)
  * @param sampling the sampling controls beyond temperature, or null when the server's defaults should apply
+ * @param outputField the request field that carries the output cap, or null for {@code max_tokens}
  */
 public record ChatRequest(
         List<ChatMessage> messages,
@@ -34,7 +35,47 @@ public record ChatRequest(
         @Nullable Integer maxOutputTokens,
         @Nullable Integer seed,
         @Nullable CallKind callKind,
-        @Nullable SamplingParams sampling) {
+        @Nullable SamplingParams sampling,
+        @Nullable OutputLengthField outputField) {
+
+    /**
+     * Preserves the ten-argument construction form, with {@code max_tokens} as the output-cap field.
+     *
+     * @param messages the conversation in wire order; never null and defensively copied
+     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
+     * @param responseFormat the requested structured response format, or null when no format is requested
+     * @param reasoningEnabled null when the provider should use its default
+     * @param contextWindow the provider context-window size to request, or null when the provider default applies
+     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null
+     * @param maxOutputTokens the hard cap on the completion length, or null
+     * @param seed the sampling seed, or null
+     * @param callKind what the call is for, or null
+     * @param sampling the sampling controls beyond temperature, or null
+     */
+    public ChatRequest(
+            List<ChatMessage> messages,
+            @Nullable Double temperature,
+            @Nullable ResponseFormat responseFormat,
+            @Nullable Boolean reasoningEnabled,
+            @Nullable Integer contextWindow,
+            @Nullable Integer expectedOutputTokens,
+            @Nullable Integer maxOutputTokens,
+            @Nullable Integer seed,
+            @Nullable CallKind callKind,
+            @Nullable SamplingParams sampling) {
+        this(
+                messages,
+                temperature,
+                responseFormat,
+                reasoningEnabled,
+                contextWindow,
+                expectedOutputTokens,
+                maxOutputTokens,
+                seed,
+                callKind,
+                sampling,
+                null);
+    }
 
     /**
      * Preserves the nine-argument construction form, with the server's own sampling.
@@ -200,7 +241,8 @@ public record ChatRequest(
                 maxOutputTokens,
                 seed,
                 callKind,
-                sampling);
+                sampling,
+                outputField);
     }
 
     /**
@@ -219,7 +261,8 @@ public record ChatRequest(
                 maxOutputTokens,
                 seed,
                 callKind,
-                sampling);
+                sampling,
+                outputField);
     }
 
     /**
@@ -239,7 +282,8 @@ public record ChatRequest(
                 maxOutputTokens,
                 fixedSeed,
                 callKind,
-                sampling);
+                sampling,
+                outputField);
     }
 
     /**
@@ -261,7 +305,8 @@ public record ChatRequest(
                 maxOutputTokens == null ? null : Math.min(maxOutputTokens, outputCapLimit),
                 seed,
                 callKind,
-                sampling);
+                sampling,
+                outputField);
     }
 
     /**
@@ -282,7 +327,8 @@ public record ChatRequest(
                 retryCap,
                 retrySeed,
                 callKind,
-                sampling);
+                sampling,
+                outputField);
     }
 
     /**
@@ -302,7 +348,8 @@ public record ChatRequest(
                 maxOutputTokens,
                 seed,
                 callKind,
-                params);
+                params,
+                outputField);
     }
 
     /**

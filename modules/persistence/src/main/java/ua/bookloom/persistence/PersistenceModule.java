@@ -6,6 +6,7 @@ import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -16,6 +17,7 @@ import ua.bookloom.persistence.memory.InMemoryCheckpoint;
 import ua.bookloom.persistence.memory.InMemoryDeferralRepository;
 import ua.bookloom.persistence.memory.InMemoryGlossaryRepository;
 import ua.bookloom.persistence.memory.InMemoryLexiconRepository;
+import ua.bookloom.persistence.memory.InMemoryModelSettingsRepository;
 import ua.bookloom.persistence.memory.InMemoryProjectRepository;
 import ua.bookloom.persistence.memory.InMemoryRunRepository;
 import ua.bookloom.persistence.memory.InMemorySegmentRepository;
@@ -47,6 +49,9 @@ public final class PersistenceModule extends AbstractModule {
         bind(LexiconRepository.class).to(InMemoryLexiconRepository.class).in(Singleton.class);
         bind(RunRepository.class).to(InMemoryRunRepository.class).in(Singleton.class);
         bind(SettingsRepository.class).to(InMemorySettingsRepository.class).in(Singleton.class);
+        bind(ModelSettingsRepository.class)
+                .to(InMemoryModelSettingsRepository.class)
+                .in(Singleton.class);
         bind(CheckpointPort.class).to(InMemoryCheckpoint.class).in(Singleton.class);
     }
 }

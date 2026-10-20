@@ -129,7 +129,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Test: `AppSettingTest` (defaults and parsing for each type) and a settings contract test over the in-memory
     adapter.
   - Verify: `./gradlew build`. → :api, :persistence
-- [ ] 2.3 Add the per-model settings port and its records with an in-memory twin, so temperature, context, answer
+- [x] 2.3 Add the per-model settings port and its records with an in-memory twin, so temperature, context, answer
   length, the output field, refusals and the measured speed live per provider + model.
   - **Satisfies:** settings "Describe each model on the Models tab and keep its own settings"; settings "Choose how the
     temperature is sent for a model"; settings "Set a model's context window and answer length"; settings "List the
