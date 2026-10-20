@@ -68,7 +68,7 @@ class SessionReporterTest {
 
     @Test
     void runStarting_anEndpointWithUserPartPathAndQuery_recordsTheHostAndPortOnly() {
-        configs.register(new ProviderConfig(
+        configs.save(new ProviderConfig(
                 "custom",
                 ProviderKind.OPENAI_COMPATIBLE,
                 URI.create("https://user:pass@llm.example.org:8443/v1?key=abc"),

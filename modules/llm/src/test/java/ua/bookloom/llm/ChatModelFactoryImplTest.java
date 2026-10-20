@@ -46,6 +46,8 @@ import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Verifies provider-neutral model resolution while preserving the pseudo model's behavior. */
 class ChatModelFactoryImplTest {
@@ -61,7 +63,7 @@ class ChatModelFactoryImplTest {
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
     }
 
     @AfterEach
@@ -258,7 +260,7 @@ class ChatModelFactoryImplTest {
     // Guice shares the registry, client factory, gate, and retry policy across all model resolutions.
     @Test
     void configure_llmModuleResolvesSharedServicesAndChatModelFactory() {
-        final Injector injector = Guice.createInjector(new LlmModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new LlmTestStorageModule());
 
         assertThat(injector.getInstance(ChatModelFactory.class)).isInstanceOf(ChatModelFactoryImpl.class);
         assertThat(injector.getInstance(ProviderConfigs.class)).isSameAs(injector.getInstance(ProviderConfigs.class));
@@ -277,7 +279,7 @@ class ChatModelFactoryImplTest {
     }
 
     private void register(ProviderConfig config) {
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
     }
 
     private ChatModel pseudoModel() {

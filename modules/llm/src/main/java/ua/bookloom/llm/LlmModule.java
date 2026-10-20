@@ -10,7 +10,6 @@ import java.util.function.LongSupplier;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
-import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -35,7 +34,6 @@ public final class LlmModule extends AbstractModule {
         bind(ProviderVerifier.class).to(ProviderVerifierImpl.class);
         bind(ModelCatalog.class).to(ModelCatalogService.class);
         bind(ModelCapabilities.class).to(ModelCapabilityService.class);
-        bind(ProviderConfigs.class).to(InMemoryProviderConfigs.class).in(Singleton.class);
         bind(InferenceGate.class).in(Singleton.class);
         bind(ProviderClientFactory.class).in(Singleton.class);
     }

@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Context-length detection on both dialects at the HTTP seam, and its quiet degradation. */
 class ModelCapabilityServiceTest {
@@ -32,13 +33,13 @@ class ModelCapabilityServiceTest {
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
-    private InMemoryProviderConfigs configs;
+    private FakeProviderConfigs configs;
     private ModelCapabilityService capabilities;
 
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
         capabilities = new ModelCapabilityService(
                 configs,
                 new ProviderClientFactory(
@@ -130,7 +131,7 @@ class ModelCapabilityServiceTest {
     }
 
     private void register(final String id, final ProviderKind kind, final String baseUrl) {
-        assertThat(configs.register(new ProviderConfig(id, kind, URI.create(baseUrl), TIMEOUT, TIMEOUT))
+        assertThat(configs.save(new ProviderConfig(id, kind, URI.create(baseUrl), TIMEOUT, TIMEOUT))
                         .isOk())
                 .isTrue();
     }

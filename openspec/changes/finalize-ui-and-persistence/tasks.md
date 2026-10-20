@@ -142,7 +142,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     carry the model's output-length field to the mapper (design K5); every constructor call site follows.
   - Test: the record tests and a contract test over the in-memory adapter.
   - Verify: `./gradlew build`. → :api, :persistence
-- [ ] 2.4 Extend the provider record with the fields of the GoText-style form, and move its validation and in-memory
+- [x] 2.4 Extend the provider record with the fields of the GoText-style form, and move its validation and in-memory
   binding out of `:llm`, so either persistence module can own the providers without a duplicate Guice binding.
   - **Satisfies:** llm-provider "Describe a provider by kind, endpoint and timeouts"; llm-provider "Describe how a
     provider signs in"; llm-provider "Describe a provider's overrides, headers and custom models"; llm-provider "Offer

@@ -23,13 +23,13 @@ public final class FakeProviderConfigs implements ProviderConfigs {
 
     /** The two presets: {@code ollama} on port 11434 and {@code lmstudio} on port 1234. */
     public FakeProviderConfigs() {
-        register(new ProviderConfig(
+        save(new ProviderConfig(
                 "ollama",
                 ProviderKind.OLLAMA,
                 URI.create("http://localhost:11434"),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
-        register(new ProviderConfig(
+        save(new ProviderConfig(
                 "lmstudio",
                 ProviderKind.OPENAI_COMPATIBLE,
                 URI.create("http://localhost:1234/v1"),
@@ -38,7 +38,7 @@ public final class FakeProviderConfigs implements ProviderConfigs {
     }
 
     @Override
-    public Result<ProviderConfig> register(final ProviderConfig config) {
+    public Result<ProviderConfig> save(final ProviderConfig config) {
         Objects.requireNonNull(config, "config");
         configs.add(config);
         return Result.ok(config);
@@ -47,6 +47,12 @@ public final class FakeProviderConfigs implements ProviderConfigs {
     @Override
     public Optional<ProviderConfig> find(final String id) {
         return configs.stream().filter(config -> config.id().equals(id)).findFirst();
+    }
+
+    @Override
+    public Result<Boolean> delete(final String id) {
+        Objects.requireNonNull(id, "id");
+        return Result.ok(configs.removeIf(config -> config.id().equals(id)));
     }
 
     @Override

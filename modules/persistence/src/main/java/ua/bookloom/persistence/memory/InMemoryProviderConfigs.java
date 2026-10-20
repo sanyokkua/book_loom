@@ -1,8 +1,7 @@
-package ua.bookloom.llm;
+package ua.bookloom.persistence.memory;
 
 import com.google.inject.Inject;
 import java.net.URI;
-import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -10,11 +9,10 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 
@@ -33,20 +31,27 @@ public final class InMemoryProviderConfigs implements ProviderConfigs {
     }
 
     @Override
-    public Result<ProviderConfig> register(ProviderConfig config) {
+    public Result<ProviderConfig> save(final ProviderConfig config) {
         Objects.requireNonNull(config, "config");
-        final String invalidDescription = validationFailure(config);
-        if (invalidDescription != null) {
-            log.warn("Provider registration refused id={} code={}", config.id(), ErrorCode.validation);
-            return Result.err(AppError.of(ErrorCode.validation, "Invalid provider configuration", invalidDescription));
+        final ProviderConfigRules.Check check = ProviderConfigRules.check(config);
+        if (!check.isValid()) {
+            final AppError refusal = check.errors().get(0);
+            log.warn("Provider save refused id={} code={}", config.id(), refusal.code());
+            return Result.err(refusal);
         }
+        check.warnings().forEach(warning -> log.debug("Provider id={} warning={}", config.id(), warning));
         final ProviderConfig previous = configs.put(config.id(), config);
         log.debug(
-                "Provider configuration registered id={} kind={} replaced={}",
-                config.id(),
-                config.kind(),
-                previous != null);
+                "Provider configuration saved id={} kind={} replaced={}", config.id(), config.kind(), previous != null);
         return Result.ok(config);
+    }
+
+    @Override
+    public Result<Boolean> delete(final String id) {
+        Objects.requireNonNull(id, "id");
+        final boolean removed = configs.remove(id) != null;
+        log.debug("Provider configuration delete id={} removed={}", id, removed);
+        return Result.ok(removed);
     }
 
     @Override
@@ -64,26 +69,6 @@ public final class InMemoryProviderConfigs implements ProviderConfigs {
                 .toList();
         log.debug("Provider configuration list count={}", result.size());
         return result;
-    }
-
-    private static @Nullable String validationFailure(ProviderConfig config) {
-        final URI baseUrl = config.baseUrl();
-        final String scheme = baseUrl.getScheme();
-        if (!baseUrl.isAbsolute()
-                || scheme == null
-                || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
-                || baseUrl.getHost() == null) {
-            return "The provider base URL must be an absolute HTTP or HTTPS URL.";
-        }
-        final Duration connectTimeout = config.connectTimeout();
-        final Duration requestTimeout = config.requestTimeout();
-        if (connectTimeout.isZero()
-                || connectTimeout.isNegative()
-                || requestTimeout.isZero()
-                || requestTimeout.isNegative()) {
-            return "Provider connect and request timeouts must both be positive.";
-        }
-        return null;
     }
 
     private static ProviderConfig preset(String id, ProviderKind kind, String url) {

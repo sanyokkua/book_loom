@@ -2,6 +2,7 @@ package ua.bookloom.persistence;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -19,6 +20,7 @@ import ua.bookloom.persistence.memory.InMemoryGlossaryRepository;
 import ua.bookloom.persistence.memory.InMemoryLexiconRepository;
 import ua.bookloom.persistence.memory.InMemoryModelSettingsRepository;
 import ua.bookloom.persistence.memory.InMemoryProjectRepository;
+import ua.bookloom.persistence.memory.InMemoryProviderConfigs;
 import ua.bookloom.persistence.memory.InMemoryRunRepository;
 import ua.bookloom.persistence.memory.InMemorySegmentRepository;
 import ua.bookloom.persistence.memory.InMemorySettingsRepository;
@@ -52,6 +54,7 @@ public final class PersistenceModule extends AbstractModule {
         bind(ModelSettingsRepository.class)
                 .to(InMemoryModelSettingsRepository.class)
                 .in(Singleton.class);
+        bind(ProviderConfigs.class).to(InMemoryProviderConfigs.class).in(Singleton.class);
         bind(CheckpointPort.class).to(InMemoryCheckpoint.class).in(Singleton.class);
     }
 }

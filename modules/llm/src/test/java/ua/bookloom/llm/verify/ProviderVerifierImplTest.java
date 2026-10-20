@@ -43,10 +43,11 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.llm.InMemoryProviderConfigs;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Exercises provider verification, retries, and shared-gate behavior against both real HTTP dialect clients. */
 class ProviderVerifierImplTest {
@@ -66,14 +67,14 @@ class ProviderVerifierImplTest {
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private final List<Duration> retryDelays = new ArrayList<>();
-    private InMemoryProviderConfigs configs;
+    private FakeProviderConfigs configs;
     private InferenceGate gate;
     private RetryPolicy retryPolicy;
 
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
         gate = new InferenceGate();
         retryPolicy = newRetryPolicy(retryDelays::add);
     }
@@ -317,7 +318,8 @@ class ProviderVerifierImplTest {
 
     @Test
     void llmModuleBindsVerifierWithoutOpeningAConnection() {
-        final ProviderVerifier verifier = Guice.createInjector(new LlmModule()).getInstance(ProviderVerifier.class);
+        final ProviderVerifier verifier = Guice.createInjector(new LlmModule(), new LlmTestStorageModule())
+                .getInstance(ProviderVerifier.class);
 
         assertThat(verifier).isNotNull();
         assertThat(server.getAllServeEvents()).isEmpty();
@@ -365,7 +367,7 @@ class ProviderVerifierImplTest {
             ProviderConfigs providerConfigs, String id, ProviderKind kind, String pathSuffix) {
         final ProviderConfig config = new ProviderConfig(
                 id, kind, URI.create(server.baseUrl() + pathSuffix), Duration.ofSeconds(2), Duration.ofSeconds(3));
-        assertThat(providerConfigs.register(config).isOk()).isTrue();
+        assertThat(providerConfigs.save(config).isOk()).isTrue();
         return config;
     }
 

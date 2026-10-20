@@ -318,8 +318,14 @@ abstract class WorkspaceTestBase {
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
 
         @Override
-        public Result<ProviderConfig> register(final ProviderConfig config) {
+        public Result<ProviderConfig> save(final ProviderConfig config) {
             Objects.requireNonNull(config, "config");
+            return Result.err(AppError.of(ErrorCode.validation, "Not supported", "This registry is fixed."));
+        }
+
+        @Override
+        public Result<Boolean> delete(final String id) {
+            Objects.requireNonNull(id, "id");
             return Result.err(AppError.of(ErrorCode.validation, "Not supported", "This registry is fixed."));
         }
 

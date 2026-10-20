@@ -46,11 +46,11 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.llm.GatedChatModel;
-import ua.bookloom.llm.InMemoryProviderConfigs;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Proves a verifier's retry wait releases the same gate used by regular chat. */
 class ProviderVerifierGateTest {
@@ -88,7 +88,7 @@ class ProviderVerifierGateTest {
     }
 
     private RetryWaitContext retryWaitContext() {
-        final InMemoryProviderConfigs configs = new InMemoryProviderConfigs();
+        final FakeProviderConfigs configs = new FakeProviderConfigs();
         final InferenceGate gate = new InferenceGate();
         final ProviderConfig config = new ProviderConfig(
                 "lmstudio",
@@ -96,7 +96,7 @@ class ProviderVerifierGateTest {
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(3));
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
         stubRetryingDiscovery();
         server.stubFor(post(urlEqualTo(CHAT_PATH)).willReturn(okJson(CHAT_REPLY)));
 

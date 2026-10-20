@@ -52,7 +52,7 @@ final class ProviderSetup {
         final ProviderConfig base = OPENAI_COMPATIBLE_PROVIDER.equals(arguments.providerId())
                 ? customConfig(arguments)
                 : presetConfig(arguments.providerId());
-        final Result<ProviderConfig> registered = providerConfigs.register(applyOverrides(base, arguments));
+        final Result<ProviderConfig> registered = providerConfigs.save(applyOverrides(base, arguments));
         if (registered.isErr()) {
             final AppError error = Objects.requireNonNull(registered.error(), "error");
             return Result.err(AppError.of(
