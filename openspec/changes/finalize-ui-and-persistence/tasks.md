@@ -270,7 +270,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - `relocateBook` changes the stored path;
     - a person's glossary edit and a checkpoint's glossary addition made one after the other both survive.
   - Log: DEBUG per operation with ids and counts; TRACE for documents. → :persistence
-- [ ] 3.5 Implement the settings, per-model settings and provider ports over SQLite, so preferences, providers and
+- [x] 3.5 Implement the settings, per-model settings and provider ports over SQLite, so preferences, providers and
   refusals survive a restart and a key never lands in the file.
   - **Satisfies:** local-storage "Keep the application's work across a restart"; local-storage "Store a credential
     never, only the name of an environment variable"; local-storage "Require a credential-like header to name an

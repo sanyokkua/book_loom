@@ -83,6 +83,11 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
+    /** The database file, for the storage facts of Settings. */
+    Path file() {
+        return file;
+    }
+
     /** The connection source, every connection of which carries the pragmas. */
     DataSource dataSource() {
         return dataSource;
