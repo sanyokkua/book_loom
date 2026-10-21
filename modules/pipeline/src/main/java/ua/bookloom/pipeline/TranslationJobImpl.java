@@ -45,6 +45,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
+import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.ChunkRunner;
@@ -274,12 +275,13 @@ final class TranslationJobImpl implements TranslationJob {
                 words,
                 requestDefaultsSource.current());
         final ModelCalls calls = new JobModelCalls(
-                onSent -> new CancellableChatModel(model, control, onSent, watchdog),
-                this::emit,
-                clock,
-                frame.targetLanguage(),
-                runWindow::current,
-                SegmentLocators.of(run.document()));
+                        onSent -> new CancellableChatModel(model, control, onSent, watchdog),
+                        this::emit,
+                        clock,
+                        frame.targetLanguage(),
+                        runWindow::current,
+                        SegmentLocators.of(run.document()))
+                .withSteps(StepAnnouncer.over(this::emit));
         final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(

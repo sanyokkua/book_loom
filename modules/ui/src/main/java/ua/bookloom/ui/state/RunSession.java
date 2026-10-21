@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
@@ -243,6 +244,7 @@ final class RunSession implements JobListener {
             case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
             case StepsPlanned planned -> log.trace("{} {} steps planned", planned.added(), planned.kind());
             case StepChanged changed -> log.trace("{} step {} is {}", changed.kind(), changed.index(), changed.state());
+            case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
         }
     }
 

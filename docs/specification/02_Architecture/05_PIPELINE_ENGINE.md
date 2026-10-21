@@ -84,12 +84,16 @@ hard gate, a soft check, or a judge finding — repairs only the **offending seg
 fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see
 `chunk-translate-loop.mermaid`):
 
-1. **Draft** — one `chat` call for exactly one source segment; the response is exactly `{"target":"…"}`. The last
-   three accepted targets may provide context only within their section. A malformed or wrong-shape response gets one
-   structural repair containing its delimited rejected reply and parsing diagnosis. A valid target that fails the tag
-   multiset gets one separate repair containing the source, rejected target, and required token order. No array, id
-   map, prose, embedded-object, or text fallback is accepted, and neither repair recurses. A **context-match TM
-   auto-reuse** skips this draft call (and the judge) entirely.
+1. **Draft** — consecutive segments of the chunk go out together in one batch call (up to 8 on Fast and Balanced, 2 on
+   Max, adapted down when the model loses the numbering), and the reply is read per id. When a readable reply leaves
+   out two or more ids, one **re-ask** names only those ids and its answers are merged into the first reply; a failed
+   or unreadable re-ask changes nothing. An id that is missing, malformed or wrong-shape after that is drafted alone:
+   one `chat` call for exactly one source segment, answered exactly `{"target":"…"}`, with one structural repair
+   containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag multiset gets one
+   separate repair containing the source, rejected target, and required token order. Neither repair recurses and no
+   text fallback is accepted. The last three accepted targets may provide context only within their section. A
+   **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the reviewer)
+   entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Failure → self-heal with a concrete finding.
 3. **Deterministic QA gate** — run the checks in `#qa-checks`; compute `confidence`.
@@ -124,6 +128,27 @@ fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per 
    (`#rolling-summary`).
 
 Every self-heal call passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).
+
+**Step announcements.** The run tells its listeners what it will do and what it has done as `StepsPlanned(kind,
+added, estimated)` and `StepChanged(kind, label, index, state, itemRef, result)` events, so a progress bar can count
+model work instead of segments. `estimated` is `false` when every planned step will be ended (possibly with `NO_CALL`)
+and `true` for a forecast the run may correct. A step's `index` counts from 0 within its kind; a step started again
+under the same key (a retry after a pause) keeps its index, so it is never counted twice, and a step the run stopped
+inside stays open — it is never ended `FAILED` — because the next run plans afresh.
+
+| Kind | Planned or added | `itemRef` | Ends |
+|------|------------------|-----------|------|
+| `DRAFT` | one per segment, planned when its chunk is entered | the segment id | `DONE`; `NO_CALL` for a shortcut or memory reuse; `FAILED` when flagged at once |
+| `CHECK` | one per reviewer pass the dial enables, planned when the chunk is entered | the chunk's first segment id | `DONE`; `NO_CALL` when no pair qualified or the first verdict was unreadable (pass 2); `FAILED` when the reviewer is given up |
+| `REPAIR` | one added when a repair round, a directed fix or a soft fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
+| `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
+| `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
+| `SUMMARY` | one per unit, planned when it is entered, on dials that ask the model for the summary | the unit id | `DONE`; `NO_CALL` when nothing was refreshed |
+| `REVISION` | one forecast (`estimated`) at the start of a run whose dial revises backwards | none | `DONE` or `FAILED` |
+
+Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair-round-N`,
+`directed-fix`, `soft-fix`, `re-ask`, `resend-N`, `summary`, `revision`). The plan is per chunk, not per book; a screen
+that shows a book-level total seeds it from the run's figures.
 
 ## qa-checks {#qa-checks}
 
@@ -275,6 +300,9 @@ chapter would push the summary over its token budget, the summary is **condensed
 dropped/re-summarized first while character, place, and terminology facts are retained — so it always fits its reserved
 slice.
 
+On a dial that asks the model for the summary, each unit's end refresh is one `SUMMARY` step (`#tiered-loop`, step
+announcements) that ends `NO_CALL` when no segment was accepted in the unit.
+
 **Default is a deterministic summary** (accumulated key facts truncated to budget); the **LLM-generated** variant
 (`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. Only the LLM-generated text is shown to drafts and in the
 context panel as the running summary; the deterministic text (glossary lines and heading titles) is stored but never
@@ -314,7 +342,9 @@ revision 0.2, pre-scan/summary 0.2. The default 0.2 is user-adjustable 0.0–2.0
 (`01_Product/07_SETTINGS.md#generation-tab`), and a review-desk retry can opt into 0.1 for its draft call when a lower
 temperature is asked. Where a **reasoning level** is controllable (Ollama `think`, OpenAI reasoning params) every call
 sets it low/off; the response handler strips any reasoning/thinking channel before parsing (`04_LLM_INTEGRATION.md`).
-Per-call values live in `01_Product/12_PROMPT_CATALOG.md`.
+Per-call values live in `01_Product/12_PROMPT_CATALOG.md`. A batch draft call and its re-ask are `DRAFT`-kind calls
+whose reply is capped by the size of the items sent (`maxOutputTokens` / `num_predict`); a timed-out call is repeated once
+with a lower cap and a new seed, and that second attempt is announced as a `RESEND` step.
 
 The consistency stack this engine relies on is the **name/term dictionary** (`#name-term-dictionary`), the
 **context-aware translation memory** (`#context-aware-tm`, matched by deterministic string similarity —

@@ -161,16 +161,16 @@ final class NeighbourRevision {
         if (checked.has(inputs.projectId(), id, fingerprint)) {
             log.debug("Neighbour check segmentId={} skipped: checked before in this state", id);
             tally.neighbourRemembered();
-            return Result.ok(false);
+            return unchanged(calls, record, "remembered");
         }
         log.debug("Neighbour check segmentId={} status={} guards={}", id, record.status(), mode);
         final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(inputs, source, masked, user, mode, calls);
         if (answered.isErr()) {
-            return skipped(id, Objects.requireNonNull(answered.error(), "error"), tally);
+            return skipped(record, Objects.requireNonNull(answered.error(), "error"), tally, calls);
         }
         final RevisionAnswer answer = Objects.requireNonNull(answered.data(), "answered");
         rememberIfSettled(inputs.projectId(), id, fingerprint, masked, answer);
-        return settle(inputs, record, masked, answer, tally);
+        return settle(inputs, record, masked, answer, tally, calls);
     }
 
     // A paragraph left as it was, or whose change was refused for what it broke, is not asked again until something it
@@ -195,13 +195,25 @@ final class NeighbourRevision {
 
     // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the book's
     // export; only the person's stop ends it.
-    private static Result<Boolean> skipped(final String id, final AppError error, final PassTally tally) {
+    private static Result<Boolean> skipped(
+            final SegmentRecord record, final AppError error, final PassTally tally, final ModelCalls calls) {
         if (error.code() == ErrorCode.cancelled) {
             return Result.err(error);
         }
-        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
+        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", record.segmentId(), error.code());
         tally.skipped();
+        return unchanged(calls, record, "skipped");
+    }
+
+    // Shows the paragraph as it was, with no new text, for an item the pass went over without changing it.
+    private static Result<Boolean> unchanged(final ModelCalls calls, final SegmentRecord record, final String verdict) {
+        calls.reread(record.segmentId(), shownBefore(record), null, verdict);
         return Result.ok(false);
+    }
+
+    private static String shownBefore(final SegmentRecord record) {
+        final String target = record.machineTarget();
+        return target != null ? target : Objects.requireNonNullElse(record.maskedMachineTarget(), "");
     }
 
     // A flagged paragraph's text failed a check, often a lost sentence or quote mark: its fix may add one back.
@@ -223,32 +235,33 @@ final class NeighbourRevision {
             final SegmentRecord record,
             final String masked,
             final RevisionAnswer answer,
-            final PassTally tally) {
+            final PassTally tally,
+            final ModelCalls calls) {
         final String id = record.segmentId();
         return switch (answer) {
             case RevisionAnswer.Unchanged unchanged -> {
                 log.debug("Neighbour check segmentId={} answered unchanged", id);
                 tally.neighbourUnchanged();
-                yield Result.ok(false);
+                yield unchanged(calls, record, "unchanged");
             }
             case RevisionAnswer.Refused refused -> {
                 log.debug("Neighbour check segmentId={} refused rule={}", id, refused.reason());
                 tally.refused(refused.reason());
-                yield Result.ok(false);
+                yield unchanged(calls, record, "refused:" + refused.reason());
             }
             case RevisionAnswer.Revised revised
             when revised.restored().maskedForm().equals(masked) -> {
                 log.debug("Neighbour check segmentId={} found nothing to change", id);
                 tally.neighbourUnchanged();
-                yield Result.ok(false);
+                yield unchanged(calls, record, "unchanged");
             }
             case RevisionAnswer.Revised revised
             when isRewriteTooLarge(record, masked, revised) -> {
                 log.debug("Neighbour check segmentId={} refused rule={}", id, RevisionGuards.REWRITE_CAP_RULE);
                 tally.refused(RevisionGuards.REWRITE_CAP_RULE);
-                yield Result.ok(false);
+                yield unchanged(calls, record, "refused:" + RevisionGuards.REWRITE_CAP_RULE);
             }
-            case RevisionAnswer.Revised revised -> storeFix(inputs, record, masked, revised.restored(), tally);
+            case RevisionAnswer.Revised revised -> storeFix(inputs, record, masked, revised.restored(), tally, calls);
         };
     }
 
@@ -264,16 +277,20 @@ final class NeighbourRevision {
             final SegmentRecord record,
             final String masked,
             final GateResult.Restored restored,
-            final PassTally tally) {
+            final PassTally tally,
+            final ModelCalls calls) {
         final String id = record.segmentId();
         return writer.store(record, restored, List.of(), RevisionWriter.Change.NEIGHBOUR)
                 .map(how -> {
                     log.debug("Neighbour check segmentId={} stored={}", id, how);
                     log.trace("Neighbour check segmentId={} before={} after={}", id, masked, restored.maskedForm());
-                    if (how == RevisionWriter.Stored.MACHINE_TARGET) {
+                    final boolean fixed = how == RevisionWriter.Stored.MACHINE_TARGET;
+                    if (fixed) {
                         tally.neighbourFixed(id, inputs.locator(id));
                     }
-                    return how == RevisionWriter.Stored.MACHINE_TARGET;
+                    calls.reread(
+                            id, shownBefore(record), fixed ? restored.restored() : null, fixed ? "fixed" : "skipped");
+                    return fixed;
                 });
     }
 }

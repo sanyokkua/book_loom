@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,6 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
-import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.NamesPassReport;
@@ -112,30 +110,7 @@ public final class NamesPassImpl implements NamesPass {
             LexiconServiceImpl lexiconService) {}
 
     /** What one pass sends its calls through. */
-    private record Run(Stage stage, ChatModel model, CallCounter counter, ModelCalls calls, Instant started) {}
-
-    /** Forwards every event and counts the calls: a call sent again after a timeout is still one call. */
-    private static final class CallCounter implements Consumer<JobEvent> {
-
-        private final Consumer<JobEvent> receiver;
-        private final AtomicInteger calls = new AtomicInteger();
-
-        CallCounter(final Consumer<JobEvent> receiver) {
-            this.receiver = receiver;
-        }
-
-        @Override
-        public void accept(final JobEvent event) {
-            if (event instanceof ModelCallStarted started && started.attempt() == 1) {
-                calls.incrementAndGet();
-            }
-            receiver.accept(event);
-        }
-
-        int calls() {
-            return calls.get();
-        }
-    }
+    private record Run(Stage stage, ChatModel model, NamesPassSteps counter, ModelCalls calls, Instant started) {}
 
     @Override
     public Result<NamesEstimate> estimate(final String projectId) {
@@ -161,7 +136,7 @@ public final class NamesPassImpl implements NamesPass {
                 "run",
                 projectId,
                 () -> stage(projectId).flatMap(stage -> {
-                    final CallCounter counter = new CallCounter(progress);
+                    final NamesPassSteps counter = new NamesPassSteps(progress);
                     final ChatModel stoppable = new StoppableModel(model);
                     final int window = ContextBudget.windowFor(detectedContext, model.contextWindowOverride());
                     log.debug("Names pass window={} detected={}", window, detectedContext);
@@ -224,17 +199,19 @@ public final class NamesPassImpl implements NamesPass {
                 stage.book().names(),
                 stage.namesBefore().size(),
                 stage.termsBefore().size());
-        return step("scan", () -> stage.glossaryService().scan(stage.projectId()))
+        run.counter().planStages();
+        return step(run, "scan", () -> stage.glossaryService().scan(stage.projectId()))
                 .flatMap(scanned -> {
-                    logEstimate(stage, scanned.added().size());
-                    return step("names", () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
+                    run.counter()
+                            .planRequests(logEstimate(stage, scanned.added().size()));
+                    return step(run, "names", () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
                 })
                 .flatMap(reviewed -> readTerms(run)
                         .flatMap(read -> translate(run, reviewed))
                         .flatMap(translated -> finish(run, reviewed)));
     }
 
-    private static void logEstimate(final Stage stage, final int scanned) {
+    private static int logEstimate(final Stage stage, final int scanned) {
         final NamesEstimate estimate = estimateOf(stage);
         log.info(
                 "Names pass project={} scanned={} plan: about {} calls, {}-{} min",
@@ -243,6 +220,7 @@ public final class NamesPassImpl implements NamesPass {
                 estimate.calls(),
                 estimate.minutesLow(),
                 estimate.minutesHigh());
+        return estimate.calls();
     }
 
     // The recurring terms: the held ones without a rendering are read first, so a term the model drops is not asked
@@ -250,10 +228,13 @@ public final class NamesPassImpl implements NamesPass {
     private Result<Boolean> readTerms(final Run run) {
         final Stage stage = run.stage();
         final String projectId = stage.projectId();
-        return step("terms-scan", () -> stage.lexiconService().scan(projectId))
+        return step(run, "terms-scan", () -> stage.lexiconService().scan(projectId))
                 .flatMap(scanned -> step(
-                        "terms-review", () -> stage.lexiconService().review(projectId, run.model(), run.counter())))
+                        run,
+                        "terms-review",
+                        () -> stage.lexiconService().review(projectId, run.model(), run.counter())))
                 .flatMap(reviewed -> step(
+                        run,
                         "terms-read",
                         () -> stage.lexiconService().scanWithModel(projectId, run.model(), run.counter())))
                 .map(read -> {
@@ -270,21 +251,24 @@ public final class NamesPassImpl implements NamesPass {
         final Stage stage = run.stage();
         final String projectId = stage.projectId();
         return step(
+                        run,
                         "names-translate",
                         () -> NamesTranslation.run(
                                 stage.names(), stage.scans(), projectId, stage.book(), reviewed, run.calls()))
                 .flatMap(locked -> step(
-                        "terms-translate", () -> stage.lexiconService().suggest(projectId, run.model(), run.counter())))
+                        run,
+                        "terms-translate",
+                        () -> stage.lexiconService().suggest(projectId, run.model(), run.counter())))
                 .map(suggested -> true);
     }
 
     // The only write: what the pass changed in the copies, applied to the stored tables in one go.
     private Result<NamesPassReport> finish(final Run run, final Reviewed reviewed) {
+        return step(run, "write", () -> write(run, reviewed));
+    }
+
+    private Result<NamesPassReport> write(final Run run, final Reviewed reviewed) {
         final Stage stage = run.stage();
-        if (Thread.currentThread().isInterrupted()) {
-            log.info("Names pass project={} stopped before writing: nothing is changed", stage.projectId());
-            return Result.err(StoppableModel.stopped());
-        }
         final Map<String, String> reasons = reasonsOf(reviewed.report().changes());
         final EntryChanges<GlossaryEntry> names = EntryChanges.between(
                 stage.namesBefore(), stage.names().entries(), GlossaryEntry::id, entry -> reasons.get(entry.id()));
@@ -341,13 +325,13 @@ public final class NamesPassImpl implements NamesPass {
     }
 
     // Stop interrupts the calling thread: a step does not start once it has, and a call in a step is refused.
-    private static <T> Result<T> step(final String name, final Supplier<Result<T>> body) {
+    private static <T> Result<T> step(final Run run, final String name, final Supplier<Result<T>> body) {
         if (Thread.currentThread().isInterrupted()) {
             log.info("Names pass stopped before step {}: nothing is changed", name);
             return Result.err(StoppableModel.stopped());
         }
         log.debug("Names pass step {}", name);
-        final Result<T> result = body.get();
+        final Result<T> result = run.counter().stage(name, body);
         if (result.isErr()) {
             log.warn(
                     "Names pass step {} ended with {}: nothing is changed",

@@ -30,7 +30,6 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -39,14 +38,9 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.MemoryUpdated;
-import ua.bookloom.api.pipeline.ModelCallFinished;
-import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.SegmentDrafted;
-import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 
@@ -56,14 +50,18 @@ class TranslationJobEventsTest {
     /** What one segment accepted on its first call announces, in order. */
     private static final List<String> ACCEPTED_ON_FIRST_CALL = List.of(
             "SegmentStarted",
+            "StepChanged",
             "ContextAssembled",
             "ModelCallStarted",
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
             "SegmentDrafted",
+            "StepChanged",
             "SegmentDecided",
             "CallSnapshotUpdated");
+
+    private static final List<String> OPENING = List.of("StageStarted", "StageStarted", "StepsPlanned");
 
     @TempDir
     private Path tempDir;
@@ -87,9 +85,9 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(events)
-                .extracting(TranslationJobEventsTest::label)
+                .extracting(JobEventLabels::label)
                 .containsExactlyElementsOf(concat(List.of(
-                        List.of("StageStarted PREP", "StageStarted TRANSLATE"),
+                        List.of("StageStarted PREP", "StageStarted TRANSLATE", "StepsPlanned"),
                         acceptedOnFirstCall("Book.txt:0", 1, 2),
                         acceptedOnFirstCall("Book.txt:1", 2, 1),
                         acceptedOnFirstCall("Book.txt:2", 3, 0),
@@ -165,7 +163,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(2 + ACCEPTED_ON_FIRST_CALL.size() + 1);
+        assertThat(healthy).hasSize(2 + 1 + ACCEPTED_ON_FIRST_CALL.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -202,8 +200,7 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactlyElementsOf(concat(
-                        List.of(List.of("StageStarted", "StageStarted"), ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
+                .containsExactlyElementsOf(concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -225,7 +222,7 @@ class TranslationJobEventsTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactlyElementsOf(concat(List.of(
-                        List.of("StageStarted", "StageStarted"),
+                        OPENING,
                         ACCEPTED_ON_FIRST_CALL,
                         List.of("Paused", "Resumed"),
                         ACCEPTED_ON_FIRST_CALL,
@@ -301,38 +298,20 @@ class TranslationJobEventsTest {
     private static List<String> acceptedOnFirstCall(final String segmentId, final long callId, final int pendingAfter) {
         return List.of(
                 "SegmentStarted " + segmentId,
+                "StepChanged",
                 "ContextAssembled",
                 "ModelCallStarted DRAFT " + segmentId,
                 "CallSnapshotUpdated " + callId + " WAITING outcomes=0",
                 "ModelCallFinished DRAFT " + segmentId,
                 "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "SegmentDrafted " + segmentId,
+                "StepChanged",
                 "SegmentDecided " + segmentId + " ACCEPTED pending=" + pendingAfter,
                 "CallSnapshotUpdated " + callId + " ANSWERED outcomes=1");
     }
 
     private static List<String> concat(final List<List<String>> parts) {
         return parts.stream().flatMap(List::stream).toList();
-    }
-
-    private static String label(final JobEvent event) {
-        return switch (event) {
-            case StageStarted started -> "StageStarted " + started.stage();
-            case SegmentStarted started -> "SegmentStarted " + started.segmentId();
-            case ModelCallStarted started -> "ModelCallStarted " + started.kind() + " " + started.segmentId();
-            case ModelCallFinished finished -> "ModelCallFinished " + finished.kind() + " " + finished.segmentId();
-            case SegmentDrafted drafted -> "SegmentDrafted " + drafted.segmentId();
-            case SegmentDecided decided ->
-                "SegmentDecided " + decided.segmentId() + " " + decided.status() + " pending="
-                        + decided.progress().pending();
-            case MemoryUpdated updated -> "MemoryUpdated " + updated.kind();
-            case Finished finished -> "Finished " + finished.report().end();
-            case CallSnapshotUpdated updated ->
-                "CallSnapshotUpdated " + updated.snapshot().callId() + " "
-                        + updated.snapshot().state() + " outcomes="
-                        + updated.snapshot().outcomes().size();
-            default -> event.getClass().getSimpleName();
-        };
     }
 
     private static void observeFinishedState(

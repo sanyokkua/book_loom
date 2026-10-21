@@ -25,6 +25,7 @@ import ua.bookloom.pipeline.heal.VerbatimCheck;
 import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
+import ua.bookloom.pipeline.prompt.CallFrame;
 
 /**
  * The ways a segment is decided without a draft call of its own, tried before the memory and the draft. A segment
@@ -44,6 +45,12 @@ final class DraftShortcuts {
     private final Map<String, String> acceptedAuxiliary = new HashMap<>();
     private final ContextSnapshot noContext;
     private final FixedLabels labels;
+
+    /** The shortcuts of a run with {@code frame}. */
+    static DraftShortcuts forFrame(final CallFrame frame) {
+        return new DraftShortcuts(
+                frame.styleSheet().text(), FixedLabels.forPair(frame.sourceLanguage(), frame.targetLanguage()));
+    }
 
     /**
      * Creates the shortcuts of one run.

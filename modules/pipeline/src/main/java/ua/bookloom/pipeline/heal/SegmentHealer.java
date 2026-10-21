@@ -199,7 +199,11 @@ final class SegmentHealer {
                     SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round - 1, null)));
         }
         announceRound(segmentId, round, findings);
-        return switch (rounds.run(outcome, best.rewriteBase(), findings, round)) {
+        final String stepKey =
+                RepairSteps.begin(calls, segmentId, RepairSteps.ROUND_SUFFIX + round, "repair-round-" + round);
+        final RoundOutcome ran = rounds.run(outcome, best.rewriteBase(), findings, round);
+        RepairSteps.end(calls, stepKey, ran);
+        return switch (ran) {
             case RoundOutcome.StepError stepError -> new RoundStep.Interrupted(stepError.error());
             case RoundOutcome.FlagNow flagNow ->
                 RoundStep.terminal(Result.ok(SegmentOutcomes.flagged(

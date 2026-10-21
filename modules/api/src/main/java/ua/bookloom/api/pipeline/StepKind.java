@@ -15,5 +15,9 @@ public enum StepKind {
     /** One of Max's chapter summaries. */
     SUMMARY,
     /** Max's backward revision. */
-    REVISION
+    REVISION,
+    /** One stage of the names pass: a group row of its progress dialog that no percentage counts. */
+    STAGE,
+    /** One model call of a names pass, of the brief suggestion or of a card action. */
+    REQUEST
 }

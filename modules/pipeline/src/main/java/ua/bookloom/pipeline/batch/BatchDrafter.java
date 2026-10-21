@@ -6,8 +6,6 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -17,6 +15,7 @@ import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
@@ -246,42 +245,15 @@ public final class BatchDrafter {
             }
         }
         log.info("Batch reply left out {} of {} ids; asking for those only", at.size(), items.size());
+        final String key = "reask:" + segmentIds.get(at.getFirst());
+        calls.steps().added(StepKind.RE_ASK, "re-ask", key, segmentIds.get(at.getFirst()));
         final Result<BatchReply> second = draft(
                 context,
                 at.stream().map(items::get).toList(),
                 at.stream().map(segmentIds::get).toList(),
                 at.stream().map(sources::get).toList(),
                 position);
-        return merged(first, second);
-    }
-
-    // A stopped re-ask ends the attempt; a failed or unreadable one leaves the missing ids to their single drafts.
-    private static Result<BatchReply> merged(final BatchReply first, final Result<BatchReply> second) {
-        final AppError failure = second.error();
-        if (failure != null && failure.code() == ErrorCode.cancelled) {
-            log.info("The re-ask for the missing ids was stopped code={}; no single draft follows", failure.code());
-            return Result.err(failure);
-        }
-        final BatchReply again = second.data();
-        if (again == null || !again.readable()) {
-            log.warn(
-                    "The re-ask for the missing ids brought nothing code={}; they fall back one by one",
-                    failure == null ? "unreadable" : failure.code());
-            return Result.ok(first);
-        }
-        return Result.ok(withAnswers(first, again));
-    }
-
-    private static BatchReply withAnswers(final BatchReply first, final BatchReply again) {
-        final List<ItemOutcome> merged = first.outcomes().stream()
-                .map(outcome -> outcome.status() == ItemStatus.MISSING
-                        ? again.outcome(outcome.id())
-                                .filter(second -> second.status() != ItemStatus.EXTRA)
-                                .orElse(outcome)
-                        : outcome)
-                .toList();
-        log.debug("Re-ask answered ids={}", again.acceptedIds());
-        return new BatchReply(true, merged, first.cut());
+        return ReAskMerge.merge(first, second, calls.steps(), key);
     }
 
     /**

@@ -103,7 +103,7 @@ final class ExportCalls implements ModelCalls {
             case RETRY_DOUBTED -> ExportProgress.Step.RETRY_DOUBTED;
             case NEIGHBOUR_CHECK -> ExportProgress.Step.CONSISTENCY_NEIGHBOUR;
         };
-        countsCalls = stage != Stage.RETRY_DOUBTED;
+        countsCalls = stage == Stage.GENDER_RETRY;
         done = 0;
         total = calls;
         log.debug("export pass stage={} plannedCalls={}", stage, calls);
@@ -119,6 +119,17 @@ final class ExportCalls implements ModelCalls {
             done = Math.min(units, total);
             progress.onProgress(new ExportProgress(step, done, total));
         }
+    }
+
+    @Override
+    public void reread(
+            final String segmentId, final String before, @Nullable final String after, final String verdict) {
+        if (total == 0) {
+            return;
+        }
+        done = Math.min(done + 1, total);
+        log.debug("export reread segmentId={} verdict={} done={} of {}", segmentId, verdict, done, total);
+        progress.onProgress(new ExportProgress(step, done, total, segmentId, before, after, verdict));
     }
 
     /** Interrupts the call now waiting on the provider, if any; a no-op between calls. */

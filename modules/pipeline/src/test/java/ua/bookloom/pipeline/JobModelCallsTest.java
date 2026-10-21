@@ -16,15 +16,25 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.RequestSummary;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
+import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /** The one place a run's model calls go through: each is announced as it goes out, and a refused one is not. */
@@ -165,6 +175,76 @@ class JobModelCallsTest {
         assertThat(error).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
         assertThat(events).isEmpty();
         assertThat(model.requests()).isEmpty();
+    }
+
+    // The provider client retries a timed-out attempt itself; the second attempt is work the bar must count.
+    @Test
+    void send_secondAttemptAfterTimeout_addsOneResendStep() {
+        final ChatModel retrying = new RetryingModel(true);
+        final JobModelCalls stepped = new JobModelCalls(onSent -> retrying, events::add, new StepClock(), "uk")
+                .withSteps(StepAnnouncer.over(events::add));
+
+        stepped.call(CallKind.DRAFT, "Book.md:0", REQUEST);
+
+        assertThat(events)
+                .filteredOn(event -> event instanceof StepsPlanned || event instanceof StepChanged)
+                .containsExactly(
+                        new StepsPlanned(StepKind.RESEND, 1, false),
+                        new StepChanged(StepKind.RESEND, "resend-2", 0, StepState.STARTED, "Book.md:0", null),
+                        new StepChanged(StepKind.RESEND, "resend-2", 0, StepState.ENDED, "Book.md:0", StepResult.DONE));
+    }
+
+    // A seam built without steps (setup, glossary, export) sends the same attempts and announces no step.
+    @Test
+    void send_seamWithoutSteps_announcesNoStepEvent() {
+        final JobModelCalls plain =
+                new JobModelCalls(onSent -> new RetryingModel(true), events::add, new StepClock(), "uk");
+
+        plain.call(CallKind.DRAFT, "Book.md:0", REQUEST);
+
+        assertThat(events).noneMatch(event -> event instanceof StepsPlanned || event instanceof StepChanged);
+    }
+
+    // A resend that also fails ends its step FAILED, so the bar still reaches the total.
+    @Test
+    void send_secondAttemptFailsToo_endsTheResendStepFailed() {
+        final ChatModel failing = new RetryingModel(false);
+        final JobModelCalls stepped = new JobModelCalls(onSent -> failing, events::add, new StepClock(), "uk")
+                .withSteps(StepAnnouncer.over(events::add));
+
+        stepped.call(CallKind.DRAFT, "Book.md:0", REQUEST);
+
+        assertThat(events)
+                .filteredOn(StepChanged.class::isInstance)
+                .map(StepChanged.class::cast)
+                .filteredOn(change -> change.state() == StepState.ENDED)
+                .extracting(StepChanged::result)
+                .containsExactly(StepResult.FAILED);
+    }
+
+    /** Attempt 1 times out; attempt 2 answers {@code succeeds ? a reply : a timeout} like the provider client does. */
+    private record RetryingModel(boolean succeeds) implements ChatModel {
+
+        private static final Duration LIMIT = Duration.ofSeconds(60);
+
+        @Override
+        public Result<ChatResponse> chat(final ChatRequest request) {
+            return chat(request, CallAttemptListener.NONE);
+        }
+
+        @Override
+        public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
+            final CallAttempt first = new CallAttempt(1, 2, LIMIT, null);
+            attempts.started(first);
+            attempts.failed(first, ErrorCode.timeout);
+            final CallAttempt second = new CallAttempt(2, 2, LIMIT, null);
+            attempts.started(second);
+            if (succeeds) {
+                return Result.ok(new ChatResponse("ONE.", FinishReason.STOP));
+            }
+            attempts.failed(second, ErrorCode.timeout);
+            return Result.err(AppError.of(ErrorCode.timeout, "Timed out", "The second attempt timed out."));
+        }
     }
 
     /** A clock three seconds later at every reading, so an elapsed time is exact. */

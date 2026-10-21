@@ -89,6 +89,7 @@ class JobEventContractsTest {
             case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
             case StepsPlanned planned -> "StepsPlanned";
             case StepChanged changed -> "StepChanged";
+            case BriefSampleRead read -> "BriefSampleRead";
         };
     }
 
@@ -206,5 +207,23 @@ class JobEventContractsTest {
 
         assertThat(paused.pauses()).isZero();
         assertThat(paused.pausesBeforeFlagging()).isZero();
+    }
+
+    @Test
+    void briefSampleRead_answers_areCopiedAndKeepValueAndQuote() {
+        final java.util.Map<BriefField, SampleAnswer> given = new java.util.EnumMap<>(BriefField.class);
+        given.put(BriefField.GENRE, new SampleAnswer("crime", "He left."));
+        final BriefSampleRead read = new BriefSampleRead(2, 4, given);
+        given.clear();
+
+        assertThat(read.answers()).containsOnlyKeys(BriefField.GENRE);
+        assertThat(read.answers().get(BriefField.GENRE)).isEqualTo(new SampleAnswer("crime", "He left."));
+        assertThat(read.sample()).isEqualTo(2);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,3", "4,3", "1,0"})
+    void briefSampleRead_sampleOutsideTheWindows_isRejected(final int sample, final int samples) {
+        assertThatIllegalArgumentException().isThrownBy(() -> new BriefSampleRead(sample, samples, java.util.Map.of()));
     }
 }

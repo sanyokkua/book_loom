@@ -91,6 +91,29 @@ public interface ModelCalls {
         // Nothing listens.
     }
 
+    /**
+     * The steps this seam announces. A seam that announces no steps returns a silent announcer.
+     *
+     * @return the non-null announcer
+     */
+    default StepAnnouncer steps() {
+        return StepAnnouncer.silent();
+    }
+
+    /**
+     * Announces one paragraph a reread stage went over, with its text before and after, so an export can show each
+     * reread item next to its neighbours. A seam that shows nothing ignores it.
+     *
+     * @param segmentId the segment that was reread; non-null
+     * @param before the target before the reread; book text, so a seam never logs it above TRACE; non-null
+     * @param after the target the reread stored, or null when it changed nothing
+     * @param verdict {@code unchanged}, {@code fixed}, {@code refused:<rule>}, {@code skipped} or {@code remembered}
+     */
+    default void reread(
+            final String segmentId, final String before, @Nullable final String after, final String verdict) {
+        // Nothing shows rereads.
+    }
+
     /** The stages of a backward revision whose calls are counted before the first is sent. */
     enum Stage {
         /** One call per segment whose character's gender became known. */

@@ -23,12 +23,14 @@ class TranslationJobModelCallEventTest {
     /** What one segment drafted and accepted on its first call announces, in order. */
     private static final List<String> ONE_SEGMENT = List.of(
             "SegmentStarted",
+            "StepChanged",
             "ContextAssembled",
             "ModelCallStarted",
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
             "SegmentDrafted",
+            "StepChanged",
             "SegmentDecided",
             "CallSnapshotUpdated");
 
@@ -48,7 +50,10 @@ class TranslationJobModelCallEventTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactlyElementsOf(Stream.of(
-                                List.of("StageStarted", "StageStarted"), ONE_SEGMENT, ONE_SEGMENT, List.of("Finished"))
+                                List.of("StageStarted", "StageStarted", "StepsPlanned"),
+                                ONE_SEGMENT,
+                                ONE_SEGMENT,
+                                List.of("Finished"))
                         .flatMap(List::stream)
                         .toList());
         assertThat(events)

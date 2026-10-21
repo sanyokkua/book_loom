@@ -387,7 +387,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     `context.snapshot().withSent(sections)`.
   - Tests: `BatchDraftingJobTest` asserts `sentSections` on a batch-adopted record and null on a single draft, and a
     `RetryDraft` test shows the replay text is unchanged. → :pipeline
-- [ ] 4.6 Announce planned and changing steps from the run, the names pass and the brief suggestion, and the export
+- [x] 4.6 Announce planned and changing steps from the run, the names pass and the brief suggestion, and the export
   items through `ExportProgress`, so every progress bar counts all the work of its operation.
   - **Satisfies:** translation-pipeline "Plan a run's steps and count the time spent"; translation-pipeline "Announce
     the planned steps and each step's state"; translation-pipeline "Map the quality dial to the run's mechanics";
@@ -564,6 +564,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     of a reopened project from its stored decisions"
   - `state/ProgressLedger` (D3) is fed by `StepsPlanned` / `StepChanged` and `ExportProgress`. It replaces
     `RunClock.timeLeft` and `RunFigures.percent`.
+    Note (4.6): `StepsPlanned` is sent per chunk (and per names-pass or brief run), not per book, so the ledger must seed
+    its book-level total from `RunFigures` (segments, units) or the bar reaches 100 % at the end of every chunk.
   - Tests: `ProgressLedgerTest`:
     - 3 tasks × 3 items = 9 steps;
     - 52 % done in 2 h of uniform steps → "about 2 h";

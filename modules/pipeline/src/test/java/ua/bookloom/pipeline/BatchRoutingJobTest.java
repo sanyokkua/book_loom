@@ -1,8 +1,10 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.BatchedJobs.batchedJob;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
@@ -16,7 +18,9 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,11 +35,17 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.FlaggedSegment;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
@@ -120,6 +130,29 @@ class BatchRoutingJobTest {
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.md:0", ErrorCode.upstream));
         assertThat(formats(model)).containsExactly(BATCH, BATCH);
         assertThat(report.accepted()).isEqualTo(3);
+    }
+
+    // IF a re-ask for left-out ids were not a step of its own, THEN the extra call would not count in the bar.
+    @Test
+    void run_batchReplyMissingIds_addsOneReAskStep() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answerTo(BATCH, batchReply(items(entry("1", T0), entry("4", T3))))
+                .answerTo(BATCH, batchReply(items(entry("2", T1), entry("3", T2))));
+        final TranslationJobImpl translation = batchedJob(fourParagraphs(), model);
+        final List<JobEvent> events = new CopyOnWriteArrayList<>();
+        translation.subscribe(events::add);
+
+        report(translation.run());
+
+        assertThat(events).contains(new StepsPlanned(StepKind.RE_ASK, 1, false));
+        assertThat(events)
+                .filteredOn(StepChanged.class::isInstance)
+                .map(StepChanged.class::cast)
+                .filteredOn(change -> change.kind() == StepKind.RE_ASK)
+                .extracting(StepChanged::label, StepChanged::index, StepChanged::state, StepChanged::result)
+                .containsExactly(
+                        tuple("re-ask", 0, StepState.STARTED, null),
+                        tuple("re-ask", 0, StepState.ENDED, StepResult.DONE));
     }
 
     private TestProject fourParagraphs() {

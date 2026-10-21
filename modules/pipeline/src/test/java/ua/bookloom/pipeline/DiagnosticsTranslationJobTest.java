@@ -303,6 +303,7 @@ class DiagnosticsTranslationJobTest {
                 .extracting(FlaggedSegment::segmentId, FlaggedSegment::reason)
                 .containsExactly("Book.md:1", ErrorCode.validation);
         assertThat(result.error()).extracting(AppError::cause).isSameAs(cause);
+        final String call = "SegmentStarted StepChanged ContextAssembled ModelCallStarted ModelCallFinished";
         // The flagged-at-once second segment has no draft to show; the third ends in the fault before one.
         assertThat(String.join(
                         " ",
@@ -310,10 +311,9 @@ class DiagnosticsTranslationJobTest {
                                 .map(event -> event.getClass().getSimpleName())
                                 .filter(name -> !name.equals("CallSnapshotUpdated"))
                                 .toList()))
-                .isEqualTo("StageStarted StageStarted"
-                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDrafted SegmentDecided"
-                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDecided"
-                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished Finished");
+                .isEqualTo("StageStarted StageStarted StepsPlanned " + call
+                        + " SegmentDrafted StepChanged SegmentDecided " + call
+                        + " StepChanged SegmentDecided " + call + " Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);
         assertOnlyErrorCarries(cause);
     }

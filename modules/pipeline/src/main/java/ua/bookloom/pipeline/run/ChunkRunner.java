@@ -25,7 +25,6 @@ import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
 import ua.bookloom.pipeline.project.SegmentLocators;
@@ -62,6 +61,7 @@ public final class ChunkRunner {
     private final DraftShortcuts shortcuts;
     private final BatchStage batches;
     private final TermLearning learning;
+    private final ChunkSteps announced;
 
     /**
      * Creates the runner of one run.
@@ -92,13 +92,11 @@ public final class ChunkRunner {
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
         final String analysis = settings.frame().analysisLanguage();
-        this.followUp =
-                new DecisionFollowUp(settings.projectId(), analysis, steps.summary(), stores, index, sinks, calls);
+        this.announced = new ChunkSteps(steps.calls().steps(), settings.dial());
+        this.followUp = new DecisionFollowUp(
+                settings.projectId(), analysis, steps.summary(), stores, index, sinks, calls, announced);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
-        this.shortcuts = new DraftShortcuts(
-                settings.frame().styleSheet().text(),
-                FixedLabels.forPair(
-                        settings.frame().sourceLanguage(), settings.frame().targetLanguage()));
+        this.shortcuts = DraftShortcuts.forFrame(settings.frame());
         this.batches = new BatchStage(
                 steps.batch(),
                 settings,
@@ -146,6 +144,7 @@ public final class ChunkRunner {
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
+        announced.unitEntered();
         return runChunks(work, planner.walk(items));
     }
 
@@ -153,6 +152,7 @@ public final class ChunkRunner {
         while (walk.hasNext()) {
             final ChunkPlanner.Next next = walk.next();
             work.enterChunk(next.number(), next.total());
+            announced.chunkEntered(next.items().size());
             final Optional<RunEnd> end = runChunk(work, next.chunk(), next.items(), next.number() - 1, next.budget());
             if (end.isPresent()) {
                 return end;
@@ -252,12 +252,13 @@ public final class ChunkRunner {
      */
     private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
-        events.started(segment, current.work().position(item));
+        begun(current, item);
         final ProtectedMask mask = current.context().mask(segment);
         final DraftOutcome shortcut =
                 shortcuts.take(segment, mask, current.context().gate(), current.loop(), current.drafts());
         if (shortcut != null) {
             events.drafted(shortcut, current.loop());
+            announced.drafted(segment.id());
             return new Step.Done<>(shortcut);
         }
         final List<Segment> unitSegments = current.work().unitSegments(item);
@@ -274,9 +275,15 @@ public final class ChunkRunner {
         final DraftOutcome.Reused reused = offer.reused();
         if (reused != null) {
             current.drafts().drafted(reused, context.snapshot());
+            announced.drafted(segment.id());
             return new Step.Done<>(reused);
         }
         return drafted(current, new Ready(item, mask, offer), context);
+    }
+
+    private void begun(final Current current, final WorkItem item) {
+        events.started(item.segment(), current.work().position(item));
+        announced.drafting(item.segment().id());
     }
 
     /** A segment that needs a call, with the mask it is shown and what the memory offered it. */
@@ -306,6 +313,7 @@ public final class ChunkRunner {
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
             current.drafts().drafted(outcome, snapshot);
             events.drafted(outcome, current.loop());
+            announced.drafted(segment.id(), outcome);
         }
         return drafted;
     }
@@ -372,16 +380,8 @@ public final class ChunkRunner {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }
         return followUp.decided(current.work(), item, record, current.context().glossary())
-                .or(() -> sinks.boundaries().afterDecision(boundaryOf(current.work(), item, record), progress));
-    }
-
-    private static RunBoundaries.Decision boundaryOf(
-            final WorkList work, final WorkItem item, final SegmentRecord record) {
-        return new RunBoundaries.Decision(
-                record.segmentId(),
-                record.status() == SegmentStatus.FLAGGED,
-                work.endsSection(item),
-                work.isComplete());
+                .or(() -> sinks.boundaries()
+                        .afterDecision(RunBoundaries.Decision.of(current.work(), item, record), progress));
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {

@@ -15,6 +15,8 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
@@ -74,6 +76,9 @@ public final class StageRunner {
         Objects.requireNonNull(work, "work");
         log.debug("Translation job stage change stage={} project={}", JobStage.TRANSLATE, settings.projectId());
         sinks.emit().accept(new StageStarted(JobStage.TRANSLATE, work.currentTranslationProgress()));
+        if (settings.dial().backwardRevision()) {
+            calls.steps().planned(StepKind.REVISION, 1, true);
+        }
         final RunEnd translated = narratorSettled(chunks.run(work));
         final boolean revises = settings.dial().backwardRevision();
         log.debug(
@@ -110,12 +115,14 @@ public final class StageRunner {
         log.debug("Translation job stage change stage={} project={}", JobStage.REVISE, settings.projectId());
         sinks.emit().accept(new StageStarted(JobStage.REVISE, work.revisionProgress()));
         final RoutedRevisionCalls routed = new RoutedRevisionCalls(new RoutedCalls(sinks.boundaries()), work);
+        calls.steps().started(StepKind.REVISION, "revision", "revision", null);
         final Result<ConsistencyReport> revised = revision.run(settings.projectId(), routed);
         final RunEnd stopped = routed.stopped();
         if (stopped != null) {
             log.debug("Backward revision ended by the run's boundary end={}", stopped.state());
             return stopped;
         }
+        calls.steps().ended(StepKind.REVISION, "revision", revised.isErr() ? StepResult.FAILED : StepResult.DONE);
         if (revised.isErr()) {
             return RoutedCalls.failedBy(Objects.requireNonNull(revised.error(), "error"));
         }

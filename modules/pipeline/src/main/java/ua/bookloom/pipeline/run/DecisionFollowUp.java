@@ -42,6 +42,7 @@ final class DecisionFollowUp {
     private final BookIndex index;
     private final RunSinks sinks;
     private final RoutedCalls calls;
+    private final ChunkSteps announced;
     private final List<Segment> decidedInUnit = new ArrayList<>();
     private @Nullable String summary;
 
@@ -52,7 +53,8 @@ final class DecisionFollowUp {
             final RunStores stores,
             final BookIndex index,
             final RunSinks sinks,
-            final RoutedCalls calls) {
+            final RoutedCalls calls,
+            final ChunkSteps announced) {
         this.projectId = Objects.requireNonNull(projectId, "projectId");
         this.analysisLanguage = analysisLanguage;
         this.keeper = Objects.requireNonNull(keeper, "keeper");
@@ -62,6 +64,7 @@ final class DecisionFollowUp {
         this.index = Objects.requireNonNull(index, "index");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.announced = Objects.requireNonNull(announced, "announced");
     }
 
     /**
@@ -132,9 +135,11 @@ final class DecisionFollowUp {
             }
         }
         decidedInUnit.clear();
+        announced.summarizing(unitId);
         return switch (calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId))) {
             case Step.Stopped<Optional<RollingSummary>>(final RunEnd end) -> Optional.of(end);
             case Step.Done<Optional<RollingSummary>>(final Optional<RollingSummary> refreshed) -> {
+                announced.summarized(unitId, refreshed);
                 announce(refreshed, "unit end");
                 yield Optional.empty();
             }

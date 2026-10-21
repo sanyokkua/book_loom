@@ -20,4 +20,5 @@ public sealed interface JobEvent
                 BatchStarted,
                 CallSnapshotUpdated,
                 StepsPlanned,
-                StepChanged {}
+                StepChanged,
+                BriefSampleRead {}

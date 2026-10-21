@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
@@ -106,7 +107,8 @@ final class RunSummaryLogger {
                     BatchStarted _,
                     CallSnapshotUpdated _,
                     StepsPlanned _,
-                    StepChanged _ -> {}
+                    StepChanged _,
+                    BriefSampleRead _ -> {}
         }
         writeWhenDue();
     }
