@@ -138,7 +138,7 @@ final class DraftShortcuts {
                 "Auxiliary segmentId={} takes the draft of identical segmentId={}, no call",
                 segment.id(),
                 sibling.segment().id());
-        drafts.drafted(copy, drafts.snapshot(sibling.segment().id()));
+        drafts.drafted(copy, drafts.snapshot(sibling.segment().id()).withSent(null));
         return copy;
     }
 

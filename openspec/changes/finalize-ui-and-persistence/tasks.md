@@ -380,7 +380,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     `call.withItems(items)`.
   - Items carry book text, so they are logged at TRACE only.
   - Test: `JobModelCallSnapshotsTest.parsed_fourItemBatchOneMissing_snapshotCarriesFourItemsOneMissing`. → :pipeline
-- [ ] 4.5 Store, with each batch-adopted segment, the sections its batch actually sent, so the review desk's "What the
+- [x] 4.5 Store, with each batch-adopted segment, the sections its batch actually sent, so the review desk's "What the
   model saw" is the real context.
   - **Satisfies:** review-queue "Show on "What the model saw" the context the model was actually sent"
   - `ChunkBatches` keeps segment → sections filled in `BatchStage.adopt`; `ChunkRunner.drafted` stores

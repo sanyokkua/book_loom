@@ -13,6 +13,8 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
@@ -287,7 +289,9 @@ public final class ChunkRunner {
         if (batchEnd.isPresent()) {
             return new Step.Stopped<>(batchEnd.get());
         }
-        events.contextAssembled(segment.id(), context.snapshot());
+        final List<PromptSection> sections = current.batches().takeSent(segment.id());
+        final ContextSnapshot snapshot = context.snapshot().withSent(sections);
+        events.contextAssembled(segment.id(), snapshot);
         final DraftOutcome batched = current.batches().take(segment.id());
         final Step<DraftOutcome> drafted = batched != null
                 ? new Step.Done<>(batched)
@@ -300,7 +304,7 @@ public final class ChunkRunner {
                                         segment, context.draftContext(), mask, steps.splitter(), current.budget()),
                         error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
-            current.drafts().drafted(outcome, context.snapshot());
+            current.drafts().drafted(outcome, snapshot);
             events.drafted(outcome, current.loop());
         }
         return drafted;

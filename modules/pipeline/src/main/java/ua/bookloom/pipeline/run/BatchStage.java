@@ -12,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
@@ -210,7 +211,7 @@ final class BatchStage {
         return switch (step) {
             case Step.Stopped<BatchAttempt>(final RunEnd end) -> Optional.of(end);
             case Step.Done<BatchAttempt>(final BatchAttempt attempt) -> {
-                settle(current, batch, prepared.context(), attempt);
+                settle(current, batch, prepared.context(), sentSections(attempt, prepared.context(), items), attempt);
                 yield Optional.empty();
             }
         };
@@ -242,6 +243,7 @@ final class BatchStage {
             final Current current,
             final List<Candidate> batch,
             final BatchContext context,
+            @Nullable final List<PromptSection> sections,
             final BatchAttempt attempt) {
         if (attempt.kind() == BatchAttempt.Kind.SKIPPED) {
             skipFirst(current, batch.getFirst(), Objects.requireNonNull(attempt.skip(), "skip"));
@@ -253,7 +255,7 @@ final class BatchStage {
             final Candidate candidate = batch.get(i);
             current.batches().tried(candidate.segment().id());
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
-            final boolean isAdopted = outcome.isAccepted() && adopt(current, candidate, outcome);
+            final boolean isAdopted = outcome.isAccepted() && adopt(current, candidate, outcome, sections);
             note(candidate.segment().id(), outcome, isAdopted);
             if (isAdopted) {
                 adopted++;
@@ -271,6 +273,14 @@ final class BatchStage {
             noteKeyTerms(context, attempt.first());
         }
         logSettled(batch.size(), adopted, attempt.kind());
+    }
+
+    // Stored as sent (masked), like the preceding targets; the review desk converts them for display. A re-asked id
+    // keeps the first call's sections, since that is the call whose reply the batch adopted from.
+    @Nullable
+    private List<PromptSection> sentSections(
+            final BatchAttempt attempt, final BatchContext context, final List<BatchItem> items) {
+        return attempt.kind() == BatchAttempt.Kind.ANSWERED ? drafter.sectionsFor(context, items) : null;
     }
 
     // An unreadable reply says nothing of whether the model uses the key-term block.
@@ -327,10 +337,17 @@ final class BatchStage {
                                 first.segment(), first.segment().masked(), List.of(), error));
     }
 
-    private static boolean adopt(final Current current, final Candidate candidate, final ItemOutcome outcome) {
+    private static boolean adopt(
+            final Current current,
+            final Candidate candidate,
+            final ItemOutcome outcome,
+            @Nullable final List<PromptSection> sections) {
         final Optional<DraftOutcome> drafted =
                 current.translator().adopt(candidate.segment(), candidate.mask(), outcome.target());
-        drafted.ifPresent(found -> current.batches().ready(candidate.segment().id(), found));
+        drafted.ifPresent(found -> {
+            current.batches().ready(candidate.segment().id(), found);
+            current.batches().sent(candidate.segment().id(), sections);
+        });
         return drafted.isPresent();
     }
 

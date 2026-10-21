@@ -16,6 +16,7 @@ import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
@@ -120,8 +121,7 @@ public final class BatchDrafter {
      * @param context the non-null read-only context shown with the items
      * @param items the non-null items, at least one, with unique ids
      * @param segmentIds the non-null segments the items stand for, in the items' order, which the call announces
-     * @return the reply read per id — not readable when the model answered nothing usable — or the error the call
-     *     answered, which the run routes
+     * @return the reply read per id (not readable when nothing usable came), or the error the call answered
      */
     public Result<BatchReply> draft(
             final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
@@ -131,6 +131,11 @@ public final class BatchDrafter {
                 segmentIds,
                 items.stream().map(item -> DisplayText.of(item.masked())).toList(),
                 null);
+    }
+
+    /** The prompt parts a batch of these items is sent as, in the order they are sent; never null. */
+    public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
+        return prompts.sectionsFor(context, items);
     }
 
     /**

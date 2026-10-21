@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SegmentRecord;
@@ -102,5 +103,26 @@ class RetryDraftNeighboursTest {
 
     private static SegmentRecord ok(final Result<SegmentRecord> result) {
         return Objects.requireNonNull(result.data(), () -> "expected success but got " + result.error());
+    }
+
+    // IF the stored snapshot also holds the sections a batch sent, THEN the retry replays the same text as without
+    // them.
+    @Test
+    void retry_batchAdoptedSnapshot_replaysTheSameTextAsTheSnapshotWithoutSections() {
+        final Desk plain = flaggedWithSnapshot(JobState.PAUSED);
+        final ScriptedChatModel plainModel = passing();
+        ok(retry(plain, plainModel));
+        final Desk batched = flaggedWithSnapshot(JobState.PAUSED);
+        withContext(
+                batched,
+                FLAGGED_ID,
+                SNAPSHOT.withSent(List.of(new PromptSection(
+                        "items", "Items:", PromptSection.Origin.USER, List.of("<s id=\"1\">The monster.</s>")))));
+        final ScriptedChatModel batchedModel = passing();
+
+        ok(retry(batched, batchedModel));
+
+        assertThat(userMessage(batchedModel.requests().getFirst()))
+                .isEqualTo(userMessage(plainModel.requests().getFirst()));
     }
 }

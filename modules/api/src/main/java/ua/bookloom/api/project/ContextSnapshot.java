@@ -79,4 +79,15 @@ public record ContextSnapshot(
             final String styleSheet) {
         this(precedingTargets, glossary, tmHits, summary, styleSheet, List.of());
     }
+
+    /**
+     * Returns this snapshot with the prompt parts a batch really sent, every other component unchanged.
+     *
+     * @param sections the parts the batch call sent, or null for a segment drafted alone
+     * @return a copy holding {@code sections}
+     */
+    public ContextSnapshot withSent(@Nullable final List<PromptSection> sections) {
+        return new ContextSnapshot(
+                precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, characters, sections);
+    }
 }
