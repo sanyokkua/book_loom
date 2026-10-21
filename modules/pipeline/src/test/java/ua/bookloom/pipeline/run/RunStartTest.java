@@ -29,7 +29,7 @@ import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 
@@ -47,7 +47,7 @@ class RunStartTest {
     void setUp() throws Exception {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         stores = new RunStores(

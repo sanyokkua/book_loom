@@ -1,7 +1,7 @@
 /**
- * Storage behind the {@code :api} repository and checkpoint ports. Today these are in-memory adapters
- * ({@code ua.bookloom.persistence.memory}, ADR-0034), so nothing survives a restart; the SQLite adapter (JDBI DAOs,
- * JSON documents, the typed settings KV store; ADR-0043) replaces them for the window behind the same ports. FX-free.
+ * Storage behind the {@code :api} repository and checkpoint ports: in-memory adapters ({@code .memory}, ADR-0034) for
+ * the command line and the tests, SQLite adapters ({@code .sqlite}: JDBI DAOs, JSON documents, the typed settings KV
+ * store; ADR-0043) for the window, chosen by {@code InMemoryPersistenceModule} or {@code SqlitePersistenceModule}. FX-free.
  *
  * <p>The only module permitted to import {@code java.sql}. Note it does NOT own the process single-instance lock —
  * that is acquired pre-injector by {@code :app} using the path resolved by {@code ua.bookloom.util.paths}
@@ -26,6 +26,7 @@ module ua.bookloom.persistence {
     requires com.fasterxml.jackson.datatype.jsr310;
 
     exports ua.bookloom.persistence;
+    exports ua.bookloom.persistence.sqlite;
 
     opens ua.bookloom.persistence to
             com.google.guice;
@@ -33,5 +34,6 @@ module ua.bookloom.persistence {
             com.google.guice;
     // Jackson reads the stored glossary and lexicon documents through their public canonical constructors.
     opens ua.bookloom.persistence.sqlite to
-            com.fasterxml.jackson.databind;
+            com.fasterxml.jackson.databind,
+            com.google.guice;
 }

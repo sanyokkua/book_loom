@@ -25,7 +25,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The glossary file: what is written, what an import updates, adds, skips and reports. */
 class GlossaryCsvTest {
@@ -41,7 +41,7 @@ class GlossaryCsvTest {
     void setUp() {
         service = Guice.createInjector(
                         new DocumentModule(),
-                        new PersistenceModule(),
+                        new InMemoryPersistenceModule(),
                         binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
                 .getInstance(GlossaryServiceImpl.class);
     }

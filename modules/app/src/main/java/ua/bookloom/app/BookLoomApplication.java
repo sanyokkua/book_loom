@@ -4,6 +4,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
@@ -18,6 +20,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.persistence.SqlitePersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
@@ -71,8 +74,14 @@ public final class BookLoomApplication extends Application {
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
     }
 
+    /** The window keeps its work in the database file of the data folder; the command line never does. */
+    static Module windowPersistence(final StartupContext startup) {
+        return new SqlitePersistenceModule(startup.paths().databaseFile(), Clock.system(ZoneId.systemDefault()));
+    }
+
     private static Injector developmentInjector(final StartupContext startup) {
-        return Guice.createInjector(new CoreModules(startup), new UiModule(), new DesktopModule());
+        return Guice.createInjector(
+                new CoreModules(startup, windowPersistence(startup)), new UiModule(), new DesktopModule());
     }
 
     /**
@@ -103,7 +112,10 @@ public final class BookLoomApplication extends Application {
         log.info("resolve-all smoke: building the injector in the production stage");
         final Module ui = Modules.override(new UiModule()).with(new OpenStepsModule());
         return Guice.createInjector(
-                com.google.inject.Stage.PRODUCTION, new CoreModules(startup), ui, new DesktopModule());
+                com.google.inject.Stage.PRODUCTION,
+                new CoreModules(startup, windowPersistence(startup)),
+                ui,
+                new DesktopModule());
     }
 
     @Override
@@ -144,6 +156,12 @@ public final class BookLoomApplication extends Application {
     /** The first entry with a screen, so the window never opens on an empty screen area while any screen exists. */
     private static Optional<ViewNames> initialView() {
         return Arrays.stream(ViewNames.values()).filter(ViewNames::isAvailable).findFirst();
+    }
+
+    @Override
+    public void stop() {
+        log.info("window closing, releasing resources");
+        lifecycle.close(injector);
     }
 
     /**

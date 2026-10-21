@@ -33,6 +33,7 @@ import ua.bookloom.app.bootstrap.LoggingBootstrap;
 import ua.bookloom.app.bootstrap.ResolvedLogLevel;
 import ua.bookloom.app.bootstrap.ResolvedTraceFile;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -142,7 +143,7 @@ class TraceRedactionTest {
                         java.util.stream.Stream.of(source.toString()), providerArguments.stream())
                 .toList();
 
-        Guice.createInjector(new CoreModules(startup))
+        Guice.createInjector(new CoreModules(startup, new InMemoryPersistenceModule()))
                 .getInstance(TranslateCommand.class)
                 .run(arguments, new PrintStream(console, true, StandardCharsets.UTF_8));
 

@@ -32,7 +32,7 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The zero-edit round trip over the real document module, with decorators that damage the written copy. */
 class RoundTripCheckTest {
@@ -45,7 +45,7 @@ class RoundTripCheckTest {
     @TempDir
     private Path tempDir;
 
-    private final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+    private final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
 
     @Test
     void roundTrip_faithfulBookWithImageAndFont_reportsEverythingPreserved() {

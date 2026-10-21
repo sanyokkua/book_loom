@@ -25,7 +25,7 @@ import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestProjects;
@@ -45,7 +45,7 @@ class ExportJobLogTest {
     void setUp() {
         final var injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new ReviewModeTestModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);

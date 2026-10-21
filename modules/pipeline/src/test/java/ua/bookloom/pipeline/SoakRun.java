@@ -37,7 +37,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -59,7 +59,7 @@ final class SoakRun {
     private final Injector injector = Guice.createInjector(
             new DocumentModule(),
             new LlmModule(),
-            new PersistenceModule(),
+            new InMemoryPersistenceModule(),
             new PipelineModule(),
             new ReviewModeTestModule());
     private final ObjectMapper mapper = new ObjectMapper();

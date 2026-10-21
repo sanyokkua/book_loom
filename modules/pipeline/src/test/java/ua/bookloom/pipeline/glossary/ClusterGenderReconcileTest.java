@@ -11,15 +11,16 @@ import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** One person, one gender at the end of a review (15i.N2), over the in-memory glossary; the names are invented. */
 class ClusterGenderReconcileTest {
 
     private static final String PROJECT = "p1";
 
-    private final GlossaryRepository glossary =
-            Guice.createInjector(new DocumentModule(), new PersistenceModule()).getInstance(GlossaryRepository.class);
+    private final GlossaryRepository glossary = Guice.createInjector(
+                    new DocumentModule(), new InMemoryPersistenceModule())
+            .getInstance(GlossaryRepository.class);
 
     private static GlossaryEntry character(final String term) {
         return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);

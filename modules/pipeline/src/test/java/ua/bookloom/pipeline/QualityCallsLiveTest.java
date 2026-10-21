@@ -31,7 +31,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -172,7 +172,7 @@ class QualityCallsLiveTest {
         /** Builds a real {@link ChatModel} through {@link LlmModule}/{@link ChatModelFactory}, then wraps it as a
          * {@link ModelCalls} seam. */
         ModelCalls calls() {
-            final Injector injector = Guice.createInjector(new LlmModule(), new PersistenceModule());
+            final Injector injector = Guice.createInjector(new LlmModule(), new InMemoryPersistenceModule());
             final String id = name().toLowerCase(Locale.ROOT);
             final ProviderConfig config = new ProviderConfig(
                     id,

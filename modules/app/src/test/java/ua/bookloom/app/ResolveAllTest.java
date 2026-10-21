@@ -21,6 +21,7 @@ import org.testfx.api.FxToolkit;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
@@ -90,7 +91,8 @@ class ResolveAllTest {
         FxToolkit.registerPrimaryStage();
         final Injector injector = Guice.createInjector(
                 Stage.DEVELOPMENT,
-                Modules.override(new CoreModules(startup()), new UiModule()).with(new ThrowingReviewDesk()));
+                Modules.override(new CoreModules(startup(), new InMemoryPersistenceModule()), new UiModule())
+                        .with(new ThrowingReviewDesk()));
 
         final ResolveAll.Outcome outcome = ResolveAll.resolvePorts(injector);
 

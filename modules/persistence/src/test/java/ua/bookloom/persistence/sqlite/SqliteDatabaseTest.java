@@ -196,4 +196,20 @@ class SqliteDatabaseTest {
         }
         assertThat(thrown.get()).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void read_onFxNamedThreadWithGuardOff_warnsAndStillReads() throws InterruptedException {
+        final AtomicReference<Result<Boolean>> answer = new AtomicReference<>();
+        final String before = System.getProperty("bookloom.storage.failOnFxThread");
+        System.setProperty("bookloom.storage.failOnFxThread", "false");
+        try (SqliteDatabase db = open()) {
+            final Thread fx =
+                    new Thread(() -> answer.set(db.read("x", h -> Boolean.TRUE)), "JavaFX Application Thread");
+            fx.start();
+            fx.join();
+        } finally {
+            System.setProperty("bookloom.storage.failOnFxThread", before == null ? "true" : before);
+        }
+        assertThat(answer.get()).isNotNull().extracting(Result::isOk).isEqualTo(true);
+    }
 }

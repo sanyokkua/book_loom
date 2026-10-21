@@ -18,7 +18,7 @@ One `AbstractModule` per Gradle module, co-located with the implementation it bi
 |--------------------------------------|----------------------------------------------------------------------|
 | `DocumentModule` (`:document`)       | `DocumentPort → DocumentService`                                     |
 | `LlmModule` (`:llm`)                 | **built:** `ChatModelFactory → ChatModelFactoryImpl` (resolves the offline `pseudo` provider and every registered real one), `ProviderClientFactory` and `InferenceGate` (singletons), `ProviderVerifier`, `ModelCatalog`, `ProviderConfigs`; still to come: credential resolution |
-| `PersistenceModule` (`:persistence`) | repository ports → JDBI DAOs, `Jdbi`, `DataSource`                   |
+| `SqlitePersistenceModule` / `InMemoryPersistenceModule` (`:persistence`) | repository ports → JDBI DAOs over one `SqliteDatabase` (window) / in-memory adapters (command line, tests) |
 | `PipelineModule` (`:pipeline`)       | **built:** `TranslationEngine → TranslationEngineImpl`; still to come: assemblers, QA          |
 | `UiModule` (`:ui`)                   | viewmodels, `Navigator`, state mirror, controllers via factory       |
 | `AppModule` (`:app`)                 | `ExecutorService` (daemon), virtual-thread executor, config, wiring  |
@@ -28,9 +28,9 @@ infrastructure (gate, executors, mirror, DAOs); no field/setter injection; no st
 
 **`ua.bookloom.app.CoreModules`** (`:app`, built by `add-translation-engine-and-cli`) is the Guice module the desktop
 app and the command line **share**, so the two entry points never wire different graphs: it installs `AppModule`,
-`DocumentModule`, `LlmModule`, `PersistenceModule` and `PipelineModule`. `BookLoomApplication.init` builds its
-injector from `CoreModules` plus `UiModule`; `bootstrap.TranslateLauncher` (the `./gradlew :app:translate` entry
-point) builds its injector from `CoreModules` alone — it never starts JavaFX.
+`DocumentModule`, `LlmModule`, the persistence module handed to its constructor and `PipelineModule`.
+`BookLoomApplication.init` builds its injector from `CoreModules(startup, SqlitePersistenceModule)` plus `UiModule`; `bootstrap.TranslateLauncher` (the `./gradlew :app:translate` entry
+point) builds its injector from `CoreModules(startup, InMemoryPersistenceModule)` alone, so it never creates `bookloom.db` — it never starts JavaFX.
 
 ## composition-root {#composition-root}
 
@@ -39,7 +39,7 @@ point) builds its injector from `CoreModules` alone — it never starts JavaFX.
 ```java
 Injector injector = Guice.createInjector(
     new AppModule(startup),
-    new PersistenceModule(),
+    new SqlitePersistenceModule(paths.databaseFile(), clock),  // InMemoryPersistenceModule on the command line
     new LlmModule(),
     new DocumentModule(),
     new PipelineModule(),

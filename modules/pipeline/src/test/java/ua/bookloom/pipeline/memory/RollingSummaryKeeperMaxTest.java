@@ -31,7 +31,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.RollingSummary;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -52,7 +52,7 @@ class RollingSummaryKeeperMaxTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         summaries = injector.getInstance(SummaryRepository.class);
         model = new ScriptedChatModel();
         final CallFrame frame =

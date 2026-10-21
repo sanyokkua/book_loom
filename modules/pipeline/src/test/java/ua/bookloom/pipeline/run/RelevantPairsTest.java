@@ -19,7 +19,7 @@ import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 
@@ -51,7 +51,7 @@ class RelevantPairsTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         segments = injector.getInstance(SegmentRepository.class);
         pending = new PendingCommit(injector.getInstance(CheckpointPort.class), PROJECT);
         document = IndexTestBooks.oneUnit(LINES.toArray(String[]::new));

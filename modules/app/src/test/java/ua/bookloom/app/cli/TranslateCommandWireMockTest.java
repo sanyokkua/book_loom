@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -179,7 +180,7 @@ class TranslateCommandWireMockTest {
                 AppPaths.of(tempDir.resolve("data"), logDir),
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> null, name -> null));
-        return Guice.createInjector(new CoreModules(startup))
+        return Guice.createInjector(new CoreModules(startup, new InMemoryPersistenceModule()))
                 .getInstance(TranslateCommand.class)
                 .run(arguments, new PrintStream(console, true, StandardCharsets.UTF_8));
     }

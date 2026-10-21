@@ -37,6 +37,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
@@ -88,7 +89,8 @@ class ReviewPauseDeskIntegrationTest {
                 ReviewModeResolver.resolve(
                         name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "manual" : null, name -> null));
         final Stage stage = FxToolkit.registerPrimaryStage();
-        injector = Guice.createInjector(Modules.override(new CoreModules(startup), new UiModule())
+        injector = Guice.createInjector(Modules.override(
+                        new CoreModules(startup, new InMemoryPersistenceModule()), new UiModule())
                 .with(new AbstractModule() {
                     @Override
                     protected void configure() {

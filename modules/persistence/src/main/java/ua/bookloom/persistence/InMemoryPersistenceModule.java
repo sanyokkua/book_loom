@@ -30,15 +30,15 @@ import ua.bookloom.persistence.memory.InMemorySummaryRepository;
 import ua.bookloom.persistence.memory.InMemoryTmRepository;
 
 /**
- * Guice bindings owned by {@code :persistence} — every repository port bound to its in-memory adapter, all sharing
- * one shared in-memory store singleton per injector ({@code ua.bookloom.persistence.memory.InMemoryStore}, scoped by
- * its own class-level {@code @Singleton} rather than bound here, since it is package-private to {@code .memory}
- * (ADR-0034). A later change rebinds these ports to SQLite-backed adapters without touching a caller.
+ * Every storage port bound to its in-memory adapter, all sharing one store singleton per injector
+ * ({@code ua.bookloom.persistence.memory.InMemoryStore}, scoped by its own class-level {@code @Singleton} rather than
+ * bound here, since it is package-private to {@code .memory}; ADR-0034). The command line and the tests install
+ * this variant so nothing is written to disk; the window installs {@link SqlitePersistenceModule}.
  */
-public final class PersistenceModule extends AbstractModule {
+public final class InMemoryPersistenceModule extends AbstractModule {
 
     /** Installed by the composition root in {@code :app}. */
-    public PersistenceModule() {
+    public InMemoryPersistenceModule() {
         // Guice modules are constructed, not injected.
     }
 

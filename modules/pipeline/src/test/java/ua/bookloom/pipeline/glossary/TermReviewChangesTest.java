@@ -22,7 +22,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -48,7 +48,7 @@ class TermReviewChangesTest {
 
     @BeforeEach
     void setUp() {
-        glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
         review = new TermReview(
                 new PromptTemplates(),

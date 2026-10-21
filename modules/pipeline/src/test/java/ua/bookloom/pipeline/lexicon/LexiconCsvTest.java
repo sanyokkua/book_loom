@@ -25,7 +25,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.glossary.CsvRecords;
@@ -50,7 +50,10 @@ class LexiconCsvTest {
 
     private static Injector injector() {
         return Guice.createInjector(
-                new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule());
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                new PipelineModule(),
+                new ReviewModeTestModule());
     }
 
     @BeforeEach

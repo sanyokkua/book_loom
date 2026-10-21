@@ -152,7 +152,8 @@ public final class SqliteDatabase implements AutoCloseable {
 
     private static String callSite() {
         return StackWalker.getInstance()
-                .walk(frames -> frames.filter(f -> f.getDeclaringClass() != SqliteDatabase.class)
+                .walk(frames -> frames.filter(
+                                f -> !SqliteDatabase.class.getName().equals(f.getClassName()))
                         .findFirst()
                         .map(f -> f.getClassName() + "." + f.getMethodName() + ":" + f.getLineNumber())
                         .orElse("unknown"));

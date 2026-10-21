@@ -33,7 +33,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 
 /** Import, brief update, plan and close over the real document module and the in-memory repositories. */
@@ -54,7 +54,7 @@ class ProjectServiceImplTest {
     void setUp() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         documents = injector.getInstance(DocumentPort.class);

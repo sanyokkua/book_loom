@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.project.TmEntry;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** Context-aware reuse, hints and suggestions over the in-memory translation-memory repository. */
 class TranslationMemoryTest {
@@ -27,7 +27,7 @@ class TranslationMemoryTest {
 
     @BeforeEach
     void setUp() {
-        repository = Guice.createInjector(new PersistenceModule()).getInstance(TmRepository.class);
+        repository = Guice.createInjector(new InMemoryPersistenceModule()).getInstance(TmRepository.class);
         memory = new TranslationMemory(repository, PROJECT);
     }
 

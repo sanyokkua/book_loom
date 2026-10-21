@@ -36,7 +36,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestProjects;
 import ua.bookloom.pipeline.project.OpenProjects;
 
@@ -49,7 +49,7 @@ class WorkListTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
         stores = new RunStores(
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),

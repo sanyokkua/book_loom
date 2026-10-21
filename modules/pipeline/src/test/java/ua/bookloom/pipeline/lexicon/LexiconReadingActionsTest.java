@@ -32,7 +32,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RenderingOrigin;
 import ua.bookloom.api.project.TargetOrigin;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.PreScan;
@@ -70,7 +70,7 @@ class LexiconReadingActionsTest {
     @BeforeEach
     void open() {
         desk = ReviewFixtures.markdown(tempDir, String.join("\n\n", Collections.nCopies(8, PARAGRAPH)) + "\n");
-        lexicon = Guice.createInjector(new PersistenceModule()).getInstance(LexiconRepository.class);
+        lexicon = Guice.createInjector(new InMemoryPersistenceModule()).getInstance(LexiconRepository.class);
         final PromptTemplates templates = new PromptTemplates();
         final ObjectMapper mapper = new ObjectMapper();
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);

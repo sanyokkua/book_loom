@@ -41,7 +41,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
@@ -63,7 +63,7 @@ class TranslationJobBrandTest {
 
     private final Injector injector = Guice.createInjector(
             new DocumentModule(),
-            new PersistenceModule(),
+            new InMemoryPersistenceModule(),
             binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
 
     @AfterEach

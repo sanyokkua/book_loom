@@ -33,7 +33,7 @@ import ua.bookloom.util.text.GlossaryKeys;
  * its own; only a multi-record read (first-pending, counts, flagged, by-unit, all) and a multi-record write
  * (loading a project's segments, committing a chunk) take this lock, for reading and writing respectively.
  *
- * <p>{@code @Singleton} is declared on the class itself, rather than bound in {@code PersistenceModule}, because
+ * <p>{@code @Singleton} is declared on the class itself, rather than bound in {@code InMemoryPersistenceModule}, because
  * this class is package-private to {@code .memory} and so cannot be named from the {@code ua.bookloom.persistence}
  * package the module lives in; Guice's implicit (JIT) binding still honours a class-level scope annotation.
  */

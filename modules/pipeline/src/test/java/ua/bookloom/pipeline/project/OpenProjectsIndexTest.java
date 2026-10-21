@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
@@ -45,7 +45,7 @@ class OpenProjectsIndexTest {
     void setUp() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);

@@ -30,7 +30,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The decisions a run has made and not yet stored, with the memory entries they write, and the promise that a stored
@@ -51,7 +51,7 @@ class PendingCommitTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         segments = injector.getInstance(SegmentRepository.class);
         runs = injector.getInstance(RunRepository.class);
         checkpoint = injector.getInstance(CheckpointPort.class);

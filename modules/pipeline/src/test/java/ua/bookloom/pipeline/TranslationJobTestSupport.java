@@ -48,7 +48,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
@@ -75,7 +75,8 @@ final class TranslationJobTestSupport {
 
     /** Imports through the injector's own document port, wrapped by {@code decorate} for the job. */
     static TestProject project(final UnaryOperator<DocumentPort> decorate, final Path book, final BookBrief brief) {
-        return project(Guice.createInjector(new DocumentModule(), new PersistenceModule()), decorate, book, brief);
+        return project(
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule()), decorate, book, brief);
     }
 
     /** Imports through the given injector, so a test can reach other services over the same stores. */

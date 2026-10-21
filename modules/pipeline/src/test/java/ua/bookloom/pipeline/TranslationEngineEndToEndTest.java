@@ -43,7 +43,7 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** Proves the public engine translates every supported generated book through the real document module. */
 // `slow`: a whole run end to end; `test` and the gate run it, the `fastTest` inner loop leaves it out.
@@ -134,7 +134,7 @@ class TranslationEngineEndToEndTest {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new PipelineModule(),
                 new ReviewModeTestModule());
         final ProjectService projects = injector.getInstance(ProjectService.class);
@@ -193,7 +193,7 @@ class TranslationEngineEndToEndTest {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new PipelineModule(),
                 new ReviewModeTestModule());
         final DocumentPort documents = injector.getInstance(DocumentPort.class);

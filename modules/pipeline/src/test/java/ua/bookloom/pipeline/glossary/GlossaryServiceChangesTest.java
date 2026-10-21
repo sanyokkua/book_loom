@@ -34,7 +34,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.project.OpenProjects;
 
@@ -50,7 +50,7 @@ class GlossaryServiceChangesTest {
     void setUp() {
         injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)));
         service = injector.getInstance(GlossaryServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);

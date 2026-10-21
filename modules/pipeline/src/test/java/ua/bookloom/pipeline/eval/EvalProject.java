@@ -23,7 +23,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
@@ -183,7 +183,7 @@ public final class EvalProject {
             final List<Segment> chunk,
             final ModelCalls calls,
             final BatchDrafter drafter) {
-        final var injector = Guice.createInjector(new PersistenceModule());
+        final var injector = Guice.createInjector(new InMemoryPersistenceModule());
         final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
         final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
         setup.glossary().forEach(term -> glossary.add(term.entry(PROJECT)));

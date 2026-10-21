@@ -20,7 +20,7 @@ import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * A gender the person chooses for one spelling of a name is chosen for the person (15i.N2): the other members of the
@@ -39,7 +39,7 @@ class GlossaryClusterGenderServiceTest {
     void setUp() {
         service = Guice.createInjector(
                         new DocumentModule(),
-                        new PersistenceModule(),
+                        new InMemoryPersistenceModule(),
                         binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
                 .getInstance(GlossaryServiceImpl.class);
     }

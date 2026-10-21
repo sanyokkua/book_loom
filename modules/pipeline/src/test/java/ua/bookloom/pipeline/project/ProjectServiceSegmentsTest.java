@@ -26,7 +26,7 @@ import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 
 /** The Structure screen's segment listing over the real document module, checked against the plan it must agree with. */
@@ -43,7 +43,7 @@ class ProjectServiceSegmentsTest {
     void setUp() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ProjectServiceImpl.class);
     }

@@ -72,7 +72,7 @@ map of every module is `docs/implementation_plan/01_MODULE_INVENTORY.md`.
 `ReviewMode` resolved at launch, a background pool and a virtual-thread IO executor), `DocumentModule` (`DocumentPort`,
 `BookInspector`, `SentenceSplitter`), `LlmModule` (`ChatModelFactory`, `ProviderVerifier`, `ModelCatalog`,
 `ProviderConfigs` with the offline `pseudo` provider and the in-memory `ollama`/`lmstudio` presets),
-`PersistenceModule` (every repository port to its in-memory adapter, singletons over one `InMemoryStore`) and
+`CoreModules` takes the storage module as an argument: `InMemoryPersistenceModule` (every repository port to its in-memory adapter, singletons over one `InMemoryStore`; the command line) or `SqlitePersistenceModule` (the same ports to the SQLite adapters over one `SqliteDatabase`; the window) and
 `PipelineModule` (`TranslationEngine`, `ProjectService`, `ExportService`, `GlossaryService`, `LexiconService`,
 `NamesPass`, `ReviewDesk`, `SetupAssistant`, the prompt templates and the bundled language rules). The desktop app adds
 `UiModule` and `DesktopModule` (the operating system's keep-awake); `./gradlew :app:translate` installs `CoreModules`

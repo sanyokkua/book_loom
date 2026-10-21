@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.IoExecutor;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.util.paths.AppEnvironment;
@@ -141,7 +142,8 @@ class AppBootSmokeTest {
     // built the way BookLoomApplication.init builds it must resolve every service port up front.
     @Test
     void injector_coreModulesAndUiModule_resolveEveryServicePort() throws Exception {
-        final Injector injector = Guice.createInjector(new CoreModules(startup()), new UiModule());
+        final Injector injector =
+                Guice.createInjector(new CoreModules(startup(), new InMemoryPersistenceModule()), new UiModule());
 
         assertThat(injector.getInstance(ProjectService.class)).isNotNull();
         assertThat(injector.getInstance(GlossaryService.class)).isNotNull();

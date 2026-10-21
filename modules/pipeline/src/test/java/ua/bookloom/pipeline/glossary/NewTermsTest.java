@@ -22,7 +22,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The proposals that survive the glossary the person already holds and the names they removed. */
 class NewTermsTest {
@@ -33,7 +33,7 @@ class NewTermsTest {
 
     @BeforeEach
     void setUp() {
-        glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
     }
 

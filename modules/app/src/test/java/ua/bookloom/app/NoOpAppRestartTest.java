@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppRestart;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -26,8 +27,8 @@ class NoOpAppRestartTest {
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> null, name -> null));
 
-        final AppRestart restart =
-                Guice.createInjector(new CoreModules(startup)).getInstance(AppRestart.class);
+        final AppRestart restart = Guice.createInjector(new CoreModules(startup, new InMemoryPersistenceModule()))
+                .getInstance(AppRestart.class);
 
         assertThatCode(restart::restart).doesNotThrowAnyException();
     }

@@ -36,7 +36,7 @@ import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -287,7 +287,7 @@ public final class ReviewFixtures {
     }
 
     private static Desk open(final Path book, final BookBrief brief) {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
         final DocumentPort documents = injector.getInstance(DocumentPort.class);
         final OpenProjects openProjects = injector.getInstance(OpenProjects.class);
         final ProjectRepository projects = injector.getInstance(ProjectRepository.class);

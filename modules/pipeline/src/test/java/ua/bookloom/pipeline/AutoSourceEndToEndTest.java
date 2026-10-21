@@ -31,7 +31,7 @@ import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * A French plain-text book with no metadata, translated with the source language Auto: the person chose nothing and the
@@ -154,7 +154,7 @@ class AutoSourceEndToEndTest {
         return Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new PipelineModule(),
                 new ReviewModeTestModule());
     }

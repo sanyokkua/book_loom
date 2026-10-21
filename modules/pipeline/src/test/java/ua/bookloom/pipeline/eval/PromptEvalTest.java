@@ -24,7 +24,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
@@ -151,7 +151,7 @@ class PromptEvalTest {
 
     /** An injector whose provider registry holds one provider at {@code url}: LM Studio's dialect or Ollama's. */
     static Injector registeredProvider(final String url, final boolean lmStudio) {
-        final Injector injector = Guice.createInjector(new LlmModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new InMemoryPersistenceModule());
         final ProviderConfig config = new ProviderConfig(
                 PROVIDER_ID,
                 lmStudio ? ProviderKind.OPENAI_COMPATIBLE : ProviderKind.OLLAMA,

@@ -33,7 +33,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.retry.RetryPolicy;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** A real provider client pointed at a WireMock server, speaking either the Ollama-native or the OpenAI dialect. */
 final class WireMockProvider implements AutoCloseable {
@@ -78,8 +78,9 @@ final class WireMockProvider implements AutoCloseable {
             final Duration requestTimeout, final RetryPolicy.Sleeper sleeper, final int count) {
         final URI base = URI.create(kind == ProviderKind.OLLAMA ? server.baseUrl() : server.baseUrl() + "/v1");
         final RetryPolicy policy = new RetryPolicy(Clock.systemUTC(), () -> 0.5, sleeper);
-        final Injector injector = Guice.createInjector(Modules.override(new LlmModule(), new PersistenceModule())
-                .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
+        final Injector injector =
+                Guice.createInjector(Modules.override(new LlmModule(), new InMemoryPersistenceModule())
+                        .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
         injector.getInstance(ProviderConfigs.class)
                 .save(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout));
         final ChatModelFactory factory = injector.getInstance(ChatModelFactory.class);

@@ -46,6 +46,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.UiModule;
@@ -108,7 +109,8 @@ abstract class WorkspaceTestBase {
         // replace one. It therefore skips AppLifecycle's two phases, which hold nothing yet; when persistence fills
         // phase two this test must run it too.
         injector = Guice.createInjector(
-                Modules.override(new CoreModules(startup), new UiModule()).with(new PseudoOnlyModule(), extra));
+                Modules.override(new CoreModules(startup, new InMemoryPersistenceModule()), new UiModule())
+                        .with(new PseudoOnlyModule(), extra));
         shell = injector.getInstance(AppShellView.class);
         watchPauses();
         onFx(() -> {

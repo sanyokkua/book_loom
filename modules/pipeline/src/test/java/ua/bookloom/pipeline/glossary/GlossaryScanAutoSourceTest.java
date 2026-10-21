@@ -18,7 +18,7 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** The deterministic glossary scan of a book whose source language is Auto and which declares none. */
@@ -31,7 +31,7 @@ class GlossaryScanAutoSourceTest {
     void setUp() {
         final var injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)));
         service = injector.getInstance(GlossaryServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);

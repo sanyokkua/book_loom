@@ -17,7 +17,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.eval.StageCases.HeldTerm;
 import ua.bookloom.pipeline.eval.StageCases.TermVerdict;
 import ua.bookloom.pipeline.eval.StageCases.TermsCase;
@@ -90,7 +90,7 @@ final class TermsEvalRunner {
 
     private StageRow review(final TermsCase termsCase) {
         final GlossaryRepository glossary =
-                Guice.createInjector(new PersistenceModule()).getInstance(GlossaryRepository.class);
+                Guice.createInjector(new InMemoryPersistenceModule()).getInstance(GlossaryRepository.class);
         termsCase.glossary().forEach(held -> glossary.add(entry(held)));
         final int mark = probe.mark();
         final BookBrief brief = StageFrames.brief(termsCase.source(), termsCase.target());

@@ -23,7 +23,7 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 
 /** An import that fails after the book was opened leaves no open book and no open document behind. */
@@ -38,7 +38,7 @@ class ProjectServiceImportFailureTest {
     void importBook_storeThrows_closesTheDocumentAndRegistersNothing() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         final List<Document> closed = new CopyOnWriteArrayList<>();
         final List<String> projectIds = new CopyOnWriteArrayList<>();

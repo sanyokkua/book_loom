@@ -24,7 +24,7 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -39,7 +39,10 @@ class TranslationEngineImplTest {
     @Test
     void injector_pipelineModule_resolvesTranslationEngineImpl() {
         final TranslationEngine engine = Guice.createInjector(
-                        new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule())
+                        new DocumentModule(),
+                        new InMemoryPersistenceModule(),
+                        new PipelineModule(),
+                        new ReviewModeTestModule())
                 .getInstance(TranslationEngine.class);
 
         assertThat(engine).isInstanceOf(TranslationEngineImpl.class);

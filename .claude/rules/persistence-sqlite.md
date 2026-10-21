@@ -4,13 +4,17 @@ Scope: `:persistence` (`ua.bookloom.persistence..`). Spec: `docs/specification/0
 
 ## Current status
 
-`:persistence` keeps an in-memory adapter for every `:api` repository port in
-`modules/persistence/src/main/java/ua/bookloom/persistence/memory/` (ADR-0034); the command line and the tests still
-bind these. By ADR-0043 the desktop window will bind SQLite adapters instead — planned by `finalize-ui-and-persistence`, not built until its group 3; today every port is in memory (sqlite-jdbc in WAL mode, JDBI's fluent API,
-state kept as JSON documents in a few tables, real columns only where an index, a uniqueness rule or a cascade needs
-them), so settings, providers, books and projects then survive a restart. The abstract
-`modules/persistence/src/test/java/ua/bookloom/persistence/contract/RepositoryContractTest.java` is to run against both
-adapter families once the SQLite one exists. There is no schema migration before the first release (ADR-0043): one schema file, and a database
+`:persistence` has two adapter families behind the `:api` storage ports, each with its own Guice module in
+`ua.bookloom.persistence`. `InMemoryPersistenceModule` binds the in-memory adapters
+(`.../persistence/memory/`, ADR-0034); the command line (`TranslateLauncher`) and most tests install it, and it never
+creates `bookloom.db`. `SqlitePersistenceModule(file, clock)` binds the SQLite adapters (`.../persistence/sqlite/`;
+sqlite-jdbc in WAL mode, JDBI's fluent API, state kept as JSON documents in a few tables, real columns only where an
+index, a uniqueness rule or a cascade needs them; ADR-0043) over one singleton `SqliteDatabase`; the window installs
+it through `CoreModules(startup, persistenceModule)`, `AppLifecycle` phase 2 opens the database at
+`AppPaths.databaseFile()` (an open failure is a startup error) and `BookLoomApplication.stop()` closes it. So settings,
+providers, books and projects survive a restart in the window only. The abstract
+`modules/persistence/src/test/java/ua/bookloom/persistence/contract/RepositoryContractTest.java` runs against both
+adapter families. There is no schema migration before the first release (ADR-0043): one schema file, and a database
 whose `PRAGMA user_version` differs from it, or that cannot be opened, is renamed aside and a fresh one created.
 
 ## MUST

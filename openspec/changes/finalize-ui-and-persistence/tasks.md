@@ -281,7 +281,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     `backupTo` returns a not-yet-available error until 7.4).
   - Contract tests over both adapters, including "a stored provider row contains `${env:LMS_KEY}` and never a key
     value", and "a fresh SQLite provider list is empty". → :persistence
-- [ ] 3.6 Split the persistence module into in-memory and SQLite variants and open the database at boot, so the window
+- [x] 3.6 Split the persistence module into in-memory and SQLite variants and open the database at boot, so the window
   stores its state while the command line still keeps nothing.
   - **Satisfies:** local-storage "Keep nothing on disk from the command line"; local-storage "Keep the database in the
     per-user data folder under a single running instance"; local-storage "Keep the application's work across a restart";

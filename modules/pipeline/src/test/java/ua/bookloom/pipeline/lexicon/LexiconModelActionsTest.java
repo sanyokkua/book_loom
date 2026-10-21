@@ -23,7 +23,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.LexiconReading;
@@ -52,7 +52,7 @@ class LexiconModelActionsTest {
     @BeforeEach
     void open() {
         desk = ReviewFixtures.markdown(tempDir, (PENTACLE + TABLE).repeat(8) + "\n");
-        lexicon = Guice.createInjector(new PersistenceModule()).getInstance(LexiconRepository.class);
+        lexicon = Guice.createInjector(new InMemoryPersistenceModule()).getInstance(LexiconRepository.class);
         model = new ScriptedChatModel();
         final PromptTemplates templates = new PromptTemplates();
         final ObjectMapper mapper = new ObjectMapper();
