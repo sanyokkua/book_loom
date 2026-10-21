@@ -47,6 +47,27 @@ public final class DurationText {
     }
 
     /**
+     * Words a rounded time left: "about 20 min", "about 2 h" or "about 1 h 40 min".
+     *
+     * @param messages the catalogue that words the units in the display language
+     * @param duration a positive length of time already rounded to the minute below an hour and to ten minutes above
+     * @return the text, which starts with the word for "about"
+     */
+    public static String about(final Messages messages, final Duration duration) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(duration, "duration");
+        final long minutes = duration.toMinutes();
+        if (minutes < MINUTES_PER_HOUR) {
+            return messages.get(MessageKey.DURATION_ABOUT_M, Long.toString(Math.max(1, minutes)));
+        }
+        final long rest = minutes % MINUTES_PER_HOUR;
+        final String hours = Long.toString(minutes / MINUTES_PER_HOUR);
+        return rest == 0
+                ? messages.get(MessageKey.DURATION_ABOUT_H, hours)
+                : messages.get(MessageKey.DURATION_ABOUT_HM, hours, Long.toString(rest));
+    }
+
+    /**
      * The waiting clock.
      *
      * @param seconds whole seconds, not negative

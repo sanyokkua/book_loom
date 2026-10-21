@@ -146,7 +146,7 @@ public final class ProgressDialogModel {
         final ProgressFigures.Figures before = figures.get();
         return read.percent() >= before.percent()
                 ? read
-                : new ProgressFigures.Figures(before.percent(), read.done(), read.total(), read.left());
+                : read.holding(before.percent(), Math.max(before.fraction(), read.fraction()));
     }
 
     private void attach(final @Nullable StepEntry running, final @Nullable CallSnapshot call) {

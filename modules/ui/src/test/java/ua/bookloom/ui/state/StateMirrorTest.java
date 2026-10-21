@@ -76,7 +76,7 @@ class StateMirrorTest extends FxTestBase {
             mirror.flagged().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.remaining().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.total().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
-            mirror.progressFraction().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
+            mirror.live().progress().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.failure().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.report().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.activityLog()
@@ -123,7 +123,7 @@ class StateMirrorTest extends FxTestBase {
         assertThat(onFx(() -> mirror.flagged().get())).isZero();
         assertThat(onFx(() -> mirror.remaining().get())).isZero();
         assertThat(onFx(() -> mirror.total().get())).isZero();
-        assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(0.0);
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
         assertThat(onFx(() -> mirror.failure().get())).isNull();
         assertThat(onFx(() -> mirror.report().get())).isNull();
         assertThat(onFx(() -> mirror.activityLog().size())).isZero();
@@ -218,7 +218,7 @@ class StateMirrorTest extends FxTestBase {
         assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(3);
         assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(469);
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(1240);
-        assertThat(onFx(() -> mirror.progressFraction().get())).isCloseTo(0.6217741935483871, within(1e-12));
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isCloseTo(0.6217741935483871, within(1e-12));
     }
 
     // IF the position columns were dropped, THEN the dashboard could not say which chapter and chunk it is in.
@@ -257,7 +257,7 @@ class StateMirrorTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(1240);
-        assertThat(onFx(() -> mirror.progressFraction().get())).isCloseTo(0.6217741935483871, within(1e-12));
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isCloseTo(0.6217741935483871, within(1e-12));
     }
 
     // IF an all-zero snapshot divided by zero, THEN the bar would be NaN or the publish would fail.
@@ -268,7 +268,7 @@ class StateMirrorTest extends FxTestBase {
         mirror.publishProgress(ProgressFixtures.progress(0, 0, 0, 0, 0));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(0.0);
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
         assertThat(onFx(() -> mirror.total().get())).isZero();
     }
 
@@ -318,7 +318,7 @@ class StateMirrorTest extends FxTestBase {
         assertThat(onFx(() -> mirror.flagged().get())).isZero();
         assertThat(onFx(() -> mirror.remaining().get())).isZero();
         assertThat(onFx(() -> mirror.total().get())).isZero();
-        assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(0.0);
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
         assertThat(onFx(() -> mirror.activityLog().size())).isZero();
         assertThat(onFx(() -> mirror.failure().get())).isNull();
         assertThat(onFx(() -> mirror.report().get())).isNull();

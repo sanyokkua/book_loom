@@ -63,7 +63,7 @@ public final class BusyHost {
     private final ActivityTracker activities;
     private final Messages messages;
     private final ProgressDialogDefaults defaults;
-    private final ProgressFigures figures;
+    private final ProgressFigures.Factory figures;
     private final WorkVisibility work;
     private final ConfirmDialog confirm;
     private final StackPane host = new StackPane();
@@ -87,7 +87,7 @@ public final class BusyHost {
      * @param messages the catalogue every word of the dialogs comes from
      * @param modalHost the dialog layer above this one, whose card takes the keyboard while it is shown
      * @param defaults the view a new dialog opens in
-     * @param figures how a dialog's figures line is read from its steps
+     * @param figures how each dialog gets its own reader of its figures
      * @param work where this layer says whether a dialog is showing
      * @param confirm the question asked before the export is cancelled, shown on the layer above
      */
@@ -97,7 +97,7 @@ public final class BusyHost {
             final Messages messages,
             final ModalHost modalHost,
             final ProgressDialogDefaults defaults,
-            final ProgressFigures figures,
+            final ProgressFigures.Factory figures,
             final WorkVisibility work,
             final ConfirmDialog confirm) {
         this.activities = Objects.requireNonNull(activities, "activities");
@@ -200,7 +200,7 @@ public final class BusyHost {
     private Shown build(final Activity first) {
         final ProgressDialogModel.Mode mode = defaults.initialMode().get();
         log.debug("work layer: a progress dialog for {} #{} opens in {}", first.kind(), first.id(), mode);
-        final ProgressDialogModel model = new ProgressDialogModel(first, figures, mode, activities::now);
+        final ProgressDialogModel model = new ProgressDialogModel(first, figures.create(), mode, activities::now);
         final long id = first.id();
         final Runnable hide = first.kind().isHideable() ? () -> activities.hide(id) : null;
         return new Shown(model, new ProgressDialog(model, messages, () -> cancel(first.kind(), id), hide));

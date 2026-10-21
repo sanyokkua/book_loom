@@ -136,8 +136,8 @@ count within the current section's chunking. `pending` leaves out segments kept 
 
 Counts are locale-formatted for display (`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`). Time left and the
 progress bar are specified to count all the work of the operation — steps, not segments (`mockups/README.md`, G10);
-that `ProgressPlan` / `ProgressLedger` replacement of the segment percentage in `RunFigures` and of `RunClock`'s
-last-20-segments window is **planned**.
+`state/ProgressLedger` is built (finalize 5.4): it replaced the segment percentage in `RunFigures` and `RunClock`'s
+last-20-segments window, and the mirror's `progress()` property carries its figures.
 
 **The publishers** (each wraps `Platform.runLater`, so engine threads call plain methods): `publishRunStarted()`,
 `publishRunState(RunState)`, `publishWaitingSeconds(int)`, `publishProgress(JobProgress)`,

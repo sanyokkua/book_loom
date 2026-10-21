@@ -25,11 +25,14 @@ public final class LiveSection {
 
     private final ReadOnlyObjectWrapper<LiveCalls> calls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private final ReadOnlyObjectWrapper<Throughput> throughput = new ReadOnlyObjectWrapper<>(Throughput.EMPTY);
+    private final ReadOnlyObjectWrapper<ProgressFigures.Figures> progress =
+            new ReadOnlyObjectWrapper<>(ProgressFigures.Figures.NONE);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suspicious = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
             new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
+    private boolean counting;
     private final ObservableList<FlaggedRow> queue = FXCollections.observableArrayList();
     private final ObservableList<FlaggedRow> readOnlyQueue = FXCollections.unmodifiableObservableList(queue);
 
@@ -49,6 +52,15 @@ public final class LiveSection {
      */
     public ReadOnlyObjectProperty<Throughput> throughput() {
         return throughput.getReadOnlyProperty();
+    }
+
+    /**
+     * The steps of the run counted into the one share the bars and the title read, with the time left.
+     *
+     * @return the read-only figures; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<ProgressFigures.Figures> progress() {
+        return progress.getReadOnlyProperty();
     }
 
     /**
@@ -136,6 +148,26 @@ public final class LiveSection {
     }
 
     /**
+     * Shows the run's steps counted into one share. From the first call on, the segment count no longer sets the share.
+     *
+     * @param steps the figures the run's ledger read
+     */
+    public void publishSteps(final ProgressFigures.Figures steps) {
+        Objects.requireNonNull(steps, "steps");
+        Platform.runLater(() -> {
+            counting = true;
+            progress.set(steps);
+        });
+    }
+
+    // The share counted from the segments alone, for a mirror whose run has not published its steps.
+    void showCount(final int done, final int total) {
+        if (!counting) {
+            progress.set(ProgressFigures.Figures.ofCount(done, total));
+        }
+    }
+
+    /**
      * Shows how many segments the run kept as source.
      *
      * @param count the non-negative count
@@ -181,6 +213,8 @@ public final class LiveSection {
     void reset() {
         calls.set(LiveCalls.EMPTY);
         throughput.set(Throughput.EMPTY);
+        counting = false;
+        progress.set(ProgressFigures.Figures.NONE);
         sourceKept.set(0);
         suspicious.set(0);
         waitingCall.set(null);

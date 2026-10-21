@@ -1,17 +1,27 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.time.Duration;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
+import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 
-/** Tokens per second, the time left and the elapsed time a run reports. */
+/** Tokens per second, the time left from the step events and the elapsed time a run reports. */
 class RunSessionPaceTest extends LiveSessionTestBase {
 
     private static final Duration THREE_SECONDS = Duration.ofSeconds(3);
@@ -65,52 +75,71 @@ class RunSessionPaceTest extends LiveSessionTestBase {
         assertThat(throughput().tokensPerSecond()).isNull();
     }
 
-    // IF an estimate showed before the model was warm, THEN the first slow segments would promise a wrong end.
-    @Test
-    void timeLeft_afterFourDecisions_isNotReported() {
-        final RunSession session = session();
+    /** The run's first snapshot, which tells the ledger how many segments the book has. */
+    private void begin(final RunSession session, final int segments) {
+        session.onEvent(new StageStarted(JobStage.TRANSLATE, progress(0, 0, segments)));
+        session.onEvent(new StepsPlanned(StepKind.DRAFT, segments, false));
+    }
 
-        decideEvery(session, 4, 12);
+    /** Ends {@code count} draft steps, each {@code seconds} after the last. */
+    private void endDrafts(final RunSession session, final int count, final long seconds) {
+        IntStream.range(0, count).forEach(n -> {
+            clock.advance(Duration.ofSeconds(seconds));
+            session.onEvent(new StepChanged(StepKind.DRAFT, "draft", n, StepState.ENDED, null, StepResult.DONE));
+        });
+    }
+
+    // IF an estimate showed before enough steps were timed, THEN the first slow ones would promise a wrong end.
+    @Test
+    void timeLeft_afterFourDraftSteps_isNotReported() {
+        final RunSession session = session();
+        begin(session, 276);
+
+        endDrafts(session, 4, 12);
         tick(session);
 
         assertThat(throughput().timeLeft()).isNull();
     }
 
-    // IF the average were not seconds per segment times the pending ones, THEN the estimate would be wrong.
+    // IF the time left were not steps left times the measured seconds, THEN the estimate would be wrong.
     @Test
-    void timeLeft_afterFiveDecisionsOfTwelveSeconds_isTwentyMinutes() {
+    void timeLeft_fiveDraftStepsOfTwelveSecondsWith100Left_isAbout20Minutes() {
         final RunSession session = session();
+        begin(session, 105);
 
-        decideEvery(session, 5, 12);
+        endDrafts(session, 5, 12);
         tick(session);
 
         assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(20));
     }
 
-    // IF the segments before the last twenty still weighed in, THEN a run that sped up after warming would keep
-    // promising its slow start.
+    // IF a slow stretch weighed more than the whole run, THEN the old window's problem would be back: a recent slow
+    // spell projected over the book.
     @Test
-    void timeLeft_twentySlowThenTwentyFastSegments_followsOnlyTheLastTwenty() {
+    void timeLeft_aSlowStretchAfterSteadySteps_isAveragedOverTheWholeRun() {
         final RunSession session = session();
-
-        decideEvery(session, WINDOW, 60);
-        decideEvery(session, WINDOW, 12);
+        begin(session, 120);
+        endDrafts(session, 20, 12);
+        endDrafts(session, 20, 60);
         tick(session);
 
-        assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(20));
+        // 80 left at (20 x 12 s + 20 x 60 s) / 40 = 36 s: 2,880 s = 48 min.
+        assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(48));
     }
 
-    // IF one slow segment moved the estimate by a fifth of its excess, THEN the time left would leap from minutes to
-    // hours on a single hard paragraph; over twenty segments it moves by a twentieth.
+    // IF a chunk's own plan were the bar's total, THEN the bar would be full at the end of every chunk of the book.
     @Test
-    void timeLeft_oneSlowSegmentAfterNineteenSteadyOnes_movesByATwentiethOfItsExcess() {
+    void progress_oneChunkOfABookDone_isNotTheWholeBar() {
         final RunSession session = session();
+        session.onEvent(new StageStarted(JobStage.TRANSLATE, progress(0, 0, 100)));
+        session.onEvent(new StepsPlanned(StepKind.DRAFT, 5, false));
+        endDrafts(session, 5, 12);
+        session.onEvent(new SegmentDecided("s-5", SegmentStatus.ACCEPTED, null, progress(5, 0, 95), null));
 
-        decideEvery(session, WINDOW - 1, 12);
-        decideEvery(session, 1, 252);
         tick(session);
 
-        assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(40));
+        assertThat(onFx(() -> mirror.live().progress().get().percent())).isEqualTo(5);
+        assertThat(onFx(() -> mirror.live().progress().get().total())).isEqualTo(100);
     }
 
     // IF a pause counted as translation time, THEN a lunch break would be shown as a very slow run.

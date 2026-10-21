@@ -9,6 +9,8 @@ import java.util.function.ToIntFunction;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -25,6 +27,7 @@ import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ProgressFigures;
 import ua.bookloom.ui.state.RunFigures;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -48,18 +51,19 @@ final class TranslatingFigures {
     private static final double TILE_SPACING = 12;
     private static final String PART_SEPARATOR = " · ";
     private static final String ERR_BAR = "bar-err";
+    private static final String FRACTION_KEY = "bookloom.progress.fraction";
 
     static Node progressCard(final StateMirror mirror, final Messages messages) {
         final ProgressBar bar = new ProgressBar();
         bar.setId("translating-progress");
         bar.setMaxWidth(Double.MAX_VALUE);
-        Motion.followProgress(bar, mirror.progressFraction());
+        followSteps(bar, mirror, messages);
         followProviderError(bar, mirror);
         final Label line = boundLabel(
                 "translating-progress-text",
                 "muted",
                 () -> progressLine(mirror, messages),
-                mirror.figures(),
+                mirror.live().progress(),
                 mirror.section(),
                 mirror.sections(),
                 mirror.chunk(),
@@ -79,6 +83,25 @@ final class TranslatingFigures {
         card.setId("translating-progress-card");
         card.getStyleClass().add("card");
         return card;
+    }
+
+    // The bar and its tooltip read the same figures, so the steps the tooltip counts are the share the bar shows.
+    private static void followSteps(final ProgressBar bar, final StateMirror mirror, final Messages messages) {
+        final ReadOnlyObjectProperty<ProgressFigures.Figures> steps =
+                mirror.live().progress();
+        final DoubleBinding fraction =
+                Bindings.createDoubleBinding(() -> steps.get().fraction(), steps);
+        // A binding is held weakly by what it watches; the bar keeps it, or the bar would stop following.
+        bar.getProperties().put(FRACTION_KEY, fraction);
+        Motion.followProgress(bar, fraction);
+        Tips.installLive(
+                bar,
+                Bindings.createStringBinding(
+                        () -> messages.get(
+                                MessageKey.PROGRESS_BAR_STEPS,
+                                steps.get().done(),
+                                steps.get().total()),
+                        steps));
     }
 
     // The danger role belongs to the pause on an error only: a resume clears the error, and any other state drops it.
@@ -201,9 +224,10 @@ final class TranslatingFigures {
     }
 
     static String progressLine(final StateMirror mirror, final Messages messages) {
-        final RunFigures figures = mirror.figures().get();
         final List<String> parts = new ArrayList<>();
-        parts.add(messages.get(MessageKey.TRANSLATING_LINE_PERCENT, figures.percent()));
+        parts.add(messages.get(
+                MessageKey.TRANSLATING_LINE_PERCENT,
+                mirror.live().progress().get().percent()));
         if (mirror.sections().get() > 0) {
             parts.add(messages.get(
                     MessageKey.TRANSLATING_LINE_SECTION,
@@ -223,7 +247,7 @@ final class TranslatingFigures {
         Objects.requireNonNull(pace, "pace");
         final List<String> parts = new ArrayList<>();
         if (pace.timeLeft() != null && !state.hasEnded()) {
-            parts.add(messages.get(MessageKey.TRANSLATING_PACE_LEFT, DurationText.format(messages, pace.timeLeft())));
+            parts.add(messages.get(MessageKey.TRANSLATING_PACE_LEFT, DurationText.about(messages, pace.timeLeft())));
         }
         if (pace.tokensPerSecond() != null) {
             final String rate = (pace.estimated() ? "~" : "") + Math.round(pace.tokensPerSecond());

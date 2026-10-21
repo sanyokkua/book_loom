@@ -19,6 +19,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
@@ -254,6 +255,31 @@ class ProgressDialogTest extends ShellTestBase {
     }
 
     // IF Cancel stopped the export at once, THEN one slip would throw away the whole last check.
+    // IF the bar's tooltip did not give the steps, THEN a person could not relate the bar to the text beside it.
+    @Test
+    void bar_hovered_saysHowManyStepsAreDoneIncludingChecks() throws TimeoutException {
+        final ActivityTracker.Handle names = begin(ActivityKind.NAMES_PASS);
+        plan(names, 276);
+        endSteps(names, 140);
+        awaitDialog();
+
+        assertThat(TooltipProbe.tipText(required("progress-bar"))).isEqualTo("140 of 276 steps, checks included");
+    }
+
+    // IF "How progress is counted" listed no kinds, THEN the breakdown the bar promises would be missing.
+    @Test
+    void howCounted_afterSomeSteps_listsEachKindWithItsDoneAndPlannedSteps() throws TimeoutException {
+        final ActivityTracker.Handle names = begin(ActivityKind.NAMES_PASS);
+        plan(names, 10);
+        endSteps(names, 4);
+        awaitDialog();
+
+        final VBox kinds = (VBox) required("progress-how-kinds");
+
+        assertThat(kinds.getChildren()).hasSize(1);
+        assertThat(((Label) kinds.getChildren().getFirst()).getText()).startsWith("Requests: 4 of 10 steps");
+    }
+
     @Test
     void exportCancel_pressed_asksCancelTheExportAboveDialog() throws TimeoutException {
         begin(ActivityKind.EXPORT);

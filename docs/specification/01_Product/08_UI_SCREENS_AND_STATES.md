@@ -286,8 +286,9 @@ work ("51 % done"); text lines count segments ("74 of 142 segments done"); the t
 percentages; the bar's tooltip says "140 of 276 steps, checks included". **ⓘ How progress is counted** opens the
 breakdown per kind of step (planned, done, measured time per step). Estimates before Start appear only from a measured
 speed (the inference test or an earlier run) and are marked "estimate"; without one the screen shows relative cost
-(Balanced ≈ 1.5× Fast, Max ≈ 3×). **Built today:** `RunFigures` counts segments equally and `RunClock` projects the
-average of the last 20 timed segments over all pending segments; a `ProgressPlan` / `ProgressLedger` replaces both.
+(Balanced ≈ 1.5× Fast, Max ≈ 3×). **Built:** `state/ProgressLedger` counts every step of every kind and measures the time per kind
+over the whole operation without pauses (it replaced `RunFigures.percent` and the 20-segment window of `RunClock`);
+`StartEstimates` decides the estimate before Start, and its wiring to the quality card is group 6.3.
 
 ### Words {#words}
 

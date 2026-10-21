@@ -122,10 +122,10 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
     @CsvSource(
             delimiter = '|',
             value = {
-                "time and rate|24.0|false|80|~1h 20m left · 24 tok/s",
-                "estimated rate|24.0|true|80|~1h 20m left · ~24 tok/s",
+                "time and rate|24.0|false|80|about 1 h 20 min left · 24 tok/s",
+                "estimated rate|24.0|true|80|about 1 h 20 min left · ~24 tok/s",
                 "rate only|24.0|false|-1|24 tok/s",
-                "time only|-1|false|80|~1h 20m left"
+                "time only|-1|false|80|about 1 h 20 min left"
             })
     void pace_figuresPublished_omitEachPartWhileUnknown(
             final String name, final double rate, final boolean estimated, final long minutes, final String expected) {

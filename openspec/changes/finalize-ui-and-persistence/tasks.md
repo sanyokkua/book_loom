@@ -563,7 +563,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - hiding long work sets `HiddenWork` to the screen it names, and the activity chip shows "open" (the Names
       screen's own bindings are tested in 6.4).
   - Verify: `grep -rn "new Stage(" modules/ui/src/main` has no hit (the startup-failure stage lives in `:app`). → :ui
-- [ ] 5.4 Replace the 20-segment time-left window with a ledger of all steps, so "52 % in 2 h" reads "about 2 h left"
+- [x] 5.4 Replace the 20-segment time-left window with a ledger of all steps, so "52 % in 2 h" reads "about 2 h left"
   and checks and repairs count.
   - **Satisfies:** app-shell "Show progress as one percentage of steps that never moves back"; app-shell "Show the time
     left only from measured time per kind of step"; app-shell "Show the share of work in the bar and the count of

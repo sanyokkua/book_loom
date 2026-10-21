@@ -53,6 +53,7 @@ final class RunSession implements JobListener {
     private final LiveCallState liveCalls = new LiveCallState();
     private final ThroughputMeter throughputMeter = new ThroughputMeter();
     private final RunClock runClock;
+    private final RunLedger progress;
     private final ActivityLogFeed feed = new ActivityLogFeed();
     private final ReviewDeskReads deskReads;
     private final CallTracker calls;
@@ -83,6 +84,7 @@ final class RunSession implements JobListener {
         Objects.requireNonNull(context, "context");
         this.calls = new CallTracker(mirror, clock, feed);
         this.runClock = new RunClock(clock.instant());
+        this.progress = new RunLedger(runClock);
         this.deskReads = new ReviewDeskReads(desk, executor, mirror.live(), context.projectId());
     }
 
@@ -242,8 +244,8 @@ final class RunSession implements JobListener {
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
             case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
-            case StepsPlanned planned -> log.trace("{} {} steps planned", planned.added(), planned.kind());
-            case StepChanged changed -> log.trace("{} step {} is {}", changed.kind(), changed.index(), changed.state());
+            case StepsPlanned planned -> locked(() -> progress.planned(planned));
+            case StepChanged changed -> onStep(changed);
             case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
         }
     }
@@ -269,13 +271,15 @@ final class RunSession implements JobListener {
             calls.clearWait("a segment was decided");
             feed.decided(decided).ifPresent(this::queue);
             liveCalls.decided(decided);
-            if (RunClock.isTimed(decided)) {
-                runClock.decided(clock.instant());
-            }
         });
         if (decided.status() == SegmentStatus.FLAGGED) {
             deskReads.refreshFlaggedQueue();
         }
+    }
+
+    private void onStep(final StepChanged changed) {
+        log.trace("{} step {} is {}", changed.kind(), changed.index(), changed.state());
+        locked(() -> progress.changed(changed, clock.instant()));
     }
 
     private void onSegmentStarted(final SegmentStarted started) {
@@ -370,8 +374,11 @@ final class RunSession implements JobListener {
             mirror.live().publishCalls(calls);
         }
         final JobProgress seen = lastSeen.get();
-        final Throughput figures = throughputMeter.snapshot(
-                runClock.timeLeft(seen == null ? 0 : seen.pending()), runClock.elapsed(clock.instant()));
+        final ProgressFigures.Figures steps = progress.read(seen, clock.instant());
+        if (seen != null && progress.isNew(steps)) {
+            mirror.live().publishSteps(steps);
+        }
+        final Throughput figures = throughputMeter.snapshot(steps.left(), runClock.elapsed(clock.instant()));
         if (!figures.equals(shownThroughput)) {
             shownThroughput = figures;
             mirror.live().publishThroughput(figures);

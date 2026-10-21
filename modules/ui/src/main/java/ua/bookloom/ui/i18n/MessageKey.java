@@ -143,8 +143,38 @@ public enum MessageKey {
     BUSY_CALLS_TIP("busy.calls.tip"),
     /** Progress dialog: the figures line; arguments: 0 percent, 1 steps done, 2 steps in all. */
     PROGRESS_FIGURES("progress.figures"),
-    /** Progress dialog: the figures line with the time left; arguments: 0 the line, 1 a duration such as 2m. */
+    /** Progress dialog: the figures line with the time left; arguments: 0 the line, 1 "about 2 min" or the like. */
     PROGRESS_FIGURES_LEFT("progress.figures.left"),
+    /** Tooltip of a progress bar that counts steps; arguments: 0 steps done, 1 steps in all. */
+    PROGRESS_BAR_STEPS("progress.bar.steps"),
+    /** "How progress is counted": one kind of step; arguments: 0 its name, 1 done, 2 planned, 3 measured seconds. */
+    PROGRESS_HOW_COUNTED_LINE("progress.howCounted.line"),
+    /** "How progress is counted": one kind of step not timed yet; arguments: 0 its name, 1 done, 2 planned. */
+    PROGRESS_HOW_COUNTED_UNTIMED("progress.howCounted.untimed"),
+    /** Name of the draft steps in the note on how progress is counted. */
+    PROGRESS_KIND_DRAFT("progress.kind.draft"),
+    /** Name of the check steps in the note on how progress is counted. */
+    PROGRESS_KIND_CHECK("progress.kind.check"),
+    /** Name of the repair steps in the note on how progress is counted. */
+    PROGRESS_KIND_REPAIR("progress.kind.repair"),
+    /** Name of the re-ask steps in the note on how progress is counted. */
+    PROGRESS_KIND_RE_ASK("progress.kind.reAsk"),
+    /** Name of the resend steps in the note on how progress is counted. */
+    PROGRESS_KIND_RESEND("progress.kind.resend"),
+    /** Name of the chapter-summary steps in the note on how progress is counted. */
+    PROGRESS_KIND_SUMMARY("progress.kind.summary"),
+    /** Name of the backward-revision step in the note on how progress is counted. */
+    PROGRESS_KIND_REVISION("progress.kind.revision"),
+    /** Name of the stage rows in the note on how progress is counted. */
+    PROGRESS_KIND_STAGE("progress.kind.stage"),
+    /** Name of the model-request steps in the note on how progress is counted. */
+    PROGRESS_KIND_REQUEST("progress.kind.request"),
+    /** Before Start: the time of a book from a measured speed; argument 0 is "about 2 h" or the like. */
+    ESTIMATE_MEASURED("estimate.measured"),
+    /** Before Start: what Balanced costs against Fast when no speed was measured. */
+    ESTIMATE_RELATIVE_BALANCED("estimate.relative.balanced"),
+    /** Before Start: what Max costs against Fast when no speed was measured. */
+    ESTIMATE_RELATIVE_MAX("estimate.relative.max"),
     /** Progress dialog: the switch that keeps the step the work is on selected. */
     PROGRESS_FOLLOW("progress.follow"),
     /** Hover explanation of the switch labelled by {@link #PROGRESS_FOLLOW}. */
@@ -323,7 +353,7 @@ public enum MessageKey {
     SHELL_RUN_FAILED("shell.run.failed"),
     /** Title-bar elapsed time; argument 0 is the formatted duration. */
     SHELL_RUN_ELAPSED("shell.run.elapsed"),
-    /** Title-bar time left; argument 0 is the formatted duration. */
+    /** Title-bar time left; argument 0 is the rounded time, "about 20 min" or the like. */
     SHELL_RUN_LEFT("shell.run.left"),
     /** What the names.translate option does, shown under its choice and on hover. */
     BRIEF_HELP_NAMES_TRANSLATE("brief.help.names.translate"),
@@ -385,6 +415,12 @@ public enum MessageKey {
     DURATION_M("duration.m"),
     /** A duration under a minute; argument 0 is the seconds, a String. */
     DURATION_S("duration.s"),
+    /** A rounded time left under an hour; argument 0 is the minutes, a String; the text starts with "about". */
+    DURATION_ABOUT_M("duration.about.m"),
+    /** A rounded time left of whole hours; argument 0 is the hours, a String; the text starts with "about". */
+    DURATION_ABOUT_H("duration.about.h"),
+    /** A rounded time left of hours and minutes; arguments are the hours and the minutes, Strings. */
+    DURATION_ABOUT_HM("duration.about.hm"),
     /** Label of a button that dismisses a dialog. */
     COMMON_CLOSE("common.close"),
     /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
@@ -1594,7 +1630,7 @@ public enum MessageKey {
     TRANSLATING_LINE_SECTION("translating.line.section"),
     /** The chunk part of the progress line; arguments are the chunk and the number of chunks. */
     TRANSLATING_LINE_CHUNK("translating.line.chunk"),
-    /** The time-left part of the pace text; argument 0 is the duration, passed as a String. */
+    /** The time-left part of the pace text; argument 0 is the rounded time, "about 20 min" or the like. */
     TRANSLATING_PACE_LEFT("translating.pace.left"),
     /** The rate part of the pace text; argument 0 is the rate, passed as a String, with a leading ~ when estimated. */
     TRANSLATING_PACE_RATE("translating.pace.rate"),

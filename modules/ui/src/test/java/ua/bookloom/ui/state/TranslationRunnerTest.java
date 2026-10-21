@@ -135,7 +135,7 @@ class TranslationRunnerTest extends RunnerTestBase {
         assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(5000);
         assertThat(onFx(() -> mirror.remaining().get())).isZero();
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(5000);
-        assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(1.0);
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(1.0);
     }
 
     private void emitTenBatchesWithATickAfterEach() {

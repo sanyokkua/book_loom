@@ -96,6 +96,7 @@ public final class RunStatusBar {
         mirror.runMode().addListener(redraw);
         mirror.runState().addListener(redraw);
         mirror.figures().addListener(redraw);
+        mirror.live().progress().addListener(redraw);
         mirror.review().providerError().addListener(redraw);
         mirror.review().recovery().addListener(redraw);
         mirror.live().throughput().addListener(redraw);
@@ -178,7 +179,7 @@ public final class RunStatusBar {
         }
         fileName.setText(file);
         final RunState state = mirror.runState().get();
-        final int percent = mirror.figures().get().percent();
+        final int percent = mirror.live().progress().get().percent();
         stateText.setText(stateText(state, percent));
         showMode(mirror.runMode().get());
         showTimes(mirror.live().throughput().get(), state);
@@ -234,7 +235,7 @@ public final class RunStatusBar {
         final Duration left = state.hasEnded() ? null : figures.timeLeft();
         view.want(timeLeft, left != null);
         if (left != null) {
-            timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.format(messages, left)));
+            timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.about(messages, left)));
         }
         final Double average = figures.averageTokensPerSecond();
         view.want(rate, average != null);

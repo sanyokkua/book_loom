@@ -88,6 +88,16 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(progressBar().getProgress()).isCloseTo(0.6218, within(0.0001));
     }
 
+    // IF the bar's tooltip did not give the steps, THEN 62% beside 768 segments would look like a mistake.
+    @Test
+    void progressBar_hovered_givesTheStepsCountedIncludingChecks() {
+        showTranslating();
+
+        publishProgress(768, 3, 469);
+
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(progressBar())).isEqualTo("771 of 1,240 steps, checks included");
+    }
+
     // IF an empty book divided by its total, THEN the dashboard would show NaN instead of zero.
     @Test
     void figures_emptyBook_showZeroProgressWithoutFailing() {

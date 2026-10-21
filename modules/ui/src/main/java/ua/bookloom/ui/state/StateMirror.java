@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -48,7 +46,6 @@ public final class StateMirror {
     private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
     private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
-    private final ReadOnlyDoubleWrapper progressFraction = new ReadOnlyDoubleWrapper();
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
@@ -151,15 +148,6 @@ public final class StateMirror {
      */
     public ReadOnlyIntegerProperty chunks() {
         return chunks.getReadOnlyProperty();
-    }
-
-    /**
-     * Decided segments over the total.
-     *
-     * @return the read-only proportion between 0.0 and 1.0; read on the FX thread
-     */
-    public ReadOnlyDoubleProperty progressFraction() {
-        return progressFraction.getReadOnlyProperty();
     }
 
     /**
@@ -285,13 +273,14 @@ public final class StateMirror {
     }
 
     /**
-     * Shows the figures derived from a snapshot.
+     * Shows the figures derived from a snapshot. Until the run publishes its steps ({@link LiveSection#publishSteps}),
+     * the share of work is counted from the segments alone.
      *
-     * @param progress the engine's latest snapshot
+     * @param snapshot the engine's latest snapshot
      */
-    public void publishProgress(final JobProgress progress) {
-        Objects.requireNonNull(progress, "progress");
-        final RunFigures figures = RunFigures.from(progress);
+    public void publishProgress(final JobProgress snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        final RunFigures figures = RunFigures.from(snapshot);
         Platform.runLater(() -> applyFigures(figures));
     }
 
@@ -360,6 +349,7 @@ public final class StateMirror {
 
     private void applyFigures(final RunFigures figures) {
         this.figures.set(figures);
+        live.showCount(figures.total() - figures.remaining(), figures.total());
         accepted.set(figures.accepted());
         flagged.set(figures.flagged());
         remaining.set(figures.remaining());
@@ -368,7 +358,6 @@ public final class StateMirror {
         sections.set(figures.sections());
         chunk.set(figures.chunk());
         chunks.set(figures.chunks());
-        progressFraction.set(figures.fraction());
     }
 
     // A line that says what the previous one said is counted on it instead of repeated, so a stalled call that fails

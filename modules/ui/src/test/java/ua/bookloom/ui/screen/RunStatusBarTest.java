@@ -64,13 +64,14 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
         runAt78(RunState.RUNNING);
 
         assertThat(textsUnder(required(BAR)))
-                .containsSubsequence("Frankenstein.epub", "Progress 78%", "1h 02m elapsed", "~1h 20m left", "Pause");
+                .containsSubsequence(
+                        "Frankenstein.epub", "Progress 78%", "1h 02m elapsed", "about 1 h 20 min left", "Pause");
         assertThat(barText()).doesNotContain("Resume");
         assertThat(((javafx.scene.layout.HBox) required("shell-title-bar")).getChildren())
                 .containsSubsequence(required(BAR), required("shell-theme-toggle"));
     }
 
-    // IF the title bar rounded the share while the card floored it, THEN at 81 of 163 the two would read 50% and 49%.
+    // IF the title bar and the card each worked out the share, THEN at 81 of 163 they could read 50% and 49%.
     @Test
     void bar_andTheProgressCard_atOneShare_showTheSamePercent() {
         showTranslating();
@@ -79,8 +80,8 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
         mirror().publishRunState(RunState.RUNNING);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(textsUnder(required(BAR))).contains("Progress 49%");
-        assertThat(labelText("translating-progress-text")).startsWith("49%");
+        assertThat(textsUnder(required(BAR))).contains("Progress 50%");
+        assertThat(labelText("translating-progress-text")).startsWith("50%");
     }
 
     // IF the time left were shown when the run reports none, THEN the bar would claim an estimate it does not have.

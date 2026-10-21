@@ -2,6 +2,7 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
@@ -69,6 +70,27 @@ public final class Tips {
             control.setAccessibleHelp(text);
         } else {
             Tooltip.install(node, tooltip);
+        }
+        return node;
+    }
+
+    /**
+     * Attaches an explanation whose text changes while the node lives, such as the steps a bar has counted: one tooltip
+     * follows the value, so a change builds no new popup.
+     *
+     * @param node the control or container the pointer hovers; a second call replaces the first tip
+     * @param text the explanation now and later; never blank
+     * @param <N> the node's type, returned unchanged
+     * @return {@code node}
+     */
+    public static <N extends Node> N installLive(final N node, final ObservableValue<String> text) {
+        Objects.requireNonNull(text, "text");
+        install(node, text.getValue());
+        final Object installed = node instanceof Control control
+                ? control.getTooltip()
+                : node.getProperties().get(Tooltip.class.getName());
+        if (installed instanceof Tooltip tooltip) {
+            tooltip.textProperty().bind(text);
         }
         return node;
     }

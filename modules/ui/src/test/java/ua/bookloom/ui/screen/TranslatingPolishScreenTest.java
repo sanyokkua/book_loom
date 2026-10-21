@@ -180,8 +180,8 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.RUNNING);
 
-        assertThat(labelText("shell-run-left")).isEqualTo("~5m left");
-        assertThat(labelText("translating-pace-text")).contains("5m left");
+        assertThat(labelText("shell-run-left")).isEqualTo("about 5 min left");
+        assertThat(labelText("translating-pace-text")).contains("about 5 min left");
     }
 
     // IF the chip kept counting "answered 0:00 ago" after the run ended, THEN it would claim a live conversation.

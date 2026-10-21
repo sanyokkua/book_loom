@@ -1,8 +1,11 @@
 package ua.bookloom.ui.control;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -16,6 +19,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -46,6 +50,8 @@ public final class ProgressDialog extends ModalCard {
     private final ProgressBar bar = new ProgressBar();
     private final FigureLabel figures = new FigureLabel();
     private final Label details = new Label();
+    private final VBox kindLines = new VBox();
+    private List<ProgressFigures.KindFigures> shownKinds = List.of();
     private final ProgressStepDetail detail;
     private final Button cancel;
     private @Nullable Boolean shownCancelling;
@@ -95,6 +101,14 @@ public final class ProgressDialog extends ModalCard {
         purpose.setWrapText(true);
         bar.setId("progress-bar");
         bar.setMaxWidth(Double.MAX_VALUE);
+        Tips.installLive(
+                bar,
+                Bindings.createStringBinding(
+                        () -> messages.get(
+                                MessageKey.PROGRESS_BAR_STEPS,
+                                model.figures().get().done(),
+                                model.figures().get().total()),
+                        model.figures()));
         figures.setId("progress-figures");
         figures.getStyleClass().add("dialog-sub");
         details.setId("progress-details");
@@ -114,7 +128,9 @@ public final class ProgressDialog extends ModalCard {
         VBox.setVgrow(split, Priority.ALWAYS);
         final Label how = new Label(messages.get(MessageKey.PROGRESS_HOW_COUNTED_TEXT));
         how.setWrapText(true);
-        final TitledPane howCounted = new TitledPane(messages.get(MessageKey.PROGRESS_HOW_COUNTED), how);
+        kindLines.setId("progress-how-kinds");
+        final TitledPane howCounted =
+                new TitledPane(messages.get(MessageKey.PROGRESS_HOW_COUNTED), new VBox(how, kindLines));
         howCounted.setId("progress-how");
         howCounted.setExpanded(false);
         final VBox body = new VBox(split, howCounted);
@@ -200,6 +216,46 @@ public final class ProgressDialog extends ModalCard {
         final ProgressFigures.Figures read = model.figures().get();
         figures.setText(counted ? read.line(messages) : "");
         showFor(figures, counted);
+        showKinds(read.kinds());
+    }
+
+    // Rebuilt only when a count changes, so a tick that moves nothing adds no node.
+    private void showKinds(final List<ProgressFigures.KindFigures> kinds) {
+        if (kinds.equals(shownKinds)) {
+            return;
+        }
+        shownKinds = kinds;
+        kindLines.getChildren().setAll(kinds.stream().map(this::kindLine).toList());
+    }
+
+    private Label kindLine(final ProgressFigures.KindFigures kind) {
+        final String name = messages.get(kindName(kind.kind()));
+        final Double seconds = kind.secondsPerStep();
+        final String text = seconds == null
+                ? messages.get(MessageKey.PROGRESS_HOW_COUNTED_UNTIMED, name, kind.done(), kind.planned())
+                : messages.get(
+                        MessageKey.PROGRESS_HOW_COUNTED_LINE,
+                        name,
+                        kind.done(),
+                        kind.planned(),
+                        String.format(Locale.ROOT, "%.1f", seconds));
+        final Label line = new Label(text);
+        line.getStyleClass().add("dialog-sub");
+        return line;
+    }
+
+    private static MessageKey kindName(final StepKind kind) {
+        return switch (kind) {
+            case DRAFT -> MessageKey.PROGRESS_KIND_DRAFT;
+            case CHECK -> MessageKey.PROGRESS_KIND_CHECK;
+            case REPAIR -> MessageKey.PROGRESS_KIND_REPAIR;
+            case RE_ASK -> MessageKey.PROGRESS_KIND_RE_ASK;
+            case RESEND -> MessageKey.PROGRESS_KIND_RESEND;
+            case SUMMARY -> MessageKey.PROGRESS_KIND_SUMMARY;
+            case REVISION -> MessageKey.PROGRESS_KIND_REVISION;
+            case STAGE -> MessageKey.PROGRESS_KIND_STAGE;
+            case REQUEST -> MessageKey.PROGRESS_KIND_REQUEST;
+        };
     }
 
     /**

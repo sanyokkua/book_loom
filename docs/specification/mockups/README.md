@@ -265,14 +265,14 @@ There is no Accent row and no decorative text; each screen has at most one purpo
    - **Estimates before Start** appear only from a measured speed (the inference test or an earlier run), always marked
      "estimate". Without one, the screen shows relative cost (Balanced ≈ 1.5× Fast, Max ≈ 3×).
 
-**Why today's estimate is wrong.**
-- `state/RunClock.timeLeft(pending)` multiplies the average of the **last 20** segments by **all pending segments**, so
+**Why the old estimate was wrong (replaced by 5.4).**
+- The former `state/RunClock.timeLeft(pending)` multiplied the average of the **last 20** segments by **all pending segments**, so
   one slow stretch is projected over the rest of the book.
-- `RunFigures` counts segments equally, including instant kept-as-is ones.
+- The former `RunFigures.percent` counted segments equally, including instant kept-as-is ones.
 - Checks and Max's work after the last segment are in neither figure.
 - That gives "2 h passed, 52 %, 10 h left".
 
-**Code.** A new `ProgressPlan` / `ProgressLedger` replaces the segment percentage of `RunFigures` and the window of
+**Code.** `state/ProgressLedger` replaced the segment percentage of `RunFigures` and the window of
 `RunClock`. The pipeline announces planned and added steps: `DialParameters`; the repair, re-ask and timeout paths;
 `NamesPassImpl`; `BriefSuggester`; `ExportProgress.Step`.
 

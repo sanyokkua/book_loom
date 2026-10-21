@@ -38,7 +38,7 @@ class ProgressDialogModelTest {
     private @Nullable CallSnapshot current;
 
     private ProgressDialogModel model(final ProgressDialogModel.Mode mode) {
-        return new ProgressDialogModel(activity(), new StepCountFigures(), mode, () -> AT);
+        return new ProgressDialogModel(activity(), new LedgerFigures(), mode, () -> AT);
     }
 
     private Activity activity() {
@@ -172,7 +172,7 @@ class ProgressDialogModelTest {
                 new ProgressDialogModel(activity(), fake, ProgressDialogModel.Mode.SIMPLE, () -> AT);
         final Messages messages = new Messages((LocaleProvider) () -> Locale.ENGLISH);
 
-        assertThat(model.figures().get().line(messages)).isEqualTo("51 % · 26 of about 49 steps · Left about 1m");
+        assertThat(model.figures().get().line(messages)).isEqualTo("51 % · 26 of about 49 steps · Left about 1 min");
     }
 
     // IF the bar's percentage fell when work was added, THEN the dialog would contradict the title bar.
