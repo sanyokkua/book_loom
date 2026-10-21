@@ -182,6 +182,10 @@ public final class TranslatingViewModel {
         return pending.count();
     }
 
+    PendingCount pendingCounts() {
+        return pending;
+    }
+
     /** Reads the pending count in the background, on each showing and when a run ends; FX thread only. */
     public void refreshPending() {
         final OpenedBook book = current.book().get();
@@ -378,7 +382,7 @@ public final class TranslatingViewModel {
         switch (now) {
             case RUNNING -> notice.set(null);
             case FAILED -> {
-                final RunNotice.Refused refused = RunEnding.routeFailure(mirror, errors);
+                final RunNotice.Refused refused = RunEnding.routeFailure(mirror);
                 if (refused != null) {
                     notice.set(refused);
                 }

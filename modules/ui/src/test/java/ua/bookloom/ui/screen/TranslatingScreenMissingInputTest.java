@@ -7,18 +7,21 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.RunState;
 
-/** A start refused for a missing input, read from the real scene: the banner names the input and no run begins. */
+/**
+ * A start that lacks an input, read from the real scene (README "Run states": Cannot start yet): with no AI model chosen
+ * Start is off with a hover that names the model, the banner says so with Open settings, and no run begins.
+ */
 class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
 
-    private void pressStartWithBookOpenAndNoModel() throws TimeoutException {
+    private void bookOpenAndNoModel() throws TimeoutException {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
         chooseTarget();
         showTranslating();
-        onFx(() -> button("translating-start").fire());
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -27,32 +30,49 @@ class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
     }
 
-    // IF Start with no model did nothing visible, THEN a person would press it and get no answer.
+    // IF Start with no model could be pressed for nothing, THEN a person would get no answer; it is off, says why, and
+    // the banner leads to the settings.
     @Test
-    void banner_startWithNoModelChosen_namesTheModelAsAWarningAndStartsNoRun() throws TimeoutException {
-        pressStartWithBookOpenAndNoModel();
+    void cannotStart_noModelChosen_offersOpenSettingsAndKeepsStartOffWithTheReason() throws TimeoutException {
+        bookOpenAndNoModel();
 
-        assertThat(labelText("translating-banner-text")).containsIgnoringCase("model");
+        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet — no AI model is chosen.");
+        assertThat(labelText("translating-banner-text"))
+                .isEqualTo("Choose an AI model in Settings › Providers, then start the translation.");
         assertThat(required("translating-banner").getStyleClass())
                 .contains("banner", "banner-warn")
                 .doesNotContain("banner-err");
-        assertThat(isShown("translating-open-settings")).isFalse();
+        assertThat(isShown("translating-open-settings")).isTrue();
+        assertThat(button("translating-start").isDisabled()).isTrue();
+        assertThat(Tips.explanationOf(button("translating-start")))
+                .contains("Choose an AI model in Settings › Providers, then start the translation.");
+        assertThat(button("shell-run-connection").getText()).isEqualTo("No AI model");
         assertThat(models.selections()).isEmpty();
         assertThat(engine.requests()).isEmpty();
         assertNoDialogOrErrorToast();
     }
 
-    // IF Start with no book named the model, THEN the person would be sent to fix the wrong step.
+    // IF choosing a model left the refusal standing, THEN a ready start would still read as refused.
     @Test
-    void banner_startWithNoBookOpen_namesTheBookAsAWarningAndStartsNoRun() {
+    void cannotStart_modelThenChosen_isReadyWithStartOn() throws TimeoutException {
+        bookOpenAndNoModel();
+
+        chooseModel();
+
+        assertThat(optional("translating-banner")).isNull();
+        assertThat(button("translating-start").isDisabled()).isFalse();
+        assertThat(labelText("shell-run-state")).isEqualTo("Ready");
+    }
+
+    // IF Start with no book began a run, THEN a run would exist with nothing to translate.
+    @Test
+    void start_noBookOpen_startsNoRunAndOpensNoDialog() {
+        chooseModel();
         showTranslating();
 
         onFx(() -> button("translating-start").fire());
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-text")).containsIgnoringCase("book");
-        assertThat(labelText("translating-banner-text")).doesNotContainIgnoringCase("model");
-        assertThat(required("translating-banner").getStyleClass()).contains("banner-warn");
         assertThat(models.selections()).isEmpty();
         assertThat(engine.requests()).isEmpty();
         assertNoDialogOrErrorToast();
@@ -60,14 +80,11 @@ class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
 
     // IF a refusal stayed once a run began, THEN a run in progress would still say something was missing.
     @Test
-    void banner_runBeginsAfterARefusedStart_returnsToThePlainRunningBanner() throws TimeoutException {
-        pressStartWithBookOpenAndNoModel();
+    void banner_runBegins_withdrawsTheCannotStartBanner() throws TimeoutException {
+        bookOpenAndNoModel();
 
         publish(RunState.RUNNING);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
-        assertThat(required("translating-banner").getStyleClass())
-                .contains("banner-info")
-                .doesNotContain("banner-warn");
+        assertThat(optional("translating-banner")).isNull();
     }
 }

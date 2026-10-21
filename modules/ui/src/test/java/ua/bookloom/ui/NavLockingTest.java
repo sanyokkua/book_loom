@@ -9,9 +9,13 @@ import javafx.scene.control.Label;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
 
 /** The navigation column shows a locked step as locked, says why on hover and still answers a click. */
 class NavLockingTest extends ShellTestBase {
@@ -120,5 +124,22 @@ class NavLockingTest extends ShellTestBase {
 
         press("names-style-back");
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+    }
+
+    // IF the run's state locked a step, THEN a person could not reach Settings to fix an unreachable program, or Import
+    // while a run waits; the run-state table locks model actions, never navigation (the no-project lock is 6.1a's).
+    @ParameterizedTest
+    @EnumSource(RunState.class)
+    void navigation_everyRunState_locksNoStep(final RunState state) {
+        openBook("en", "uk");
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+
+        onFx(() -> {
+            mirror.publishRunStarted("Frankenstein.epub", null);
+            mirror.publishRunState(state);
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(scene.getRoot().lookupAll("." + LOCKED)).isEmpty();
     }
 }

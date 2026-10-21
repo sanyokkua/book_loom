@@ -242,7 +242,7 @@ final class ConformanceCases {
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             ConformanceResultsCase.RESULTS_DIALOG,
-            // Ready to translate: the ready card and the banner in the info role.
+            // Ready to translate: the ready card; Ready has no banner (README "Run states").
             new Screen(
                     "TRANSLATING",
                     ViewNames.TRANSLATING,
@@ -250,10 +250,9 @@ final class ConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part(BANNER, Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part(BANNER, Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
-            // Running: the bar's track surface-2 and its fill the primary, the tiles, the live panel and the log.
+                            new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // Running, with no banner: the bar's track surface-2 and its fill the primary, the tiles, the live panel
+            // and the log.
             new Screen(
                     "TRANSLATING_RUNNING",
                     ViewNames.TRANSLATING,
@@ -296,9 +295,7 @@ final class ConformanceCases {
                                     Kind.BORDER,
                                     "border",
                                     "#ddd5c8",
-                                    "#48585f"),
-                            new Part(BANNER, Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part(BANNER, Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                                    "#48585f"))),
             new Screen(
                     "TRANSLATING_COMPLETED",
                     ViewNames.TRANSLATING,

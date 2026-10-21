@@ -18,6 +18,7 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -55,14 +56,16 @@ final class BriefView {
             final Navigator navigator,
             final LanguageNames names,
             final SettingsViewModel settings,
-            final WorkflowProgress progress) {
+            final WorkflowProgress progress,
+            final RunStateSource runs) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.progress = Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(viewModel, "viewModel");
         log.debug("building the brief");
         this.languages = new BriefLanguagesCard(viewModel, messages, names);
-        this.tone = new BriefToneCard(viewModel, messages);
+        this.tone = new BriefToneCard(
+                viewModel, messages, Objects.requireNonNull(runs, "runs").view());
         this.policies = new BriefPoliciesCard(viewModel, messages);
         this.also = new BriefAlsoCard(viewModel, messages);
         this.quality = new BriefQualityCard(viewModel, settings, messages, navigator);

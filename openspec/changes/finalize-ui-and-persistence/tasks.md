@@ -635,8 +635,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     Term keeps the Translation column ≥ 170 px; a changed row has the `changed` pseudo-class and its term cell has no
     chip).
   - Edit FR-THEME-10 in `09_THEMING.md` to the six meanings. → :ui, docs
-- [ ] 5.8 Drive the title bar, the toolbar run actions, the banners, the nav footer and the step locks from one
-  run-state table, so all 16 states look the same everywhere and the steps stay locked until a project is open.
+- [x] 5.8 Drive the title bar, the toolbar run actions, the banners, the nav footer and the model-action locks from one
+  run-state table, so all 16 states look the same everywhere; the step lock until a project is open lands in 6.1a.
   - **Satisfies:** app-shell "Show each of the sixteen run states the same way everywhere"; app-shell "Show the run in
     the title bar while one exists"; app-shell "Close each workflow step with a Back and a forward action"; app-shell
     "Show the chosen provider and model in the navigation footer"; app-shell "Disable model actions while a translation

@@ -337,6 +337,10 @@
     -fx-font-size: 12px;
 }
 
+.run-status-state {
+    -fx-font-weight: bold;
+}
+
 /* The model work under way beside the run status ("Model scan · 12 requests"): title-bar words, not body text. */
 .activity-chip-text {
     -fx-text-fill: -color-title-fg;
@@ -517,9 +521,23 @@
 }
 
 .nav-footer {
+    -fx-padding: 10px 18px 12px 18px;
+}
+
+/* The footer names the AI program and model; a failing one is the red state marker (its own colours, G11). */
+.nav-footer-text {
     -fx-text-fill: -color-nav-fg-muted;
     -fx-font-size: 12px;
-    -fx-padding: 10px 18px 12px 18px;
+    -fx-graphic-text-gap: 7px;
+}
+
+.nav-footer-dot {
+    -fx-min-width: 8px;
+    -fx-min-height: 8px;
+    -fx-max-width: 8px;
+    -fx-max-height: 8px;
+    -fx-background-color: -color-title-ok-fg;
+    -fx-background-radius: 4px;
 }
 
 .nav-item-current,
@@ -2225,17 +2243,17 @@
     -fx-icon-size: 12px;
 }
 
-/* The connection chip in the title bar: its dot and words in the role of how the server has been answering. */
-.connection-chip.conn-steady {
-    -fx-text-fill: -color-title-ok-fg;
+/* The AI-model chip in the title bar: a state marker (its own colours, G11) that opens the settings. */
+.connection-chip {
+    -fx-background-insets: 0;
+    -fx-cursor: hand;
 }
 
-.connection-chip.conn-unsteady {
-    -fx-text-fill: -color-title-warn-fg;
-}
-
-.connection-chip.conn-unknown {
-    -fx-text-fill: -color-title-fg;
+.connection-chip:focus-visible {
+    -fx-border-color: -color-nav-focus;
+    -fx-border-width: 2px;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 13px;
 }
 
 /* --- Structure: the read-only tree of a book's own structure and its side cards (ui-mockup.html: the chapter tree) --- */

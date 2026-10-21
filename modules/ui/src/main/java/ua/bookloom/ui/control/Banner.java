@@ -118,12 +118,14 @@ public final class Banner extends HBox {
     }
 
     /**
-     * Replaces the second line.
+     * Replaces the second line; a blank one takes no room.
      *
      * @param value the new text
      */
     public void setText(final String value) {
         text.setText(Objects.requireNonNull(value, "value"));
+        text.setVisible(!value.isBlank());
+        text.setManaged(!value.isBlank());
     }
 
     /**

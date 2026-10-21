@@ -20,6 +20,7 @@ import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -38,6 +39,7 @@ public final class NamesStyleController {
     private final Messages messages;
     private final Navigator navigator;
     private final TranslatingViewModel translating;
+    private final RunStateSource runs;
     private final NamesStyleViewModel glossary;
     private final BookBriefViewModel brief;
     private final ModalHost modalHost;
@@ -57,6 +59,7 @@ public final class NamesStyleController {
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Back, Start translation and the route from the no-book state lead
      * @param translating what Start translation asks to begin the run
+     * @param runs the run-state row the forward action follows
      * @param glossary the state of the glossary table
      * @param brief the book's brief, whose dial the automatic pass's estimate is stated for
      * @param modalHost where the Add term card is shown
@@ -73,6 +76,7 @@ public final class NamesStyleController {
             final Messages messages,
             final Navigator navigator,
             final TranslatingViewModel translating,
+            final RunStateSource runs,
             final NamesStyleViewModel glossary,
             final BookBriefViewModel brief,
             final ModalHost modalHost,
@@ -84,6 +88,7 @@ public final class NamesStyleController {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
+        this.runs = Objects.requireNonNull(runs, "runs");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
@@ -109,6 +114,7 @@ public final class NamesStyleController {
                                 messages,
                                 navigator,
                                 translating,
+                                runs,
                                 glossary,
                                 brief,
                                 modalHost,

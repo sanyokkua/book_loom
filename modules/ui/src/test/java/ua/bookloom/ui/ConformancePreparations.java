@@ -215,7 +215,9 @@ final class ConformancePreparations {
 
     private void completeARun() {
         final JobReport report = new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
-        injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub", null);
+        mirror.publishOutcome(RunState.COMPLETED, report, null);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -282,6 +284,7 @@ final class ConformancePreparations {
         final AppError unreachable =
                 AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing is listening at http://localhost:11434.");
         final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.publishRunState(RunState.PAUSED);
         mirror.review().publishProviderError(unreachable);
         WaitForAsyncUtils.waitForFxEvents();

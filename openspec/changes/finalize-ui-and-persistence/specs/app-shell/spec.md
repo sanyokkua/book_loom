@@ -1355,8 +1355,8 @@ WHILE no project is open, the title bar SHALL show only the product name, the th
 
 #### Scenario: The run control follows the state
 
-- **WHEN** the translation is running, or paused or stopped, or finished or failed
-- **THEN** the run control is `Pause`, or `Resume`, or absent respectively, and `Pause` and `Resume` are never shown together
+- **WHEN** the translation is running, or paused, or stopped, or finished or failed
+- **THEN** the run control is `Pause`, or `Resume`, or `Continue translation`, or absent respectively, and `Pause` and `Resume` are never shown together
 
 #### Scenario: Both controls show the same state
 

@@ -1,9 +1,11 @@
 package ua.bookloom.ui.screen;
 
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -16,9 +18,20 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @Slf4j
 record TranslatingDialogs(RetryWithNoteDialog retry, NarratorDialog narrator, ConfirmDialog confirm) {
 
-    /** Stopping ends the run for good (Resume starts a new job), so the person is asked first. */
-    void askToStop(final TranslatingViewModel viewModel) {
-        log.debug("stop pressed: asking first");
-        confirm.ask(ConfirmDialog.Question.STOP_RUN, viewModel::stop);
+    /**
+     * Stop ends translating for now (Continue translation picks up later), so the person is asked first, with what is
+     * kept and what is done again ("74 of 142 segments are done and saved. The 4 being translated now are translated
+     * next time.").
+     */
+    void askToStop(final TranslatingViewModel viewModel, final RunStateSource.StopFigures figures) {
+        log.debug(
+                "stop pressed at {} of {} with {} in flight: asking first",
+                figures.decided(),
+                figures.total(),
+                figures.inFlight());
+        confirm.ask(
+                ConfirmDialog.Question.STOP_RUN,
+                List.of(figures.decided(), figures.total(), figures.inFlight()),
+                viewModel::stop);
     }
 }

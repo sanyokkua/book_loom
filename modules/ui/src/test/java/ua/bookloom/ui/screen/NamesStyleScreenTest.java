@@ -31,8 +31,9 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         return ThemeTestSupport.onFx(() -> navigator.currentView().get());
     }
 
-    private void awaitBanner(final String title) throws Exception {
-        awaitFx(() -> title.equals(labelText("translating-banner-title")));
+    // The title bar's state text of the run-state row, which every surface follows.
+    private void awaitState(final String prefix) throws Exception {
+        awaitFx(() -> labelText("shell-run-state").startsWith(prefix));
     }
 
     private void openBookOnly() throws TimeoutException {
@@ -76,9 +77,9 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
-        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet");
+        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet — no AI model is chosen.");
         assertThat(labelText("translating-banner-text"))
-                .isEqualTo("Choose a model in the provider settings, then start the translation.");
+                .isEqualTo("Choose an AI model in Settings › Providers, then start the translation.");
         assertThat(engine.requests()).isEmpty();
     }
 
@@ -100,7 +101,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
@@ -110,7 +111,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
     void forward_runUnderWay_offersBackToTheRunAndOnlyShowsIt() throws Exception {
         runningThenBackToNamesStyle();
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Back to the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         onFx(() -> button("names-style-start").fire());
 
         assertThat(engine.requests()).hasSize(1);
@@ -118,44 +119,45 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 
-    // IF a paused run were started again from here, THEN two jobs would work on one project; the button resumes it.
+    // IF a paused run were started again from here, THEN two jobs would work on one project; the button shows it.
     @Test
-    void forward_runPaused_offersResumeAndResumesTheSameJob() throws Exception {
+    void forward_runPaused_offersGoToTranslatingAndOnlyShowsIt() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> button("translating-pause").fire());
         job.emit(new Paused(PauseReason.REQUESTED, null, ProgressFixtures.progress(1, 2, 5, 0, 5)));
-        awaitBanner("Paused");
+        awaitState("Paused at");
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         onFx(() -> button("names-style-start").fire());
 
         assertThat(engine.requests()).hasSize(1);
-        assertThat(job.calls()).contains("resume");
+        assertThat(job.calls()).doesNotContain("resume");
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 
-    // IF a stopped run were offered a fresh start here, THEN Resume would be bypassed by a first-segment run.
+    // IF a stopped run were offered a fresh start here, THEN Continue translation would be bypassed by a first-segment
+    // run.
     @Test
-    void forward_runStopped_offersResumeNotStart() throws Exception {
+    void forward_runStopped_offersGoToTranslatingNotStart() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> button("translating-stop").fire());
         job.finish(Result.ok(cancelledReport()));
-        awaitBanner("Run stopped");
+        awaitState("Stopped at");
 
         showNamesStyleAgain();
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         assertThat(TooltipProbe.tipText(required("names-style-start")))
-                .startsWith("Continues the paused or stopped translation");
+                .startsWith("Opens the Translating step, where the translation can be continued");
     }
 
     private void showNamesStyleAgain() {

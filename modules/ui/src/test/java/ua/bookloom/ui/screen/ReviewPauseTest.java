@@ -138,7 +138,7 @@ class ReviewPauseTest extends TranslatingScreenTestBase {
                 .publishFlaggedQueue(java.util.stream.IntStream.range(0, 4)
                         .mapToObj(i -> new FlaggedRow("s-" + i, "ch7 · p" + i, List.of(), null))
                         .toList());
-        awaitFx(() -> button("translating-review-flagged").getText().equals("Review flagged (4)"));
+        awaitFx(() -> button("translating-review-flagged").getText().equals("Review (4)"));
 
         assertThat(isShown("review-panel")).isFalse();
     }

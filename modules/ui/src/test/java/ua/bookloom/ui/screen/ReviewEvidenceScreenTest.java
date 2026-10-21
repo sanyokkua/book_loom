@@ -35,7 +35,7 @@ class ReviewEvidenceScreenTest extends TranslatingScreenTestBase {
         publish(RunState.PAUSED);
         mirror().live().publishFlaggedQueue(List.of(new FlaggedRow(view.segmentId(), view.locator(), List.of(), null)));
         WaitForAsyncUtils.waitForFxEvents();
-        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (1)"));
+        awaitFx(() -> button(REVIEW).getText().equals("Review (1)"));
         onFx(() -> button(REVIEW).fire());
         WaitForAsyncUtils.waitForFxEvents();
         selectFirstRow();

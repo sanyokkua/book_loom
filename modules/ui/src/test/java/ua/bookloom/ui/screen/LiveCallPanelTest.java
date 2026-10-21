@@ -298,6 +298,8 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
     // every second; only the figures that changed lay themselves out.
     @Test
     void paceTick_laysOutOnlyTheFigures() {
+        // Wide enough for the title bar to show its times (a window of 1280 or less hides them).
+        resizeScene(1440, 700);
         mirror().publishRunStarted("Frankenstein.epub", null);
         publish(RunState.RUNNING);
         showCalls(waiting(1, 2), null);
@@ -310,7 +312,7 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         assertThat(labelText("shell-run-elapsed")).isEqualTo("1h 21m elapsed");
         assertThat(relaidOut)
                 .containsExactlyInAnyOrder(
-                        "shell-run-elapsed", "shell-run-left", "shell-run-rate", "translating-pace-text");
+                        "shell-run-elapsed", "shell-run-state", "shell-run-rate", "translating-pace-text");
     }
 
     private static Throughput pace(final int elapsedMinutes, final int leftMinutes, final double rate) {
@@ -332,7 +334,11 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         return found;
     }
 
+    // A hidden part (a title-bar figure a narrow window hides) is never laid out, so it costs a tick nothing.
     private static List<String> needingLayout(final Node node) {
+        if (!node.isVisible()) {
+            return List.of();
+        }
         final Stream<String> own = node instanceof Parent parent && parent.isNeedsLayout()
                 ? Stream.of(String.valueOf(parent.getId()))
                 : Stream.empty();

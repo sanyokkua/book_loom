@@ -21,15 +21,18 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.RunState;
 
 /**
- * The translating dashboard when something goes wrong, read from the real scene: a pause on a provider error as the run's own
- * state with a route to the settings, a refusal in place, the refused start that names its missing input, and no
- * dialog for the pause or the refusal. A failure reaches the screen the way it does in the application, through the mirror.
+ * The Translating screen when something goes wrong, read from the real scene: a pause on an error as the run's own
+ * paused-after-an-error row with Try again now, Skip and Open settings, a missing model with another model to choose, a
+ * refusal in place, a failed run's banner with Show details, and no dialog that opens by itself. A failure reaches the
+ * screen the way it does in the application, through the mirror.
  */
 class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
     private static final String RETRY = "translating-retry-now";
+    private static final String SKIP = "translating-skip-segment";
     private static final String SETTINGS = "translating-open-settings";
-    private static final String STAY = "translating-stay-paused";
+    private static final String CHOOSE_MODEL = "translating-choose-model";
+    private static final String SHOW_DETAILS = "translating-show-details";
     private static final AppError UNREACHABLE = AppError.of(
             ErrorCode.unreachable,
             "Model server unreachable",
@@ -38,6 +41,14 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
             null);
     private static final AppError DESTINATION_EXISTS =
             AppError.of(ErrorCode.validation, "Destination exists", "The file Frankenstein.uk.epub already exists.");
+
+    /** A run on the shell: the model chosen and a run file published, so the run's banner is pinned. */
+    private void onTheShell() {
+        chooseModel();
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
 
     private void failRun(final AppError error) {
         mirror().publishOutcome(RunState.FAILED, null, error);
@@ -56,11 +67,13 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
         job.emit(new Paused(PauseReason.ON_ERROR, error, ProgressFixtures.progress(1, 2, 412, 0, 5)));
-        awaitFx(() -> isShown(RETRY));
+        awaitFx(() -> optional("translating-banner") != null);
     }
 
     private List<String> shownActions() {
-        return List.of(RETRY, SETTINGS, STAY).stream().filter(this::isShown).toList();
+        return List.of(RETRY, SKIP, SETTINGS, CHOOSE_MODEL, SHOW_DETAILS).stream()
+                .filter(this::isShown)
+                .toList();
     }
 
     private Paint barColor() {
@@ -80,25 +93,23 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
     }
 
-    // --- the provider-error state -----------------------------------------------------------------------------
+    // --- a pause on an error ----------------------------------------------------------------------------------
 
-    // IF the banner did not name the failure and the server, THEN a person could not tell a dead server from a wrong
-    // key.
+    // IF the banner did not name the program and what to do, THEN a person could not tell a closed program from a
+    // wrong key; it offers the three things a person can do.
     @Test
-    void banner_runPausesOnUnreachable_namesTheTitleAndTheHostWithoutClaimingNoWorkWasLost() {
-        showTranslating();
+    void banner_runPausesOnUnreachable_namesTheProgramWithTheThreeActions() {
+        onTheShell();
         publish(RunState.RUNNING);
 
         pauseOnError(UNREACHABLE);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Model server unreachable");
-        assertThat(labelText("translating-banner-text"))
-                .contains("localhost:11434")
-                .doesNotContain("no work was lost");
+        assertThat(labelText("translating-banner-title")).isEqualTo("Paused. Ollama could not be reached.");
+        assertThat(labelText("translating-banner-text")).isEqualTo("Open Ollama, then press Resume.");
         assertThat(required("translating-banner").getStyleClass())
                 .contains("banner", "banner-err")
                 .doesNotContain("banner-info", "banner-warn");
-        assertThat(shownActions()).containsExactly(RETRY, SETTINGS, STAY);
+        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS);
         assertThat(barColor()).isEqualTo(Color.web("#b0574c"));
     }
 
@@ -106,41 +117,39 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
-            names = {
-                "unreachable",
-                "timeout",
-                "auth",
-                "rateLimited",
-                "upstream",
-                "modelNotFound",
-                "modelUnavailable",
-                "missingCredential"
-            })
-    void banner_eachProviderCode_showsTheErrorRoleItsTitleAndTheThreeActions(final ErrorCode code) {
-        showTranslating();
+            names = {"unreachable", "timeout", "auth", "rateLimited", "upstream", "missingCredential", "validation"})
+    void banner_eachErrorARunPausesOn_showsTheErrorRoleAndTheThreeActions(final ErrorCode code) {
+        onTheShell();
         publish(RunState.RUNNING);
 
         pauseOnError(AppError.of(code, "Provider failure " + code.name(), "The provider reported a failure."));
 
         assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
-        assertThat(labelText("translating-banner-title")).isEqualTo("Provider failure " + code.name());
-        assertThat(shownActions()).containsExactly(RETRY, SETTINGS, STAY);
+        assertThat(labelText("translating-banner-title")).startsWith("Paused. Ollama");
+        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS);
         assertNoDialogOrErrorToast();
     }
 
-    // IF LM Studio's unloaded model were shown as a refusal, THEN the person could not retry once it is loaded again.
-    @Test
-    void banner_pauseOnValidationModelUnloaded_showsTheSameProviderErrorState() {
-        showTranslating();
+    // IF an unloaded model were told as an outage, THEN the person would restart a program that answers.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"modelNotFound", "modelUnavailable"})
+    void banner_modelMissing_namesTheModelAndOffersAnotherModel(final ErrorCode code) {
+        onTheShell();
         publish(RunState.RUNNING);
 
-        pauseOnError(AppError.of(ErrorCode.validation, "Model unloaded", "{\"error\":\"Model unloaded\"}"));
+        pauseOnError(AppError.of(code, "Model unloaded", "{\"error\":\"Model unloaded\"}"));
 
+        assertThat(labelText("translating-banner-title"))
+                .isEqualTo("The AI model gemma3:12b is not available — check that it is installed.");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
-        assertThat(shownActions()).containsExactly(RETRY, SETTINGS, STAY);
+        assertThat(shownActions()).containsExactly(CHOOSE_MODEL);
+        assertThat(button("translating-resume").getText()).isEqualTo("Try again now");
+        assertNoDialogOrErrorToast();
     }
 
-    // IF Retry now were not wired, THEN a person who restarted the server could not carry on from this screen.
+    // IF Try again now were not wired, THEN a person who opened the program again could not carry on from this screen.
     @Test
     void retryNow_pressed_resumesTheSameJob() throws Exception {
         pauseTheJobOnError(UNREACHABLE);
@@ -150,9 +159,9 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(job.calls()).last().isEqualTo("resume");
     }
 
-    // IF Open provider settings resumed the run, THEN the run would fail again before the server was fixed.
+    // IF Open settings resumed the run, THEN the run would fail again before the program was fixed.
     @Test
-    void openSettings_pressedInTheProviderErrorState_showsSettingsOnItsProvidersTabAndDoesNotResume() throws Exception {
+    void openSettings_pressedOnTheBanner_showsSettingsOnItsProvidersTabAndDoesNotResume() throws Exception {
         pauseTheJobOnError(UNREACHABLE);
 
         onFx(() -> button(SETTINGS).fire());
@@ -166,38 +175,35 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(job.calls()).doesNotContain("resume");
     }
 
-    // IF Stay paused kept the three actions, THEN it would offer what it was pressed to decline.
+    // IF the banner vanished off Translating, THEN a person in Settings fixing the program would lose the way back.
     @Test
-    void stayPaused_pressed_withdrawsTheThreeActionsAndLeavesResume() {
-        showTranslating();
-        publish(RunState.RUNNING);
-        pauseOnError(UNREACHABLE);
+    void banner_onSettings_staysPinnedAndOffersGoToTranslating() throws Exception {
+        pauseTheJobOnError(UNREACHABLE);
 
-        onFx(() -> button(STAY).fire());
+        onFx(() -> button(SETTINGS).fire());
 
-        assertThat(shownActions()).isEmpty();
-        assertThat(isShown("translating-resume")).isTrue();
+        assertThat(required("translating-banner").getParent()).isSameAs(required("shell-banners"));
+        assertThat(isShown("translating-go-translating")).isTrue();
+        onFx(() -> button("translating-go-translating").fire());
+        assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
+        assertThat(isShown("translating-go-translating")).isFalse();
     }
 
-    // IF a withdrawn state outlived the error, THEN a second failure would be shown with no way to act on it.
+    // IF Choose another model resumed the run, THEN the missing model would fail it again at once.
     @Test
-    void banner_resumeThenASecondPauseAfterStayPaused_showsTheThreeActionsAgain() {
-        showTranslating();
-        publish(RunState.RUNNING);
-        pauseOnError(UNREACHABLE);
-        onFx(() -> button(STAY).fire());
+    void chooseAnotherModel_pressed_showsSettingsAndDoesNotResume() throws Exception {
+        pauseTheJobOnError(AppError.of(ErrorCode.modelUnavailable, "Model unloaded", "Model unloaded."));
 
-        publish(RunState.RUNNING);
-        pauseOnError(AppError.of(ErrorCode.timeout, "Model server timed out", "The server did not answer."));
+        onFx(() -> button(CHOOSE_MODEL).fire());
 
-        assertThat(shownActions()).containsExactly(RETRY, SETTINGS, STAY);
-        assertThat(labelText("translating-banner-title")).isEqualTo("Model server timed out");
+        assertThat(currentView()).isEqualTo(ViewNames.SETTINGS);
+        assertThat(job.calls()).doesNotContain("resume");
     }
 
-    // IF a refusal offered the settings, THEN the person would be sent to fix a server that was never at fault.
+    // IF a refusal offered the settings, THEN the person would be sent to fix a program that was never at fault.
     @Test
     void banner_startRefusedWithValidation_keepsTheNeutralRefusalWithNoSettingsRoute() {
-        showTranslating();
+        onTheShell();
 
         failRun(DESTINATION_EXISTS);
 
@@ -230,10 +236,10 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-count-remaining")).isEqualTo("825");
     }
 
-    // IF the provider-error state also opened a dialog, THEN the same failure would be said twice.
+    // IF the paused state also opened a dialog, THEN the same failure would be said twice.
     @Test
     void dialog_providerFailure_opensNoDialogAndRaisesNoErrorToast() {
-        showTranslating();
+        onTheShell();
         publish(RunState.RUNNING);
 
         pauseOnError(UNREACHABLE);
@@ -241,43 +247,45 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertNoDialogOrErrorToast();
     }
 
-    // IF a new run kept the old provider error on screen, THEN a healthy run would still read as failed.
+    // IF a new run kept the old error on screen, THEN a healthy run would still read as failed.
     @Test
-    void banner_newRunBeginsAfterAProviderError_returnsToThePlainRunningBanner() {
-        showTranslating();
+    void banner_runResumesAfterAnError_isWithdrawn() {
+        onTheShell();
         publish(RunState.RUNNING);
         pauseOnError(UNREACHABLE);
 
         publish(RunState.RUNNING);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
-        assertThat(required("translating-banner").getStyleClass())
-                .contains("banner-info")
-                .doesNotContain("banner-err");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(isShown("translating-open-settings")).isFalse();
     }
 
-    // IF a run that ended failed with a provider code still drew the provider-error banner, THEN a run that cannot be
-    // resumed would offer a Retry that has nothing to retry.
+    // IF a failed run opened a dialog by itself or offered a Retry, THEN it would interrupt the person or offer what
+    // cannot be done; its banner says what happened and opens the failure on Show details.
     @Test
-    void dialog_runFailedWithAProviderCode_opensTheDialogAndShowsNoProviderBanner() {
-        showTranslating();
+    void banner_runFailedWithAProviderCode_showsTheFailedBannerAndNoDialogUntilShowDetails() {
+        onTheShell();
         publish(RunState.RUNNING);
 
         failRun(UNREACHABLE);
+        final boolean dialogBefore = optional("error-card") != null;
+        onFx(() -> button(SHOW_DETAILS).fire());
 
+        assertThat(dialogBefore).isFalse();
+        assertThat(labelText("translating-banner-title"))
+                .isEqualTo("The translation stopped because of an error. Finished segments are saved.");
+        assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
+        assertThat(isShown(SETTINGS)).isFalse();
         assertThat(optional("error-card")).isNotNull();
-        assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err");
-        assertThat(isShown("translating-open-settings")).isFalse();
     }
 
     // --- a refusal in place -----------------------------------------------------------------------------------
 
-    // IF a destination that already exists looked like a dead server, THEN the person would fix a machine that was
+    // IF a destination that already exists looked like a dead program, THEN the person would fix a machine that was
     // never broken.
     @Test
     void banner_runRefusedWithValidation_isAWarningWithTheMessageAndNoSettingsRoute() {
-        showTranslating();
+        onTheShell();
 
         failRun(DESTINATION_EXISTS);
 
@@ -294,7 +302,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     // would tell the person that nothing had been done.
     @Test
     void banner_validationAfterProgress_isTitledNeutrallyAndKeepsTheCounts() {
-        showTranslating();
+        onTheShell();
         publish(RunState.RUNNING);
         publishProgress(412, 3, 825);
 
@@ -314,43 +322,41 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
             value = ErrorCode.class,
             names = {"validation", "discoveryFailed"})
     void openSettings_codeThatIsNotAProviderFailure_isNotOffered(final ErrorCode code) {
-        showTranslating();
+        onTheShell();
         publish(RunState.RUNNING);
 
         failRun(AppError.of(code, "Not a provider failure", "Something else happened."));
 
         assertThat(isShown("translating-open-settings")).isFalse();
-        assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err");
+        assertNoDialogOrErrorToast();
     }
 
     // IF a cancelled result were drawn as a failed run, THEN a stop would read as "did not finish" instead of
     // "stopped".
     @Test
-    void banner_runReturnsCancelledAsAnError_showsTheStoppedStateAndNoErrorRole() {
-        showTranslating();
+    void stopped_runReturnsCancelledAsAnError_showsTheStoppedStateAndNoBanner() {
+        onTheShell();
         publish(RunState.RUNNING);
 
         mirror().publishOutcome(RunState.STOPPED, null, null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
-        assertThat(required("translating-banner").getStyleClass())
-                .contains("banner-info")
-                .doesNotContain("banner-err", "banner-warn");
+        assertThat(labelText("shell-run-state")).startsWith("Stopped at");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(isShown("translating-open-settings")).isFalse();
         assertNoDialogOrErrorToast();
     }
 
     // IF a stop drew the provider-error state or a dialog, THEN a choice the person made would read as a failure.
     @Test
-    void banner_runStoppedByThePerson_showsNeitherTheSettingsRouteNorADialog() {
-        showTranslating();
+    void stopped_byThePerson_showsNeitherTheSettingsRouteNorADialog() {
+        onTheShell();
         publish(RunState.RUNNING);
 
         mirror().publishOutcome(RunState.STOPPED, cancelledReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
+        assertThat(labelText("shell-run-state")).startsWith("Stopped at");
         assertThat(isShown("translating-open-settings")).isFalse();
         assertNoDialogOrErrorToast();
     }

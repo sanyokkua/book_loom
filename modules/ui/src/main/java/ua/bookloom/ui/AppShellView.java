@@ -30,6 +30,7 @@ import ua.bookloom.ui.control.BannerSlot;
 import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Overrun;
+import ua.bookloom.ui.control.RunBanner;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.control.ScrollAnchor;
 import ua.bookloom.ui.control.SmoothScroll;
@@ -39,7 +40,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DiagnosticActions;
-import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -67,17 +68,10 @@ public final class AppShellView {
     static final String FILLS_CLASS = "fills-viewport";
     static final String CAPPED_CLASS = "content-capped";
 
-    /**
-     * The smallest <em>outer</em> window width. The content area that leaves a person is smaller (borders and title
-     * bar take part of it, about 944 by 600 at least), and every screen still fits its width there without sideways
-     * scrolling.
-     */
+    /** The smallest <em>outer</em> window width; every screen fits the content area it leaves (about 944 wide). */
     public static final double MIN_WIDTH = 960;
 
-    /**
-     * The smallest <em>outer</em> window height; the content area it leaves is about 600 pixels on Windows and 612 on
-     * macOS, and below it the title bar, toolbar and a screen's controls compete for room.
-     */
+    /** The smallest <em>outer</em> window height; it leaves a content area of about 600 pixels on Windows. */
     public static final double MIN_HEIGHT = 640;
 
     private static final int WORKFLOW_STEPS = Arrays.stream(ViewNames.values())
@@ -122,10 +116,11 @@ public final class AppShellView {
      * @param runStatus the run's status and control, placed between the product name and the theme control
      * @param activityChip the other model work under way, with its Stop, placed before the run's status
      * @param progress the completed steps the navigation marks
-     * @param settings the chosen provider and model the navigation footer names
+     * @param runs the run-state row and the chosen AI model the navigation footer names
      * @param locks which steps are closed, for the navigation to draw
      * @param diagnostics the log settings and actions the About dialog offers
      * @param banners the run's banners, pinned between the toolbar and the content
+     * @param runBanner the run's own banner, built with the shell; it pins itself in {@code banners}
      * @param version the build version the About dialog reports
      */
     @Inject
@@ -140,10 +135,11 @@ public final class AppShellView {
             final RunStatusBar runStatus,
             final ActivityChip activityChip,
             final WorkflowProgress progress,
-            final SettingsViewModel settings,
+            final RunStateSource runs,
             final StepLocks locks,
             final DiagnosticActions diagnostics,
             final ShellBanners banners,
+            final RunBanner runBanner,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -156,8 +152,9 @@ public final class AppShellView {
         this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
         this.banners = Objects.requireNonNull(banners, "banners");
+        Objects.requireNonNull(runBanner, "runBanner");
         this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate, progress, settings, locks);
+        this.navColumn = new NavColumn(messages, this::activate, progress, runs, locks);
     }
 
     /**

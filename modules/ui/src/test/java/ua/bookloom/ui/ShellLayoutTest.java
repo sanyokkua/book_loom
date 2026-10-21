@@ -9,7 +9,12 @@ import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.ShellBanners;
+import ua.bookloom.ui.state.StateMirror;
 
 /**
  * The shell's layout rules that depend on its own regions: the pinned banner slot, the width classes on the content
@@ -70,9 +75,20 @@ class ShellLayoutTest extends ShellTestBase {
         assertThat(sceneBounds("shell-banners").getHeight()).isZero();
     }
 
+    private void failARun() {
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        onFx(() -> {
+            mirror.publishRunStarted("Frankenstein.epub", null);
+            mirror.publishOutcome(
+                    RunState.FAILED, null, AppError.of(ErrorCode.internal, "Unexpected error", "It stopped."));
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     // IF the run's banner stayed inside the Translating page, THEN it would scroll away and show on that screen only.
     @Test
     void translatingScreen_banner_livesInTheShellSlotNotInTheScreen() {
+        failARun();
         openAScreen(ViewNames.TRANSLATING);
 
         final Node banner = required("translating-banner");
@@ -81,12 +97,32 @@ class ShellLayoutTest extends ShellTestBase {
         assertThat(required("translating-screen").lookup("#translating-banner")).isNull();
     }
 
-    // IF the slot kept the banner after the screen was left, THEN a "ready to translate" strip would sit on Export.
+    // IF the run's banner left with the Translating screen, THEN a failure would be missed on every other screen; it
+    // stays pinned there and leads back to Translating.
     @Test
-    void translatingScreen_leftForAnotherScreen_takesItsBannerOffTheSlot() {
+    void translatingScreen_leftForAnotherScreen_keepsTheRunsBannerWithGoToTranslating() {
+        failARun();
         openAScreen(ViewNames.TRANSLATING);
-        openAScreen(ViewNames.EXPORT);
+        openAScreen(ViewNames.SETTINGS);
 
+        assertThat(required("translating-banner").getParent()).isSameAs(required("shell-banners"));
+        assertThat(required("translating-go-translating").isVisible()).isTrue();
+    }
+
+    // IF a finished run's banner followed the person to every screen, THEN it would nag long after it mattered.
+    @Test
+    void finishedRun_bannerShowsOnTranslatingOnly() {
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        onFx(() -> {
+            mirror.publishRunStarted("Frankenstein.epub", null);
+            mirror.publishRunState(RunState.COMPLETED);
+        });
+        openAScreen(ViewNames.TRANSLATING);
+        final boolean onTranslating = scene.getRoot().lookup("#translating-banner") != null;
+
+        openAScreen(ViewNames.SETTINGS);
+
+        assertThat(onTranslating).isTrue();
         assertThat(scene.getRoot().lookup("#translating-banner")).isNull();
     }
 

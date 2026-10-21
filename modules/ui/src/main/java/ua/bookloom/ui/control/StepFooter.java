@@ -21,6 +21,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The caller supplies each action's node id, label, hover explanation, button style class and effect, so the ids the
  * screens and their tests already address stay as they were. The forward action can be drawn unavailable, for the last step.
+ * A step whose run actions belong in the toolbar too (Translating's Start, Pause, Resume, Stop and Review) adds them as a
+ * run group, which sits just before the forward action wherever the buttons are.
  */
 @Slf4j
 public final class StepFooter extends HBox {
@@ -54,6 +56,7 @@ public final class StepFooter extends HBox {
     private final @Nullable Button back;
     private final Region spacer = new Region();
     private final Label hint = new Label();
+    private final List<Node> runGroup = new ArrayList<>();
     private boolean hinting;
     private @Nullable Pane host;
 
@@ -117,7 +120,31 @@ public final class StepFooter extends HBox {
     }
 
     private List<Node> forwardNodes() {
-        return hinting ? List.of(hint, forward) : List.of(forward);
+        final List<Node> nodes = new ArrayList<>(runGroup);
+        if (hinting) {
+            nodes.add(hint);
+        }
+        nodes.add(forward);
+        return nodes;
+    }
+
+    /**
+     * Adds the step's run actions, which sit just before the forward action, in this order.
+     *
+     * @param actions the buttons; each keeps the id, label and state its owner gives it
+     * @return this footer
+     */
+    public StepFooter withRunGroup(final List<? extends Node> actions) {
+        Objects.requireNonNull(actions, "actions");
+        runGroup.addAll(actions);
+        final Pane slot = host;
+        if (slot == null) {
+            restoreInPlace();
+        } else {
+            slot.getChildren().addAll(slot.getChildren().indexOf(forward), actions);
+        }
+        log.debug("footer {} holds {} run actions", forward.getId(), actions.size());
+        return this;
     }
 
     private List<Node> hostedNodes() {

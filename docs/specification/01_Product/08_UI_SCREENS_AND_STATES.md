@@ -54,27 +54,23 @@ own minimum height is zero, so the height is fixed in the stylesheet). The layou
 
 ### Title bar run status {#title-bar-run-status}
 
-**Built today.** While the current project has no run, the title bar shows only the product name and the theme toggle. While a run
-exists — from Start until the project's book is replaced by a different import — the title bar shows, between the
-product name and the theme toggle: the file name; the state text (`Progress 78%` while running, `Paused at 78%`,
-`Stopped at 78%`, `Provider error`, `Finished`, or `Failed at 78%`); the run's quality dial and review mode joined by ` · ` (`Balanced · Unattended`; `#shell-run-mode`, with a hover
-explanation, absent when the start names none); and the elapsed time and the time left. It
-offers **Pause** while running, **Resume** while paused, stopped or in a provider error, and **no control** once the
-run has finished or failed. The title bar's control does exactly what the Translating screen's control of the same
-name does — pressing either one acts on the same run. In a narrow window (down to the 960 × 640 minimum, with the
-model-work chip and every run part shown at once) nothing is cut or drawn over another: the file name shortens first
-(ellipsis, down to about twenty characters), then the run parts are hidden whole in this order — the tokens-per-second
-rate, the mode, the time left, the elapsed time — and only then does the file name shrink further; the state text, the
-connection chip, the control, the model-work chip with its Stop, the product name, the theme toggle and About always
-keep their words whole, and a wider window brings the hidden parts back (`LayoutFitTest`).
-
-**Planned.** The title bar reads, left to right: product name · the **activity chip** of hidden work (`ActivityChip`,
-for example "▬ Names · 53 % · open") · while a project is open, the project name · the run state text from the run-state
-table (`#run-states`, for example "51 % done · about 1 h 10 min left") · the quality dial and review mode · while
-translating, elapsed time and speed (the title bar keeps "9.4 tok/s", tooltip "how fast the model writes") · the
-**AI-model chip** (colour by G11) · Pause / Resume. Items give way by priority; the mockup README gives "window ≤ 1280
-hides dial, elapsed and speed; ≤ 1060 hides the name", and `LayoutFitTest` covers it (also under `uk`, L10). The
-project's name shows in the title bar, not in the sidebar (G6).
+**Built (task 5.8).** While no project is open (and no run exists), the title bar shows only the product name, the
+theme toggle and About. While one is, it reads, left to right: product name · the **activity chip** of hidden work
+(`ActivityChip`, for example "▬ Names · 53 % · open") · the project's name (`#shell-run-project`: the book's title up to
+a subtitle, or the file name without its extension, then the language pair, "Earth Gravity · EN → UK") · the state text
+of its run-state row (`#shell-run-state`, `#run-states`, for example "51 % done · about 1 h 10 min left") · the quality
+dial and review mode (`#shell-run-mode`, "Balanced · Unattended") · while translating, elapsed time and speed
+(`#shell-run-elapsed`, `#shell-run-rate`, "9.4 tok/s" with its tooltip) · the **AI-model chip** (`#shell-run-connection`,
+a state marker coloured by G11 — grey "AI model ready" / "Model idle", blue "Model answering", amber "No answer for
+3:40", red "Cannot reach Ollama", "Model missing", "No AI model", "Error"; its tooltip keeps the last answer, timeouts,
+failures and speeds, and it opens Settings) · the one run control (`#shell-run-control`), which is the toolbar's Pause or
+Resume of the same row with the same label ("Try again now" when the run stopped trying or the model is missing,
+"Continue translation" once stopped, shown unavailable while pausing or stopping, absent when ready, finished or failed).
+`RunStatusBar` reads the row from `RunStateSource`, the same row the toolbar and the banner read. Items give way by the
+window's width: at 1280 pixels or less the mode, the elapsed time and the speed are hidden, at 1060 or less the name;
+the state text, the chip and the control always stay (`PriorityRow.dropAtWindowWidth`, `TitleBarGiveWayTest`). A
+narrower title bar still shortens the name first and hides the speed, the mode and the elapsed time in that order
+(`LayoutFitTest`). The project's name shows in the title bar, not in the sidebar (G6).
 
 ### Background work and the progress dialog {#busy-card}
 
@@ -160,7 +156,11 @@ unlock when a project is open"; Projects and Settings stay available (`NavColumn
 
 ### Navigation footer {#navigation-footer}
 
-The navigation column's footer reads the chosen provider's display name and model id, for example `Ollama · gemma4:26b`, or `No model chosen` when none is configured. It shows **no readiness dot** — readiness is not tracked in this build. **Planned:** the footer (`#nav-footer`) reads "AI program · model" with the tooltip "the one network destination"; the readiness shows in the title bar's AI-model chip (colour by G11) and in the Providers summary card.
+**Built (task 5.8).** The navigation column's footer (`#nav-footer`) reads "AI program · model", for example `Ollama ·
+gemma4:26b`, with the tooltip "The one network destination: the AI program and model BookLoom sends its requests to." It
+reads the same source as the title bar's AI-model chip (`RunStateSource`): `No AI model found` as a red state marker
+when none is chosen, and, while a project is open and the chip is red, the program and the chip's words (`Ollama ·
+Cannot reach Ollama`).
 
 P6 reference: match the shell chrome, nav grouping, and theme toggle in the mockup, except for the departures named
 below. The mockup's "Mockup reference" group (Component library, Dialogs, Notifications and Run states pages) and its
@@ -578,31 +578,33 @@ is saved, so the subtitle changes with the project store.)
 |-------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | Progress line           | `Label` + `ProgressBar`      | Percentage · `Chapter k of n` (the body-unit position; the auxiliary unit is never counted as a chapter) · chunk `k/K`                          |
 | Rate / time             | `Label`s                     | Time left and tokens per second, from the recent drafts                                                                                        |
-| Count tiles             | four stat tiles              | auto-accepted / repaired / flagged / remaining — `remaining` leaves out segments kept as source by choice. The flagged tile shows the review desk's count whenever the run is paused or ended (so Accept on a paused run lowers it and it equals `Review flagged (n)`); while the run decides it shows the run's own running count, so after Resume it reads that figure until the next pause or end |
+| Count tiles             | four stat tiles              | auto-accepted / repaired / flagged / remaining — `remaining` leaves out segments kept as source by choice. The flagged tile shows the review desk's count whenever the run is paused or ended (so Accept on a paused run lowers it and it equals the flagged part of `Review (n)`); while the run decides it shows the run's own running count, so after Resume it reads that figure until the next pause or end |
 | Model calls (live)      | two call blocks              | Block 1, `Current call` (`Last call` once the run has ended): the model call in flight, else the newest finished. Block 2, `Previous call`: the one before it; a new call moves the current one here. A block shows a header (prompt name, kind, state chip — waiting / answered / failed / cancelled — `attempt a of b`, a clock from the moment the attempt went out, the timeout, the tokens once answered), every segment the call carried (locator, the source as sent, the target so far, chips for what became of it: adopted, fell back, accepted, flagged, judge score, path) in a fixed-height scroll area, the model's reply as received (collapsed, with Copy) and a collapsed `Prompt context` section (with Copy) holding the filled parts of the prompt in the order they were sent — the system message's first, the fixed instruction text left out. The reply and the prompt are each one read-only text, filled only while the section is open; the clock, timeout and token figures change without re-laying out the screen, and a new call swaps the two blocks' roles rather than rebuilding them. Before the first call the card says nothing was sent yet |
 | Activity log            | `ListView` (monospace)       | Tagged entries — `ok`, `fix`, `mem`, `sum`, `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); bounded to the last 500       |
-| Controls                | `Button`s                    | Start, Pause, Resume, Stop, `Review flagged (n)`; which are offered follows the state table below                                               |
+| Controls                | `Button`s in the toolbar     | Start / Continue translation, Resume / Try again now, Pause, Stop, `Review (n)`, Continue to Export; which are offered follows the run-state table (`#run-states`) |
 
 The start toast reads `Translation started` / `Progress is saved as you go.` (Built.)
 
-**Built today** (`#runState`, 7 states):
-
-| State           | Shows                                                                                                                                                                        | Offers                                                            |
-|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| idle              | A ready card: book, model, review mode, quality dial, pending count; a missing model or missing brief field is named in place                                              | Start (its own)                                                       |
-| running           | Progress advancing, the live panel, the activity log                                                                                                                        | Pause, Stop, `Review flagged (n)`                                     |
-| paused            | Banner `Paused. Progress is kept until the application closes. Resume any time — it continues at chunk 41/66.`                                                             | Resume, Stop, `Review flagged (n)`                                    |
-| stopped           | Banner `Run stopped. Progress is kept until the application closes. Resume any time — it re-enters at the first pending segment; flagged segments wait in the review panel.` | Resume, `Review flagged (n)`                                          |
-| provider error    | Auto-paused, naming the failure's error code                                                                                                                                | Resume, `Open provider settings`                                      |
-| completed         | Auto-accepted, repaired-and-accepted, flagged, kept-as-is (numbers, symbols) and kept-as-source counts                                                                      | Continue to Export, `Review flagged (n)`; Start only while pending segments remain (e.g. after an "Also translate" switch is turned on once the run has completed) |
-| failed            | A blocking dialog: `Decided segments are kept until the application closes.`, then the outcome so far                                                                      | Start (begins a new run at the first pending segment)                 |
-
 ### The 16 run states {#run-states}
 
-**Planned — UI finalization + SQLite (A).** Every surface follows the row of the current state: the title bar, the
-AI-model chip (colour by G11), the toolbar (L2), the pinned banner (L3), the live panel's line and the markers of the
-current call's segments. `RunState` (8 values) plus the recovery and call details (`RunNotice`, `RunInterventions`,
-`PauseNotice`, `ActivityTracker`) already exist; this table is the mapping the conformance test checks.
+**Built (task 5.8).** Every surface follows the row of the current state: the title bar, the AI-model chip (colour by
+G11), the toolbar (L2), the pinned banner (L3) and the live line. `state/RunStateView` is one pure row per state, worked
+out from `RunState` plus the recovery and call details (`RunNotice`, `RecoveryState`, `WaitingCall`, the controls on
+offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all sixteen rows. As built:
+
+- A banner is pinned in `#shell-banners` on every screen while it applies, with **Go to Translating** off Translating;
+  a finished run's banner shows on Translating only (`RunBanner`). A pause on an error (Waiting for the AI model, Paused
+  after an error, Stopped trying) offers Try again now, Skip these N segments (N the segments of the call in flight)
+  and Open settings; Model missing offers Choose another model…; a failed run offers Show details and opens no dialog
+  by itself.
+- The live line shows on Translating as `#translating-live-line` until the live card's own line (task 6.5). Where a run
+  continues is not known yet, so "Continues at …" reads "picks up at the first segment not done".
+- Finished, nothing to review still offers Review (0), so a clean Unattended run can be spot-checked through All
+  segments; the desk does not open by itself.
+- A start refused in place (`validation`) shows "The run was refused" with its message, warning role, no settings route.
+- While Translating, Pausing, Stuck call, Stopping or Waiting for the AI model (`RunStateView.isAtWork()`), the other
+  model actions are off with "Pause the translation first — BookLoom sends one model request at a time"; while the
+  names pass runs, Start waits with "Wait until the names pass ends" (`BlockedWords`).
 
 | State | Code | Title bar · chip | Toolbar | Banner | Live line · current-call rows | Review · Export · awake |
 |---|---|---|---|---|---|---|

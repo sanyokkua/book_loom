@@ -26,6 +26,7 @@ final class PendingCount {
     private final Executor executor;
     private final ReadOnlyIntegerWrapper count = new ReadOnlyIntegerWrapper();
     private final ReadOnlyBooleanWrapper remains = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
 
     PendingCount(final ReviewDesk desk, final Executor executor) {
         this.desk = Objects.requireNonNull(desk, "desk");
@@ -40,6 +41,11 @@ final class PendingCount {
         return remains.getReadOnlyProperty();
     }
 
+    /** The project's segments in all, which a reopened project's progress is counted against; zero until read. */
+    ReadOnlyIntegerProperty total() {
+        return total.getReadOnlyProperty();
+    }
+
     /** Reads the count for {@code projectId} in the background and publishes it on the FX thread. */
     void refresh(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
@@ -52,14 +58,22 @@ final class PendingCount {
         log.debug("no project open: the pending count is cleared");
         count.set(0);
         remains.set(false);
+        total.set(0);
     }
 
     private void read(final String projectId) {
         final Result<ReviewCounts> counts = desk.counts(projectId);
         final ReviewCounts data = counts.data();
         final int pending = data == null ? 0 : data.pending();
-        log.debug("project {} has {} pending segments (read succeeded: {})", projectId, pending, data != null);
+        final int segments = data == null ? 0 : data.total();
+        log.debug(
+                "project {} has {} pending of {} segments (read succeeded: {})",
+                projectId,
+                pending,
+                segments,
+                data != null);
         Platform.runLater(() -> {
+            total.set(segments);
             count.set(pending);
             remains.set(pending > 0);
         });

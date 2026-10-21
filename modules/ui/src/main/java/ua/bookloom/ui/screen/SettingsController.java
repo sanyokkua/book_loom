@@ -32,6 +32,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ModelAdvice;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ProviderNames;
 import ua.bookloom.ui.state.ProviderRow;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -65,10 +66,8 @@ public final class SettingsController {
     private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
     private final ChangeListener<List<ModelAdvice.Note>> onNotes = (observed, was, now) -> showNotes(now);
 
-    /**
-     * Set while this controller itself changes the combo's items, editor or value, so that the events those changes
-     * cause are not mistaken for a person typing or picking; FX thread only.
-     */
+    // Set while this controller changes the combo's items, editor or value, so the events that causes are not
+    // mistaken for a person typing or picking; FX thread only.
     private boolean applying;
 
     @FXML

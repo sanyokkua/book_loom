@@ -69,10 +69,11 @@ resolved or dismissed and offers a relevant action (Try again now, Open settings
 
 ### The pinned banner slot {#banner-slot}
 
-**Planned** (`mockups/README.md`, L3): a pinned banner slot (`#shell-banners`, a `VBox` in `AppShellView`) sits between
-the toolbar and the scrolling content. It holds the **run banners** and the hidden-work banner. Run banners show on
-**every** screen while they apply, with a "Go to Translating" action, so a problem is never hidden by leaving the
-Translating screen. Today the run's notice is shown on the Translating screen only.
+**Built (task 5.8)** (`mockups/README.md`, L3): a pinned banner slot (`#shell-banners`, `BannerSlot` in `AppShellView`)
+sits between the toolbar and the scrolling content. It holds the **run banner** (`RunBanner`, `#translating-banner`,
+read from the run-state row) and the hidden-work banner. The run banner shows on **every** screen while it applies and,
+off Translating, offers "Go to Translating", so a problem is never hidden by leaving the Translating screen; a finished
+run's banner shows on Translating only.
 
 The run banners and their exact wording come from the Run states table (`mockups/README.md`, Run states). The wording
 below is the user-facing text; the program name ("Ollama") is the configured provider's.
@@ -82,8 +83,8 @@ below is the user-facing text; the program name ("Ollama") is the configured pro
 | Ready to continue | "Welcome back — 74 of 142 segments are done." |
 | Cannot start yet | "Cannot start yet — no AI model is chosen." [Open settings] |
 | Waiting for the AI model | "BookLoom cannot reach Ollama — Is the Ollama app open? BookLoom tries again by itself in 0:12." [Try again now] [Skip these 4 segments] [Open settings] |
-| Paused after an error | "Paused. Ollama could not be reached. Open Ollama, then press Resume." |
-| Stopped trying (12 h) | "Ollama has not answered for 12 hours — BookLoom stopped trying by itself." |
+| Paused after an error | "Paused. Ollama could not be reached. Open Ollama, then press Resume." [Try again now] [Skip these 4 segments] [Open settings] |
+| Stopped trying (12 h) | "Ollama has not answered for 12 hours — BookLoom stopped trying by itself." [Try again now] [Skip these 4 segments] [Open settings] |
 | Model missing | "The AI model gemma4:e4b is not available — check that it is installed." [Choose another model…] |
 | Stuck call | "The model is taking longer than usual (3:40). BookLoom tries again by itself at 6:00. You do not need to do anything." |
 | Finished, to review | "Translation finished. 6 segments need your review. You can export now and review later." [Review 6 segments] (Translating only) |
@@ -91,8 +92,11 @@ below is the user-facing text; the program name ("Ollama") is the configured pro
 | Failed | "The translation stopped because of an error. Finished segments are saved." [Show details] |
 
 The other states (Ready, Translating, Pausing, Paused, Stopping, Stopped) have no banner. Counts are ICU plurals, and the
-retry verb is always "Try again now" (never "Retry" or "Send again"). The conformance test checks this table against the
-README's.
+retry verb is always "Try again now" (never "Retry" or "Send again"). Every pause on an error offers the three actions
+the notifications spec names ("Report a paused or failed run in the run's own banner"); the README draws fewer for
+Paused after an error and Stopped trying, and the table above follows the spec. A failed run opens **no dialog by
+itself**: Show details opens the failure's dialog with its details folded. A start refused in place (`validation`)
+reads "The run was refused" with its message. `RunStateMappingTest` checks this table.
 
 Other banners are in-screen and appear with their screen (`mockups/README.md`, Changes while translating): Names &
 style ("Changes apply to the next segments translated."), Book Brief read-only ("Pause the translation to change the

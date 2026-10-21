@@ -64,7 +64,7 @@ final class AutoNamesBar {
         auto.setId("names-style-auto");
         auto.getStyleClass().add("btn-secondary");
         auto.setMinWidth(Region.USE_PREF_SIZE);
-        auto.disableProperty().bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
+        ModelActionBar.explainWhenBlocked(messages, auto, MessageKey.NAMES_STYLE_AUTO_TIP, names);
         auto.setOnAction(event -> {
             log.debug("names-style-auto pressed");
             names.autoPrepare();

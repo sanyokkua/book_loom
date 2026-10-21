@@ -51,8 +51,7 @@ class LayoutFitTest extends ShellTestBase {
     // Short enough for the wide window to hold whole beside every part in any font: how much room a long name needs
     // depends on the platform's font (a Linux runner's was wider than a 1900 px bar can hold with the other parts).
     private static final String BOOK_NAME_THAT_FITS_THE_WIDE_WINDOW = "Doctor Jekyll and Mister Hyde.epub";
-    private static final List<String> DROP_ORDER =
-            List.of("shell-run-rate", "shell-run-mode", "shell-run-left", "shell-run-elapsed");
+    private static final List<String> DROP_ORDER = List.of("shell-run-rate", "shell-run-mode", "shell-run-elapsed");
 
     // The full-HD size runs 1920 wide by 700 high here: JavaFX's headless screen is a 1000 by 1000 pixel buffer, and a
     // window whose rows run past it makes the blit fail and takes the toolkit down with it.
@@ -197,7 +196,7 @@ class LayoutFitTest extends ShellTestBase {
 
         assertThat(DROP_ORDER.stream().map(id -> required(id).isVisible()).toList())
                 .containsOnly(true);
-        final Node file = required("shell-run-file");
+        final Node file = required("shell-run-project");
         assertThat(file.getLayoutBounds().getWidth())
                 .as("a wide window shows the whole book name")
                 .isGreaterThanOrEqualTo(file.prefWidth(-1) - PART_TOLERANCE);
@@ -249,7 +248,7 @@ class LayoutFitTest extends ShellTestBase {
     // The book name is the one part meant to give way (it ends in an ellipsis), so only the others are held whole.
     private static List<String> cutParts(final List<Node> parts) {
         return parts.stream()
-                .filter(part -> !"shell-run-file".equals(part.getId()))
+                .filter(part -> !"shell-run-project".equals(part.getId()))
                 .filter(part -> part.getLayoutBounds().getWidth() + PART_TOLERANCE < part.prefWidth(-1))
                 .map(part -> part.getId() + " " + ((Labeled) part).getText())
                 .toList();

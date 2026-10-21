@@ -133,16 +133,16 @@ class MessagesTest {
                 .isEqualTo(expected);
     }
 
-    // IF the waiting wording were English-only or lost its time argument, THEN a Ukrainian reader would see an English
-    // banner or a banner with no clock.
+    // IF the stuck chip were English-only or lost its clock, THEN a Ukrainian reader would see an English chip or one
+    // with no clock.
     @ParameterizedTest
     @CsvSource({
-        "en, 0:12, Waiting for the model… 0:12",
-        "uk, 0:12, Очікування відповіді моделі… 0:12",
+        "en, 3:40, No answer for 3:40",
+        "uk, 3:40, Немає відповіді 3:40",
     })
-    void get_waitingForModel_rendersTheClockInBothLanguages(
+    void get_stuckChip_rendersTheClockInBothLanguages(
             final String language, final String clock, final String expected) {
-        assertThat(messagesFor(Locale.forLanguageTag(language)).get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, clock))
+        assertThat(messagesFor(Locale.forLanguageTag(language)).get(MessageKey.RUN_CHIP_STUCK, clock))
                 .isEqualTo(expected);
     }
 }

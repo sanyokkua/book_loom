@@ -10,6 +10,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.ReviewCounts;
@@ -133,7 +134,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> "3".equals(labelText("translating-outcome-flagged")));
         assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review flagged (3)");
+        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (3)");
     }
 
     // IF the run's own figure were replaced while it is still deciding, THEN the desk's read, which lags the run's last
@@ -168,7 +169,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
         endedRunWithZeroLeft(state);
 
-        assertThat(isShown("shell-run-left")).isFalse();
+        assertThat(labelText("shell-run-state")).doesNotContain("left");
         assertThat(labelText("translating-pace-text")).doesNotContain("left");
     }
 
@@ -180,31 +181,32 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.RUNNING);
 
-        assertThat(labelText("shell-run-left")).isEqualTo("about 5 min left");
+        assertThat(labelText("shell-run-state")).isEqualTo("0 % done · about 5 min left");
         assertThat(labelText("translating-pace-text")).contains("about 5 min left");
     }
 
-    // IF the chip kept counting "answered 0:00 ago" after the run ended, THEN it would claim a live conversation.
+    // IF the chip still said the model answers after the run ended, THEN it would claim a live conversation.
     @ParameterizedTest
-    @EnumSource(
-            value = RunState.class,
-            names = {"COMPLETED", "STOPPED", "FAILED"})
-    void connectionChip_runEnded_dropsTheAnsweredAgoClock(final RunState state) {
+    @CsvSource({"COMPLETED, Model idle", "STOPPED, Model idle", "FAILED, Error"})
+    void connectionChip_runEnded_saysTheModelIsIdleOrTheRunFailed(final RunState state, final String chip) {
         showTranslating();
 
         endedRunWithZeroLeft(state);
 
-        assertThat(button("shell-run-connection").getText()).isEqualTo("● Model answered");
+        assertThat(button("shell-run-connection").getText()).isEqualTo(chip);
     }
 
+    // IF the chip's hover lost when the model last answered, THEN a quiet run could not be told from a dead one.
     @Test
-    void connectionChip_runGoing_showsHowLongAgoTheModelAnswered() {
+    void connectionChip_runGoing_saysTheModelAnswersAndItsHoverWhenItLastDid() {
         showTranslating();
         mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().live().publishConnection(new ConnectionStatus(Duration.ofSeconds(4), 0, 0, null, null));
 
         publish(RunState.RUNNING);
 
-        assertThat(button("shell-run-connection").getText()).isEqualTo("● Model answered 0:04 ago");
+        assertThat(button("shell-run-connection").getText()).isEqualTo("Model answering");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("shell-run-connection")))
+                .contains("Last answer: 0:04 ago");
     }
 }

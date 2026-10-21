@@ -31,7 +31,7 @@ class ReviewButtonSuspiciousScreenTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.COMPLETED);
         mirror().live().publishSuspicious(45);
-        awaitFx(() -> button(REVIEW).getText().equals("Review (0 flagged · 45 suspicious)"));
+        awaitFx(() -> button(REVIEW).getText().equals("Review (45)"));
 
         onFx(() -> button(REVIEW).fire());
         selectFirstRow();
@@ -40,7 +40,7 @@ class ReviewButtonSuspiciousScreenTest extends TranslatingScreenTestBase {
         assertThat(rowTexts()).containsExactly("ch2 · p04");
         desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 0, 0, 0, 0, 0, 0, 44));
         onFx(() -> button("review-accept").fire());
-        awaitFx(() -> button(REVIEW).getText().equals("Review (0 flagged · 44 suspicious)"));
+        awaitFx(() -> button(REVIEW).getText().equals("Review (44)"));
     }
 
     @SuppressWarnings("unchecked")

@@ -2,6 +2,7 @@ package ua.bookloom.ui.dialog;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.List;
 import java.util.Objects;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -127,10 +128,22 @@ public final class ConfirmDialog {
      * @param onConfirm what the confirming button does, after the card has closed
      */
     public void ask(final Question question, final Runnable onConfirm) {
+        ask(question, List.of(), onConfirm);
+    }
+
+    /**
+     * Asks with figures in the text, and runs {@code onConfirm} only if the person confirms.
+     *
+     * @param question what is asked
+     * @param textArgs the arguments of the question's text, in its order ("74 of 142 segments are done")
+     * @param onConfirm what the confirming button does, after the card has closed
+     */
+    public void ask(final Question question, final List<Object> textArgs, final Runnable onConfirm) {
         Objects.requireNonNull(question, "question");
+        Objects.requireNonNull(textArgs, "textArgs");
         Objects.requireNonNull(onConfirm, "onConfirm");
-        log.debug("asking: {}", question.title());
-        final Label text = new Label(messages.get(question.text()));
+        log.debug("asking: {} with {}", question.title(), textArgs);
+        final Label text = new Label(messages.get(question.text(), textArgs.toArray()));
         text.setWrapText(true);
         text.getStyleClass().add("dialog-text");
         final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);

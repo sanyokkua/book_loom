@@ -285,7 +285,7 @@ class ReviewPanelScreenTest extends ReviewPanelScreenTestBase {
         showTranslating();
         publish(RunState.PAUSED);
 
-        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (4)"));
+        awaitFx(() -> button(REVIEW).getText().equals("Review (4)"));
     }
 
     // IF Resume stayed live during a retry, THEN the run and the retry would race for the model.

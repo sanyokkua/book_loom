@@ -26,6 +26,15 @@ public final class FigureLabel extends Label {
         setMaxWidth(Region.USE_PREF_SIZE);
     }
 
+    /**
+     * Gives up the width reserved so far, for a label whose texts change kind (a state text that is short while paused
+     * and long while translating), so the next text is measured afresh and asks its parent for room once.
+     */
+    public void release() {
+        reserved = 0;
+        super.requestLayout();
+    }
+
     @Override
     public void requestLayout() {
         if (reserved > 0 && getParent() != null) {

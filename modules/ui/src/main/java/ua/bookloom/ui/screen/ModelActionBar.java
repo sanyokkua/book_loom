@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
@@ -93,13 +94,29 @@ final class ModelActionBar {
                 button(messages, card + "-translate", words.translate(), words.translateTip(), actions.translate());
         final Button stop =
                 button(messages, card + "-stop", MessageKey.BAR_STOP, MessageKey.BAR_STOP_TIP, names::stopModel);
-        for (final Button model : new Button[] {scan, review, translate}) {
-            model.disableProperty()
-                    .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
-        }
+        explainWhenBlocked(messages, scan, words.scanTip(), names);
+        explainWhenBlocked(messages, review, words.reviewTip(), names);
+        explainWhenBlocked(messages, translate, words.translateTip(), names);
         stop.visibleProperty().bind(names.busy());
         stop.managedProperty().bind(names.busy());
         return new Bar(scan, review, translate, stop);
+    }
+
+    /**
+     * Disables a model action while the screen's own work or other model work runs and, for the latter, makes its hover
+     * say why ("Pause the translation first — BookLoom sends one model request at a time"). The visible line under the
+     * table says it too, as a disabled button shows no tooltip on every platform.
+     */
+    static void explainWhenBlocked(
+            final Messages messages, final Button model, final MessageKey tip, final NamesStyleViewModel names) {
+        model.disableProperty().bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
+        Tips.installLive(
+                model,
+                Bindings.createStringBinding(
+                        () -> names.modelBlockedReason().get().isEmpty()
+                                ? messages.get(tip)
+                                : names.modelBlockedReason().get(),
+                        names.modelBlockedReason()));
     }
 
     private static Button button(

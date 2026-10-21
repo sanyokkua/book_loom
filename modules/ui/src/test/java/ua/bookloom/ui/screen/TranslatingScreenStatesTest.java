@@ -27,8 +27,6 @@ import ua.bookloom.ui.state.Throughput;
  */
 class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
-    private static final String KEPT_UNTIL_CLOSE = "Progress is kept until the application closes.";
-
     private void bookReadyWithPending(final int pending) throws TimeoutException {
         readyToStart();
         ThemeTestSupport.onFx(() -> {
@@ -93,13 +91,15 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(isShown("translating-ready-model-hint")).isFalse();
     }
 
-    // IF the subtitle kept promising a saved run, THEN a person would close the window expecting to resume.
+    // IF the subtitle still said progress lasts only until the window closes, THEN a person would keep the window open
+    // for hours for nothing: every decision is saved as it is made.
     @Test
-    void subtitle_anyState_saysProgressLastsUntilTheApplicationCloses() {
+    void subtitle_anyState_saysProgressIsSavedAsYouGo() {
         showTranslating();
 
         assertThat(labelText("translating-subtitle"))
-                .isEqualTo("A stopped run resumes where it left off — until the application closes.");
+                .isEqualTo("Progress is saved as you go. Continue translation picks up where it left off, also after a"
+                        + " restart.");
     }
 
     // IF the tiles mixed repaired with auto-accepted, THEN the repair rate would be invisible.
@@ -143,21 +143,41 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-pace-text")).isEqualTo(expected);
     }
 
-    // IF a paused banner promised the run was saved, THEN a person would quit and lose it.
+    // IF the paused line did not say what resume redoes, THEN a person would wonder whether the segments in flight are
+    // lost; a pause by the person has no banner (README "Run states").
     @Test
-    void paused_inChunk41Of66_saysProgressIsKeptOnlyUntilCloseAndOffersResumeAndNoStart() {
+    void paused_byThePerson_saysTheSegmentsInFlightAreTranslatedAgainAndOffersResumeAndNoStart() {
         showTranslating();
         publishRunning(700, 68, 3, 469);
 
         publish(RunState.PAUSED);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Paused");
-        assertThat(labelText("translating-banner-text"))
-                .isEqualTo(KEPT_UNTIL_CLOSE + " Resume any time — it continues at chunk 41/66.");
+        assertThat(labelText("translating-live-line"))
+                .isEqualTo("Paused. The segments in progress are translated again when you resume.");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(enabledControls()).containsExactlyInAnyOrder("translating-resume", "translating-stop");
     }
 
-    // IF a stop kept its terminal wording, THEN a person would not know Resume re-enters at the first pending segment.
+    // IF the paused line named no segments when the call in flight is known, THEN the person could not tell which are
+    // done again.
+    @Test
+    void paused_callOfFourInFlight_namesItsSegments() {
+        showTranslating();
+        publishRunning(700, 68, 3, 469);
+        mirror().live()
+                .publishCalls(ua.bookloom.ui.LiveCallFixtures.calls(
+                        ua.bookloom.ui.LiveCallFixtures.waiting(
+                                1, 4, "Text.", ua.bookloom.ui.LiveCallFixtures.smallPrompt()),
+                        null));
+
+        publish(RunState.PAUSED);
+
+        assertThat(labelText("translating-live-line"))
+                .isEqualTo("Paused. Segments ch7 · p101–ch7 · p104 are translated again when you resume.");
+    }
+
+    // IF a stop kept its terminal wording, THEN a person would not know Continue translation re-enters at the first
+    // pending segment.
     @Test
     void stopped_runReturnsCancelled_saysWhereResumeReentersAndShowsNoErrorToast() {
         showTranslating();
@@ -166,12 +186,11 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         mirror().publishOutcome(RunState.STOPPED, cancelledReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
-        assertThat(labelText("translating-banner-text"))
-                .isEqualTo(KEPT_UNTIL_CLOSE
-                        + " Resume any time — it re-enters at the first pending segment;"
-                        + " flagged segments wait in the review panel.");
+        assertThat(labelText("translating-live-line"))
+                .isEqualTo("Stopped. Continue translation picks up at the first segment not done.");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(enabledControls()).containsExactly("translating-resume");
+        assertThat(button("translating-resume").getText()).isEqualTo("Continue translation");
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
     }
 
@@ -185,8 +204,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
         publishFlaggedQueue(3);
 
-        awaitFx(() ->
-                "Review flagged (3)".equals(button("translating-review-flagged").getText()));
+        awaitFx(() -> "Review (3)".equals(button("translating-review-flagged").getText()));
     }
 
     // IF the button counted only the flagged while the outcome showed the audit's doubts, THEN the two figures
@@ -200,8 +218,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         publishFlaggedQueue(47);
         mirror().live().publishSuspicious(45);
 
-        awaitFx(() -> "Review (47 flagged · 45 suspicious)"
-                .equals(button("translating-review-flagged").getText()));
+        awaitFx(() -> "Review (92)".equals(button("translating-review-flagged").getText()));
     }
 
     // IF a completed run showed only counts, THEN a person would have nowhere to go next.
@@ -217,7 +234,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-outcome-repaired")).isEqualTo("45");
         assertThat(labelText("translating-outcome-flagged")).isEqualTo("3");
         assertThat(labelText("translating-outcome-kept")).isEqualTo("12");
-        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review flagged (3)");
+        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (3)");
         assertThat(enabledControls()).isEmpty();
         assertThat(isShown("translating-continue")).isTrue();
     }
@@ -291,10 +308,11 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
                         .projectId());
     }
 
-    // IF a failed run promised saved progress or dressed as a provider pause, THEN it would mislead; it opens the
-    // blocking dialog with the honest line and then shows the outcome so far with Start.
+    // IF a failed run dressed as a provider pause or opened a dialog by itself, THEN it would mislead or interrupt; its
+    // banner says what happened, Show details opens the failure, and the outcome so far offers Continue translation.
     @Test
-    void failed_internalErrorAfter412Decisions_opensTheRunFailureDialogThenTheOutcomeWithStart() throws Exception {
+    void failed_internalErrorAfter412Decisions_showsTheFailedBannerAndOpensTheFailureOnlyOnShowDetails()
+            throws Exception {
         bookReadyWithPending(828);
         showTranslating();
         publishRunning(412, 0, 0, 828);
@@ -304,9 +322,14 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
                         null,
                         AppError.of(ErrorCode.internal, "Unexpected error", "The run stopped unexpectedly."));
         WaitForAsyncUtils.waitForFxEvents();
+        final boolean dialogBeforeShowDetails = optional("error-note") != null;
+        onFx(() -> button("translating-show-details").fire());
 
-        assertThat(labelText("error-note")).isEqualTo("Decided segments are kept until the application closes.");
-        assertThat(labelText("translating-banner-title")).doesNotContain("Provider error");
+        assertThat(dialogBeforeShowDetails).isFalse();
+        assertThat(labelText("translating-banner-title"))
+                .isEqualTo("The translation stopped because of an error. Finished segments are saved.");
+        assertThat(labelText("error-note"))
+                .isEqualTo("Finished segments are saved. Continue translation picks up where the run stopped.");
         assertThat(labelText("translating-outcome-accepted")).isEqualTo("412");
         assertThat(enabledControls()).containsExactly("translating-start");
     }

@@ -2,6 +2,7 @@ package ua.bookloom.ui;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
+import com.google.inject.multibindings.Multibinder;
 import java.util.concurrent.ExecutorService;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
@@ -31,6 +32,7 @@ import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.DiagnosticActions;
+import ua.bookloom.ui.state.DirtySource;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportGuard;
@@ -42,6 +44,7 @@ import ua.bookloom.ui.state.ProgressFigures;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStarter;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SessionReporter;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
@@ -101,6 +104,7 @@ public final class UiModule extends AbstractModule {
         bind(ExportViewModel.class);
         bind(RunStarter.class);
         bind(TranslatingViewModel.class);
+        bind(RunStateSource.class);
         bind(ReviewPauseFollower.class);
         bind(DiagnosticActions.class);
         // Eager, so the first book opened is told to the detailed log before any screen asks for the reporter.
@@ -126,6 +130,8 @@ public final class UiModule extends AbstractModule {
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
         bind(StepLocks.class).to(StepAvailability.class);
+        // No form guards its unsaved changes yet; the Settings forms register here (tasks 7.1a, 7.2).
+        Multibinder.newSetBinder(binder(), DirtySource.class);
         bind(ProgressFigures.Factory.class).toInstance(LedgerFigures::new);
         bindDialogs();
         bindShell();

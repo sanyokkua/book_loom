@@ -39,7 +39,7 @@ abstract class ReviewPanelScreenTestBase extends TranslatingScreenTestBase {
         showTranslating();
         publish(state);
         publishFlagged(flagged);
-        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (" + flagged + ")"));
+        awaitFx(() -> button(REVIEW).getText().equals("Review (" + flagged + ")"));
         onFx(() -> button(REVIEW).fire());
         WaitForAsyncUtils.waitForFxEvents();
     }

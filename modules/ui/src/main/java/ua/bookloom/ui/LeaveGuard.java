@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -12,12 +13,14 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.DirtySource;
 
 /**
- * Asks before the person leaves a screen whose model work shows its result only there. Long work shown in its progress
- * dialog (the names pass, the export) asks "Model work is running": stay, or continue in the background, which hides it
- * and then leaves. Other such work (a glossary scan or review, the provider's inference test) asks to stop it and
- * leave, or leave and let it run on. Any other navigation passes at once. FX thread only.
+ * Asks before the person leaves a screen whose form holds unsaved changes (Keep editing, Discard or Save), or whose
+ * model work shows its result only there. Long work shown in its progress dialog (the names pass, the export) asks
+ * "Model work is running": stay, or continue in the background, which hides it and then leaves. Other such work (a
+ * glossary scan or review, the provider's inference test) asks to stop it and leave, or leave and let it run on. Any
+ * other navigation passes at once. FX thread only.
  */
 @Slf4j
 @Singleton
@@ -26,6 +29,7 @@ public final class LeaveGuard {
     private final ActivityTracker activities;
     private final LeaveDialog dialog;
     private final Messages messages;
+    private final Set<DirtySource> forms;
 
     /**
      * Wires the guard to what runs and to the question it asks.
@@ -33,12 +37,18 @@ public final class LeaveGuard {
      * @param activities the running work
      * @param dialog the question put to the person
      * @param messages the catalogue the work is named from
+     * @param forms the forms whose unsaved changes a leave asks about; empty until a screen registers one
      */
     @Inject
-    public LeaveGuard(final ActivityTracker activities, final LeaveDialog dialog, final Messages messages) {
+    public LeaveGuard(
+            final ActivityTracker activities,
+            final LeaveDialog dialog,
+            final Messages messages,
+            final Set<DirtySource> forms) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.dialog = Objects.requireNonNull(dialog, "dialog");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.forms = Set.copyOf(Objects.requireNonNull(forms, "forms"));
     }
 
     /**
@@ -50,7 +60,7 @@ public final class LeaveGuard {
      */
     public boolean admits(final @Nullable ViewNames source, final Runnable proceed) {
         Objects.requireNonNull(proceed, "proceed");
-        if (askedAboutLongWork(source, proceed)) {
+        if (askedAboutUnsavedChanges(source, proceed) || askedAboutLongWork(source, proceed)) {
             return false;
         }
         final Predicate<ActivityKind> leftBehind = kind -> kind.isLeaveSensitive() && kind.home() == source;
@@ -76,6 +86,28 @@ public final class LeaveGuard {
                     proceed.run();
                 });
         return false;
+    }
+
+    private boolean askedAboutUnsavedChanges(final @Nullable ViewNames source, final Runnable proceed) {
+        final @Nullable DirtySource dirty = forms.stream()
+                .filter(form -> form.home() == source && form.isDirty())
+                .findFirst()
+                .orElse(null);
+        if (dirty == null) {
+            return false;
+        }
+        log.debug("leaving {} with unsaved changes: asking first", source);
+        dialog.askUnsaved(
+                () -> {
+                    log.info("leaving {}: unsaved changes discarded", source);
+                    dirty.discard();
+                    proceed.run();
+                },
+                () -> {
+                    log.info("leaving {}: saving the changes first", source);
+                    dirty.save(proceed);
+                });
+        return true;
     }
 
     // Long work shown in its progress dialog asks "Model work is running"; Continue in background hides it, then

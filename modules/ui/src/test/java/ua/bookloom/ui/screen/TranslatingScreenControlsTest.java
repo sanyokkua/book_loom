@@ -6,10 +6,12 @@ import java.util.List;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.TooltipProbe;
 
@@ -19,8 +21,9 @@ import ua.bookloom.ui.TooltipProbe;
  */
 class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
-    private void awaitBanner(final String title) throws Exception {
-        awaitFx(() -> title.equals(labelText("translating-banner-title")));
+    // The title bar's state text of the run-state row, which every surface follows.
+    private void awaitState(final String prefix) throws Exception {
+        awaitFx(() -> labelText("shell-run-state").startsWith(prefix));
     }
 
     private void startRun() throws Exception {
@@ -28,7 +31,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
     }
 
     // IF the start control were not wired, THEN nothing would ever be translated from the screen.
@@ -50,7 +53,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-pause").fire());
 
         assertThat(job.calls()).contains("pause");
-        awaitBanner("Pausing");
+        awaitState("Pausing…");
         assertThat(disabledControls()).containsExactly("translating-pause");
     }
 
@@ -60,7 +63,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         startRun();
         onFx(() -> button("translating-pause").fire());
         job.emit(new Paused(PauseReason.REQUESTED, null, ProgressFixtures.progress(1, 2, 5, 0, 5)));
-        awaitBanner("Paused");
+        awaitState("Paused at");
 
         onFx(() -> button("translating-resume").fire());
 
@@ -79,9 +82,9 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
         assertThat(whileAsking).doesNotContain("cancel");
         assertThat(job.calls()).contains("cancel");
-        awaitBanner("Stopping");
+        awaitState("Stopping…");
         job.finish(Result.ok(cancelledReport()));
-        awaitBanner("Run stopped");
+        awaitState("Stopped at");
         assertThat(enabledControls()).containsExactly("translating-resume");
     }
 
@@ -95,7 +98,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
         assertThat(job.calls()).doesNotContain("cancel");
         assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
-        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
+        assertThat(labelText("shell-run-state")).startsWith("0 % done");
     }
 
     // IF Escape stopped the run, THEN backing out of the question by reflex would end it.
@@ -110,7 +113,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
         assertThat(job.calls()).doesNotContain("cancel");
         assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
-        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
+        assertThat(labelText("shell-run-state")).startsWith("0 % done");
     }
 
     // IF Enter confirmed the stop, THEN the dangerous answer would be the easy one.
@@ -124,5 +127,24 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         assertThat(button("confirm-yes").isDefaultButton()).isFalse();
         assertThat(TooltipProbe.tipText(button("confirm-yes"))).isNotBlank();
         assertThat(TooltipProbe.tipText(button("confirm-cancel"))).isNotBlank();
+    }
+
+    // IF the question did not say what is kept and what is done again, THEN a person who wanted a short break could
+    // stop instead; it names the counts and points to Pause.
+    @Test
+    void stopQuestion_74Of142With4InFlight_saysWhatIsKeptAndWhatIsTranslatedNextTime() throws Exception {
+        startRun();
+        mirror().publishProgress(ProgressFixtures.progress(2, 9, 74, 0, 68));
+        mirror().live()
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(1, 4, "Text.", LiveCallFixtures.smallPrompt()), null));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        onFx(() -> button("translating-stop").fire());
+
+        assertThat(textOf("confirm-card"))
+                .contains("74 of 142 segments are done and saved. The 4 being translated now are translated next"
+                        + " time. For a short break, use Pause.");
+        assertThat(button("confirm-cancel").isDefaultButton()).isTrue();
     }
 }

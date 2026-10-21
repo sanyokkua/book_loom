@@ -341,24 +341,8 @@ public enum MessageKey {
     SHELL_TAGLINE("shell.tagline"),
     /** Tail of a workflow breadcrumb; argument 0 is the step number and argument 1 the number of workflow steps. */
     SHELL_BREADCRUMB_STEP("shell.breadcrumb.step"),
-    /** State text while running; argument 0 is the whole-number percentage. */
-    SHELL_RUN_PROGRESS("shell.run.progress"),
-    /** State text while paused; argument 0 is the whole-number percentage. */
-    SHELL_RUN_PAUSED("shell.run.paused"),
-    /** State text once stopped; argument 0 is the whole-number percentage. */
-    SHELL_RUN_STOPPED("shell.run.stopped"),
-    /** State text while paused on an error, whatever its code. */
-    SHELL_RUN_PROVIDER_ERROR("shell.run.providerError"),
-    /** State text while the run waits for the provider by itself; argument 0 is the time to the next try as {@code m:ss}. */
-    SHELL_RUN_WAITING_PROVIDER("shell.run.waitingProvider"),
-    /** State text once every segment is decided. */
-    SHELL_RUN_FINISHED("shell.run.finished"),
-    /** State text once the run ended in failure; argument 0 is the whole-number percentage. */
-    SHELL_RUN_FAILED("shell.run.failed"),
     /** Title-bar elapsed time; argument 0 is the formatted duration. */
     SHELL_RUN_ELAPSED("shell.run.elapsed"),
-    /** Title-bar time left; argument 0 is the rounded time, "about 20 min" or the like. */
-    SHELL_RUN_LEFT("shell.run.left"),
     /** What the names.translate option does, shown under its choice and on hover. */
     BRIEF_HELP_NAMES_TRANSLATE("brief.help.names.translate"),
     /** What the names.transliterate option does, shown under its choice and on hover. */
@@ -405,14 +389,6 @@ public enum MessageKey {
     SHELL_RUN_MODE("shell.run.mode"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
     SHELL_RUN_MODE_TIP("shell.run.mode.tip"),
-    /** Title-bar run control that pauses the run. */
-    SHELL_RUN_PAUSE("shell.run.pause"),
-    /** Hover explanation of the control labelled by {@link #SHELL_RUN_PAUSE}. */
-    SHELL_RUN_PAUSE_TIP("shell.run.pause.tip"),
-    /** Title-bar run control that resumes the run. */
-    SHELL_RUN_RESUME("shell.run.resume"),
-    /** Hover explanation of the control labelled by {@link #SHELL_RUN_RESUME}. */
-    SHELL_RUN_RESUME_TIP("shell.run.resume.tip"),
     /** A duration of an hour or more; argument 0 is the hours, argument 1 the two-digit minutes, both Strings. */
     DURATION_HM("duration.hm"),
     /** A duration of a minute or more, under an hour; argument 0 is the minutes, a String. */
@@ -1119,10 +1095,6 @@ public enum MessageKey {
     NAMES_STYLE_START("namesStyle.start"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_START}. */
     NAMES_STYLE_START_TIP("namesStyle.start.tip"),
-    /** Footer button of names and style that resumes the paused or stopped run and shows it. */
-    NAMES_STYLE_RESUME("namesStyle.resume"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_RESUME}. */
-    NAMES_STYLE_RESUME_TIP("namesStyle.resume.tip"),
     /** Footer button of names and style that shows the run under way instead of starting another. */
     NAMES_STYLE_TO_RUN("namesStyle.toRun"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_TO_RUN}. */
@@ -1638,17 +1610,6 @@ public enum MessageKey {
     TRANSLATING_PACE_LEFT("translating.pace.left"),
     /** The rate part of the pace text; argument 0 is the rate, passed as a String, with a leading ~ when estimated. */
     TRANSLATING_PACE_RATE("translating.pace.rate"),
-    /** Paused banner text naming the chunk the run continues at; arguments are the chunk and the number of chunks. */
-    TRANSLATING_PAUSED_TEXT("translating.pausedText"),
-    /** Button that opens the flagged segments for review; argument 0 is the number of flagged segments. */
-    TRANSLATING_REVIEW_FLAGGED("translating.reviewFlagged"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_REVIEW_FLAGGED}. */
-    TRANSLATING_REVIEW_FLAGGED_TIP("translating.reviewFlagged.tip"),
-    /**
-     * The same button when the final audit doubts accepted segments too; argument 0 is the flagged count, argument 1
-     * the suspicious count.
-     */
-    TRANSLATING_REVIEW_FLAGGED_SUSPICIOUS("translating.reviewFlaggedSuspicious"),
     /** Button that leaves a completed run for the Export step. */
     TRANSLATING_CONTINUE("translating.continue"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_CONTINUE}. */
@@ -1657,61 +1618,10 @@ public enum MessageKey {
     TRANSLATING_BACK("translating.back"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_BACK}. */
     TRANSLATING_BACK_TIP("translating.back.tip"),
-    /** Banner title of a run state; argument 0 is the state's token (idle to failed); stopped and failed are neutral. */
-    TRANSLATING_STATE_TITLE("translating.stateTitle"),
-    /** Banner text of a run state; argument 0 is the same token as for {@link #TRANSLATING_STATE_TITLE}. */
-    TRANSLATING_STATE_TEXT("translating.stateText"),
-    /** Banner title of a provider failure; argument 0 is the failure's error code name, passed as data. */
-    TRANSLATING_PROVIDER_TEXT("translating.providerText"),
-    TRANSLATING_PROVIDER_TEXT_NO_HOST("translating.providerTextNoHost"),
-    TRANSLATING_RETRY_NOW("translating.retryNow"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_RETRY_NOW}. */
-    TRANSLATING_RETRY_NOW_TIP("translating.retryNow.tip"),
-    TRANSLATING_STAY_PAUSED("translating.stayPaused"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_STAY_PAUSED}. */
-    TRANSLATING_STAY_PAUSED_TIP("translating.stayPaused.tip"),
     /** Banner title of a failure reported in place, such as a destination that may not be replaced. */
     TRANSLATING_REFUSED_TITLE("translating.refusedTitle"),
-    /** Banner title of a start refused because an input is missing. */
-    TRANSLATING_MISSING_TITLE("translating.missingTitle"),
     /** Banner text naming the missing input; argument 0 is its token (book or model). */
     TRANSLATING_MISSING_TEXT("translating.missingText"),
-    /** Banner text while the model has not answered for a while; argument 0 is the wait as {@code m:ss}, passed as a String. */
-    TRANSLATING_WAITING_FOR_MODEL("translating.waitingForModel"),
-    /** Banner text naming the request the run waits on; arguments: 0 the call's name, 1 the locator part, 2 the attempt, 3 the attempts allowed, 4 the attempt's wait as {@code m:ss}, 5 its timeout as {@code m:ss} or {@code none}, 6 the call's whole wait as {@code m:ss} or {@code none}; all Strings. */
-    TRANSLATING_WAITING_CALL("translating.waitingCall"),
-    /** Banner title once a request has waited long enough to offer a way out. */
-    TRANSLATING_STUCK_TITLE("translating.stuckTitle"),
-    /** Banner hint under a stuck request, naming the three ways out. */
-    TRANSLATING_STUCK_HINT("translating.stuckHint"),
-    /** Banner title while the run waits for the provider by itself. */
-    TRANSLATING_RECOVERY_TITLE("translating.recoveryTitle"),
-    /** Banner text while the run waits for the provider; arguments: 0 the time to the next try as {@code m:ss}, 1 the attempt (a number), 2 when the outage began as {@code HH:mm}, 3 the last probe's code or {@code none}. */
-    TRANSLATING_RECOVERY_TEXT("translating.recoveryText"),
-    /** Banner title once the provider has been down too long for the run to keep retrying by itself. */
-    TRANSLATING_RECOVERY_GAVE_UP_TITLE("translating.recoveryGaveUpTitle"),
-    /** Banner text once the run stopped retrying by itself; arguments: 0 when the outage began as {@code HH:mm}, 1 how many tries were made (a number). */
-    TRANSLATING_RECOVERY_GAVE_UP_TEXT("translating.recoveryGaveUpText"),
-    /** Banner title once a model the server never loaded again made the run stop retrying by itself. */
-    TRANSLATING_MODEL_UNLOADED_TITLE("translating.modelUnloadedTitle"),
-    /** Banner text for {@link #TRANSLATING_MODEL_UNLOADED_TITLE}; arguments: 0 the provider's endpoint host or {@code none}, 1 how many tries were made (a number), 2 when the outage began as {@code HH:mm}. */
-    TRANSLATING_MODEL_UNLOADED_TEXT("translating.modelUnloadedText"),
-    /** Button that flags the failing or stalled segment and lets the run go on. */
-    TRANSLATING_SKIP_SEGMENT("translating.skipSegment"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_SKIP_SEGMENT}. */
-    TRANSLATING_SKIP_SEGMENT_TIP("translating.skipSegment.tip"),
-    /** Button on the stuck banner that cancels the stalled request and sends it again. */
-    TRANSLATING_RETRY_CALL("translating.retryCall"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_RETRY_CALL}. */
-    TRANSLATING_RETRY_CALL_TIP("translating.retryCall.tip"),
-    /** Button on the stuck banner that pauses the run. */
-    TRANSLATING_PAUSE_STUCK("translating.pauseStuck"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_PAUSE_STUCK}. */
-    TRANSLATING_PAUSE_STUCK_TIP("translating.pauseStuck.tip"),
-    /** Provider-error detail line; arguments: 0 the failed call's name, 1 the locator part, 2 the error code, 3 the pauses spent, 4 the pauses allowed; all Strings. */
-    TRANSLATING_PROVIDER_DETAIL("translating.providerDetail"),
-    /** Provider-error line saying what Retry now and Skip segment do; argument 0 is {@code last} when the next failure flags the segment, else {@code more}. */
-    TRANSLATING_PROVIDER_RESUME("translating.providerResume"),
     /** Toggle over the activity log that shows only the lines about something that went wrong. */
     TRANSLATING_LOG_ERRORS_ONLY("translating.log.errorsOnly"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_ERRORS_ONLY}. */
@@ -1724,16 +1634,6 @@ public enum MessageKey {
     TRANSLATING_LOG_REPEATS("translating.log.repeats"),
     /** Heading of the connection chip's hover explanation. */
     SHELL_CONNECTION("shell.connection"),
-    /** Status-bar chip before the server has answered anything. */
-    SHELL_CONNECTION_UNKNOWN("shell.connection.unknown"),
-    /** Status-bar chip while the server answers; argument 0 is how long ago it last answered, as {@code m:ss}, a String. */
-    SHELL_CONNECTION_STEADY("shell.connection.steady"),
-    /** Text of the connection chip once the run ended, when a clock since the last answer would only go stale. */
-    SHELL_CONNECTION_ANSWERED("shell.connection.answered"),
-    /** Status-bar chip after recent failures; argument 0 is how many attempts failed in the last ten minutes. */
-    SHELL_CONNECTION_UNSTEADY("shell.connection.unsteady"),
-    /** Status-bar chip while the run waits for an unreachable provider and retries by itself. */
-    SHELL_CONNECTION_RETRYING("shell.connection.retrying"),
     /** Hover explanation of the connection chip; arguments: 0 the model, 1 the last answer's age, 2 the timeouts, 3 the failures, 4 the drafting speed, 5 the judging speed; all Strings. */
     SHELL_CONNECTION_TIP("shell.connection.tip"),
     /** A figure the connection chip's explanation does not know yet. */
@@ -2332,7 +2232,159 @@ public enum MessageKey {
     /** Word of the state marker for something left as it was on purpose. */
     STATE_KEPT("state.kept"),
     /** Line shown when a changed row was edited after the operation, so it is not put back: the term. */
-    RESULTS_REVERT_EDITED("results.revert.edited");
+    RESULTS_REVERT_EDITED("results.revert.edited"),
+    /** Title-bar state text of a project with nothing translated yet. */
+    RUN_TITLE_READY("run.title.ready"),
+    /** Title-bar state text of a reopened project with stored progress: the percent done. */
+    RUN_TITLE_READY_CONTINUE("run.title.readyContinue"),
+    /** Title-bar state text while translating: the percent done and the worded time left, or {@code none}. */
+    RUN_TITLE_RUNNING("run.title.running"),
+    /** Title-bar state text while a pause waits for the run's next boundary. */
+    RUN_TITLE_PAUSING("run.title.pausing"),
+    /** Title-bar state text of a paused run: the percent done. */
+    RUN_TITLE_PAUSED("run.title.paused"),
+    /** Title-bar state text while the run waits for the AI program by itself: the program. */
+    RUN_TITLE_WAITING("run.title.waiting"),
+    /** Title-bar state text while a stop waits for the run to return. */
+    RUN_TITLE_STOPPING("run.title.stopping"),
+    /** Title-bar state text of a stopped run: the percent done. */
+    RUN_TITLE_STOPPED("run.title.stopped"),
+    /** Title-bar state text once every segment is decided. */
+    RUN_TITLE_FINISHED("run.title.finished"),
+    /** Title-bar state text of a run that ended on an error. */
+    RUN_TITLE_FAILED("run.title.failed"),
+    /** AI-model chip while a model is chosen and no run is at work. */
+    RUN_CHIP_READY("run.chip.ready"),
+    /** AI-model chip while no model is chosen. */
+    RUN_CHIP_NO_MODEL("run.chip.noModel"),
+    /** AI-model chip while the run sends requests. */
+    RUN_CHIP_ANSWERING("run.chip.answering"),
+    /** AI-model chip while the run is paused, stopped or finished. */
+    RUN_CHIP_IDLE("run.chip.idle"),
+    /** AI-model chip while the AI program cannot be reached: the program. */
+    RUN_CHIP_UNREACHABLE("run.chip.unreachable"),
+    /** AI-model chip once the run stopped trying by itself: the program and the hours. */
+    RUN_CHIP_GAVE_UP("run.chip.gaveUp"),
+    /** AI-model chip while the chosen model is not available. */
+    RUN_CHIP_MISSING("run.chip.missing"),
+    /** AI-model chip while an attempt has had no answer for a minute or more: its clock. */
+    RUN_CHIP_STUCK("run.chip.stuck"),
+    /** AI-model chip of a run that ended on an error. */
+    RUN_CHIP_ERROR("run.chip.error"),
+    /** Run action that continues a project at its first segment not done. */
+    RUN_ACTION_CONTINUE("run.action.continue"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_CONTINUE}. */
+    RUN_ACTION_CONTINUE_TIP("run.action.continue.tip"),
+    /** Run action that sends the interrupted request to the AI model again now. */
+    RUN_ACTION_TRY_AGAIN("run.action.tryAgain"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_TRY_AGAIN}. */
+    RUN_ACTION_TRY_AGAIN_TIP("run.action.tryAgain.tip"),
+    /** Run action that opens the review desk: the count of segments to review. */
+    RUN_ACTION_REVIEW("run.action.review"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_REVIEW}. */
+    RUN_ACTION_REVIEW_TIP("run.action.review.tip"),
+    /** Pause offered while the run waits for the AI program by itself. */
+    RUN_ACTION_PAUSE_WAIT("run.action.pauseWait"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_PAUSE_WAIT}. */
+    RUN_ACTION_PAUSE_WAIT_TIP("run.action.pauseWait.tip"),
+    /** Banner action on another screen that shows Translating. */
+    RUN_ACTION_GO_TRANSLATING("run.action.goTranslating"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_GO_TRANSLATING}. */
+    RUN_ACTION_GO_TRANSLATING_TIP("run.action.goTranslating.tip"),
+    /** Banner action that opens the provider settings to choose another model. */
+    RUN_ACTION_CHOOSE_MODEL("run.action.chooseModel"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_CHOOSE_MODEL}. */
+    RUN_ACTION_CHOOSE_MODEL_TIP("run.action.chooseModel.tip"),
+    /** Banner action that opens the failure of a failed run with its details. */
+    RUN_ACTION_SHOW_DETAILS("run.action.showDetails"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_SHOW_DETAILS}. */
+    RUN_ACTION_SHOW_DETAILS_TIP("run.action.showDetails.tip"),
+    /** Banner action of a finished run that opens the review desk: the count. */
+    RUN_ACTION_REVIEW_SEGMENTS("run.action.reviewSegments"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_REVIEW_SEGMENTS}. */
+    RUN_ACTION_REVIEW_SEGMENTS_TIP("run.action.reviewSegments.tip"),
+    /** Banner action that flags the segments in flight and goes on: their count. */
+    RUN_ACTION_SKIP("run.action.skip"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_SKIP}. */
+    RUN_ACTION_SKIP_TIP("run.action.skip.tip"),
+    /** Banner of a reopened project with stored progress: segments done and in all. */
+    RUN_BANNER_WELCOME("run.banner.welcome"),
+    /** Second line of the welcome banner: where it continues, or {@code none}. */
+    RUN_BANNER_WELCOME_TEXT("run.banner.welcomeText"),
+    /** Banner of a start that lacks an input: the input's token. */
+    RUN_BANNER_CANNOT_START("run.banner.cannotStart"),
+    /** Banner while the run waits for the AI program by itself: the program. */
+    RUN_BANNER_WAITING("run.banner.waiting"),
+    /** Second line of the waiting banner: the program and the time to the next try. */
+    RUN_BANNER_WAITING_TEXT("run.banner.waitingText"),
+    /** Banner of a run paused on an error: the program and {@code reach} or another token. */
+    RUN_BANNER_PAUSED_ERROR("run.banner.pausedError"),
+    /** Second line of the paused-on-error banner: the program and the same token. */
+    RUN_BANNER_PAUSED_ERROR_TEXT("run.banner.pausedErrorText"),
+    /** Banner once the run stopped trying by itself: the program and the hours. */
+    RUN_BANNER_GAVE_UP("run.banner.gaveUp"),
+    /** Second line of the gave-up banner: the program. */
+    RUN_BANNER_GAVE_UP_TEXT("run.banner.gaveUpText"),
+    /** Banner of a run paused because the model is not available: the model. */
+    RUN_BANNER_MODEL_MISSING("run.banner.modelMissing"),
+    /** Second line of the model-missing banner: the program. */
+    RUN_BANNER_MODEL_MISSING_TEXT("run.banner.modelMissingText"),
+    /** Banner of a call with no answer for a minute: its clock and its time limit, or {@code none}. */
+    RUN_BANNER_STUCK("run.banner.stuck"),
+    /** Banner of a finished run with segments to review: their count. */
+    RUN_BANNER_FINISHED_REVIEW("run.banner.finishedReview"),
+    /** Banner of a finished run with nothing to review. */
+    RUN_BANNER_FINISHED_NONE("run.banner.finishedNone"),
+    /** Banner of a run that ended on an error. */
+    RUN_BANNER_FAILED("run.banner.failed"),
+    /** A banner line that is a failure's own message, passed through as it is. */
+    RUN_BANNER_PLAIN("run.banner.plain"),
+    /** Live line of a project with nothing translated yet. */
+    RUN_LIVE_READY("run.live.ready"),
+    /** Live line of a reopened project: where it continues, or {@code none}. */
+    RUN_LIVE_CONTINUES("run.live.continues"),
+    /** Live line while a start lacks an input: nothing to say. */
+    RUN_LIVE_CANNOT_START("run.live.cannotStart"),
+    /** Live line while translating: the segments of the current call, or {@code none}. */
+    RUN_LIVE_RUNNING("run.live.running"),
+    /** Live line while pausing: the segments in flight, or {@code none}. */
+    RUN_LIVE_PAUSING("run.live.pausing"),
+    /** Live line of a paused run: the segments in flight, or {@code none}. */
+    RUN_LIVE_PAUSED("run.live.paused"),
+    /** Live line while the run waits for the AI program: the program and the segments, or {@code none}. */
+    RUN_LIVE_WAITING("run.live.waiting"),
+    /** Live line of a call with no answer for a minute: the segments, or {@code none}. */
+    RUN_LIVE_STUCK("run.live.stuck"),
+    /** Live line while stopping: the segments in flight, or {@code none}. */
+    RUN_LIVE_STOPPING("run.live.stopping"),
+    /** Live line of a stopped run: where it continues, or {@code none}. */
+    RUN_LIVE_STOPPED("run.live.stopped"),
+    /** Live line of a finished run. */
+    RUN_LIVE_FINISHED("run.live.finished"),
+    /** Live line of a run that ended on an error: where, or {@code none}. */
+    RUN_LIVE_FAILED("run.live.failed"),
+    /** Hover explanation of the navigation footer. */
+    NAV_FOOTER_SELECTION_TIP("nav.footer.selection.tip"),
+    /** Why a model action is off while a translation is at work. */
+    MODEL_BLOCKED_PAUSE_FIRST("model.blocked.pauseFirst"),
+    /** Why Start translation is off while the names pass runs. */
+    START_BLOCKED_NAMES_PASS("start.blocked.namesPass"),
+    /** Heading of the question asked before leaving a screen with unsaved changes. */
+    DIALOG_UNSAVED_TITLE("dialog.unsaved.title"),
+    /** Body of the question asked before leaving a screen with unsaved changes. */
+    DIALOG_UNSAVED_TEXT("dialog.unsaved.text"),
+    /** The answer that stays on the screen with the changes as they are. */
+    DIALOG_UNSAVED_KEEP("dialog.unsaved.keep"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_UNSAVED_KEEP}. */
+    DIALOG_UNSAVED_KEEP_TIP("dialog.unsaved.keep.tip"),
+    /** The answer that drops the changes and leaves. */
+    DIALOG_UNSAVED_DISCARD("dialog.unsaved.discard"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_UNSAVED_DISCARD}. */
+    DIALOG_UNSAVED_DISCARD_TIP("dialog.unsaved.discard.tip"),
+    /** The answer that saves the changes and leaves. */
+    DIALOG_UNSAVED_SAVE("dialog.unsaved.save"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_UNSAVED_SAVE}. */
+    DIALOG_UNSAVED_SAVE_TIP("dialog.unsaved.save.tip");
 
     private final String key;
 

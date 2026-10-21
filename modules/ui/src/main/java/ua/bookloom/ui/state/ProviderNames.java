@@ -1,4 +1,4 @@
-package ua.bookloom.ui.screen;
+package ua.bookloom.ui.state;
 
 import java.util.Map;
 import java.util.Objects;

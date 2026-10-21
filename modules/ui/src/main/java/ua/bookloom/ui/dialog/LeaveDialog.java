@@ -19,7 +19,8 @@ import ua.bookloom.ui.i18n.Messages;
 /**
  * The questions asked before leaving a screen whose model work would otherwise be left behind: for short work, stop it
  * and leave, or leave and let it run on; for long work shown in its progress dialog, "Model work is running", stay or
- * let it continue in the background. Escape closes the card, stays on the screen and changes nothing.
+ * let it continue in the background; for a form with unsaved changes, keep editing, discard or save. Escape closes the
+ * card, stays on the screen and changes nothing.
  */
 @Slf4j
 @Singleton
@@ -31,6 +32,10 @@ public final class LeaveDialog {
     static final String WORK_CARD_ID = "work-card";
     static final String WORK_STAY_ID = "work-stay";
     static final String WORK_BACKGROUND_ID = "work-background";
+    static final String UNSAVED_CARD_ID = "unsaved-card";
+    static final String UNSAVED_KEEP_ID = "unsaved-keep";
+    static final String UNSAVED_DISCARD_ID = "unsaved-discard";
+    static final String UNSAVED_SAVE_ID = "unsaved-save";
 
     private final ModalHost modalHost;
     private final Messages messages;
@@ -85,6 +90,53 @@ public final class LeaveDialog {
         final Button stay = wireWork(card, activity, continueInBackground);
         modalHost.show(card, false, true);
         stay.requestFocus();
+    }
+
+    /**
+     * Asks before leaving a screen whose form holds unsaved changes: Keep editing (the default, and what Escape does),
+     * Discard, or Save. FX thread only.
+     *
+     * @param discardAndLeave what drops the changes and leaves
+     * @param saveAndLeave what saves the changes and then leaves
+     */
+    public void askUnsaved(final Runnable discardAndLeave, final Runnable saveAndLeave) {
+        Objects.requireNonNull(discardAndLeave, "discardAndLeave");
+        Objects.requireNonNull(saveAndLeave, "saveAndLeave");
+        log.debug("asking before leaving a form with unsaved changes");
+        final DialogPane card = card(
+                UNSAVED_CARD_ID,
+                messages.get(MessageKey.DIALOG_UNSAVED_TITLE),
+                messages.get(MessageKey.DIALOG_UNSAVED_TEXT));
+        final ButtonType keepType =
+                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_KEEP), ButtonBar.ButtonData.CANCEL_CLOSE);
+        final ButtonType discardType =
+                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_DISCARD), ButtonBar.ButtonData.OTHER);
+        final ButtonType saveType =
+                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_SAVE), ButtonBar.ButtonData.OK_DONE);
+        card.getButtonTypes().setAll(keepType, discardType, saveType);
+        final Button keep = answer(card, keepType, UNSAVED_KEEP_ID, MessageKey.DIALOG_UNSAVED_KEEP_TIP, () -> {});
+        keep.setDefaultButton(true);
+        answer(card, discardType, UNSAVED_DISCARD_ID, MessageKey.DIALOG_UNSAVED_DISCARD_TIP, discardAndLeave)
+                .setDefaultButton(false);
+        answer(card, saveType, UNSAVED_SAVE_ID, MessageKey.DIALOG_UNSAVED_SAVE_TIP, saveAndLeave)
+                .setDefaultButton(false);
+        modalHost.show(card, false, true);
+        keep.requestFocus();
+    }
+
+    // Each answer closes the card first, then does what it says.
+    private Button answer(
+            final DialogPane card, final ButtonType type, final String id, final MessageKey tip, final Runnable then) {
+        final Button button = (Button) card.lookupButton(type);
+        button.setId(id);
+        button.getStyleClass().add("btn-secondary");
+        Tips.install(messages, button, tip);
+        button.setOnAction(event -> {
+            log.debug("unsaved changes answered with {}", id);
+            modalHost.hide();
+            then.run();
+        });
+        return button;
     }
 
     private Button wireWork(final DialogPane card, final String activity, final Runnable continueInBackground) {

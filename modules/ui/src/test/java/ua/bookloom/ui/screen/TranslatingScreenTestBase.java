@@ -112,6 +112,14 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
         });
     }
 
+    /** Chooses the model, so the run-state rows read as they do with a model chosen ("Ready", not "Cannot start"). */
+    void chooseModel() {
+        ThemeTestSupport.onFx(() -> {
+            injector.getInstance(SettingsViewModel.class).model().set(MODEL);
+            return null;
+        });
+    }
+
     StateMirror mirror() {
         return injector.getInstance(StateMirror.class);
     }

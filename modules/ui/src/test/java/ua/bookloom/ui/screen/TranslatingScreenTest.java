@@ -37,13 +37,14 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
             RUNNING   | translating-pause translating-stop   | -
             PAUSING   | translating-stop                     | translating-pause
             PAUSED    | translating-resume translating-stop  | -
-            STOPPING  | -                                    | translating-stop
+            STOPPING  | -                                    | translating-pause translating-stop
             STOPPED   | translating-resume                   | -
             COMPLETED | -                                    | -
             FAILED    | translating-start                    | -
             """)
     void controls_eachRunState_showTheStatedButtonsAvailableOrNot(
             final RunState state, final String enabled, final String disabled) {
+        chooseModel();
         showTranslating();
 
         publish(state);
@@ -52,26 +53,38 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(disabledControls()).containsExactlyInAnyOrderElementsOf(ids(disabled));
     }
 
-    // IF the banner said the wrong thing for a state, THEN a pending request would read as one already honoured.
+    // IF the banner said the wrong thing for a state, THEN a pending request would read as one already honoured; the
+    // README's run-state table gives a banner to an ended run only, among these.
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', textBlock = """
-            IDLE      | Ready to translate      | banner-info
-            RUNNING   | Translating             | banner-info
-            PAUSING   | Pausing                 | banner-info
-            PAUSED    | Paused                  | banner-info
-            STOPPING  | Stopping                | banner-info
-            STOPPED   | Run stopped             | banner-info
-            COMPLETED | Translation finished    | banner-ok
-            FAILED    | The run did not finish  | banner-warn
+            COMPLETED | Translation finished. Nothing needs your review.                           | banner-ok
+            FAILED    | The translation stopped because of an error. Finished segments are saved.  | banner-err
             """)
-    void banner_eachRunState_carriesTheStatedTitleAndRole(
+    void banner_endedRun_carriesTheStatedTitleAndRole(
             final RunState state, final String title, final String roleClass) {
+        chooseModel();
         showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
 
         publish(state);
 
         assertThat(labelText("translating-banner-title")).isEqualTo(title);
         assertThat(required("translating-banner").getStyleClass()).contains("banner", roleClass);
+    }
+
+    // IF a run at work or paused by the person carried a banner, THEN the slot would repeat what the title bar says.
+    @ParameterizedTest
+    @EnumSource(
+            value = RunState.class,
+            names = {"IDLE", "RUNNING", "PAUSING", "PAUSED", "STOPPING", "STOPPED"})
+    void banner_runAtWorkOrPausedByThePerson_isNotShown(final RunState state) {
+        chooseModel();
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
+
+        publish(state);
+
+        assertThat(optional("translating-banner")).isNull();
     }
 
     // IF the derived figures were shown wrongly, THEN the dashboard would contradict what the engine reports.
@@ -120,7 +133,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         publishProgress(413, 3, 799);
 
         assertThat(labelText("translating-count-accepted")).isEqualTo("413");
-        assertThat(labelText("translating-banner-title")).isEqualTo("Pausing");
+        assertThat(labelText("translating-live-line")).startsWith("Pausing…");
         assertThat(button("translating-pause").isDisabled()).isTrue();
     }
 
@@ -132,7 +145,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.STOPPING);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Stopping");
+        assertThat(labelText("translating-live-line")).startsWith("Stopping…");
         assertThat(button("translating-stop").isDisabled()).isTrue();
     }
 
@@ -145,10 +158,11 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         mirror().publishOutcome(RunState.STOPPED, cancelledReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
-        assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err", "banner-warn");
-        assertThat(textOf("translating-banner")).doesNotContainIgnoringCase("error", "fail");
+        assertThat(labelText("translating-live-line"))
+                .isEqualTo("Stopped. Continue translation picks up at the first segment not done.");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(isShown("translating-resume")).isTrue();
+        assertThat(button("translating-resume").getText()).isEqualTo("Continue translation");
         assertThat(isShown("translating-start")).isFalse();
         assertThat(optional("error-card")).isNull();
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
@@ -301,28 +315,22 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(contentWidth).isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
     }
 
-    // IF the Pause and Stop row sat at the bottom, THEN during a long stall a person would have to scroll past the live
-    // panel and the log to stop the run; it sits under the banner, in view at the top of the content area.
+    // IF Pause and Stop scrolled with the screen, THEN during a long stall a person would have to scroll past the live
+    // panel and the log to stop the run; they sit in the toolbar, above the scrolling content (README L2).
     @Test
-    void controls_atMinimum_stopIsInViewAtTheTop() {
+    void controls_atMinimum_pauseAndStopAreInTheToolbar() {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
         publish(RunState.RUNNING);
-        final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
 
-        onFx(() -> pane.setVvalue(0));
-
-        final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
-        final Bounds stop = required("translating-stop")
-                .localToScene(required("translating-stop").getLayoutBounds());
-        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(viewport.getMinY());
-        assertThat(stop.getMaxY()).isLessThanOrEqualTo(viewport.getMaxY());
+        assertThat(required("translating-pause").getParent()).isSameAs(required("shell-actions"));
+        assertThat(required("translating-stop").getParent()).isSameAs(required("shell-actions"));
     }
 
     // IF a screen taller than the window were clipped rather than scrolled, THEN the parts below the fold of a short
-    // window could never be reached; the Stop button stays in view at the top.
+    // window could never be reached; the Stop button stays in view in the toolbar wherever the content is scrolled.
     @Test
-    void screen_sceneShorterThanDashboard_scrollsAndKeepsTheRunControlsAtTheTop() {
+    void screen_sceneShorterThanDashboard_scrollsAndKeepsStopInView() {
         showTranslating();
         resizeScene(960, 300);
         publish(RunState.RUNNING);
@@ -330,12 +338,12 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         assertThat(pane.getContent().getLayoutBounds().getHeight())
                 .isGreaterThan(pane.getViewportBounds().getHeight());
-        onFx(() -> pane.setVvalue(0));
+        onFx(() -> pane.setVvalue(1));
 
-        final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
         final Bounds stop = required("translating-stop")
                 .localToScene(required("translating-stop").getLayoutBounds());
-        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(viewport.getMinY());
-        assertThat(stop.getMaxY()).isLessThanOrEqualTo(viewport.getMaxY());
+        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(0);
+        assertThat(stop.getMaxY())
+                .isLessThanOrEqualTo(pane.localToScene(pane.getLayoutBounds()).getMinY());
     }
 }

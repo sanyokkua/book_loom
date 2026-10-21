@@ -23,6 +23,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.ProviderNames;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**

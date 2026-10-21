@@ -27,11 +27,13 @@ import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.GlossaryNotice;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.RecurringTerms;
+import ua.bookloom.ui.state.RunRow;
+import ua.bookloom.ui.state.RunStateSource;
+import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -39,11 +41,12 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  * terms card side by side or stacked, each a {@link TermTableCard}, the note that the step can be skipped, and the
  * footer that goes back to the brief or starts the run.
  *
- * <p>The forward action follows the run controls Translating offers: Start translation asks
- * {@link TranslatingViewModel#start()} when a start is offered, Resume the run continues a paused or stopped run, and
- * Back to the run only shows a run under way, so this screen never offers a second translation. Each then shows the
- * translating screen whatever came of it, where a missing input is named on the banner. The view model outlives this
- * view, so what listens to it does so weakly, with the strong reference held by the node that reacts.
+ * <p>The forward action follows the run-state row: Start translation asks {@link TranslatingViewModel#start()} while
+ * the project is Ready or Cannot start yet, and Go to Translating only shows the run in every other state, so this
+ * screen never offers a second translation. Start then shows the translating screen whatever came of it, where a
+ * missing input is named on the banner; while other model work holds a start (the names pass), Start is off and says
+ * why. The row source outlives this view, so what listens to it does so weakly, with the strong reference held by the
+ * node that reacts.
  */
 @Slf4j
 final class NamesStyleView {
@@ -55,6 +58,7 @@ final class NamesStyleView {
     private final Messages messages;
     private final Navigator navigator;
     private final TranslatingViewModel translating;
+    private final RunStateSource runs;
     private final NamesStyleViewModel glossary;
     private final BookBriefViewModel brief;
     private final ModalHost modalHost;
@@ -67,6 +71,7 @@ final class NamesStyleView {
             final Messages messages,
             final Navigator navigator,
             final TranslatingViewModel translating,
+            final RunStateSource runs,
             final NamesStyleViewModel glossary,
             final BookBriefViewModel brief,
             final ModalHost modalHost,
@@ -77,6 +82,7 @@ final class NamesStyleView {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
+        this.runs = Objects.requireNonNull(runs, "runs");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
@@ -248,35 +254,51 @@ final class NamesStyleView {
                         messages.get(MessageKey.NAMES_STYLE_START_TIP),
                         "btn-primary",
                         this::onForward));
-        followTheRun(footer.forwardButton());
+        followTheRun(footer);
         return footer;
     }
 
     // The forward action names what it will do with the run as it stands, so it never offers a second translation.
-    private void followTheRun(final Button forward) {
-        final ChangeListener<Controls> onControls = (observed, was, now) -> showForward(forward, Forward.of(now));
-        forward.getProperties().put(LISTENER_KEY, onControls);
-        translating.controls().addListener(new WeakChangeListener<>(onControls));
-        showForward(forward, Forward.of(translating.controls().get()));
+    private void followTheRun(final StepFooter footer) {
+        final ChangeListener<RunStateView> onRow = (observed, was, now) -> showForward(footer, now);
+        footer.forwardButton().getProperties().put(LISTENER_KEY, onRow);
+        runs.view().addListener(new WeakChangeListener<>(onRow));
+        showForward(footer, runs.view().get());
     }
 
-    private void showForward(final Button forward, final Forward action) {
-        log.debug("names and style offers {} as its forward action", action);
+    // A start held by other work (the names pass) is off and says why; a disabled button shows no tooltip, so the
+    // reason is also a visible line beside it. A missing model is not a hold: Start then shows Cannot start yet.
+    private void showForward(final StepFooter footer, final RunStateView row) {
+        final Forward action = Forward.of(row.row());
+        final Button forward = footer.forwardButton();
+        final RunStateView.@Nullable RunAction start = row.toolbar().stream()
+                .filter(offered -> RunStateView.START.equals(offered.id()))
+                .findFirst()
+                .orElse(null);
+        final @Nullable String heldBecause = action == Forward.START
+                        && start != null
+                        && !start.enabled()
+                        && translating.otherWork().get() != null
+                ? start.tip().in(messages)
+                : null;
+        final boolean held = heldBecause != null;
+        final String tip = heldBecause == null ? messages.get(action.tip()) : heldBecause;
+        if (!tip.equals(Tips.explanationOf(forward).orElse("")) || forward.isDisable() != held) {
+            log.debug("names and style offers {} as its forward action, held {}", action, held);
+            Tips.install(forward, tip);
+        }
         forward.setText(messages.get(action.label()));
-        Tips.install(messages, forward, action.tip());
+        forward.setDisable(held);
+        footer.explainDisabledForward(held ? tip : null);
     }
 
     private void onForward() {
-        final Forward action = Forward.of(translating.controls().get());
+        final Forward action = Forward.of(runs.view().get().row());
         log.debug("forward pressed on names and style: {}", action);
         switch (action) {
             case START -> startUnlessTargetsAreMissing();
-            case RESUME -> {
-                translating.resume();
-                navigator.navigate(ViewNames.TRANSLATING);
-            }
             case TO_RUN -> {
-                log.debug("a run is under way: showing it");
+                log.debug("a run can be continued or is under way: showing it");
                 navigator.navigate(ViewNames.TRANSLATING);
             }
         }
@@ -307,13 +329,11 @@ final class NamesStyleView {
         translating.start();
     }
 
-    /** What the forward button does, read from the run controls Translating offers. */
+    /** What the forward button does, read from the run-state row. */
     private enum Forward {
-        /** No run can be continued: start one, as Translating's Start would. */
+        /** Ready or Cannot start yet: start a run, as Translating's Start would. */
         START(MessageKey.NAMES_STYLE_START, MessageKey.NAMES_STYLE_START_TIP),
-        /** A paused or stopped run can be continued: resume it rather than start another. */
-        RESUME(MessageKey.NAMES_STYLE_RESUME, MessageKey.NAMES_STYLE_RESUME_TIP),
-        /** A run is under way or has nothing left: only show it. */
+        /** Any other row: a run can be continued, is under way or has ended; only show it. */
         TO_RUN(MessageKey.NAMES_STYLE_TO_RUN, MessageKey.NAMES_STYLE_TO_RUN_TIP);
 
         private final MessageKey label;
@@ -332,11 +352,8 @@ final class NamesStyleView {
             return tip;
         }
 
-        static Forward of(final Controls controls) {
-            if (controls.start().isShown()) {
-                return START;
-            }
-            return controls.resume().isShown() ? RESUME : TO_RUN;
+        static Forward of(final RunRow row) {
+            return row == RunRow.READY || row == RunRow.CANNOT_START ? START : TO_RUN;
         }
     }
 }

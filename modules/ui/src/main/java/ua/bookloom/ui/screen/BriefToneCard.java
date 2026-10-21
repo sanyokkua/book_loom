@@ -8,6 +8,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -31,6 +33,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.GenreLabels;
+import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StyleSuggestionOutcome;
 
 /**
@@ -62,7 +65,8 @@ final class BriefToneCard {
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.
     private boolean applying;
 
-    BriefToneCard(final BookBriefViewModel viewModel, final Messages messages) {
+    BriefToneCard(
+            final BookBriefViewModel viewModel, final Messages messages, final ObservableValue<RunStateView> runRow) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.evidence = evidenceRows(messages);
@@ -78,7 +82,7 @@ final class BriefToneCard {
                 "brief-tone-card",
                 messages,
                 MessageKey.BRIEF_CARD_TONE,
-                suggestion(viewModel, messages),
+                suggestion(viewModel, messages, Objects.requireNonNull(runRow, "runRow")),
                 field(MessageKey.BRIEF_TONE_GENRE, genre, BriefField.GENRE),
                 field(MessageKey.BRIEF_TONE_REGISTER, register.withHelp(), BriefField.REGISTER),
                 field(MessageKey.BRIEF_TONE_VOICE, voice, BriefField.VOICE),
@@ -180,15 +184,24 @@ final class BriefToneCard {
     }
 
     // The model reads the opening of the book and fills these fields; the person reviews them before going on.
-    private static Node suggestion(final BookBriefViewModel viewModel, final Messages messages) {
+    // While a translation is at work the model is busy with it, so the suggestion waits and says why.
+    private static Node suggestion(
+            final BookBriefViewModel viewModel, final Messages messages, final ObservableValue<RunStateView> runRow) {
         if (!viewModel.styleSuggestion().isOffered()) {
             return new VBox();
         }
         final Button suggest = new Button(messages.get(MessageKey.BRIEF_SUGGEST));
         suggest.setId("brief-suggest-style");
         suggest.getStyleClass().add("btn-secondary");
-        Tips.install(messages, suggest, MessageKey.BRIEF_SUGGEST_TIP);
-        suggest.disableProperty().bind(viewModel.styleSuggestion().suggesting());
+        final BooleanBinding atWork =
+                Bindings.createBooleanBinding(() -> runRow.getValue().isAtWork(), runRow);
+        Tips.installLive(
+                suggest,
+                Bindings.createStringBinding(
+                        () -> messages.get(
+                                atWork.get() ? MessageKey.MODEL_BLOCKED_PAUSE_FIRST : MessageKey.BRIEF_SUGGEST_TIP),
+                        atWork));
+        suggest.disableProperty().bind(viewModel.styleSuggestion().suggesting().or(atWork));
         suggest.setOnAction(event -> viewModel.styleSuggestion().ask());
         final Label outcome = new Label();
         outcome.setId("brief-suggest-outcome");

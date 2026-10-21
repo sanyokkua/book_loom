@@ -43,7 +43,9 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
     }
 
     private void showATallRunningDashboard() {
+        chooseModel();
         showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
         publish(RunState.RUNNING);
         mirror().live()
                 .publishCalls(LiveCallFixtures.calls(
@@ -77,20 +79,19 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
         onFx(() -> {});
     }
 
-    // IF the focused Skip segment button vanished with the banner and the page followed the focus elsewhere, THEN the
-    // person reading the middle of the page would be thrown to another part of it.
+    // IF the stuck call's banner, pinned above the page, moved the page when it cleared, THEN the person reading the
+    // middle of the page would be thrown to another part of it.
     @Test
-    void stuckBannerClears_focusOnItsSkipButton_pageKeepsItsPosition() {
+    void stuckBannerClears_pageKeepsItsPosition() {
         showATallRunningDashboard();
         stuckOnAJudge();
-        onFx(() -> button("translating-skip-segment").requestFocus());
         onFx(() -> content().setVvalue(0.5));
         final double before = offset();
         assertThat(before).as("the page must be scrolled away from its top").isGreaterThan(50);
 
         modelAnswers();
 
-        assertThat(isShown("translating-skip-segment")).isFalse();
+        assertThat(optional("translating-banner")).isNull();
         assertThat(offset()).isCloseTo(before, within(PIXEL));
     }
 

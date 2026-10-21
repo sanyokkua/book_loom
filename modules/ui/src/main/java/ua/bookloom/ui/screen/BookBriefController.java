@@ -15,6 +15,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -36,6 +37,7 @@ public final class BookBriefController {
     private final LanguageNames names;
     private final SettingsViewModel settings;
     private final WorkflowProgress progress;
+    private final RunStateSource runs;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
     @FXML
@@ -51,6 +53,7 @@ public final class BookBriefController {
      * @param names how the language boxes name and recognise languages
      * @param settings where the model row reads the chosen model from
      * @param progress where Continue records that the brief step is done
+     * @param runs the run-state row, whose translation at work holds Fill in from the book
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -62,7 +65,8 @@ public final class BookBriefController {
             final Navigator navigator,
             final LanguageNames names,
             final SettingsViewModel settings,
-            final WorkflowProgress progress) {
+            final WorkflowProgress progress,
+            final RunStateSource runs) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -70,6 +74,7 @@ public final class BookBriefController {
         this.names = Objects.requireNonNull(names, "names");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.progress = Objects.requireNonNull(progress, "progress");
+        this.runs = Objects.requireNonNull(runs, "runs");
     }
 
     @FXML
@@ -84,7 +89,7 @@ public final class BookBriefController {
     private void show(final boolean bookOpen) {
         log.debug("showing the {}", bookOpen ? "brief" : "no-book state");
         final Node content = bookOpen
-                ? new BriefView(viewModel, messages, navigator, names, settings, progress).root()
+                ? new BriefView(viewModel, messages, navigator, names, settings, progress, runs).root()
                 : NoBookView.build(messages, navigator);
         stateHost.getChildren().setAll(content);
     }
