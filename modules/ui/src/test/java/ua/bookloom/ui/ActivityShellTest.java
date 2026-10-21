@@ -15,8 +15,9 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 
 /**
- * The window's side of the activity tracker: the title-bar chip names other model work and stops it, and leaving the
- * screen of a glossary scan asks whether to stop it or let it run on, and a scan keeps the window from navigating.
+ * The window's side of the activity tracker: the title-bar chip names other model work and stops it, leaving the
+ * screen of a glossary scan asks whether to stop it or let it run on, a scan or the brief's suggestion keeps the window
+ * from navigating, and leaving the names pass's screen asks "Model work is running".
  */
 class ActivityShellTest extends ShellTestBase {
 
@@ -128,5 +129,73 @@ class ActivityShellTest extends ShellTestBase {
 
         assertThat(isShown("leave-card")).isFalse();
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
+    }
+
+    private ActivityTracker.Handle beginNamesPass() {
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        onFx(() -> handle.set(injector.getInstance(ActivityTracker.class)
+                .begin(ActivityKind.NAMES_PASS, () -> stopped.add("names"))));
+        return Objects.requireNonNull(handle.get(), "handle");
+    }
+
+    private boolean isNamesPassHidden() {
+        return injector.getInstance(ActivityTracker.class).running().stream()
+                .anyMatch(activity -> activity.kind() == ActivityKind.NAMES_PASS && activity.isHidden());
+    }
+
+    // IF leaving the pass's screen were silent, THEN the pass would write into a screen nobody sees.
+    @Test
+    void navigate_whileNamesPassShown_asksModelWorkIsRunningAndStays() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        assertThat(isShown("work-card")).isTrue();
+        assertThat(textsUnder(required("work-card")))
+                .contains("Model work is running", "Stay", "Continue in background");
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
+        assertThat(TooltipProbe.tipText(required("work-background"))).isNotBlank();
+    }
+
+    @Test
+    void stay_chosen_keepsTheScreenAndTheWorkInView() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        onFx(() -> ((Button) required("work-stay")).fire());
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
+        assertThat(isNamesPassHidden()).isFalse();
+        assertThat(stopped).isEmpty();
+    }
+
+    // IF Continue in background did not hide the pass, THEN the person would land on Export behind its dialog.
+    @Test
+    void continueInBackground_chosen_opensExportAndHidesWork() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        onFx(() -> ((Button) required("work-background")).fire());
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.EXPORT);
+        assertThat(isNamesPassHidden()).isTrue();
+        assertThat(stopped).isEmpty();
+        assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Preparing names · 0 %");
+    }
+
+    // IF short work let the person leave, THEN the brief's suggestion would land on a screen nobody looks at.
+    @Test
+    void navigate_whileBriefRuns_isRefusedWithoutDialog() {
+        onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
+        onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.SUGGEST_STYLE, null));
+
+        onFx(() -> shell.activate(ViewNames.IMPORT));
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+        assertThat(isShown("work-card")).isFalse();
+        assertThat(isShown("leave-card")).isFalse();
     }
 }

@@ -156,13 +156,17 @@ public final class StyleSuggestion {
                                 .suggestBrief(
                                         book.projectId(), model, detection.get().orElse(null), progress),
                         answer -> answered(book.projectId(), answer))
-                .ifPresent(refusal -> {
-                    suggesting.set(false);
-                    outcome.set(StyleSuggestionOutcome.of(
-                            refusal == SetupHelper.Refusal.NO_MODEL
-                                    ? StyleSuggestionOutcome.Kind.NO_MODEL
-                                    : StyleSuggestionOutcome.Kind.BUSY));
-                });
+                .ifPresent(this::refused);
+    }
+
+    private void refused(final SetupHelper.Refusal refusal) {
+        log.debug("the style suggestion was refused: {}", refusal);
+        suggesting.set(false);
+        switch (refusal) {
+            case NO_MODEL -> outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.NO_MODEL));
+            case BUSY -> outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.BUSY));
+            case HIDDEN_WORK -> log.debug("the refusal was said by the work in the background");
+        }
     }
 
     private void answered(final String projectId, final Result<BriefSuggestion> answer) {

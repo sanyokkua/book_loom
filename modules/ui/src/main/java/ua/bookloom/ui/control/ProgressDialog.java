@@ -1,0 +1,218 @@
+package ua.bookloom.ui.control;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TitledPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.dialog.ModalCard;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.Activity;
+import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ProgressDialogModel;
+import ua.bookloom.ui.state.ProgressFigures;
+
+/**
+ * The one dialog of model work, on the work layer: a header with the title, a purpose line, a determinate bar and the
+ * figures line; the steps beside the selected step's detail; a folded note on how progress is counted; and a footer
+ * that says what Cancel does, with Continue in background for long work.
+ *
+ * <p>Escape hides long work and cancels short work. The dialog reads everything from its {@link ProgressDialogModel},
+ * so a dialog put in the background reopens as it was. Redraws are not logged: they follow the work up to ten times a
+ * second.
+ */
+@Slf4j
+public final class ProgressDialog extends ModalCard {
+
+    private static final double DIVIDER = 0.36;
+    private static final String DETAIL_JOIN = " · ";
+
+    private final ProgressDialogModel model;
+    private final Messages messages;
+    private final Label title = new Label();
+    private final Label purpose = new Label();
+    private final ProgressBar bar = new ProgressBar();
+    private final FigureLabel figures = new FigureLabel();
+    private final Label details = new Label();
+    private final ProgressStepDetail detail;
+    private final Button cancel;
+    private @Nullable Boolean shownCancelling;
+
+    /**
+     * Builds the dialog over its model.
+     *
+     * @param model what the dialog shows, kept while the work runs
+     * @param messages the catalogue every word comes from
+     * @param onCancel what Cancel does: stop the work, or ask first
+     * @param onHide what puts the work in the background, or {@code null} for short work, which cannot be hidden
+     */
+    public ProgressDialog(
+            final ProgressDialogModel model,
+            final Messages messages,
+            final Runnable onCancel,
+            final @Nullable Runnable onHide) {
+        super(Size.XL);
+        this.model = Objects.requireNonNull(model, "model");
+        this.messages = Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(onCancel, "onCancel");
+        setId("busy-card");
+        getStyleClass().addAll("dialog-card", "elevation-lg");
+        detail = new ProgressStepDetail(model, messages);
+        setHeader(header());
+        setContent(body());
+        if (getContent() instanceof ScrollPane scroll) {
+            scroll.setFitToHeight(true);
+        }
+        cancel = footer(onCancel, onHide);
+        setOnEscape(onHide != null ? onHide : onCancel);
+        model.activity().addListener((observed, was, now) -> showActivity(now));
+        model.figures().addListener((observed, was, now) -> showFigures());
+        showActivity(model.activity().get());
+        log.debug(
+                "progress dialog built for {} #{}, hideable={}",
+                model.activity().get().kind(),
+                model.activity().get().id(),
+                onHide != null);
+    }
+
+    private Node header() {
+        title.setId("progress-title");
+        title.getStyleClass().add("dialog-title");
+        purpose.setId("progress-purpose");
+        purpose.getStyleClass().add("dialog-sub");
+        purpose.setWrapText(true);
+        bar.setId("progress-bar");
+        bar.setMaxWidth(Double.MAX_VALUE);
+        figures.setId("progress-figures");
+        figures.getStyleClass().add("dialog-sub");
+        details.setId("progress-details");
+        details.getStyleClass().add("dialog-sub");
+        final VBox header = new VBox(title, purpose, bar, figures, details);
+        header.getStyleClass().addAll("dialog-h", "progress-header");
+        return header;
+    }
+
+    private Node body() {
+        final ScrollPane detailScroll = new ScrollPane(detail);
+        detailScroll.setFitToWidth(true);
+        detailScroll.getStyleClass().add("progress-detail-scroll");
+        final SplitPane split = new SplitPane(new ProgressStepList(model, messages), detailScroll);
+        split.setDividerPositions(DIVIDER);
+        split.getStyleClass().add("progress-split");
+        VBox.setVgrow(split, Priority.ALWAYS);
+        final Label how = new Label(messages.get(MessageKey.PROGRESS_HOW_COUNTED_TEXT));
+        how.setWrapText(true);
+        final TitledPane howCounted = new TitledPane(messages.get(MessageKey.PROGRESS_HOW_COUNTED), how);
+        howCounted.setId("progress-how");
+        howCounted.setExpanded(false);
+        final VBox body = new VBox(split, howCounted);
+        body.getStyleClass().add("progress-body");
+        return body;
+    }
+
+    private Button footer(final Runnable onCancel, final @Nullable Runnable onHide) {
+        final ButtonType cancelType =
+                new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
+        final ButtonType hideType =
+                new ButtonType(messages.get(MessageKey.PROGRESS_BACKGROUND), ButtonBar.ButtonData.LEFT);
+        if (onHide == null) {
+            getButtonTypes().setAll(cancelType);
+        } else {
+            getButtonTypes().setAll(hideType, cancelType);
+            final Button hide = (Button) lookupButton(hideType);
+            hide.setId("progress-background");
+            hide.getStyleClass().add("btn-secondary");
+            Tips.install(messages, hide, MessageKey.PROGRESS_BACKGROUND_TIP);
+            hide.setOnAction(event -> {
+                log.info("progress dialog: continue in background pressed");
+                onHide.run();
+            });
+        }
+        final Button stop = (Button) lookupButton(cancelType);
+        stop.setId("progress-cancel");
+        stop.getStyleClass().add("btn-danger-outline");
+        stop.setOnAction(event -> {
+            log.info("progress dialog: cancel pressed");
+            onCancel.run();
+        });
+        footnote();
+        return stop;
+    }
+
+    // The line saying what Cancel does sits in the footer's left group, after Continue in background.
+    private void footnote() {
+        final boolean export = model.activity().get().kind() == ActivityKind.EXPORT;
+        final Label footnote = new Label(
+                messages.get(export ? MessageKey.PROGRESS_FOOTER_EXPORT : MessageKey.PROGRESS_FOOTER_WRITES_NOTHING));
+        footnote.setId("progress-footnote");
+        footnote.getStyleClass().add("progress-footnote");
+        ButtonBar.setButtonData(footnote, ButtonBar.ButtonData.LEFT);
+        ButtonBar.setButtonUniformSize(footnote, false);
+        if (lookup(".button-bar") instanceof ButtonBar buttons) {
+            buttons.getButtons().add(footnote);
+        }
+    }
+
+    private void showActivity(final Activity now) {
+        title.setText(messages.get(now.title()));
+        purpose.setText(purposeOf(now));
+        final Double fraction = now.fraction();
+        bar.setProgress(fraction == null ? ProgressBar.INDETERMINATE_PROGRESS : fraction);
+        details.setText(now.details().stream()
+                .map(line -> line.label() + " " + line.value())
+                .collect(Collectors.joining(DETAIL_JOIN)));
+        showFor(details, !now.details().isEmpty());
+        showFigures();
+        showFor(cancel, now.cancellable());
+        cancel.setDisable(now.cancelling());
+        if (!Boolean.valueOf(now.cancelling()).equals(shownCancelling)) {
+            shownCancelling = now.cancelling();
+            Tips.install(
+                    messages, cancel, now.cancelling() ? MessageKey.BUSY_CANCELLING_TIP : MessageKey.BUSY_CANCEL_TIP);
+        }
+    }
+
+    private String purposeOf(final Activity now) {
+        if (now.cancelling()) {
+            return messages.get(MessageKey.BUSY_CANCELLING);
+        }
+        if (!now.cancellable()) {
+            return messages.get(MessageKey.BUSY_NOT_CANCELLABLE);
+        }
+        final String step = now.stepText();
+        return step == null ? "" : step;
+    }
+
+    private void showFigures() {
+        final boolean counted = !model.activity().get().steps().isEmpty();
+        final ProgressFigures.Figures read = model.figures().get();
+        figures.setText(counted ? read.line(messages) : "");
+        showFor(figures, counted);
+    }
+
+    /**
+     * Moves the dialog's clocks, once a second while it is shown.
+     *
+     * @param now the moment the clocks read
+     */
+    public void tick(final Instant now) {
+        detail.tick(now);
+    }
+
+    private static void showFor(final Node node, final boolean shown) {
+        node.setVisible(shown);
+        node.setManaged(shown);
+    }
+}

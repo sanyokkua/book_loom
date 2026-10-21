@@ -84,19 +84,20 @@ step, key/value details and a time left) and, when it can be stopped, a cancel. 
 scan and review, the Book Brief's style suggestion, the file-name suggestion, the provider's inference test and a
 review retry. The translation run itself, the model listing, the connection check and structure checks are not.
 
-While a blocking activity runs: the navigation column and the toolbar actions are disabled, the navigator refuses every
-navigation, and — after 400 ms, so work that ends at once never flashes it — the work layer fades in (160 ms) over a
-scrim (`#shell-busy-scrim`) that swallows clicks. Escape does not close the work card and Tab stays on it; the card goes
-when the work ends. The layer sits between the frame and the dialog layer, so an error dialog or a question that arrives
-meanwhile is shown above it, and the progress dialog keeps its state underneath.
+While a blocking activity runs with its dialog shown, the work layer (`#shell-busy-host`) fades in (160 ms) — after
+400 ms, so work that ends at once never flashes it — over a scrim (`#shell-busy-scrim`) that swallows clicks, and no key
+reaches the window behind it. Short work also disables the navigation column and the toolbar actions, and the navigator
+refuses every navigation; long work (the names pass, the export) does not lock them, so leaving its screen asks "Model
+work is running" (Stay · Continue in background). Tab stays in the dialog; it goes when the work ends. The layer sits
+between the frame and the dialog layer, so an error dialog or a question that arrives meanwhile is shown above it, and
+the progress dialog keeps its state underneath.
 
-**Built today:** the work layer shows a small busy card (`#busy-card`: title, `#busy-step`, `#busy-bar`, elapsed and time
-left, key/value facts, `#busy-cancel`) with a **Show model calls** button (`#busy-show-calls`) that opens a separate
-**Model calls** window. **Planned:** both go. The work layer holds the **progress dialog** (`control/ProgressDialog`,
-`#busy-card` kept as its root id), one pattern for all model work (mockup README, G4), and no second OS window exists
-except the native file choosers (G1; `control/ModelCallsWindow` is removed). The progress dialog is used by: Fill in the
-brief from the book, Prepare names automatically and the Scan / Review / Translate card actions, Suggest a file name,
-Export · last check before saving, and All calls (the translation's model calls). Its parts:
+The work layer holds the **progress dialog** (`control/ProgressDialog`, root id `#busy-card`, XL size), one pattern for
+all model work (mockup README, G4); no second OS window exists except the native file choosers (G1;
+`control/ModelCallsWindow` is removed). Each activity keeps its dialog and `state/ProgressDialogModel` until it ends,
+and the tracker's changes reach them at most ten times a second. The progress dialog is used by: Fill in the brief from
+the book, Prepare names automatically and the Scan / Review / Translate card actions, Suggest a file name, Export · last
+check before saving, and All calls (the translation's model calls). Its parts:
 
 | Part | Content | Behaviour |
 |---|---|---|
@@ -113,7 +114,8 @@ on the chip reopens the same dialog with its state. While work is hidden, the sc
 behind a banner ("Names is running in the background — this screen is read-only until it ends"), and other model work is
 refused with a toast offering "Show progress". When it finishes, the chip goes and a toast with **Review the results**
 appears; nothing pops up by itself. A press of Cancel disables the button until the work ends; work that cannot be
-stopped shows no Cancel and says so. Esc hides long work, asks first before losing an export, and closes short work.
+stopped shows no Cancel and says so. Esc hides long work, the export's last check included, and cancels short work;
+only the export's Cancel button asks first ("Cancel the export? No file is written.").
 
 ### Start and Resume {#start-and-resume}
 

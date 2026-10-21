@@ -5,6 +5,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,10 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedSetupAssistant;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /** What a stopped suggestion and the person's narrator edits do to the narrator's gender origin (15i.B4). */
 class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
@@ -40,7 +44,14 @@ class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
                 projects,
                 new DirectExecutor(),
                 tag -> true,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
+                new SetupHelper(
+                        assistant,
+                        models,
+                        settings,
+                        new DirectExecutor(),
+                        activities,
+                        capabilities,
+                        hiddenWork(activities))));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -130,5 +141,9 @@ class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
         });
 
         assertThat(stored().narrator().genderOrigin()).isEqualTo(Narrator.GenderOrigin.NONE);
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

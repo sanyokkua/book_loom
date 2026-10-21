@@ -543,7 +543,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
       `<s id="2">` → an Id | Segment | Text row);
     - `ReplyViewTest` (4 items, one MISSING, gives 4 rows with "missing").
   - Rewrite the `PromptContextPane` and `ContextSection` tests. → :ui
-- [ ] 5.3 Turn the busy layer into the work layer that holds the progress dialog, and remove the separate OS window, so
+- [x] 5.3 Turn the busy layer into the work layer that holds the progress dialog, and remove the separate OS window, so
   all model work shows its steps, figures and parsed input and output in the window.
   - **Satisfies:** app-shell "Report an action that has not answered yet"; app-shell "Show every dialog inside the
     window, on one of two layers"; app-shell "Show all model work in one progress dialog"; app-shell "Offer Simple and

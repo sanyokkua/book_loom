@@ -280,8 +280,9 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 Dialogs live in the window, never in a second OS window except the native file choosers (`mockups/README.md`, G1).
 
 - **Built today:** `ModalHost` shows one `dialog/ModalCard` over a scrim with a focus trap, Escape (for a card that may
-  be closed) and focus return; `BusyHost` shows a small busy card for model work; `control/ModelCallsWindow` opens a
-  second `Stage`.
+  be closed) and focus return; `BusyHost` is the work layer and shows `control/ProgressDialog` for model work (the
+  busy card and `control/ModelCallsWindow` are gone, finalize 5.3); Enter, Escape and Tab are answered by one
+  `CardKeys` on both layers.
 - **Planned (G1, G4):**
   - **`BusyHost` becomes the work layer** and holds the progress dialogs of model work; **`ModalHost`, above it,** holds
     everything else (questions, confirmations, errors, the review desk, the tests, forms). A question opened during work

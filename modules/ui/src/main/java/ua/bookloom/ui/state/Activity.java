@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * One activity as the title bar and the busy card show it.
+ * One activity as the title bar and its progress dialog show it.
  *
  * @param id the registration's own number, unique for the application's life
  * @param kind what runs
@@ -18,6 +18,7 @@ import ua.bookloom.ui.i18n.MessageKey;
  * @param startedAt when it began, by the tracker's clock
  * @param progress how far it has got
  * @param cancelling whether it was asked to stop and has not ended yet
+ * @param hidden whether its progress dialog was put in the background; only long work can be
  */
 public record Activity(
         long id,
@@ -27,7 +28,8 @@ public record Activity(
         MessageKey title,
         Instant startedAt,
         Progress progress,
-        boolean cancelling) {
+        boolean cancelling,
+        boolean hidden) {
 
     /** Rejects a missing part. */
     public Activity {
@@ -47,12 +49,32 @@ public record Activity(
     }
 
     /**
-     * How far it has got.
+     * Whether its progress dialog is in the background, behind the title bar's chip.
+     *
+     * @return {@code true} while hidden, {@code false} otherwise
+     */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /**
+     * How far it has got: the share of its announced steps when it announces any, else what its owner said.
      *
      * @return the fraction, or {@code null} when not known
      */
     public @Nullable Double fraction() {
-        return progress.fraction();
+        return progress.steps().isEmpty()
+                ? progress.fraction()
+                : Double.valueOf(progress.steps().reached());
+    }
+
+    /**
+     * The steps it announced.
+     *
+     * @return the log; {@link StepLog#EMPTY} for work that announces none
+     */
+    public StepLog steps() {
+        return progress.steps();
     }
 
     /**
@@ -92,19 +114,23 @@ public record Activity(
     }
 
     Activity withRequests(final int count) {
-        return new Activity(id, kind, count, cancellable, title, startedAt, progress, cancelling);
+        return new Activity(id, kind, count, cancellable, title, startedAt, progress, cancelling, hidden);
     }
 
     Activity withTitle(final MessageKey heading) {
-        return new Activity(id, kind, requests, cancellable, heading, startedAt, progress, cancelling);
+        return new Activity(id, kind, requests, cancellable, heading, startedAt, progress, cancelling, hidden);
     }
 
     Activity withProgress(final Progress now) {
-        return new Activity(id, kind, requests, cancellable, title, startedAt, now, cancelling);
+        return new Activity(id, kind, requests, cancellable, title, startedAt, now, cancelling, hidden);
     }
 
     Activity asCancelling() {
-        return new Activity(id, kind, requests, cancellable, title, startedAt, progress, true);
+        return new Activity(id, kind, requests, cancellable, title, startedAt, progress, true, hidden);
+    }
+
+    Activity withHidden(final boolean now) {
+        return new Activity(id, kind, requests, cancellable, title, startedAt, progress, cancelling, now);
     }
 
     /**
@@ -123,7 +149,7 @@ public record Activity(
     }
 
     /**
-     * How far an activity has got, as the busy card shows it.
+     * How far an activity has got, as its progress dialog shows it.
      *
      * @param fraction between 0 and 1, or {@code null} when that is not known
      * @param stepText what it is doing now, already worded, or {@code null} for none
@@ -131,21 +157,36 @@ public record Activity(
      * @param eta the time left by the average of the units finished so far, or {@code null} when not known
      * @param calls the model calls the work is making, as the live call view shows them; {@link LiveCalls#EMPTY}
      *     for work that shows none
+     * @param steps the steps the work announced; {@link StepLog#EMPTY} for work that announces none
      */
     public record Progress(
             @Nullable Double fraction,
             @Nullable String stepText,
             List<Detail> details,
             @Nullable Duration eta,
-            LiveCalls calls) {
+            LiveCalls calls,
+            StepLog steps) {
 
-        /** Freezes the details and rejects missing calls. */
+        /** Freezes the details and rejects missing calls or steps. */
         public Progress {
             details = List.copyOf(details);
             Objects.requireNonNull(calls, "calls");
+            Objects.requireNonNull(steps, "steps");
         }
 
         /** What an activity shows before it says anything: indeterminate, no step, no facts. */
-        static final Progress NONE = new Progress(null, null, List.of(), null, LiveCalls.EMPTY);
+        static final Progress NONE = new Progress(null, null, List.of(), null, LiveCalls.EMPTY, StepLog.EMPTY);
+
+        Progress withDetails(final List<Detail> lines) {
+            return new Progress(fraction, stepText, lines, eta, calls, steps);
+        }
+
+        Progress withCalls(final LiveCalls now) {
+            return new Progress(fraction, stepText, details, eta, now, steps);
+        }
+
+        Progress withSteps(final StepLog now) {
+            return new Progress(fraction, stepText, details, eta, calls, now);
+        }
     }
 }

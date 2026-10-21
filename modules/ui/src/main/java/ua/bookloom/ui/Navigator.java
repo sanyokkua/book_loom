@@ -26,8 +26,8 @@ import ua.bookloom.ui.state.StepLocks;
  * with the active message catalogue and the {@link GuiceControllerFactory}, and a failed load leaves the previous
  * view in place: a screen that cannot be built must not blank the window. Both properties change only here, so the
  * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
- * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While work the
- * window waits for runs (a blocking activity) every navigation is refused, and a screen whose step is still locked
+ * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While short work the
+ * window waits for runs every navigation is refused (long work asks instead), and a screen whose step is still locked
  * ({@link StepLocks}) is refused with a message that says what is missing.
  */
 @Slf4j
@@ -75,8 +75,8 @@ public final class Navigator {
         Objects.requireNonNull(target, "target");
         final ViewNames source = currentView.get();
         log.debug("navigating {} -> {}", source, target);
-        if (activities.blocking().get()) {
-            log.debug("refused {}: work the window waits for is running", target);
+        if (activities.locking().get()) {
+            log.debug("refused {}: short work the window waits for is running", target);
             return false;
         }
         if (!target.isAvailable()) {

@@ -39,7 +39,7 @@ public final class Motion {
     /** A nudge: the current navigation step settling, a screen's content appearing. */
     public static final Duration QUICK = Duration.millis(120);
 
-    /** A surface arriving: a dialog card, a banner, a toast, the busy card. */
+    /** A surface arriving: a dialog card, a banner, a toast, the progress dialog. */
     public static final Duration STANDARD = Duration.millis(160);
 
     /** A value travelling: a progress bar moving to its new fraction. */

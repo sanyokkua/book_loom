@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -21,6 +20,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.KeepAwake;
 import ua.bookloom.ui.i18n.MessageKey;
 
@@ -43,13 +45,9 @@ public final class ActivityTracker {
     private final Map<Long, Runnable> cancels = new HashMap<>();
     private final ReadOnlyObjectWrapper<LiveCalls> lastCalls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private long lastId;
-    private @Nullable Handle translation;
     private final AwakeHolders awake;
     private final Clock clock;
-    private final BooleanBinding blocking =
-            Bindings.createBooleanBinding(() -> running.stream().anyMatch(Activity::isBlocking), running);
-    private final ObjectBinding<@Nullable Activity> blockingActivity = Bindings.createObjectBinding(
-            () -> running.stream().filter(Activity::isBlocking).findFirst().orElse(null), running);
+    private final ActivityBindings bindings = new ActivityBindings(running);
 
     /**
      * Creates a tracker that follows the run and holds nothing awake.
@@ -82,43 +80,8 @@ public final class ActivityTracker {
         Objects.requireNonNull(mirror, "mirror");
         this.awake = new AwakeHolders(keepAwake);
         this.clock = Objects.requireNonNull(clock, "clock");
-        mirror.runState().addListener((observed, was, now) -> followRun(isTranslating(mirror)));
-        // The countdown republishes the recovery every second; only a change of whether it waits matters here.
-        mirror.review().recovery().addListener((observed, was, now) -> {
-            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
-                followRun(isTranslating(mirror));
-            }
-        });
-        followRun(isTranslating(mirror));
+        new RunRegistration(this).follow(mirror);
         log.debug("activity tracker ready");
-    }
-
-    /**
-     * Whether the run is at work: translating, or paused on a provider error that it recovers from by itself, which is
-     * still the run's own activity and keeps the machine awake.
-     *
-     * @param mirror where the run's state and recovery are read; on the FX thread
-     * @return {@code true} while the run translates or waits for the provider by itself, {@code false} otherwise
-     */
-    public static boolean isTranslating(final StateMirror mirror) {
-        final RecoveryState recovery = mirror.review().recovery().get();
-        return switch (mirror.runState().get()) {
-            case RUNNING, PAUSING, STOPPING -> true;
-            case PAUSED -> RecoveryState.waits(recovery);
-            case IDLE, STOPPED, COMPLETED, FAILED -> false;
-        };
-    }
-
-    private void followRun(final boolean translating) {
-        final Handle registered = translation;
-        if (translating && registered == null) {
-            translation = begin(ActivityKind.TRANSLATION, null);
-        } else if (!translating && registered != null) {
-            registered.end();
-            translation = null;
-        } else {
-            log.debug("the translation activity stays {}", translating ? "registered" : "absent");
-        }
     }
 
     /** The calls of the last work that made any, kept for the results dialog once its card is gone. */
@@ -150,36 +113,57 @@ public final class ActivityTracker {
             cancels.put(id, cancel);
         }
         running.add(new Activity(
-                id, kind, 0, cancel != null, kind.label(), clock.instant(), Activity.Progress.NONE, false));
+                id, kind, 0, cancel != null, kind.label(), clock.instant(), Activity.Progress.NONE, false, false));
         log.info("activity {} #{} started; running now {}", kind, id, kinds());
         awake.hold(kind);
         return new Handle(id, kind);
     }
 
-    /**
-     * Whether some running activity makes the window wait; navigation, the footer buttons and the navigation column
-     * follow it.
-     *
-     * @return a binding that is {@code true} while a blocking activity runs
-     */
+    /** {@return a binding that is {@code true} while blocking work runs with its dialog shown, not in the background} */
     public BooleanBinding blocking() {
-        return blocking;
+        return bindings.blocking();
     }
 
-    /**
-     * The oldest running activity that makes the window wait, which the busy card describes.
-     *
-     * @return a binding holding it, or {@code null} while nothing blocks
-     */
+    /** {@return a binding holding the oldest blocking activity whose dialog is shown, or {@code null} for none} */
     public ObjectBinding<@Nullable Activity> blockingActivity() {
-        return blockingActivity;
+        return bindings.blockingActivity();
     }
 
     /**
-     * The tracker's own time, so a card that shows elapsed time counts from the same clock the start was taken from.
-     *
-     * @return the current instant
+     * {@return a binding that is {@code true} while shown, non-hideable blocking work runs} The navigation and the
+     * toolbar follow it; long work does not lock them, so leaving its screen can ask whether to let it run on.
      */
+    public BooleanBinding locking() {
+        return bindings.locking();
+    }
+
+    /**
+     * Puts long work's progress dialog in the background; ignored for work that cannot be hidden or has ended.
+     *
+     * @param id the activity's id
+     */
+    public void hide(final long id) {
+        running.stream().filter(activity -> activity.id() == id).findFirst().ifPresent(activity -> {
+            if (!activity.kind().isHideable()) {
+                log.debug("activity {} #{} cannot be hidden: it is short work", activity.kind(), id);
+                return;
+            }
+            log.info("activity {} #{} continues in the background", activity.kind(), id);
+            replace(id, shown -> shown.withHidden(true));
+        });
+    }
+
+    /**
+     * Brings hidden work's progress dialog back; ignored when it is not hidden or has ended.
+     *
+     * @param id the activity's id
+     */
+    public void reveal(final long id) {
+        log.debug("activity #{} asked to show its progress again", id);
+        replace(id, shown -> shown.withHidden(false));
+    }
+
+    /** {@return the tracker's own time, so a dialog's clocks count from the clock the start was taken from} */
     public Instant now() {
         return clock.instant();
     }
@@ -205,14 +189,7 @@ public final class ActivityTracker {
      * @return a binding holding the conflicting running kind, or {@code null} while {@code kind} may start
      */
     public ObjectBinding<@Nullable ActivityKind> blocker(final ActivityKind kind) {
-        Objects.requireNonNull(kind, "kind");
-        return Bindings.createObjectBinding(
-                () -> running.stream()
-                        .map(Activity::kind)
-                        .filter(kind::conflictsWith)
-                        .findFirst()
-                        .orElse(null),
-                running);
+        return bindings.blocker(Objects.requireNonNull(kind, "kind"));
     }
 
     /**
@@ -273,12 +250,8 @@ public final class ActivityTracker {
 
         private final long id;
         private final ActivityKind kind;
+        private final StepTimer timer = new StepTimer();
         private boolean ended;
-        // The counted step under way: its text, when it began and how many units were done then. Null until a step
-        // other than the first begins, so the first is timed from the activity's start.
-        private @Nullable String step;
-        private @Nullable Instant stepStart;
-        private int stepStartDone;
 
         private Handle(final long id, final ActivityKind kind) {
             this.id = id;
@@ -325,20 +298,11 @@ public final class ActivityTracker {
             Objects.requireNonNull(stepText, "stepText");
             final double fraction = total <= 0 ? 0 : Math.min(1.0, (double) done / total);
             final Instant now = clock.instant();
-            if (done <= 0 || (step != null && !step.equals(stepText))) {
-                log.debug("activity {} #{} step '{}' begins at {} of {}", kind, id, stepText, done, total);
-                stepStart = now;
-                stepStartDone = Math.max(0, done);
-            }
-            step = stepText;
+            log.debug("activity {} #{} step '{}' at {} of {}", kind, id, stepText, done, total);
             update(shown -> {
-                final Instant began = stepStart == null ? shown.startedAt() : stepStart;
-                final int doneInStep = done - stepStartDone;
-                final Duration eta = doneInStep <= 0 || total <= done
-                        ? null
-                        : Duration.between(began, now).dividedBy(doneInStep).multipliedBy(total - done);
+                final Duration eta = timer.eta(shown.startedAt(), done, total, stepText, now);
                 return shown.withProgress(
-                        new Activity.Progress(fraction, stepText, shown.details(), eta, shown.calls()));
+                        new Activity.Progress(fraction, stepText, shown.details(), eta, shown.calls(), shown.steps()));
             });
         }
 
@@ -348,8 +312,8 @@ public final class ActivityTracker {
          * @param stepText what is being done, already worded; {@code null} for none
          */
         public void indeterminate(final @Nullable String stepText) {
-            update(shown ->
-                    shown.withProgress(new Activity.Progress(null, stepText, shown.details(), null, shown.calls())));
+            update(shown -> shown.withProgress(
+                    new Activity.Progress(null, stepText, shown.details(), null, shown.calls(), shown.steps())));
         }
 
         /**
@@ -359,8 +323,36 @@ public final class ActivityTracker {
          */
         public void details(final List<Activity.Detail> lines) {
             Objects.requireNonNull(lines, "lines");
-            update(shown -> shown.withProgress(
-                    new Activity.Progress(shown.fraction(), shown.stepText(), lines, shown.eta(), shown.calls())));
+            update(shown -> shown.withProgress(shown.progress().withDetails(lines)));
+        }
+
+        /**
+         * Folds a step event into the activity's steps; any other event is ignored, as is any event once ended.
+         *
+         * @param event the job event the work announced; non-null
+         */
+        public void steps(final JobEvent event) {
+            Objects.requireNonNull(event, "event");
+            if (event instanceof StepChanged changed) {
+                step(changed, null);
+            } else if (event instanceof StepsPlanned planned) {
+                log.debug("activity {} #{} plans {} {} steps", kind, id, planned.added(), planned.kind());
+                update(shown -> shown.withProgress(
+                        shown.progress().withSteps(shown.steps().apply(planned))));
+            }
+        }
+
+        /**
+         * Folds one step change in with what the step read and wrote; ignored once ended.
+         *
+         * @param changed the step's new state; non-null
+         * @param text what it read and wrote, or {@code null}
+         */
+        public void step(final StepChanged changed, final StepEntry.@Nullable StepText text) {
+            Objects.requireNonNull(changed, "changed");
+            log.debug("activity {} #{} step {} {} is {}", kind, id, changed.kind(), changed.index(), changed.state());
+            update(shown ->
+                    shown.withProgress(shown.progress().withSteps(shown.steps().apply(changed, text))));
         }
 
         /**
@@ -373,8 +365,7 @@ public final class ActivityTracker {
             if (!ended && calls.current() != null) {
                 lastCalls.set(calls);
             }
-            update(shown -> shown.withProgress(
-                    new Activity.Progress(shown.fraction(), shown.stepText(), shown.details(), shown.eta(), calls)));
+            update(shown -> shown.withProgress(shown.progress().withCalls(calls)));
         }
 
         private void update(final UnaryOperator<Activity> change) {

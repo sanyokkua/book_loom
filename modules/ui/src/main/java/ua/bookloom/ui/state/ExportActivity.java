@@ -12,13 +12,19 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * Turns what an export job announces into what the busy card shows: the worded step, the fraction of a counted step,
- * the facts of the export and the consistency pass's model calls. The job announces from its own thread; each
- * announcement is handed to the FX thread, where the activity lives.
+ * Turns what an export job announces into what its progress dialog shows: the worded step, the facts of the export,
+ * the consistency pass's model calls, and one step per unit of every stage, the segment it reread with its text
+ * before and after and its verdict. The job announces from its own thread; each announcement is handed to the FX
+ * thread, where the activity lives.
  */
 @Slf4j
 final class ExportActivity implements ExportProgressListener {
@@ -29,6 +35,12 @@ final class ExportActivity implements ExportProgressListener {
     private final @Nullable String model;
     private final Supplier<Instant> now;
     private final LiveCallState calls = new LiveCallState();
+    private ExportProgress.@Nullable Step stage;
+    private int stageStart;
+    private int stageDone;
+    private int plannedSoFar;
+    private int startedAt = -1;
+    private String stageLabel = "";
 
     ExportActivity(
             final ActivityTracker.Handle handle,
@@ -58,7 +70,7 @@ final class ExportActivity implements ExportProgressListener {
 
     /** Shows the call in the card's call view. FX thread only. */
     void show(final CallSnapshot snapshot) {
-        log.debug("export call {} {} shown on the busy card", snapshot.callId(), snapshot.state());
+        log.debug("export call {} {} shown on the progress dialog", snapshot.callId(), snapshot.state());
         calls.snapshot(snapshot);
         handle.calls(calls.view(now.get()));
     }
@@ -85,6 +97,45 @@ final class ExportActivity implements ExportProgressListener {
             handle.indeterminate(step);
         }
         handle.details(lines);
+        steps(progress, step);
+    }
+
+    // Each stage plans its units as steps; units done since the last announcement end, the next one starts.
+    private void steps(final ExportProgress progress, final String label) {
+        if (progress.step() != stage) {
+            log.debug("export stage {} plans {} steps after {}", progress.step(), progress.total(), plannedSoFar);
+            // The new stage is planned before the old one's open step ends, so the bar never reads a finished stage
+            // as the whole export.
+            handle.steps(new StepsPlanned(StepKind.REQUEST, progress.total(), false));
+            endStarted();
+            stage = progress.step();
+            stageLabel = label;
+            stageStart = plannedSoFar;
+            stageDone = 0;
+            plannedSoFar += progress.total();
+        }
+        for (int unit = stageDone; unit < progress.done(); unit++) {
+            final boolean last = unit == progress.done() - 1;
+            final String item = last ? progress.itemRef() : null;
+            handle.step(
+                    new StepChanged(StepKind.REQUEST, label, stageStart + unit, StepState.ENDED, item, StepResult.DONE),
+                    item == null
+                            ? null
+                            : new StepEntry.StepText(progress.before(), progress.after(), progress.verdict()));
+        }
+        stageDone = Math.max(stageDone, progress.done());
+        final int next = stageStart + stageDone;
+        if (stageDone < progress.total() && startedAt != next) {
+            startedAt = next;
+            handle.steps(new StepChanged(StepKind.REQUEST, label, next, StepState.STARTED, null, null));
+        }
+    }
+
+    private void endStarted() {
+        if (stage != null && startedAt >= stageStart + stageDone) {
+            handle.steps(
+                    new StepChanged(StepKind.REQUEST, stageLabel, startedAt, StepState.ENDED, null, StepResult.DONE));
+        }
     }
 
     private static MessageKey stepKey(final ExportProgress.Step step) {

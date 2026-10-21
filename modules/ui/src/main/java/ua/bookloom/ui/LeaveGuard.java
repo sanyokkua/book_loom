@@ -14,9 +14,10 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 
 /**
- * Asks before the person leaves a screen whose model work shows its result only there (a glossary scan or review, the
- * provider's inference test): stop it and leave, or leave and let it run on. Any other navigation passes at once.
- * FX thread only.
+ * Asks before the person leaves a screen whose model work shows its result only there. Long work shown in its progress
+ * dialog (the names pass, the export) asks "Model work is running": stay, or continue in the background, which hides it
+ * and then leaves. Other such work (a glossary scan or review, the provider's inference test) asks to stop it and
+ * leave, or leave and let it run on. Any other navigation passes at once. FX thread only.
  */
 @Slf4j
 @Singleton
@@ -49,8 +50,13 @@ public final class LeaveGuard {
      */
     public boolean admits(final @Nullable ViewNames source, final Runnable proceed) {
         Objects.requireNonNull(proceed, "proceed");
+        if (askedAboutLongWork(source, proceed)) {
+            return false;
+        }
         final Predicate<ActivityKind> leftBehind = kind -> kind.isLeaveSensitive() && kind.home() == source;
+        // Work already in the background is out of the way: leaving does not concern it.
         final List<ActivityKind> sensitive = activities.running().stream()
+                .filter(activity -> !activity.isHidden())
                 .map(Activity::kind)
                 .filter(leftBehind)
                 .toList();
@@ -70,5 +76,25 @@ public final class LeaveGuard {
                     proceed.run();
                 });
         return false;
+    }
+
+    // Long work shown in its progress dialog asks "Model work is running"; Continue in background hides it, then
+    // leaves.
+    private boolean askedAboutLongWork(final @Nullable ViewNames source, final Runnable proceed) {
+        final Activity shownLong = activities.running().stream()
+                .filter(activity -> activity.kind().isHideable() && !activity.isHidden())
+                .filter(activity -> activity.kind().home() == source)
+                .findFirst()
+                .orElse(null);
+        if (shownLong == null) {
+            log.debug("leaving {}: no long work of that screen runs shown", source);
+            return false;
+        }
+        log.debug("leaving {} while {} #{} runs shown: asking first", source, shownLong.kind(), shownLong.id());
+        dialog.askModelWork(messages.get(shownLong.kind().label()), () -> {
+            activities.hide(shownLong.id());
+            proceed.run();
+        });
+        return true;
     }
 }

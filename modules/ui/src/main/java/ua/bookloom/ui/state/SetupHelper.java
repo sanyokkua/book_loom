@@ -37,7 +37,9 @@ public final class SetupHelper {
         /** No provider and model are chosen yet. */
         NO_MODEL,
         /** Other model work is running, named by the kind. */
-        BUSY
+        BUSY,
+        /** Long work runs in the background; a message offering "Show progress" has already said so. */
+        HIDDEN_WORK
     }
 
     private final SetupAssistant assistant;
@@ -46,6 +48,7 @@ public final class SetupHelper {
     private final ExecutorService executor;
     private final ActivityTracker activities;
     private final ModelCapabilities capabilities;
+    private final HiddenWork hiddenWork;
 
     /**
      * Creates the helper.
@@ -56,6 +59,7 @@ public final class SetupHelper {
      * @param executor the daemon executor the call runs on, never the FX thread
      * @param activities the model work under way
      * @param capabilities where the chosen model's context length is detected
+     * @param hiddenWork long work in the background, which refuses a proposal with its own message
      */
     @Inject
     public SetupHelper(
@@ -64,13 +68,15 @@ public final class SetupHelper {
             final SettingsViewModel settings,
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities,
-            final ModelCapabilities capabilities) {
+            final ModelCapabilities capabilities,
+            final HiddenWork hiddenWork) {
         this.assistant = Objects.requireNonNull(assistant, "assistant");
         this.models = Objects.requireNonNull(models, "models");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.activities = Objects.requireNonNull(activities, "activities");
         this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
+        this.hiddenWork = Objects.requireNonNull(hiddenWork, "hiddenWork");
     }
 
     /**
@@ -115,7 +121,7 @@ public final class SetupHelper {
     }
 
     /**
-     * Starts one proposal whose model calls show on the busy card. FX thread only.
+     * Starts one proposal whose model calls and steps show in its progress dialog. FX thread only.
      *
      * @param kind the model work it is registered as
      * @param work asks the assistant with the model it is given and the receiver of each call's snapshot, which it may
@@ -131,6 +137,10 @@ public final class SetupHelper {
         if (selection.isEmpty()) {
             log.debug("setup proposal {} not started: no model is chosen", kind);
             return Optional.of(Refusal.NO_MODEL);
+        }
+        if (hiddenWork.refuses(kind)) {
+            log.debug("setup proposal {} not started: long work runs in the background", kind);
+            return Optional.of(Refusal.HIDDEN_WORK);
         }
         if (activities.conflictFor(kind).isPresent()) {
             log.debug("setup proposal {} not started: {} is running", kind, activities.conflictFor(kind));

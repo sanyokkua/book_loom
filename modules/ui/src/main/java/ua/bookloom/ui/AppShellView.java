@@ -207,8 +207,9 @@ public final class AppShellView {
         final BorderPane frame = new BorderPane();
         frame.setTop(titleBar());
         frame.setLeft(navColumn.view());
-        // Work the window waits for leaves nothing to navigate to; the busy card says why, and Navigator refuses too.
-        navColumn.view().disableProperty().bind(activities.blocking());
+        // Short work the window waits for leaves nothing to navigate to; its progress dialog says why, and Navigator
+        // refuses too. Long work does not lock: leaving its screen asks whether to let it run on in the background.
+        navColumn.view().disableProperty().bind(activities.locking());
         frame.setCenter(main());
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
@@ -283,7 +284,7 @@ public final class AppShellView {
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.setSpacing(ACTION_SPACING);
         actions.setMinWidth(Region.USE_PREF_SIZE);
-        actions.disableProperty().bind(activities.blocking());
+        actions.disableProperty().bind(activities.locking());
         breadcrumb.setMinWidth(0);
         breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);

@@ -110,11 +110,15 @@ public final class NameSuggestion {
     }
 
     private void refused(final SetupHelper.Refusal refusal) {
+        log.debug("the file name suggestion was refused: {}", refusal);
         suggesting.set(false);
         notice.set(
-                refusal == SetupHelper.Refusal.NO_MODEL
-                        ? messages.get(MessageKey.EXPORT_SUGGEST_NAME_NO_MODEL)
-                        : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_NAME.label())));
+                switch (refusal) {
+                    case NO_MODEL -> messages.get(MessageKey.EXPORT_SUGGEST_NAME_NO_MODEL);
+                    case BUSY ->
+                        messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_NAME.label()));
+                    case HIDDEN_WORK -> "";
+                });
     }
 
     private void answered(final String projectId, final Result<FileNameSuggestion> answer) {

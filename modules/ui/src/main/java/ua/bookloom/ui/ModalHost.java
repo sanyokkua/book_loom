@@ -3,19 +3,12 @@ package ua.bookloom.ui;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.TraversalDirection;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -129,7 +122,7 @@ public final class ModalHost {
         }
         Motion.popIn(dialog);
         capture();
-        focusFirstIn(dialog);
+        CardKeys.focusFirstIn(dialog);
     }
 
     /**
@@ -232,113 +225,20 @@ public final class ModalHost {
     }
 
     private void filterKey(final KeyEvent event) {
-        if (event.getCode() == KeyCode.ESCAPE) {
-            event.consume();
-            escape();
-        } else if (event.getCode() == KeyCode.ENTER) {
-            enter(event);
-        } else if (event.getCode() == KeyCode.TAB) {
-            event.consume();
-            moveFocus(event.isShiftDown());
-        }
-    }
-
-    private void escape() {
-        final Runnable own = card instanceof ModalCard modal ? modal.onEscape() : null;
-        if (own != null) {
-            log.debug("Escape runs the escape action of the card");
-            own.run();
-        } else if (dismissOnEscape) {
-            log.debug("dialog dismissed by Escape");
-            hide();
-        } else {
-            log.debug("Escape ignored: this dialog must be answered through its own controls");
-        }
-    }
-
-    private void enter(final KeyEvent event) {
-        final boolean inTextArea = event.getTarget() instanceof TextArea;
-        if (inTextArea && !(event.isControlDown() || event.isMetaDown())) {
-            log.debug("Enter left to the text area: it adds a line");
-            return;
-        }
-        final Button main = defaultButton(card);
-        if (main == null) {
-            log.debug("Enter ignored: the card has no enabled default button");
-            return;
-        }
-        event.consume();
-        log.debug("Enter runs the default button {}", main.getId());
-        main.fire();
-    }
-
-    private static @Nullable Button defaultButton(final @Nullable Node dialog) {
-        if (dialog instanceof Button button && button.isDefaultButton() && !button.isDisabled()) {
-            return button;
-        }
-        if (dialog instanceof Parent parent) {
-            for (final Node child : parent.getChildrenUnmodifiable()) {
-                final Button found = defaultButton(child);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        return null;
-    }
-
-    private void moveFocus(final boolean backwards) {
         final Node dialog = card;
         final Scene scene = host.getScene();
         if (dialog == null || scene == null) {
             return;
         }
-        final List<Node> stops = new ArrayList<>();
-        collectStops(dialog, stops);
-        if (stops.isEmpty()) {
-            return;
-        }
-        final int at = stops.indexOf(scene.getFocusOwner());
-        final int step = backwards ? -1 : 1;
-        final int next = at < 0 ? 0 : Math.floorMod(at + step, stops.size());
-        focusFromKeyboard(stops, next);
+        CardKeys.handle(dialog, scene, event, this::escapeWithoutAction);
     }
 
-    // A focus moved by requestFocus() counts as a click and shows no ring; moved by traversal it shows one. So the
-    // target is reached by traversing from its neighbour inside the card: forwards from the stop before it, or, for the
-    // first stop (which has no stop before it inside the card), backwards from the stop after it.
-    private static void focusFromKeyboard(final List<Node> stops, final int target) {
-        final Node wanted = stops.get(target);
-        if (stops.size() > 1) {
-            final boolean fromBefore = target > 0;
-            final Node neighbour = stops.get(fromBefore ? target - 1 : target + 1);
-            neighbour.requestFocusTraversal(fromBefore ? TraversalDirection.NEXT : TraversalDirection.PREVIOUS);
-        }
-        if (wanted.getScene() != null && !wanted.isFocused()) {
-            log.debug("traversal did not land on stop {} of the card; focusing it directly", target);
-            wanted.requestFocus();
-        }
-    }
-
-    private void focusFirstIn(final Node dialog) {
-        final List<Node> stops = new ArrayList<>();
-        collectStops(dialog, stops);
-        if (stops.isEmpty()) {
-            dialog.setFocusTraversable(true);
-            dialog.requestFocus();
+    private void escapeWithoutAction() {
+        if (dismissOnEscape) {
+            log.debug("dialog dismissed by Escape");
+            hide();
         } else {
-            stops.get(0).requestFocus();
-        }
-    }
-
-    private static void collectStops(final Node node, final List<Node> stops) {
-        if (node instanceof Parent parent) {
-            for (final Node child : parent.getChildrenUnmodifiable()) {
-                if (child.isFocusTraversable() && child.isVisible() && !child.isDisabled()) {
-                    stops.add(child);
-                }
-                collectStops(child, stops);
-            }
+            log.debug("Escape ignored: this dialog must be answered through its own controls");
         }
     }
 }

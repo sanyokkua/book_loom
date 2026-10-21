@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.RunState;
@@ -66,7 +67,9 @@ public final class ExitGuard {
     public boolean requestClose(final Runnable exit) {
         Objects.requireNonNull(exit, "exit");
         final RunState state = mirror.runState().get();
-        final boolean working = activities.blocking().get() || RUN_UNDER_WAY.contains(state);
+        // Work in the background still counts: closing would lose it as surely as work shown.
+        final boolean working =
+                activities.running().stream().anyMatch(Activity::isBlocking) || RUN_UNDER_WAY.contains(state);
         final boolean unexported = RUN_ENDED.contains(state) && !progress.done().contains(ViewNames.EXPORT);
         log.debug(
                 "close requested: run {}, activities {}, working {}, unexported {}",

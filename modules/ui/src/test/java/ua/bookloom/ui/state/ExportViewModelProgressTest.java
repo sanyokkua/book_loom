@@ -88,7 +88,7 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         }
     }
 
-    // IF the job's announcements never reached the activity, THEN the busy card would spin through a long pass.
+    // IF the job's announcements never reached the activity, THEN its dialog would spin through a long pass.
     @Test
     void export_jobAnnouncesACountedStep_theActivityShowsFractionStepAndCallCount() throws Exception {
         exportService.announce(new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 4));
@@ -98,12 +98,13 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         WaitForAsyncUtils.waitFor(
                 5,
                 TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().fraction() != null));
+                () -> onFx(() -> activities.running().getFirst().steps().done() == 2));
 
         final Activity shown = onFx(() -> activities.running().getFirst());
         assertThat(shown.kind()).isEqualTo(ActivityKind.EXPORT);
         assertThat(shown.cancellable()).isTrue();
-        assertThat(shown.fraction()).isEqualTo(0.25);
+        // The bar counts every step of the export: the check before it (1) and the first of the 4 rereads, of 5.
+        assertThat(shown.fraction()).isEqualTo(0.4);
         assertThat(shown.stepText()).isEqualTo("Checking paragraphs against their neighbours");
         assertThat(shown.details()).extracting(Activity.Detail::value).contains("1 of 4", "Frankenstein.uk.epub");
         exportService.release();

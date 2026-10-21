@@ -77,7 +77,7 @@ public enum MessageKey {
     ACTIVITY_TERM_REVIEW("activity.termReview"),
     /** Name of the recurring terms' rendering suggestion as running model work. */
     ACTIVITY_TERM_TRANSLATE("activity.termTranslate"),
-    /** Name of the automatic names pass as running model work, and the title of its busy card. */
+    /** Name of the automatic names pass as running model work, and the title of its progress dialog. */
     ACTIVITY_NAMES_PASS("activity.namesPass"),
     /** Name of a review-panel segment retry as running model work. */
     ACTIVITY_REVIEW_RETRY("activity.reviewRetry"),
@@ -127,28 +127,112 @@ public enum MessageKey {
     ACTIVITY_DETAIL_SEGMENTS("activity.detail.segments"),
     /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
     ACTIVITY_DETAIL_OF("activity.detail.of"),
-    /** Busy card: time since the work began; argument 0 is a clock such as 1:15. */
-    BUSY_ELAPSED("busy.elapsed"),
-    /** Busy card: the estimated time left; argument 0 is a duration such as 2m. */
-    BUSY_ETA("busy.eta"),
-    /** Busy card: label of the button that stops the work. */
+    /** Progress dialog: label of the button that stops the work. */
     BUSY_CANCEL("busy.cancel"),
-    /** Hover explanation of the busy card's Cancel button. */
+    /** Hover explanation of the progress dialog's Cancel button. */
     BUSY_CANCEL_TIP("busy.cancel.tip"),
-    /** Busy card: what the Cancel button and the step line say once a stop was asked for. */
+    /** Progress dialog: what the purpose line says once a stop was asked for. */
     BUSY_CANCELLING("busy.cancelling"),
     /** Hover explanation of the disabled Cancel button while the work stops. */
     BUSY_CANCELLING_TIP("busy.cancelling.tip"),
-    /** Busy card: shown instead of a Cancel button for work that cannot be stopped. */
+    /** Progress dialog: shown instead of a Cancel button for work that cannot be stopped. */
     BUSY_NOT_CANCELLABLE("busy.notCancellable"),
     /** Busy card: heading of the folded section that shows the work's current model call. */
     BUSY_CALLS("busy.calls"),
     /** Hover explanation of the busy card's model-call section. */
     BUSY_CALLS_TIP("busy.calls.tip"),
-    /** Busy card: the button that opens the model calls window. */
-    BUSY_SHOW_CALLS("busy.showCalls"),
-    /** Hover explanation of the button labelled by {@link #BUSY_SHOW_CALLS}. */
-    BUSY_SHOW_CALLS_TIP("busy.showCalls.tip"),
+    /** Progress dialog: the figures line; arguments: 0 percent, 1 steps done, 2 steps in all. */
+    PROGRESS_FIGURES("progress.figures"),
+    /** Progress dialog: the figures line with the time left; arguments: 0 the line, 1 a duration such as 2m. */
+    PROGRESS_FIGURES_LEFT("progress.figures.left"),
+    /** Progress dialog: the switch that keeps the step the work is on selected. */
+    PROGRESS_FOLLOW("progress.follow"),
+    /** Hover explanation of the switch labelled by {@link #PROGRESS_FOLLOW}. */
+    PROGRESS_FOLLOW_TIP("progress.follow.tip"),
+    /** Progress dialog: the plain view of a step. */
+    PROGRESS_VIEW_SIMPLE("progress.view.simple"),
+    /** Hover explanation of the choice labelled by {@link #PROGRESS_VIEW_SIMPLE}. */
+    PROGRESS_VIEW_SIMPLE_TIP("progress.view.simple.tip"),
+    /** Progress dialog: the technical view of a step. */
+    PROGRESS_VIEW_DETAILED("progress.view.detailed"),
+    /** Hover explanation of the choice labelled by {@link #PROGRESS_VIEW_DETAILED}. */
+    PROGRESS_VIEW_DETAILED_TIP("progress.view.detailed.tip"),
+    /** Progress dialog: the name of a planned step that has not started; argument 0 is its number. */
+    PROGRESS_STEP_PENDING("progress.step.pending"),
+    /** Progress dialog: the result line of a step that has not started. */
+    PROGRESS_STEP_NOT_STARTED("progress.step.notStarted"),
+    /** Progress dialog: the result line of the running step. */
+    PROGRESS_STEP_RUNNING("progress.step.running"),
+    /** Progress dialog: the result line of a step that finished. */
+    PROGRESS_STEP_DONE("progress.step.done"),
+    /** Progress dialog: the result line of a step that failed. */
+    PROGRESS_STEP_FAILED("progress.step.failed"),
+    /** Progress dialog: the result line of a step done with no model call. */
+    PROGRESS_STEP_NO_CALL("progress.step.noCall"),
+    /** Progress dialog: the plain sentence about the selected step; arguments: 0 its state word, 1 its name. */
+    PROGRESS_SAY("progress.say"),
+    /** Progress dialog: heading of what the selected step read. */
+    PROGRESS_INPUT("progress.input"),
+    /** Progress dialog: heading of what the selected step gave back. */
+    PROGRESS_OUTPUT("progress.output"),
+    /** Progress dialog: what an input or output with nothing in it says. */
+    PROGRESS_NOTHING("progress.nothing"),
+    /** Progress dialog, Detailed: the call line; arguments: 0 number, 1 kind words, 2 segments, 3 attempt, 4 of. */
+    PROGRESS_DETAIL_CALL("progress.detail.call"),
+    /** Progress dialog, Detailed: the call's clock; arguments: 0 waiting or other, 1 the clock, 2 the limit or none. */
+    PROGRESS_DETAIL_CLOCK("progress.detail.clock"),
+    /** Progress dialog, Detailed: the call's tokens; arguments: 0 sent, 1 written, 2 tokens a second or none. */
+    PROGRESS_DETAIL_TOKENS("progress.detail.tokens"),
+    /** Progress dialog, Detailed: said of an older call whose full prompt is no longer kept. */
+    PROGRESS_DETAIL_NOT_KEPT("progress.detail.notKept"),
+    /** Progress dialog, Detailed: said of a step that made no model call. */
+    PROGRESS_DETAIL_NO_CALL("progress.detail.noCall"),
+    /** Progress dialog: the footer button that puts long work in the background. */
+    PROGRESS_BACKGROUND("progress.background"),
+    /** Hover explanation of the button labelled by {@link #PROGRESS_BACKGROUND}. */
+    PROGRESS_BACKGROUND_TIP("progress.background.tip"),
+    /** Progress dialog footer: what Cancel does for work that writes nothing until it ends. */
+    PROGRESS_FOOTER_WRITES_NOTHING("progress.footer.writesNothing"),
+    /** Progress dialog footer: what Cancel does for the export. */
+    PROGRESS_FOOTER_EXPORT("progress.footer.export"),
+    /** Progress dialog: heading of the folded note on how the steps are counted. */
+    PROGRESS_HOW_COUNTED("progress.howCounted"),
+    /** Progress dialog: the note on how the steps are counted. */
+    PROGRESS_HOW_COUNTED_TEXT("progress.howCounted.text"),
+    /** Title of the question asked before the export is cancelled. */
+    EXPORT_CANCEL_TITLE("export.cancel.title"),
+    /** Body of the cancel-the-export question. */
+    EXPORT_CANCEL_TEXT("export.cancel.text"),
+    /** Confirming button of the cancel-the-export question. */
+    EXPORT_CANCEL_YES("export.cancel.yes"),
+    /** Hover explanation of the button labelled by {@link #EXPORT_CANCEL_YES}. */
+    EXPORT_CANCEL_YES_TIP("export.cancel.yes.tip"),
+    /** The safe answer of the cancel-the-export question. */
+    EXPORT_CANCEL_NO("export.cancel.no"),
+    /** Title-bar chip of work in the background; arguments: 0 its name, 1 its percentage. */
+    ACTIVITY_CHIP_HIDDEN("activity.chip.hidden"),
+    /** Title-bar chip: the link that reopens hidden work's progress dialog. */
+    ACTIVITY_CHIP_OPEN("activity.chip.open"),
+    /** Hover explanation of the link labelled by {@link #ACTIVITY_CHIP_OPEN}. */
+    ACTIVITY_CHIP_OPEN_TIP("activity.chip.open.tip"),
+    /** Title of the question asked before leaving a screen whose long model work runs. */
+    DIALOG_WORK_TITLE("dialog.work.title"),
+    /** Body of that question; argument 0 is the work's name. */
+    DIALOG_WORK_TEXT("dialog.work.text"),
+    /** That question's answer that stays on the screen. */
+    DIALOG_WORK_STAY("dialog.work.stay"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_WORK_STAY}. */
+    DIALOG_WORK_STAY_TIP("dialog.work.stay.tip"),
+    /** That question's answer that leaves and lets the work run on in the background. */
+    DIALOG_WORK_BACKGROUND("dialog.work.background"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_WORK_BACKGROUND}. */
+    DIALOG_WORK_BACKGROUND_TIP("dialog.work.background.tip"),
+    /** Warning raised when model work is refused because long work runs in the background; argument 0 its name. */
+    WORK_HIDDEN_REFUSED("work.hidden.refused"),
+    /** Action of that warning, which brings the hidden work's progress back. */
+    WORK_HIDDEN_SHOW("work.hidden.show"),
+    /** Hover explanation of the action labelled by {@link #WORK_HIDDEN_SHOW}. */
+    WORK_HIDDEN_SHOW_TIP("work.hidden.show.tip"),
     /** Title of the question asked before the run is stopped. */
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */

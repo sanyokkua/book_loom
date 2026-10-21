@@ -36,8 +36,9 @@ public final class ConfirmDialog {
      * @param text what happens if the person confirms
      * @param yes the confirming button's label, worded for the action
      * @param yesTip the confirming button's hover explanation
+     * @param no the safe button's label; Cancel unless the question itself is about cancelling
      */
-    public record Question(MessageKey title, MessageKey text, MessageKey yes, MessageKey yesTip) {
+    public record Question(MessageKey title, MessageKey text, MessageKey yes, MessageKey yesTip, MessageKey no) {
 
         /** Stopping the run. */
         public static final Question STOP_RUN = new Question(
@@ -74,12 +75,33 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_QUIT_UNEXPORTED_YES,
                 MessageKey.CONFIRM_QUIT_UNEXPORTED_YES_TIP);
 
+        /** Cancelling the export from its progress dialog. */
+        public static final Question CANCEL_EXPORT = new Question(
+                MessageKey.EXPORT_CANCEL_TITLE,
+                MessageKey.EXPORT_CANCEL_TEXT,
+                MessageKey.EXPORT_CANCEL_YES,
+                MessageKey.EXPORT_CANCEL_YES_TIP,
+                MessageKey.EXPORT_CANCEL_NO);
+
+        /**
+         * A question whose safe answer is Cancel.
+         *
+         * @param title the card's heading
+         * @param text what happens if the person confirms
+         * @param yes the confirming button's label
+         * @param yesTip the confirming button's hover explanation
+         */
+        public Question(final MessageKey title, final MessageKey text, final MessageKey yes, final MessageKey yesTip) {
+            this(title, text, yes, yesTip, MessageKey.COMMON_CANCEL);
+        }
+
         /** Rejects a missing part. */
         public Question {
             Objects.requireNonNull(title, "title");
             Objects.requireNonNull(text, "text");
             Objects.requireNonNull(yes, "yes");
             Objects.requireNonNull(yesTip, "yesTip");
+            Objects.requireNonNull(no, "no");
         }
     }
 
@@ -127,8 +149,7 @@ public final class ConfirmDialog {
     }
 
     private Button wire(final DialogPane card, final Question question, final Runnable onConfirm) {
-        final ButtonType cancelType =
-                new ButtonType(messages.get(MessageKey.COMMON_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
+        final ButtonType cancelType = new ButtonType(messages.get(question.no()), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType yesType = new ButtonType(messages.get(question.yes()), ButtonBar.ButtonData.OK_DONE);
         card.getButtonTypes().setAll(cancelType, yesType);
         final Button cancel = (Button) card.lookupButton(cancelType);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -13,7 +14,10 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedSetupAssistant;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /** The model-suggested file name: what it replaces in the destination, and what is said when it cannot be had. */
 class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
@@ -38,7 +42,14 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
                 progress,
                 new DirectExecutor(),
                 activities,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
+                new SetupHelper(
+                        assistant,
+                        models,
+                        settings,
+                        new DirectExecutor(),
+                        activities,
+                        capabilities,
+                        hiddenWork(activities))));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -192,5 +203,9 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
         titleEdited();
 
         assertThat(assistant.asked()).isEmpty();
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

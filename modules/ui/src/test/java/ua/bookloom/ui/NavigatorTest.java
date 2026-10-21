@@ -186,7 +186,7 @@ class NavigatorTest extends FxTestBase {
         final ActivityTracker tracker = graph.getInstance(ActivityTracker.class);
         final Navigator guarded = graph.getInstance(Navigator.class);
         final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
-        interact(() -> handle.set(tracker.begin(ActivityKind.EXPORT, null)));
+        interact(() -> handle.set(tracker.begin(ActivityKind.SUGGEST_STYLE, null)));
 
         final boolean whileBusy = navigateOnFxThread(guarded, ViewNames.EXPORT);
         interact(() -> Objects.requireNonNull(handle.get()).end());
@@ -194,6 +194,20 @@ class NavigatorTest extends FxTestBase {
 
         assertThat(whileBusy).isFalse();
         assertThat(afterwards).isTrue();
+    }
+
+    // IF long work locked the navigation, THEN leaving its screen could never ask whether to let it run on; a hidden
+    // pass lets the person go anywhere.
+    @Test
+    void navigate_hiddenNamesPassRunning_isAccepted() {
+        final Injector graph = UiTestInjector.create(Locale.ENGLISH);
+        final ActivityTracker tracker = graph.getInstance(ActivityTracker.class);
+        final Navigator guarded = graph.getInstance(Navigator.class);
+        interact(() -> tracker.hide(tracker.begin(ActivityKind.NAMES_PASS, null).id()));
+
+        final boolean accepted = navigateOnFxThread(guarded, ViewNames.EXPORT);
+
+        assertThat(accepted).isTrue();
     }
 
     private Navigator guardedNavigator(final Injector graph, final RecordingToasts toasts) {

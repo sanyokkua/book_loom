@@ -10,28 +10,31 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.event.Event;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Window;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.WorkVisibility;
 
 /**
- * The busy layer: it waits before showing, describes the work from the tracker, stops it on Cancel, cannot be dismissed
- * from the keyboard, and leaves the navigation and toolbar disabled for as long as blocking work runs.
+ * The work layer: it waits before showing the progress dialog, describes the work from the tracker, stops it on
+ * Cancel, keeps every key from the window behind, and leaves the navigation and toolbar disabled for as long as short
+ * blocking work runs.
  */
 class BusyHostTest extends ShellTestBase {
 
@@ -74,63 +77,7 @@ class BusyHostTest extends ShellTestBase {
         assertThat(isCardShown()).isFalse();
         awaitCard();
 
-        assertThat(text(BusyHost.TITLE_ID)).isEqualTo("Export");
-    }
-
-    // IF the card carried the calls inline, THEN opened prompts would push it past the screen (15j.J6): it keeps only
-    // a button, shown while there is a call.
-    @Test
-    void card_workShowsACall_offersAShowModelCallsButtonAndNoInlineCalls() throws TimeoutException {
-        final ActivityTracker.Handle export = begin(ActivityKind.EXPORT, true);
-        awaitCard();
-        assertThat(required(BusyHost.SHOW_CALLS_ID).isVisible()).isFalse();
-
-        onFx(() -> export.calls(
-                LiveCallFixtures.calls(LiveCallFixtures.waiting(4, 1, "One.", LiveCallFixtures.smallPrompt()), null)));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        final Button show = (Button) required(BusyHost.SHOW_CALLS_ID);
-        assertThat(show.isVisible()).isTrue();
-        assertThat(show.getText()).isEqualTo("Show model calls");
-        assertThat(TooltipProbe.tipText(show)).isNotBlank();
-        assertThat(scene.getRoot().lookup("#model-calls-current-label")).isNull();
-    }
-
-    // IF the window showed only the current call, THEN the person could not compare what the last two calls sent.
-    @Test
-    void window_workWithTwoCalls_showsThePreviousCallBelowTheCurrentOne() throws TimeoutException {
-        final ActivityTracker.Handle scan = begin(ActivityKind.GLOSSARY_SCAN, true);
-        awaitCard();
-        final var first =
-                LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 1, "One.", LiveCallFixtures.smallPrompt()), "{}");
-        final var second = LiveCallFixtures.waiting(2, 1, "Two.", LiveCallFixtures.smallPrompt());
-        onFx(() -> scan.calls(LiveCallFixtures.calls(second, first)));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        onFx(() -> ((Button) required(BusyHost.SHOW_CALLS_ID)).fire());
-
-        final Parent window = callsWindowRoot();
-        assertThat(ThemeTestSupport.onFx(
-                        () -> window.lookup("#model-calls-previous").isVisible()))
-                .isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((Label) window.lookup("#model-calls-previous-title")).getText()))
-                .isEqualTo("Previous call");
-        assertThat(ThemeTestSupport.onFx(
-                        () -> ((Label) window.lookup("#model-calls-previous-segment-1-source-text")).getText()))
-                .isEqualTo("One. #1");
-        assertThat(ThemeTestSupport.onFx(
-                        () -> ((Label) window.lookup("#model-calls-current-segment-1-source-text")).getText()))
-                .isEqualTo("Two. #1");
-    }
-
-    private Parent callsWindowRoot() {
-        return ThemeTestSupport.onFx(() -> Window.getWindows().stream()
-                .filter(Window::isShowing)
-                .map(Window::getScene)
-                .map(Scene::getRoot)
-                .filter(root -> "model-calls-window".equals(root.getId()))
-                .findFirst()
-                .orElseThrow());
+        assertThat(text("progress-title")).isEqualTo("Export");
     }
 
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.
@@ -156,9 +103,9 @@ class BusyHostTest extends ShellTestBase {
         assertThat(required("shell-nav").isDisabled()).isFalse();
     }
 
-    // IF the card did not read the tracker, THEN the person would see a spinner with nothing said about the work.
+    // IF the dialog did not read the tracker, THEN the person would see a spinner with nothing said about the work.
     @Test
-    void card_workWithProgressAndDetails_showsStepFractionDetailsAndTimes() throws TimeoutException {
+    void card_workWithProgressAndDetails_showsStepFractionAndDetails() throws TimeoutException {
         final ActivityTracker.Handle export = begin(ActivityKind.EXPORT, true);
         onFx(() -> {
             export.progress(1, 4, "Checking paragraphs");
@@ -166,10 +113,24 @@ class BusyHostTest extends ShellTestBase {
         });
         awaitCard();
 
-        assertThat(text(BusyHost.STEP_ID)).isEqualTo("Checking paragraphs");
-        assertThat(((ProgressBar) required(BusyHost.BAR_ID)).getProgress()).isEqualTo(0.25);
-        assertThat(textsUnder(required(BusyHost.DETAILS_ID))).contains("Model", "gemma", "File", "b.epub");
-        assertThat(text(BusyHost.ELAPSED_ID)).startsWith("Elapsed ");
+        assertThat(text("progress-purpose")).isEqualTo("Checking paragraphs");
+        assertThat(((ProgressBar) required("progress-bar")).getProgress()).isEqualTo(0.25);
+        assertThat(text("progress-details")).isEqualTo("Model gemma · File b.epub");
+    }
+
+    // IF the figures line did not count the steps, THEN the person could not tell how much is left.
+    @Test
+    void figures_twoOfFourStepsEnded_readFiftyPercent() throws TimeoutException {
+        final ActivityTracker.Handle brief = begin(ActivityKind.SUGGEST_STYLE, true);
+        onFx(() -> {
+            brief.steps(new StepsPlanned(StepKind.REQUEST, 4, false));
+            brief.steps(new StepChanged(StepKind.REQUEST, "a", 0, StepState.ENDED, null, StepResult.DONE));
+            brief.steps(new StepChanged(StepKind.REQUEST, "b", 1, StepState.ENDED, null, StepResult.DONE));
+        });
+        awaitCard();
+
+        assertThat(text("progress-figures")).isEqualTo("50 % · 2 of about 4 steps");
+        assertThat(((ProgressBar) required("progress-bar")).getProgress()).isEqualTo(0.5);
     }
 
     // IF work with no known fraction drew a determinate bar, THEN it would sit at zero and look stuck.
@@ -178,7 +139,7 @@ class BusyHostTest extends ShellTestBase {
         begin(ActivityKind.GLOSSARY_SCAN, true);
         awaitCard();
 
-        assertThat(((ProgressBar) required(BusyHost.BAR_ID)).getProgress()).isLessThan(0);
+        assertThat(((ProgressBar) required("progress-bar")).getProgress()).isLessThan(0);
     }
 
     // IF Cancel did not reach the activity, THEN the card would be a trap; once pressed it must not be pressable again
@@ -187,14 +148,17 @@ class BusyHostTest extends ShellTestBase {
     void cancel_pressed_stopsTheActivityOnceAndSaysCancelling() throws TimeoutException {
         begin(ActivityKind.GLOSSARY_SCAN, true);
         awaitCard();
-        final Button cancel = (Button) required(BusyHost.CANCEL_ID);
+        final Button cancel = (Button) required("progress-cancel");
 
         onFx(cancel::fire);
         onFx(cancel::fire);
+        // The dialog redraws from the tracker at most every COALESCE.
+        WaitForAsyncUtils.waitFor(APPEARS_WITHIN_SECONDS, TimeUnit.SECONDS, cancel::isDisabled);
+        interact(() -> {});
 
         assertThat(cancelled).containsExactly("GLOSSARY_SCAN");
         assertThat(cancel.isDisabled()).isTrue();
-        assertThat(text(BusyHost.STEP_ID)).isEqualTo("Cancelling…");
+        assertThat(text("progress-purpose")).isEqualTo("Cancelling…");
         assertThat(TooltipProbe.tipText(cancel)).isNotBlank();
     }
 
@@ -204,8 +168,8 @@ class BusyHostTest extends ShellTestBase {
         begin(ActivityKind.IMPORT, false);
         awaitCard();
 
-        assertThat(required(BusyHost.CANCEL_ID).isVisible()).isFalse();
-        assertThat(text(BusyHost.STEP_ID)).isEqualTo("This work cannot be stopped; it ends by itself.");
+        assertThat(required("progress-cancel").isVisible()).isFalse();
+        assertThat(text("progress-purpose")).isEqualTo("This work cannot be stopped; it ends by itself.");
     }
 
     // IF the card went when the work ended only after a stop, THEN a finished export would leave the window locked.
@@ -219,24 +183,13 @@ class BusyHostTest extends ShellTestBase {
 
         assertThat(required("shell-nav").isDisabled()).isFalse();
         assertThat(required("shell-actions").isDisabled()).isFalse();
-    }
-
-    // IF Escape closed the card, THEN the person could uncover a window that is still working.
-    @Test
-    void escape_pressedOnTheCard_doesNotDismissIt() throws TimeoutException {
-        begin(ActivityKind.EXPORT, true);
-        awaitCard();
-
-        onFx(() -> Event.fireEvent(
-                scene, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
-
-        assertThat(isCardShown()).isTrue();
+        assertThat(injector.getInstance(WorkVisibility.class).isVisible()).isFalse();
     }
 
     // IF the navigation stayed enabled behind the scrim, THEN a click in the first moments could leave the screen.
     @Test
     void blocking_work_disablesTheNavigationAndTheToolbarFromTheStart() {
-        begin(ActivityKind.EXPORT, true);
+        begin(ActivityKind.GLOSSARY_SCAN, true);
 
         assertThat(required("shell-nav").isDisabled()).isTrue();
         assertThat(required("shell-actions").isDisabled()).isTrue();
@@ -257,7 +210,6 @@ class BusyHostTest extends ShellTestBase {
         final StackPane shell = (StackPane) scene.getRoot();
         assertThat(shell.getChildren().indexOf(required(BusyHost.HOST_ID)))
                 .isLessThan(shell.getChildren().indexOf(required("shell-modal-host")));
-        assertThat(MessageKey.BUSY_CANCEL_TIP).isNotNull();
     }
 
     private static boolean isInside(final @Nullable Node node, final Node root) {
@@ -271,7 +223,7 @@ class BusyHostTest extends ShellTestBase {
         begin(ActivityKind.IMPORT, false);
         awaitCard();
 
-        assertThat(isInside(scene.getFocusOwner(), required(BusyHost.CARD_ID))).isTrue();
+        assertThat(isInside(scene.getFocusOwner(), required("busy-card"))).isTrue();
     }
 
     // IF a key could pass the scrim, THEN the window behind would act on it while it is working.
