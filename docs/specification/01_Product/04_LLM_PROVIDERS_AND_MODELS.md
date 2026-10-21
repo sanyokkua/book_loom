@@ -36,7 +36,7 @@ implementations (e.g. Gemini, Claude) without changing callers, but those are no
 | Other OpenAI-compatible | OpenAI-compatible (`OPENAI_COMPATIBLE`) | Configurable base URL, `/v1/*`                          | Bearer / API key by reference | Live model list or manual     |
 
 Each preset seeds endpoint, auth scheme, discovery capability, and quirks from the profile; the user may override
-fields. The one OpenAI-compatible client serves every OpenAI-shaped server, so pointing at a new such server is
+fields, including the model-list path (both kinds) and the chat path (OpenAI-compatible only; an Ollama description that sets it is refused). An override replaces the path only — the base URL, sign-in and request shape stay the dialect's. The one OpenAI-compatible client serves every OpenAI-shaped server, so pointing at a new such server is
 configuration, not code.
 
 ## authentication-and-credentials {#authentication-and-credentials}
@@ -44,8 +44,8 @@ configuration, not code.
 | ID          | Requirement                                                                                                                         |
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------|
 | FR-PROV-05a | Credentials are stored only as a reference — an environment-variable name (an OS keychain entry is allowed later, not built) — never the secret value (DD-11). |
-| FR-PROV-05b | The secret is resolved at call time from the referenced source (credential resolution is planned, not built); it is never written to the database, logs, or exports. |
-| FR-PROV-05c | Auth schemes supported: none, bearer token, and custom header, each resolving its value from the credential reference.              |
+| FR-PROV-05b | The secret is resolved at call time from the referenced source from the process environment immediately before each request (a null or blank value counts as unset, and a variable that is unset fails the call as `missingCredential`, naming the variable and never a value, before any request is sent); it is never written to the database, logs, or exports. |
+| FR-PROV-05c | Auth schemes supported: none, bearer token, and custom header, each resolving its value from the credential reference: bearer sends `Authorization: Bearer <value>`, a custom header sends the value under the configured name. Extra headers may hold `${env:NAME}`, resolved the same way; a value with a line break or control character is refused as `validation` without being shown, and the sign-in header wins over an extra header of the same name.              |
 
 ## model-discovery-and-slots {#model-discovery-and-slots}
 
@@ -120,7 +120,7 @@ never affects the current working provider. The three stages are reported indepe
 
 | Stage      | Check                                                                                                                                                                                                                                                                                                                                              | Failure surfaced as                                                     |
 |------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| Connection | A dedicated **provider probe** (`probe()`/`verifyConnection()`) reaches the endpoint: Ollama hits the root / `/api/version`, an OpenAI-compatible server does a `/v1/models` HEAD or cheap GET. A **credential-resolution pre-check** runs first — a draft credential reference that does not yet resolve fails this stage as `missingCredential`. | Typed `AppError` (connection / `missingCredential`), banner/toast.      |
+| Connection | A dedicated **provider probe** (`probe()`/`verifyConnection()`) reaches the endpoint: Ollama hits the root / `/api/version`, an OpenAI-compatible server does a `/v1/models` HEAD or cheap GET. A **credential-resolution pre-check** runs first — a draft credential reference that does not yet resolve fails this stage as `missingCredential`. The draft is the unsaved form: it is checked by the provider rules, run on an uncached client, never registered, and each stage's exchange shows its request headers with every secret masked (`Authorization: Bearer ••••`). When the structured probe is rejected and the plain probe answers, inference passes with the note "structured output: not confirmed". | Typed `AppError` (connection / `missingCredential`), banner/toast.      |
 | Models     | Model listing (`listModels()`) succeeds (or manual fallback offered). Discovery failure is a typed `discoveryFailed`.                                                                                                                                                                                                                              | Typed `AppError` (`discoveryFailed`), fallback path.                    |
 | Inference  | A minimal chat completion returns a valid response from the chosen model; this **also populates** `supportsStructuredOutput` (whether the structured-output request was honoured or silently downgraded). For a manually-entered model this round-trip **is** the availability check.                                                              | Typed `AppError` (inference / `modelUnavailable`), stage marked failed. |
 
@@ -160,6 +160,8 @@ flagged only if it then fails the QA gates. **Empty-response ordering:** a **raw
 sanitize) maps to `emptyCompletion`; a **non-empty response that sanitizes to empty** takes one repair retry
 specifically for empty-after-sanitize, and if still empty yields an empty text-fallback result that QA then flags — it
 is not an `emptyCompletion`. |
+
+A provider whose credential variable is unset fails every call, discovery included, with `missingCredential` before any request is made; discovery preserves this code instead of degrading it to `discoveryFailed`.
 
 ## per-project-binding {#per-project-binding}
 

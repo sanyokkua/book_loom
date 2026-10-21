@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
  * @param firstTokenMs milliseconds to the first streamed token, or null when not measured
  * @param tokensPerSecond the measured generation speed, or null when not measured
  * @param structured whether the reply was a well-formed structured answer
+ * @param requestHeaders the request headers as masked "Name: value" lines, or an empty string
  */
 public record VerificationExchange(
         String method,
@@ -26,7 +27,21 @@ public record VerificationExchange(
         int httpStatus,
         @Nullable Long firstTokenMs,
         @Nullable Double tokensPerSecond,
-        boolean structured) {
+        boolean structured,
+        String requestHeaders) {
+
+    /** The form without request headers. */
+    public VerificationExchange(
+            String method,
+            String url,
+            String requestBody,
+            String responseBody,
+            int httpStatus,
+            @Nullable Long firstTokenMs,
+            @Nullable Double tokensPerSecond,
+            boolean structured) {
+        this(method, url, requestBody, responseBody, httpStatus, firstTokenMs, tokensPerSecond, structured, "");
+    }
 
     /** Rejects a missing or blank method and URL, and absent bodies. */
     public VerificationExchange {
@@ -34,6 +49,7 @@ public record VerificationExchange(
         Objects.requireNonNull(url, "url");
         Objects.requireNonNull(requestBody, "requestBody");
         Objects.requireNonNull(responseBody, "responseBody");
+        Objects.requireNonNull(requestHeaders, "requestHeaders");
         if (method.isBlank() || url.isBlank()) {
             throw new IllegalArgumentException("method and url must not be blank");
         }

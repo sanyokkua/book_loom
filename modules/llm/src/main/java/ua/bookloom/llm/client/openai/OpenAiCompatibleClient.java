@@ -33,6 +33,7 @@ import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
+import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.response.ReplySanitizer;
@@ -181,7 +182,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
-        final Result<HttpReply> response = exchange.post(chatConfig, CHAT_PATH, body);
+        final Result<HttpReply> response = exchange.post(chatConfig, EndpointPaths.chatPath(config, CHAT_PATH), body);
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
@@ -304,7 +305,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private ProviderCallResult<HttpReply> get(CallPurpose purpose, @Nullable String modelId) {
-        final Result<HttpReply> response = exchange.get(config, MODELS_PATH);
+        final Result<HttpReply> response = exchange.get(config, EndpointPaths.modelsPath(config, MODELS_PATH));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }

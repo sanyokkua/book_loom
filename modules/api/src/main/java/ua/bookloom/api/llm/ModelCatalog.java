@@ -1,6 +1,8 @@
 package ua.bookloom.api.llm;
 
 import java.util.List;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 
 /**
@@ -19,4 +21,16 @@ public interface ModelCatalog {
      *     {@link ua.bookloom.api.ErrorCode#validation} for an unregistered id (no request is sent), otherwise the discovery failure
      */
     Result<List<ModelInfo>> listModels(String providerId);
+
+    /**
+     * Lists the models an unsaved description reports; nothing is registered or stored.
+     *
+     * @param draft the unsaved provider description
+     * @return the model ids, or an error: {@code validation} for a description the rules refuse, otherwise the
+     *     discovery failure
+     */
+    default Result<List<ModelInfo>> listModels(ProviderConfig draft) {
+        return Result.err(AppError.of(
+                ErrorCode.internal, "Not supported", "This catalog cannot list a description that is not saved."));
+    }
 }

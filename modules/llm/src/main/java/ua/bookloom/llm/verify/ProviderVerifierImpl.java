@@ -18,16 +18,14 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
-import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
@@ -44,16 +42,8 @@ import ua.bookloom.llm.retry.RetryPolicy;
 @Slf4j
 public final class ProviderVerifierImpl implements ProviderVerifier {
 
-    /** The probe's output cap: the smallest cap a run's call has, ample for {@code {"status":"ok"}}. */
-    static final int PROBE_OUTPUT_CAP = 64;
-
-    private static final String INFERENCE_PROBE_MESSAGE = "Return exactly one JSON object: {\"status\":\"ok\"}.";
     private static final String STRUCTURED_OUTPUT_SUPPORTED = "structured output: supported";
     private static final String STRUCTURED_OUTPUT_NOT_CONFIRMED = "structured output: not confirmed";
-    private static final ResponseFormat INFERENCE_PROBE_FORMAT = new ResponseFormat("verification_probe", """
-            {"type":"object","properties":{"status":{"const":"ok"}},"required":["status"],"additionalProperties":false}
-            """);
-
     private final ProviderConfigs providerConfigs;
     private final ProviderClientFactory clients;
     private final InferenceGate gate;
@@ -111,21 +101,52 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return Result.ok(new VerificationReport(List.of(connection)));
     }
 
+    @Override
+    public Result<VerificationReport> verify(ProviderConfig draft, String modelId, VerificationPolicy policy) {
+        Objects.requireNonNull(draft, "draft");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(policy, "policy");
+        log.info(
+                "Draft provider verification started provider={} kind={} model={} policy={}",
+                draft.id(),
+                draft.kind(),
+                modelId,
+                policy);
+        final ProviderConfigRules.Check check = ProviderConfigRules.check(draft);
+        if (!check.isValid()) {
+            final AppError refusal = check.errors().get(0);
+            log.warn("Draft provider verification refused provider={} code={}", draft.id(), refusal.code());
+            return Result.err(refusal);
+        }
+        return runStages(new ModelSelection(draft.id(), modelId), policy, draft, clients.createUncached(draft));
+    }
+
     private Result<VerificationReport> verifyConfigured(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config) {
-        final ProviderClient client = clients.create(config);
+        return runStages(selection, policy, config, clients.create(config));
+    }
+
+    private Result<VerificationReport> runStages(
+            ModelSelection selection, VerificationPolicy policy, ProviderConfig config, ProviderClient client) {
         final List<StageOutcome> stages = new ArrayList<>(3);
-        final StageOutcome connection = timed(() -> verifyConnection(client, config.id()));
+        final StageOutcome connection =
+                withExchange(timed(() -> verifyConnection(client, config.id())), VerificationStage.CONNECTION, config);
         stages.add(connection);
         if (connection.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
             return completed(selection, policy, stages);
         }
-        final StageOutcome models = timed(() -> verifyModels(client, config.id(), selection.modelId()));
+        final StageOutcome models = withExchange(
+                timed(() -> verifyModels(client, config.id(), selection.modelId())), VerificationStage.MODELS, config);
         stages.add(models);
         if (models.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION_AND_MODELS) {
             return completed(selection, policy, stages);
         }
-        return verifyInferencePolicy(selection, policy, client, config.id(), stages, models);
+        return verifyInferencePolicy(selection, policy, client, config, stages, models);
+    }
+
+    private static StageOutcome withExchange(StageOutcome outcome, VerificationStage stage, ProviderConfig config) {
+        return StageOutcomes.withExchange(
+                outcome, VerificationExchanges.forStage(stage, config, outcome.status(), ProbeRequests.MESSAGE));
     }
 
     private StageOutcome timed(Supplier<StageOutcome> stage) {
@@ -184,20 +205,24 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             ModelSelection selection,
             VerificationPolicy policy,
             ProviderClient client,
-            String providerId,
+            ProviderConfig config,
             List<StageOutcome> stages,
             StageOutcome models) {
+        final String providerId = config.id();
         log.debug(
                 "Provider verification inference decision provider={} policy={} modelsStatus={} run=true",
                 providerId,
                 policy,
                 models.status());
-        stages.add(timed(() -> verifyInference(client, providerId, selection.modelId())));
+        stages.add(withExchange(
+                timed(() -> verifyInference(client, providerId, selection.modelId())),
+                VerificationStage.INFERENCE,
+                config));
         return completed(selection, policy, stages);
     }
 
     private StageOutcome verifyInference(ProviderClient client, String providerId, String modelId) {
-        final ChatRequest request = structuredProbeRequest(false);
+        final ChatRequest request = ProbeRequests.structured(false);
         log.debug(
                 "Provider verification inference stage started provider={} model={} messageCount=1 responseFormatPresent=true reasoningDisabled=true",
                 providerId,
@@ -226,7 +251,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         final ProviderCallResult<ChatResponse> withoutReasoning =
                 call.rejectedCapability() == RejectedCapability.REASONING_CONTROL
                         ? callWithRetry(
-                                () -> client.chat(modelId, structuredProbeRequest(null)),
+                                () -> client.chat(modelId, ProbeRequests.structured(null)),
                                 VerificationStage.INFERENCE,
                                 providerId)
                         : call;
@@ -252,12 +277,12 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private ProviderCallResult<ChatResponse> plainProbeCall(
             ProviderClient client, String providerId, String modelId, @Nullable Boolean reasoningEnabled) {
         final ProviderCallResult<ChatResponse> call = callWithRetry(
-                () -> client.chat(modelId, plainProbeRequest(reasoningEnabled)),
+                () -> client.chat(modelId, ProbeRequests.plain(reasoningEnabled)),
                 VerificationStage.INFERENCE,
                 providerId);
         return call.rejectedCapability() == RejectedCapability.REASONING_CONTROL
                 ? callWithRetry(
-                        () -> client.chat(modelId, plainProbeRequest(null)), VerificationStage.INFERENCE, providerId)
+                        () -> client.chat(modelId, ProbeRequests.plain(null)), VerificationStage.INFERENCE, providerId)
                 : call;
     }
 
@@ -283,29 +308,6 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         } catch (JsonProcessingException ignored) {
             return false;
         }
-    }
-
-    private static ChatRequest structuredProbeRequest(@Nullable Boolean reasoningEnabled) {
-        return probeRequest(INFERENCE_PROBE_FORMAT, reasoningEnabled);
-    }
-
-    private static ChatRequest plainProbeRequest(@Nullable Boolean reasoningEnabled) {
-        return probeRequest(null, reasoningEnabled);
-    }
-
-    // Capped like a run's calls: an uncapped probe let a thinking model reason to the end and answer, hiding a server
-    // that ignores the reasoning control and then spends every capped call of the run on reasoning.
-    private static ChatRequest probeRequest(@Nullable ResponseFormat format, @Nullable Boolean reasoningEnabled) {
-        return new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)),
-                null,
-                format,
-                reasoningEnabled,
-                null,
-                null,
-                PROBE_OUTPUT_CAP,
-                null,
-                null);
     }
 
     private <T> ProviderCallResult<T> callWithRetry(

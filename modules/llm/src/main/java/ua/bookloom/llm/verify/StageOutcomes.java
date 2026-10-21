@@ -6,6 +6,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
 
 /** Builds the passed/soft-passed/failed {@link StageOutcome} shapes {@link ProviderVerifierImpl} reports. */
@@ -44,6 +45,17 @@ final class StageOutcomes {
     static StageOutcome withCount(StageOutcome outcome, int count) {
         return new StageOutcome(
                 outcome.stage(), outcome.status(), outcome.error(), outcome.note(), outcome.elapsed(), count);
+    }
+
+    static StageOutcome withExchange(StageOutcome outcome, VerificationExchange exchange) {
+        return new StageOutcome(
+                outcome.stage(),
+                outcome.status(),
+                outcome.error(),
+                outcome.note(),
+                outcome.elapsed(),
+                outcome.count(),
+                exchange);
     }
 
     static StageOutcome modelUnavailable(AppError original) {

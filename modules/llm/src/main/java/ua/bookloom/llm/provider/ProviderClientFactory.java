@@ -50,6 +50,13 @@ public final class ProviderClientFactory {
         return Objects.requireNonNull(cached, "cached client").client();
     }
 
+    /** Builds a client for a description that is not saved, leaving the cache and any saved client of that id alone. */
+    public ProviderClient createUncached(ProviderConfig config) {
+        Objects.requireNonNull(config, "config");
+        log.debug("Creating uncached provider client id={} kind={}", config.id(), config.kind());
+        return createClient(config);
+    }
+
     private ProviderClient createClient(ProviderConfig config) {
         log.debug("Creating provider client id={} kind={}", config.id(), config.kind());
         return switch (config.kind()) {

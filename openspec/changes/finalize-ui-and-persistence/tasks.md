@@ -300,7 +300,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 4. The provider and pipeline hooks the UI needs
 
-- [ ] 4.1 Send the form's sign-in, headers and endpoint overrides, and check the key before any request, so a provider
+- [x] 4.1 Send the form's sign-in, headers and endpoint overrides, and check the key before any request, so a provider
   configured in Settings works and a missing key says which variable is missing.
   - **Satisfies:** llm-provider "Add the provider's headers and its key to every request"; llm-provider "Refuse a call
     whose key is missing before sending anything"; llm-provider "Never show the key in a log line or in the test

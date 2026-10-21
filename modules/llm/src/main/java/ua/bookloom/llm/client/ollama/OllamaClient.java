@@ -32,6 +32,7 @@ import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
+import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.ReasoningHeadroom;
@@ -91,7 +92,8 @@ public final class OllamaClient implements ProviderClient {
                 config.id(),
                 config.baseUrl().getHost());
         try {
-            final ProviderCallResult<HttpReply> call = get(TAGS_PATH, CallPurpose.DISCOVERY, null);
+            final ProviderCallResult<HttpReply> call =
+                    get(EndpointPaths.modelsPath(config, TAGS_PATH), CallPurpose.DISCOVERY, null);
             final Result<HttpReply> result = call.result();
             if (result.isErr()) {
                 return new ProviderCallResult<>(
