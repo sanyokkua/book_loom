@@ -91,6 +91,11 @@ public final class ReviewFixtures {
 
         /** The retry over the same stores, deciding with {@code mode}'s threshold. */
         public RetryDraft retryDraft(final ReviewMode mode) {
+            return retryDraft(() -> mode);
+        }
+
+        /** The retry over the same stores, asking {@code mode} for the review mode at each retry. */
+        public RetryDraft retryDraft(final com.google.inject.Provider<ReviewMode> mode) {
             return new RetryDraft(
                     documents,
                     openProjects,

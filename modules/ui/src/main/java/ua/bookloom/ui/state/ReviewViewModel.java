@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
@@ -40,11 +41,11 @@ import ua.bookloom.ui.notify.Toasts;
  * <p>A singleton because the screen is rebuilt on every visit while the count and the open list must outlive it. Every
  * desk call runs on the background executor and every property changes on the FX Application Thread. Every action is
  * unavailable while the run translates or a retry is in flight, and the desk answers {@code busy} if a run starts in
- * between; that answer is one warning, never a dialog.
+ * between (one warning, never a dialog).
  *
- * <p>The flagged count is read from the desk, not from the mirror's queue, because the mirror clears its queue when a
- * run session starts; the mirror's queue changing is only the cue to read it again. A refused accept or save is shown
- * in place through {@link #problem()}, and the segment keeps its status.
+ * <p>The flagged count is read from the desk, not from the mirror's queue, which the mirror clears when a run session
+ * starts; the queue changing is only the cue to read again. A refused accept or save is shown in place through
+ * {@link #problem()}, and the segment keeps its status.
  */
 @Slf4j
 @Singleton
@@ -74,7 +75,7 @@ public final class ReviewViewModel {
      * @param desk the review desk every read and action goes through
      * @param mirror the run's state, whose run state gates the actions and whose flagged queue prompts a recount
      * @param current the open book, whose project the desk is asked about
-     * @param reviewMode the mode of this launch, which decides whether All segments is offered
+     * @param reviewMode the mode a run keeps or the next would use, which decides whether All segments is offered
      * @param toasts where an accept, a save and the busy refusal are announced
      * @param errors where a failure that is neither busy nor validation is shown
      * @param retry the model, the desk call and the hold on the run for a retry
@@ -85,7 +86,7 @@ public final class ReviewViewModel {
             final ReviewDesk desk,
             final StateMirror mirror,
             final CurrentProject current,
-            final ReviewMode reviewMode,
+            final Provider<ReviewMode> reviewMode,
             final Toasts toasts,
             final ErrorPresenter errors,
             final ReviewRetry retry,
@@ -95,7 +96,7 @@ public final class ReviewViewModel {
         this.counts = new FlaggedCount(queries, Objects.requireNonNull(executor, "executor"));
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
-        this.availability = new ReviewAvailability(mirror, Objects.requireNonNull(reviewMode, "reviewMode"));
+        this.availability = new ReviewAvailability(mirror, reviewMode, this::refreshAvailability);
         this.refusals = new ReviewRefusals(
                 Objects.requireNonNull(toasts, "toasts"),
                 Objects.requireNonNull(errors, "errors"),
@@ -107,7 +108,6 @@ public final class ReviewViewModel {
             refreshAvailability();
             counts.afterRun(now, this::refreshCount);
         });
-        mirror.review().retryInFlight().addListener((observed, was, now) -> refreshAvailability());
         mirror.live().flaggedQueue().addListener(onMirrorQueue);
         refreshAvailability();
         log.debug("review view model ready");

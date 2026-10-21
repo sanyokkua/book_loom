@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import com.google.inject.Provider;
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -21,16 +22,20 @@ import ua.bookloom.ui.i18n.MessageKey;
 final class ReviewAvailability {
 
     private final StateMirror mirror;
-    private final ReviewMode reviewMode;
+    private final Provider<ReviewMode> reviewMode;
     private final ReadOnlyBooleanWrapper actions = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper accept = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper allSegments = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> lockReason = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> acceptNote = new ReadOnlyObjectWrapper<>();
 
-    ReviewAvailability(final StateMirror mirror, final ReviewMode reviewMode) {
+    /** Watches the run's mode and the retry flag, calling {@code refresh} when either changes. */
+    ReviewAvailability(final StateMirror mirror, final Provider<ReviewMode> reviewMode, final Runnable refresh) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
+        Objects.requireNonNull(refresh, "refresh");
+        mirror.runMode().addListener((observed, was, now) -> refresh.run());
+        mirror.review().retryInFlight().addListener((observed, was, now) -> refresh.run());
     }
 
     ReadOnlyBooleanProperty actions() {
@@ -72,7 +77,8 @@ final class ReviewAvailability {
         final boolean hasTarget = segment != null && hasTarget(segment);
         accept.set(offered && !dirty && decidable && hasTarget);
         acceptNote.set(offered && decidable && !hasTarget ? noTargetNote(segment) : null);
-        allSegments.set(reviewMode == ReviewMode.UNATTENDED && mirror.runState().get() == RunState.COMPLETED);
+        allSegments.set(mirror.runState().get() == RunState.COMPLETED
+                && RunModes.current(mirror, reviewMode) == ReviewMode.UNATTENDED);
         log.debug(
                 "review availability: actions {}, accept {}, all segments {}, locked by {}",
                 offered,

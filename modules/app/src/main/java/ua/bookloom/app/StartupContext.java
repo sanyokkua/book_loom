@@ -23,7 +23,7 @@ import ua.bookloom.util.paths.AppPaths;
  *
  * @param paths the resolved, created data and log directories
  * @param environment whether this is a development or a packaged production run
- * @param reviewMode how much of a run a person confirms, chosen by the launch flag
+ * @param reviewMode how much of a run a person confirms, the launch flag, which wins over the stored choice only when it was set
  * @param detailedLog whether the detailed diagnostic log ({@code bookloom-trace.log}) is being written
  * @param session the session facts the detailed log's header reads; the same instance the window updates
  */

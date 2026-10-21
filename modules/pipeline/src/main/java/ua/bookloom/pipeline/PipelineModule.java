@@ -35,7 +35,7 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
  * an {@code @Inject} constructor, so Guice builds them for the engine, which hands the quality loop to every run. The
  * deterministic checks in {@code qa} are static functions.
  *
- * <p>{@code ReviewMode} is deliberately not bound here: the composition root chooses it once at launch, and a binding
+ * <p>{@code ReviewMode} is deliberately not bound here: the composition root provides it afresh for each run, and a binding
  * here would clash with it. An injector built from this module alone must bind it too.
  */
 public final class PipelineModule extends AbstractModule {

@@ -464,16 +464,21 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: `RequestDefaultsSource` (env `BOOKLOOM_REASONING=low` wins over stored Off; unset → stored; nothing →
     Off); WireMock body assertions in both dialects for Off, Low and On.
   - Verify: `./gradlew build`. → :api, :llm, :pipeline
-- [ ] 4.8b Read the review mode at each run start from the stored setting, while an explicitly set environment variable
+- [x] 4.8b Read the review mode at each run start from the stored setting, while an explicitly set environment variable
   or property still wins, so a change in Settings › Automation reaches the next run.
   - **Satisfies:** translation-pipeline "Read the review mode at the start of each run"; settings "Apply the app
     language after a restart and the review mode at the next run start"; settings "Name the review modes with one set
     of words"; resume "Pause for review as the review mode says"
-  - Design K9: `AppModule:54`'s instance binding becomes a non-singleton `Provider<ReviewMode>` (the resolver's mode
-    when its source is the environment or the property, else stored `run.reviewMode`, else Unattended).
+  - Design K9: `AppModule:54`'s instance binding becomes an unscoped `@Provides ReviewMode` over
+    `app/bootstrap/ReviewModeSource` (a flag that was set wins, including one naming no mode, which means Unattended
+    (`source != DEFAULT || rejectedValue != null`); else the stored `AppSetting.REVIEW_MODE`; else Unattended).
     `ui/state/RunStarter` and `pipeline/review/RetryDraft` (`:83`) inject `Provider<ReviewMode>` and read it per start
     or retry; `ReviewViewModel:88`, `ReviewPauseFollower:47`, `ReviewAvailability:24` and `TranslatingViewModel:200`
-    read `RunContext.reviewMode()`. `UiModule:149` and `ReviewModeTestModule` stay valid. The command line keeps
+    read `mirror.runMode()` (the mode the run in progress keeps, published at run start) and fall back to the provider
+    when no run has published one; `RunContext` lives only in `TranslationRunner`, so the singletons cannot read it.
+    `RunStarter` reads the provider once per start and passes it to the request, context and pause points.
+    `ReviewAvailability` is injected at `ReviewViewModel:~99` and `LoopSettings.reviewMode` is read nowhere yet.
+    `UiModule:149` and `ReviewModeTestModule` stay valid. The command line keeps
     ignoring the flag.
   - Tests: env set wins; env unset → stored; nothing → Unattended; a stored change applies to the next start and a
     run in progress keeps its mode; a retry reads the current mode.

@@ -101,7 +101,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 current,
                 models,
                 engine,
-                reviewMode,
+                () -> reviewMode,
                 runner,
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor,

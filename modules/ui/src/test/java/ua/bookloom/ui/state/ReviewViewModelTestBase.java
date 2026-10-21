@@ -139,7 +139,7 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
     protected ReviewViewModel newReviewViewModel(final ExecutorService deskExecutor) {
         final ReviewRetry retry =
                 new ReviewRetry(desk, models, mirror, settings, new Messages(() -> Locale.ENGLISH), activities);
-        return new ReviewViewModel(desk, mirror, current, reviewMode, toasts, errors, retry, deskExecutor);
+        return new ReviewViewModel(desk, mirror, current, () -> reviewMode, toasts, errors, retry, deskExecutor);
     }
 
     protected void open() {

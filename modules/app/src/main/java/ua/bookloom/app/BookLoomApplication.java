@@ -20,6 +20,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.app.bootstrap.ReviewModeSource;
 import ua.bookloom.persistence.SqlitePersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.ExitGuard;
@@ -68,6 +69,10 @@ public final class BookLoomApplication extends Application {
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
+        // init() is not the FX thread: this read seeds the stored review mode the FX-thread readers (ready card) see.
+        log.debug(
+                "seeded review mode {}",
+                injector.getInstance(ReviewModeSource.class).current());
         log.info("injector built and two-phase init complete");
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
         injector.getInstance(SessionInfo.class)

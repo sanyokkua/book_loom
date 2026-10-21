@@ -10,6 +10,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.app.bootstrap.ReviewModeSource;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
 import ua.bookloom.ui.DiagnosticLog;
@@ -51,8 +52,6 @@ public final class AppModule extends AbstractModule {
         bind(AppPaths.class).toInstance(startup.paths());
         bind(AppEnvironment.class).toInstance(startup.environment());
         bind(StartupContext.class).toInstance(startup);
-        // The mode is chosen once at launch and never re-read, so the review desk and the window see the same answer.
-        bind(ReviewMode.class).toInstance(startup.reviewMode().mode());
         // The one read of the build version: the launcher's startup line and the About dialog must report the same
         // string, and `:ui` cannot see this module's reader, so the value crosses the edge as a binding.
         bind(String.class).annotatedWith(BuildVersion.class).toInstance(AppVersion.current());
@@ -61,6 +60,17 @@ public final class AppModule extends AbstractModule {
         bind(SessionInfo.class).toInstance(startup.session());
         bind(AppRestart.class).to(NoOpAppRestart.class).in(Singleton.class);
         bind(DiagnosticLog.class).toInstance(new DiagnosticLog(startup.paths().logDir(), startup.detailedLog()));
+    }
+
+    /**
+     * The review mode a run starts with, read at each request so a change in Settings reaches the next run.
+     *
+     * @param source the launch flag, else the stored choice
+     * @return the mode now; deliberately unscoped, so a {@code Provider<ReviewMode>} asks again each time
+     */
+    @Provides
+    ReviewMode reviewMode(final ReviewModeSource source) {
+        return source.current();
     }
 
     /**
