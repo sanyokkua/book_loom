@@ -49,10 +49,13 @@ import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.RunStores;
 
 /** Shared real-document and controlled-model setup for job acceptance tests. */
@@ -228,7 +231,12 @@ final class TranslationJobTestSupport {
                 SPLITTER,
                 ConsistencyPassFixture.over(project),
                 Clock.systemUTC(),
-                new UuidIdSource());
+                new UuidIdSource(),
+                RecoveryTimer.REAL,
+                RunTicks.DAEMON,
+                BatchDrafter.NO_BATCHING,
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */

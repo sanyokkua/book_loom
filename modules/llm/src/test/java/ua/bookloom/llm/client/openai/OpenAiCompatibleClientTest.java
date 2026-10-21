@@ -42,6 +42,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
@@ -360,7 +361,7 @@ class OpenAiCompatibleClientTest {
                         new ChatMessage(ChatRole.ASSISTANT, "prior")),
                 0.2,
                 new ResponseFormat("draft", SCHEMA),
-                false);
+                ReasoningLevel.OFF);
     }
 
     private static Stream<String> malformedChatBodies() {

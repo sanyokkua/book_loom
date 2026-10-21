@@ -36,6 +36,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -62,6 +63,28 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final Clock clock;
+
+    private final RequestDefaultsSource requestDefaultsSource;
+
+    /** A setup assistant whose requests use the defaults the environment alone gives (the command line, tests). */
+    public SetupAssistantImpl(
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final GlossaryRepository glossary,
+            final OpenProjects openProjects,
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final Clock clock) {
+        this(
+                projects,
+                segments,
+                glossary,
+                openProjects,
+                templates,
+                mapper,
+                clock,
+                RequestDefaultsSource.environmentOnly());
+    }
 
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
@@ -155,7 +178,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                     "Nothing to suggest",
                     "The project must be stored, name a target language and have its book open."));
         }
-        return Result.ok(new SetupBook(project, document, target, openProjects.index(projectId)));
+        return Result.ok(new SetupBook(
+                project, document, target, openProjects.index(projectId), requestDefaultsSource.current()));
     }
 
     private Result<FileNameSuggestion> askName(final SetupBook book, final ModelCalls calls) {

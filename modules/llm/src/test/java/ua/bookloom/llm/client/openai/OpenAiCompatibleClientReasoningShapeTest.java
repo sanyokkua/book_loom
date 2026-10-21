@@ -17,11 +17,14 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -57,16 +60,36 @@ class OpenAiCompatibleClientReasoningShapeTest {
     // The effort a thinking call asks for is the server's usual middle level.
     @Test
     void chat_thinkingOn_sendsAReasoningEffortOfMedium() {
-        client().chat(MODEL_ID, request(300, true));
+        client().chat(MODEL_ID, request(300, ReasoningLevel.ON));
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
                 .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo("medium"))));
     }
 
+    // The three levels map to none / low / medium; no level sends no key at all.
+    @ParameterizedTest
+    @CsvSource({"OFF,none", "LOW,low", "ON,medium"})
+    void chat_level_sendsTheMatchingReasoningEffort(final ReasoningLevel level, final String effort) {
+        client().chat(MODEL_ID, request(300, level));
+
+        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo(effort))));
+    }
+
+    // IF the level is Low, THEN max_tokens grows by the reasoning headroom as for On; Off keeps the cap as asked.
+    @ParameterizedTest
+    @CsvSource({"OFF,300", "LOW,1324", "ON,1324"})
+    void chat_level_growsMaxTokensOnlyWhenTheModelReasons(final ReasoningLevel level, final String maxTokens) {
+        client().chat(MODEL_ID, request(300, level));
+
+        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo(maxTokens))));
+    }
+
     // IF a call has thinking on, THEN its max_tokens grows by 1,024 tokens for the reasoning.
     @Test
     void chat_thinkingOn_growsMaxTokensByTheReasoningHeadroom() {
-        client().chat(MODEL_ID, request(300, true));
+        client().chat(MODEL_ID, request(300, ReasoningLevel.ON));
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
                 .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("1324"))));
@@ -74,7 +97,7 @@ class OpenAiCompatibleClientReasoningShapeTest {
 
     @Test
     void chat_thinkingOff_sendsNoneAndTheCapAsAsked() {
-        client().chat(MODEL_ID, request(300, false));
+        client().chat(MODEL_ID, request(300, ReasoningLevel.OFF));
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
                 .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo("none")))
@@ -99,7 +122,7 @@ class OpenAiCompatibleClientReasoningShapeTest {
                                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                                 null,
                                 null,
-                                true,
+                                ReasoningLevel.ON,
                                 null,
                                 null,
                                 null,
@@ -113,7 +136,7 @@ class OpenAiCompatibleClientReasoningShapeTest {
                         .doesNotContain("max_tokens"));
     }
 
-    private static ChatRequest request(final int cap, final @Nullable Boolean thinking) {
+    private static ChatRequest request(final int cap, final @Nullable ReasoningLevel thinking) {
         return new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                 null,

@@ -16,6 +16,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
@@ -49,7 +50,7 @@ class ReviewerCallTest {
         final ChatRequest request = model.requests().getFirst();
         assertThat(request.temperature()).isEqualTo(0.0);
         assertThat(request.seed()).isEqualTo(15);
-        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
         assertThat(request.callKind()).isEqualTo(CallKind.REVIEW);
         assertThat(Objects.requireNonNull(request.responseFormat()).name()).isEqualTo("reviewer");
         assertThat(request.responseFormat().jsonSchema())

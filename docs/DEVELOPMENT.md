@@ -1834,10 +1834,10 @@ always did. Two switches let the eval measure where that is wrong; neither chang
 
 | Switch | Meaning | Eval wiring |
 |---|---|---|
-| `BOOKLOOM_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` (else `-Dbookloom.reasoning`) | the named `PromptName` calls think (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property) | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
+| `BOOKLOOM_REASONING="low"` or `"DRAFT_BATCH_JSON=on,TERM_READING=low"` (else `-Dbookloom.reasoning`) | a bare `off`, `low` or `on` sets the level of every call that is not named; `NAME=on\|low\|off` sets one `PromptName` call (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property). **Set, it replaces the stored Generation setting entirely; unset, the stored setting (`run.reasoning`, Off when nothing is stored) applies to every call.** `BOOKLOOM_SAMPLING` (`server`\|`tuned`) works the same way against `run.sampling` | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
 | `BOOKLOOM_BATCH_NOTES=on\|off` (else `-Dbookloom.batch.notes`, default off) | the batch draft writes a one-line `notes` string before each `target` (hard phrases and idioms); the code reads it only to log it at TRACE and never validates or stores it | `BOOKLOOM_EVAL_BATCH_NOTES`, `scripts/eval-matrix.sh --batch-notes on` |
 
-A call that thinks sends Ollama `think:true` and LM Studio `reasoning_effort:"medium"`, and its output cap grows by 1,024
+A call that thinks sends Ollama `think:true` (`"low"` at Low) and LM Studio `reasoning_effort:"medium"` (`"low"` at Low), and its output cap grows by 1,024
 tokens for the reasoning (a gpt-oss model gets that room once, thinking or not); the Ollama runaway line guard is sized
 from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` and `batchNotes`.
 

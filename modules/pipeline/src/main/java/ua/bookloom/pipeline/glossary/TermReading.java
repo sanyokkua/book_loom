@@ -238,7 +238,11 @@ public final class TermReading {
         log.trace("Term reading messages {}", messages);
         final int expected = BASE_TOKENS + TOKENS_PER_WINDOW * windows.size();
         return ChatRequests.build(
-                PromptName.TERM_READING, messages, new OutputLimit(expected, expected * CAP_FACTOR), false);
+                PromptName.TERM_READING,
+                messages,
+                new OutputLimit(expected, expected * CAP_FACTOR),
+                false,
+                frame.requestDefaults());
     }
 
     // What the code knows, on the term's own line: the count, the tally when there is one, the other spellings.

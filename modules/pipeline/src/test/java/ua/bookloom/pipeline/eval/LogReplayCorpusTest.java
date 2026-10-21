@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.eval.LogReplayCorpus.Outcome;
 
@@ -111,7 +112,7 @@ class LogReplayCorpusTest {
         assertThat(request.messages().getFirst().role()).isEqualTo(ChatRole.SYSTEM);
         assertThat(request.temperature()).isEqualTo(0.2);
         assertThat(request.maxOutputTokens()).isEqualTo(141);
-        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
         assertThat(request.responseFormat().name()).isEqualTo("draft");
         assertThat(request.callKind()).isEqualTo(CallKind.DRAFT);
     }

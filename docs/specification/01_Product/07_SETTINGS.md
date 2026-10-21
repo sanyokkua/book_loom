@@ -90,8 +90,8 @@ has: no judge model and no τ override.
 | Setting                  | Type          | Default                | Validation / meaning                                                                 | Requirement  |
 |--------------------------|---------------|------------------------|---------------------------------------------------------------------------------------|--------------|
 | What the quality choice does | read-only grid | —                  | the Fast / Balanced / Max rows of `DialParameters` (see below)                        | FR-ALGO-C12  |
-| Thinking before answering | enum         | Off                    | Off / Low / On (`ReasoningPlan`; today the env var `BOOKLOOM_REASONING`)              | FR-SETTINGS-03 |
-| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom (today the env var `BOOKLOOM_SAMPLING`)          | FR-SETTINGS-03 |
+| Thinking before answering | enum         | Off                    | Off / Low / On, read at each run start (`RequestDefaultsSource`); `BOOKLOOM_REASONING`, when set, replaces it              | FR-SETTINGS-03 |
+| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom, read at each run start; `BOOKLOOM_SAMPLING`, when set to a known mode, replaces it          | FR-SETTINGS-03 |
 | Time limits              | read-only     | `RequestTimeouts`      | fixed per call kind                                                                   | FR-SETTINGS-03 |
 
 **Context window (built).** Every call is sized against a fixed effective context of **16,384 tokens**

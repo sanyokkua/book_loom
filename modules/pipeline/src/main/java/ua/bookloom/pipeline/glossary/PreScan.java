@@ -249,8 +249,8 @@ public final class PreScan {
             final CallFrame frame,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(batch, existing, frame);
-        final ChatRequest request =
-                ChatRequests.build(PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false);
+        final ChatRequest request = ChatRequests.build(
+                PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false, frame.requestDefaults());
         log.trace("Pre-scan batch {} messages {}", index, messages);
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.PRESCAN, List.of(), request, CallDescriptor.whole(PromptName.PRESCAN));

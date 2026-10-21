@@ -348,7 +348,7 @@ each `target` (a hard phrase, an idiom, how it will be rendered; empty when none
 per item. `BatchEntries` reads the note only to drop it: it is logged at TRACE, never validated, stored or read as part of
 a target, and the cut-reply salvage accepts `"id","notes","target"`. With the switch off the prompt and the schema are
 byte-for-byte today's. It stays an experiment until the eval shows it moves quality; the thinking switch for any call is
-`BOOKLOOM_REASONING` (`docs/DEVELOPMENT.md#x2-arms`).
+`BOOKLOOM_REASONING` (which, when set, replaces the stored Generation setting) (`docs/DEVELOPMENT.md#x2-arms`).
 
 ### related-pairs {#related-pairs}
 

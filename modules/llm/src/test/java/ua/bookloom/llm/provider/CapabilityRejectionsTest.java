@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.llm.SamplingParams;
 import ua.bookloom.llm.http.HttpReply;
@@ -149,7 +150,7 @@ class CapabilityRejectionsTest {
     private static ChatRequest build(
             @Nullable Double temperature,
             @Nullable ResponseFormat format,
-            @Nullable Boolean reasoning,
+            @Nullable ReasoningLevel reasoning,
             @Nullable Integer window,
             @Nullable Integer cap,
             @Nullable Integer seed,
@@ -194,11 +195,11 @@ class CapabilityRejectionsTest {
     }
 
     private static ChatRequest reasoningAndTemperature() {
-        return build(0.2, null, false, null, null, null, null, null);
+        return build(0.2, null, ReasoningLevel.OFF, null, null, null, null, null);
     }
 
     private static ChatRequest reasoningOff() {
-        return build(null, null, false, null, null, null, null, null);
+        return build(null, null, ReasoningLevel.OFF, null, null, null, null, null);
     }
 
     private static ChatRequest structured() {

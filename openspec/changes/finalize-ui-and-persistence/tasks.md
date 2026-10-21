@@ -450,7 +450,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - `Земля` vs `ЗЕМЛЯ` in one book → `NameInUse`;
     - rename back to automatic refused while the pair is used.
   - Verify: `./gradlew build`. → :api, :pipeline
-- [ ] 4.8a Read the reasoning level and the sampling mode from the stored settings while their environment variables
+- [x] 4.8a Read the reasoning level and the sampling mode from the stored settings while their environment variables
   still override them, and send Off, Low or On to both kinds of server.
   - **Satisfies:** inference "Carry the reasoning level that the Generation setting chooses"; llm-provider "Turn
     reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning"; llm-provider "Shape an

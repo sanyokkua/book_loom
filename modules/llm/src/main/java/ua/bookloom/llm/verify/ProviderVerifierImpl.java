@@ -26,6 +26,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
@@ -222,17 +223,14 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     }
 
     private StageOutcome verifyInference(ProviderClient client, String providerId, String modelId) {
-        final ChatRequest request = ProbeRequests.structured(false);
         log.debug(
                 "Provider verification inference stage started provider={} model={} messageCount=1 responseFormatPresent=true reasoningDisabled=true",
                 providerId,
                 modelId);
+        final ChatRequest request = ProbeRequests.structured(ReasoningLevel.OFF);
         final ProviderCallResult<ChatResponse> call = chatProbe(client, providerId, modelId, request);
         if (call.result().isErr()) {
-            final AppError failure = error(call.result());
-            return failure.code() == ErrorCode.modelNotFound
-                    ? StageOutcomes.modelUnavailable(failure)
-                    : StageOutcomes.failed(VerificationStage.INFERENCE, failure);
+            return StageOutcomes.inferenceFailure(error(call.result()));
         }
         final ChatResponse response = Objects.requireNonNull(call.result().data(), "chat response");
         if (call.rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
@@ -263,19 +261,16 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     }
 
     private StageOutcome plainProbeOutcome(ProviderClient client, String providerId, String modelId) {
-        final ProviderCallResult<ChatResponse> plain = plainProbeCall(client, providerId, modelId, false);
+        final ProviderCallResult<ChatResponse> plain = plainProbeCall(client, providerId, modelId, ReasoningLevel.OFF);
         if (plain.result().isErr()) {
-            final AppError failure = error(plain.result());
-            return failure.code() == ErrorCode.modelNotFound
-                    ? StageOutcomes.modelUnavailable(failure)
-                    : StageOutcomes.failed(VerificationStage.INFERENCE, failure);
+            return StageOutcomes.inferenceFailure(error(plain.result()));
         }
         return inferenceContent(
                 Objects.requireNonNull(plain.result().data(), "chat response"), STRUCTURED_OUTPUT_NOT_CONFIRMED);
     }
 
     private ProviderCallResult<ChatResponse> plainProbeCall(
-            ProviderClient client, String providerId, String modelId, @Nullable Boolean reasoningEnabled) {
+            ProviderClient client, String providerId, String modelId, @Nullable ReasoningLevel reasoningEnabled) {
         final ProviderCallResult<ChatResponse> call = callWithRetry(
                 () -> client.chat(modelId, ProbeRequests.plain(reasoningEnabled)),
                 VerificationStage.INFERENCE,

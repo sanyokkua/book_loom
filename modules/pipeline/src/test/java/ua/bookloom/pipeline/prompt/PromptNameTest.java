@@ -12,6 +12,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
@@ -87,7 +88,7 @@ class PromptNameTest {
                 List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),
                 name.temperature(false),
                 new ResponseFormat(name.responseFormatName(), DraftSchema.SCHEMA),
-                false);
+                ReasoningLevel.OFF);
 
         final var result = new PseudoChatModel(new ObjectMapper()).chat(request);
 

@@ -54,6 +54,7 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.OutcomeRecords;
 import ua.bookloom.pipeline.typography.TypographyGate;
@@ -82,6 +83,7 @@ public final class RetryDraft {
     private final SentenceSplitter splitter;
     private final ReviewMode mode;
     private final Clock clock;
+    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
      * Drafts one segment again.
@@ -225,7 +227,8 @@ public final class RetryDraft {
             return refuse(ErrorCode.validation, record.segmentId(), "The brief names no language to translate into.");
         }
         final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
-        final CallFrame frame = RetryFrames.of(brief, snapshot, document, openProjects.index(record.projectId()));
+        final CallFrame frame = RetryFrames.of(
+                brief, snapshot, document, openProjects.index(record.projectId()), requestDefaultsSource.current());
         return FollowingTarget.of(segments, record)
                 .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
     }

@@ -99,7 +99,8 @@ public final class ModelWordValidator implements WordValidator {
                 PromptName.SUSPICIOUS_WORDS,
                 List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user)),
                 OutputLimit.forSuspiciousWords(targets.size()),
-                false);
+                false,
+                frame.requestDefaults());
     }
 
     private static List<List<CheckFinding>> emptyFor(final List<String> targets) {

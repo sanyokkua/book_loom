@@ -40,7 +40,7 @@ final class SetupCalls {
     ChatRequest requestOf(
             final SetupBook book, final PromptName name, final Map<String, String> user, final OutputLimit limit) {
         final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, book.frame(), user);
-        return ChatRequests.build(name, messages, limit, false);
+        return ChatRequests.build(name, messages, limit, false, book.frame().requestDefaults());
     }
 
     /**

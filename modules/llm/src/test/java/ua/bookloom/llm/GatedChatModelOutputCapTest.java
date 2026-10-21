@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -65,7 +66,13 @@ class GatedChatModelOutputCapTest {
                 .whenScenarioStateIs("think removed")
                 .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
         final ChatRequest request = new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, false, null, null, 80);
+                List.of(new ChatMessage(ChatRole.USER, "Translate this.")),
+                null,
+                null,
+                ReasoningLevel.OFF,
+                null,
+                null,
+                80);
 
         final Result<ChatResponse> result = ollamaModel().chat(request);
 

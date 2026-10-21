@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.dto.OllamaChatRequest;
@@ -217,12 +218,15 @@ public final class OllamaClient implements ProviderClient {
      * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
      * reasoning, so "reasoning off" is asked of it as its lowest level.
      */
-    static @Nullable Object thinkControl(final String modelId, final @Nullable Boolean reasoningEnabled) {
-        if (Boolean.FALSE.equals(reasoningEnabled)
-                && modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
-            return "low";
+    static @Nullable Object thinkControl(final String modelId, final @Nullable ReasoningLevel reasoningEnabled) {
+        if (reasoningEnabled == null) {
+            return null;
         }
-        return reasoningEnabled;
+        return switch (reasoningEnabled) {
+            case ON -> true;
+            case LOW -> "low";
+            case OFF -> modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? "low" : false;
+        };
     }
 
     /**
@@ -230,16 +234,9 @@ public final class OllamaClient implements ProviderClient {
      * at its lowest level, so it gets the room whether or not thinking was asked for (once, never twice).
      */
     static @Nullable Integer withReasoningHeadroom(
-            final String modelId, final @Nullable Integer cap, final @Nullable Boolean reasoningEnabled) {
-        if (!needsReasoningRoom(modelId, reasoningEnabled)) {
-            return cap;
-        }
-        return ReasoningHeadroom.raise(cap);
-    }
-
-    private static boolean needsReasoningRoom(final String modelId, final @Nullable Boolean reasoningEnabled) {
-        return Boolean.TRUE.equals(reasoningEnabled)
-                || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss");
+            final String modelId, final @Nullable Integer cap, final @Nullable ReasoningLevel reasoningEnabled) {
+        final boolean thinks = reasoningEnabled != null && reasoningEnabled.isThinking();
+        return thinks || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? ReasoningHeadroom.raise(cap) : cap;
     }
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
@@ -277,7 +274,8 @@ public final class OllamaClient implements ProviderClient {
      * given, not the answer running away, so only the other lines count against the bound.
      */
     private static Predicate<String> countedLines(ChatRequest request) {
-        return Boolean.TRUE.equals(request.reasoningEnabled()) ? line -> !isThinkingLine(line) : line -> true;
+        final ReasoningLevel level = request.reasoningEnabled();
+        return level != null && level.isThinking() ? line -> !isThinkingLine(line) : line -> true;
     }
 
     private static boolean isThinkingLine(String line) {

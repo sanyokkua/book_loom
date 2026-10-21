@@ -44,6 +44,7 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.ChunkRunner;
@@ -95,38 +96,12 @@ final class TranslationJobImpl implements TranslationJob {
     private final RunTicks ticks;
     private final int batchSize;
     private final WordValidator words;
+    private final RequestDefaultsSource requestDefaultsSource;
 
-    TranslationJobImpl(
-            final DocumentPort documents,
-            final RunRequest request,
-            final ChatModel model,
-            final ObjectMapper mapper,
-            final PromptTemplates templates,
-            final RunStores stores,
-            final QualityLoop qualityLoop,
-            final SentenceSplitter splitter,
-            final ConsistencyPass revision,
-            final Clock clock,
-            final IdSource idSource) {
-        this(
-                documents,
-                request,
-                model,
-                mapper,
-                templates,
-                stores,
-                qualityLoop,
-                splitter,
-                revision,
-                clock,
-                idSource,
-                RecoveryTimer.REAL,
-                RunTicks.DAEMON,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none());
-    }
-
-    /** Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock. */
+    /**
+     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its
+     * requests use the reasoning level and sampling mode the source reads when the run starts.
+     */
     TranslationJobImpl(
             final DocumentPort documents,
             final RunRequest request,
@@ -142,7 +117,9 @@ final class TranslationJobImpl implements TranslationJob {
             final RecoveryTimer timer,
             final RunTicks ticks,
             final int batchSize,
-            final WordValidator words) {
+            final WordValidator words,
+            final RequestDefaultsSource requestDefaultsSource) {
+        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
         this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
         this.words = Objects.requireNonNull(words, "words");
         this.batchSize = batchSize;
@@ -290,7 +267,12 @@ final class TranslationJobImpl implements TranslationJob {
         final BookBrief brief = run.project().brief();
         final RunWindow runWindow = new RunWindow(request.detectedContext(), model::contextWindowOverride);
         final CallFrame frame = CallFrame.forRun(
-                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
+                brief,
+                styleSheet,
+                run.document(),
+                run.index().majorityScript().orElse(null),
+                words,
+                requestDefaultsSource.current());
         final ModelCalls calls = new JobModelCalls(
                 onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                 this::emit,

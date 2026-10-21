@@ -29,7 +29,7 @@ public record ChatRequest(
         List<ChatMessage> messages,
         @Nullable Double temperature,
         @Nullable ResponseFormat responseFormat,
-        @Nullable Boolean reasoningEnabled,
+        @Nullable ReasoningLevel reasoningEnabled,
         @Nullable Integer contextWindow,
         @Nullable Integer expectedOutputTokens,
         @Nullable Integer maxOutputTokens,
@@ -56,7 +56,7 @@ public record ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
-            @Nullable Boolean reasoningEnabled,
+            @Nullable ReasoningLevel reasoningEnabled,
             @Nullable Integer contextWindow,
             @Nullable Integer expectedOutputTokens,
             @Nullable Integer maxOutputTokens,
@@ -94,7 +94,7 @@ public record ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
-            @Nullable Boolean reasoningEnabled,
+            @Nullable ReasoningLevel reasoningEnabled,
             @Nullable Integer contextWindow,
             @Nullable Integer expectedOutputTokens,
             @Nullable Integer maxOutputTokens,
@@ -147,7 +147,7 @@ public record ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
-            @Nullable Boolean reasoningEnabled) {
+            @Nullable ReasoningLevel reasoningEnabled) {
         this(messages, temperature, responseFormat, reasoningEnabled, null, null, null);
     }
 
@@ -167,7 +167,7 @@ public record ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
-            @Nullable Boolean reasoningEnabled,
+            @Nullable ReasoningLevel reasoningEnabled,
             @Nullable Integer contextWindow,
             @Nullable Integer expectedOutputTokens) {
         this(messages, temperature, responseFormat, reasoningEnabled, contextWindow, expectedOutputTokens, null);
@@ -190,7 +190,7 @@ public record ChatRequest(
             List<ChatMessage> messages,
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
-            @Nullable Boolean reasoningEnabled,
+            @Nullable ReasoningLevel reasoningEnabled,
             @Nullable Integer contextWindow,
             @Nullable Integer expectedOutputTokens,
             @Nullable Integer maxOutputTokens) {

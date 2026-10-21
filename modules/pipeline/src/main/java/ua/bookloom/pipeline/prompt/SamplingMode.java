@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.prompt;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
@@ -44,6 +45,30 @@ public enum SamplingMode {
     }
 
     /**
+     * The mode the environment or the property names, which then replaces the stored setting.
+     *
+     * @param env the environment variables; never null
+     * @param property the {@code bookloom.sampling} value, or null when unset
+     * @return the named mode, or empty when neither is set to a known name
+     */
+    static Optional<SamplingMode> explicit(final Map<String, String> env, @Nullable final String property) {
+        Objects.requireNonNull(env, "env");
+        final String asked = env.getOrDefault(ENV_NAME, property == null ? "" : property)
+                .strip()
+                .toLowerCase(Locale.ROOT);
+        if (asked.isEmpty()) {
+            return Optional.empty();
+        }
+        for (final SamplingMode mode : values()) {
+            if (mode.token.equals(asked)) {
+                return Optional.of(mode);
+            }
+        }
+        log.warn("Unknown sampling mode '{}'; it is ignored", asked);
+        return Optional.empty();
+    }
+
+    /**
      * Resolves the mode from an environment and a property value.
      *
      * @param env the environment variables; never null
@@ -51,19 +76,6 @@ public enum SamplingMode {
      * @return the named mode; {@link #DEFAULT} when neither names one or the name is unknown
      */
     static SamplingMode resolve(final Map<String, String> env, @Nullable final String property) {
-        Objects.requireNonNull(env, "env");
-        final String asked = env.getOrDefault(ENV_NAME, property == null ? "" : property)
-                .strip()
-                .toLowerCase(Locale.ROOT);
-        if (asked.isEmpty()) {
-            return DEFAULT;
-        }
-        for (final SamplingMode mode : values()) {
-            if (mode.token.equals(asked)) {
-                return mode;
-            }
-        }
-        log.warn("Unknown sampling mode '{}'; using {}", asked, DEFAULT.token);
-        return DEFAULT;
+        return explicit(env, property).orElse(DEFAULT);
     }
 }

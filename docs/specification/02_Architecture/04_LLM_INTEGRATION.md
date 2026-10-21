@@ -63,11 +63,11 @@ the pipeline stays dialect-agnostic:
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
   `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
   call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
-  provides them. It deliberately sends no `think`, `num_ctx`, `keep_alive`, or `/api/show` request in this change.
+  provides them. It sends `think` (`false`, `"low"` or `true`) only when the request carries a reasoning level, and deliberately sends no `num_ctx`, `keep_alive`, or `/api/show` request in this change.
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
-  `response_format` only when requested, and `reasoning_effort:"none"` when the request disables reasoning (Ollama's
+  `response_format` only when requested, and `reasoning_effort` (`none`, `low` or `medium`) when the request carries a reasoning level (Ollama's
   and LM Studio's `/v1` both honour it). A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
   is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
 

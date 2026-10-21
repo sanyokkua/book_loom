@@ -31,6 +31,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaults;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -66,7 +67,8 @@ final class ReviewBatches {
                 batches.size(),
                 verdicts.size());
         for (int index = 0; index < batches.size(); index++) {
-            final Result<List<Verdict>> answered = runBatch(index, batches.get(index), evidence, system, calls);
+            final Result<List<Verdict>> answered =
+                    runBatch(index, batches.get(index), evidence, system, frame.requestDefaults(), calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -127,13 +129,15 @@ final class ReviewBatches {
             final List<GlossaryEntry> batch,
             final Map<String, Evidence> evidence,
             final String system,
+            final RequestDefaults defaults,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(batch, evidence, system);
         final ChatRequest request = ChatRequests.build(
                 PromptName.REVIEW_TERMS,
                 messages,
                 new OutputLimit(batch.size() * TOKENS_PER_VERDICT, CAP_TOKENS),
-                false);
+                false,
+                defaults);
         log.debug("Glossary review batch {} asks about {} terms", index, batch.size());
         log.trace("Glossary review batch {} messages {}", index, messages);
         final Result<ChatResponse> reply = calls.callAbout(

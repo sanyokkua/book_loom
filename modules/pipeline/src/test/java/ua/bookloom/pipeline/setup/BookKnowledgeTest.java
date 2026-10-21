@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
@@ -129,7 +130,7 @@ class BookKnowledgeTest {
                 .contains("\"known\"", "\"title\"", "\"author\"", "\"year\"", "\"genre\"", "\"audience\"", "\"era\"")
                 .contains("\"narration\"", "\"summary\"", "\"confidence\"")
                 .contains("\"additionalProperties\":false");
-        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
     }
 
     @Test

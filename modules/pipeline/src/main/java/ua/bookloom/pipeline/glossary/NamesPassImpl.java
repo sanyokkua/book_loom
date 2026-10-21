@@ -39,6 +39,7 @@ import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /**
  * The one autonomous names pass (15i.N8): the steps the Names &amp; style buttons run, in order, over a private copy of
@@ -66,6 +67,37 @@ public final class NamesPassImpl implements NamesPass {
     private final SuggestTargets suggestTargets;
     private final LexiconReading lexiconReading;
     private final Clock clock;
+    private final RequestDefaultsSource requestDefaultsSource;
+
+    /** A names pass whose requests use the defaults the environment alone gives (the command line, tests). */
+    public NamesPassImpl(
+            final GlossaryRepository glossary,
+            final LexiconRepository lexicon,
+            final SegmentRepository segments,
+            final DeferralRepository deferrals,
+            final ProjectRepository projects,
+            final OpenProjects openProjects,
+            final PreScan preScan,
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final SuggestTargets suggestTargets,
+            final LexiconReading lexiconReading,
+            final Clock clock) {
+        this(
+                glossary,
+                lexicon,
+                segments,
+                deferrals,
+                projects,
+                openProjects,
+                preScan,
+                templates,
+                mapper,
+                suggestTargets,
+                lexiconReading,
+                clock,
+                RequestDefaultsSource.environmentOnly());
+    }
 
     /** The copies of both tables and the services built over them, for one project. */
     private record Stage(
@@ -143,7 +175,14 @@ public final class NamesPassImpl implements NamesPass {
                 .flatMap(names -> StagedLexicon.copyOf(lexicon, projectId).flatMap(terms -> {
                     final TermReview review = new TermReview(templates, mapper, names, suggestTargets);
                     final GlossaryModelScans scans = new GlossaryModelScans(
-                            projects, openProjects, preScan, review, suggestTargets, lexiconReading, clock);
+                            projects,
+                            openProjects,
+                            preScan,
+                            review,
+                            suggestTargets,
+                            lexiconReading,
+                            clock,
+                            requestDefaultsSource);
                     return scans.book(projectId)
                             .map(book -> new Stage(
                                     projectId,

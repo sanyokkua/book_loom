@@ -33,6 +33,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -161,8 +162,8 @@ class GatedChatModelTest {
                 .inScenario("think capability")
                 .whenScenarioStateIs("think removed")
                 .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
-        final ChatRequest request =
-                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, false);
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, ReasoningLevel.OFF);
 
         final Result<ChatResponse> result = ollamaModel(ignored -> {}).chat(request);
 
@@ -186,7 +187,7 @@ class GatedChatModelTest {
                 .whenScenarioStateIs("think removed")
                 .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
         final ChatRequest request = new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, false, 8192, null);
+                List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, ReasoningLevel.OFF, 8192, null);
 
         final Result<ChatResponse> result = ollamaModel(ignored -> {}).chat(request);
 
@@ -378,6 +379,6 @@ class GatedChatModelTest {
                 List.of(new ChatMessage(ChatRole.USER, "Translate this.")),
                 0.2,
                 new ResponseFormat("draft", "{\"type\":\"object\"}"),
-                false);
+                ReasoningLevel.OFF);
     }
 }

@@ -43,6 +43,7 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -179,7 +180,8 @@ final class SoakRun {
                     return () -> tick.set(null);
                 },
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
-                WordValidator.none());
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

@@ -28,6 +28,7 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -49,6 +50,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final IdSource idSource;
     private final RecoveryTimer timer;
     private final WordValidator words;
+    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
      * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
@@ -75,7 +77,9 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final Clock clock,
             final IdSource idSource,
             final RecoveryTimer timer,
-            final WordValidator words) {
+            final WordValidator words,
+            final RequestDefaultsSource requestDefaultsSource) {
+        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
@@ -125,6 +129,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
                 timer,
                 RunTicks.DAEMON,
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
-                words);
+                words,
+                requestDefaultsSource);
     }
 }

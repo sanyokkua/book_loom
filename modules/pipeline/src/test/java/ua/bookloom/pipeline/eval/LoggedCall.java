@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.pipeline.CallKind;
 
@@ -151,10 +152,10 @@ record LoggedCall(
                 : null;
     }
 
-    private static @Nullable Boolean reasoning(final JsonNode body) {
+    private static @Nullable ReasoningLevel reasoning(final JsonNode body) {
         final boolean off = NO_REASONING.equals(body.path("reasoning_effort").asText())
                 || (body.path("think").isBoolean() && !body.path("think").asBoolean());
-        return off ? Boolean.FALSE : null;
+        return off ? ReasoningLevel.OFF : null;
     }
 
     private static @Nullable Double number(final JsonNode first, final JsonNode second) {

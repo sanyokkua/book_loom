@@ -44,6 +44,7 @@ import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /**
  * A real book imported through {@code ProjectServiceImpl} over the in-memory stores, with the review desk's parts
@@ -102,7 +103,8 @@ public final class ReviewFixtures {
                     Guice.createInjector().getInstance(QualityLoop.class),
                     splitter,
                     mode,
-                    java.time.Clock.systemUTC());
+                    java.time.Clock.systemUTC(),
+                    RequestDefaultsSource.environmentOnly());
         }
 
         /** The audit over the same stores, with no word validator. */

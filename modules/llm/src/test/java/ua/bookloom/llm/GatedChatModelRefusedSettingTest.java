@@ -42,6 +42,7 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.SamplingParams;
 import ua.bookloom.api.llm.TemperatureChoice;
@@ -114,8 +115,8 @@ class GatedChatModelRefusedSettingTest {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
         final GatedChatModel model = model(kind, basePath, MODEL);
 
-        final Result<ChatResponse> first = model.chat(request());
-        final Result<ChatResponse> second = model.chat(request());
+        final Result<ChatResponse> first = model.chat(request(ReasoningLevel.OFF));
+        final Result<ChatResponse> second = model.chat(request(ReasoningLevel.OFF));
 
         assertThat(first.isOk()).isTrue();
         assertThat(second.isOk()).isTrue();
@@ -132,7 +133,7 @@ class GatedChatModelRefusedSettingTest {
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, "{\"error\":\"unknown field top_p\"}"), ok());
 
-        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request());
+        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(result.isOk()).isTrue();
         assertThat(bodies(chatPath).get(0)).contains("\"top_p\":0.9");
@@ -150,13 +151,39 @@ class GatedChatModelRefusedSettingTest {
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
 
-        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request());
+        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(result.isOk()).isTrue();
         assertThat(bodies(chatPath).get(1))
                 .doesNotContain("temperature")
                 .contains("\"num_ctx\":8192")
                 .contains("\"think\":\"low\"");
+    }
+
+    // IF the server refuses the reasoning control asked for at Low, THEN the repeat lacks it and later calls do too.
+    @ParameterizedTest
+    @CsvSource({
+        "OPENAI_COMPATIBLE, /v1, /v1/chat/completions, reasoning_effort, \"reasoning_effort\":\"low\"",
+        "OLLAMA, '', /api/chat, think, \"think\":\"low\""
+    })
+    void chat_lowReasoningRefused_repeatAndLaterCallsLackTheControl(
+            final ProviderKind kind,
+            final String basePath,
+            final String chatPath,
+            final String field,
+            final String sentFirst) {
+        stubSequence(kind, chatPath, reply(400, "{\"error\":\"unknown field " + field + "\"}"), ok());
+        final GatedChatModel model = model(kind, basePath, OTHER_MODEL);
+
+        final Result<ChatResponse> first = model.chat(request(ReasoningLevel.LOW));
+        final Result<ChatResponse> second = model.chat(request(ReasoningLevel.LOW));
+
+        assertThat(first.isOk()).isTrue();
+        assertThat(second.isOk()).isTrue();
+        assertThat(bodies(chatPath)).hasSize(3);
+        assertThat(bodies(chatPath).get(0)).contains(sentFirst);
+        assertThat(bodies(chatPath).get(1)).doesNotContain(field).contains("Translate this.");
+        assertThat(bodies(chatPath).get(2)).doesNotContain(field);
     }
 
     // max_tokens refused: the repeat and every later call carry the cap as max_completion_tokens.
@@ -171,8 +198,8 @@ class GatedChatModelRefusedSettingTest {
                 ok());
         final GatedChatModel model = model(kind, basePath, MODEL);
 
-        model.chat(request());
-        final Result<ChatResponse> second = model.chat(request());
+        model.chat(request(ReasoningLevel.OFF));
+        final Result<ChatResponse> second = model.chat(request(ReasoningLevel.OFF));
 
         assertThat(second.isOk()).isTrue();
         assertThat(bodies(chatPath).get(0)).contains("\"max_tokens\":400");
@@ -192,7 +219,7 @@ class GatedChatModelRefusedSettingTest {
         server.stubFor(post(urlEqualTo(chatPath))
                 .willReturn(aResponse().withStatus(400).withBody("{\"error\":\"invalid request\"}")));
 
-        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request());
+        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.validation);
         server.verify(1, postRequestedFor(urlEqualTo(chatPath)));
@@ -208,7 +235,7 @@ class GatedChatModelRefusedSettingTest {
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), reply(503, "{}"), reply(503, "{}"), ok());
 
-        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(), listener);
+        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF), listener);
 
         assertThat(result.isOk()).isTrue();
         server.verify(4, postRequestedFor(urlEqualTo(chatPath)));
@@ -228,9 +255,9 @@ class GatedChatModelRefusedSettingTest {
     void chat_afterRestart_firstRequestLacksTheRefusedTemperature(
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
-        model(kind, basePath, MODEL).chat(request());
+        model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
-        final Result<ChatResponse> afterRestart = model(kind, basePath, MODEL).chat(request());
+        final Result<ChatResponse> afterRestart = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(afterRestart.isOk()).isTrue();
         assertThat(bodies(chatPath)).hasSize(3);
@@ -242,9 +269,9 @@ class GatedChatModelRefusedSettingTest {
     void chat_otherModelOfTheSameProvider_stillSendsItsTemperature(
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
-        model(kind, basePath, MODEL).chat(request());
+        model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
-        model(kind, basePath, OTHER_MODEL).chat(request());
+        model(kind, basePath, OTHER_MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(bodies(chatPath)).hasSize(3);
         assertThat(bodies(chatPath).get(2)).contains("\"temperature\":0.2");
@@ -267,7 +294,7 @@ class GatedChatModelRefusedSettingTest {
                 null));
         stubSequence(kind, chatPath, ok());
 
-        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request());
+        final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(result.isOk()).isTrue();
         assertThat(bodies(chatPath)).hasSize(1);
@@ -282,9 +309,9 @@ class GatedChatModelRefusedSettingTest {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
         final GatedChatModel model = model(kind, basePath, MODEL);
 
-        model.chat(request());
+        model.chat(request(ReasoningLevel.OFF));
         final long afterFirst = refusalWarnings();
-        model.chat(request());
+        model.chat(request(ReasoningLevel.OFF));
 
         assertThat(afterFirst).isEqualTo(1);
         assertThat(refusalWarnings()).isEqualTo(1);
@@ -334,14 +361,14 @@ class GatedChatModelRefusedSettingTest {
         return all;
     }
 
-    private static ChatRequest request() {
+    private static ChatRequest request(final ReasoningLevel level) {
         return new ChatRequest(
                 List.of(
                         new ChatMessage(ChatRole.SYSTEM, "Keep names."),
                         new ChatMessage(ChatRole.USER, "Translate this.")),
                 0.2,
                 null,
-                false,
+                level,
                 8192,
                 null,
                 400,

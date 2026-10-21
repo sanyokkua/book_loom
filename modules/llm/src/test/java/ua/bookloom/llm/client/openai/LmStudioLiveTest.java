@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
@@ -38,7 +39,7 @@ class LmStudioLiveTest {
                                 List.of(new ChatMessage(ChatRole.USER, "Answer with the single word: yes")),
                                 0.0,
                                 null,
-                                true,
+                                ReasoningLevel.ON,
                                 8192,
                                 null,
                                 200,

@@ -32,6 +32,7 @@ import ua.bookloom.pipeline.index.BookIndex;
  *     decides which marked runs are foreign. Null when unknown, then the segment's own text decides
  * @param analysisLanguage the language the code reads the book in, from {@link SourceLanguage#forAnalysis}: the chosen
  *     tag, else a recognised declared tag, else null for the generic rules; never put into a prompt
+ * @param requestDefaults the reasoning plan and sampling mode every request of the run is built with
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
@@ -42,7 +43,8 @@ public record CallFrame(
         Narrator narrator,
         WordValidator wordValidator,
         @Nullable UnicodeScript bookScript,
-        @Nullable String analysisLanguage) {
+        @Nullable String analysisLanguage,
+        RequestDefaults requestDefaults) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -51,6 +53,31 @@ public record CallFrame(
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(wordValidator, "wordValidator");
+        Objects.requireNonNull(requestDefaults, "requestDefaults");
+    }
+
+    /** A frame whose requests use the defaults the environment alone gives. */
+    public CallFrame(
+            @Nullable String sourceLanguage,
+            String targetLanguage,
+            StyleSheet styleSheet,
+            ForeignPassagePolicy foreignPassagePolicy,
+            @Nullable String bookLanguage,
+            Narrator narrator,
+            WordValidator wordValidator,
+            @Nullable UnicodeScript bookScript,
+            @Nullable String analysisLanguage) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                styleSheet,
+                foreignPassagePolicy,
+                bookLanguage,
+                narrator,
+                wordValidator,
+                bookScript,
+                analysisLanguage,
+                RequestDefaults.fromEnvironment());
     }
 
     /**
@@ -111,6 +138,27 @@ public record CallFrame(
             final Document document,
             final @Nullable UnicodeScript bookScript,
             final WordValidator words) {
+        return forRun(brief, styleSheet, document, bookScript, words, RequestDefaults.fromEnvironment());
+    }
+
+    /**
+     * The frame of one run with the request defaults the run resolved at its start.
+     *
+     * @param brief the run's brief
+     * @param styleSheet the run's derived style sheet
+     * @param document the book being translated
+     * @param bookScript the script most of the story is written in, or null when unknown
+     * @param words the run's word validator
+     * @param requestDefaults the reasoning plan and sampling mode of the run
+     * @return the frame every call of the run carries
+     */
+    public static CallFrame forRun(
+            final BookBrief brief,
+            final StyleSheet styleSheet,
+            final Document document,
+            final @Nullable UnicodeScript bookScript,
+            final WordValidator words,
+            final RequestDefaults requestDefaults) {
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(document, "document");
         return new CallFrame(
@@ -122,7 +170,8 @@ public record CallFrame(
                 brief.narrator(),
                 words,
                 bookScript,
-                SourceLanguage.forAnalysis(brief, document));
+                SourceLanguage.forAnalysis(brief, document),
+                requestDefaults);
     }
 
     /**
@@ -135,7 +184,24 @@ public record CallFrame(
      * @return the frame the call carries
      */
     public static CallFrame forBook(final BookBrief brief, final Document document, final @Nullable BookIndex index) {
-        return forRun(brief, StyleSheet.from(brief), document, scriptOf(index), WordValidator.none());
+        return forBook(brief, document, index, RequestDefaults.fromEnvironment());
+    }
+
+    /**
+     * The frame of a call made on an opened book outside a run, with the request defaults resolved for it.
+     *
+     * @param brief the project's brief
+     * @param document the opened book
+     * @param index the book's index, or null when it is not built
+     * @param requestDefaults the reasoning plan and sampling mode of the call
+     * @return the frame the call carries
+     */
+    public static CallFrame forBook(
+            final BookBrief brief,
+            final Document document,
+            final @Nullable BookIndex index,
+            final RequestDefaults requestDefaults) {
+        return forRun(brief, StyleSheet.from(brief), document, scriptOf(index), WordValidator.none(), requestDefaults);
     }
 
     /**

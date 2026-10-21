@@ -28,6 +28,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -78,7 +79,7 @@ class OllamaClientReasoningTest {
     void chat_thinkingOn_sendsThinkTrueAndTheCapWithHeadroom(final String model, final int numPredict) {
         stubReply(SIMPLE_REPLY);
 
-        client().chat(model, request(300, true));
+        client().chat(model, request(300, ReasoningLevel.ON));
 
         assertSent(model, "$.think", "true");
         assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
@@ -91,10 +92,39 @@ class OllamaClientReasoningTest {
     void chat_thinkingOff_sendsTodaysRequest(final String model, final String think, final int numPredict) {
         stubReply(SIMPLE_REPLY);
 
-        client().chat(model, request(300, false));
+        client().chat(model, request(300, ReasoningLevel.OFF));
 
         assertSent(model, "$.think", think);
         assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
+    }
+
+    // IF the level is Low, THEN Ollama is asked for "low" effort on any model and the cap grows like a thinking call's.
+    @ParameterizedTest
+    @CsvSource({"gemma4:e4b-mlx,1324", "qwen3:8b,1324", "gpt-oss:20b,1324"})
+    void chat_thinkingLow_sendsThinkLowAndTheCapWithHeadroom(final String model, final int numPredict) {
+        stubReply(SIMPLE_REPLY);
+
+        client().chat(model, request(300, ReasoningLevel.LOW));
+
+        assertSent(model, "$.think", "low");
+        assertSent(model, "$.options.num_predict", String.valueOf(numPredict));
+    }
+
+    // Low streams reasoning lines too, so they do not count against the runaway bound.
+    @Test
+    void chat_thinkingLowWithManyThinkingLines_isNotCutAsARunaway() {
+        stubReply(thinkingLines(300) + ANSWER);
+
+        final Result<ChatResponse> result =
+                client().chat(MODEL_ID, request(CAP, ReasoningLevel.LOW)).result();
+
+        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+    }
+
+    @Test
+    void maxLines_thinkingLow_countsTheHeadroomTwice() {
+        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.LOW)))
+                .isEqualTo(2312L);
     }
 
     @Test
@@ -114,7 +144,7 @@ class OllamaClientReasoningTest {
         stubReply(thinkingLines(300) + ANSWER);
 
         final Result<ChatResponse> result =
-                client().chat(MODEL_ID, request(CAP, true)).result();
+                client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
         assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
         assertThat(OLD_LIMIT).isLessThan(300);
@@ -126,7 +156,7 @@ class OllamaClientReasoningTest {
         stubReply(thinkingLines(GROWN_LIMIT + 200) + ANSWER);
 
         final Result<ChatResponse> result =
-                client().chat(MODEL_ID, request(CAP, true)).result();
+                client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
         assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
     }
@@ -137,7 +167,7 @@ class OllamaClientReasoningTest {
         stubReply(contentLines(GROWN_LIMIT + 200));
 
         final Result<ChatResponse> result =
-                client().chat(MODEL_ID, request(CAP, true)).result();
+                client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
         assertThat(result.data()).extracting(ChatResponse::finishReason).isEqualTo(FinishReason.LENGTH);
     }
@@ -148,29 +178,33 @@ class OllamaClientReasoningTest {
         stubReply(contentLines(OLD_LIMIT + 200));
 
         final Result<ChatResponse> result =
-                client().chat(MODEL_ID, request(CAP, false)).result();
+                client().chat(MODEL_ID, request(CAP, ReasoningLevel.OFF)).result();
 
         assertThat(result.data()).extracting(ChatResponse::finishReason).isEqualTo(FinishReason.LENGTH);
     }
 
     @Test
     void maxLines_thinkingOn_countsTheHeadroomTwice() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, true))).isEqualTo(2312L);
+        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.ON)))
+                .isEqualTo(2312L);
     }
 
     @Test
     void maxLines_thinkingOff_isTwiceTheCapPlusTheMargin() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, false))).isEqualTo(264L);
+        assertThat(OllamaClient.maxLines(MODEL_ID, request(100, ReasoningLevel.OFF)))
+                .isEqualTo(264L);
     }
 
     @Test
     void maxLines_gptOssWithThinkingOff_countsItsHeadroom() {
-        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, false))).isEqualTo(2312L);
+        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, ReasoningLevel.OFF)))
+                .isEqualTo(2312L);
     }
 
     @Test
     void maxLines_gptOssWithThinkingOn_countsTheHeadroomOnce() {
-        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, true))).isEqualTo(2312L);
+        assertThat(OllamaClient.maxLines("gpt-oss:20b", request(100, ReasoningLevel.ON)))
+                .isEqualTo(2312L);
     }
 
     // With no cap the bound is the context window, which already holds the thinking: no room is added.
@@ -180,7 +214,7 @@ class OllamaClientReasoningTest {
                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                 null,
                 null,
-                true,
+                ReasoningLevel.ON,
                 4096,
                 null,
                 null,
@@ -211,7 +245,7 @@ class OllamaClientReasoningTest {
                         .withBody(body)));
     }
 
-    private static ChatRequest request(final int cap, final @Nullable Boolean thinking) {
+    private static ChatRequest request(final int cap, final @Nullable ReasoningLevel thinking) {
         return new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                 null,

@@ -58,6 +58,13 @@ final class StageOutcomes {
                 exchange);
     }
 
+    /** A failed inference stage, told apart when the model itself is not there. */
+    static StageOutcome inferenceFailure(AppError failure) {
+        return failure.code() == ErrorCode.modelNotFound
+                ? modelUnavailable(failure)
+                : failed(VerificationStage.INFERENCE, failure);
+    }
+
     static StageOutcome modelUnavailable(AppError original) {
         final AppError unavailable = AppError.of(
                 ErrorCode.modelUnavailable,

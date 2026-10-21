@@ -327,7 +327,8 @@ public final class ReviewerCall {
                 List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
         final OutputLimit limit = OutputLimit.forReview(
                 pairs.stream().map(ReviewedPair::maskedCandidate).toList(), frame.targetLanguage());
-        return ChatRequests.build(PromptName.REVIEWER, messages, limit, false).withSeed(REVIEWER_SEED);
+        return ChatRequests.build(PromptName.REVIEWER, messages, limit, false, frame.requestDefaults())
+                .withSeed(REVIEWER_SEED);
     }
 
     private static String renderPairs(final List<ReviewedPair> pairs) {
