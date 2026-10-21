@@ -2,10 +2,8 @@ package ua.bookloom.ui.control;
 
 import java.util.List;
 import java.util.Objects;
-import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.control.Label;
-import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import org.jspecify.annotations.Nullable;
@@ -18,7 +16,6 @@ import org.jspecify.annotations.Nullable;
  */
 final class ParsedGrid extends GridPane {
 
-    private static final double PERCENT = 100;
     private static final double GAP = 8;
 
     private final int columns;
@@ -32,12 +29,7 @@ final class ParsedGrid extends GridPane {
         setHgap(GAP);
         setVgap(GAP / 2);
         columns = heads.size();
-        for (final double width : widths) {
-            final ColumnConstraints column = new ColumnConstraints();
-            column.setPercentWidth(width * PERCENT / sum(widths));
-            column.setHalignment(HPos.LEFT);
-            getColumnConstraints().add(column);
-        }
+        ReadOnlyGrid.style(this, widths);
         for (int index = 0; index < columns; index++) {
             put(heads.get(index), "parsed-head", index);
         }
@@ -70,13 +62,5 @@ final class ParsedGrid extends GridPane {
         GridPane.setValignment(cell, VPos.TOP);
         add(cell, column, rows);
         return cell;
-    }
-
-    private static double sum(final double[] widths) {
-        double total = 0;
-        for (final double width : widths) {
-            total += width;
-        }
-        return total;
     }
 }

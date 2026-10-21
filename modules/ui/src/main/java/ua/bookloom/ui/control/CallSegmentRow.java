@@ -35,8 +35,8 @@ final class CallSegmentRow extends VBox {
     private static final int SCORE_DIGITS = 2;
     private static final String PLACEHOLDER = "live-placeholder";
 
-    /** One chip as shown: its words and its role class. */
-    private record Chip(String text, String role) {}
+    /** A chip of the row: a state when {@code meaning} is set, else a neutral note. */
+    private record Chip(String text, StateMarker.@Nullable Meaning meaning) {}
 
     private final Messages messages;
     private final Label locator = new Label();
@@ -126,11 +126,11 @@ final class CallSegmentRow extends VBox {
             final NumberFormat score = NumberFormat.getNumberInstance(messages.locale());
             score.setMinimumFractionDigits(SCORE_DIGITS);
             score.setMaximumFractionDigits(SCORE_DIGITS);
-            wanted.add(new Chip(messages.get(MessageKey.LIVE_JUDGE, score.format(judged)), "chip-neutral"));
+            wanted.add(new Chip(messages.get(MessageKey.LIVE_JUDGE, score.format(judged)), null));
         }
         final SegmentPath path = live.path();
         if (path != null) {
-            wanted.add(new Chip(messages.get(pathKey(path)), "chip-neutral"));
+            wanted.add(new Chip(messages.get(pathKey(path)), null));
         }
     }
 
@@ -150,17 +150,20 @@ final class CallSegmentRow extends VBox {
                 .collect(java.util.stream.Collectors.joining(", "));
     }
 
-    private static String outcomeRole(final SegmentOutcomeNote.Kind kind) {
+    private static StateMarker.Meaning outcomeRole(final SegmentOutcomeNote.Kind kind) {
         return switch (kind) {
-            case ADOPTED, ACCEPTED -> "chip-ok";
-            case FELL_BACK -> "chip-warn";
-            case FLAGGED -> "chip-err";
+            case ADOPTED, ACCEPTED -> StateMarker.Meaning.DONE;
+            case FELL_BACK -> StateMarker.Meaning.ATTENTION;
+            case FLAGGED -> StateMarker.Meaning.FAILED;
         };
     }
 
     private static Label chip(final Chip spec) {
+        if (spec.meaning() != null) {
+            return StateMarker.of(spec.meaning(), spec.text());
+        }
         final Label label = new Label(spec.text());
-        label.getStyleClass().addAll("chip", spec.role());
+        label.getStyleClass().addAll("chip", "chip-neutral");
         return label;
     }
 

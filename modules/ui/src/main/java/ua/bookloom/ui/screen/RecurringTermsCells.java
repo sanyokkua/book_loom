@@ -1,12 +1,10 @@
 package ua.bookloom.ui.screen;
 
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -15,7 +13,6 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.RecurringTerms;
 
 /**
@@ -28,8 +25,6 @@ import ua.bookloom.ui.state.RecurringTerms;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class RecurringTermsCells {
-
-    private static final double ROW_SPACING = 8;
 
     /** A cell holding one control that is filled from the row it shows. */
     abstract static class RowCell<N extends Node> extends TableCell<LexiconEntry, LexiconEntry> {
@@ -59,28 +54,22 @@ final class RecurringTermsCells {
         }
     }
 
-    /** The source term. */
-    static final class TermCell extends RowCell<HBox> {
+    /** The source term; a changed row is marked by the table's row edge, so nothing else shares the cell. */
+    static final class TermCell extends RowCell<Label> {
 
-        private final Label term = new Label();
-        private final Label changed;
-        private final ChangeMarks.Side marks;
+        TermCell() {
+            super(withFullText(new Label()));
+            control().getStyleClass().add("glossary-term");
+        }
 
-        TermCell(final Messages messages, final ChangeMarks.Side marks) {
-            super(new HBox(ROW_SPACING));
-            this.marks = marks;
-            changed = ChangedMarks.chip(messages);
-            term.getStyleClass().add("glossary-term");
-            control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(term, changed);
+        // The cell may cut a long term; its whole text is the hover.
+        private static Label withFullText(final Label term) {
+            return Tips.installLive(term, term.textProperty());
         }
 
         @Override
-        void show(final HBox shown, final LexiconEntry entry) {
-            term.setText(entry.term());
-            final boolean marked = marks.isMarked(LexiconEntry.keyOf(entry.term()));
-            changed.setVisible(marked);
-            changed.setManaged(marked);
+        void show(final Label shown, final LexiconEntry entry) {
+            shown.setText(entry.term());
         }
     }
 

@@ -33,12 +33,18 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryTable {
 
-    private static final double TERM_WIDTH = 130;
-    private static final double TYPE_WIDTH = 100;
-    private static final double TARGET_WIDTH = 190;
-    private static final double GENDER_WIDTH = 170;
-    private static final double LOCK_WIDTH = 100;
+    private static final double TERM_WIDTH = 170;
+    private static final double TERM_MIN = 140;
+    private static final double TYPE_WIDTH = 110;
+    private static final double TYPE_MIN = 96;
+    private static final double TARGET_WIDTH = 220;
+    private static final double TARGET_MIN = 170;
+    private static final double GENDER_WIDTH = 150;
+    private static final double GENDER_MIN = 110;
+    private static final double LOCK_WIDTH = 90;
+    private static final double LOCK_MIN = 64;
     private static final double REMOVE_WIDTH = 40;
+    private static final double REMOVE_MIN = 36;
     private static final String NOT_A_CHARACTER = "—";
 
     private static final Comparator<GlossaryEntry> BY_TERM =
@@ -64,16 +70,16 @@ final class GlossaryTable {
                         true,
                         MessageKey.NAMES_STYLE_COLUMN_SOURCE_TIP,
                         TERM_WIDTH,
-                        false,
+                        TERM_MIN,
                         BY_TERM,
-                        () -> new GlossaryCells.TermCell(messages, model.marks().glossary())),
+                        () -> new GlossaryCells.TermCell()),
                 column(
                         messages,
                         MessageKey.NAMES_STYLE_COLUMN_TYPE,
                         true,
                         MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
                         TYPE_WIDTH,
-                        true,
+                        TYPE_MIN,
                         Comparator.comparing(GlossaryEntry::type),
                         () -> typeCell(messages, model)),
                 targetColumn(messages, model),
@@ -90,7 +96,7 @@ final class GlossaryTable {
                 true,
                 MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP,
                 TARGET_WIDTH,
-                false,
+                TARGET_MIN,
                 null,
                 () -> new GlossaryCells.TargetCell(messages, model));
     }
@@ -103,7 +109,7 @@ final class GlossaryTable {
                 true,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
                 GENDER_WIDTH,
-                false,
+                GENDER_MIN,
                 Comparator.comparing(GlossaryEntry::gender),
                 () -> genderCell(messages, model));
     }
@@ -116,7 +122,7 @@ final class GlossaryTable {
                 true,
                 MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP,
                 LOCK_WIDTH,
-                true,
+                LOCK_MIN,
                 Comparator.comparing(GlossaryEntry::locked),
                 () -> new GlossaryCells.LockCell(messages, model));
     }
@@ -129,7 +135,7 @@ final class GlossaryTable {
                 false,
                 MessageKey.NAMES_STYLE_COLUMN_REMOVE_TIP,
                 REMOVE_WIDTH,
-                true,
+                REMOVE_MIN,
                 null,
                 () -> new GlossaryCells.RemoveCell(messages, model));
     }
@@ -140,10 +146,10 @@ final class GlossaryTable {
             final boolean shown,
             final MessageKey tip,
             final double width,
-            final boolean fixed,
+            final double minWidth,
             final @Nullable Comparator<GlossaryEntry> order,
             final Supplier<TableCell<GlossaryEntry, GlossaryEntry>> cell) {
-        return TermTableCard.column(messages, header, shown, tip, width, fixed, order, cell);
+        return TermTableCard.column(messages, header, shown, tip, width, minWidth, order, cell);
     }
 
     private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {

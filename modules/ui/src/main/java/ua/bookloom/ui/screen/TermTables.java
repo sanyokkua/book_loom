@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javafx.beans.binding.Bindings;
@@ -13,15 +14,21 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.css.PseudoClass;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeMarks;
 
 /** The table of a {@link TermTableCard}: its rows filtered by the search and the changed filter, then sorted. */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -31,6 +38,7 @@ import ua.bookloom.ui.i18n.Messages;
 final class TermTables {
 
     private static final double ROW_HEIGHT = 46;
+    private static final PseudoClass CHANGED = PseudoClass.getPseudoClass("changed");
     private static final String LISTENER_KEY = "term-table-card-listener-";
 
     static <R> TableView<R> of(
@@ -55,7 +63,8 @@ final class TermTables {
         table.setSortPolicy(_ -> true);
         table.setId(id + "-table");
         table.getStyleClass().add("glossary-table");
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        table.setRowFactory(_ -> new MarkedRow<>(messages, rows.marks(), rows.markKey()));
         table.setFixedCellSize(ROW_HEIGHT);
         table.setPlaceholder(emptyLabel(messages, texts, search.textProperty()));
         table.setFocusTraversable(false);
@@ -63,6 +72,37 @@ final class TermTables {
         table.getColumns().addAll(rows.columns());
         refreshWhenChanged(table, rows);
         return table;
+    }
+
+    /** A row the last operation changed wears the {@code :changed} pseudo-class, which the theme draws as a left edge. */
+    private static final class MarkedRow<R> extends TableRow<R> {
+
+        private final ChangeMarks.Side marks;
+        private final Function<R, String> markKey;
+        private final String word;
+        private final Tooltip explanation;
+
+        MarkedRow(final Messages messages, final ChangeMarks.Side marks, final Function<R, String> markKey) {
+            this.marks = marks;
+            this.markKey = markKey;
+            word = messages.get(MessageKey.CHANGED_MARKER);
+            // Only a changed row carries the explanation, so the one Tips builds is taken off again and put back
+            // when the row is marked.
+            Tips.install(messages, this, MessageKey.CHANGED_MARKER_TIP);
+            explanation = Objects.requireNonNull(getTooltip());
+            setTooltip(null);
+            setAccessibleHelp(null);
+        }
+
+        // Runs for every row on every scroll: no logging.
+        @Override
+        protected void updateItem(final @Nullable R item, final boolean empty) {
+            super.updateItem(item, empty);
+            final boolean changed = !empty && item != null && marks.isMarked(markKey.apply(item));
+            pseudoClassStateChanged(CHANGED, changed);
+            setTooltip(changed ? explanation : null);
+            setAccessibleText(changed ? word : null);
+        }
     }
 
     private static <R> Predicate<R> matching(

@@ -49,6 +49,8 @@
     -color-primary-soft: #f0e5dd;
     -color-sand-soft: #f2e9db;
     -color-sand-strong: #dcc4a3;
+    /* Words on a sand tint (6.1:1 on sand-soft): the sand of "kept as is" as text, like the -fg shades of the statuses. */
+    -color-sand-fg: #6a5232;
     -color-selected: #f0e6d6;
 
     /* Navigation and title bar */
@@ -143,6 +145,7 @@
     -color-primary-soft: #3f3733;
     -color-sand-soft: #3a3a37;
     -color-sand-strong: #6d5f4a;
+    -color-sand-fg: #d8c6a4;
     -color-selected: rgba(231,214,192,.12);
 
     /* Navigation and title bar */
@@ -1152,6 +1155,79 @@
     -fx-background-color: -color-info-bg;
     -fx-border-color: -color-info-bd;
     -fx-text-fill: -color-info-fg;
+}
+
+/* --- State markers: one colour per meaning, always with an icon and a word (FR-THEME-10) -------------------- */
+.state-marker {
+    -fx-graphic-text-gap: 5px;
+}
+
+.state-waiting {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-border;
+    -fx-text-fill: -color-muted;
+}
+
+.state-waiting .state-icon {
+    -fx-icon-color: -color-muted;
+}
+
+.state-working {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info-fg;
+}
+
+.state-working .state-icon {
+    -fx-icon-color: -color-info-fg;
+}
+
+.state-done {
+    -fx-background-color: -color-ok-bg;
+    -fx-border-color: -color-ok-bd;
+    -fx-text-fill: -color-ok-fg;
+}
+
+.state-done .state-icon {
+    -fx-icon-color: -color-ok-fg;
+}
+
+.state-attention {
+    -fx-background-color: -color-warn-bg;
+    -fx-border-color: -color-warn-bd;
+    -fx-text-fill: -color-warn-fg;
+}
+
+.state-attention .state-icon {
+    -fx-icon-color: -color-warn-fg;
+}
+
+.state-failed {
+    -fx-background-color: -color-err-bg;
+    -fx-border-color: -color-err-bd;
+    -fx-text-fill: -color-err-fg;
+}
+
+.state-failed .state-icon {
+    -fx-icon-color: -color-err-fg;
+}
+
+.state-kept {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+    -fx-text-fill: -color-sand-fg;
+}
+
+.state-kept .state-icon {
+    -fx-icon-color: -color-sand-fg;
+}
+
+/* A grid that only shows: bordered, never resized (G9). */
+.read-only-grid {
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 6px 8px 6px 8px;
 }
 
 /* --- Buttons that sit beside the primary and secondary ones --------------------------------------------- */
@@ -2317,6 +2393,12 @@
 
 .glossary-table .table-row-cell:empty {
     -fx-border-color: transparent;
+}
+
+/* A row the last operation changed: a left edge, so no chip in the term cell can cut a long term (G9). */
+.glossary-table .table-row-cell:changed {
+    -fx-border-color: transparent transparent -color-divider -color-info;
+    -fx-border-width: 0 0 1px 3px;
 }
 
 .glossary-table .table-row-cell:hover {

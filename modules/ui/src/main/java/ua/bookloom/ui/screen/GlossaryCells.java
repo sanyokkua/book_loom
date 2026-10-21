@@ -18,7 +18,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
@@ -35,7 +34,6 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryCells {
 
-    private static final double ROW_SPACING = 8;
     private static final double BADGE_SPACING = 4;
 
     /** A cell holding one control that is filled from the row it shows. */
@@ -76,28 +74,22 @@ final class GlossaryCells {
         }
     }
 
-    /** The source term, with the chip that marks a row the last operation changed. */
-    static final class TermCell extends EntryCell<HBox> {
+    /** The source term; a changed row is marked by the table's row edge, so nothing else shares the cell. */
+    static final class TermCell extends EntryCell<Label> {
 
-        private final Label term = new Label();
-        private final Label changed;
-        private final ChangeMarks.Side marks;
+        TermCell() {
+            super(withFullText(new Label()));
+            control().getStyleClass().add("glossary-term");
+        }
 
-        TermCell(final Messages messages, final ChangeMarks.Side marks) {
-            super(new HBox(ROW_SPACING));
-            this.marks = marks;
-            changed = ChangedMarks.chip(messages);
-            term.getStyleClass().add("glossary-term");
-            control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(term, changed);
+        // The cell may cut a long term; its whole text is the hover.
+        private static Label withFullText(final Label term) {
+            return Tips.installLive(term, term.textProperty());
         }
 
         @Override
-        void show(final HBox shown, final GlossaryEntry entry) {
-            term.setText(entry.term());
-            final boolean marked = marks.isMarked(entry.id());
-            changed.setVisible(marked);
-            changed.setManaged(marked);
+        void show(final Label shown, final GlossaryEntry entry) {
+            shown.setText(entry.term());
         }
     }
 

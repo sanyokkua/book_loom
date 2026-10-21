@@ -3,7 +3,9 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import javafx.css.PseudoClass;
 import javafx.scene.Node;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.ToggleButton;
 import org.junit.jupiter.api.Test;
@@ -50,10 +52,20 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         return card != null && card.isVisible() && card.getScene() != null;
     }
 
+    private static final PseudoClass CHANGED = PseudoClass.getPseudoClass("changed");
+
+    /** The filled rows of a table that carry the {@code :changed} pseudo-class, the left edge of a changed row. */
     private long visibleMarkers(final String tableId) {
-        return ThemeTestSupport.onFx(() -> required(tableId).lookupAll(".changed-marker").stream()
-                .filter(node -> node.isVisible() && node.getParent() != null)
+        return ThemeTestSupport.onFx(() -> required(tableId).lookupAll(".table-row-cell").stream()
+                .filter(row -> ((TableRow<?>) row).getItem() != null)
+                .filter(row -> row.getPseudoClassStates().contains(CHANGED))
                 .count());
+    }
+
+    /** How many chips a table still draws inside its cells; a changed row is marked by its edge, never by a chip. */
+    private long chipsInCells(final String tableId) {
+        return ThemeTestSupport.onFx(
+                () -> required(tableId).lookupAll(".changed-marker").size());
     }
 
     private void reviewTypingWell() throws Exception {
@@ -75,6 +87,22 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
                 .contains("Name review — results", "Changed (1)", "Well", "No target · other");
     }
 
+    // IF the edge had no words, THEN only a colour would tell a person why the row differs.
+    @Test
+    void review_cardClosed_theChangedRowExplainsItsEdgeOnHover() throws Exception {
+        showScreen();
+        reviewTypingWell();
+
+        onFx(() -> button("results-close").fire());
+
+        assertThat(ThemeTestSupport.onFx(() -> required("names-style-table").lookupAll(".table-row-cell").stream()
+                        .map(row -> (TableRow<?>) row)
+                        .filter(row -> row.getPseudoClassStates().contains(CHANGED))
+                        .map(row -> row.getTooltip().getText())
+                        .toList()))
+                .containsExactly("Changed by the last automatic run");
+    }
+
     // IF the row carried no mark, THEN the person closing the card would lose track of what changed.
     @Test
     void review_cardClosed_theChangedRowKeepsAMarkerAndTheOtherDoesNot() throws Exception {
@@ -84,6 +112,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("results-close").fire());
 
         assertThat(visibleMarkers("names-style-table")).isEqualTo(1);
+        assertThat(chipsInCells("names-style-table")).isZero();
         assertThat(ThemeTestSupport.onFx(
                         () -> required("names-style-changed-filter").isVisible()))
                 .isTrue();

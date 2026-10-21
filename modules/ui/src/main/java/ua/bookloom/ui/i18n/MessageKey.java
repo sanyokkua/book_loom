@@ -2311,14 +2311,26 @@ public enum MessageKey {
     RESULTS_SHOW_CHANGED("results.showChanged"),
     /** Hover explanation of the control labelled by {@link #RESULTS_SHOW_CHANGED}. */
     RESULTS_SHOW_CHANGED_TIP("results.showChanged.tip"),
-    /** Chip on a row the last operation changed. */
+    /** Word a screen reader gives for a row the last operation changed; the row itself shows a left edge. */
     CHANGED_MARKER("namesStyle.changed.marker"),
-    /** Hover explanation of the chip labelled by {@link #CHANGED_MARKER}. */
+    /** Hover explanation of a row the last operation changed. */
     CHANGED_MARKER_TIP("namesStyle.changed.marker.tip"),
     /** Toggle that shows only the rows the last operation changed. */
     CHANGED_FILTER("namesStyle.changed.filter"),
     /** Hover explanation of the control labelled by {@link #CHANGED_FILTER}. */
     CHANGED_FILTER_TIP("namesStyle.changed.filter.tip"),
+    /** Word of the state marker for something queued or idle. */
+    STATE_WAITING("state.waiting"),
+    /** Word of the state marker for something at work. */
+    STATE_WORKING("state.working"),
+    /** Word of the state marker for something finished well. */
+    STATE_DONE("state.done"),
+    /** Word of the state marker for something that needs the person or is slow. */
+    STATE_ATTENTION("state.attention"),
+    /** Word of the state marker for something that failed or cannot be reached. */
+    STATE_FAILED("state.failed"),
+    /** Word of the state marker for something left as it was on purpose. */
+    STATE_KEPT("state.kept"),
     /** Line shown when a changed row was edited after the operation, so it is not put back: the term. */
     RESULTS_REVERT_EDITED("results.revert.edited");
 

@@ -38,7 +38,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
     private static final Pattern MOCKUP_DECLARATION = Pattern.compile("--([a-z0-9-]+)\\s*:");
     private static final Pattern STATUS_ROLE = Pattern.compile("(ok|warn|err|info)(-bg|-bd|-fg)?");
 
-    /** The 50 roles that are looked-up colours, exactly as published. */
+    /** The 51 roles that are looked-up colours, exactly as published. */
     private static final Set<String> COLOUR_ROLES = Set.of(
             "bg",
             "surface",
@@ -58,6 +58,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
             "primary-soft",
             "sand-soft",
             "sand-strong",
+            "sand-fg",
             "selected",
             "nav-bg",
             "nav-bg-2",
@@ -113,17 +114,17 @@ class ThemeTokenCatalogueTest extends FxTestBase {
 
     // ===== the role names ================================================================================
 
-    // IF the stylesheet is read for its role names, THEN there are 53 published (50 colours, 3 elevations) plus 3
+    // IF the stylesheet is read for its role names, THEN there are 54 published (51 colours, 3 elevations) plus 3
     // switch.
     @Test
-    void catalogue_declaredRoles_areFiftyThreePublishedPlusThreeSwitchRoles() {
-        assertThat(catalogueNames()).hasSize(56);
+    void catalogue_declaredRoles_areFiftyFourPublishedPlusThreeSwitchRoles() {
+        assertThat(catalogueNames()).hasSize(57);
     }
 
-    // IF the colour roles are counted on .root without the brand anchors, THEN there are 50 published plus 3 switch.
+    // IF the colour roles are counted on .root without the brand anchors, THEN there are 51 published plus 3 switch.
     @Test
-    void catalogue_colourRolesOnRoot_areFiftyPublishedPlusThreeSwitchRoles() {
-        assertThat(colourNames(rootBlock())).hasSize(53);
+    void catalogue_colourRolesOnRoot_areFiftyOnePublishedPlusThreeSwitchRoles() {
+        assertThat(colourNames(rootBlock())).hasSize(54);
     }
 
     // IF the catalogue's roles are classified, THEN exactly 16 are status roles (4 statuses x 4 shades).
@@ -149,13 +150,13 @@ class ThemeTokenCatalogueTest extends FxTestBase {
     void catalogue_names_equalTheMockupLightBlockDeclarations() throws IOException {
         final Set<String> mockup = mockupLightNames();
 
-        assertThat(mockup).as("the mockup's light block declares 53 roles").hasSize(53);
+        assertThat(mockup).as("the mockup's light block declares 54 roles").hasSize(54);
         final Set<String> withoutSwitchRoles = new TreeSet<>(catalogueNames());
         withoutSwitchRoles.removeAll(SWITCH_ROLES);
         assertThat(withoutSwitchRoles).containsExactlyInAnyOrderElementsOf(mockup);
     }
 
-    // IF the dark block is read, THEN it defines the same 53 colour names as the light block, no more, no fewer.
+    // IF the dark block is read, THEN it defines the same 54 colour names as the light block, no more, no fewer.
     @Test
     void darkBlock_colourNames_equalTheLightBlockNames() {
         assertThat(colourNames(darkBlock())).containsExactlyInAnyOrderElementsOf(colourNames(rootBlock()));
@@ -176,10 +177,10 @@ class ThemeTokenCatalogueTest extends FxTestBase {
                 .containsExactlyInAnyOrderElementsOf(BRAND_ANCHORS);
     }
 
-    // IF a role name is checked for a hue word, THEN only the brand anchors and the two published sand tints have one.
+    // IF a role name is checked for a hue word, THEN only the brand anchors and the three sand roles have one.
     @Test
     void catalogue_roleNames_neverNameAHueOutsideTheBrandAnchors() {
-        final Set<String> allowedSandRoles = Set.of("brand-sand", "sand-soft", "sand-strong");
+        final Set<String> allowedSandRoles = Set.of("brand-sand", "sand-soft", "sand-strong", "sand-fg");
 
         assertThat(allDeclaredNames(rootBlock()))
                 .filteredOn(name -> name.contains("cognac") || name.contains("slate") || name.contains("charcoal"))
@@ -187,7 +188,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
                 .allMatch(name -> name.startsWith("brand-"));
         assertThat(allDeclaredNames(rootBlock()))
                 .filteredOn(name -> name.contains("sand"))
-                .as("sand appears only in the brand anchor and the two published sand tints")
+                .as("sand appears only in the brand anchor and the three published sand roles")
                 .allMatch(allowedSandRoles::contains);
         assertThat(allDeclaredNames(darkBlock()))
                 .as("the dark block redeclares no hue-named role")
@@ -239,6 +240,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
             primary-soft  | #f0e5dd                 | #3f3733
             sand-soft     | #f2e9db                 | #3a3a37
             sand-strong   | #dcc4a3                 | #6d5f4a
+            sand-fg       | #6a5232                 | #d8c6a4
             selected      | #f0e6d6                 | rgba(231,214,192,.12)
             nav-bg        | #3a4a52                 | #20292e
             nav-bg-2      | #324148                 | #1c2429
@@ -283,14 +285,14 @@ class ThemeTokenCatalogueTest extends FxTestBase {
         ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, role), dark, role + " under dark");
     }
 
-    /** Guards the hard-coded lists themselves: 50 colours, 3 elevations, 16 statuses among them. */
+    /** Guards the hard-coded lists themselves: 51 colours, 3 elevations, 16 statuses among them. */
     @Test
     void publishedLists_asTranscribed_haveTheSpecifiedSizes() {
         final List<String> statuses = COLOUR_ROLES.stream()
                 .filter(name -> STATUS_ROLE.matcher(name).matches())
                 .toList();
 
-        assertThat(COLOUR_ROLES).hasSize(50);
+        assertThat(COLOUR_ROLES).hasSize(51);
         assertThat(ELEVATION_ROLES).hasSize(3);
         assertThat(statuses).hasSize(16);
     }

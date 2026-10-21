@@ -65,6 +65,7 @@ a defect (checked by the palette-token conformance assertion,
 | `primary-soft`  | Soft primary tint (selected accents)      | `#f0e5dd`                        | `#3f3733`                    |
 | `sand-soft`     | Soft sand tint                            | `#f2e9db`                        | `#3a3a37`                    |
 | `sand-strong`   | Strong sand                               | `#dcc4a3`                        | `#6d5f4a`                    |
+| `sand-fg`       | Words and icon on a sand tint ("kept as is") | `#6a5232`                    | `#d8c6a4`                    |
 | `selected`      | Selected row/item background              | `#f0e6d6`                        | `rgba(231,214,192,.12)`      |
 | `nav-bg`        | Navigation background                     | `#3a4a52`                        | `#20292e`                    |
 | `nav-bg-2`      | Navigation secondary background           | `#324148`                        | `#1c2429`                    |
@@ -128,7 +129,7 @@ label — takes the `-fg` shade, which holds 4.5:1 on the surfaces, the selected
 | ID          | Requirement                                                                                                                                                                                                      |
 |-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-THEME-9  | Tokens are named by role, not by hue (e.g. `surface`, `text`, `border`, `primary`, `ok`, `warn`, `err`, `info` — see the full `#token-catalog`), so a palette change is a token-value edit within a value block. |
-| FR-THEME-10 | Status tokens map to the four functional colours above and are used consistently by toasts, banners, and status indicators (see `08_UI_SCREENS_AND_STATES.md` and `11_NOTIFICATIONS_AND_ERRORS.md`).             |
+| FR-THEME-10 | Every state marker, chip and badge is an icon plus a word in one of six colours, the same on every screen: grey (`muted` on `surface-2`) for waiting, queued or idle; blue (`info`) for working; green (`ok`) for done; amber (`warn`) for needs you or slow; red (`err`) for failed or unreachable; sand (`sand-soft`/`sand-strong` with `sand-fg` words) for kept as is. Words hold 4.5:1 and the icon 3:1 on the marker's own fill in both themes (`StateMarkerContrastTest`); the control is `ua.bookloom.ui.control.StateMarker`. Toasts, banners and status indicators use the same status roles (see `08_UI_SCREENS_AND_STATES.md` and `11_NOTIFICATIONS_AND_ERRORS.md`). |
 
 ## contrast {#contrast}
 

@@ -172,6 +172,8 @@ final class TermTableCard<R> extends VBox {
      * @param header the catalogue entry of the header text, which a blank-headed column keeps as its accessible name
      * @param shown {@code false} for a column whose header carries no text (the remove cross, "→ Glossary") and
      *     explains itself on hover only
+     * @param width the width the column starts at
+     * @param minWidth the width the column cannot be dragged below
      */
     static <R> TableColumn<R, R> column(
             final Messages messages,
@@ -179,7 +181,7 @@ final class TermTableCard<R> extends VBox {
             final boolean shown,
             final MessageKey tip,
             final double width,
-            final boolean fixed,
+            final double minWidth,
             final @Nullable Comparator<R> order,
             final Supplier<TableCell<R, R>> cell) {
         final TableColumn<R, R> column = new TableColumn<>(shown ? messages.get(header) : "");
@@ -194,10 +196,7 @@ final class TermTableCard<R> extends VBox {
         }
         column.setReorderable(false);
         column.setPrefWidth(width);
-        if (fixed) {
-            column.setMinWidth(width);
-            column.setMaxWidth(width);
-        }
+        column.setMinWidth(minWidth);
         column.setCellValueFactory(features -> new ReadOnlyObjectWrapper<>(features.getValue()));
         column.setCellFactory(_ -> cell.get());
         return column;

@@ -624,7 +624,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - the banner cases in `ConformanceCases` (used by `ScreenConformanceTest`) moved to `#shell-banners`.
   - **Compare:** the empty shell at both sizes.
   - Edit FR-UI-11/12 (new). → :ui, docs
-- [ ] 5.7 Add state markers with one colour map, read-only grids, and resizable term tables with a changed-row edge, so
+- [x] 5.7 Add state markers with one colour map, read-only grids, and resizable term tables with a changed-row edge, so
   a long term is never cut by a chip and every state reads as an icon plus a word.
   - **Satisfies:** theming "Show every state in one of six colours, with an icon and a word"; glossary "Let every
     glossary column be resized"; app-shell "Use the control each drawn widget stands for"
@@ -766,6 +766,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     Apply writes through `BriefSaver`.
   - **Compare:** idle, translating, and the dialog in Simple and Detailed. → :ui
 - [ ] 6.4 Give Names & style its purpose lines, empty states, "Used" column, wide-only side-by-side layout, read-only
+  - **Carried from 5.7:** the Names & style cards must sit side by side only from the wide class (content ≥ 1440 px); from 1040 the glossary's column minimums (616 px) are wider than its card (532 px) and clip the Locked and remove columns. The `cards_atEachWindowSize…` test must expect stacked cards below 1440.
   state under hidden work, and the names pass in the long progress dialog with Results, so the tables explain
   themselves and the pass shows exact progress.
   - **Satisfies:** glossary "Keep both term tables editable while a translation runs"; glossary "Show the recurring

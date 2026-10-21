@@ -29,9 +29,13 @@ import ua.bookloom.ui.state.RecurringTerms;
 final class RecurringTermsCard {
 
     private static final double TERM_WIDTH = 170;
+    private static final double TERM_MIN = 140;
     private static final double TARGET_WIDTH = 260;
+    private static final double TARGET_MIN = 170;
     private static final double PROMOTE_WIDTH = 120;
+    private static final double PROMOTE_MIN = 110;
     private static final double REMOVE_WIDTH = 40;
+    private static final double REMOVE_MIN = 36;
 
     private static final Comparator<LexiconEntry> BY_TERM =
             Comparator.comparing(LexiconEntry::term, Collator.getInstance());
@@ -44,12 +48,12 @@ final class RecurringTermsCard {
                 entry -> LexiconEntry.keyOf(entry.term()),
                 entry -> Arrays.asList(entry.term(), entry.established().orElse(null)),
                 BY_TERM,
-                columns(messages, names.recurring(), marks),
+                columns(messages, names.recurring()),
                 List.of());
     }
 
     private static List<TableColumn<LexiconEntry, LexiconEntry>> columns(
-            final Messages messages, final RecurringTerms recurring, final ChangeMarks.Side marks) {
+            final Messages messages, final RecurringTerms recurring) {
         return List.of(
                 column(
                         messages,
@@ -57,20 +61,22 @@ final class RecurringTermsCard {
                         true,
                         MessageKey.RECURRING_COLUMN_TERM_TIP,
                         TERM_WIDTH,
-                        false,
-                        () -> new RecurringTermsCells.TermCell(messages, marks)),
+                        TERM_MIN,
+                        () -> new RecurringTermsCells.TermCell()),
                 targetColumn(messages, recurring),
                 actionColumn(
                         messages,
                         MessageKey.RECURRING_PROMOTE,
                         MessageKey.RECURRING_PROMOTE_TIP,
                         PROMOTE_WIDTH,
+                        PROMOTE_MIN,
                         () -> new RecurringTermsCells.PromoteCell(messages, recurring)),
                 actionColumn(
                         messages,
                         MessageKey.NAMES_STYLE_COLUMN_REMOVE,
                         MessageKey.NAMES_STYLE_COLUMN_REMOVE_TIP,
                         REMOVE_WIDTH,
+                        REMOVE_MIN,
                         () -> new RecurringTermsCells.RemoveCell(messages, recurring)));
     }
 
@@ -82,7 +88,7 @@ final class RecurringTermsCard {
                 true,
                 MessageKey.RECURRING_COLUMN_TARGET_TIP,
                 TARGET_WIDTH,
-                false,
+                TARGET_MIN,
                 () -> new RecurringTermsCells.RenderingCell(messages, recurring));
     }
 
@@ -92,8 +98,9 @@ final class RecurringTermsCard {
             final MessageKey header,
             final MessageKey tip,
             final double width,
+            final double minWidth,
             final Supplier<TableCell<LexiconEntry, LexiconEntry>> cell) {
-        return column(messages, header, false, tip, width, true, cell);
+        return column(messages, header, false, tip, width, minWidth, cell);
     }
 
     private static TableColumn<LexiconEntry, LexiconEntry> column(
@@ -102,8 +109,8 @@ final class RecurringTermsCard {
             final boolean shown,
             final MessageKey tip,
             final double width,
-            final boolean fixed,
+            final double minWidth,
             final Supplier<TableCell<LexiconEntry, LexiconEntry>> cell) {
-        return TermTableCard.column(messages, header, shown, tip, width, fixed, null, cell);
+        return TermTableCard.column(messages, header, shown, tip, width, minWidth, null, cell);
     }
 }
