@@ -7,6 +7,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -30,6 +32,7 @@ final class ExportTitleCard {
     private final TextField authorField = new TextField();
     private final Label titleSource = new Label();
     private final Label authorSource = new Label();
+    private final Label titleReason = new Label();
     private final VBox titleRow;
     private final VBox authorRow;
     private final Node node;
@@ -47,11 +50,11 @@ final class ExportTitleCard {
         hint.setId("export-book-hint");
         this.node =
                 BriefCards.card("export-book-card", messages, MessageKey.EXPORT_BOOK_CARD, titleRow, authorRow, hint);
-        this.onTitle = (observed, was, now) -> show(now, titleRow, titleField, titleSource);
+        this.onTitle = (observed, was, now) -> showTitle(now);
         this.onAuthor = (observed, was, now) -> show(now, authorRow, authorField, authorSource);
         viewModel.title().addListener(new WeakChangeListener<>(onTitle));
         viewModel.author().addListener(new WeakChangeListener<>(onAuthor));
-        show(viewModel.title().get(), titleRow, titleField, titleSource);
+        showTitle(viewModel.title().get());
         show(viewModel.author().get(), authorRow, authorField, authorSource);
         viewModel.refresh();
     }
@@ -76,6 +79,12 @@ final class ExportTitleCard {
         source.setWrapText(true);
         final VBox row = BriefCards.field(messages, label, field);
         row.getChildren().add(source);
+        if (part == Part.TITLE) {
+            titleReason.setId(id + "-reason");
+            titleReason.getStyleClass().add("hint");
+            titleReason.setWrapText(true);
+            row.getChildren().add(titleReason);
+        }
         return row;
     }
 
@@ -86,7 +95,7 @@ final class ExportTitleCard {
 
     // A row with no source text is the book not having a title or author at all, and takes no room.
     private void show(final Row row, final VBox box, final TextField field, final Label source) {
-        final boolean present = !row.source().isEmpty();
+        final boolean present = !row.source().isEmpty() || row.origin() != null;
         box.setVisible(present);
         box.setManaged(present);
         source.setText(messages.get(MessageKey.EXPORT_BOOK_TITLE_SOURCE, row.source()));
@@ -94,5 +103,25 @@ final class ExportTitleCard {
         if (!field.getText().equals(row.target()) && !field.isFocused()) {
             field.setText(row.target());
         }
+    }
+
+    private void showTitle(final Row row) {
+        show(row, titleRow, titleField, titleSource);
+        showReason(row.origin());
+    }
+
+    private void showReason(final @Nullable TitleOrigin origin) {
+        titleReason.setVisible(origin != null);
+        titleReason.setManaged(origin != null);
+        titleReason.setText(origin == null ? "" : messages.get(reasonKey(origin)));
+    }
+
+    private static MessageKey reasonKey(final TitleOrigin origin) {
+        return switch (origin) {
+            case DETAILS -> MessageKey.EXPORT_BOOK_TITLE_FROM_DETAILS;
+            case FRONT_MATTER -> MessageKey.EXPORT_BOOK_TITLE_FROM_FRONT_MATTER;
+            case FIRST_HEADING -> MessageKey.EXPORT_BOOK_TITLE_FROM_HEADING;
+            case FILE_NAME -> MessageKey.EXPORT_BOOK_TITLE_FROM_FILE_NAME;
+        };
     }
 }

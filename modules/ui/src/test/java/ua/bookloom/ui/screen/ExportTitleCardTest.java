@@ -7,12 +7,17 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedReviewDesk;
@@ -155,5 +160,49 @@ class ExportTitleCardTest extends TranslatingScreenTestBase {
         showExport();
 
         assertThat(optional("export-title-hint")).isNull();
+    }
+
+    // IF the reason line were missing or worded by the code and not the catalogue, THEN a person could not tell where
+    // the title came from.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "DETAILS|From the book's details|aux:title",
+                "FRONT_MATTER|From the front matter|aux:fm:title",
+                "FIRST_HEADING|From the first heading|ch1:0",
+                "FILE_NAME|The book names no title — the file name is used|"
+            })
+    void card_titleOfEachOrigin_showsItsReasonLine(
+            final TitleOrigin origin, final String reason, final @Nullable String segmentId) throws TimeoutException {
+        desk().willAnswerOriginalTitle(new OriginalTitle("Amber Tide", origin, segmentId));
+        desk().willAnswerSegment(metadata("aux:title", SegmentStatus.ACCEPTED, "Amber Tide", "Бурштин"));
+        showExport();
+
+        awaitFx(() -> ((Label) required("export-book-title-reason")).getText().equals(reason));
+
+        assertThat(isShown("export-book-title-reason")).isTrue();
+    }
+
+    // IF a file-name title could be typed into, THEN the edit would be lost: no segment holds that title.
+    @Test
+    void card_titleFromTheFileName_fieldIsDisabledAndEmpty() throws TimeoutException {
+        desk().willAnswerOriginalTitle(new OriginalTitle("earth-gravity", TitleOrigin.FILE_NAME, null));
+        showExport();
+
+        awaitFx(() -> ((Label) required("export-book-title-source")).getText().equals("Original: earth-gravity"));
+
+        assertThat(((TextField) required("export-book-title")).isDisabled()).isTrue();
+        assertThat(((TextField) required("export-book-title")).getText()).isEmpty();
+    }
+
+    // IF the author row showed a reason line, THEN it would claim a source the author does not have.
+    @Test
+    void card_authorRow_hasNoReasonLine() throws TimeoutException {
+        scriptTranslatedBook();
+        showExport();
+        awaitFx(() -> ((TextField) required("export-book-author")).getText().equals("Анна Гейл"));
+
+        assertThat(optional("export-book-author-reason")).isNull();
     }
 }

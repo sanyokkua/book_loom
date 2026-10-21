@@ -118,7 +118,8 @@ public final class ReviewFixtures {
 
         /** The port over the real parts and the same stores. */
         public ReviewDeskImpl reviewDesk(final ReviewMode mode) {
-            return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments, audits(segments));
+            return new ReviewDeskImpl(
+                    actions, queries, retryDraft(mode), projects, segments, audits(segments), openProjects);
         }
     }
 

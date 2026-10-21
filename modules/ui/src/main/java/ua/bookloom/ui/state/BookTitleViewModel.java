@@ -14,8 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -60,8 +62,13 @@ public final class BookTitleViewModel {
      * @param source the text the book carries; empty when the book has none, and then the row is not shown
      * @param target the translated text, or empty until the run has translated it
      * @param editable whether the translated text can be edited now, which it can once it exists
+     * @param origin where the original title came from, or null for the author row and while nothing is read
      */
-    public record Row(String source, String target, boolean editable) {
+    public record Row(
+            String source,
+            String target,
+            boolean editable,
+            @Nullable TitleOrigin origin) {
 
         /** Rejects a missing text. */
         public Row {
@@ -70,7 +77,7 @@ public final class BookTitleViewModel {
         }
 
         static Row none() {
-            return new Row("", "", false);
+            return new Row("", "", false, null);
         }
     }
 
@@ -80,6 +87,8 @@ public final class BookTitleViewModel {
     private final ReadOnlyObjectWrapper<Row> title = new ReadOnlyObjectWrapper<>(Row.none());
     private final ReadOnlyObjectWrapper<Row> author = new ReadOnlyObjectWrapper<>(Row.none());
     private final ReadOnlyIntegerWrapper edits = new ReadOnlyIntegerWrapper();
+    // The segment the shown title row was read from; null while there is none. FX thread only.
+    private @Nullable String titleSegmentId;
 
     /**
      * Follows the open book.
@@ -147,16 +156,22 @@ public final class BookTitleViewModel {
         Objects.requireNonNull(text, "text");
         final OpenedBook book = project.book().get();
         final Row row = (part == Part.TITLE ? title : author).get();
-        if (book == null || !row.editable() || text.isBlank() || text.strip().equals(row.target())) {
+        final String segmentId = part == Part.TITLE ? titleSegmentId : part.segmentId();
+        if (book == null
+                || segmentId == null
+                || !row.editable()
+                || text.isBlank()
+                || text.strip().equals(row.target())) {
             log.debug("{} edit not saved: nothing to change", part);
             return;
         }
         log.debug("saving the edited {} of project {}", part, book.projectId());
         log.trace("edited {} is '{}'", part, text);
-        submit(() -> saveOffThread(book.projectId(), part, text.strip()));
+        submit(() -> saveOffThread(book.projectId(), part, segmentId, text.strip()));
     }
 
     private void reset(final @Nullable OpenedBook book) {
+        titleSegmentId = null;
         title.set(Row.none());
         author.set(Row.none());
         if (book != null) {
@@ -164,8 +179,8 @@ public final class BookTitleViewModel {
         }
     }
 
-    private void saveOffThread(final String projectId, final Part part, final String text) {
-        final Result<?> saved = desk.saveEdit(projectId, part.segmentId(), text);
+    private void saveOffThread(final String projectId, final Part part, final String segmentId, final String text) {
+        final Result<?> saved = desk.saveEdit(projectId, segmentId, text);
         if (saved.isErr()) {
             log.warn(
                     "the edited {} was not saved: code {}",
@@ -176,12 +191,30 @@ public final class BookTitleViewModel {
     }
 
     private void readBoth(final String projectId, final boolean edited) {
-        final Row titleRow = read(projectId, TITLE_ID);
-        final Row authorRow = read(projectId, AUTHOR_ID);
-        Platform.runLater(() -> publish(projectId, titleRow, authorRow, edited));
+        final Read titleRead = readTitle(projectId);
+        final Row authorRow = read(projectId, AUTHOR_ID, null);
+        Platform.runLater(() -> publish(projectId, titleRead, authorRow, edited));
     }
 
-    private Row read(final String projectId, final String segmentId) {
+    // The title's segment depends on the book: the resolver names it, or says that the file name stands in.
+    private Read readTitle(final String projectId) {
+        final OriginalTitle resolved = desk.originalTitle(projectId).data();
+        if (resolved == null) {
+            log.debug("no original title for project {}", projectId);
+            return new Read(Row.none(), null);
+        }
+        final String segmentId = resolved.segmentId();
+        if (segmentId == null) {
+            log.debug("the title of project {} is its file name; nothing can be edited", projectId);
+            return new Read(new Row(resolved.text(), "", false, resolved.origin()), null);
+        }
+        final Row row = read(projectId, segmentId, resolved.origin());
+        // The resolver found a title the stored segment cannot show yet, so the row still says where it came from.
+        return new Read(
+                row.source().isEmpty() ? new Row(resolved.text(), "", false, resolved.origin()) : row, segmentId);
+    }
+
+    private Row read(final String projectId, final String segmentId, final @Nullable TitleOrigin origin) {
         final Result<SegmentView> found = desk.segment(projectId, segmentId);
         final SegmentView view = found.data();
         if (view == null) {
@@ -192,16 +225,19 @@ public final class BookTitleViewModel {
         final String machine = view.maskedMachineTarget();
         final String target = user != null ? user : machine == null ? "" : machine;
         final boolean translated = view.status() != SegmentStatus.PENDING;
-        return new Row(view.displaySource(), translated ? target : "", translated && !target.isBlank());
+        return new Row(view.displaySource(), translated ? target : "", translated && !target.isBlank(), origin);
     }
 
-    private void publish(final String projectId, final Row titleRow, final Row authorRow, final boolean edited) {
+    private record Read(Row row, @Nullable String segmentId) {}
+
+    private void publish(final String projectId, final Read titleRead, final Row authorRow, final boolean edited) {
         final OpenedBook book = project.book().get();
         if (book == null || !book.projectId().equals(projectId)) {
             log.debug("title rows of project {} dropped: another book is open", projectId);
             return;
         }
-        title.set(titleRow);
+        titleSegmentId = titleRead.segmentId();
+        title.set(titleRead.row());
         author.set(authorRow);
         if (edited) {
             edits.set(edits.get() + 1);

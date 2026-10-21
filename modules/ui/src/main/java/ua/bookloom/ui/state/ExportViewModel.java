@@ -4,7 +4,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -21,10 +20,10 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SideFile;
@@ -38,9 +37,9 @@ import ua.bookloom.util.paths.DestinationPath;
  *
  * <p>A singleton, like {@link CurrentProject}, because the screens are rebuilt on every visit while the choices must
  * survive them. It is first constructed when a screen first needs it, which can be long after the book was opened, so
- * it proposes a destination for a book that is already open. The proposed file name is never built here:
- * {@link DestinationPath} owns that rule, so the command line and the window cannot drift apart. The proposal follows
- * the brief's target language until the person has typed or picked a path of their own.
+ * it proposes a destination for a book that is already open. {@link ExportProposals} builds the name through
+ * {@link DestinationPath}, shared with the command line, and the proposal follows the brief's target language until
+ * the person has typed or picked a path.
  *
  * <p>Looking for a file at the destination is I/O, so it runs on the background executor and its answer is published
  * back with {@code Platform.runLater}. Each question bumps a counter and an answer is published only if the counter
@@ -62,6 +61,7 @@ public final class ExportViewModel {
     private final ReadOnlyStringWrapper runNote = new ReadOnlyStringWrapper("");
     private final ObjectBinding<@Nullable ActivityKind> blocker;
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
+    private final ExportProposals proposals;
     private final ExportStatement statement;
     private final ExportOccupancy occupancy;
     private final ExportRun run;
@@ -82,6 +82,7 @@ public final class ExportViewModel {
      * @param project the holder of the open book, which outlives this view model
      * @param desk the review desk whose counts the partial-export statement states
      * @param messages the catalogue the refusals and the statement are worded from
+     * @param projects the stored projects, whose list decides the file name's label
      * @param exports the port an export is asked of
      * @param models the port the consistency pass's model is created through
      * @param settings the provider settings, whose selection names that model
@@ -94,6 +95,7 @@ public final class ExportViewModel {
     public ExportViewModel(
             final CurrentProject project,
             final ReviewDesk desk,
+            final ProjectService projects,
             final Messages messages,
             final ExportService exports,
             final ChatModelFactory models,
@@ -103,6 +105,7 @@ public final class ExportViewModel {
             final ActivityTracker activities,
             final @Nullable SetupHelper setup) {
         this.project = Objects.requireNonNull(project, "project");
+        this.proposals = new ExportProposals(projects, executor);
         this.nameSuggestion = new NameSuggestion(project, messages, setup, this);
         this.messages = Objects.requireNonNull(messages, "messages");
         this.statement = new ExportStatement(desk, messages, executor);
@@ -119,9 +122,7 @@ public final class ExportViewModel {
         project.book().addListener((observed, was, now) -> onBookChanged(now));
         project.brief().addListener((observed, was, now) -> onBriefChanged(now));
         followDial(project.brief().get());
-        log.debug(
-                "export view model created, a book is already open: {}",
-                project.book().get() != null);
+        log.debug("export view model created, book open {}", project.book().get() != null);
         propose();
         refreshExists();
         refreshRunNote();
@@ -212,10 +213,7 @@ public final class ExportViewModel {
         return run.failure();
     }
 
-    /**
-     * Writes the book to the destination with the chosen side files, in the background. Does nothing while Export book
-     * is unavailable. The result arrives as {@link #outcome()} or {@link #failure()}.
-     */
+    /** Writes the book with the chosen side files in the background; the result arrives as outcome or failure. */
     public void export() {
         final OpenedBook book = project.book().get();
         final Optional<Path> path = destinationPath();
@@ -238,10 +236,7 @@ public final class ExportViewModel {
         statement.refresh(book == null ? null : book.projectId());
     }
 
-    /**
-     * Looks again for a file at the destination, because one can appear or vanish while nothing here changes and the
-     * warning is only worth showing if it is current. The answer arrives later on the FX thread.
-     */
+    /** Looks again for a file at the destination, because one can appear or vanish while nothing here changes. */
     public void refresh() {
         log.debug("destination existence refreshed");
         refreshExists();
@@ -261,11 +256,7 @@ public final class ExportViewModel {
         refreshExists();
     }
 
-    /**
-     * Takes a path picked in the file chooser, which counts as a choice like typing one does.
-     *
-     * @param chosen the file the person picked
-     */
+    /** Takes a path picked in the file chooser, which counts as a choice like typing one does. */
     public void chooseDestination(final Path chosen) {
         Objects.requireNonNull(chosen, "chosen");
         log.debug("destination chosen in the file chooser: {}", chosen);
@@ -310,7 +301,7 @@ public final class ExportViewModel {
         if (Objects.equals(target, proposedFor)) {
             return;
         }
-        log.debug("the brief's target is now {}, destination hand-edited: {}", target, destinationEdited);
+        log.debug("the brief's target is now {}, hand-edited {}", target, destinationEdited);
         if (!destinationEdited) {
             propose();
             refreshExists();
@@ -327,10 +318,19 @@ public final class ExportViewModel {
             destination.set("");
             return;
         }
-        final BookFormat format = Objects.requireNonNull(book.inspection().format(), "format");
-        final Path proposed = DestinationPath.destinationFor(book.source(), format, target);
-        log.debug("proposing destination {} for project {} ({})", proposed, book.projectId(), format);
-        destination.set(proposed.toString());
+        destination.set(proposals.proposal(book, target).toString());
+        proposals.load(book, target, proposed -> onLabelled(book, target, proposed));
+    }
+
+    private void onLabelled(final OpenedBook asked, final String target, final Path proposed) {
+        final OpenedBook book = project.book().get();
+        final boolean current =
+                book != null && book.projectId().equals(asked.projectId()) && target.equals(proposedFor);
+        log.debug("file label arrived: still current {}, hand-edited {}", current, destinationEdited);
+        if (current && !destinationEdited && !proposed.toString().equals(destination.get())) {
+            destination.set(proposed.toString());
+            refreshExists();
+        }
     }
 
     private void refreshExists() {
@@ -343,14 +343,7 @@ public final class ExportViewModel {
             recompute();
             return;
         }
-        final OpenedBook book = project.book().get();
-        occupancy.ask(
-                book == null
-                        ? List.of(path.get())
-                        : ExportPathRules.writtenPaths(
-                                path.get(),
-                                Objects.requireNonNull(book.inspection().format(), "format"),
-                                Set.copyOf(sideFiles)));
+        occupancy.ask(project.book().get(), path.get(), Set.copyOf(sideFiles));
     }
 
     private void onOutcomeChanged() {

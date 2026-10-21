@@ -4,11 +4,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.SideFile;
 
 /**
  * Whether the book or a chosen side file already exists, asked off the FX thread.
@@ -47,6 +49,15 @@ final class ExportOccupancy {
         epoch++;
         bookTaken = false;
         occupied = null;
+    }
+
+    /** Asks about the book's path and each chosen side file's; {@code book} is null when nothing is open. */
+    void ask(final @Nullable OpenedBook book, final Path path, final Set<SideFile> sides) {
+        ask(
+                book == null
+                        ? List.of(path)
+                        : ExportPathRules.writtenPaths(
+                                path, Objects.requireNonNull(book.inspection().format(), "format"), sides));
     }
 
     /** Asks whether any of {@code paths} exists, the book first; the answer arrives later and calls back. */

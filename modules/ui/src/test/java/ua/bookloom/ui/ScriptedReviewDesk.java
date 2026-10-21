@@ -15,11 +15,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.api.project.SegmentRecord;
 
 /**
@@ -35,6 +37,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     private final Map<String, SegmentView> views = new ConcurrentHashMap<>();
     private volatile @Nullable Result<List<SegmentView>> queueView;
     private volatile @Nullable Result<ReviewCounts> countsView;
+    private volatile @Nullable OriginalTitle originalTitleView;
     private volatile @Nullable CountDownLatch acceptGate;
     private final CountDownLatch acceptEntered = new CountDownLatch(1);
     private volatile @Nullable CountDownLatch retryGate;
@@ -56,6 +59,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
      */
     public void willAnswerSegment(final SegmentView view) {
         views.put(view.segmentId(), view);
+    }
+
+    /** Makes every {@code originalTitle} call answer this title, whatever else was queued. */
+    public void willAnswerOriginalTitle(final OriginalTitle title) {
+        originalTitleView = title;
     }
 
     /** Makes every {@code counts} call answer these counts, whatever else was queued. */
@@ -169,6 +177,22 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             return Result.ok(view);
         }
         return answer("segment(" + projectId + ", " + segmentId + ")");
+    }
+
+    // A title not scripted is the scripted aux:title segment's source from the book's details, if one was scripted.
+    @Override
+    public Result<OriginalTitle> originalTitle(final String projectId) {
+        final OriginalTitle scripted = originalTitleView;
+        final SegmentView details = views.get("aux:title");
+        if (scripted != null) {
+            calls.add("originalTitle(" + projectId + ")");
+            return Result.ok(scripted);
+        }
+        if (details != null) {
+            calls.add("originalTitle(" + projectId + ")");
+            return Result.ok(new OriginalTitle(details.displaySource(), TitleOrigin.DETAILS, "aux:title"));
+        }
+        return answer("originalTitle(" + projectId + ")");
     }
 
     @Override

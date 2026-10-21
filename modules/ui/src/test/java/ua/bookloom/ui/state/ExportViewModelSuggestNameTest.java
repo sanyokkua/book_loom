@@ -30,6 +30,7 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
         exports = onFx(() -> new ExportViewModel(
                 current,
                 desk,
+                projects,
                 messages,
                 exportService,
                 models,

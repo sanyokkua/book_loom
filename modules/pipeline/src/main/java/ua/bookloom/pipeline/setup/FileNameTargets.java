@@ -20,7 +20,6 @@ import ua.bookloom.api.project.SegmentRecord;
 @Slf4j
 record FileNameTargets(@Nullable String title, @Nullable String author) {
 
-    private static final String TITLE_ID = "aux:title";
     private static final String AUTHOR_ID = "aux:creator:0";
 
     /**
@@ -28,11 +27,14 @@ record FileNameTargets(@Nullable String title, @Nullable String author) {
      *
      * @param segments the project's stored segments
      * @param projectId the project's id
+     * @param titleSegmentId the segment that holds the book's title, or null when none does (the file name is the title)
      * @return the targets found; either may be null
      */
-    static FileNameTargets of(final SegmentRepository segments, final String projectId) {
+    static FileNameTargets of(
+            final SegmentRepository segments, final String projectId, final @Nullable String titleSegmentId) {
         return new FileNameTargets(
-                translated(segments, projectId, TITLE_ID), translated(segments, projectId, AUTHOR_ID));
+                titleSegmentId == null ? null : translated(segments, projectId, titleSegmentId),
+                translated(segments, projectId, AUTHOR_ID));
     }
 
     /**

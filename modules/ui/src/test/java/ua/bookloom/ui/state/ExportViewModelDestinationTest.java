@@ -4,10 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.pipeline.ProjectSummary;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NameOrigin;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.BookFixtures;
 
 /**
@@ -164,5 +171,82 @@ class ExportViewModelDestinationTest extends ExportViewModelTestBase {
 
         assertThat(empty).isEqualTo("Choose where to write the book: type a path in Save to or press Browse.");
         assertThat(onFx(() -> exports.currentNote().get())).isEmpty();
+    }
+
+    private static ProjectSummary summary(final String id, final String name, final NameOrigin origin) {
+        return new ProjectSummary(
+                new Project(
+                        id,
+                        FRANKENSTEIN,
+                        BookFormat.EPUB,
+                        "hash-1",
+                        BookBrief.defaults("en").withLanguages("en", "uk"),
+                        name,
+                        origin,
+                        "Frankenstein",
+                        Instant.EPOCH,
+                        Instant.EPOCH),
+                0);
+    }
+
+    private void listTwoProjectsOfOnePair() {
+        projects.willList(List.of(
+                summary("auto", "Frankenstein · EN → UK", NameOrigin.AUTO),
+                summary("p1", "Frankenstein · 26b max", NameOrigin.USER)));
+    }
+
+    // IF the label were not asked of the stored projects, THEN a second translation of one pair would replace the
+    // first.
+    @Test
+    void destination_namedProjectSharingItsPair_gainsTheLabelOnceTheListArrives() {
+        listTwoProjectsOfOnePair();
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+
+        assertThat(destination())
+                .isEqualTo(Path.of("/books/Frankenstein.uk.26b-max.epub").toString());
+    }
+
+    // IF the first proposal waited for the list, THEN the field would be empty while the stored projects are read.
+    @Test
+    void destination_listNotAnsweredYet_isProposedWithoutALabelThenLabelledOnArrival() {
+        listTwoProjectsOfOnePair();
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+        final ManualExecutor manual = new ManualExecutor();
+        exports = onFx(() -> newExports(manual));
+        WaitForAsyncUtils.waitForFxEvents();
+        final String before = destination();
+
+        manual.runAll();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(before).isEqualTo(Path.of("/books/Frankenstein.uk.epub").toString());
+        assertThat(destination())
+                .isEqualTo(Path.of("/books/Frankenstein.uk.26b-max.epub").toString());
+    }
+
+    // IF the late label overwrote a path typed meanwhile, THEN a person's choice would silently be undone.
+    @Test
+    void destination_editedByHandBeforeTheListArrives_isNotOverwrittenByTheLabel() {
+        listTwoProjectsOfOnePair();
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+        final ManualExecutor manual = new ManualExecutor();
+        exports = onFx(() -> newExports(manual));
+        WaitForAsyncUtils.waitForFxEvents();
+        editDestination("/archive/out.epub");
+
+        manual.runAll();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(destination()).isEqualTo("/archive/out.epub");
+    }
+
+    // IF a project alone with its pair were labelled, THEN its file would differ from the command line's.
+    @Test
+    void destination_namedProjectAloneWithItsPair_hasNoLabel() {
+        projects.willList(List.of(summary("p1", "Frankenstein · 26b max", NameOrigin.USER)));
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+
+        assertThat(destination())
+                .isEqualTo(Path.of("/books/Frankenstein.uk.epub").toString());
     }
 }

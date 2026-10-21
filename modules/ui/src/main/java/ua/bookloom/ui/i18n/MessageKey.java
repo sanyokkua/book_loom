@@ -786,6 +786,14 @@ public enum MessageKey {
     EXPORT_BOOK_AUTHOR_TIP("export.bookAuthor.tip"),
     /** Line under a title or author field naming the text the book carries, with that text as the argument. */
     EXPORT_BOOK_TITLE_SOURCE("export.bookTitle.source"),
+    /** Reason line under the original title: it comes from the book's details. */
+    EXPORT_BOOK_TITLE_FROM_DETAILS("export.bookTitle.fromDetails"),
+    /** Reason line under the original title: it comes from a Markdown book's front matter. */
+    EXPORT_BOOK_TITLE_FROM_FRONT_MATTER("export.bookTitle.fromFrontMatter"),
+    /** Reason line under the original title: it comes from a Markdown book's first heading. */
+    EXPORT_BOOK_TITLE_FROM_HEADING("export.bookTitle.fromHeading"),
+    /** Reason line under the original title: the book names none and its file name stands in. */
+    EXPORT_BOOK_TITLE_FROM_FILE_NAME("export.bookTitle.fromFileName"),
     /** Hint under the title and author fields saying when they fill and that an edit reaches every place. */
     EXPORT_BOOK_TITLE_HINT("export.bookTitle.hint"),
     /** Quality option: fastest. */

@@ -483,13 +483,15 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: env set wins; env unset → stored; nothing → Unattended; a stored change applies to the next start and a
     run in progress keeps its mode; a retry reads the current mode.
   - Verify: `./gradlew build`. → :pipeline, :ui, :app
-- [ ] 4.8c Give every format a title by a fixed order, and give a named project's exports their own file names.
+- [x] 4.8c Give every format a title by a fixed order, and give a named project's exports their own file names.
   - **Satisfies:** export "Take the original title in a fixed order and say where it came from"; export "Name the
     proposed file as the command line names its output"
-  - Design K8: `BookTitleViewModel` and `FileNameTargets` take the metadata title, then Markdown front matter
+  - Design K8: `ReviewDesk.originalTitle` (so `BookTitleViewModel` and `FileNameTargets`) takes a non-blank `aux:title`
+    on a non-Markdown book, then Markdown front matter
     (`aux:fm:title`, `document/md/MarkdownAuxiliary.java:99`), then the first Markdown heading, then the file name
     without its extension; each step gives a reason line.
-  - `ExportPathRules` appends the named project's suffix.
+  - `ProjectFileLabel` and `DestinationPath` (shared with the command line; `ExportPathRules` only refuses) add the
+    named project's label after the language.
   - Tests: a Markdown front-matter title, a Markdown first heading, a TXT file `earth-gravity.txt` → "earth-gravity";
     two projects of one book and pair → `earth-gravity.uk.md` and `earth-gravity.uk.26b-max.md`.
   - Edit FR-REVIEW-01 and FR-EXPORT-04 in `01_FUNCTIONAL_REQUIREMENTS.md`. → :pipeline, :ui, docs

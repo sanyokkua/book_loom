@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 
 /**
@@ -28,13 +29,27 @@ public final class DestinationPath {
      * @return the destination path, relative when {@code source} has no parent directory
      */
     public static Path destinationFor(Path source, BookFormat format, String targetLanguage) {
+        return destinationFor(source, format, targetLanguage, null);
+    }
+
+    /**
+     * Places the target language, then an optional label, before the format's real suffix.
+     *
+     * @param source the source book path; its file name must end with a suffix of {@code format}
+     * @param format the format the source was recognised as
+     * @param targetLanguage the language tag inserted into the file name
+     * @param label the project label inserted after the language, or null for none
+     * @return the destination path, relative when {@code source} has no parent directory
+     */
+    public static Path destinationFor(Path source, BookFormat format, String targetLanguage, @Nullable String label) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(format, "format");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         final String fileName = Objects.requireNonNull(source.getFileName()).toString();
         final String suffix = format.matchedSuffix(fileName);
+        final String tag = label == null ? "" : "." + label;
         final String outputName =
-                fileName.substring(0, fileName.length() - suffix.length()) + "." + targetLanguage + suffix;
+                fileName.substring(0, fileName.length() - suffix.length()) + "." + targetLanguage + tag + suffix;
         final Path parent = source.getParent();
         return parent == null ? Path.of(outputName) : parent.resolve(outputName);
     }

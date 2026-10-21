@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -37,17 +36,14 @@ import ua.bookloom.api.project.Project;
  */
 public final class ScriptedProjectService implements ProjectService {
 
-    private static final String ID_PREFIX = "id:";
+    static final String ID_PREFIX = "id:";
 
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
+    private final ScriptedListing listing = new ScriptedListing();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
     private final List<Path> opens = new CopyOnWriteArrayList<>();
     private final Map<Path, Result<ProjectOpening>> openings = new ConcurrentHashMap<>();
     private final List<String> removed = new CopyOnWriteArrayList<>();
-    private final AtomicInteger listCalls = new AtomicInteger();
-    private final List<Boolean> listOnFxThread = new CopyOnWriteArrayList<>();
-    private final Map<Path, Integer> decided = new ConcurrentHashMap<>();
-    private volatile @Nullable AppError decidedFailure;
     private final List<Boolean> importsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<BookBrief> briefs = new CopyOnWriteArrayList<>();
     private final List<Boolean> briefsOnFxThread = new CopyOnWriteArrayList<>();
@@ -175,16 +171,7 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<List<ProjectSummary>> list() {
-        listCalls.incrementAndGet();
-        listOnFxThread.add(Platform.isFxApplicationThread());
-        final AppError failed = decidedFailure;
-        if (failed != null) {
-            return Result.err(failed);
-        }
-        return Result.ok(decided.entrySet().stream()
-                .map(entry ->
-                        new ProjectSummary(projectOf(ID_PREFIX + entry.getKey(), entry.getKey()), entry.getValue()))
-                .toList());
+        return listing.list();
     }
 
     @Override
@@ -234,24 +221,29 @@ public final class ScriptedProjectService implements ProjectService {
         return projectOf(ID_PREFIX + source, source);
     }
 
+    /** From now on {@link #list} answers exactly these summaries, whatever else was scripted. */
+    public void willList(final List<ProjectSummary> summaries) {
+        listing.willList(summaries);
+    }
+
     /** From now on {@link #list} reports a project for {@code source} with {@code count} decided segments. */
     public void onDecided(final Path source, final int count) {
-        decided.put(Objects.requireNonNull(source, "source"), count);
+        listing.decide(source, count);
     }
 
     /** From now on answers every {@link #list} with {@code failure}. */
     public void failDecidedWith(final AppError failure) {
-        decidedFailure = Objects.requireNonNull(failure, "failure");
+        listing.failWith(failure);
     }
 
     /** How many times {@link #list} was asked. */
     public int listCalls() {
-        return listCalls.get();
+        return listing.calls();
     }
 
     /** For each {@link #list}, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> listCallsOnFxThread() {
-        return List.copyOf(listOnFxThread);
+        return listing.onFxThread();
     }
 
     /** The source of every {@link #open}, in call order. */

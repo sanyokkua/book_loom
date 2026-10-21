@@ -32,6 +32,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.project.OriginalTitles;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -188,8 +189,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         user.put("fileName", stem);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        final FileNameTargets targets =
-                FileNameTargets.of(segments, book.project().id());
+        final FileNameTargets targets = FileNameTargets.of(
+                segments,
+                book.project().id(),
+                OriginalTitles.of(book.document(), book.project()).segmentId());
         Optional.ofNullable(targets.title()).ifPresent(title -> user.put("titleTarget", title));
         Optional.ofNullable(targets.author()).ifPresent(author -> user.put("authorTarget", author));
         return askFileName(book, user, calls)
