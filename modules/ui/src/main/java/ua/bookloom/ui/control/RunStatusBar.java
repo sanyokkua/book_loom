@@ -128,6 +128,7 @@ public final class RunStatusBar {
         Tips.install(messages, rate, MessageKey.SHELL_RUN_RATE_TIP);
         fileName.setMinWidth(0);
         fileName.setTextOverrun(OverrunStyle.ELLIPSIS);
+        Overrun.install(fileName);
         for (final Label part : new Label[] {stateText, modeText, elapsed, timeLeft, rate}) {
             part.setMinWidth(Region.USE_PREF_SIZE);
         }

@@ -59,6 +59,10 @@ final class TranslatingDashboard {
         return root;
     }
 
+    Node bannerNode() {
+        return banner.banner();
+    }
+
     /**
      * Words the banner from the notice when there is one, else from the run state, else from the wait.
      *

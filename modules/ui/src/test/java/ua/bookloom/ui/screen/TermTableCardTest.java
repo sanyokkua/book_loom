@@ -72,12 +72,12 @@ class TermTableCardTest extends TermTableCardTestBase {
     @CsvSource({
         "en, 960, 640, names-style",
         "en, 960, 640, recurring",
-        "en, 1024, 700, names-style",
-        "en, 1024, 700, recurring",
+        "en, 980, 700, names-style",
+        "en, 980, 700, recurring",
         "uk, 960, 640, names-style",
         "uk, 960, 640, recurring",
-        "uk, 1024, 700, names-style",
-        "uk, 1024, 700, recurring"
+        "uk, 980, 700, names-style",
+        "uk, 980, 700, recurring"
     })
     void toolbar_narrowCard_foldsImportAndExportIntoTheMenuAndKeepsTheRest(
             final String tag, final double width, final double height, final String card) throws Exception {

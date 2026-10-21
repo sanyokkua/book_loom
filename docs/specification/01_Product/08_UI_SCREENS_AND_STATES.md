@@ -66,14 +66,14 @@ model-work chip and every run part shown at once) nothing is cut or drawn over a
 (ellipsis, down to about twenty characters), then the run parts are hidden whole in this order — the tokens-per-second
 rate, the mode, the time left, the elapsed time — and only then does the file name shrink further; the state text, the
 connection chip, the control, the model-work chip with its Stop, the product name, the theme toggle and About always
-keep their words whole, and a wider window brings the hidden parts back (`TitleBarFitTest`).
+keep their words whole, and a wider window brings the hidden parts back (`LayoutFitTest`).
 
 **Planned.** The title bar reads, left to right: product name · the **activity chip** of hidden work (`ActivityChip`,
 for example "▬ Names · 53 % · open") · while a project is open, the project name · the run state text from the run-state
 table (`#run-states`, for example "51 % done · about 1 h 10 min left") · the quality dial and review mode · while
 translating, elapsed time and speed (the title bar keeps "9.4 tok/s", tooltip "how fast the model writes") · the
 **AI-model chip** (colour by G11) · Pause / Resume. Items give way by priority; the mockup README gives "window ≤ 1280
-hides dial, elapsed and speed; ≤ 1060 hides the name", and `TitleBarFitTest` is extended (also under `uk`, L10). The
+hides dial, elapsed and speed; ≤ 1060 hides the name", and `LayoutFitTest` covers it (also under `uk`, L10). The
 project's name shows in the title bar, not in the sidebar (G6).
 
 ### Background work and the progress dialog {#busy-card}
@@ -216,7 +216,7 @@ so the rules are Java (mockup README, "Layout and sizes"):
 | **L7** | Stacks in compact: Names & style's two cards; the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export); four tiles go 2 × 2 | Region width rules (`TwoColumns`), `GridPane` constraints |
 | **L8** | Truncation: one-line text is cut with an ellipsis and gets a tooltip only when it is cut; long text wraps in detail panes and dialogs | `Overrun` helper on `Labeled` |
 | **L9** | Nav width 236 px, or 200 px when the window is narrower than 1200 px; no icon rail | `NavColumn` pref width |
-| **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` | `LayoutFitTest` extending `TitleBarFitTest`'s pattern, at 960×640 and 1920×1080, in `en` and `uk` |
+| **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` | `LayoutFitTest` (it absorbed the former title-bar fit test), at 960×640 and 1920×1080 (1000 high in the headless platform), in `en` and `uk` |
 
 Built today, the same intent is met screen by screen: `TwoColumns` switches by its own width (Import 760 px, Book Brief
 700 px, Names & style 1040 px), and the 960 × 640 fit above holds.

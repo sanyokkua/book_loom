@@ -24,6 +24,7 @@ import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.SectionMemory;
+import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
@@ -40,6 +41,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @Slf4j
 public final class TranslatingController {
 
+    private static final String BANNER_KEY = "translating";
+
     private final TranslatingViewModel viewModel;
     private final StateMirror mirror;
     private final Messages messages;
@@ -53,6 +56,7 @@ public final class TranslatingController {
     private final SectionMemory sections;
     private final NarratorDialog narratorDialog;
     private final ConfirmDialog confirm;
+    private final ShellBanners banners;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -81,6 +85,7 @@ public final class TranslatingController {
      * @param sections the session's memory of which sections the person left open
      * @param narratorDialog the question asked before a start when the book is told in the first person
      * @param confirm the question asked before the run is stopped
+     * @param banners the slot the shell pins the run's banner in while this screen is shown
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -98,7 +103,8 @@ public final class TranslatingController {
             final RunInterventions interventions,
             final SectionMemory sections,
             final NarratorDialog narratorDialog,
-            final ConfirmDialog confirm) {
+            final ConfirmDialog confirm,
+            final ShellBanners banners) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -112,6 +118,7 @@ public final class TranslatingController {
         this.sections = Objects.requireNonNull(sections, "sections");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
+        this.banners = Objects.requireNonNull(banners, "banners");
     }
 
     private TranslatingView.Exits exits() {
@@ -133,6 +140,7 @@ public final class TranslatingController {
         viewModel.refreshPending();
         review.refreshCount();
         host.getChildren().setAll(dashboard.root());
+        pinBannerWhileShown();
         host.getProperties().put(TranslatingController.class, this);
         mirror.runState().addListener(new WeakChangeListener<>(onState));
         viewModel.notice().addListener(new WeakChangeListener<>(onNotice));
@@ -145,6 +153,19 @@ public final class TranslatingController {
                 mirror.runState().get(),
                 viewModel.notice().get(),
                 mirror.waitingSeconds().get());
+    }
+
+    // The banner sits in the shell's slot only while this screen is in a scene, which is what it did when it was part
+    // of
+    // the page: leaving the screen takes it away.
+    private void pinBannerWhileShown() {
+        host.sceneProperty().addListener((observed, was, scene) -> {
+            if (scene == null) {
+                banners.withdraw(BANNER_KEY);
+            } else {
+                banners.publish(BANNER_KEY, dashboard.bannerNode());
+            }
+        });
     }
 
     private void renderState(final RunState state) {

@@ -389,6 +389,14 @@
     -fx-max-width: 236px;
 }
 
+/* Under a 1200-pixel window the column narrows to 200 (the shell sets `narrow` from the scene width). */
+.shell-nav:narrow,
+.shell-nav:narrow:focused {
+    -fx-min-width: 200px;
+    -fx-pref-width: 200px;
+    -fx-max-width: 200px;
+}
+
 .nav-scroll > .viewport {
     -fx-background-color: transparent;
 }
@@ -576,6 +584,25 @@
 .shell-content {
     -fx-background-color: -color-bg;
     -fx-padding: 22px 26px 40px 26px;
+}
+
+/* The pinned banner slot: no padding while empty, so it takes no height; the banners never scroll with the page. */
+.shell-banners {
+    -fx-background-color: -color-bg;
+}
+
+.shell-banners.filled {
+    -fx-spacing: 8px;
+    -fx-padding: 14px 26px 0 26px;
+}
+
+/* Form and list screens stop at 1320 px and are centred by the shell; prose and hints stop at 680 px. */
+.content-capped {
+    -fx-max-width: 1320px;
+}
+
+.prose {
+    -fx-max-width: 680px;
 }
 
 /* The content area scrolls when a screen is taller or wider than the window; the pane is a frame that paints the */

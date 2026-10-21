@@ -7,7 +7,9 @@ import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -50,6 +52,8 @@ final class NavColumn {
     private static final String LOCKED_STYLE_CLASS = "nav-item-locked";
     private static final String DONE_STYLE_CLASS = "nav-step-done";
     private static final String NO_TEXT = "";
+    private static final PseudoClass NARROW = PseudoClass.getPseudoClass("narrow");
+    private static final double NARROW_BELOW = 1200;
 
     private final Messages messages;
     private final StepLocks locks;
@@ -102,7 +106,27 @@ final class NavColumn {
         scroll.setFitToHeight(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        followWindowWidth();
         log.debug("built navigation column with {} entries", entries.size());
+    }
+
+    // The column is 236 pixels wide, or 200 while the window is narrower than 1200 (the stylesheet reads `narrow`).
+    // Not logged: the width changes on every step of a window drag.
+    private void followWindowWidth() {
+        final ChangeListener<Number> follow = (observed, was, now) -> markNarrow(now.doubleValue());
+        scroll.sceneProperty().addListener((observed, was, scene) -> {
+            if (was != null) {
+                was.widthProperty().removeListener(follow);
+            }
+            if (scene != null) {
+                scene.widthProperty().addListener(follow);
+                markNarrow(scene.getWidth());
+            }
+        });
+    }
+
+    private void markNarrow(final double windowWidth) {
+        scroll.pseudoClassStateChanged(NARROW, windowWidth < NARROW_BELOW);
     }
 
     /**

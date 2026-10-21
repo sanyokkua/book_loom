@@ -12,9 +12,9 @@
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-      fx:controller="ua.bookloom.ui.screen.SettingsController" id="settings-screen" spacing="14">
+      fx:controller="ua.bookloom.ui.screen.SettingsController" id="settings-screen" styleClass="fills-viewport, content-capped" spacing="14">
     <Label id="settings-title" styleClass="screen-title" text="%settings.title"/>
-    <Label id="settings-subtitle" styleClass="muted" wrapText="true" text="%settings.subtitle"/>
+    <Label id="settings-subtitle" styleClass="muted, prose" wrapText="true" text="%settings.subtitle"/>
     <TabPane id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
         <Tab id="settings-tab-providers" text="%settings.tab.providers">
             <HBox spacing="14" alignment="TOP_LEFT">

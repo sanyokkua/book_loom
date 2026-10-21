@@ -607,7 +607,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Edit FR-NOTIF-01, `09_THEMING.md` (palette scrollbars, a new FR-THEME-13 for the scrollbar, link and selected-bar
     rules; FR-THEME-11 and -12 are taken) and `11_NOTIFICATIONS_AND_ERRORS.md` if a line still says bottom-centre.
     → :ui, docs
-- [ ] 5.6 Add width classes, the overrun tooltip, the pinned banner slot, the fill-the-window opt-out and the content
+- [x] 5.6 Add width classes, the overrun tooltip, the pinned banner slot, the fill-the-window opt-out and the content
   caps, so every screen lays out by its own width and fits from 960×640 to 1920×1080.
   - **Satisfies:** app-shell "Fit the layout to the width of the content area"; app-shell "Keep list and detail side by
     side and stack cards where they do not fit"; app-shell "Let four screens fill the window's height"; app-shell "Cut

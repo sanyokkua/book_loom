@@ -184,7 +184,7 @@ The window minimum is 960x640 (`AppShellView`). JavaFX has no media queries, so 
   - An `Overrun` helper on `Labeled`: one-line text is cut with an ellipsis and gets a tooltip only when it is cut
     (L8).
   - A `LayoutFitTest` that checks the title bar, toolbar, dialog footers and narrow segmented controls at 960x640 and
-    1920x1080, in `en` and `uk` (L10; it extends the pattern of `TitleBarFitTest`).
+    1920x1080, in `en` and `uk` (L10; it absorbed the former `TitleBarFitTest`).
 
 ## theming {#theming}
 

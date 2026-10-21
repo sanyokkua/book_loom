@@ -18,6 +18,9 @@ import ua.bookloom.ui.theme.ThemeMode;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ConformanceCases {
 
+    // The run's banner is pinned in the shell's slot, not drawn inside the screen.
+    private static final String BANNER = "#shell-banners #translating-banner";
+
     /** What a role is painted onto: the fill behind a part, or the line drawn around it. */
     enum Kind {
         BACKGROUND,
@@ -248,8 +251,8 @@ final class ConformanceCases {
                     List.of(
                             new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                            new Part(BANNER, Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part(BANNER, Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             // Running: the bar's track surface-2 and its fill the primary, the tiles, the live panel and the log.
             new Screen(
                     "TRANSLATING_RUNNING",
@@ -294,8 +297,8 @@ final class ConformanceCases {
                                     "border",
                                     "#ddd5c8",
                                     "#48585f"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                            new Part(BANNER, Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part(BANNER, Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             new Screen(
                     "TRANSLATING_COMPLETED",
                     ViewNames.TRANSLATING,
@@ -310,8 +313,8 @@ final class ConformanceCases {
                                     "surface",
                                     "#ffffff",
                                     "#33424a"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
-                            new Part("#translating-banner", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
+                            new Part(BANNER, Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
+                            new Part(BANNER, Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
             // The review panel open beside a paused run: its card on the surface role, the judge badge on surface-2.
             new Screen(
                     "TRANSLATING_REVIEW",
@@ -334,8 +337,8 @@ final class ConformanceCases {
                     Preparation.RUN_PROVIDER_FAILED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#translating-banner", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
+                            new Part(BANNER, Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part(BANNER, Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
                             new Part("#translating-progress > .bar", Kind.BACKGROUND, "err", "#b0574c", "#cc7a6f"))),
             // A run that waits for the provider by itself is a warning, not an error: it will go on without the person.
             new Screen(
@@ -344,8 +347,8 @@ final class ConformanceCases {
                     Preparation.RUN_WAITING_FOR_PROVIDER,
                     Overlay.NONE,
                     List.of(
-                            new Part("#translating-banner", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
-                            new Part("#translating-banner", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
+                            new Part(BANNER, Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part(BANNER, Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
             // consistency track on the cool border role. It needs an open book to show them; the finished state
             // follows a real export.

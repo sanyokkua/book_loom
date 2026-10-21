@@ -10,15 +10,21 @@ import java.util.function.Supplier;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.RunMode;
@@ -28,11 +34,14 @@ import ua.bookloom.ui.state.Throughput;
 import ua.bookloom.ui.theme.ThemeMode;
 
 /**
- * The title bar at the smallest window with everything in it at once — a long book name, a model scan with Stop, the
+ * The window's chrome at its smallest and at a full-HD size, in English and Ukrainian: the toolbar's actions are whole
+ * and inside the toolbar, and a dialog stays inside the window.
+ *
+ * <p>Also the title bar at the smallest window with everything in it at once — a long book name, a model scan with Stop, the
  * run's state, mode, times, rate and connection, the theme toggle and About: nothing is cut or overlaps; the book name
  * gives way first, then the least important run parts are hidden whole, rate first, and a wide window shows them all.
  */
-class TitleBarFitTest extends ShellTestBase {
+class LayoutFitTest extends ShellTestBase {
 
     private static final double PART_TOLERANCE = 0.5;
     private static final double TEXT_RATIO = 4.5;
@@ -45,6 +54,8 @@ class TitleBarFitTest extends ShellTestBase {
     private static final List<String> DROP_ORDER =
             List.of("shell-run-rate", "shell-run-mode", "shell-run-left", "shell-run-elapsed");
 
+    // The full-HD size runs 1920 wide by 700 high here: JavaFX's headless screen is a 1000 by 1000 pixel buffer, and a
+    // window whose rows run past it makes the blit fail and takes the toolkit down with it.
     private Bounds sceneBounds(final Node node) {
         return node.localToScene(node.getLayoutBounds());
     }
@@ -68,6 +79,77 @@ class TitleBarFitTest extends ShellTestBase {
                     .requests(12);
         });
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF a toolbar action were cut or pushed past the edge, THEN the person could not read or press it; Ukrainian
+    // labels are about a quarter longer, so both languages run at both sizes.
+    @ParameterizedTest
+    @CsvSource({
+        "en, " + CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT,
+        "uk, " + CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT,
+        "en, 1920, 700",
+        "uk, 1920, 700"
+    })
+    void toolbar_stepActionsAtEachSize_showEveryActionWholeInsideTheBar(
+            final String language, final double width, final double height) {
+        fillTheTitleBar(language);
+        mountNamesStyleFooter();
+        resizeScene(width, height);
+
+        final Bounds bar = sceneBounds(required("shell-actions"));
+        final Bounds toolbar = sceneBounds(required("shell-breadcrumb").getParent());
+        final List<Node> actions = onFxList(() -> shownParts(required("shell-actions")));
+
+        assertThat(actions).as("the step offers its actions in the toolbar").isNotEmpty();
+        assertThat(cutParts(actions))
+                .as("actions shown shorter than their words")
+                .isEmpty();
+        assertThat(overlaps(actions)).as("actions drawn over each other").isEmpty();
+        assertThat(bar.getMaxX()).isLessThanOrEqualTo(toolbar.getMaxX());
+        assertThat(sceneBounds(required("shell-breadcrumb")).getMaxX()).isLessThanOrEqualTo(bar.getMinX());
+    }
+
+    // The longest pair of step actions the screens offer (Back with its destination, and Start), worded as the Names &
+    // style screen words them; the screens themselves need an open book, which a shell-only test has not got.
+    private void mountNamesStyleFooter() {
+        final Messages messages = injector.getInstance(Messages.class);
+        final StepFooter footer = StepFooter.of(
+                new StepFooter.Action(
+                        "probe-back",
+                        messages.get(MessageKey.NAMES_STYLE_BACK),
+                        messages.get(MessageKey.NAMES_STYLE_BACK_TIP),
+                        "btn-secondary",
+                        () -> {}),
+                new StepFooter.Action(
+                        "probe-start",
+                        messages.get(MessageKey.NAMES_STYLE_START),
+                        messages.get(MessageKey.NAMES_STYLE_START_TIP),
+                        "btn-primary",
+                        () -> {}));
+        onFx(() -> ((Pane) required("shell-content")).getChildren().add(footer));
+    }
+
+    // IF a dialog were placed or sized past the window's edge, THEN its buttons would be out of reach.
+    @ParameterizedTest
+    @CsvSource({
+        "en, " + CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT,
+        "uk, " + CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT,
+        "en, 1920, 700",
+        "uk, 1920, 700"
+    })
+    void dialog_aboutAtEachSize_staysInsideTheWindow(final String language, final double width, final double height) {
+        useLocale(Locale.forLanguageTag(language));
+        resizeScene(width, height);
+        onFx(() -> ((Button) required("shell-about")).fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        final List<Bounds> cards = onFxBounds(() -> scene.getRoot().lookupAll(".dialog-card"));
+
+        assertThat(cards).isNotEmpty();
+        assertThat(cards).allSatisfy(card -> assertThat(card.getMinX()).isGreaterThanOrEqualTo(0));
+        assertThat(cards).allSatisfy(card -> assertThat(card.getMinY()).isGreaterThanOrEqualTo(0));
+        assertThat(cards).allSatisfy(card -> assertThat(card.getMaxX()).isLessThanOrEqualTo(width));
+        assertThat(cards).allSatisfy(card -> assertThat(card.getMaxY()).isLessThanOrEqualTo(height));
     }
 
     // IF a part were cut, squeezed into another or pushed past the edge, THEN the person could not read or reach it.
@@ -133,6 +215,11 @@ class TitleBarFitTest extends ShellTestBase {
                 ThemeTestSupport.onFx(() -> Contrast.ratio((Color) text.getTextFill(), Contrast.surfaceBehind(text)));
 
         assertThat(ratio).isGreaterThanOrEqualTo(TEXT_RATIO);
+    }
+
+    private List<Bounds> onFxBounds(final Supplier<java.util.Set<Node>> read) {
+        return ThemeTestSupport.onFx(
+                () -> read.get().stream().map(this::sceneBounds).toList());
     }
 
     private List<Node> onFxList(final Supplier<List<Node>> read) {

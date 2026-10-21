@@ -323,7 +323,7 @@ The window minimum is **960×640** (`AppShellView`). The mockup's CSS mirrors th
 | **L7** | **Stacks in compact**: Names & style's two cards (stacked below wide, since six columns need about 640 px); the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export); four tiles go 2 × 2 | Region width rules (`TwoColumns`), `GridPane` constraints |
 | **L8** | **Truncation**: one-line text is cut with an ellipsis **and** gets a tooltip only when it is cut (one overrun helper, R4-G4). Long text wraps in detail panes and dialogs. Nothing important is hidden behind a hover | A small `Overrun` helper on `Labeled` |
 | **L9** | **Nav width**: 236 px, or 200 px when the window is narrower than 1200 px. No icon rail | `NavColumn` pref width |
-| **L10** | **Ukrainian** labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` (JX-I2) | Extend `TitleBarFitTest`'s pattern into a `LayoutFitTest` |
+| **L10** | **Ukrainian** labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` (JX-I2) | `LayoutFitTest` (grown from the former title-bar fit test) |
 
 ---
 
@@ -447,7 +447,7 @@ banner (L3), the live panel's line and the markers of the current call's segment
 
 | Element | Behaviour | Code |
 |---|---|---|
-| **Title bar** | Product name · the **activity chip** of hidden work · while a project is open: the project name · the run state text from the Run states table ("51 % done · about 1 h 10 min left") · dial · review mode · while translating, elapsed and speed · the **AI-model chip** · Pause / Resume. Items give way by priority (window ≤ 1280 hides dial, elapsed and speed; ≤ 1060 hides the name) | `AppShellView` `#shell-title-bar`, `ActivityChip`, `control/RunStatusBar`, `ConnectionStatus`, `TitleBarFitTest` |
+| **Title bar** | Product name · the **activity chip** of hidden work · while a project is open: the project name · the run state text from the Run states table ("51 % done · about 1 h 10 min left") · dial · review mode · while translating, elapsed and speed · the **AI-model chip** · Pause / Resume. Items give way by priority (window ≤ 1280 hides dial, elapsed and speed; ≤ 1060 hides the name) | `AppShellView` `#shell-title-bar`, `ActivityChip`, `control/RunStatusBar`, `ConnectionStatus`, `LayoutFitTest` |
 | **Sidebar** | Brand · Workflow: Projects, steps 1–5 (number, or ✓ when done; locked without a project, G6) · Application: Settings · footer: AI program · model, with the tooltip "the one network destination"; its dot and text follow the same source as the AI-model chip (red "No AI model found", "Ollama · Cannot reach Ollama") | `NavColumn`, `ViewNames`, `#nav-footer` |
 | **Toolbar** | Breadcrumb "Workflow / Step · step n of 5" and the step's actions (L2) | `#shell-breadcrumb`, `StepFooter` in `#shell-actions` |
 | **Banner slot** | L3 | new `#shell-banners` |

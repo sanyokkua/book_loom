@@ -8,14 +8,14 @@
 <?import javafx.scene.layout.VBox?>
 
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-            fx:controller="ua.bookloom.ui.screen.ImportController" id="import-screen" styleClass="import-scroll"
+            fx:controller="ua.bookloom.ui.screen.ImportController" id="import-screen" styleClass="import-scroll, fills-viewport, content-capped"
             fitToWidth="true" hbarPolicy="NEVER">
     <VBox spacing="14">
         <padding>
             <Insets right="8"/>
         </padding>
         <Label id="import-title" styleClass="screen-title" text="%import.title"/>
-        <Label id="import-subtitle" styleClass="muted" wrapText="true" text="%import.subtitle"/>
+        <Label id="import-subtitle" styleClass="muted, prose" wrapText="true" text="%import.subtitle"/>
         <GridPane fx:id="dropzone" id="import-dropzone" styleClass="dropzone" alignment="CENTER">
             <Label fx:id="dropzoneGlyph" styleClass="dropzone-glyph" text="⬇"/>
             <Label fx:id="dropzoneTitle" styleClass="card-title" text="%import.dropzone.title"/>

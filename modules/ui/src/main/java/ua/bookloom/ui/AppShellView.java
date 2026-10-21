@@ -26,7 +26,10 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.ActivityChip;
+import ua.bookloom.ui.control.BannerSlot;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Motion;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.control.ScrollAnchor;
 import ua.bookloom.ui.control.SmoothScroll;
@@ -37,6 +40,7 @@ import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
 import ua.bookloom.ui.theme.MonoFont;
@@ -58,6 +62,10 @@ import ua.bookloom.ui.theme.ThemeController;
 public final class AppShellView {
 
     static final String REDUCED_MOTION_CLASS = "reduce-motion";
+
+    // Style classes a screen carries: its own minimum height instead of the height hold, and the content cap.
+    static final String FILLS_CLASS = "fills-viewport";
+    static final String CAPPED_CLASS = "content-capped";
 
     /**
      * The smallest <em>outer</em> window width. The content area that leaves a person is smaller (borders and title
@@ -92,6 +100,7 @@ public final class AppShellView {
     private final RunStatusBar runStatus;
     private final ActivityChip activityChip;
     private final DiagnosticActions diagnostics;
+    private final ShellBanners banners;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
     private final StackPane contentHost = new ContentHost();
@@ -116,6 +125,7 @@ public final class AppShellView {
      * @param settings the chosen provider and model the navigation footer names
      * @param locks which steps are closed, for the navigation to draw
      * @param diagnostics the log settings and actions the About dialog offers
+     * @param banners the run's banners, pinned between the toolbar and the content
      * @param version the build version the About dialog reports
      */
     @Inject
@@ -133,6 +143,7 @@ public final class AppShellView {
             final SettingsViewModel settings,
             final StepLocks locks,
             final DiagnosticActions diagnostics,
+            final ShellBanners banners,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -144,6 +155,7 @@ public final class AppShellView {
         this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
         this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
+        this.banners = Objects.requireNonNull(banners, "banners");
         this.version = Objects.requireNonNull(version, "version");
         this.navColumn = new NavColumn(messages, this::activate, progress, settings, locks);
     }
@@ -290,19 +302,21 @@ public final class AppShellView {
         actions.disableProperty().bind(activities.locking());
         breadcrumb.setMinWidth(0);
         breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
+        Overrun.install(breadcrumb);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         final ScrollPane scroll = configuredContentScroll();
         final StackPane contentArea = new StackPane(scroll);
         VBox.setVgrow(contentArea, Priority.ALWAYS);
-        return new VBox(toolbar, contentArea);
+        return new VBox(toolbar, new BannerSlot(banners), contentArea);
     }
 
     private ScrollPane configuredContentScroll() {
         contentHost.setId("shell-content");
         contentHost.getStyleClass().add("shell-content");
         contentHost.setAlignment(Pos.TOP_LEFT);
+        LayoutClass.install(contentHost);
         final ScrollPane scroll = contentScroll;
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
@@ -326,21 +340,29 @@ public final class AppShellView {
         breadcrumb.setText(current == null ? "" : crumb(current));
     }
 
-    // A screen that is not its own scroll pane is never squeezed below its preferred height: fitting the height clamps
-    // the content only to its minimum, which would otherwise crush lists and text areas into the window instead of
-    // letting the shell scroll. A screen that scrolls itself (import, brief) keeps fitting the window.
+    // A screen is held at its preferred height (fitting the height would crush its lists to their minimum); one with
+    // `fills-viewport` declares its own minimum, and one that scrolls itself fits the window. A capped one is centred.
     private void showContent(final @Nullable Node content) {
         if (content == null) {
             contentHost.getChildren().clear();
         } else {
             if (content instanceof Region region && !(content instanceof ScrollPane)) {
-                log.debug("screen {} keeps its preferred height; the shell scrolls it", content.getId());
-                region.setMinHeight(Region.USE_PREF_SIZE);
+                holdHeight(region);
             }
+            StackPane.setAlignment(
+                    content, content.getStyleClass().contains(CAPPED_CLASS) ? Pos.TOP_CENTER : Pos.TOP_LEFT);
             contentHost.getChildren().setAll(content);
             Motion.fadeIn(content, Motion.QUICK);
         }
         contentAnchor.reset();
+    }
+
+    private static void holdHeight(final Region region) {
+        final boolean fills = region.getStyleClass().contains(FILLS_CLASS);
+        log.debug("screen {} {}", region.getId(), fills ? "declares its own minimum" : "is held at its height");
+        if (!fills) {
+            region.setMinHeight(Region.USE_PREF_SIZE);
+        }
     }
 
     private String crumb(final ViewNames view) {

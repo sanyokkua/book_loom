@@ -160,7 +160,7 @@ final class TranslatingView {
         final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                head(banner, actions(viewModel, mirror, exits.review(), review, exits.dialogs(), messages)),
+                head(actions(viewModel, mirror, exits.review(), review, exits.dialogs(), messages)),
                 review,
                 StateVisibility.shownIn(
                         TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
@@ -173,9 +173,9 @@ final class TranslatingView {
         return new TranslatingDashboard(screen, banner, messages, mirror);
     }
 
-    // The run controls sit under the banner, so they stay in view above the live panel during a long stall.
-    private static Node head(final TranslatingDashboard.LiveBanner banner, final Node actions) {
-        final VBox head = new VBox(CARD_SPACING, banner.banner(), actions);
+    // The banner is not part of the page: the shell pins it above the scrolling content (TranslatingController).
+    private static Node head(final Node actions) {
+        final VBox head = new VBox(CARD_SPACING, actions);
         head.setId("translating-head");
         return head;
     }
