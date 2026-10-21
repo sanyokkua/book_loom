@@ -12,6 +12,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.pipeline.DisplayText;
@@ -173,14 +175,39 @@ public final class BatchDrafter {
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
                 : parser.parse(response.content(), items, sourceLanguage, targetLanguage, prompts.format());
+        calls.parsed(segmentIds, callItems(ids, segmentIds, reply));
         return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
+    }
+
+    /**
+     * Reads a reply as the items a call row shows: the expected ids in order, then any extra id. A gate refusal made
+     * later by the caller is not an item status, so it is not shown here.
+     */
+    private static List<CallItem> callItems(
+            final List<String> ids, final List<String> segmentIds, final BatchReply reply) {
+        final List<CallItem> expected = new ArrayList<>();
+        final List<CallItem> extra = new ArrayList<>();
+        for (final ItemOutcome outcome : reply.outcomes()) {
+            final int index = ids.indexOf(outcome.id());
+            final String target = outcome.target().isBlank() ? null : outcome.target();
+            final CallItem item = new CallItem(
+                    outcome.id(),
+                    index < 0 || index >= segmentIds.size() ? null : segmentIds.get(index),
+                    target,
+                    CallItemStatus.valueOf(outcome.status().name()),
+                    outcome.problems().stream().map(ItemProblem::name).toList());
+            (outcome.status() == ItemStatus.EXTRA ? extra : expected).add(item);
+        }
+        expected.addAll(extra);
+        return expected;
     }
 
     /**
      * Asks once more for the ids a readable reply left out, when it left out {@value #MIN_MISSING_TO_REASK} or more:
      * only those items go, with the same context, so the model has fewer to number and the rest of the reply is kept.
      * One id left out is not worth a call of its own, since its single-segment draft costs the same. A failed or
-     * unreadable second call changes nothing, so those ids fall back one by one as before.
+     * unreadable second call changes nothing, so those ids fall back one by one as before. Each call shows its own
+     * items: the first call keeps the missing ones marked, the second shows only the ids it was asked.
      *
      * @param context the non-null context the first call showed
      * @param items the non-null items of the first call

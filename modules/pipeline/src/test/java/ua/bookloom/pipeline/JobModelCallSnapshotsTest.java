@@ -23,6 +23,8 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
@@ -234,6 +236,81 @@ class JobModelCallSnapshotsTest {
     void noted_segmentNoCallDrafted_showsNothing() {
         callsOver(TranslationJobTestSupport.replies("x"))
                 .noted(new SegmentOutcomeNote("Book.md:9", SegmentOutcomeNote.Kind.ACCEPTED, ""));
+
+        assertThat(snapshots()).isEmpty();
+    }
+
+    private static CallItem item(final String id, final String segmentId, final CallItemStatus status) {
+        return new CallItem(id, segmentId, status == CallItemStatus.MISSING ? null : "Target " + id, status, List.of());
+    }
+
+    private static List<CallItem> fourItemsOneMissing() {
+        return List.of(
+                item("1", "Book.md:0", CallItemStatus.OK),
+                item("2", "Book.md:1", CallItemStatus.MISSING),
+                item("3", "Book.md:2", CallItemStatus.OK),
+                item("4", "Book.md:3", CallItemStatus.OK));
+    }
+
+    private static final List<String> FOUR_IDS = List.of("Book.md:0", "Book.md:1", "Book.md:2", "Book.md:3");
+
+    // IF a batch reply is parsed, THEN the call it answered is shown again with one item per id, the missing one
+    // marked.
+    @Test
+    void parsed_fourItemBatchOneMissing_snapshotCarriesFourItemsOneMissing() {
+        final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("x"));
+        calls.callAbout(CallKind.DRAFT, FOUR_IDS, REQUEST, BATCH);
+
+        calls.parsed(FOUR_IDS, fourItemsOneMissing());
+
+        assertThat(snapshots()).hasSize(3);
+        final CallSnapshot shown = snapshots().getLast();
+        assertThat(shown.callId()).isEqualTo(1L);
+        assertThat(shown.state()).isEqualTo(CallState.ANSWERED);
+        assertThat(shown.reply()).isEqualTo("{\"target\":\"x\"}");
+        assertThat(shown.items()).hasSize(4);
+        assertThat(shown.items())
+                .filteredOn(item -> item.status() == CallItemStatus.MISSING)
+                .extracting(CallItem::segmentId, CallItem::target)
+                .containsExactly(tuple("Book.md:1", null));
+        assertThat(shown.segments()).hasSize(4);
+    }
+
+    // The batch's outcome notes after the items still land on the same call, and the items stay on it.
+    @Test
+    void parsed_laterNote_keepsTheItems() {
+        final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("x"));
+        calls.callAbout(CallKind.DRAFT, FOUR_IDS, REQUEST, BATCH);
+        calls.parsed(FOUR_IDS, fourItemsOneMissing());
+
+        calls.noted(new SegmentOutcomeNote("Book.md:0", SegmentOutcomeNote.Kind.ADOPTED, ""));
+
+        assertThat(snapshots().getLast().items()).hasSize(4);
+        assertThat(snapshots().getLast().outcomes()).hasSize(1);
+    }
+
+    @Test
+    void parsed_afterTheSegmentWasDecided_showsNothingMore() {
+        final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("x"));
+        calls.callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
+        calls.noted(new SegmentOutcomeNote("Book.md:0", SegmentOutcomeNote.Kind.FLAGGED, "MISSING"));
+
+        calls.parsed(List.of("Book.md:0"), List.of(item("1", "Book.md:0", CallItemStatus.OK)));
+
+        assertThat(snapshots()).hasSize(3);
+    }
+
+    @Test
+    void parsed_noCallDrafted_showsNothing() {
+        callsOver(TranslationJobTestSupport.replies("x"))
+                .parsed(List.of("Book.md:9"), List.of(item("1", "Book.md:9", CallItemStatus.OK)));
+
+        assertThat(snapshots()).isEmpty();
+    }
+
+    @Test
+    void parsed_noSegmentIds_showsNothing() {
+        callsOver(TranslationJobTestSupport.replies("x")).parsed(List.of(), List.of());
 
         assertThat(snapshots()).isEmpty();
     }

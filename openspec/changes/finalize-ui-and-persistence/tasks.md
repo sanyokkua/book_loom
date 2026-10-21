@@ -370,7 +370,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - FR-INFER-09e already exists in `04_LLM_PROVIDERS_AND_MODELS.md:155`: widen it to every optional setting and 422,
     add a pointer from `01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`, and edit `09_ERROR_HANDLING.md` (a refused setting is
     not an error). → :llm, docs
-- [ ] 4.4 Put a batch reply's parsed items on its call snapshot, so each live row shows its own translation or why it
+- [x] 4.4 Put a batch reply's parsed items on its call snapshot, so each live row shows its own translation or why it
   fell back.
   - **Satisfies:** translation-pipeline "Send a batch reply's per-segment results to the rows"; translation-pipeline
     "Announce each batch item's result"

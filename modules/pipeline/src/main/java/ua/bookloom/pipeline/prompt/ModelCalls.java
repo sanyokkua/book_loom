@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
@@ -66,6 +67,17 @@ public interface ModelCalls {
      * @param note the non-null outcome
      */
     default void noted(final SegmentOutcomeNote note) {
+        // Nothing shows calls.
+    }
+
+    /**
+     * Shows what a batch reply held for each expected id, on the call that was sent. A seam that shows nothing ignores
+     * it.
+     *
+     * @param segmentIds the segments the batch call was about, in item order; never null
+     * @param items the non-null items the reply was read as, one per expected id then any extra id
+     */
+    default void parsed(final List<String> segmentIds, final List<CallItem> items) {
         // Nothing shows calls.
     }
 

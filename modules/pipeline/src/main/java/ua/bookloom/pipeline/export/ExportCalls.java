@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
@@ -60,6 +61,11 @@ final class ExportCalls implements ModelCalls {
             final ChatRequest request,
             final CallDescriptor descriptor) {
         return guarded(kind, () -> delegate.callAbout(kind, segmentIds, request, descriptor));
+    }
+
+    @Override
+    public void parsed(final List<String> segmentIds, final List<CallItem> items) {
+        delegate.parsed(segmentIds, items);
     }
 
     @Override

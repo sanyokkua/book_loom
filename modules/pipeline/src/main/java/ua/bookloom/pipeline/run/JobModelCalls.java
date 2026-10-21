@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
@@ -170,6 +171,11 @@ public final class JobModelCalls implements ModelCalls {
     @Override
     public void noted(final SegmentOutcomeNote note) {
         snapshots.noted(note);
+    }
+
+    @Override
+    public void parsed(final List<String> segmentIds, final List<CallItem> items) {
+        snapshots.parsed(segmentIds, items);
     }
 
     private Result<ChatResponse> send(
