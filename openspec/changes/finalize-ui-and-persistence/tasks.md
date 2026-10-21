@@ -495,7 +495,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: a Markdown front-matter title, a Markdown first heading, a TXT file `earth-gravity.txt` → "earth-gravity";
     two projects of one book and pair → `earth-gravity.uk.md` and `earth-gravity.uk.26b-max.md`.
   - Edit FR-REVIEW-01 and FR-EXPORT-04 in `01_FUNCTIONAL_REQUIREMENTS.md`. → :pipeline, :ui, docs
-- [ ] 4.9 Prove a translation continues after a restart over the real SQLite store, so "Ready to continue" rests on a
+- [x] 4.9 Prove a translation continues after a restart over the real SQLite store, so "Ready to continue" rests on a
   test and not on inspection. Depends on group 3.
   - **Satisfies:** resume "Reopen an unfinished project as ready to continue"; resume "Never continue a translation by
     itself"; resume "Continue at the first segment not yet decided"; resume "Treat a run stored as running or paused as

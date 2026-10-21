@@ -8,22 +8,14 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 
 import java.lang.reflect.Proxy;
-import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.IntConsumer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -40,21 +32,7 @@ import ua.bookloom.pipeline.run.RunStores;
  * resumes when a probe passes, spends a segment's budget only on what is the segment's fault, and leaves a person in
  * charge once they act or once the outage outlasts twelve hours. Every wait is replayed on a scripted clock.
  */
-class TranslationJobUnattendedRecoveryTest {
-
-    private static final RunTicks NO_TICKS = (period, tick) -> () -> {};
-
-    @TempDir
-    private Path tempDir;
-
-    private final ScriptedClock clock = new ScriptedClock();
-    private final List<JobEvent> events = new CopyOnWriteArrayList<>();
-    private final AtomicInteger probes = new AtomicInteger();
-
-    @AfterEach
-    void cleanUpWorkers() {
-        TranslationJobTestSupport.shutdownAll();
-    }
+class TranslationJobUnattendedRecoveryTest extends UnattendedRecoveryHarness {
 
     // Wakes at 0:15, 0:45, 1:45, 3:45, 8:45 and 18:45 find the provider down; the seventh, at 28:45, finds it back.
     @Test
@@ -297,41 +275,6 @@ class TranslationJobUnattendedRecoveryTest {
                 .satisfies(error -> assertThat(error.message()).contains("before it began"));
     }
 
-    private TranslationJobImpl job(final ScriptedChatModel model, final IntConsumer onWait) {
-        final AtomicInteger waitsSoFar = new AtomicInteger();
-        final RecoveryTimer timer = delay -> {
-            clock.advance(delay);
-            onWait.accept(waitsSoFar.incrementAndGet());
-            return 0;
-        };
-        final TranslationJobImpl job = timedJob(project(book(), brief("en", "uk")), model, clock, timer, NO_TICKS);
-        job.subscribe(events::add);
-        return job;
-    }
-
-    private ua.bookloom.api.pipeline.ProviderProbe downFor(final Duration outage) {
-        return () -> {
-            probes.incrementAndGet();
-            return clock.sinceStart().compareTo(outage) >= 0
-                    ? Result.ok(Duration.ofMillis(40))
-                    : Result.err(AppError.of(ErrorCode.unreachable, "Down", "The scripted provider is down."));
-        };
-    }
-
-    private List<RecoveryWaiting> waits() {
-        return events.stream()
-                .filter(RecoveryWaiting.class::isInstance)
-                .map(RecoveryWaiting.class::cast)
-                .toList();
-    }
-
-    private List<Paused> pauses() {
-        return events.stream()
-                .filter(Paused.class::isInstance)
-                .map(Paused.class::cast)
-                .toList();
-    }
-
     private static void stopOnHold(final TranslationJobImpl job, final JobEvent event) {
         if (event instanceof RecoveryWaiting waiting && waiting.status() != RecoveryWaiting.Status.WAITING) {
             job.cancel();
@@ -362,10 +305,6 @@ class TranslationJobUnattendedRecoveryTest {
         }
     }
 
-    private Path book() {
-        return TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree.");
-    }
-
     private static TestProject withBrokenGlossary(final TestProject project, final RuntimeException fault) {
         final GlossaryRepository broken = (GlossaryRepository) Proxy.newProxyInstance(
                 GlossaryRepository.class.getClassLoader(),
@@ -388,13 +327,5 @@ class TranslationJobUnattendedRecoveryTest {
                         stores.lexicon()),
                 project.documents(),
                 project.deferrals());
-    }
-
-    private static Result<ChatResponse> error(final ErrorCode code) {
-        return Result.err(AppError.of(code, "Provider failure", "The scripted provider failed."));
-    }
-
-    private static Result<ChatResponse> target(final String target) {
-        return Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(target), FinishReason.STOP));
     }
 }

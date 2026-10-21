@@ -84,7 +84,7 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 | FR-NOTIF-6a | implemented | `add-ui-translation-workspace` | `translation-pipeline` | Activity-log entry kinds. |
 | FR-NOTIF-6b | implemented | `add-ui-translation-workspace` | `translation-pipeline` | Activity-log status roles. |
 | FR-RESUME-03 | implemented | `add-ui-translation-workspace` | `resume` | Pause and resume from the screen; also cited by `translation-pipeline`. |
-| FR-RESUME-05 | partial | `add-ui-translation-workspace` | `resume` | Stop is terminal and writes nothing; resuming a stopped run arrives with storage. Also cited by `translation-pipeline`. |
+| FR-RESUME-05 | implemented | `add-ui-translation-workspace` | `resume` | Stop is terminal; its decisions are kept in the project's database and a new run starts at the first pending segment, also after a restart (`RestartContinueE2eTest`). Also cited by `translation-pipeline`. |
 | FR-EXPORT-01 | implemented | `add-ui-translation-workspace` | `export` | The screen reports the finished file and shows it in the system file manager. |
 | FR-EXPORT-04 | implemented | `add-ui-translation-workspace` | `export` | The path is chosen on the Book Brief before the run starts; the export screen reports the file. |
 | FR-EXPORT-05 | shown-disabled | `add-ui-translation-workspace` | `export` | Auxiliary offering drawn on the export screen, unavailable. |
@@ -109,8 +109,6 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
 
 - The in-app language switch and the persisted `ui.language` setting (FR-UI-06 stays partial until then).
 - Source-language detection (the import screen shows the declared language only).
-- Resuming a run across a restart, and resuming a stopped run (FR-RESUME-05 stays partial); both need saved progress from
-  local storage.
 - Side files: the glossary, the bilingual copy and the quality report (FR-EXPORT-05, FR-EXPORT-06 stay shown-disabled).
 - Adding and editing a provider (the settings screen offers the two built-in local providers only).
 
@@ -221,9 +219,9 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-QA-04 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `document-round-trip`. |
 | FR-QA-05 | implemented | `complete-translation-workflow` | `quality-gates` |  |
 | FR-QA-07 | implemented | `complete-translation-workflow` | `quality-gates` |  |
-| FR-RESUME-02 | implemented | `complete-translation-workflow` | `resume` |  |
+| FR-RESUME-02 | implemented | `complete-translation-workflow` | `resume` | Also after a restart over SQLite; a stored running or paused run is shown as interrupted (`RestartContinueE2eTest`). |
 | FR-RESUME-03 | implemented | `complete-translation-workflow` | `resume` | Also cited by `translation-pipeline`. |
-| FR-RESUME-05 | partial | `complete-translation-workflow` | `resume` | A stopped run resumes within the session, from its first pending segment; resuming after a restart arrives with SQLite. Also cited by `translation-pipeline`. |
+| FR-RESUME-05 | implemented | `complete-translation-workflow` | `resume` | A stopped run resumes from its first pending segment, also after a restart over SQLite (`RestartContinueE2eTest`). Also cited by `translation-pipeline`. |
 | FR-REVIEW-01 | implemented | `complete-translation-workflow` | `review-queue` | Also cited by `resume`, `translation-pipeline`. |
 | FR-REVIEW-02 | implemented | `complete-translation-workflow` | `quality-gates` |  |
 | FR-REVIEW-03 | implemented | `complete-translation-workflow` | `review-queue` |  |
