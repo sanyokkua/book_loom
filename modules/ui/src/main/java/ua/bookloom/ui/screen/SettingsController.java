@@ -49,12 +49,7 @@ public final class SettingsController {
 
     private static final String SELECTED_ROW = "list-item-selected";
 
-    /**
-     * A provider row and the badge that marks it as the current one.
-     *
-     * @param row the clickable row node
-     * @param badge the "current" mark, shown only on the selected row
-     */
+    /** A provider row and the badge that marks it as the current one. */
     private record RowNodes(Node row, Label badge) {}
 
     private final SettingsViewModel viewModel;
@@ -62,6 +57,7 @@ public final class SettingsController {
     private final StageChipRows chipRows;
     private final ProviderDetailText detail;
     private final Map<String, RowNodes> rows = new LinkedHashMap<>();
+    private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
     private final ChangeListener<String> onSelection = (observed, was, now) -> markSelectedRow();
     private final ListChangeListener<StageChip> onStages = change -> showChips();
     private final ListChangeListener<String> onOffered = change -> showOffered();
@@ -153,9 +149,7 @@ public final class SettingsController {
 
     @FXML
     void initialize() {
-        log.debug(
-                "building the settings screen for {} provider(s)",
-                viewModel.providers().size());
+        log.debug("building the settings screen");
         Tips.install(messages, providerAdd, MessageKey.SETTINGS_PROVIDER_ADD_TIP);
         Tips.install(messages, providerEdit, MessageKey.SETTINGS_PROVIDER_EDIT_TIP);
         Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
@@ -163,15 +157,30 @@ public final class SettingsController {
         Tips.install(messages, testConnection, MessageKey.SETTINGS_TEST_CONNECTION_TIP);
         Tips.install(messages, testModels, MessageKey.SETTINGS_TEST_MODELS_TIP);
         Tips.install(messages, testInference, MessageKey.SETTINGS_TEST_INFERENCE_TIP);
-        viewModel.providers().forEach(this::addRow);
-        markSelectedRow();
+        showProviders();
+        viewModel.providers().addListener(new WeakListChangeListener<>(onProviders));
         viewModel.selectedProviderId().addListener(new WeakChangeListener<>(onSelection));
         bindDetail();
         bindModel();
         bindTests();
         viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
         showChips();
+        if (!viewModel.providers().isEmpty()) {
+            viewModel.refreshModels();
+        }
+    }
+
+    private void onProvidersLoaded() {
+        showProviders();
         viewModel.refreshModels();
+    }
+
+    private void showProviders() {
+        log.debug("showing the rows of {} provider(s)", viewModel.providers().size());
+        rows.clear();
+        providerList.getChildren().clear();
+        viewModel.providers().forEach(this::addRow);
+        markSelectedRow();
     }
 
     private void bindDetail() {

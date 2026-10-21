@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -38,13 +39,16 @@ public final class SettingsViewModel {
 
     private final ModelListing modelListing;
     private final ProviderTestRunner tests;
-    private final ObservableList<ProviderRow> providers;
+    private final ProviderConfigs configs;
+    private final ObservableList<ProviderRow> loaded = FXCollections.observableArrayList();
+    private final ObservableList<ProviderRow> providers = FXCollections.unmodifiableObservableList(loaded);
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
     private final StringProperty model = new SimpleStringProperty("");
     private final ReadOnlyObjectWrapper<List<ModelAdvice.Note>> modelNotes = new ReadOnlyObjectWrapper<>(List.of());
 
     /**
-     * Reads the registry once and selects its first provider in {@link ua.bookloom.api.llm.ProviderKind} order.
+     * Starts reading the registry on the background executor; the list stays empty, and nothing is selected, until the
+     * read is published. The first provider in {@link ua.bookloom.api.llm.ProviderKind} order is then selected.
      *
      * @param configs the registry the rows are read from; the order it lists in is not relied on
      * @param verifier the port a check is run through
@@ -65,7 +69,7 @@ public final class SettingsViewModel {
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities) {
-        Objects.requireNonNull(configs, "configs");
+        this.configs = Objects.requireNonNull(configs, "configs");
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
         this.tests = new ProviderTestRunner(
                 Objects.requireNonNull(verifier, "verifier"),
@@ -75,12 +79,29 @@ public final class SettingsViewModel {
                 selectedProviderId.getReadOnlyProperty(),
                 model,
                 Objects.requireNonNull(activities, "activities"));
-        this.providers = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(rowsOf(configs)));
-        providers.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
         selectedProviderId.addListener((observed, was, now) -> refreshNotes());
         model.addListener((observed, was, now) -> refreshNotes());
         refreshNotes();
-        log.info("settings ready: {} provider(s), selected '{}'", providers.size(), selectedProviderId.get());
+        executor.execute(this::loadProviders);
+    }
+
+    /** Reads the registry off the FX thread: storage is never touched where the window draws. */
+    private void loadProviders() {
+        log.debug("loading the providers on {}", Thread.currentThread().getName());
+        final List<ProviderRow> rows = rowsOf(configs);
+        if (Platform.isFxApplicationThread()) {
+            publishProviders(rows);
+        } else {
+            Platform.runLater(() -> publishProviders(rows));
+        }
+    }
+
+    private void publishProviders(final List<ProviderRow> rows) {
+        loaded.setAll(rows);
+        if (selectedProviderId.get().isEmpty()) {
+            rows.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
+        }
+        log.info("settings ready: {} provider(s), selected '{}'", rows.size(), selectedProviderId.get());
     }
 
     private void refreshNotes() {
@@ -119,7 +140,7 @@ public final class SettingsViewModel {
     /**
      * The providers on offer, in the order they are listed.
      *
-     * @return a read-only list that never changes after construction
+     * @return a read-only list, empty until the registry has been read in the background
      */
     public ObservableList<ProviderRow> providers() {
         return providers;

@@ -98,8 +98,27 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     }
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
-        return onFx(() -> new SettingsViewModel(
+        final SettingsViewModel built = onFx(() -> new SettingsViewModel(
                 new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
+        awaitProvidersLoaded();
+        return built;
+    }
+
+    /** The provider read is the first task the pool runs; wait for it so a test counts only its own checks. */
+    private void awaitProvidersLoaded() {
+        try {
+            awaitLoadTask();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(interrupted);
+        }
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void awaitLoadTask() throws InterruptedException {
+        if (executor instanceof CountingPool pool) {
+            pool.awaitFinished(1);
+        }
     }
 
     /** A listing over whatever {@link #catalog} the test scripted before calling this. */

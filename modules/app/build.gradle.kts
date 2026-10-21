@@ -232,10 +232,3 @@ val archTestTask =
 tasks.named("check") {
     dependsOn(archTestTask)
 }
-
-// The window now boots over the real database, and the Settings view model still lists the providers on the FX
-// thread while it is built (a later UI task moves that off the thread). Until then the :app boot tests may not trip the
-// FX-thread guard that every other test task sets; the guard stays on for :ui, :persistence and the rest.
-tasks.withType<Test>().configureEach {
-    systemProperty("bookloom.storage.failOnFxThread", "false")
-}
