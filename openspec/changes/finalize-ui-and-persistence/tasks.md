@@ -518,7 +518,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 5. The window's shared infrastructure
 
-- [ ] 5.1 Give dialog cards their three sizes and give the dialog host its Enter, Esc and queue rules, so every dialog
+- [x] 5.1 Give dialog cards their three sizes and give the dialog host its Enter, Esc and queue rules, so every dialog
   fits the window, its footer stays put, and a dialog nobody asked for waits its turn.
   - **Satisfies:** app-shell "Show every dialog inside the window, on one of two layers"; app-shell "Give every dialog
     one of three sizes with a fixed header and footer"; app-shell "Answer Enter, Escape and Tab the same way in every
@@ -598,7 +598,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - ✕ on each;
     - while a dialog or visible work is open, the message goes to its footer line.
   - `theme.css`: one 12 px scrollbar rule (thumb `muted-2` on track `surface-2`, nav `nav-fg-muted` on `nav-bg-2`) and
-    the seven regional copies aligned; links underlined in `-color-info-fg`; the 2 px `-color-text-strong` selected
+    the eight regional copies aligned; links underlined in `-color-info-fg`; the 2 px `-color-text-strong` selected
     bar.
   - Tests: rewrite the toast tests (the fifth toast drops the oldest; a toast during an open dialog becomes a footer
     line); `ContrastTest` gains the thumb (≥ 3:1), links (≥ 4.5:1 on every surface, both themes) and the selected bar.

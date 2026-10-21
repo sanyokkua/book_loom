@@ -26,7 +26,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
     private static final Path BOOK = Path.of("/books/Frankenstein.uk.epub");
     private static final int SIZE = 958_464;
-    private static final double MAX_CARD_WIDTH = 640;
+    private static final double MAX_CARD_WIDTH = 720;
 
     private void show() {
         show(List.of(), ConsistencySummary.NOT_RUN);

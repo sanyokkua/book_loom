@@ -2,14 +2,19 @@ package ua.bookloom.ui;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
+import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.TraversalDirection;
+import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
@@ -17,6 +22,8 @@ import javafx.scene.layout.StackPane;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Motion;
+import ua.bookloom.ui.dialog.ModalCard;
+import ua.bookloom.ui.state.WorkVisibility;
 
 /**
  * The shell's overlay for one dialog at a time: a dimming layer with the dialog card centred over it.
@@ -26,6 +33,11 @@ import ua.bookloom.ui.control.Motion;
  * keeps Tab inside the card, wherever focus was when it opened, and the filter is removed again on hide so nothing
  * outlives the dialog. Focus goes back to whatever owned it before. Everything is FX-Application-Thread only, like
  * the scene graph it edits.
+ *
+ * <p>Enter runs the card's default button (Ctrl or Command with Enter inside a text area, where plain Enter adds a
+ * line). Escape runs the card's own escape action when it has one ({@link ModalCard#setOnEscape}), else closes a card
+ * that may be closed. A dialog nobody asked for goes through {@link #showWhenFree} and waits for the open card and for
+ * visible model work.
  */
 @Slf4j
 @Singleton
@@ -37,15 +49,22 @@ public final class ModalHost {
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
     private final EventHandler<KeyEvent> keyFilter = this::filterKey;
+    private final WorkVisibility work;
+    private final Deque<Node> waiting = new ArrayDeque<>();
     private boolean dismissOnOutsideClick;
     private boolean dismissOnEscape;
     private @Nullable Node card;
     private @Nullable Scene filteredScene;
     private @Nullable Node previousFocus;
 
-    /** Creates an empty, hidden host; the shell places {@link #view()} in the scene. */
+    /**
+     * Creates an empty, hidden host; the shell places {@link #view()} in the scene.
+     *
+     * @param work whether model work is visible, which holds back a dialog nobody asked for
+     */
     @Inject
-    public ModalHost() {
+    public ModalHost(final WorkVisibility work) {
+        this.work = Objects.requireNonNull(work, "work");
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
         scrim.setId(SCRIM_ID);
@@ -54,6 +73,9 @@ public final class ModalHost {
         host.getChildren().add(scrim);
         host.setVisible(false);
         scrim.setVisible(false);
+        work.visibleProperty().addListener((observable, old, now) -> scheduleDrain());
+        host.widthProperty().addListener((observable, old, now) -> fitCard());
+        host.heightProperty().addListener((observable, old, now) -> fitCard());
     }
 
     /**
@@ -97,6 +119,7 @@ public final class ModalHost {
         this.dismissOnOutsideClick = dismissOnOutsideClick;
         this.dismissOnEscape = dismissOnEscape;
         card = dialog;
+        fitCard();
         final boolean arriving = !host.isVisible();
         host.getChildren().setAll(scrim, dialog);
         host.setVisible(true);
@@ -107,6 +130,54 @@ public final class ModalHost {
         Motion.popIn(dialog);
         capture();
         focusFirstIn(dialog);
+    }
+
+    /**
+     * Shows a dialog nobody asked for, such as the review desk at the end of a run: at once when no card is open and no
+     * model work is visible, else after the open card closes and the work has left. Cards wait in the order given.
+     *
+     * @param dialog the dialog's root node; it closes on Escape and not on an outside click
+     */
+    public void showWhenFree(final Node dialog) {
+        Objects.requireNonNull(dialog, "dialog");
+        if (isFree()) {
+            log.debug("window is free: showing {} at once", dialog.getId());
+            show(dialog, false, true);
+        } else {
+            log.debug("window is busy: {} waits its turn, {} already waiting", dialog.getId(), waiting.size());
+            waiting.add(dialog);
+        }
+    }
+
+    private boolean isFree() {
+        return card == null && !work.isVisible();
+    }
+
+    // Deferred a turn: a dialog that closes and, in the same handler, opens its follow-up must win over the queue.
+    private void scheduleDrain() {
+        if (!waiting.isEmpty()) {
+            Platform.runLater(this::drain);
+        }
+    }
+
+    private void drain() {
+        if (isFree() && !waiting.isEmpty()) {
+            final Node next = waiting.poll();
+            log.debug("window is free: showing the waiting dialog {}", next.getId());
+            show(next, false, true);
+        }
+    }
+
+    private void fitCard() {
+        final Node dialog = card;
+        if (dialog instanceof ModalCard modal) {
+            final Scene scene = host.getScene();
+            final double width = host.getWidth() > 0 || scene == null ? host.getWidth() : scene.getWidth();
+            final double height = host.getHeight() > 0 || scene == null ? host.getHeight() : scene.getHeight();
+            if (width > 0 && height > 0) {
+                modal.fit(width, height);
+            }
+        }
     }
 
     /**
@@ -125,6 +196,7 @@ public final class ModalHost {
         host.getChildren().setAll(scrim);
         host.setVisible(false);
         scrim.setVisible(false);
+        scheduleDrain();
     }
 
     private void onScrimClicked() {
@@ -162,16 +234,57 @@ public final class ModalHost {
     private void filterKey(final KeyEvent event) {
         if (event.getCode() == KeyCode.ESCAPE) {
             event.consume();
-            if (dismissOnEscape) {
-                log.debug("dialog dismissed by Escape");
-                hide();
-            } else {
-                log.debug("Escape ignored: this dialog must be answered through its own controls");
-            }
+            escape();
+        } else if (event.getCode() == KeyCode.ENTER) {
+            enter(event);
         } else if (event.getCode() == KeyCode.TAB) {
             event.consume();
             moveFocus(event.isShiftDown());
         }
+    }
+
+    private void escape() {
+        final Runnable own = card instanceof ModalCard modal ? modal.onEscape() : null;
+        if (own != null) {
+            log.debug("Escape runs the escape action of the card");
+            own.run();
+        } else if (dismissOnEscape) {
+            log.debug("dialog dismissed by Escape");
+            hide();
+        } else {
+            log.debug("Escape ignored: this dialog must be answered through its own controls");
+        }
+    }
+
+    private void enter(final KeyEvent event) {
+        final boolean inTextArea = event.getTarget() instanceof TextArea;
+        if (inTextArea && !(event.isControlDown() || event.isMetaDown())) {
+            log.debug("Enter left to the text area: it adds a line");
+            return;
+        }
+        final Button main = defaultButton(card);
+        if (main == null) {
+            log.debug("Enter ignored: the card has no enabled default button");
+            return;
+        }
+        event.consume();
+        log.debug("Enter runs the default button {}", main.getId());
+        main.fire();
+    }
+
+    private static @Nullable Button defaultButton(final @Nullable Node dialog) {
+        if (dialog instanceof Button button && button.isDefaultButton() && !button.isDisabled()) {
+            return button;
+        }
+        if (dialog instanceof Parent parent) {
+            for (final Node child : parent.getChildrenUnmodifiable()) {
+                final Button found = defaultButton(child);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     private void moveFocus(final boolean backwards) {

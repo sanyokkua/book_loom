@@ -86,7 +86,7 @@ public final class RetryWithNoteDialog {
     }
 
     private DialogPane card(final String locator, final VBox body) {
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         final Label title = new Label(messages.get(MessageKey.DIALOG_RETRY_TITLE));

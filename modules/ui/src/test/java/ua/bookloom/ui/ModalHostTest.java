@@ -133,4 +133,17 @@ class ModalHostTest extends ShellTestBase {
             System.setProperty("bookloom.reduceMotion", before == null ? "true" : before);
         }
     }
+
+    // IF the card kept its first size, THEN a window made smaller would cut it off.
+    @Test
+    void show_xlCardThenASmallerWindow_refitsTheCard() {
+        final ua.bookloom.ui.dialog.ModalCard card =
+                new ua.bookloom.ui.dialog.ModalCard(ua.bookloom.ui.dialog.ModalCard.Size.XL);
+        onFx(() -> host().show(card, false));
+
+        resizeScene(960, 640);
+
+        assertThat(card.getPrefWidth()).isEqualTo(883);
+        assertThat(card.getPrefHeight()).isEqualTo(576);
+    }
 }

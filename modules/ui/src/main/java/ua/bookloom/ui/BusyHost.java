@@ -83,7 +83,7 @@ public final class BusyHost {
     private final Messages messages;
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
-    private final DialogPane card = new ModalCard();
+    private final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
     private final Label title = new Label();
     private final Label step = new Label();
     private final ProgressBar bar = new ProgressBar();

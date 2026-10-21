@@ -79,7 +79,7 @@ public final class AddTermDialog {
      * @return the card's root node, ready for {@code ModalHost.show}
      */
     public Node card() {
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header());

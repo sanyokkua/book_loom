@@ -75,7 +75,7 @@ public final class ChangeResultsDialog {
         Objects.requireNonNull(results, "results");
         Objects.requireNonNull(showChanged, "showChanged");
         log.debug("showing the results of {}: {}", results.operation(), results.outcome());
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header(results));

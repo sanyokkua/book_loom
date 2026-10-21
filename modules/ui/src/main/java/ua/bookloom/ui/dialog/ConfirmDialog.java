@@ -111,7 +111,7 @@ public final class ConfirmDialog {
         final Label text = new Label(messages.get(question.text()));
         text.setWrapText(true);
         text.getStyleClass().add("dialog-text");
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         final Label title = new Label(messages.get(question.title()));

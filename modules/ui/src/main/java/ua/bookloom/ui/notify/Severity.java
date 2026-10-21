@@ -34,7 +34,7 @@ public enum Severity {
         return persistent;
     }
 
-    String styleClass() {
+    public String styleClass() {
         return styleClass;
     }
 

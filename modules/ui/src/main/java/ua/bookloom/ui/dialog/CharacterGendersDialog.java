@@ -101,7 +101,7 @@ public final class CharacterGendersDialog {
         final VBox body = new VBox();
         group(body, missing, MessageKey.DIALOG_GENDERS_TEXT, MessageKey.DIALOG_GENDERS_ROW);
         group(body, suggested, MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT, MessageKey.DIALOG_GENDERS_SUGGESTED_ROW);
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         final Label title = new Label(messages.get(

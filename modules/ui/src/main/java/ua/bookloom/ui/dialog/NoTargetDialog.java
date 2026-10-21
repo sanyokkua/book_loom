@@ -82,7 +82,7 @@ public final class NoTargetDialog {
     }
 
     private DialogPane card(final VBox body) {
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         final Label title = new Label(messages.get(MessageKey.DIALOG_NO_TARGET_TITLE));

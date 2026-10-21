@@ -151,7 +151,7 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
     }
 
     private DialogPane card(final Node body, final MessageKey titleKey, final String id) {
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
         card.setId(id);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         final Label title = new Label(messages.get(titleKey));

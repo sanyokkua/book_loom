@@ -701,7 +701,6 @@
     -fx-border-color: -color-border;
     -fx-border-radius: 9px;
     -fx-border-width: 1px;
-    -fx-pref-width: 520px;
 }
 
 .dialog-card > .header-panel {
@@ -722,6 +721,36 @@
     -fx-border-width: 1 0 0 0;
     -fx-padding: 13px 18px 13px 18px;
     -fx-spacing: 8px;
+}
+
+/* The body is the one part of a card that scrolls; the scroll pane adds no frame of its own. */
+.dialog-card .dialog-body,
+.dialog-card .dialog-body > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.dialog-feedback {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: -color-muted;
+    -fx-text-overrun: ellipsis;
+}
+
+.dialog-feedback-success {
+    -fx-text-fill: -color-ok-fg;
+}
+
+.dialog-feedback-info {
+    -fx-text-fill: -color-info-fg;
+}
+
+.dialog-feedback-warning {
+    -fx-text-fill: -color-warn-fg;
+}
+
+.dialog-feedback-error {
+    -fx-text-fill: -color-err-fg;
 }
 
 .dialog-h {

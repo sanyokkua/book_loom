@@ -7,6 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.ModalHost;
@@ -37,10 +38,20 @@ class ModalCardTest extends ShellTestBase {
         assertThat(cut).isEmpty();
     }
 
+    // IF the body were not in a scroll pane, THEN a long body would squeeze or overflow the fixed header and footer.
+    @Test
+    void content_aNode_sitsInAScrollingBody() {
+        final ModalCard card = onFxCard(List.of(ButtonType.OK));
+
+        final boolean scrolls = ua.bookloom.ui.ThemeTestSupport.onFx(() -> card.getContent() instanceof ScrollPane);
+
+        assertThat(scrolls).isTrue();
+    }
+
     private ModalCard onFxCard(final List<ButtonType> types) {
         final ModalCard[] made = new ModalCard[1];
         onFx(() -> {
-            final ModalCard card = new ModalCard();
+            final ModalCard card = new ModalCard(ModalCard.Size.DIALOG);
             card.getStyleClass().add("dialog-card");
             card.setContent(new Label("The book is told in the first person."));
             card.getButtonTypes().setAll(types);

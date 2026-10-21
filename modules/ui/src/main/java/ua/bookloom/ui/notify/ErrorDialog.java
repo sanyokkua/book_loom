@@ -94,7 +94,7 @@ final class ErrorDialog {
     Node card() {
         final Runnable retryAction = error.retryable() ? onRetry : null;
         log.debug("building the error card: retryOffered={}, hasDetails={}", retryAction != null, hasDetails(error));
-        final DialogPane card = new ModalCard();
+        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header());
