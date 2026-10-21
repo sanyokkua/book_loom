@@ -31,9 +31,7 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.notify.Toasts;
 
 /**
  * Runs the three provider tests for whatever provider and model the settings view model has selected, and holds the
@@ -51,7 +49,6 @@ import ua.bookloom.ui.notify.Toasts;
 public final class ProviderTestRunner {
 
     private final ProviderVerifier verifier;
-    private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ExecutorService executor;
     private final ReadOnlyStringProperty providerId;
@@ -77,7 +74,6 @@ public final class ProviderTestRunner {
      * Starts idle, and drops whatever is in flight or on show when the provider or the model changes.
      *
      * @param verifier the port a test is run through
-     * @param toasts where a fully passed test is announced
      * @param errors where a refusal of the whole test is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param providerId the selected provider's id; read when a test is asked for, observed for changes
@@ -86,14 +82,12 @@ public final class ProviderTestRunner {
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
-            final Toasts toasts,
             final ErrorPresenter errors,
             final ExecutorService executor,
             final ReadOnlyStringProperty providerId,
             final ReadOnlyStringProperty model,
             final ActivityTracker activities) {
         this.verifier = Objects.requireNonNull(verifier, "verifier");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.providerId = Objects.requireNonNull(providerId, "providerId");
@@ -317,7 +311,6 @@ public final class ProviderTestRunner {
         stages.setAll(chips);
         if (chips.stream().allMatch(ProviderTestRunner::isPass)) {
             log.info("provider test {} passed", test);
-            toasts.success(MessageKey.TOAST_PROVIDER_PASSED);
         } else {
             log.info("provider test {} did not pass", test);
         }

@@ -7,6 +7,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Severity;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -41,8 +43,8 @@ final class ReviewRefusals {
     /** Confirms an accepted or saved segment, which the panel has just moved on from; other actions stay silent. */
     void confirm(final String action, final String locator, final int remaining) {
         switch (action) {
-            case "accept" -> toasts.success(MessageKey.REVIEW_ACCEPTED, locator, remaining);
-            case "saveEdit" -> toasts.success(MessageKey.REVIEW_SAVED, locator);
+            case "accept" -> toasts.feedback(Severity.SUCCESS, MessageKey.REVIEW_ACCEPTED, locator, remaining);
+            case "saveEdit" -> toasts.feedback(Severity.SUCCESS, MessageKey.REVIEW_SAVED, locator);
             default -> log.debug("review {} of {} needs no confirmation", action, locator);
         }
     }
@@ -57,7 +59,7 @@ final class ReviewRefusals {
         switch (FailureSurface.of(error.code())) {
             case WARNING_TOAST -> {
                 log.warn("review {} of segment {} refused as busy", action, segmentId);
-                toasts.warning(MessageKey.REVIEW_BUSY);
+                toasts.raise(ToastOccasion.RETRY_REFUSED);
             }
             case IN_PLACE -> {
                 log.warn("review {} of segment {} refused: {}", action, segmentId, error.code());

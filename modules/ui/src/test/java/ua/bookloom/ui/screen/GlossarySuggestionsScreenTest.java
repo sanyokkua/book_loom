@@ -133,18 +133,20 @@ class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
         assertThat(glossary.updated()).containsExactly(HALE.accepted());
     }
 
-    // IF a run started on unconfirmed suggestions without a word, THEN the person would not know they are only hints.
+    // IF a run started on unconfirmed suggestions without a word, THEN the person would not know they are only hints;
+    // the words live on the Accept all button's hover explanation, and no toast says them (the toast list is closed).
     @Test
-    void startTranslation_withASuggestion_saysItIsUsedAsAHint() throws Exception {
+    void acceptAll_withASuggestion_explainsOnHoverThatUnreviewedOnesAreHintsAndRaisesNoToast() throws Exception {
         showGlossary(HALE, MILTON);
+        final String tip = TooltipProbe.tipText(required("names-style-accept-all"));
 
         onFx(() -> button("names-style-start").fire());
         job.awaitRunStarted();
 
-        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll(".toast-info").stream()
-                        .flatMap(toast -> toast.lookupAll(".toast-text").stream())
+        assertThat(tip).contains("A suggestion left unreviewed when a run starts is used only as a hint.");
+        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll(".toast-text").stream()
                         .map(text -> ((Label) text).getText())
                         .toList()))
-                .contains("1 suggested target is unreviewed and will be used as hints.");
+                .noneMatch(text -> text.contains("unreviewed"));
     }
 }

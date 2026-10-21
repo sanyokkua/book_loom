@@ -21,6 +21,7 @@ import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
+import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
@@ -121,6 +122,7 @@ public final class UiModule extends AbstractModule {
         bind(Navigator.class);
         bind(ModalHost.class);
         bind(LanguageNames.class);
+        bind(DialogFeedback.class);
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
         bind(StepLocks.class).to(StepAvailability.class);

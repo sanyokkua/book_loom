@@ -21,8 +21,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -266,7 +266,7 @@ public final class ModelListing {
             default -> {
                 noListObtained.set(true);
                 refusal.set("");
-                toasts.warning(MessageKey.TOAST_MODEL_LIST_UNREADABLE);
+                toasts.raise(ToastOccasion.MODEL_LIST_UNREADABLE);
             }
         }
     }

@@ -42,7 +42,7 @@ pinned banner slot between the toolbar and the content (`#shell-banners`, L3).
 | Content host       | `ScrollPane` around a `StackPane` | Hosts the active screen; scrolls when the screen is taller or wider than the window, and fits width and height so a growing list still fills it       |
 | Work layer + scrim | `StackPane` overlay (`BusyHost`)  | Holds the progress dialogs of model work (`#busy-card`, G4), below the modal host                                                                    |
 | Modal host + scrim | `StackPane` overlay (`ModalHost`) | For `Dialog`/`Alert`; above the work layer (G1)                                                                                                      |
-| Toast host         | Native token-styled JavaFX nodes  | ok/info/warn/err, stacked in-shell (`#shell-toast-host`); Planned: bottom-right (G2, see `#toasts`)                                                  |
+| Toast host         | Native token-styled JavaFX nodes  | ok/info/warn/err, stacked in-shell at the bottom right (`#shell-toast-host`; G2, see `#toasts`)                                                  |
 
 Smallest window: the stage's minimum is 960 × 640 as the outer window, title bar and borders included (the window opens
 at 1024 × 700); the content area inside it is smaller by that decoration — about 944 wide with 8 px borders and about 612
@@ -150,8 +150,8 @@ navigation footer is described in `#navigation-footer`.
 Names & style, Translating and Export are **locked** while no book is open (`Open a book first`); Names &
 style and Translating are also locked while the source or target language is unset or the two are the same (`Choose the
 languages in Book Brief`). Export needs only a book, because a stopped or running book can be exported at any time. A locked entry is
-drawn muted (`nav-item-locked`) but stays clickable: the click is refused and an information toast gives the reason, and
-its hover text states the same reason. Every route to a screen — the column, Back and Continue — goes through the same
+drawn muted (`nav-item-locked`) but stays clickable: the click is refused with no message (a toast is not raised for it), and
+its hover text states the reason. Every route to a screen — the column, Back and Continue — goes through the same
 refusal. While Continue on Book Brief cannot be pressed, a line beside it names what is missing, because a disabled button
 shows no hover text. Book Brief is marked done once Continue was pressed with usable languages, or a run exists;
 Translating is also marked done for a stopped or failed run with no segment left undecided.
@@ -173,7 +173,7 @@ when the Planned clause ships), and differs on purpose in the rest:
 
 - **Built today, closed by the change:** Projects has no screen; the work layer shows a small busy card with a separate
   Model calls window; review is a panel inside Translating (not a dialog); run controls also sit in the title bar and the
-  Translating screen; toasts are anchored bottom-centre; nothing is saved (no project store, no remembered settings);
+  Translating screen; nothing is saved (no project store, no remembered settings);
   the Settings tabs hold a subset of the mockup's contents (`#screen-settings`).
 - **The Structure step** — the mockup's older draft drew the book's structure as a step of its own; since 15i.U3 the
   Import screen shows the reading-order tree, its segments and the book's facts, so the workflow has five steps and
@@ -240,8 +240,9 @@ them by number.
 - **G2 — Toasts bottom-right**, newest at the bottom, at most 4; success and info stay 5 s, warning, error and toasts
   with an action 12 s; each has ✕; a toast may carry one action ("Review the results"); while a dialog or visible work
   is open its feedback is a line in its own footer, not a toast (`notify/ToastStack`, 16 px inset, 360 px wide).
-- **G3 — Visible scrollbars:** 12 px, a `muted-2` thumb on a `surface-2` track, shown whenever content overflows, never
-  overlay bars; `ContrastTest` checks the thumb at 3:1.
+- **G3 — Visible scrollbars:** 12 px, a `muted-2` thumb on a `surface-2` track (the navigation column `nav-fg-muted` on
+  `nav-bg-2`), shown whenever content overflows, never overlay bars; one rule in `theme.css`; `ThemeScrollLinkBarTest`
+  checks the thumb at 3:1 (FR-THEME-13).
 - **G4 — The progress dialog** (`#busy-card`).
 - **G5 — Parsed prompts and replies, in Detailed views only:** each message a card headed by its role (SYSTEM, USER)
   with part count, tokens and Copy; each prompt section collapsible; rule lists as bullets; name and term slots as a
@@ -582,8 +583,7 @@ is saved, so the subtitle changes with the project store.)
 | Activity log            | `ListView` (monospace)       | Tagged entries — `ok`, `fix`, `mem`, `sum`, `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); bounded to the last 500       |
 | Controls                | `Button`s                    | Start, Pause, Resume, Stop, `Review flagged (n)`; which are offered follows the state table below                                               |
 
-The start toast reads `Translation started` / `Keep the application open — progress is kept only until it closes.`
-(Built today.)
+The start toast reads `Translation started` / `Progress is saved as you go.` (Built.)
 
 **Built today** (`#runState`, 7 states):
 
@@ -950,9 +950,10 @@ non-release build. Control: `Dialog`; the only dialog that closes on a click out
 
 Toasts (native token-styled JavaFX nodes stacked in the shell) come in four types — ok / info / warn / err — specified
 with their triggers in `11_NOTIFICATIONS_AND_ERRORS.md#toasts`. FR-NOTIF-01. P6 reference: Notifications.
-**Planned (G2):** bottom-right, 16 px inset, 360 px wide, newest at the bottom, at most 4; success and info stay 5 s,
-warning, error and toasts with an action 12 s; each has ✕; one optional action (`ToastAction`, "Review the results");
-while a dialog or visible work is open, feedback is a line in its footer, not a toast.
+Bottom-right, 16 px inset, 360 px wide, newest at the bottom, at most 4; success and info stay 5 s, warning, error and
+toasts with an action 12 s; each has ✕; one optional action (`ToastAction`, "Review the results"); while a dialog or
+visible work is open, feedback is a line in its footer, not a toast. The occasions are a closed list (`ToastOccasion`,
+`11_NOTIFICATIONS_AND_ERRORS.md#toasts`).
 
 ## banners {#banners}
 

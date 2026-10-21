@@ -10,6 +10,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -55,7 +56,7 @@ final class Toast {
         this.args = List.of(args);
         this.timer = new PauseTransition(Duration.millis((double) lifetime.toMillis()));
         final String text = messages.get(key, args);
-        node.getChildren().addAll(icon(severity), textLabel(text), counter());
+        node.getChildren().addAll(icon(severity), words(text), counter());
         node.getStyleClass().addAll("toast", severity.styleClass(), "elevation");
         node.setAccessibleText(text);
         if (action != null) {
@@ -81,12 +82,23 @@ final class Toast {
         return icon;
     }
 
-    private static Label textLabel(final String text) {
-        final Label label = new Label(text);
-        label.setWrapText(true);
-        label.getStyleClass().add("toast-text");
-        HBox.setHgrow(label, Priority.ALWAYS);
-        return label;
+    // A catalogue entry of two lines is a title and its body; one line is the body alone.
+    private static VBox words(final String text) {
+        final String[] lines = text.split("\n", 2);
+        final VBox box = new VBox();
+        box.getStyleClass().add("toast-words");
+        if (lines.length == 2) {
+            final Label title = new Label(lines[0]);
+            title.setWrapText(true);
+            title.getStyleClass().add("toast-title");
+            box.getChildren().add(title);
+        }
+        final Label body = new Label(lines[lines.length - 1]);
+        body.setWrapText(true);
+        body.getStyleClass().add("toast-text");
+        box.getChildren().add(body);
+        HBox.setHgrow(box, Priority.ALWAYS);
+        return box;
     }
 
     private Label counter() {

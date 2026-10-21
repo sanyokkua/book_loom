@@ -23,7 +23,6 @@ import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ScriptedProviderVerifier;
-import ua.bookloom.ui.i18n.MessageKey;
 
 /** The three provider tests: what each asks, when each is available, and the findings each report becomes. */
 class ProviderTestRunnerTest extends SettingsViewModelTestBase {
@@ -32,7 +31,7 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
     private final StringProperty model = new SimpleStringProperty("");
 
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
-        return onFx(() -> new ProviderTestRunner(verifier, toasts, errors, executor, provider, model, activities));
+        return onFx(() -> new ProviderTestRunner(verifier, errors, executor, provider, model, activities));
     }
 
     private void setModel(final String text) {
@@ -133,12 +132,11 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                         tuple(VerificationStage.MODELS, StageStatus.SKIPPED),
                         tuple(VerificationStage.INFERENCE, StageStatus.SKIPPED));
         assertThat(chips(runner).getFirst().error()).isSameAs(unreachable);
-        assertThat(toasts.raised()).isEmpty();
     }
 
     // IF a fully passing run raised no success notice or more than one, THEN the person would miss it or be nagged.
     @Test
-    void run_inferenceAllPass_reportsThreeMeasuredValuesAndOneSuccessToast() {
+    void run_inferenceAllPass_reportsThreeMeasuredValues() {
         final ProviderTestRunner runner =
                 runner(ScriptedProviderVerifier.returning(Result.ok(new VerificationReport(List.of(
                         measured(VerificationStage.CONNECTION, StageStatus.PASSED, 41, null),
@@ -154,8 +152,6 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                         tuple(Duration.ofMillis(41), null),
                         tuple(Duration.ofMillis(5), 3),
                         tuple(Duration.ofMillis(1200), null));
-        assertThat(toasts.raised()).hasSize(1);
-        assertThat(toasts.raised().getFirst().key()).isEqualTo(MessageKey.TOAST_PROVIDER_PASSED);
     }
 
     // IF an unreadable listing stopped the run or counted as a failure, THEN a server with no listing endpoint, which
@@ -233,7 +229,6 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(chips(runner)).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
         assertThat(onFx(() -> runner.checking().get())).isFalse();
     }
 

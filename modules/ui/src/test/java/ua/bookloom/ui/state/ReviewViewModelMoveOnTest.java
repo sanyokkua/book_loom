@@ -61,7 +61,7 @@ class ReviewViewModelMoveOnTest extends ReviewViewModelTestBase {
 
         press(review::saveEdit);
 
-        assertThat(toasts.raised())
+        assertThat(toasts.feedback())
                 .extracting(raised -> raised.severity() + ":" + raised.key() + ":" + raised.args())
                 .contains("success:" + MessageKey.REVIEW_SAVED + ":[ch5 · p12]");
         assertThat(selectedId()).isEqualTo("ch07.xhtml:39");

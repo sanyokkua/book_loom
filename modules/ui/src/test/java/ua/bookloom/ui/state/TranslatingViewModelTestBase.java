@@ -89,7 +89,6 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                         new RecordingErrorPresenter(),
                         new DirectExecutor(),
                         activities),
-                new RecordingToasts(),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 activities);

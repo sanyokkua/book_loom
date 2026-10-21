@@ -22,8 +22,8 @@ import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -314,7 +314,7 @@ public final class ImportViewModel {
                     shown.card().author(),
                     opened.source());
         }
-        toasts.success(MessageKey.TOAST_BOOK_OPENED, fileName);
+        toasts.raise(ToastOccasion.BOOK_OPENED, fileName);
     }
 
     // The inspection refused the file before any project was made, so the verdict, not an error, names the state.

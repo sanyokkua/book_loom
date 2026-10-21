@@ -26,7 +26,7 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
         final CountingPool pool = useCountingPool();
 
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                configs, ScriptedProviderVerifier.idle(), newModelListing(), toasts, errors, executor, activities));
+                configs, ScriptedProviderVerifier.idle(), newModelListing(), errors, executor, activities));
         pool.awaitFinished(1);
         WaitForAsyncUtils.waitForFxEvents();
 

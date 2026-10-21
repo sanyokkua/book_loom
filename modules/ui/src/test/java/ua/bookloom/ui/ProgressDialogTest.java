@@ -262,6 +262,9 @@ class ProgressDialogTest extends ShellTestBase {
         plan(names, 276);
         endSteps(names, 140);
         awaitDialog();
+        // The dialog redraws from the tracker in coalesced passes, so the figures catch up a moment after it shows.
+        await(() -> "140 of 276 steps, checks included"
+                .equals(ThemeTestSupport.onFx(() -> TooltipProbe.tipText(required("progress-bar")))));
 
         assertThat(TooltipProbe.tipText(required("progress-bar"))).isEqualTo("140 of 276 steps, checks included");
     }

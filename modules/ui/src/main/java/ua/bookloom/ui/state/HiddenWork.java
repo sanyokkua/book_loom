@@ -10,8 +10,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.Severity;
 import ua.bookloom.ui.notify.ToastAction;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -87,9 +87,8 @@ public final class HiddenWork {
             return false;
         }
         log.warn("{} refused: {} #{} runs in the background", starting, hidden.kind(), hidden.id());
-        toasts.raise(
-                Severity.WARNING,
-                MessageKey.WORK_HIDDEN_REFUSED,
+        toasts.raiseWithAction(
+                ToastOccasion.HIDDEN_WORK_REFUSED,
                 new ToastAction(
                         MessageKey.WORK_HIDDEN_SHOW,
                         MessageKey.WORK_HIDDEN_SHOW_TIP,

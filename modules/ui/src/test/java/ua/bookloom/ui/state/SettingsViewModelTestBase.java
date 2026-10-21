@@ -99,7 +99,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
+                new FakeProviderConfigs(), verifier, newModelListing(), errors, executor, activities));
         awaitProvidersLoaded();
         return built;
     }

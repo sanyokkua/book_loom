@@ -3,52 +3,40 @@ package ua.bookloom.ui.notify;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * The transient-message surface, one method per severity.
+ * The transient-message surface: a message only for a named {@link ToastOccasion}, and one footer line for a dialog.
  *
  * <p>An interface, not the stack itself, so a screen's test can hand it a recording fake; the message is a catalogue
- * key plus arguments so no caller resolves text on its own. FX Application Thread only.
+ * key plus arguments so no caller resolves text on its own. While a dialog or visible model work is open, an occasion
+ * is shown as that dialog's footer line instead of a toast, because a corner message would land on its buttons or
+ * behind its scrim. FX Application Thread only.
  */
 public interface Toasts {
 
     /**
-     * Raises a success-severity message.
+     * Raises the message of an occasion.
      *
-     * @param key the catalogue entry to show
-     * @param args the arguments the entry's pattern names, in order
+     * @param occasion what happened; it fixes the severity and the wording
+     * @param args the arguments the occasion's pattern names, in order
      */
-    void success(MessageKey key, Object... args);
+    void raise(ToastOccasion occasion, Object... args);
 
     /**
-     * Raises an information-severity message.
+     * Raises the message of an occasion with a button that runs an action, for a message the person can act on at
+     * once. Such a message stays as long as a warning. As a footer line the action is left out.
      *
-     * @param key the catalogue entry to show
-     * @param args the arguments the entry's pattern names, in order
-     */
-    void info(MessageKey key, Object... args);
-
-    /**
-     * Raises a warning-severity message.
-     *
-     * @param key the catalogue entry to show
-     * @param args the arguments the entry's pattern names, in order
-     */
-    void warning(MessageKey key, Object... args);
-
-    /**
-     * Raises an error-severity message.
-     *
-     * @param key the catalogue entry to show
-     * @param args the arguments the entry's pattern names, in order
-     */
-    void error(MessageKey key, Object... args);
-
-    /**
-     * Raises a message of any severity with a button that runs an action, for a message the person can act on at once.
-     *
-     * @param severity how the message is drawn and how long it stays
-     * @param key the catalogue entry to show
+     * @param occasion what happened; it fixes the severity and the wording
      * @param action the button's label and what pressing it does; the message goes away when it is pressed
+     * @param args the arguments the occasion's pattern names, in order
+     */
+    void raiseWithAction(ToastOccasion occasion, ToastAction action, Object... args);
+
+    /**
+     * Says what happened in the open dialog as one line in its footer, and says nothing where no dialog is open, since
+     * the screen then shows the result itself.
+     *
+     * @param severity the status role that colours the line
+     * @param key the catalogue entry to show
      * @param args the arguments the entry's pattern names, in order
      */
-    void raise(Severity severity, MessageKey key, ToastAction action, Object... args);
+    void feedback(Severity severity, MessageKey key, Object... args);
 }

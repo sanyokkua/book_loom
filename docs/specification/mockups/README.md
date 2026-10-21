@@ -142,8 +142,8 @@ Everything else (layout, ids, content) is free to change; the conformance tests 
 - A toast may carry **one action** ("Review the results").
 - **While a dialog or visible work is open, its feedback is a line in its own footer**, not a toast, so nothing lands
   on its buttons.
-- **Code.** `notify/ToastStack` (`#shell-toast-host`) is anchored bottom-centre today. Anchor it `BOTTOM_RIGHT` with a
-  16 px inset and a 360 px width. `ToastAction` exists.
+- **Code.** `notify/ToastStack` (`#shell-toast-host`) is anchored `BOTTOM_RIGHT` with a 16 px inset and a 360 px width;
+  `ToastOccasion` is the closed list of occasions; `DialogFeedback` routes a message to the open dialog's footer.
 
 ### G3 — Visible scrollbars
 - 12 px wide, with a `muted-2` thumb on a `surface-2` track, shown whenever content overflows. They are never overlay

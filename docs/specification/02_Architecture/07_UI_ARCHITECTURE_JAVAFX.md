@@ -331,8 +331,9 @@ Translate actions, suggesting a file name, the export's last check and the list 
   this build — the export's only success notice, `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`),
   about. Retry with a note is **planned** to become an inline panel inside the review desk rather than a second dialog
   (G1).
-- **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`, bottom-centre today
-  (**planned:** bottom-right, at most 4, success and info 5 s, warning and error 12 s, G2); while a dialog or visible
+- **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`, bottom-right, at most 4,
+  success and info 5 s, warning, error and any with an action 12 s (G2), raised only on the named occasions
+  (`ToastOccasion`); while a dialog or visible
   work is open its feedback is a line in its own footer, not a toast; banners `info/warn/err`;
   empty states per screen. Errors surface as a dialog (with expandable typed `AppError.details`) plus a toast, per
   `09_ERROR_HANDLING.md#ui-surfacing`.

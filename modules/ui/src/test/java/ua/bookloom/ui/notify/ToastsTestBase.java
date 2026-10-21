@@ -11,7 +11,6 @@ import javafx.scene.input.MouseEvent;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.i18n.MessageKey;
 
 /** What the toast tests share: raising through the real stack and reading what the scene shows. */
 abstract class ToastsTestBase extends ShellTestBase {
@@ -28,6 +27,10 @@ abstract class ToastsTestBase extends ShellTestBase {
 
     protected static String textOf(final Node toast) {
         return ((Label) toast.lookup(".toast-text")).getText();
+    }
+
+    protected static String titleOf(final Node toast) {
+        return ((Label) toast.lookup(".toast-title")).getText();
     }
 
     protected static MouseEvent click() {
@@ -74,6 +77,6 @@ abstract class ToastsTestBase extends ShellTestBase {
 
     protected void raiseBooks(final int count) {
         onFx(() -> IntStream.rangeClosed(1, count)
-                .forEach(number -> toasts().success(MessageKey.TOAST_BOOK_OPENED, "Book" + number + ".epub")));
+                .forEach(number -> toasts().raise(ToastOccasion.BOOK_OPENED, "Book" + number + ".epub")));
     }
 }

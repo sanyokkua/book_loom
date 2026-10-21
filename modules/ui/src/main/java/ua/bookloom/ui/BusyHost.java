@@ -25,6 +25,7 @@ import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
@@ -74,6 +75,7 @@ public final class BusyHost {
     private final FadeTransition fade = new FadeTransition(FADE, host);
     private final Timeline clock = new Timeline(new KeyFrame(TICK, event -> tick()));
     private final BusyKeyboard keyboard;
+    private final DialogFeedback feedback;
     private long shownId = -1;
     private boolean revealed;
 
@@ -90,6 +92,7 @@ public final class BusyHost {
      * @param figures how each dialog gets its own reader of its figures
      * @param work where this layer says whether a dialog is showing
      * @param confirm the question asked before the export is cancelled, shown on the layer above
+     * @param feedback told which dialog is shown, so a message raised meanwhile becomes its footer line
      */
     @Inject
     public BusyHost(
@@ -99,13 +102,15 @@ public final class BusyHost {
             final ProgressDialogDefaults defaults,
             final ProgressFigures.Factory figures,
             final WorkVisibility work,
-            final ConfirmDialog confirm) {
+            final ConfirmDialog confirm,
+            final DialogFeedback feedback) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.defaults = Objects.requireNonNull(defaults, "defaults");
         this.figures = Objects.requireNonNull(figures, "figures");
         this.work = Objects.requireNonNull(work, "work");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
+        this.feedback = Objects.requireNonNull(feedback, "feedback");
         keyboard = new BusyKeyboard(host, Objects.requireNonNull(modalHost, "modalHost"));
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
@@ -193,6 +198,7 @@ public final class BusyHost {
         shown.model().accept(now);
         shownId = now.id();
         host.getChildren().setAll(scrim, shown.dialog());
+        feedback.open(DialogFeedback.Layer.WORK, shown.dialog());
         fit();
         keyboard.capture(shown.dialog());
     }
@@ -223,6 +229,7 @@ public final class BusyHost {
         revealed = false;
         shownId = -1;
         work.visibleProperty().set(false);
+        feedback.close(DialogFeedback.Layer.WORK);
         clock.stop();
         keyboard.release();
         fade.stop();

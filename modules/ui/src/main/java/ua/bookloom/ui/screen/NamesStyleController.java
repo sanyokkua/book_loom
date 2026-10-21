@@ -15,7 +15,6 @@ import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
@@ -42,7 +41,6 @@ public final class NamesStyleController {
     private final NamesStyleViewModel glossary;
     private final BookBriefViewModel brief;
     private final ModalHost modalHost;
-    private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
     private final ChangeResultsDialog changeResultsDialog;
@@ -62,7 +60,6 @@ public final class NamesStyleController {
      * @param glossary the state of the glossary table
      * @param brief the book's brief, whose dial the automatic pass's estimate is stated for
      * @param modalHost where the Add term card is shown
-     * @param toasts where starting with unconfirmed suggestions is noted
      * @param noTargetDialog the question asked before starting with entries that have no target
      * @param narratorDialog the question asked before starting when the book is told in the first person
      * @param changeResultsDialog the card that lists what each model operation changed
@@ -79,7 +76,6 @@ public final class NamesStyleController {
             final NamesStyleViewModel glossary,
             final BookBriefViewModel brief,
             final ModalHost modalHost,
-            final Toasts toasts,
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
             final ChangeResultsDialog changeResultsDialog,
@@ -91,7 +87,6 @@ public final class NamesStyleController {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
         this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
@@ -117,7 +112,6 @@ public final class NamesStyleController {
                                 glossary,
                                 brief,
                                 modalHost,
-                                toasts,
                                 noTargetDialog,
                                 narratorDialog,
                                 changeResultsDialog,

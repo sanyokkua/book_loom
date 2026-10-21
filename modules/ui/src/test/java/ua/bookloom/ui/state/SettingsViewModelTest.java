@@ -15,9 +15,7 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedProviderVerifier;
-import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * The settings view model: its providers, its model, the check and the chips a report becomes.
@@ -170,20 +168,20 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
                         tuple(VerificationStage.INFERENCE, StageStatus.PASSED, null));
         assertThat(verifier.selections()).containsExactly(new ModelSelection("ollama", MODEL));
         assertThat(verifier.policies()).containsExactly(VerificationPolicy.FULL);
-        assertThat(toasts.raised())
-                .containsExactly(new RecordingToasts.Raised("success", MessageKey.TOAST_PROVIDER_PASSED, List.of()));
+        assertThat(toasts.raised()).isEmpty();
     }
 
-    // IF a fully passing check raised no success message, or more than one, THEN a person would get no confirmation
-    // or a duplicated one.
+    // IF a passing provider test raised a toast, THEN its answer would be told twice, or in the corner behind the
+    // dialog it came from: the test reports in its own dialog, and the notifications spec names no toast for it.
     @Test
-    void check_allStagesPass_raisesOneSuccessToast() {
+    void check_allStagesPass_raisesNoToastAndTheChipsAreTheAnswer() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.returning(allPassed()));
 
         checkWithModel(viewModel);
 
-        assertThat(toasts.raised())
-                .containsExactly(new RecordingToasts.Raised("success", MessageKey.TOAST_PROVIDER_PASSED, List.of()));
+        assertThat(toasts.raised()).isEmpty();
+        assertThat(toasts.feedback()).isEmpty();
+        assertThat(stagesOf(viewModel)).extracting(StageChip::status).containsOnly(StageStatus.PASSED);
         assertThat(errors.presented()).isEmpty();
     }
 

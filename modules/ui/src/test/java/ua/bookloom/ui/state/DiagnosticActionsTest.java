@@ -78,7 +78,8 @@ class DiagnosticActionsTest extends FxTestBase {
         actions.copyPath();
 
         assertThat(clipboard).containsExactly(logs.toString());
-        assertThat(toasts.raised()).containsExactly(new Raised("info", MessageKey.ABOUT_LOG_PATH_COPIED, List.of()));
+        assertThat(toasts.feedback()).containsExactly(new Raised("info", MessageKey.ABOUT_LOG_PATH_COPIED, List.of()));
+        assertThat(toasts.raised()).isEmpty();
     }
 
     @Test
@@ -92,6 +93,7 @@ class DiagnosticActionsTest extends FxTestBase {
                 .satisfies(initial -> assertThat(initial.getFileName().toString())
                         .isEqualTo("bookloom-diagnostics-20260101-090507.zip"));
         assertThat(toasts.raised()).isEmpty();
+        assertThat(toasts.feedback()).isEmpty();
     }
 
     @Test
@@ -104,8 +106,9 @@ class DiagnosticActionsTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(target).isRegularFile();
-        assertThat(toasts.raised())
+        assertThat(toasts.feedback())
                 .containsExactly(new Raised("success", MessageKey.ABOUT_BUNDLE_SAVED, List.of("report.zip")));
+        assertThat(toasts.raised()).isEmpty();
         assertThat(errors.presented()).isEmpty();
     }
 

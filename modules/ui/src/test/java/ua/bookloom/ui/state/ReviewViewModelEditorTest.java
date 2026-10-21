@@ -252,16 +252,17 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
     // The count is what is left after this accept, read from the desk.
     @Test
-    void accept_twoLeft_raisesTheSuccessToastNamingTheLocatorAndTheRemainder() {
+    void accept_twoLeft_saysTheFooterLineNamingTheLocatorAndTheRemainder() {
         buildReview();
         select("ch05.xhtml:11");
         desk.willAnswerCounts(flaggedCount(2));
 
         press(review::accept);
 
-        assertThat(toasts.raised())
+        assertThat(toasts.feedback())
                 .extracting(raised -> raised.severity() + ":" + raised.key() + ":" + raised.args())
                 .containsExactly("success:" + MessageKey.REVIEW_ACCEPTED + ":[ch5 · p12, 2]");
+        assertThat(toasts.raised()).isEmpty();
         assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(2);
     }
 

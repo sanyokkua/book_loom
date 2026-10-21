@@ -24,8 +24,8 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -322,7 +322,7 @@ public final class TranslatingViewModel {
             if (failure != null) {
                 route(failure);
             } else if (announce) {
-                toasts.info(MessageKey.TOAST_RUN_STARTED);
+                toasts.raise(ToastOccasion.RUN_STARTED);
             }
         });
     }

@@ -584,7 +584,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
       new run has finished 5 steps;
     - an estimate before Start appears only when `measuredSecondsPerSegment` is stored.
   - Rewrite `RunClockTimingTest` and `RunFiguresTest`. → :ui
-- [ ] 5.5 Move toasts to the bottom-right, route dialog feedback to the dialog's footer, and make scrollbars, links and
+- [x] 5.5 Move toasts to the bottom-right, route dialog feedback to the dialog's footer, and make scrollbars, links and
   the selected-segment bar visible, so nothing covers buttons and every state reads at the required contrast.
   - **Satisfies:** notifications "Stack transient messages in the bottom-right corner and time them by severity";
     notifications "Report a dialog's own feedback in its footer"; notifications "Carry four severities of transient

@@ -77,6 +77,7 @@ public final class AppShellView {
             .max()
             .orElse(0);
     private static final double ACTION_SPACING = 10;
+    private static final double TOAST_INSET = 16;
     private static final String CRUMB_SEPARATOR = " / ";
     private static final String STEP_SEPARATOR = " · ";
 
@@ -238,14 +239,16 @@ public final class AppShellView {
         return shell;
     }
 
-    // The toasts rise from the bottom and are centred over the content, so none covers the navigation column.
+    // The toasts rise from the content area's bottom-right corner, 16 pixels in, so none covers the navigation column.
     private void keepOverTheContent(final Node toastLayer) {
         final Node nav = navColumn.view();
-        StackPane.setMargin(
-                toastLayer, new Insets(0, 0, 0, nav.getLayoutBounds().getWidth()));
+        StackPane.setMargin(toastLayer, corner(nav.getLayoutBounds().getWidth()));
         nav.layoutBoundsProperty()
-                .addListener(
-                        (observed, was, now) -> StackPane.setMargin(toastLayer, new Insets(0, 0, 0, now.getWidth())));
+                .addListener((observed, was, now) -> StackPane.setMargin(toastLayer, corner(now.getWidth())));
+    }
+
+    private static Insets corner(final double navigationWidth) {
+        return new Insets(0, TOAST_INSET, TOAST_INSET, navigationWidth);
     }
 
     private Node titleBar() {

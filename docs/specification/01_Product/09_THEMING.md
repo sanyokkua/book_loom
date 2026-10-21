@@ -31,7 +31,7 @@ Brand palette anchors (theme-independent looked-up colors on `.root`):
 | Token role       | Name        | Hex       | Usage                                             |
 |------------------|-------------|-----------|---------------------------------------------------|
 | Text / dark base | Charcoal    | `#3a4a52` | Text, sidebar/title bar, dark base                |
-| Borders / muted  | Slate       | `#b2babd` | Borders, scroll thumbs; the hue of muted text and the switch's off track, darkened per role for contrast |
+| Borders / muted  | Slate       | `#b2babd` | Borders; the hue of muted text (and, darkened per role, the scroll thumb: `muted-2`) and the switch's off track, darkened per role for contrast |
 | Warm surface     | Sand Dollar | `#e7d6c0` | Warm surfaces, selected rows, chips, draft        |
 | Primary / accent | Cognac      | `#a58075` | Primary action, brand, accent (fixed, FR-THEME-4) |
 
@@ -141,5 +141,11 @@ label — takes the `-fg` shade, which holds 4.5:1 on the surfaces, the selected
 | ID          | Requirement |
 |-------------|-------------|
 | FR-THEME-12 | The interface is set in the system UI face. The activity log, whose columns line up, is set in the first sturdy monospaced face the system has — Menlo, Consolas, Cascadia Mono, DejaVu Sans Mono, Liberation Mono — chosen once at start (`MonoFont`, a class on the shell root); the logical `Monospaced` face (a thin Courier New on macOS and Windows, which reads as grey at 13px) is only the fallback. No font is bundled. |
+
+## scrollbars-links-bars {#scrollbars-links-bars}
+
+| ID          | Requirement |
+|-------------|-------------|
+| FR-THEME-13 | A scrollbar is **12px** wide and drawn whenever its content overflows (never an overlay bar that hides itself): the thumb in the `muted-2` role on a `surface-2` track, and in the navigation column the `nav-fg-muted` role on a `nav-bg-2` track, each pair at least **3:1** in both value blocks; one rule in `theme.css` serves every scroll area. Every link is **underlined** and painted with `info-fg`, which holds **4.5:1** on every surface it appears on (page, card, `surface-2`, alternate and selected row) in both blocks; the activity chip's "open" link on the always-dark title bar keeps the title bar's words, underlined. The chosen segment of a segmented control carries a **2px bar** in the `text-strong` role along its foot, on all four pill variants, because its fill differs from its neighbours' by only 1.24:1. Enforced by `ThemeScrollLinkBarTest`. |
 
 P6 reference: match the mockup's light and dark renderings for palette, status colours, and accent.

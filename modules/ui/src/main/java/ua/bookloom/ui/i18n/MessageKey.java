@@ -263,6 +263,10 @@ public enum MessageKey {
     WORK_HIDDEN_SHOW("work.hidden.show"),
     /** Hover explanation of the action labelled by {@link #WORK_HIDDEN_SHOW}. */
     WORK_HIDDEN_SHOW_TIP("work.hidden.show.tip"),
+    /** Action of the message raised when hidden work ends, which opens the screen that holds its results. */
+    WORK_HIDDEN_RESULTS("work.hidden.results"),
+    /** Hover explanation of the action labelled by {@link #WORK_HIDDEN_RESULTS}. */
+    WORK_HIDDEN_RESULTS_TIP("work.hidden.results.tip"),
     /** Title of the question asked before the run is stopped. */
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */
@@ -469,16 +473,18 @@ public enum MessageKey {
     ERROR_RUN_FAILURE_NOTE("error.runFailureNote"),
     /** Transient message raised when a book was opened; argument 0 is the file name, passed as a String. */
     TOAST_BOOK_OPENED("toast.bookOpened"),
-    /** Transient message raised when a provider passed its check. */
-    TOAST_PROVIDER_PASSED("toast.providerPassed"),
-    /** Transient message raised when a run finished with nothing flagged; argument 0 is the number accepted. */
+    /** Transient message raised when a run finished with nothing flagged; argument 0 is the number translated. */
     TOAST_RUN_FINISHED("toast.runFinished"),
     /** Transient message raised when a run finished with flagged segments; argument 0 is accepted, argument 1 flagged. */
     TOAST_RUN_FINISHED_FLAGGED("toast.runFinishedFlagged"),
-    /** Transient message raised when a run has begun, reminding that progress is kept only until the application closes. */
+    /** Transient message raised when a run has begun: a title and a line saying progress is saved as it goes. */
     TOAST_RUN_STARTED("toast.runStarted"),
-    /** Transient message raised when a provider's model list could not be read. */
+    /** Transient message raised when a provider's model list could not be read outside a dialog. */
     TOAST_MODEL_LIST_UNREADABLE("toast.modelListUnreadable"),
+    /** Transient message raised when a project's automatic name changed; argument 0 is the new name. */
+    TOAST_PROJECT_NAME_CHANGED("toast.projectNameChanged"),
+    /** Transient message raised when work continued in the background ended; argument 0 is the work's name. */
+    TOAST_HIDDEN_WORK_FINISHED("toast.hiddenWorkFinished"),
     /** Accessible name of a message's dismiss button, which shows only a cross. */
     TOAST_DISMISS("toast.dismiss"),
     /** Hover explanation of the control named by {@link #TOAST_DISMISS}. */
@@ -1324,8 +1330,6 @@ public enum MessageKey {
     NAMES_STYLE_SUGGESTED_BADGE("namesStyle.suggestedBadge"),
     /** Hover explanation of the badge labelled by {@link #NAMES_STYLE_SUGGESTED_BADGE}. */
     NAMES_STYLE_SUGGESTED_BADGE_TIP("namesStyle.suggestedBadge.tip"),
-    /** Notice on starting a run with suggestions unconfirmed; argument 0 is their count, passed as an Integer. */
-    NAMES_STYLE_SUGGESTIONS_UNREVIEWED("namesStyle.suggestionsUnreviewed"),
     /** Result of an import; argument 0 is the row count, passed as an Integer. */
     NAMES_STYLE_IMPORT_DONE("namesStyle.import.done"),
     /** Lines an import could not read; argument 0 is the joined line numbers, argument 1 their count. */

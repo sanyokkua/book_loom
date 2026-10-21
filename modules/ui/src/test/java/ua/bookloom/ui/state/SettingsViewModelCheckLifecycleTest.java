@@ -236,6 +236,6 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> viewModel.tests().checking().get())).isFalse();
         assertThat(stagesOf(viewModel)).hasSize(3);
-        assertThat(toasts.raised()).hasSize(1);
+        assertThat(toasts.raised()).isEmpty();
     }
 }

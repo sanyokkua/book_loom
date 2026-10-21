@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.StepLocks;
 
@@ -28,7 +27,8 @@ import ua.bookloom.ui.state.StepLocks;
  * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
  * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While short work the
  * window waits for runs every navigation is refused (long work asks instead), and a screen whose step is still locked
- * ({@link StepLocks}) is refused with a message that says what is missing.
+ * ({@link StepLocks}) is refused silently: the reason is shown where the step is offered (a disabled button's hover
+ * explanation), not as a transient message.
  */
 @Slf4j
 @Singleton
@@ -40,7 +40,6 @@ public final class Navigator {
     private final LeaveGuard leaveGuard;
     private final ActivityTracker activities;
     private final StepLocks locks;
-    private final Toasts toasts;
     private final ReadOnlyObjectWrapper<ViewNames> currentView = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<Parent> content = new ReadOnlyObjectWrapper<>();
 
@@ -99,10 +98,7 @@ public final class Navigator {
 
     private boolean isLocked(final ViewNames target) {
         final Optional<MessageKey> reason = locks.lockReason(target);
-        reason.ifPresent(key -> {
-            log.debug("refused {}: it is locked, {}", target, key);
-            toasts.info(key);
-        });
+        reason.ifPresent(key -> log.debug("refused {}: it is locked, {}", target, key));
         return reason.isPresent();
     }
 

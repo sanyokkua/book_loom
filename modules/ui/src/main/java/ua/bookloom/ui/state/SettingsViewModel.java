@@ -24,7 +24,6 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.notify.Toasts;
 
 /**
  * What the settings screen shows and does about providers: which one is selected, which model is chosen for it, and
@@ -54,7 +53,6 @@ public final class SettingsViewModel {
      * @param verifier the port a check is run through
      * @param modelListing the models the selected provider offers; this view model discards and re-asks it when the
      *     provider changes
-     * @param toasts where a passed check is announced
      * @param errors where a refusal of the whole check is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param activities the work under way, which a provider test registers with and the inference test must not
@@ -65,7 +63,6 @@ public final class SettingsViewModel {
             final ProviderConfigs configs,
             final ProviderVerifier verifier,
             final ModelListing modelListing,
-            final Toasts toasts,
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities) {
@@ -73,7 +70,6 @@ public final class SettingsViewModel {
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
         this.tests = new ProviderTestRunner(
                 Objects.requireNonNull(verifier, "verifier"),
-                Objects.requireNonNull(toasts, "toasts"),
                 Objects.requireNonNull(errors, "errors"),
                 Objects.requireNonNull(executor, "executor"),
                 selectedProviderId.getReadOnlyProperty(),

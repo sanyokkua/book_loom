@@ -68,7 +68,7 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
         executor = queued;
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.idle();
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
+                new FakeProviderConfigs(), verifier, newModelListing(), errors, executor, activities));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         fx(() -> {

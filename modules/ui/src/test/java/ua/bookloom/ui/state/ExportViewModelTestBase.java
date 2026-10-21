@@ -90,7 +90,6 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                         new RecordingErrorPresenter(),
                         new DirectExecutor(),
                         activities),
-                new RecordingToasts(),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 activities);

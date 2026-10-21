@@ -7,8 +7,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -60,9 +60,9 @@ final class RunEnding {
         final int flagged = report != null ? report.flagged() : mirror.flagged().get();
         log.debug("run completed: {} accepted, {} flagged", accepted, flagged);
         if (flagged > 0) {
-            toasts.warning(MessageKey.TOAST_RUN_FINISHED_FLAGGED, accepted, flagged);
+            toasts.raise(ToastOccasion.RUN_FINISHED_FLAGGED, accepted, flagged);
         } else {
-            toasts.success(MessageKey.TOAST_RUN_FINISHED, accepted);
+            toasts.raise(ToastOccasion.RUN_FINISHED, accepted);
         }
     }
 }

@@ -32,8 +32,7 @@ Placement and behaviour (`mockups/README.md`, G2):
 
 - Toasts stack in the **bottom-right** corner of the content area, 16 px from the edges and 360 px wide (never over the
   title bar, the toolbar or the navigation), the newest lowest, at most four at once; each fades and slides in and out
-  over about 160 ms. **Planned:** the stack is anchored bottom-centre today (`notify/ToastStack`, `#shell-toast-host`);
-  the next change moves it.
+  over about 160 ms (`notify/ToastStack`, `#shell-toast-host`).
 - A success or info toast leaves after 5 s; a warn or err toast, and any toast with an action, after 12 s. The timer
   pauses while the pointer is over the toast.
 - Every toast has a ✕ button (with a hover explanation); an identical message raised again folds into the toast
@@ -42,8 +41,16 @@ Placement and behaviour (`mockups/README.md`, G2):
   "Show progress" when other model work is refused while a long job runs in the background (G4). A click on the body of
   a toast with an action no longer dismisses it.
 - **While a dialog or visible work is open, its feedback is a line in its own footer, not a toast**, so nothing lands on
-  its buttons (G2). Toasts belong to the screens, not to dialogs. **Planned** (the footer lines come with the progress
-  dialog and the finalized dialogs).
+  its buttons (G2). Toasts belong to the screens, not to dialogs: `Toasts.raise` hands the message to the open
+  dialog's footer line (`ModalCard.feedback`, found through `DialogFeedback`) when a dialog of the modal host or the
+  progress dialog of visible work is showing, and `Toasts.feedback` says a dialog's own result there and says nothing
+  when no dialog is open.
+- **The list of occasions is closed** (`ToastOccasion`): a book opens; a translation starts ("Translation started" /
+  "Progress is saved as you go.") or finishes ("Translation finished", warning "3 segments need your review" when some
+  do); a project's automatic name changes; a retry is refused; a model list cannot be read outside a dialog; hidden
+  work finishes ("Review the results"); other model work is refused while work is hidden ("Show progress"). A provider
+  test, a locked step, an accepted review segment, a copied log path and a saved diagnostic bundle report in their own
+  place and raise none.
 
 Toasts must not be the sole channel for critical information (FR-A11Y-8). An export's success is reported by its own
 dialog alone (`08_UI_SCREENS_AND_STATES.md#dialog-export-complete`), not an `ok` toast. Nothing pops up by itself when

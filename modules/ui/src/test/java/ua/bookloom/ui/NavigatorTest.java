@@ -18,13 +18,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import ua.bookloom.ui.i18n.MessageKey;
-import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenBookForTest;
-import ua.bookloom.ui.state.StepLocks;
 
 /**
  * The navigator swaps the content region by enum constant and refuses an inert one. It is built by the real
@@ -210,39 +207,34 @@ class NavigatorTest extends FxTestBase {
         assertThat(accepted).isTrue();
     }
 
-    private Navigator guardedNavigator(final Injector graph, final RecordingToasts toasts) {
-        return new Navigator(
-                graph.getInstance(GuiceControllerFactory.class),
-                graph.getInstance(Messages.class),
-                graph.getInstance(LeaveGuard.class),
-                graph.getInstance(ActivityTracker.class),
-                graph.getInstance(StepLocks.class),
-                toasts);
+    private Navigator guardedNavigator(final Injector graph) {
+        return graph.getInstance(Navigator.class);
     }
 
-    // IF a locked entry opened, THEN a screen would show a book that is not there; the toast is the click's feedback.
+    // IF a locked entry opened, THEN a screen would show a book that is not there; the refusal is silent because the
+    // reason is shown where the step is offered, and the notifications spec names no toast for it.
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
             names = {"BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
-    void navigate_noBook_isRefusedWithAnInfoToastNamingTheReason(final ViewNames locked) {
+    void navigate_noBook_isRefusedWithoutAToast(final ViewNames locked) {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
-        final RecordingToasts toasts = new RecordingToasts();
-        final Navigator guarded = guardedNavigator(graph, toasts);
+        final Navigator guarded = guardedNavigator(graph);
 
         final boolean accepted = navigateOnFxThread(guarded, locked);
 
         assertThat(accepted).isFalse();
         assertThat(guarded.currentView().get()).isNull();
-        assertThat(toasts.raised())
-                .containsExactly(new RecordingToasts.Raised("info", MessageKey.NAV_LOCKED_NO_BOOK, List.of()));
+        assertThat(((javafx.scene.layout.Pane) graph.getInstance(ua.bookloom.ui.notify.ToastStack.class)
+                                .view())
+                        .getChildren())
+                .isEmpty();
     }
 
     @Test
     void navigate_bookWithoutLanguages_refusesTranslatingButAllowsTheBrief() {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
-        final RecordingToasts toasts = new RecordingToasts();
-        final Navigator guarded = guardedNavigator(graph, toasts);
+        final Navigator guarded = guardedNavigator(graph);
         interact(() -> OpenBookForTest.open(graph.getInstance(CurrentProject.class), "en", null));
 
         final boolean translating = navigateOnFxThread(guarded, ViewNames.TRANSLATING);
@@ -250,18 +242,14 @@ class NavigatorTest extends FxTestBase {
 
         assertThat(translating).isFalse();
         assertThat(brief).isTrue();
-        assertThat(toasts.raised())
-                .containsExactly(new RecordingToasts.Raised("info", MessageKey.NAV_LOCKED_NO_LANGUAGES, List.of()));
     }
 
     @Test
     void navigate_importAndSettingsWithNoBook_areNeverLocked() {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
-        final RecordingToasts toasts = new RecordingToasts();
-        final Navigator guarded = guardedNavigator(graph, toasts);
+        final Navigator guarded = guardedNavigator(graph);
 
         assertThat(navigateOnFxThread(guarded, ViewNames.IMPORT)).isTrue();
         assertThat(navigateOnFxThread(guarded, ViewNames.SETTINGS)).isTrue();
-        assertThat(toasts.raised()).isEmpty();
     }
 }

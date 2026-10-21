@@ -28,6 +28,7 @@ import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Severity;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -132,7 +133,7 @@ public final class DiagnosticActions {
     public void copyPath() {
         log.info("copying the log folder path to the clipboard");
         clipboard.accept(diagnosticLog.directory().toString());
-        toasts.info(MessageKey.ABOUT_LOG_PATH_COPIED);
+        toasts.feedback(Severity.INFO, MessageKey.ABOUT_LOG_PATH_COPIED);
     }
 
     /** Asks where the bundle goes and writes it there in the background; a cancelled dialog does nothing. */
@@ -169,7 +170,8 @@ public final class DiagnosticActions {
             return;
         }
         final Path name = target.getFileName();
-        toasts.success(MessageKey.ABOUT_BUNDLE_SAVED, name == null ? target.toString() : name.toString());
+        toasts.feedback(
+                Severity.SUCCESS, MessageKey.ABOUT_BUNDLE_SAVED, name == null ? target.toString() : name.toString());
     }
 
     private Map<String, String> about() {

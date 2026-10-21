@@ -229,22 +229,35 @@
     -fx-background-insets: 0;
 }
 
+/* One scrollbar everywhere: 12px wide and always drawn while the content overflows, the thumb in the muted-2 role on a  */
+/* surface-2 track (3:1 in both blocks). The navigation column alone repaints it on its own dark pair, below. */
 .scroll-bar {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
 }
 
+.scroll-bar:vertical {
+    -fx-pref-width: 12px;
+    -fx-min-width: 12px;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 12px;
+    -fx-min-height: 12px;
+}
+
 .scroll-bar > .track,
 .scroll-bar > .track-background {
-    -fx-background-color: transparent;
+    -fx-background-color: -color-surface-2;
     -fx-background-insets: 0;
+    -fx-background-radius: 6px;
     -fx-border-color: transparent;
 }
 
 .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
+    -fx-background-color: -color-muted-2;
     -fx-background-insets: 0;
-    -fx-background-radius: 4px;
+    -fx-background-radius: 6px;
 }
 
 .scroll-bar > .increment-button,
@@ -380,18 +393,13 @@
     -fx-background-color: transparent;
 }
 
-.nav-scroll .scroll-bar {
-    -fx-background-color: transparent;
+.nav-scroll .scroll-bar > .track,
+.nav-scroll .scroll-bar > .track-background {
+    -fx-background-color: -color-nav-bg-2;
 }
 
 .nav-scroll .scroll-bar > .thumb {
     -fx-background-color: -color-nav-fg-muted;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.nav-scroll .scroll-bar > .track {
-    -fx-background-color: transparent;
 }
 
 .nav-brand {
@@ -583,20 +591,6 @@
     -fx-background-color: transparent;
 }
 
-.content-scroll .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.content-scroll .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.content-scroll .scroll-bar > .track {
-    -fx-background-color: transparent;
-}
-
 /* --- Modal host: a dimming layer and a dialog card ------------------------------------------------------ */
 /* The scrim is a filled region with an opacity, not an rgba fill, so no colour literal appears outside `.root`. */
 .shell-scrim {
@@ -604,9 +598,8 @@
     -fx-opacity: 0.45;
 }
 
-/* Bottom centre of the content area, the newest toast lowest. */
+/* Bottom right of the content area, 360px wide, the newest toast lowest; the shell supplies the 16px inset. */
 .shell-toast-host {
-    -fx-padding: 0 0 18px 0;
     -fx-spacing: 8px;
 }
 
@@ -629,7 +622,8 @@
     -fx-border-color: -color-border;
     -fx-border-width: 1 1 1 4;
     -fx-border-radius: 7px;
-    -fx-pref-width: 340px;
+    -fx-pref-width: 360px;
+    -fx-max-width: 360px;
     -fx-padding: 10px 14px 10px 12px;
     -fx-spacing: 10px;
     -fx-alignment: center-left;
@@ -654,6 +648,15 @@
 
 .toast-icon {
     -fx-icon-size: 16;
+}
+
+.toast-words {
+    -fx-spacing: 2px;
+}
+
+.toast-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text-strong;
 }
 
 .toast-ok .toast-icon {
@@ -834,12 +837,30 @@
     -fx-text-fill: -color-muted;
 }
 
+/* Every link is underlined and painted in the information foreground role, so colour is not the only sign it is one.   */
+/* (The chip's "open" link below sits on the title bar, which is dark in both blocks, and keeps the title bar's words.) */
+.hyperlink {
+    -fx-text-fill: -color-info-fg;
+    -fx-underline: true;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.hyperlink:visited {
+    -fx-text-fill: -color-info-fg;
+}
+
 /* The chip's "open" link on hidden work: title-bar words, underlined as a link. */
 .activity-chip-open {
     -fx-text-fill: -color-title-fg;
     -fx-font-size: 12px;
     -fx-underline: true;
     -fx-padding: 0;
+}
+
+.activity-chip-open:visited {
+    -fx-text-fill: -color-title-fg;
 }
 
 /* The About card's diagnostic-log section: set apart from the description, its actions wrapping on a narrow card. */
@@ -1327,9 +1348,29 @@
 .segmented-button .toggle-button.left-pill:selected:hover,
 .segmented-button .toggle-button.center-pill:selected:hover,
 .segmented-button .toggle-button.right-pill:selected:hover {
-    -fx-background-color: -color-primary;
+    -fx-background-color: -color-text-strong, -color-primary;
+    -fx-background-insets: 0, 0 0 2px 0;
     -fx-text-fill: -color-primary-fg;
     -fx-font-weight: bold;
+}
+
+/* The fill alone differs from its neighbours by 1.24:1, so the chosen pill also carries a 2px bar in the strong-text */
+/* role along its foot, rounded like the pill's own ends. */
+.segmented-button .toggle-button.left-pill:selected,
+.segmented-button .toggle-button.left-pill:selected:hover {
+    -fx-background-radius: 7px 0 0 7px, 6px 0 0 6px;
+}
+
+.segmented-button .toggle-button.right-pill:selected,
+.segmented-button .toggle-button.right-pill:selected:hover {
+    -fx-background-radius: 0 7px 7px 0, 0 6px 6px 0;
+}
+
+.segmented-button .toggle-button:selected,
+.segmented-button .toggle-button.center-pill:selected,
+.segmented-button .toggle-button:selected:hover,
+.segmented-button .toggle-button.center-pill:selected:hover {
+    -fx-background-radius: 0, 0;
 }
 
 /* A pill's ring is drawn above its neighbours (view order), which would otherwise paint over its outer edge. */
@@ -1369,23 +1410,6 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-padding: 0;
-}
-
-.brief-scroll .scroll-bar,
-.import-scroll .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.brief-scroll .scroll-bar > .thumb,
-.import-scroll .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.brief-scroll .scroll-bar > .track,
-.import-scroll .scroll-bar > .track {
-    -fx-background-color: transparent;
 }
 
 .text-area.brief-input {
@@ -1907,20 +1931,6 @@
     -fx-text-fill: -color-err-fg;
 }
 
-.activity-log .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.activity-log .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.activity-log .scroll-bar > .track {
-    -fx-background-color: transparent;
-}
-
 /* The log line's parts: the time is muted, the tag and mark carry the role, the words stay in the text colour so a */
 /* line reads on both themes; a repeated line ends in a neutral count. */
 .activity-log .list-cell .label {
@@ -2155,20 +2165,6 @@
     -fx-background-color: -color-selected;
 }
 
-.structure-tree .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.structure-tree .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.structure-tree .scroll-bar > .track {
-    -fx-background-color: transparent;
-}
-
 .structure-row-title {
     -fx-text-fill: -color-text-strong;
 }
@@ -2205,20 +2201,6 @@
 .structure-segments .list-cell:filled:selected,
 .structure-segments .list-cell:filled:selected:hover {
     -fx-background-color: -color-selected;
-}
-
-.structure-segments .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.structure-segments .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.structure-segments .scroll-bar > .track {
-    -fx-background-color: transparent;
 }
 
 .structure-seg-text {
@@ -2387,10 +2369,6 @@
     -fx-padding: 1px 6px 1px 6px;
 }
 
-.glossary-table .scroll-bar > .track {
-    -fx-background-color: transparent;
-}
-
 /* A row's type and gender read as text until used; a frame on hover and focus says they can be changed, and the
    combo box takes the label's place only then, so a scrolling table repaints labels rather than combo boxes. */
 .glossary-choice {
@@ -2530,20 +2508,6 @@
 .review-list .list-cell:filled:selected,
 .review-list .list-cell:filled:selected:hover {
     -fx-background-color: -color-selected;
-}
-
-.review-list .scroll-bar {
-    -fx-background-color: transparent;
-}
-
-.review-list .scroll-bar > .thumb {
-    -fx-background-color: -color-border-cool;
-    -fx-background-insets: 0;
-    -fx-background-radius: 4px;
-}
-
-.review-list .scroll-bar > .track {
-    -fx-background-color: transparent;
 }
 
 /* --- Keyboard focus inside lists, tables and trees: the focused row is framed in the focus role, inside its own

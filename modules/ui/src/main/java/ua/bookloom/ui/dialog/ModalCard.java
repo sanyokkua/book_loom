@@ -10,6 +10,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.notify.FooterFeedback;
 import ua.bookloom.ui.notify.Severity;
 
 /**
@@ -22,7 +23,7 @@ import ua.bookloom.ui.notify.Severity;
  * window's size when the card is shown and whenever the window changes.
  */
 @Slf4j
-public class ModalCard extends DialogPane {
+public class ModalCard extends DialogPane implements FooterFeedback {
 
     /** The three widths a dialog may have. */
     public enum Size {
@@ -133,11 +134,11 @@ public class ModalCard extends DialogPane {
     }
 
     /**
-     * Shows one line in the footer's free left side, replacing any earlier line.
+     * {@inheritDoc}
      *
-     * @param text the line; it is cut with an ellipsis rather than wrapped
-     * @param severity the role that colours it
+     * <p>The line sits in the footer's free left side and is cut with an ellipsis rather than wrapped.
      */
+    @Override
     public void feedback(final String text, final Severity severity) {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(severity, "severity");

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.dialog.ModalCard;
+import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.state.WorkVisibility;
 
 /**
@@ -43,6 +44,7 @@ public final class ModalHost {
     private final Region scrim = new Region();
     private final EventHandler<KeyEvent> keyFilter = this::filterKey;
     private final WorkVisibility work;
+    private final DialogFeedback feedback;
     private final Deque<Node> waiting = new ArrayDeque<>();
     private boolean dismissOnOutsideClick;
     private boolean dismissOnEscape;
@@ -54,10 +56,12 @@ public final class ModalHost {
      * Creates an empty, hidden host; the shell places {@link #view()} in the scene.
      *
      * @param work whether model work is visible, which holds back a dialog nobody asked for
+     * @param feedback told which card is shown, so a message raised meanwhile becomes its footer line
      */
     @Inject
-    public ModalHost(final WorkVisibility work) {
+    public ModalHost(final WorkVisibility work, final DialogFeedback feedback) {
         this.work = Objects.requireNonNull(work, "work");
+        this.feedback = Objects.requireNonNull(feedback, "feedback");
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
         scrim.setId(SCRIM_ID);
@@ -112,6 +116,9 @@ public final class ModalHost {
         this.dismissOnOutsideClick = dismissOnOutsideClick;
         this.dismissOnEscape = dismissOnEscape;
         card = dialog;
+        if (dialog instanceof ModalCard modal) {
+            feedback.open(DialogFeedback.Layer.MODAL, modal);
+        }
         fitCard();
         final boolean arriving = !host.isVisible();
         host.getChildren().setAll(scrim, dialog);
@@ -219,6 +226,7 @@ public final class ModalHost {
         final Node restore = previousFocus;
         previousFocus = null;
         card = null;
+        feedback.close(DialogFeedback.Layer.MODAL);
         if (restore != null && restore.getScene() != null) {
             restore.requestFocus();
         }

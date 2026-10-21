@@ -26,7 +26,6 @@ import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CsvFileChooser;
@@ -59,7 +58,6 @@ final class NamesStyleView {
     private final NamesStyleViewModel glossary;
     private final BookBriefViewModel brief;
     private final ModalHost modalHost;
-    private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
     private final ChangeResultsDialog changeResultsDialog;
@@ -72,7 +70,6 @@ final class NamesStyleView {
             final NamesStyleViewModel glossary,
             final BookBriefViewModel brief,
             final ModalHost modalHost,
-            final Toasts toasts,
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
             final ChangeResultsDialog changeResultsDialog,
@@ -83,7 +80,6 @@ final class NamesStyleView {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
         this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
@@ -305,20 +301,10 @@ final class NamesStyleView {
     }
 
     private void startRun() {
-        noteUnconfirmedSuggestions();
         // First, because starting registers the preparation as blocking work, and a blocking activity refuses
         // navigation.
         navigator.navigate(ViewNames.TRANSLATING);
         translating.start();
-    }
-
-    // A run drafts with a suggested target as a hint, not as the person's choice; starting does not wait for a review.
-    private void noteUnconfirmedSuggestions() {
-        final int suggested = glossary.suggestedCount().get();
-        log.debug("starting with {} suggested targets unconfirmed", suggested);
-        if (suggested > 0) {
-            toasts.info(MessageKey.NAMES_STYLE_SUGGESTIONS_UNREVIEWED, suggested);
-        }
     }
 
     /** What the forward button does, read from the run controls Translating offers. */
