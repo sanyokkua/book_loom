@@ -43,9 +43,11 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
 
@@ -357,6 +359,7 @@ class ProviderVerifierImplTest {
             @Override
             protected void configure() {
                 bind(ProviderConfigs.class).toInstance(providerConfigs);
+                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
                 bind(InferenceGate.class).toInstance(inferenceGate);
                 bind(RetryPolicy.class).toInstance(policy);
             }

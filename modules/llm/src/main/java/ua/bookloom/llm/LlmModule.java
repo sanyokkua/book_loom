@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
 import ua.bookloom.llm.verify.ProviderVerifierImpl;
@@ -36,6 +37,7 @@ public final class LlmModule extends AbstractModule {
         bind(ModelCapabilities.class).to(ModelCapabilityService.class);
         bind(InferenceGate.class).in(Singleton.class);
         bind(ProviderClientFactory.class).in(Singleton.class);
+        bind(ModelSettingsCache.class).in(Singleton.class);
     }
 
     /** Provides shared retry decisions with production clock, random jitter, and a blocking sleeper. */

@@ -131,7 +131,8 @@ public final class NamesPassImpl implements NamesPass {
                 () -> stage(projectId).flatMap(stage -> {
                     final CallCounter counter = new CallCounter(progress);
                     final ChatModel stoppable = new StoppableModel(model);
-                    final int window = ContextBudget.windowFor(detectedContext, null);
+                    final int window = ContextBudget.windowFor(detectedContext, model.contextWindowOverride());
+                    log.debug("Names pass window={} detected={}", window, detectedContext);
                     final ModelCalls calls = stage.scans().calls(stoppable, counter, stage.book(), window);
                     return execute(new Run(stage, stoppable, counter, calls, clock.instant()));
                 }));

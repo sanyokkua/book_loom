@@ -353,6 +353,30 @@ public record ChatRequest(
     }
 
     /**
+     * Copies this request with the settings a model's own configuration decides.
+     *
+     * @param newTemperature the temperature to send, or null to send none
+     * @param cap the output cap, or null for none; positive when set
+     * @param field the field carrying the cap, or null for {@code max_tokens}
+     * @return a copy with those three fields replaced and every other field unchanged
+     */
+    public ChatRequest withModelSettings(
+            @Nullable Double newTemperature, @Nullable Integer cap, @Nullable OutputLengthField field) {
+        return new ChatRequest(
+                messages,
+                newTemperature,
+                responseFormat,
+                reasoningEnabled,
+                contextWindow,
+                expectedOutputTokens,
+                cap,
+                seed,
+                callKind,
+                sampling,
+                field);
+    }
+
+    /**
      * Returns the sampling controls with null standing for none, so a client reads each control without a guard.
      *
      * @return {@code sampling}, or {@link SamplingParams#NONE} when it is null

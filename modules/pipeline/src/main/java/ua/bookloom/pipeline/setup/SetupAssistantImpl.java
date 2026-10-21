@@ -100,7 +100,11 @@ public final class SetupAssistantImpl implements SetupAssistant {
         try {
             return opened(projectId)
                     .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
-                            .suggest(book, detectedContext, calls(model, progress, book)));
+                            .suggest(
+                                    book,
+                                    detectedContext,
+                                    model.contextWindowOverride(),
+                                    calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         }

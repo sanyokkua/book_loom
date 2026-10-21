@@ -3,6 +3,7 @@ package ua.bookloom.llm;
 import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -12,6 +13,8 @@ import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
@@ -30,13 +33,33 @@ public final class GatedChatModel implements ChatModel {
     private final String modelId;
     private final InferenceGate gate;
     private final RetryPolicy retryPolicy;
+    private final String providerId;
+    private final BiFunction<String, String, ModelSettings> settings;
 
     /** Captures the concrete provider client, model id, shared gate, and retry policy for each call. */
     public GatedChatModel(ProviderClient client, String modelId, InferenceGate gate, RetryPolicy retryPolicy) {
+        this(client, "", modelId, gate, retryPolicy, ModelSettings::defaults);
+    }
+
+    /** As the four-argument form, applying the model's own settings, read afresh for every call. */
+    public GatedChatModel(
+            ProviderClient client,
+            String providerId,
+            String modelId,
+            InferenceGate gate,
+            RetryPolicy retryPolicy,
+            BiFunction<String, String, ModelSettings> settings) {
+        this.providerId = Objects.requireNonNull(providerId, "providerId");
+        this.settings = Objects.requireNonNull(settings, "settings");
         this.client = Objects.requireNonNull(client, "client");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+    }
+
+    @Override
+    public @org.jspecify.annotations.Nullable Integer contextWindowOverride() {
+        return settings.apply(providerId, modelId).contextWindow();
     }
 
     @Override
@@ -48,7 +71,7 @@ public final class GatedChatModel implements ChatModel {
     public Result<ChatResponse> chat(ChatRequest request, CallAttemptListener attempts) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(attempts, "attempts");
-        ChatRequest candidate = request;
+        ChatRequest candidate = applied(request);
         final EnumSet<RejectedCapability> downgraded = EnumSet.noneOf(RejectedCapability.class);
         while (true) {
             final ProviderCallResult<ChatResponse> call = callWithTransportRetry(candidate, attempts);
@@ -61,6 +84,34 @@ public final class GatedChatModel implements ChatModel {
             }
             candidate = next;
         }
+    }
+
+    // Read once per call, so every retry of it keeps the same settings and a save lands on the next call.
+    private ChatRequest applied(ChatRequest request) {
+        final ModelSettings stored = settings.apply(providerId, modelId);
+        final Double temperature =
+                switch (stored.temperatureChoice()) {
+                    case CHOOSE -> request.temperature();
+                    case VALUE -> stored.temperature();
+                    case OMIT -> null;
+                };
+        final Integer requestCap = request.maxOutputTokens();
+        final Integer maxOutput = stored.maxOutput();
+        final Integer cap =
+                requestCap != null && maxOutput != null ? Integer.valueOf(Math.min(requestCap, maxOutput)) : requestCap;
+        final OutputLengthField field =
+                request.outputField() == null && stored.outputField() != OutputLengthField.MAX_TOKENS
+                        ? stored.outputField()
+                        : request.outputField();
+        log.debug(
+                "Applied model settings model={} kind={} temperatureChoice={} temperature={} cap={} outputField={}",
+                modelId,
+                request.callKind(),
+                stored.temperatureChoice(),
+                temperature,
+                cap,
+                field);
+        return request.withModelSettings(temperature, cap, field);
     }
 
     private ProviderCallResult<ChatResponse> callWithTransportRetry(

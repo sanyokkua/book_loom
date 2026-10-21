@@ -25,6 +25,15 @@ public final class LlmTestStorageModule extends AbstractModule {
         this.modelSettings = new FakeModelSettingsRepository();
     }
 
+    /**
+     * The settings repository the injector serves, so a test can seed it.
+     *
+     * @return the in-memory repository
+     */
+    public ModelSettingsRepository modelSettings() {
+        return modelSettings;
+    }
+
     @Override
     protected void configure() {
         bind(ProviderConfigs.class).toInstance(configs);

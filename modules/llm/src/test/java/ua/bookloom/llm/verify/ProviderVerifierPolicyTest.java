@@ -40,10 +40,12 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Exercises the verifier's measured stage durations, models count, and the two shorter cumulative policies. */
@@ -225,6 +227,7 @@ class ProviderVerifierPolicyTest {
             @Override
             protected void configure() {
                 bind(ProviderConfigs.class).toInstance(configs);
+                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
                 bind(InferenceGate.class).toInstance(new InferenceGate());
                 bind(RetryPolicy.class).toInstance(new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}));
                 bind(LongSupplier.class).toInstance(nanoTime);

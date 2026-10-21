@@ -321,7 +321,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     (`#provider-kinds-and-presets`, FR-PROV-05a/b/c, `#three-stage-verification`, and the collapsed table at
     `#response-handling`), and `02_Architecture/04_LLM_INTEGRATION.md` (`#provider-config`,
     `#credentials-as-reference`). → :llm, docs
-- [ ] 4.2 Apply the per-model settings to every request, so Let BookLoom choose keeps the tuned per-kind temperature,
+- [x] 4.2 Apply the per-model settings to every request, so Let BookLoom choose keeps the tuned per-kind temperature,
   My value sends one value, and Don't send leaves `temperature` out. The context window, answer length and output
   field follow too.
   - **Satisfies:** inference "Send each call kind at its own temperature"; inference "Apply a model's own settings to

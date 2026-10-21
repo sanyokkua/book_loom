@@ -43,7 +43,15 @@ class ContextBudgetTest {
 
     @ParameterizedTest
     @CsvSource(
-            value = {"null,null,16384", "4096,null,4096", "131072,null,16384", "131072,32768,32768", "null,2048,2048"},
+            value = {
+                "null,null,16384",
+                "4096,null,4096",
+                "131072,null,16384",
+                "131072,32768,32768",
+                "null,2048,2048",
+                "4096,8192,8192",
+                "16384,8192,8192"
+            },
             nullValues = "null")
     void windowFor_detectedAndOverride_overrideWinsAndDetectionIsCapped(
             final Integer detected, final Integer override, final int expected) {

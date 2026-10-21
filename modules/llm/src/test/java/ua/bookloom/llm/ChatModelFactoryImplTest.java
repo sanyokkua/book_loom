@@ -44,8 +44,10 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
 
@@ -275,7 +277,13 @@ class ChatModelFactoryImplTest {
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retries = new RetryPolicy(
                 Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC), () -> 0.5, ignored -> {});
-        return new ChatModelFactoryImpl(configs, clients, new InferenceGate(), retries, new LlmModule().objectMapper());
+        return new ChatModelFactoryImpl(
+                configs,
+                clients,
+                new InferenceGate(),
+                retries,
+                new LlmModule().objectMapper(),
+                new ModelSettingsCache(new FakeModelSettingsRepository()));
     }
 
     private void register(ProviderConfig config) {

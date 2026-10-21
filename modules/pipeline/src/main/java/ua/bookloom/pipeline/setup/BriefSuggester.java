@@ -78,15 +78,19 @@ final class BriefSuggester {
      *
      * @param book the book
      * @param detectedContext the model's context window in tokens, or null when unknown
+     * @param override the window the person set for the model, or null; replaces the detected one
      * @param calls the model-call seam
      * @return the suggestion held to the brief's narrator; the first window call's error when every window call failed;
      *     the {@code cancelled} error of any call the person stopped; a validation error when the book has no story to
      *     read or no window's reply could be read
      */
     Result<BriefSuggestion> suggest(
-            final SetupBook book, final @Nullable Integer detectedContext, final ModelCalls calls) {
+            final SetupBook book,
+            final @Nullable Integer detectedContext,
+            final @Nullable Integer override,
+            final ModelCalls calls) {
         final QualityDial dial = book.project().brief().dial();
-        final int windowTokens = BookSamples.windowTokens(dial, detectedContext, fixedTokens(book));
+        final int windowTokens = BookSamples.windowTokens(dial, detectedContext, override, fixedTokens(book));
         final List<BookSample> windows =
                 BookSamples.of(book.document(), book.languageOf(), BookSamples.windowCount(dial), windowTokens);
         if (windows.isEmpty()) {
@@ -104,6 +108,11 @@ final class BriefSuggester {
                 .flatMap(known -> glossary.all(book.project().id())
                         .flatMap(people -> read(
                                 book, windows, new NarratorGenderEvidence(people, book.languageOf()), known, calls)));
+    }
+
+    Result<BriefSuggestion> suggest(
+            final SetupBook book, final @Nullable Integer detectedContext, final ModelCalls calls) {
+        return suggest(book, detectedContext, null, calls);
     }
 
     // What each window's call spends besides the passage: its system message, its other user text and the reply.

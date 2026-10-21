@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
@@ -83,13 +84,17 @@ final class OpenAiRequestMapper {
         final List<OpenAiChatRequest.Message> messages =
                 request.messages().stream().map(this::toOpenAiMessage).toList();
         try {
+            final Integer cap = outputCap(request);
+            final boolean completionField = request.outputField() == OutputLengthField.MAX_COMPLETION_TOKENS;
+            log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
             final OpenAiChatRequest payload = new OpenAiChatRequest(
                     modelId,
                     messages,
                     false,
                     request.temperature(),
                     responseFormat,
-                    maxTokens(request),
+                    completionField ? null : cap,
+                    completionField ? cap : null,
                     request.seed(),
                     reasoningEffort(request.reasoningEnabled()),
                     request.samplingOrNone().topP(),
@@ -102,7 +107,7 @@ final class OpenAiRequestMapper {
         }
     }
 
-    private static @Nullable Integer maxTokens(ChatRequest request) {
+    private static @Nullable Integer outputCap(ChatRequest request) {
         return Boolean.TRUE.equals(request.reasoningEnabled())
                 ? ReasoningHeadroom.raise(request.maxOutputTokens())
                 : request.maxOutputTokens();

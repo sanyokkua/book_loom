@@ -69,13 +69,18 @@ final class BookSamples {
      *
      * @param dial the quality dial; never null
      * @param detectedContext the context length the provider reported, or null; limited as
-     *     {@code ContextBudget.windowFor(detectedContext, null)} limits it
+     *     {@code ContextBudget.windowFor(detectedContext, override)} limits it
+     * @param override the window the person set for the model, or null; replaces the detected one
      * @param fixedTokens the tokens the call's system message, its other user text and the reply's cap take; not
      *     negative
      * @return the window's budget in tokens; at least 200, so a window is never empty
      */
-    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
-        final int window = ContextBudget.windowFor(detectedContext, null);
+    static int windowTokens(
+            final QualityDial dial,
+            @Nullable final Integer detectedContext,
+            @Nullable final Integer override,
+            final int fixedTokens) {
+        final int window = ContextBudget.windowFor(detectedContext, override);
         final int room = window - ContextBudget.SAFETY_MARGIN - fixedTokens;
         final int wanted =
                 switch (Objects.requireNonNull(dial, "dial")) {
@@ -85,13 +90,19 @@ final class BookSamples {
                 };
         final int tokens = Math.max(MIN_WINDOW_TOKENS, Math.min(wanted, room));
         log.debug(
-                "Brief window budget: dial={} model window={} fixed={} room={} -> {} tokens",
+                "Brief window budget: dial={} model window={} override={} fixed={} room={} -> {} tokens",
                 dial,
                 window,
+                override,
                 fixedTokens,
                 room,
                 tokens);
         return tokens;
+    }
+
+    /** As the four-argument form for a model whose window the person did not set. */
+    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
+        return windowTokens(dial, detectedContext, null, fixedTokens);
     }
 
     /**

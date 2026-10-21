@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.glossary;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -29,6 +30,11 @@ final class StoppableModel implements ChatModel {
      */
     static AppError stopped() {
         return AppError.of(ErrorCode.cancelled, "Stopped", "The names pass was stopped.");
+    }
+
+    @Override
+    public @Nullable Integer contextWindowOverride() {
+        return inner.contextWindowOverride();
     }
 
     @Override

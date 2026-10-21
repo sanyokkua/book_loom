@@ -1,10 +1,12 @@
 package ua.bookloom.pipeline;
 
+import java.util.Objects;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.pipeline.chunk.TokenBudget;
@@ -39,6 +41,11 @@ final class JobLifecycleLogger {
     }
 
     static void ended(final JobReport report, final long elapsedMillis) {
+        if (report.end() == JobState.FAILED) {
+            log.warn(
+                    "Translation job ended failed code={}",
+                    Objects.requireNonNull(report.error(), "error").code());
+        }
         log.info(
                 "Translation job ended state={} segments={} accepted={} flagged={} elapsedMs={}",
                 report.end(),

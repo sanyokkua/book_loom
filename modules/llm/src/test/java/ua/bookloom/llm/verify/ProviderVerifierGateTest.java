@@ -45,11 +45,13 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.GatedChatModel;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Proves a verifier's retry wait releases the same gate used by regular chat. */
@@ -164,6 +166,7 @@ class ProviderVerifierGateTest {
             @Override
             protected void configure() {
                 bind(ProviderConfigs.class).toInstance(configs);
+                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
                 bind(InferenceGate.class).toInstance(gate);
                 bind(RetryPolicy.class).toInstance(retryPolicy);
             }

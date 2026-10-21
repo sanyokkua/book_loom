@@ -18,8 +18,6 @@ import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.chunk.ChunkPacker;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -51,6 +49,7 @@ public final class ChunkRunner {
 
     private final RunSteps steps;
     private final RunSettings settings;
+    private final ChunkPlanner planner;
     private final RunStores stores;
     private final RunSinks sinks;
     private final PrecedingTargets preceding;
@@ -67,6 +66,7 @@ public final class ChunkRunner {
      *
      * @param steps the non-null calls a chunk is made of
      * @param settings the non-null brief and review mode of the run
+     * @param window the non-null window latched as each chunk is entered, which later chunks are packed and sent for
      * @param stores the non-null stores the glossary and earlier decisions are read from
      * @param sinks the non-null places every decision goes
      * @param index the non-null index of the book the run started with, which a later close or import cannot change
@@ -75,12 +75,14 @@ public final class ChunkRunner {
     public ChunkRunner(
             final RunSteps steps,
             final RunSettings settings,
+            final RunWindow window,
             final RunStores stores,
             final RunSinks sinks,
             final BookIndex index,
             final Document document) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
+        this.planner = new ChunkPlanner(settings, window);
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
@@ -138,37 +140,21 @@ public final class ChunkRunner {
     // The unit's glossary lines and summary are reserved as they stand when it is packed; a chunk re-reads the
     // glossary anyway, and a summary refreshed inside the unit is estimated when the next unit is packed.
     private Optional<RunEnd> runUnit(final WorkList work, final List<WorkItem> items) {
-        final List<Segment> segments = items.stream().map(WorkItem::segment).toList();
         final Result<List<GlossaryEntry>> glossary = stores.glossary().all(settings.projectId());
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
-        final ContextBudget window = ChunkBudget.budget(settings.frame(), settings.window());
-        final int budget = window.chunkTokens();
-        final int cap = settings.dial().chunkCap(settings.mode());
-        final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
-        log.debug(
-                "Packed unit unitId={} budget={} {} cap={} chunkSizes={}",
-                segments.getFirst().unit(),
-                budget,
-                window.describe(),
-                cap,
-                chunks.stream().map(chunk -> chunk.segments().size()).toList());
-        return runChunks(work, items, chunks, budget);
+        return runChunks(work, planner.walk(items));
     }
 
-    private Optional<RunEnd> runChunks(
-            final WorkList work, final List<WorkItem> items, final List<Chunk> chunks, final int budget) {
-        int offset = 0;
-        for (int index = 0; index < chunks.size(); index++) {
-            final int size = chunks.get(index).segments().size();
-            final List<WorkItem> chunkItems = items.subList(offset, offset + size);
-            work.enterChunk(index + 1, chunks.size());
-            final Optional<RunEnd> end = runChunk(work, chunks.get(index), chunkItems, index, budget);
+    private Optional<RunEnd> runChunks(final WorkList work, final ChunkPlanner.Walk walk) {
+        while (walk.hasNext()) {
+            final ChunkPlanner.Next next = walk.next();
+            work.enterChunk(next.number(), next.total());
+            final Optional<RunEnd> end = runChunk(work, next.chunk(), next.items(), next.number() - 1, next.budget());
             if (end.isPresent()) {
                 return end;
             }
-            offset += size;
         }
         return Optional.empty();
     }
@@ -176,14 +162,21 @@ public final class ChunkRunner {
     private Optional<RunEnd> runChunk(
             final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index, final int budget) {
         final Result<PromptRequests> read = PromptRequests.read(
-                stores.glossary(), stores.lexicon(), settings, chunk, steps.gate(), steps.translator(), steps.batch());
+                stores.glossary(),
+                stores.lexicon(),
+                planner.settings(),
+                chunk,
+                steps.gate(),
+                steps.translator(),
+                steps.batch());
         if (read.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
         }
         final PromptRequests requests = Objects.requireNonNull(read.data(), "requests");
         final Current current = Current.of(work, items, requests, budget);
-        final Optional<RunEnd> end =
-                settings.dial().hasReviewer() ? reviewedChunk(current, items) : unreviewedChunk(current, items);
+        final Optional<RunEnd> end = planner.settings().dial().hasReviewer()
+                ? reviewedChunk(current, items)
+                : unreviewedChunk(current, items);
         if (end.isPresent()) {
             final List<String> dropped = current.drafts().undecidedIds();
             log.debug("Stopped inside chunk={} droppedDrafts={} ids={}", index, dropped.size(), dropped);

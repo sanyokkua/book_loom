@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -55,7 +56,7 @@ public final class JobModelCalls implements ModelCalls {
     private final Consumer<JobEvent> announce;
     private final Clock clock;
     private final String targetLanguage;
-    private final int window;
+    private final IntSupplier window;
     private final CallSnapshots snapshots;
 
     /**
@@ -111,15 +112,40 @@ public final class JobModelCalls implements ModelCalls {
             final String targetLanguage,
             final int window,
             final Map<String, SegmentLocator> locators) {
+        this(guard, announce, clock, targetLanguage, fixed(window), locators);
+    }
+
+    /**
+     * Creates the run's model-call seam with a window read afresh for each request, so a chunk entered at another
+     * window sends its requests for that one.
+     *
+     * @param guard see the five-argument constructor
+     * @param announce see the five-argument constructor
+     * @param clock see the five-argument constructor
+     * @param targetLanguage see the five-argument constructor
+     * @param window the non-null source of the window in tokens, positive each time it is read
+     * @param locators see the six-argument constructor
+     */
+    public JobModelCalls(
+            final Function<Runnable, ChatModel> guard,
+            final Consumer<JobEvent> announce,
+            final Clock clock,
+            final String targetLanguage,
+            final IntSupplier window,
+            final Map<String, SegmentLocator> locators) {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.announce = Objects.requireNonNull(announce, "announce");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
+        this.window = Objects.requireNonNull(window, "window");
+        this.snapshots = new CallSnapshots(announce, locators);
+    }
+
+    private static IntSupplier fixed(final int window) {
         if (window <= 0) {
             throw new IllegalArgumentException("window must be positive: " + window);
         }
-        this.window = window;
-        this.snapshots = new CallSnapshots(announce, locators);
+        return () -> window;
     }
 
     @Override
@@ -154,9 +180,10 @@ public final class JobModelCalls implements ModelCalls {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(asked, "request");
+        final int tokens = window.getAsInt();
         final ChatRequest request = asked.contextWindow() == null
                 ? asked
-                : asked.sizedTo(window, Math.max(1, window / OUTPUT_WINDOW_DIVISOR));
+                : asked.sizedTo(tokens, Math.max(1, tokens / OUTPUT_WINDOW_DIVISOR));
         log.debug(
                 "Model call sized kind={} window={} asked={} cap={}",
                 kind,
