@@ -250,7 +250,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     (`SegmentRecord` with findings and `ContextSnapshot.sentSections`, `GlossaryEntry` with aliases, `LexiconEntry`,
     `RollingSummary`, `Deferral`, `RunRecord`, `TmEntry`, `BookBrief`, `ProviderConfig`, `ModelSettings`,
     `ExportRecord`). → :persistence
-- [ ] 3.4 Implement the existing storage ports over SQLite, and add the lexicon to the contract chain, so the window's
+- [x] 3.4 Implement the existing storage ports over SQLite, and add the lexicon to the contract chain, so the window's
   translation state survives a restart with the same behaviour the in-memory adapters prove.
   - **Satisfies:** local-storage "Keep the application's work across a restart"; local-storage "Write a chunk's
     decisions together"; local-storage "Remove a project's saved work and nothing else"; local-storage "Delete the

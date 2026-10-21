@@ -2,14 +2,19 @@ package ua.bookloom.persistence.sqlite;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +42,7 @@ public final class JsonCodec {
 
     private final ObjectMapper mapper = JsonMapper.builder()
             .addModule(new JavaTimeModule())
+            .addModule(paths())
             .visibility(new RecordComponentsOnly())
             .disable(MapperFeature.CAN_OVERRIDE_ACCESS_MODIFIERS)
             .disable(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS)
@@ -85,6 +91,32 @@ public final class JsonCodec {
             return mapper.readValue(json, type);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("cannot read " + type.getSimpleName(), e);
+        }
+    }
+
+    /**
+     * Stores a path as it was written. Jackson's default writes a {@code file:} URI, which makes a relative path
+     * absolute against the working folder on read, so the value would not come back equal.
+     */
+    private static SimpleModule paths() {
+        final SimpleModule module = new SimpleModule("paths");
+        module.addSerializer(Path.class, ToStringSerializer.instance);
+        module.addDeserializer(Path.class, new PathDeserializer());
+        return module;
+    }
+
+    /** Reads a path from the text {@link #paths()} wrote. */
+    private static final class PathDeserializer extends FromStringDeserializer<Path> {
+
+        private static final long serialVersionUID = 1L;
+
+        PathDeserializer() {
+            super(Path.class);
+        }
+
+        @Override
+        protected Path _deserialize(final String value, final DeserializationContext context) {
+            return Path.of(value);
         }
     }
 

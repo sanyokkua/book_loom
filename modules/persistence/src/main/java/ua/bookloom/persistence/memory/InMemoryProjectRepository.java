@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -16,7 +17,9 @@ import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
 
 /**
- * Stores and retrieves a project over the shared {@link InMemoryStore}, keyed by its stable id.
+ * Stores and retrieves a project over the shared {@link InMemoryStore}, keyed by its stable id, with the rules the
+ * SQLite adapter keeps by its schema: a name is unique within one book ignoring case, every project of one content
+ * shares the one book location, and deleting a project forgets its work.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -27,13 +30,34 @@ public final class InMemoryProjectRepository implements ProjectRepository {
     @Override
     public Result<Project> save(final Project project) {
         Objects.requireNonNull(project, "project");
+        final Lock writeLock = store.lock().writeLock();
+        writeLock.lock();
         try {
+            if (nameInUse(project)) {
+                log.debug(
+                        "Project save refused, name in use projectId={} hash={}", project.id(), project.contentHash());
+                return Result.err(nameInUseError());
+            }
             store.projects().put(project.id(), project);
-            log.debug("Project saved projectId={}", project.id());
+            store.projects()
+                    .replaceAll((id, held) -> held.contentHash().equals(project.contentHash())
+                            ? withSource(held, project.source())
+                            : held);
+            log.debug("Project saved projectId={} hash={}", project.id(), project.contentHash());
             return Result.ok(project);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
+        } finally {
+            writeLock.unlock();
         }
+    }
+
+    /** Another project of the same book already holds this name, compared by {@link Project#nameKey()}. */
+    private boolean nameInUse(final Project project) {
+        return store.projects().values().stream()
+                .anyMatch(held -> !held.id().equals(project.id())
+                        && held.contentHash().equals(project.contentHash())
+                        && held.nameKey().equals(project.nameKey()));
     }
 
     @Override
@@ -49,12 +73,17 @@ public final class InMemoryProjectRepository implements ProjectRepository {
     @Override
     public Result<Boolean> delete(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
+        final Lock writeLock = store.lock().writeLock();
+        writeLock.lock();
         try {
             final boolean removed = store.projects().remove(projectId) != null;
+            store.forget(projectId);
             log.debug("Project delete projectId={} removed={}", projectId, removed);
             return Result.ok(removed);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -112,16 +141,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
         try {
             final List<Project> moved = store.projects().values().stream()
                     .filter(p -> p.contentHash().equals(contentHash))
-                    .map(p -> new Project(
-                            p.id(),
-                            newPath,
-                            p.format(),
-                            p.contentHash(),
-                            p.brief(),
-                            p.name(),
-                            p.nameOrigin(),
-                            p.createdAt(),
-                            p.lastOpenedAt()))
+                    .map(p -> withSource(p, newPath))
                     .toList();
             moved.forEach(p -> store.projects().put(p.id(), p));
             log.debug("Book relocated hash={} projects={} path={}", contentHash, moved.size(), newPath);
@@ -155,6 +175,23 @@ public final class InMemoryProjectRepository implements ProjectRepository {
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }
+    }
+
+    private static Project withSource(final Project p, final Path source) {
+        return new Project(
+                p.id(),
+                source,
+                p.format(),
+                p.contentHash(),
+                p.brief(),
+                p.name(),
+                p.nameOrigin(),
+                p.createdAt(),
+                p.lastOpenedAt());
+    }
+
+    private static AppError nameInUseError() {
+        return AppError.of(ErrorCode.validation, "Name in use", "Another project of this book already has that name.");
     }
 
     private static AppError internalError(final Throwable cause) {

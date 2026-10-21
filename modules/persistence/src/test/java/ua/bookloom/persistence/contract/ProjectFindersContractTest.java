@@ -79,6 +79,7 @@ public abstract class ProjectFindersContractTest extends RepositoryContractTest 
 
     @Test
     void recordExport_twice_lastExportReturnsTheLaterOneOfThatProjectOnly() {
+        givenProjects("a", "b");
         final ProjectRepository repository = projectRepository();
         final ExportRecord first = exportRecord("one.epub");
         final ExportRecord second = exportRecord("two.epub");

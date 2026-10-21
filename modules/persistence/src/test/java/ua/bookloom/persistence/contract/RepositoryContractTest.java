@@ -109,6 +109,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void firstPending_afterAcceptAndFlag_skipsFlaggedAndMovesToTheNextUnit() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         final Set<SegmentKind> keptFrontmatter = seedFiveSegments(repository);
 
@@ -128,6 +129,7 @@ public abstract class RepositoryContractTest {
     // A flagged segment no target passed for keeps the model's refused reply, and a machine target clears it.
     @Test
     void update_rejectedTargetKeptThenMachineTargetSet_isStoredThenCleared() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         seedFiveSegments(repository);
 
@@ -145,6 +147,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void firstPending_auxiliarySegments_respectKeptAuxiliaryKinds() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         final Set<SegmentKind> keptFrontmatter = seedFiveSegments(repository);
         final Set<SegmentKind> keptNone = Set.of();
@@ -168,6 +171,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void countsByStatus_countsARevisedSegment() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -178,6 +182,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void byUnit_returnsThatUnitsSegmentsInDocumentOrder() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll(
                 "p1",
@@ -193,6 +198,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void update_unknownSegmentId_answersValidation() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -205,6 +211,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void records_ofOneProject_areInvisibleToAnother() {
+        givenProjects("p1", "p2");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         repository.saveAll("p2", List.of(pending("p2", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
@@ -219,6 +226,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void update_concurrentIncrements_endsAtTheExpectedTotal() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -269,6 +277,16 @@ public abstract class RepositoryContractTest {
     private static Optional<String> firstPendingId(
             final SegmentRepository repository, final Set<SegmentKind> keptAuxiliaryKinds) {
         return repository.firstPending("p1", keptAuxiliaryKinds).data().map(SegmentRecord::segmentId);
+    }
+
+    /**
+     * Saves a project for each id: a stored adapter keeps a project's records only under a project that exists, as
+     * the application always creates the project first.
+     */
+    protected void givenProjects(final String... ids) {
+        for (final String id : ids) {
+            assertThat(projectRepository().save(project(id)).isOk()).isTrue();
+        }
     }
 
     protected static Project project(final String id) {

@@ -90,7 +90,29 @@ class JsonCodecTest {
                         4,
                         5,
                         6,
-                        List.of(Path.of("/tmp/out/glossary.csv"), Path.of("/tmp/out/log.txt"))));
+                        List.of(Path.of("/tmp/out/glossary.csv"), Path.of("/tmp/out/log.txt"))),
+                new ExportRecord(T0, Path.of("out/книга.epub"), 1, 0, 0, 0, 0, 0, 1, List.of(Path.of("side.csv"))));
+    }
+
+    static Stream<Object> storedDocuments() {
+        return Stream.of(
+                new GlossaryDocument(List.of(glossary()), List.of("milton")),
+                new LexiconDocument(List.of(lexicon()), List.of("master")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("storedDocuments")
+    void roundTrip_storedDocument_readsBackEqual(final Object stored) {
+        final String json = codec.write(stored);
+
+        assertThat(codec.read(json, stored.getClass())).isEqualTo(stored);
+    }
+
+    @Test
+    void write_relativePath_isStoredAsWritten() {
+        final ExportRecord record = new ExportRecord(T0, Path.of("out/book.epub"), 1, 0, 0, 0, 0, 0, 1, List.of());
+
+        assertThat(codec.write(record)).contains("\"destination\":\"out/book.epub\"");
     }
 
     @ParameterizedTest

@@ -3,18 +3,19 @@ package ua.bookloom.persistence.memory;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
-import ua.bookloom.persistence.contract.CheckpointContractTest;
+import ua.bookloom.persistence.contract.ProjectStorageContractTest;
 
 /**
  * Proves the in-memory adapters against the shared repository contract (JUnit 5 creates a fresh instance per test
  * method, so each test gets an isolated {@link InMemoryStore}).
  */
-class InMemoryRepositoryContractTest extends CheckpointContractTest {
+class InMemoryRepositoryContractTest extends ProjectStorageContractTest {
 
     private final InMemoryStore store = new InMemoryStore();
     private final InMemoryProjectRepository projectRepository = new InMemoryProjectRepository(store);
@@ -24,6 +25,7 @@ class InMemoryRepositoryContractTest extends CheckpointContractTest {
     private final InMemorySummaryRepository summaryRepository = new InMemorySummaryRepository(store);
     private final InMemoryDeferralRepository deferralRepository = new InMemoryDeferralRepository(store);
     private final InMemoryRunRepository runRepository = new InMemoryRunRepository(store);
+    private final InMemoryLexiconRepository lexiconRepository = new InMemoryLexiconRepository(store);
     private final InMemoryCheckpoint checkpointPort = new InMemoryCheckpoint(store);
 
     @Override
@@ -64,5 +66,10 @@ class InMemoryRepositoryContractTest extends CheckpointContractTest {
     @Override
     protected CheckpointPort checkpointPort() {
         return checkpointPort;
+    }
+
+    @Override
+    protected LexiconRepository lexiconRepository() {
+        return lexiconRepository;
     }
 }

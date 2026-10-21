@@ -2,6 +2,7 @@ package ua.bookloom.persistence.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -19,11 +20,13 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
@@ -36,10 +39,13 @@ import ua.bookloom.api.project.TmEntry;
  */
 public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRunContractTest {
 
+    private static final Instant RUN_START = Instant.parse("2026-10-21T08:00:00Z");
+
     protected abstract CheckpointPort checkpointPort();
 
     @Test
     void commit_appliesEveryListTogether_andCountsThem() {
+        givenProjects("p1");
         final SegmentRepository segments = segmentRepository();
         segments.saveAll(
                 "p1",
@@ -67,6 +73,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     @Test
     void commit_twoTermDeferralsOnOneSegment_keepsBothOpenAndRepeatingLeavesTwo() {
+        givenProjects("p1");
         segmentRepository().saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
@@ -88,6 +95,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     @Test
     void commit_unknownSegmentId_answersValidationAndAppliesNothing() {
+        givenProjects("p1");
         final SegmentRepository segments = segmentRepository();
         segments.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         final ChunkCommit commit = new ChunkCommit(
@@ -109,6 +117,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     @Test
     void commit_glossaryAdditionOfAnExistingLockedTerm_keepsTheExistingEntry() {
+        givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
         glossary.add(new GlossaryEntry("existing", "p1", "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ChunkCommit commit = new ChunkCommit(
@@ -129,6 +138,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     @Test
     void commit_glossaryAdditionOfARemovedTerm_isNotReAdded() {
+        givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
         glossary.add(new GlossaryEntry("e1", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove("p1", "e1");
@@ -147,6 +157,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     @Test
     void commit_glossaryAdditionOfANewTerm_addsItUnlockedWithNoTarget() {
+        givenProjects("p1");
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
                 List.of(),
@@ -166,7 +177,33 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     }
 
     @Test
+    void commit_carryingARun_storesItAsTheLatestRun() {
+        givenProjects("p1");
+        segmentRepository().saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
+        final RunRecord run = new RunRecord("r1", "p1", RUN_START, null, JobState.RUNNING, 1, 0);
+
+        final Result<Integer> result = checkpointPort()
+                .commit(new ChunkCommit("p1", List.of(accepted("ch1:0", "ch1")), List.of(), List.of(), List.of(), run));
+
+        assertThat(result.data()).isEqualTo(1);
+        assertThat(runRepository().latest("p1").data()).hasValue(run);
+    }
+
+    @Test
+    void commit_carryingARunStartedEarlier_keepsTheLaterStoredRun() {
+        givenProjects("p1");
+        final RunRecord later = new RunRecord("r2", "p1", RUN_START.plusSeconds(60), null, JobState.RUNNING, 0, 0);
+        runRepository().save(later);
+        final RunRecord earlier = new RunRecord("r1", "p1", RUN_START, null, JobState.RUNNING, 3, 0);
+
+        checkpointPort().commit(new ChunkCommit("p1", List.of(), List.of(), List.of(), List.of(), earlier));
+
+        assertThat(runRepository().latest("p1").data()).hasValue(later);
+    }
+
+    @Test
     void commit_underConcurrentReads_isNeverObservedHalfApplied() {
+        givenProjects("p1");
         final SegmentRepository segments = segmentRepository();
         segments.saveAll(
                 "p1",

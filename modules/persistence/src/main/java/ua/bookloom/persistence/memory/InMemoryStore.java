@@ -123,6 +123,22 @@ final class InMemoryStore {
     }
 
     /**
+     * Forgets everything kept under a project id, as the SQLite schema's cascade does when a project is deleted. The
+     * caller holds the write lock.
+     */
+    void forget(final String projectId) {
+        segmentsByProject.remove(projectId);
+        glossaryByProject.remove(projectId);
+        tmByProject.remove(projectId);
+        summaryByProject.remove(projectId);
+        deferralsByProject.remove(projectId);
+        exportByProject.remove(projectId);
+        runsByProject.remove(projectId);
+        lexiconByProject.remove(projectId);
+        lexiconRemovedByProject.remove(projectId);
+    }
+
+    /**
      * The translation-memory key one project's source hash and context key are stored under.
      */
     static String tmKey(final String sourceHash, final String contextKey) {

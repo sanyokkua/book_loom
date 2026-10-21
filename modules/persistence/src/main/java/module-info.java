@@ -31,4 +31,7 @@ module ua.bookloom.persistence {
             com.google.guice;
     opens ua.bookloom.persistence.memory to
             com.google.guice;
+    // Jackson reads the stored glossary and lexicon documents through their public canonical constructors.
+    opens ua.bookloom.persistence.sqlite to
+            com.fasterxml.jackson.databind;
 }

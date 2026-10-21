@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -14,12 +17,15 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
@@ -36,14 +42,19 @@ class PendingCommitTest {
     private static final String EDIT = "Він рвучко відчинив двері.";
 
     private final List<ChunkCommit> commits = new CopyOnWriteArrayList<>();
+    private static final Instant START = Instant.parse("2026-10-21T08:00:00Z");
+
     private SegmentRepository segments;
+    private RunRepository runs;
+    private CheckpointPort checkpoint;
     private PendingCommit pending;
 
     @BeforeEach
     void setUp() {
         final Injector injector = Guice.createInjector(new PersistenceModule());
         segments = injector.getInstance(SegmentRepository.class);
-        final CheckpointPort checkpoint = injector.getInstance(CheckpointPort.class);
+        runs = injector.getInstance(RunRepository.class);
+        checkpoint = injector.getInstance(CheckpointPort.class);
         segments.saveAll(PROJECT, List.of(record("s0", SegmentStatus.PENDING), record("s1", SegmentStatus.PENDING)));
         pending = new PendingCommit(recording(checkpoint), PROJECT);
     }
@@ -159,6 +170,31 @@ class PendingCommitTest {
                 .singleElement()
                 .extracting(ChunkCommit::glossaryAdditions)
                 .isEqualTo(List.of(moreau));
+    }
+
+    // The run's counts are stored with the decisions they count, so a crash never leaves them disagreeing.
+    @Test
+    void flush_withARunRecorder_carriesTheRunAsItStandsAndStoresIt() {
+        final RunRecorder recorder = new RunRecorder(runs, "r1", PROJECT, Clock.fixed(START, ZoneOffset.UTC), null);
+        recorder.started();
+        recorder.decided(SegmentStatus.ACCEPTED);
+        final PendingCommit withRun = new PendingCommit(recording(checkpoint), PROJECT, recorder);
+        withRun.decided(record("s0", SegmentStatus.ACCEPTED), null);
+
+        withRun.flush();
+
+        final RunRecord expected = new RunRecord("r1", PROJECT, START, null, JobState.RUNNING, 1, 0, null);
+        assertThat(commits).singleElement().extracting(ChunkCommit::run).isEqualTo(expected);
+        assertThat(runs.latest(PROJECT).data()).hasValue(expected);
+    }
+
+    @Test
+    void flush_withoutARunRecorder_carriesNoRun() {
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
+
+        pending.flush();
+
+        assertThat(commits).singleElement().extracting(ChunkCommit::run).isNull();
     }
 
     private static TmEntry entry(final String segmentId) {

@@ -30,6 +30,8 @@ public final class RunRecorder {
     private Instant startedAt;
     private int accepted;
     private int flagged;
+    private @Nullable JobState state;
+    private @Nullable Instant endedAt;
 
     /**
      * Creates a recorder for one run.
@@ -94,12 +96,29 @@ public final class RunRecorder {
         write(end, clock.instant());
     }
 
-    private void write(final JobState state, @Nullable final Instant endedAt) {
-        log.debug("Writing run state runId={} state={}", runId, state);
+    /**
+     * Returns the run's record as it stands: the state last written with the counts so far, so a chunk commit can
+     * store the counts together with the decisions they count.
+     *
+     * @return the record, or null before the first state is written
+     */
+    public @Nullable RunRecord current() {
+        final JobState written = state;
+        final RunRecord record = written == null
+                ? null
+                : new RunRecord(runId, projectId, startedAt, endedAt, written, accepted, flagged, model);
+        log.debug("Current run record runId={} state={}", runId, written);
+        return record;
+    }
+
+    private void write(final JobState next, @Nullable final Instant end) {
+        log.debug("Writing run state runId={} state={}", runId, next);
+        state = next;
+        endedAt = end;
         final Result<RunRecord> saved =
-                runs.save(new RunRecord(runId, projectId, startedAt, endedAt, state, accepted, flagged, model));
+                runs.save(new RunRecord(runId, projectId, startedAt, end, next, accepted, flagged, model));
         if (saved.isErr()) {
-            log.warn("The run state could not be stored runId={} state={}", runId, state);
+            log.warn("The run state could not be stored runId={} state={}", runId, next);
         }
     }
 }

@@ -159,7 +159,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.control = new JobControl(request.mode().pausePoints());
         this.runSummary = new RunSummaryLogger(clock);
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.model());
-        this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
+        this.pending = new PendingCommit(stores.checkpoint(), request.projectId(), recorder);
         this.startedAt = clock.instant();
         this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
         this.watchdog = new StallWatchdog(control, clock);
