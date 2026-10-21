@@ -29,12 +29,14 @@ import ua.bookloom.api.Result;
 
 /**
  * An open SQLite database in WAL mode: reads on their own connections, writes through one {@link WriteExecutor}.
- * Before the first release a file that does not fit is set aside and replaced (ADR-0043); there is no migration.
+ * Before the first release a file that does not fit is set aside and replaced (ADR-0043); there is no migration. A
+ * file fits when it passes {@code quick_check}, carries {@link #SCHEMA_VERSION} and was written for the stored record
+ * shapes of this build ({@link StoredShapes}), since a document of another shape could not be read back.
  */
 @Slf4j
 public final class SqliteDatabase implements AutoCloseable {
 
-    static final int SCHEMA_VERSION = 1;
+    static final int SCHEMA_VERSION = 2;
 
     private static final String SCHEMA_RESOURCE = "/db/schema.sql";
     private static final int BUSY_TIMEOUT_MS = 5000;
@@ -42,6 +44,7 @@ public final class SqliteDatabase implements AutoCloseable {
     private static final String FAIL_ON_FX_PROPERTY = "bookloom.storage.failOnFxThread";
     private static final DateTimeFormatter ASIDE_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final List<String> SIDECARS = List.of("-wal", "-shm");
+    private static final String SHAPES_KEY = "record_shapes";
 
     private final Path file;
     private final SQLiteDataSource dataSource;
@@ -73,7 +76,11 @@ public final class SqliteDatabase implements AutoCloseable {
             }
             final SQLiteDataSource source = newDataSource(file);
             applySchema(source);
-            log.info("Database open file={} schemaVersion={}", file.getFileName(), SCHEMA_VERSION);
+            log.info(
+                    "Database open file={} schemaVersion={} recordShapes={}",
+                    file.getFileName(),
+                    SCHEMA_VERSION,
+                    StoredShapes.current());
             return Result.ok(new SqliteDatabase(file, source));
         } catch (IOException | RuntimeException e) {
             final AppError error = AppError.of(
@@ -180,7 +187,12 @@ public final class SqliteDatabase implements AutoCloseable {
             final String check = firstString(s, "pragma quick_check");
             final int version = Integer.parseInt(firstString(s, "pragma user_version"));
             log.debug("Database checked quickCheck={} userVersion={}", check, version);
-            return "ok".equals(check) && version == SCHEMA_VERSION;
+            if (!"ok".equals(check) || version != SCHEMA_VERSION) {
+                return false;
+            }
+            final String shapes = firstString(s, "select value from meta where key = '" + SHAPES_KEY + "'");
+            log.debug("Database record shapes stored={} expected={}", shapes, StoredShapes.current());
+            return StoredShapes.current().equals(shapes);
         } catch (SQLException e) {
             log.debug("Database cannot be opened: {}", e.getMessage());
             return false;
@@ -193,13 +205,19 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
-    private static void setAside(final Path file, final Clock clock) throws IOException {
+    /** Renames the file, and the WAL and shared-memory files beside it, to the stamped {@code .old-} name. */
+    static void setAside(final Path file, final Clock clock) throws IOException {
         final String suffix = ".old-" + ASIDE_STAMP.format(LocalDateTime.now(clock));
         final Path aside = file.resolveSibling(file.getFileName() + suffix);
         log.warn("Database does not fit, set aside file={} aside={}", file.getFileName(), aside.getFileName());
         Files.move(file, aside, StandardCopyOption.REPLACE_EXISTING);
         for (final String sidecar : SIDECARS) {
-            Files.deleteIfExists(file.resolveSibling(file.getFileName() + sidecar));
+            final Path held = file.resolveSibling(file.getFileName() + sidecar);
+            if (Files.exists(held)) {
+                final Path moved = aside.resolveSibling(aside.getFileName() + sidecar);
+                log.debug("Database sidecar set aside sidecar={} aside={}", held.getFileName(), moved.getFileName());
+                Files.move(held, moved, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
     }
 
@@ -212,6 +230,13 @@ public final class SqliteDatabase implements AutoCloseable {
             script = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
         log.debug("Applying schema chars={}", script.length());
-        Jdbi.create(source).useHandle(h -> h.createScript(script).execute());
+        Jdbi.create(source).useTransaction(h -> {
+            h.createScript(script).execute();
+            h.createUpdate("INSERT INTO meta (key, value) VALUES (:key, :value)"
+                            + " ON CONFLICT (key) DO UPDATE SET value = excluded.value")
+                    .bind("key", SHAPES_KEY)
+                    .bind("value", StoredShapes.current())
+                    .execute();
+        });
     }
 }

@@ -5,6 +5,7 @@ import com.google.inject.Key;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.persistence.sqlite.SqliteDatabase;
@@ -35,6 +36,9 @@ public final class AppLifecycle {
 
     private final List<String> completed = new CopyOnWriteArrayList<>();
 
+    /** The database phase 2 opened; {@code null} before, and for good when the graph has none or it failed to open. */
+    private final AtomicReference<@Nullable SqliteDatabase> opened = new AtomicReference<>();
+
     /**
      * Phase 1: construct services from the assembled graph, touching no I/O.
      *
@@ -59,7 +63,7 @@ public final class AppLifecycle {
         Objects.requireNonNull(injector, "injector");
         require(PHASE_ONE, PHASE_TWO);
         if (injector.getExistingBinding(Key.get(SqliteDatabase.class)) != null) {
-            injector.getInstance(SqliteDatabase.class);
+            opened.set(injector.getInstance(SqliteDatabase.class));
             log.info("phase 2: database opened");
         } else {
             log.debug("phase 2: no database in this graph");
@@ -78,15 +82,17 @@ public final class AppLifecycle {
     }
 
     /**
-     * Releases what phase 2 opened; called when the window stops.
-     *
-     * @param injector the injector of the run, or {@code null} when the application failed before building it
+     * Releases what phase 2 opened; called when the window stops. Only an instance phase 2 actually opened is closed:
+     * asking the injector again after a failed phase 2 would try to open the database a second time during shutdown.
      */
-    public void close(final @Nullable Injector injector) {
-        if (injector != null && injector.getExistingBinding(Key.get(SqliteDatabase.class)) != null) {
-            injector.getInstance(SqliteDatabase.class).close();
-            log.info("database closed");
+    public void close() {
+        final SqliteDatabase database = opened.getAndSet(null);
+        if (database == null) {
+            log.debug("close: no database was opened");
+            return;
         }
+        database.close();
+        log.info("database closed");
     }
 
     /**

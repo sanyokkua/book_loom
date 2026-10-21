@@ -1,6 +1,12 @@
 -- BookLoom storage schema (ADR-0043). Until the first release this is the only schema file: a database whose
--- user_version differs is renamed aside and a fresh one is created. Documents are JSON; real columns exist only
+-- user_version differs, or whose meta 'record_shapes' fingerprint differs from the stored records of the running
+-- build (StoredShapes), is renamed aside and a fresh one is created. Documents are JSON; real columns exist only
 -- where an index, a uniqueness rule or a cascade needs them.
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
@@ -80,4 +86,4 @@ CREATE TABLE IF NOT EXISTS deferrals (
     PRIMARY KEY (project_id, segment_id, reason, waiting_on)
 );
 
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;

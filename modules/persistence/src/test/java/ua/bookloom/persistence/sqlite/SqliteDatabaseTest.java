@@ -13,19 +13,28 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jdbi.v3.core.Handle;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 
 class SqliteDatabaseTest {
 
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-20T10:15:30Z"), ZoneOffset.UTC);
+    private static final String GUARD = "bookloom.storage.failOnFxThread";
 
     @TempDir
     Path dir;
+
+    private @Nullable String savedGuard;
 
     private SqliteDatabase open() {
         final Result<SqliteDatabase> opened = SqliteDatabase.open(dir.resolve("bookloom.db"), CLOCK);
@@ -49,17 +58,25 @@ class SqliteDatabaseTest {
                 + " values ('p1', 's1', 0, 'u1', 'PENDING', '{}')");
     }
 
-    @Test
-    void open_twoConnections_bothHaveForeignKeysAndBusyTimeout() throws SQLException {
-        try (SqliteDatabase db = open()) {
-            for (int i = 0; i < 2; i++) {
-                try (Connection c = db.dataSource().getConnection()) {
-                    assertThat(pragma(c, "foreign_keys")).isEqualTo("1");
-                    assertThat(pragma(c, "busy_timeout")).isEqualTo("5000");
-                    assertThat(pragma(c, "journal_mode")).isEqualTo("wal");
-                    assertThat(pragma(c, "synchronous")).isEqualTo("1");
-                }
-            }
+    @BeforeEach
+    void rememberGuard() {
+        savedGuard = System.getProperty(GUARD);
+    }
+
+    @AfterEach
+    void restoreGuard() {
+        Optional.ofNullable(savedGuard)
+                .ifPresentOrElse(value -> System.setProperty(GUARD, value), () -> System.clearProperty(GUARD));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"foreign_keys, 1", "busy_timeout, 5000", "journal_mode, wal", "synchronous, 1"})
+    void open_twoConnections_bothCarryThePragma(final String name, final String expected) throws SQLException {
+        try (SqliteDatabase db = open();
+                Connection first = db.dataSource().getConnection();
+                Connection second = db.dataSource().getConnection()) {
+            assertThat(pragma(first, name)).isEqualTo(expected);
+            assertThat(pragma(second, name)).isEqualTo(expected);
         }
     }
 
@@ -86,15 +103,65 @@ class SqliteDatabaseTest {
                             "project_docs",
                             "segments",
                             "tm_entries",
-                            "deferrals");
+                            "deferrals",
+                            "meta");
             assertThat(db.read(
                                     "version",
                                     h -> h.createQuery("pragma user_version")
                                             .mapTo(Integer.class)
                                             .one())
                             .data())
-                    .isEqualTo(1);
+                    .isEqualTo(2);
+            assertThat(storedShapes(db)).isEqualTo(StoredShapes.current());
         }
+    }
+
+    private static String storedShapes(final SqliteDatabase db) {
+        return Objects.requireNonNull(db.read(
+                        "shapes",
+                        h -> h.createQuery("select value from meta where key = 'record_shapes'")
+                                .mapTo(String.class)
+                                .one())
+                .data());
+    }
+
+    @Test
+    void open_storedRecordShapesChanged_renamesFileAsideAndCreatesFreshEmpty() {
+        final String otherShapes = StoredShapes.fingerprint(List.of(OtherShape.class));
+        try (SqliteDatabase first = open()) {
+            first.write("mark", h -> {
+                h.execute("insert into settings(key, value, type) values ('k', 'v', 'STRING')");
+                return h.execute("update meta set value = ? where key = 'record_shapes'", otherShapes);
+            });
+        }
+        try (SqliteDatabase second = open()) {
+            assertThat(dir.resolve("bookloom.db.old-20261020-101530")).exists();
+            assertThat(storedShapes(second)).isEqualTo(StoredShapes.current());
+            assertThat(second.read(
+                                    "count",
+                                    h -> h.createQuery("select count(*) from settings")
+                                            .mapTo(Integer.class)
+                                            .one())
+                            .data())
+                    .isZero();
+        }
+    }
+
+    private record OtherShape(String only) {}
+
+    @Test
+    void setAside_fileWithSidecars_movesTheSidecarsWithIt() throws IOException {
+        Files.writeString(dir.resolve("bookloom.db"), "main bytes");
+        Files.writeString(dir.resolve("bookloom.db-wal"), "wal bytes");
+        Files.writeString(dir.resolve("bookloom.db-shm"), "shm bytes");
+
+        SqliteDatabase.setAside(dir.resolve("bookloom.db"), CLOCK);
+
+        assertThat(dir.resolve("bookloom.db.old-20261020-101530")).hasContent("main bytes");
+        assertThat(dir.resolve("bookloom.db.old-20261020-101530-wal")).hasContent("wal bytes");
+        assertThat(dir.resolve("bookloom.db.old-20261020-101530-shm")).hasContent("shm bytes");
+        assertThat(dir.resolve("bookloom.db-wal")).doesNotExist();
+        assertThat(dir.resolve("bookloom.db-shm")).doesNotExist();
     }
 
     @Test
@@ -161,6 +228,7 @@ class SqliteDatabaseTest {
 
     @Test
     void write_onFxNamedThread_throwsWhenPropertySet() throws InterruptedException {
+        System.setProperty(GUARD, "true");
         final AtomicReference<Throwable> thrown = new AtomicReference<>();
         try (SqliteDatabase db = open()) {
             final Thread fx = new Thread(
@@ -180,6 +248,7 @@ class SqliteDatabaseTest {
 
     @Test
     void read_onFxNamedThread_throwsWhenPropertySet() throws InterruptedException {
+        System.setProperty(GUARD, "true");
         final AtomicReference<Throwable> thrown = new AtomicReference<>();
         try (SqliteDatabase db = open()) {
             final Thread fx = new Thread(
@@ -200,15 +269,12 @@ class SqliteDatabaseTest {
     @Test
     void read_onFxNamedThreadWithGuardOff_warnsAndStillReads() throws InterruptedException {
         final AtomicReference<Result<Boolean>> answer = new AtomicReference<>();
-        final String before = System.getProperty("bookloom.storage.failOnFxThread");
-        System.setProperty("bookloom.storage.failOnFxThread", "false");
+        System.setProperty(GUARD, "false");
         try (SqliteDatabase db = open()) {
             final Thread fx =
                     new Thread(() -> answer.set(db.read("x", h -> Boolean.TRUE)), "JavaFX Application Thread");
             fx.start();
             fx.join();
-        } finally {
-            System.setProperty("bookloom.storage.failOnFxThread", before == null ? "true" : before);
         }
         assertThat(answer.get()).isNotNull().extracting(Result::isOk).isEqualTo(true);
     }

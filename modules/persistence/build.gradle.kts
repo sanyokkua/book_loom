@@ -21,7 +21,8 @@ dependencies {
     // classifies and logs a failure (`.claude/rules/logging.md`).
     implementation(libs.slf4j.api)
 
-    testRuntimeOnly(libs.logback.classic)
+    // Compiled against by the contract tests that read what an adapter logged (a refused secret is never written).
+    testImplementation(libs.logback.classic)
 }
 
 // JDBI's classes carry Error Prone's `@GuardedBy`, which this module does not (and need not) have on its compile

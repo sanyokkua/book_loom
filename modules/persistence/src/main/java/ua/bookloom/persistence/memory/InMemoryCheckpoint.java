@@ -99,8 +99,13 @@ public final class InMemoryCheckpoint implements CheckpointPort {
         }
         final RunRecord run = commit.run();
         if (run != null) {
-            store.runs(commit.projectId()).put(run.runId(), run);
-            log.debug("Commit run projectId={} runId={} state={}", commit.projectId(), run.runId(), run.state());
+            final RunRecord held = store.keepRun(run);
+            log.debug(
+                    "Commit run projectId={} runId={} state={} kept={}",
+                    commit.projectId(),
+                    run.runId(),
+                    run.state(),
+                    held.equals(run));
         }
     }
 

@@ -79,16 +79,29 @@ public abstract class ProjectStorageContractTest extends LexiconContractTest {
     }
 
     @Test
-    void save_sameContentUnderAnotherFileName_sharesTheOneStoredBook() {
+    void save_sameContentUnderAnotherFileName_sharesTheOneStoredBookAtItsFirstPath() {
         final ProjectRepository repository = projectRepository();
         repository.save(project("a", "h1", "One", "en", "uk"));
 
         repository.save(withSource(project("b", "h1", "Two", "en", "de"), Path.of("copy.epub")));
 
         assertThat(repository.find("a").data())
-                .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("copy.epub")));
+                .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("h1.epub")));
         assertThat(repository.find("b").data())
-                .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("copy.epub")));
+                .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("h1.epub")));
+    }
+
+    @Test
+    void save_staleProjectAfterRelocateBook_keepsTheRelocatedPath() {
+        final ProjectRepository repository = projectRepository();
+        final Project stale = project("a", "h1", "One", "en", "uk");
+        repository.save(stale);
+        repository.relocateBook("h1", Path.of("moved.epub"));
+
+        repository.save(stale);
+
+        assertThat(repository.find("a").data())
+                .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("moved.epub")));
     }
 
     @Test

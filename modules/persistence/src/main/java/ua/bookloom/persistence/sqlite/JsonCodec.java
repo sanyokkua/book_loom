@@ -31,8 +31,9 @@ import lombok.extern.slf4j.Slf4j;
  * helper) are switched off, so a derived view is never written and cannot break a read.
  *
  * <p>Unknown properties fail on read: a stored document that no longer matches its record is drift to be seen, not
- * hidden. Before the first release a database with another schema number is replaced anyway (ADR-0043), so no record
- * needs leniency.
+ * hidden. It never reaches a read in practice: before the first release a database written for other record shapes
+ * is set aside and replaced on open ({@link StoredShapes}, kept in the {@code meta} table; ADR-0043), so no record
+ * needs leniency. A stored type added here must be added to {@link StoredShapes#ROOTS} too.
  *
  * <p>Failures are unchecked ({@link IllegalStateException} with the Jackson cause); the adapters wrap them into an
  * {@code AppError} at their boundary.

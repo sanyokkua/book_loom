@@ -161,7 +161,7 @@ public final class BookLoomApplication extends Application {
     @Override
     public void stop() {
         log.info("window closing, releasing resources");
-        lifecycle.close(injector);
+        lifecycle.close();
     }
 
     /**

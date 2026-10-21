@@ -48,7 +48,7 @@ final class InMemoryStore {
     private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
     private final Map<String, ExportRecord> exportByProject = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, RunRecord>> runsByProject = new ConcurrentHashMap<>();
+    private final Map<String, RunRecord> latestRunByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
 
@@ -100,10 +100,25 @@ final class InMemoryStore {
     }
 
     /**
-     * Returns the run table for a project, keyed by run id, creating an empty one on first use.
+     * Keeps a project's run started last, by the SQLite adapter's rule: the offered record replaces the held one when
+     * it is the same run or was started no earlier, and is otherwise dropped.
+     *
+     * @return the record held afterwards
      */
-    Map<String, RunRecord> runs(final String projectId) {
-        return runsByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    RunRecord keepRun(final RunRecord run) {
+        return latestRunByProject.merge(
+                run.projectId(),
+                run,
+                (held, offered) -> held.runId().equals(offered.runId())
+                                || !offered.startedAt().isBefore(held.startedAt())
+                        ? offered
+                        : held);
+    }
+
+    /** The project's run started last, or {@code null} when it has none. */
+    @Nullable
+    RunRecord latestRun(final String projectId) {
+        return latestRunByProject.get(projectId);
     }
 
     /**
@@ -133,7 +148,7 @@ final class InMemoryStore {
         summaryByProject.remove(projectId);
         deferralsByProject.remove(projectId);
         exportByProject.remove(projectId);
-        runsByProject.remove(projectId);
+        latestRunByProject.remove(projectId);
         lexiconByProject.remove(projectId);
         lexiconRemovedByProject.remove(projectId);
     }

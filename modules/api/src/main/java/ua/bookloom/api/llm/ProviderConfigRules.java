@@ -21,6 +21,12 @@ public interface ProviderConfigRules {
     /** The shape a credential-like header value must have: a reference to an environment variable, never a secret. */
     Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:[A-Za-z_][A-Za-z0-9_]*}");
 
+    /**
+     * The shape a credential reference must have: the name of an environment variable. A value such as a key pasted
+     * into the field does not have it, so it is refused before it could be stored.
+     */
+    Pattern ENV_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
+
     /** A path ending in the {@code v1} segment. */
     Pattern V1_SUFFIX = Pattern.compile("(^|/)v1/?$");
 
@@ -113,6 +119,14 @@ public interface ProviderConfigRules {
     }
 
     private static void checkSignIn(final ProviderConfig config, final List<AppError> errors) {
+        final String reference = config.credentialRef();
+        if (reference != null
+                && !reference.isBlank()
+                && !ENV_NAME.matcher(reference).matches()) {
+            errors.add(validation("The sign-in reference must be the name of an environment variable (letters, digits"
+                    + " and underscores, not starting with a digit), never the key itself."));
+            return;
+        }
         if (config.auth() == ProviderAuth.NONE) {
             return;
         }

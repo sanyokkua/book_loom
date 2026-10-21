@@ -26,8 +26,8 @@ import ua.bookloom.api.project.Project;
 
 /**
  * Stores a project in {@code projects} and its book once in {@code books}, keyed by the content hash: the book row
- * holds the one file location every project of that content opens from, and goes with the book's last project
- * ({@code design.md} D9, D10). A name is unique within one book by {@link Project#nameKey()}, folded in Java because
+ * holds the one file location every project of that content opens from, written when the book is first stored and
+ * changed only by {@link #relocateBook}, and goes with the book's last project ({@code design.md} D9, D10). A name is unique within one book by {@link Project#nameKey()}, folded in Java because
  * SQLite's {@code lower()} folds only ASCII.
  */
 @Slf4j
@@ -45,11 +45,13 @@ public final class SqliteProjectRepository implements ProjectRepository {
                    b.source_path, b.format
             FROM projects p JOIN books b ON b.content_hash = p.content_hash
             """;
-    private static final String UPSERT_BOOK = """
+    /** A stored book keeps its location: only {@link #relocateBook} moves it, so a stale project never moves it back. */
+    private static final String INSERT_BOOK = """
             INSERT INTO books (content_hash, source_path, format, title, json)
             VALUES (:hash, :path, :format, :title, :json)
-            ON CONFLICT (content_hash) DO UPDATE SET source_path = excluded.source_path
+            ON CONFLICT (content_hash) DO NOTHING
             """;
+
     private static final String UPSERT_PROJECT = """
             INSERT INTO projects (id, content_hash, name, name_key, name_origin, source_lang, target_lang,
                                   created_at, last_opened_at, brief_json)
@@ -86,21 +88,22 @@ public final class SqliteProjectRepository implements ProjectRepository {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Name in use", "Another project of this book already has that name."));
         }
-        upsertBook(h, project);
+        insertBookIfAbsent(h, project);
         upsertProject(h, project);
         final int orphans = h.execute(DELETE_ORPHAN_BOOKS);
         log.debug("Project saved projectId={} orphanBooksRemoved={}", project.id(), orphans);
         return Result.ok(project);
     }
 
-    private static void upsertBook(final Handle h, final Project project) {
-        h.createUpdate(UPSERT_BOOK)
+    private static void insertBookIfAbsent(final Handle h, final Project project) {
+        final int inserted = h.createUpdate(INSERT_BOOK)
                 .bind("hash", project.contentHash())
                 .bind("path", project.source().toString())
                 .bind("format", project.format().name())
                 .bind("title", Objects.toString(project.source().getFileName(), ""))
                 .bind("json", BOOK_DOCUMENT)
                 .execute();
+        log.debug("Book row hash={} inserted={}", project.contentHash(), inserted > 0);
     }
 
     private void upsertProject(final Handle h, final Project project) {

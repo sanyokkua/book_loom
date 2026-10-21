@@ -132,6 +132,40 @@ class ProviderConfigRulesTest {
         assertThat(ProviderConfigRules.check(config).isValid()).isTrue();
     }
 
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "LMS_KEY|BEARER|true",
+                "_key1|API_KEY|true",
+                "sk-test-123|BEARER|false",
+                "1KEY|BEARER|false",
+                "MY KEY|API_KEY|false",
+                "${env:LMS_KEY}|BEARER|false",
+                "sk-test-123|NONE|false"
+            })
+    void check_credentialRef_mustBeAnEnvironmentVariableName(
+            final String reference, final String auth, final boolean accepted) {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.valueOf(auth))
+                .withApiKeyHeader("X-Api-Key")
+                .withCredentialRef(reference);
+
+        assertThat(ProviderConfigRules.check(config).isValid()).isEqualTo(accepted);
+    }
+
+    @Test
+    void check_refusedCredentialRef_isValidationAndDoesNotEchoTheValue() {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.BEARER)
+                .withCredentialRef("sk-test-123");
+
+        final ProviderConfigRules.Check check = ProviderConfigRules.check(config);
+
+        assertThat(check.errors()).extracting("code").containsExactly(ErrorCode.validation);
+        assertThat(check.errors().toString()).doesNotContain("sk-test-123");
+    }
+
     @Test
     void check_noAuth_needsNoCredential() {
         assertThat(ProviderConfigRules.check(config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE))

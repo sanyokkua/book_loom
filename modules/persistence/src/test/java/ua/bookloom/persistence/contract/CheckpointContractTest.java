@@ -202,6 +202,18 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     }
 
     @Test
+    void commit_carryingAnotherRunStartedAtTheSameMoment_replacesTheStoredRun() {
+        givenProjects("p1");
+        final RunRecord first = new RunRecord("r2", "p1", RUN_START, null, JobState.RUNNING, 0, 0);
+        final RunRecord second = new RunRecord("r1", "p1", RUN_START, null, JobState.RUNNING, 0, 0);
+
+        checkpointPort().commit(new ChunkCommit("p1", List.of(), List.of(), List.of(), List.of(), first));
+        checkpointPort().commit(new ChunkCommit("p1", List.of(), List.of(), List.of(), List.of(), second));
+
+        assertThat(runRepository().latest("p1").data()).hasValue(second);
+    }
+
+    @Test
     void commit_underConcurrentReads_isNeverObservedHalfApplied() {
         givenProjects("p1");
         final SegmentRepository segments = segmentRepository();

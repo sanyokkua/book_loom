@@ -19,7 +19,8 @@ import ua.bookloom.api.project.Project;
 /**
  * Stores and retrieves a project over the shared {@link InMemoryStore}, keyed by its stable id, with the rules the
  * SQLite adapter keeps by its schema: a name is unique within one book ignoring case, every project of one content
- * shares the one book location, and deleting a project forgets its work.
+ * shares the one book location (set when the book is first stored, moved only by {@link #relocateBook}), and deleting
+ * a project forgets its work.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -38,18 +39,30 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                         "Project save refused, name in use projectId={} hash={}", project.id(), project.contentHash());
                 return Result.err(nameInUseError());
             }
-            store.projects().put(project.id(), project);
-            store.projects()
-                    .replaceAll((id, held) -> held.contentHash().equals(project.contentHash())
-                            ? withSource(held, project.source())
-                            : held);
-            log.debug("Project saved projectId={} hash={}", project.id(), project.contentHash());
+            final Path bookPath = storedBookPath(project.contentHash()).orElse(project.source());
+            store.projects().put(project.id(), withSource(project, bookPath));
+            log.debug(
+                    "Project saved projectId={} hash={} keptBookPath={}",
+                    project.id(),
+                    project.contentHash(),
+                    !bookPath.equals(project.source()));
             return Result.ok(project);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
         }
+    }
+
+    /**
+     * The location the book of this content is held at, as the SQLite adapter's one book row keeps it: written when
+     * the book is first stored and changed only by {@link #relocateBook}, so a stale project never moves it back.
+     */
+    private Optional<Path> storedBookPath(final String contentHash) {
+        return store.projects().values().stream()
+                .filter(held -> held.contentHash().equals(contentHash))
+                .map(Project::source)
+                .findFirst();
     }
 
     /** Another project of the same book already holds this name, compared by {@link Project#nameKey()}. */

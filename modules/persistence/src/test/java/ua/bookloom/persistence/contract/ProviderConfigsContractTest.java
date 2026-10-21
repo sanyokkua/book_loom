@@ -146,6 +146,34 @@ public abstract class ProviderConfigsContractTest {
         assertThat(configs().find("referenced")).contains(referenced);
     }
 
+    @Test
+    void save_literalSecretAsCredentialRef_isRefusedNotStoredAndNeverWrittenOut() {
+        final ProviderConfig literal =
+                sample("literal-ref").withAuth(ProviderAuth.BEARER).withCredentialRef("sk-test-123");
+
+        final Result<ProviderConfig> result;
+        final String logged;
+        try (LogCapture logs = LogCapture.start()) {
+            result = configs().save(literal);
+            logged = logs.text();
+        }
+
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
+        assertThat(String.valueOf(result.error())).doesNotContain("sk-test-123");
+        assertThat(logged).doesNotContain("sk-test-123");
+        assertThat(configs().find("literal-ref")).isEmpty();
+    }
+
+    @Test
+    void save_environmentVariableNameAsCredentialRef_isAccepted() {
+        final ProviderConfig referenced =
+                sample("named-ref").withAuth(ProviderAuth.BEARER).withCredentialRef("LMS_KEY");
+
+        assertThat(configs().save(referenced).isOk()).isTrue();
+
+        assertThat(configs().find("named-ref")).contains(referenced);
+    }
+
     private void assertRefused(final ProviderConfig invalid) {
         final Result<ProviderConfig> result = configs().save(invalid);
 
