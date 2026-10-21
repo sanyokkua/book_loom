@@ -80,6 +80,21 @@ public final class TestBooks {
         }
     }
 
+    /** An English EPUB whose package metadata names {@code bookTitle} as the book's title. */
+    public static Path epubWithBookTitle(
+            final Path destination, final List<List<String>> spineParagraphs, final String bookTitle) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
+            put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), "en", "", bookTitle), ZipEntry.DEFLATED);
+            putChapters(zip, spineParagraphs, null, DEFAULT_PAGE_TITLE);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
     /** An EPUB whose navigation document, outside the spine, lists {@code labels}, each linking the first chapter. */
     public static Path epubWithNavigation(
             final Path destination, final List<List<String>> spineParagraphs, final List<String> labels) {
@@ -298,6 +313,11 @@ public final class TestBooks {
     }
 
     private static String opf(final int spineCount, @Nullable final String language, final String extraManifest) {
+        return opf(spineCount, language, extraManifest, "Test");
+    }
+
+    private static String opf(
+            final int spineCount, @Nullable final String language, final String extraManifest, final String bookTitle) {
         final String lang = language == null ? "" : "<dc:language>" + language + "</dc:language>";
         final StringBuilder manifest = new StringBuilder();
         final StringBuilder spine = new StringBuilder();
@@ -312,7 +332,7 @@ public final class TestBooks {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" unique-identifier=\"id\">"
                 + "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:identifier id=\"id\">test</dc:identifier>"
-                + "<dc:title>Test</dc:title>"
+                + "<dc:title>" + bookTitle + "</dc:title>"
                 + lang
                 + "</metadata><manifest>"
                 + manifest

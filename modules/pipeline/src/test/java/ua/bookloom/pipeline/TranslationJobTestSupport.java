@@ -20,7 +20,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
@@ -99,14 +98,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(TmRepository.class),
                 injector.getInstance(SummaryRepository.class),
                 injector.getInstance(LexiconRepository.class));
-        final ProjectServiceImpl service = new ProjectServiceImpl(
-                injector.getInstance(BookInspector.class),
-                documents,
-                stores.projects(),
-                stores.segments(),
-                stores.openProjects(),
-                Clock.systemUTC(),
-                new UuidIdSource());
+        final ProjectServiceImpl service = ProjectServices.service(
+                injector, documents, stores.projects(), stores.segments(), stores.openProjects());
         final Result<ImportedBook> importResult = service.create(book);
         final ImportedBook imported =
                 Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());

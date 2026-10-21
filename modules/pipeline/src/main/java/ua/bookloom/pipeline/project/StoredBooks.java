@@ -51,12 +51,15 @@ final class StoredBooks {
     }
 
     static Project newProject(
-            final String id, final Path source, final Document document, final BookBrief brief, final Instant now) {
-        final String fileName = String.valueOf(source.getFileName());
-        final int dot = fileName.lastIndexOf('.');
-        final String name = dot > 0 ? fileName.substring(0, dot) : fileName;
+            final String id,
+            final Path source,
+            final Document document,
+            final BookBrief brief,
+            final String title,
+            final Instant now) {
+        final String name = ProjectNames.automatic(title, brief.sourceLanguage(), brief.targetLanguage());
         return new Project(
-                id, source, document.format(), document.contentHash(), brief, name, NameOrigin.AUTO, now, now);
+                id, source, document.format(), document.contentHash(), brief, name, NameOrigin.AUTO, title, now, now);
     }
 
     static AppError nothingToContinue() {

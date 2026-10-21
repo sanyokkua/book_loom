@@ -21,6 +21,7 @@ class ProjectTest {
                 BookBrief.defaults("en"),
                 name,
                 NameOrigin.USER,
+                "Book",
                 CREATED,
                 OPENED);
     }

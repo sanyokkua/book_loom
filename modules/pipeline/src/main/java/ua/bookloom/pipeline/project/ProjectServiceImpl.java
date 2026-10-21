@@ -3,14 +3,9 @@ package ua.bookloom.pipeline.project;
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -26,9 +21,13 @@ import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BookPlan;
+import ua.bookloom.api.pipeline.BookRelocation;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectChange;
+import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.pipeline.RoundTripReport;
@@ -39,7 +38,6 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
-import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.util.lang.LanguageTags;
@@ -59,6 +57,8 @@ public final class ProjectServiceImpl implements ProjectService {
     private final OpenProjects openProjects;
     private final Clock clock;
     private final IdSource ids;
+    private final RunRepository runs;
+    private final ProjectCopies copies;
 
     @Override
     public Result<ImportedBook> create(final Path source) {
@@ -94,58 +94,32 @@ public final class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public Result<ImportedBook> open(final String projectId) {
+    public Result<ProjectOpening> open(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         try {
             log.debug("open project={}", projectId);
-            final Result<Project> found = findProject(projectId);
-            final Project stored = found.data();
-            if (stored == null || !StoredBooks.isUnchanged(stored, stored.source(), documents)) {
-                log.warn("open refused project={}: nothing stored for this content", projectId);
-                return Result.err(StoredBooks.nothingToContinue());
-            }
-            final Result<BookInspection> inspected = inspector.inspect(stored.source());
-            if (inspected.isErr()) {
-                return Result.err(errorOf(inspected));
-            }
-            return reopen(stored, Objects.requireNonNull(inspected.data(), "inspection"));
+            return findProject(projectId)
+                    .flatMap(stored -> opener().open(
+                                    stored,
+                                    (project, inspection, profile, document, count) -> imported(
+                                            project.id(),
+                                            project.source(),
+                                            inspection,
+                                            profile,
+                                            project.brief(),
+                                            document,
+                                            count)));
         } catch (Throwable cause) {
             return Result.err(internalError("open the project", cause));
         }
     }
 
-    private Result<ImportedBook> reopen(final Project stored, final BookInspection inspection) {
-        if (inspection.verdict() != InspectionVerdict.READABLE) {
-            return Result.ok(new ImportedBook(null, inspection, null, null));
-        }
-        final Document previous = openProjects.remove(stored.id());
-        if (previous != null) {
-            log.debug("open replaces the open book of project={}", stored.id());
-            documents.close(previous);
-        }
-        return documents
-                .open(stored.source())
-                .flatMap(document ->
-                        closingUnlessImported(document, () -> profileAndKeep(stored, inspection, document)));
-    }
-
-    private Result<ImportedBook> profileAndKeep(
-            final Project stored, final BookInspection inspection, final Document document) {
-        return inspector
-                .profile(document)
-                .flatMap(profile -> segments.all(stored.id())
-                        .map(records -> imported(
-                                stored.id(),
-                                stored.source(),
-                                inspection,
-                                profile,
-                                stored.brief(),
-                                document,
-                                records.size())));
+    private ProjectOpener opener() {
+        return new ProjectOpener(inspector, documents, projects, segments, runs, openProjects, clock);
     }
 
     @Override
-    public Result<Project> updateBrief(final String projectId, final BookBrief brief) {
+    public Result<ProjectChange> updateBrief(final String projectId, final BookBrief brief) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(brief, "brief");
         try {
@@ -155,9 +129,67 @@ public final class ProjectServiceImpl implements ProjectService {
                     brief.dial(),
                     brief.sourceLanguage(),
                     brief.targetLanguage());
-            return findProject(projectId).flatMap(project -> projects.save(project.withBrief(brief)));
+            return findProject(projectId).flatMap(project -> new ProjectRenames(projects).updateBrief(project, brief));
         } catch (Throwable cause) {
             return Result.err(internalError("update the brief", cause));
+        }
+    }
+
+    @Override
+    public Result<ProjectChange> rename(final String projectId, final @Nullable String name) {
+        Objects.requireNonNull(projectId, "projectId");
+        try {
+            log.debug("rename project={} automatic={}", projectId, name == null);
+            return findProject(projectId).flatMap(project -> new ProjectRenames(projects).rename(project, name));
+        } catch (Throwable cause) {
+            return Result.err(internalError("rename the project", cause));
+        }
+    }
+
+    @Override
+    public Result<Boolean> remove(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        try {
+            log.debug("remove project={}", projectId);
+            return findProject(projectId).flatMap(project -> {
+                final Document open = openProjects.remove(projectId);
+                if (open != null) {
+                    documents.close(open);
+                }
+                log.info("project removed project={}", projectId);
+                return projects.delete(projectId);
+            });
+        } catch (Throwable cause) {
+            return Result.err(internalError("remove the project", cause));
+        }
+    }
+
+    @Override
+    public Result<ProjectChange> translateInto(
+            final String projectId, final String target, final @Nullable String name) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(target, "target");
+        try {
+            log.debug("translateInto project={} target={} typedName={}", projectId, target, name != null);
+            return findProject(projectId).flatMap(source -> {
+                final Project candidate =
+                        ProjectNames.translatedCopy(source, ids.newId(), target, name, clock.instant());
+                return new ProjectTranslations(projects, copies).copyUnlessClash(source, candidate);
+            });
+        } catch (Throwable cause) {
+            return Result.err(internalError("translate the book into another language", cause));
+        }
+    }
+
+    @Override
+    public Result<BookRelocation> relocate(final String projectId, final Path chosen) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(chosen, "chosen");
+        try {
+            log.debug("relocate project={}", projectId);
+            return findProject(projectId).flatMap(project -> opener().relocate(project, chosen));
+        } catch (Throwable cause) {
+            return Result.err(internalError("find the book file", cause));
         }
     }
 
@@ -169,7 +201,7 @@ public final class ProjectServiceImpl implements ProjectService {
             if (document == null) {
                 return Result.err(unknownProject(projectId));
             }
-            return findProject(projectId).map(project -> plan(projectId, document, project.brief()));
+            return findProject(projectId).map(project -> UnitChunks.plan(projectId, document, project.brief()));
         } catch (Throwable cause) {
             return Result.err(internalError("plan the book", cause));
         }
@@ -227,39 +259,35 @@ public final class ProjectServiceImpl implements ProjectService {
 
     private Result<ImportedBook> openAndStore(final Path source, final BookInspection inspection) {
         final Path normalized = source.toAbsolutePath().normalize();
-        final String id = findBySource(normalized).map(Project::id).orElseGet(ids::newId);
-        log.debug("create uses project={} for path={}", id, normalized);
+        final BookBrief brief = BookBrief.defaults(preselectSource(inspection.languageEvidence()));
+        return documents
+                .open(source)
+                .flatMap(document -> ProjectOpener.closingUnlessImported(
+                        documents, document, () -> storeUnderId(normalized, inspection, document, brief)));
+    }
+
+    private Result<ImportedBook> storeUnderId(
+            final Path source, final BookInspection inspection, final Document document, final BookBrief brief) {
+        final String id =
+                reusableProject(document.contentHash(), brief).map(Project::id).orElseGet(ids::newId);
+        log.debug("create uses project={}", id);
         final Document previous = openProjects.remove(id);
         if (previous != null) {
             log.debug("import replaces the open book of project={}", id);
             documents.close(previous);
         }
-        return documents
-                .open(source)
-                .flatMap(document ->
-                        closingUnlessImported(document, () -> profileAndStore(id, normalized, inspection, document)));
-    }
-
-    // The opened document is closed whenever the import does not complete, a failure that is thrown included.
-    private Result<ImportedBook> closingUnlessImported(
-            final Document document, final Supplier<Result<ImportedBook>> finish) {
-        boolean imported = false;
-        try {
-            final Result<ImportedBook> stored = finish.get();
-            imported = stored.isOk();
-            return stored;
-        } finally {
-            if (!imported) {
-                documents.close(document);
-            }
-        }
+        return profileAndStore(id, source, inspection, document, brief);
     }
 
     private Result<ImportedBook> profileAndStore(
-            final String id, final Path source, final BookInspection inspection, final Document document) {
+            final String id,
+            final Path source,
+            final BookInspection inspection,
+            final Document document,
+            final BookBrief brief) {
         return inspector.profile(document).flatMap(profile -> {
-            final BookBrief brief = BookBrief.defaults(preselectSource(inspection.languageEvidence()));
-            final Project project = StoredBooks.newProject(id, source, document, brief, clock.instant());
+            final String title = ProjectNames.titleOf(profile.title(), source);
+            final Project project = StoredBooks.newProject(id, source, document, brief, title, clock.instant());
             final List<SegmentRecord> records = StoredBooks.pendingRecords(id, document);
             return projects.save(project)
                     .flatMap(saved -> segments.saveAll(id, records))
@@ -318,41 +346,18 @@ public final class ProjectServiceImpl implements ProjectService {
         return chosen;
     }
 
-    private static BookPlan plan(final String projectId, final Document document, final BookBrief brief) {
-        final Map<String, Integer> perUnit = new LinkedHashMap<>();
-        final List<String> oversized = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            final List<Chunk> chunks = UnitChunks.pack(unit, brief);
-            perUnit.put(unit.id(), chunks.size());
-            chunks.stream()
-                    .filter(Chunk::oversized)
-                    .forEach(chunk -> oversized.add(chunk.segments().get(0).id()));
-        }
-        log.debug(
-                "plan project={} chunks={} oversized={} keptKinds={}",
-                projectId,
-                perUnit.values().stream().mapToInt(Integer::intValue).sum(),
-                oversized.size(),
-                brief.alsoTranslate().keptKinds());
-        return new BookPlan(perUnit, oversized);
-    }
-
     private Result<Project> findProject(final String projectId) {
         return projects.find(projectId)
                 .flatMap(found -> found.map(Result::ok).orElseGet(() -> Result.err(unknownProject(projectId))));
     }
 
-    // Today a file is its project: the same absolute path reuses the id. Step 4.7b replaces this lookup with the
-    // content hash and language pair.
-    private Optional<Project> findBySource(final Path normalized) {
-        final Result<List<Project>> all = projects.all();
-        final List<Project> stored = all.data();
-        if (stored == null) {
-            return Optional.empty();
-        }
-        return stored.stream()
-                .filter(project -> project.source().equals(normalized))
-                .max(Comparator.comparing(Project::lastOpenedAt));
+    // A project with no target cannot hold a translation, so importing the book again reuses it.
+    private Optional<Project> reusableProject(final String contentHash, final BookBrief brief) {
+        final List<Project> stored = projects.all().data();
+        final Optional<Project> reusable =
+                stored == null ? Optional.empty() : ProjectNames.reusable(contentHash, brief.sourceLanguage(), stored);
+        log.debug("create reuse={} for the book", reusable.isPresent());
+        return reusable;
     }
 
     private static AppError errorOf(final Result<?> result) {

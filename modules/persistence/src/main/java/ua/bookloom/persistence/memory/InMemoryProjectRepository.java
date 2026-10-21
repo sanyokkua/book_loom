@@ -199,6 +199,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                 p.brief(),
                 p.name(),
                 p.nameOrigin(),
+                p.title(),
                 p.createdAt(),
                 p.lastOpenedAt());
     }

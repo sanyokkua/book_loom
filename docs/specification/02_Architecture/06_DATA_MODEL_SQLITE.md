@@ -55,7 +55,7 @@ migrations arrives with the first release; until then no statement here about mi
 | `settings` | `key` PK, `value`, `type` | preferences ([settings-serialization](#settings-serialization)) |
 | `providers` | `id` PK, `json` | `ProviderConfig`; the credential is an env-var name reference only |
 | `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included |
-| `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once; `source_path` is written when the book is first stored and changed only by `relocateBook`, so saving a project never moves it |
+| `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once; `title` is the book's title (the base of an automatic project name); `source_path` is written when the book is first stored and changed only by `relocateBook`, so saving a project never moves it |
 | `projects` | `id` PK, `content_hash` → `books`, `name`, `name_key`, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; `UNIQUE (content_hash, name_key)`; index (`content_hash`, `source_lang`, `target_lang`) | the project; a name is unique within its book, ignoring letter case |
 | `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, last export |
 | `segments` | PK (`project_id`, `segment_id`), `ord`, `unit_id`, `status`, `json`; index (`project_id`, `status`) | `SegmentRecord` |

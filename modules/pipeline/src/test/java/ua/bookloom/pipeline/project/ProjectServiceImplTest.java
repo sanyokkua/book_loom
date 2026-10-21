@@ -26,6 +26,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
@@ -252,7 +253,7 @@ class ProjectServiceImplTest {
                 briefOf(imported).alsoTranslate(),
                 QualityDial.FAST);
 
-        final Result<Project> updated = service.updateBrief(idOf(imported), fast);
+        final Result<ProjectChange> updated = service.updateBrief(idOf(imported), fast);
 
         assertThat(updated.isOk()).isTrue();
         assertThat(storedProject(imported).brief().dial()).isEqualTo(QualityDial.FAST);

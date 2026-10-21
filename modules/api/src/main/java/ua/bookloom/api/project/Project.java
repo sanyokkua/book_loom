@@ -16,6 +16,7 @@ import ua.bookloom.api.document.BookFormat;
  * @param brief the project's current Book Brief
  * @param name the project's display name; unique within its book ignoring letter case
  * @param nameOrigin whether the application or the person chose {@code name}
+ * @param title the book's title as its metadata names it, or its file name; what the automatic name starts with
  * @param createdAt when the project was first stored
  * @param lastOpenedAt when the project was last opened
  */
@@ -27,6 +28,7 @@ public record Project(
         BookBrief brief,
         String name,
         NameOrigin nameOrigin,
+        String title,
         Instant createdAt,
         Instant lastOpenedAt) {
 
@@ -41,6 +43,7 @@ public record Project(
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(nameOrigin, "nameOrigin");
+        Objects.requireNonNull(title, "title");
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(lastOpenedAt, "lastOpenedAt");
     }
@@ -72,6 +75,19 @@ public record Project(
      */
     public Project withBrief(final BookBrief brief) {
         Objects.requireNonNull(brief, "brief");
-        return new Project(id, source, format, contentHash, brief, name, nameOrigin, createdAt, lastOpenedAt);
+        return new Project(id, source, format, contentHash, brief, name, nameOrigin, title, createdAt, lastOpenedAt);
+    }
+
+    /**
+     * Returns a project with another name and who chose it, preserving everything else.
+     *
+     * @param name the non-null replacement name
+     * @param origin the non-null origin of that name
+     * @return a new project with the supplied name
+     */
+    public Project withName(final String name, final NameOrigin origin) {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(origin, "origin");
+        return new Project(id, source, format, contentHash, brief, name, origin, title, createdAt, lastOpenedAt);
     }
 }

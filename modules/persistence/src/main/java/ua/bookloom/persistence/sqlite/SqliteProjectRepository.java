@@ -42,7 +42,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     private static final String SELECT = """
             SELECT p.id, p.content_hash, p.name, p.name_origin, p.created_at, p.last_opened_at, p.brief_json,
-                   b.source_path, b.format
+                   b.source_path, b.format, b.title
             FROM projects p JOIN books b ON b.content_hash = p.content_hash
             """;
     /** A stored book keeps its location: only {@link #relocateBook} moves it, so a stale project never moves it back. */
@@ -100,7 +100,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
                 .bind("hash", project.contentHash())
                 .bind("path", project.source().toString())
                 .bind("format", project.format().name())
-                .bind("title", Objects.toString(project.source().getFileName(), ""))
+                .bind("title", project.title())
                 .bind("json", BOOK_DOCUMENT)
                 .execute();
         log.debug("Book row hash={} inserted={}", project.contentHash(), inserted > 0);
@@ -237,6 +237,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
                 codec.read(rs.getString("brief_json"), BookBrief.class),
                 rs.getString("name"),
                 NameOrigin.valueOf(rs.getString("name_origin")),
+                rs.getString("title"),
                 Instant.parse(rs.getString("created_at")),
                 Instant.parse(rs.getString("last_opened_at")));
     }

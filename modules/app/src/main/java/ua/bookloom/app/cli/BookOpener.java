@@ -10,6 +10,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
@@ -62,7 +63,7 @@ final class BookOpener {
     }
 
     private Result<Opened> save(String projectId, BookBrief brief) {
-        final Result<?> saved = projects.updateBrief(projectId, brief);
+        final Result<ProjectChange> saved = projects.updateBrief(projectId, brief);
         log.debug(
                 "translate command brief saved={} source={} target={} dial={} names={}",
                 saved.isOk(),
@@ -70,9 +71,17 @@ final class BookOpener {
                 brief.targetLanguage(),
                 brief.dial(),
                 brief.names());
-        return saved.isErr()
-                ? Result.err(Objects.requireNonNull(saved.error()))
-                : Result.ok(new Opened(projectId, brief));
+        if (saved.isErr()) {
+            return Result.err(Objects.requireNonNull(saved.error()));
+        }
+        if (!(saved.data() instanceof ProjectChange.Saved)) {
+            log.warn("translate command brief not saved project={}: the name or pair clashes", projectId);
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "The brief was not saved",
+                    "Another project of this book has the same name or pair."));
+        }
+        return Result.ok(new Opened(projectId, brief));
     }
 
     // Absent --from keeps what the import preselected; `--from auto` forces Auto even for a book that declares a

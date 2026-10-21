@@ -1,46 +1,49 @@
 package ua.bookloom.ui;
 
+import static ua.bookloom.ui.ScriptedProjects.awaitGate;
+import static ua.bookloom.ui.ScriptedProjects.awaitLatch;
+import static ua.bookloom.ui.ScriptedProjects.notScripted;
+import static ua.bookloom.ui.ScriptedProjects.projectOf;
+
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.BookPlan;
+import ua.bookloom.api.pipeline.BookRelocation;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectChange;
+import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 
 /**
- * A hand-written {@link ProjectService} that answers {@code create} with what the test scripted for that path (or
- * an {@code internal} error, or a thrown exception), records every source it was asked to import, every brief it was asked to
- * save and every project it was asked to close together with whether the call arrived on the FX Application Thread,
- * and can hold each import, and each round-trip check, until the test releases it. Round-trip and plan answers are
- * scripted by the test; unscripted, they answer an {@code internal} error.
+ * A hand-written {@link ProjectService}: {@code create} and {@code open} answer what the test scripted for a path,
+ * every call is recorded with whether it arrived on the FX Application Thread, and imports, brief saves and round-trip
+ * checks can be held until the test releases them. Unscripted round-trip and plan answers are an {@code internal} error.
  */
 public final class ScriptedProjectService implements ProjectService {
 
-    private static final long WAIT_SECONDS = 10;
     private static final String ID_PREFIX = "id:";
 
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
     private final List<Path> opens = new CopyOnWriteArrayList<>();
+    private final Map<Path, Result<ProjectOpening>> openings = new ConcurrentHashMap<>();
+    private final List<String> removed = new CopyOnWriteArrayList<>();
     private final AtomicInteger listCalls = new AtomicInteger();
     private final List<Boolean> listOnFxThread = new CopyOnWriteArrayList<>();
     private final Map<Path, Integer> decided = new ConcurrentHashMap<>();
@@ -143,16 +146,12 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** Blocks until a round-trip check has been entered, so a test knows the call is truly in flight. */
     public void awaitRoundTripEntered() throws InterruptedException {
-        if (!roundTripEntered.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-            throw new IllegalStateException("the service was never asked for a round-trip check");
-        }
+        awaitLatch(roundTripEntered, "the service was never asked for a round-trip check");
     }
 
     /** Blocks until an import has been entered, so a test knows the call is truly in flight. */
     public void awaitEntered() throws InterruptedException {
-        if (!entered.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-            throw new IllegalStateException("the service was never asked to import a book");
-        }
+        awaitLatch(entered, "the service was never asked to import a book");
     }
 
     @Override
@@ -183,31 +182,56 @@ public final class ScriptedProjectService implements ProjectService {
             return Result.err(failed);
         }
         return Result.ok(decided.entrySet().stream()
-                .map(entry -> new ProjectSummary(summaryProject(entry.getKey()), entry.getValue()))
+                .map(entry ->
+                        new ProjectSummary(projectOf(ID_PREFIX + entry.getKey(), entry.getKey()), entry.getValue()))
                 .toList());
     }
 
     @Override
-    public Result<ImportedBook> open(final String projectId) {
+    public Result<ProjectOpening> open(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         final Path source = Path.of(projectId.substring(ID_PREFIX.length()));
         opens.add(source);
         events.add("open " + projectId);
+        final Result<ProjectOpening> opening = openings.get(source);
+        if (opening != null) {
+            return opening;
+        }
         final Result<ImportedBook> scripted = byPath.get(source);
-        return scripted != null ? scripted : fallback;
+        return (scripted != null ? scripted : fallback).map(book -> new ProjectOpening.Opened(book, false));
     }
 
-    private static Project summaryProject(final Path source) {
-        return new Project(
-                ID_PREFIX + source,
-                source.toAbsolutePath().normalize(),
-                BookFormat.TXT,
-                "hash",
-                BookBrief.defaults("en"),
-                "Book",
-                NameOrigin.AUTO,
-                Instant.EPOCH,
-                Instant.EPOCH);
+    /** From now on answers an {@code open} of the project of {@code source} with {@code answer}. */
+    public void onOpen(final Path source, final Result<ProjectOpening> answer) {
+        openings.put(Objects.requireNonNull(source, "source"), Objects.requireNonNull(answer, "answer"));
+    }
+
+    @Override
+    public Result<Boolean> remove(final String projectId) {
+        removed.add(Objects.requireNonNull(projectId, "projectId"));
+        events.add("remove " + projectId);
+        return Result.ok(true);
+    }
+
+    /** The id of every project {@link #remove} was asked to remove, in call order. */
+    public List<String> removedProjects() {
+        return List.copyOf(removed);
+    }
+
+    @Override
+    public Result<ProjectChange> translateInto(
+            final String projectId, final String target, final @Nullable String name) {
+        return notScripted();
+    }
+
+    @Override
+    public Result<BookRelocation> relocate(final String projectId, final Path chosen) {
+        return notScripted();
+    }
+
+    /** The project this service lists for {@code source}, the one {@link #onDecided} reports. */
+    public static Project storedProjectOf(final Path source) {
+        return projectOf(ID_PREFIX + source, source);
     }
 
     /** From now on {@link #list} reports a project for {@code source} with {@code count} decided segments. */
@@ -236,22 +260,19 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     @Override
-    public Result<Project> updateBrief(final String projectId, final BookBrief brief) {
+    public Result<ProjectChange> updateBrief(final String projectId, final BookBrief brief) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(brief, "brief");
         awaitGate(briefGate);
         briefs.add(brief);
         briefsOnFxThread.add(Platform.isFxApplicationThread());
-        return Result.ok(new Project(
-                projectId,
-                imports.getLast(),
-                BookFormat.TXT,
-                "hash",
-                brief,
-                "Book",
-                NameOrigin.AUTO,
-                Instant.EPOCH,
-                Instant.EPOCH));
+        return Result.ok(
+                new ProjectChange.Saved(projectOf(projectId, imports.getLast()).withBrief(brief)));
+    }
+
+    @Override
+    public Result<ProjectChange> rename(final String projectId, final @Nullable String name) {
+        return notScripted();
     }
 
     @Override
@@ -374,24 +395,5 @@ public final class ScriptedProjectService implements ProjectService {
     /** For each {@code close}, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> closeCallsOnFxThread() {
         return List.copyOf(closedOnFxThread);
-    }
-
-    private static void awaitGate(final @Nullable CountDownLatch held) {
-        if (held == null) {
-            return;
-        }
-        try {
-            if (!held.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("the test never released the service");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("interrupted while held back", e);
-        }
-    }
-
-    private static <T> Result<T> notScripted() {
-        return Result.err(
-                AppError.of(ErrorCode.internal, "Not scripted", "The scripted project service has no answer."));
     }
 }

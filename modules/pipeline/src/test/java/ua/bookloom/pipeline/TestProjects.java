@@ -17,6 +17,7 @@ public final class TestProjects {
     /** A project named "Book" by the application, with both timestamps at the epoch. */
     public static Project of(
             final String id, final Path source, final BookFormat format, final String hash, final BookBrief brief) {
-        return new Project(id, source, format, hash, brief, "Book", NameOrigin.AUTO, Instant.EPOCH, Instant.EPOCH);
+        return new Project(
+                id, source, format, hash, brief, "Book", NameOrigin.AUTO, "Book", Instant.EPOCH, Instant.EPOCH);
     }
 }

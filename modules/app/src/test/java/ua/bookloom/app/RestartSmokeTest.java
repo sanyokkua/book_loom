@@ -82,6 +82,7 @@ class RestartSmokeTest {
                 BookBrief.defaults("en").withLanguages("en", "uk"),
                 "Book",
                 NameOrigin.USER,
+                "Book",
                 Instant.parse("2026-01-01T00:00:00Z"),
                 Instant.parse("2026-01-02T00:00:00Z"));
     }

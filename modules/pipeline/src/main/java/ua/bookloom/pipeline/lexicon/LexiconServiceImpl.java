@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -133,6 +134,22 @@ public final class LexiconServiceImpl implements LexiconService {
     public Result<LexiconEntry> restore(final LexiconEntry entry) {
         Objects.requireNonNull(entry, "entry");
         return guarded("restore", entry.projectId(), () -> restoreEntry(entry));
+    }
+
+    @Override
+    public Result<Map<String, Integer>> usage(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        return guarded("usage", projectId, () -> usageOf(projectId));
+    }
+
+    private Result<Map<String, Integer>> usageOf(final String projectId) {
+        final BookIndex index = openProjects.index(projectId);
+        if (index == null) {
+            log.warn("Lexicon usage project={} refused: no book is open", projectId);
+            return Result.err(
+                    AppError.of(ErrorCode.validation, "No book is open", "Open the book to count the terms."));
+        }
+        return lexicon.all(projectId).map(entries -> LexiconUsage.of(entries, index));
     }
 
     @Override

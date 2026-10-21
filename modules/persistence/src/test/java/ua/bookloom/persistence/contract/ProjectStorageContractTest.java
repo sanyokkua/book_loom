@@ -91,6 +91,28 @@ public abstract class ProjectStorageContractTest extends LexiconContractTest {
                 .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("h1.epub")));
     }
 
+    // IF the book title were not kept with the book, THEN a reopened window could not rebuild an automatic name.
+    @Test
+    void save_projectWithABookTitle_findAndAllReturnTheTitle() {
+        final ProjectRepository repository = projectRepository();
+        final Project base = project("a", "h1", "Earth Gravity · EN → UK", "en", "uk");
+        repository.save(new Project(
+                base.id(),
+                base.source(),
+                base.format(),
+                base.contentHash(),
+                base.brief(),
+                base.name(),
+                base.nameOrigin(),
+                "Earth Gravity",
+                base.createdAt(),
+                base.lastOpenedAt()));
+
+        assertThat(repository.find("a").data())
+                .hasValueSatisfying(p -> assertThat(p.title()).isEqualTo("Earth Gravity"));
+        assertThat(repository.all().data()).extracting(Project::title).containsExactly("Earth Gravity");
+    }
+
     @Test
     void save_staleProjectAfterRelocateBook_keepsTheRelocatedPath() {
         final ProjectRepository repository = projectRepository();
@@ -199,6 +221,7 @@ public abstract class ProjectStorageContractTest extends LexiconContractTest {
                 p.brief(),
                 p.name(),
                 p.nameOrigin(),
+                p.title(),
                 p.createdAt(),
                 p.lastOpenedAt());
     }

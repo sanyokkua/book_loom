@@ -9,9 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 
 /**
  * Saves the brief through the project service on the background executor, one save at a time and in order.
@@ -70,7 +70,7 @@ final class BriefSaver {
         }
     }
 
-    private static void logResult(final Result<Project> saved) {
+    private static void logResult(final Result<ProjectChange> saved) {
         final AppError error = saved.error();
         if (error == null) {
             log.debug("the brief was saved");

@@ -27,7 +27,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
@@ -146,7 +149,13 @@ class RoundTripCheckTest {
                 injector.getInstance(SegmentRepository.class),
                 new OpenProjects(),
                 Clock.systemUTC(),
-                new UuidIdSource());
+                new UuidIdSource(),
+                injector.getInstance(RunRepository.class),
+                new ProjectCopies(
+                        injector.getInstance(GlossaryRepository.class),
+                        injector.getInstance(LexiconRepository.class),
+                        injector.getInstance(SegmentRepository.class),
+                        new UuidIdSource()));
     }
 
     private Path book(@Nullable final String language) {

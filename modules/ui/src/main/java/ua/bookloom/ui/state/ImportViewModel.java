@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -17,6 +18,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -171,7 +173,7 @@ public final class ImportViewModel {
 
     private Result<Answer> importGuarded(final Path source, final boolean keepEarlier) {
         try {
-            return answerOf(source, keepEarlier ? openEarlier(source) : projects.create(source));
+            return answerOf(source, keepEarlier ? openEarlier(source) : createAfterRemovingEarlier(source));
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(internalError(thrown));
@@ -185,8 +187,30 @@ public final class ImportViewModel {
             return Result.err(Objects.requireNonNull(listed.error(), "error"));
         }
         return EarlierProjects.find(all, source)
-                .map(summary -> projects.open(summary.project().id()))
+                .map(summary -> projects.open(summary.project().id()).flatMap(opening -> bookOf(opening, source)))
                 .orElseGet(() -> Result.err(noEarlierTranslation()));
+    }
+
+    // One project per file until the Projects screen exists: importing again replaces the earlier project.
+    private Result<ImportedBook> createAfterRemovingEarlier(final Path source) {
+        final List<ProjectSummary> all = projects.list().data();
+        final Optional<ProjectSummary> earlier = all == null ? Optional.empty() : EarlierProjects.find(all, source);
+        earlier.ifPresent(summary -> projects.remove(summary.project().id()));
+        return projects.create(source);
+    }
+
+    private static Result<ImportedBook> bookOf(final ProjectOpening opening, final Path source) {
+        return switch (opening) {
+            case ProjectOpening.Opened opened -> Result.ok(opened.book());
+            case ProjectOpening.BookFileMissing missing -> {
+                log.warn("the book file of {} is missing", source.getFileName());
+                yield Result.err(noEarlierTranslation());
+            }
+            case ProjectOpening.BookFileChanged changed -> {
+                log.warn("the book file of {} changed", source.getFileName());
+                yield Result.err(noEarlierTranslation());
+            }
+        };
     }
 
     private static AppError noEarlierTranslation() {

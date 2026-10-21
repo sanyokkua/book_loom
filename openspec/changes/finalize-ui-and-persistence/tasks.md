@@ -419,7 +419,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     the removed methods (`grep -rln "importBook\|continueBook\|decidedSegments" modules/*/src/test`).
   - The window still opens the just-imported project; nothing visible changes.
   - Verify: `./gradlew build`. → :api, :pipeline, :ui, :app
-- [ ] 4.7b Add names, rename, remove, "translate into another language" and the missing-file paths to projects, so the
+- [x] 4.7b Add names, rename, remove, "translate into another language" and the missing-file paths to projects, so the
   Projects screen can keep several translations of one book.
   - **Satisfies:** app-shell "Name every project automatically from its book and languages"; app-shell "Let an automatic
     name follow the languages and a typed name stay"; app-shell "Allow one project per language pair of a book unless it

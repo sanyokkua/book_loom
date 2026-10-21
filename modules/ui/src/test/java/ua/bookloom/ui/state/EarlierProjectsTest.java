@@ -25,6 +25,7 @@ class EarlierProjectsTest {
                         BookBrief.defaults("en"),
                         "Book",
                         NameOrigin.AUTO,
+                        "Book",
                         Instant.EPOCH,
                         Instant.EPOCH),
                 decided);

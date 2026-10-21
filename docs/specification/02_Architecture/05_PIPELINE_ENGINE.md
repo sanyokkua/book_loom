@@ -124,7 +124,7 @@ fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per 
       `FLAGGED`, keeping the last target that passed every hard gate as its machine translation.
 7. **Persist + update memory** — atomically write the segment; update name dictionary, context-keyed TM, and
    preceding-target window; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
-   (FLAGGED is terminal-for-run, excluded from auto-resume). Update the rolling summary on its size-based trigger
+   (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Update the rolling summary on its size-based trigger
    (`#rolling-summary`).
 
 Every self-heal call passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).

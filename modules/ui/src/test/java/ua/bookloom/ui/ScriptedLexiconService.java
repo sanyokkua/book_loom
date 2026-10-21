@@ -3,6 +3,7 @@ package ua.bookloom.ui;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -185,6 +186,12 @@ public final class ScriptedLexiconService implements LexiconService {
     public Result<Boolean> remove(final String projectId, final String term) {
         calls.add("remove(" + term + ")");
         return Result.ok(held.remove(find(term)));
+    }
+
+    @Override
+    public Result<Map<String, Integer>> usage(final String projectId) {
+        calls.add("usage()");
+        return Result.ok(Map.of());
     }
 
     @Override

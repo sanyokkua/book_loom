@@ -18,6 +18,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
@@ -140,10 +141,10 @@ class ProjectServiceEarlierWorkTest {
         final BookBrief fast = withDial(Objects.requireNonNull(first.brief()), QualityDial.FAST);
         assertThat(service.updateBrief(id, fast).isOk()).isTrue();
 
-        final Result<ImportedBook> continued = service.open(id);
+        final Result<ProjectOpening> continued = service.open(id);
 
         assertThat(continued.isOk()).as("continue result %s", continued.error()).isTrue();
-        final ImportedBook again = Objects.requireNonNull(continued.data());
+        final ImportedBook again = ProjectServices.opened(continued);
         assertThat(again.projectId()).isEqualTo(id);
         assertThat(Objects.requireNonNull(again.brief()).dial()).isEqualTo(QualityDial.FAST);
         assertThat(records(id).get(0).status()).isEqualTo(SegmentStatus.ACCEPTED);
@@ -167,20 +168,21 @@ class ProjectServiceEarlierWorkTest {
 
     @Test
     void open_unknownProjectId_answersValidation() {
-        final Result<ImportedBook> continued = service.open("no-such-project");
+        final Result<ProjectOpening> continued = service.open("no-such-project");
 
         assertThat(Objects.requireNonNull(continued.error()).code()).isEqualTo(ErrorCode.validation);
     }
 
+    // IF a rewritten file were opened, THEN the stored decisions would be shown against another text.
     @Test
-    void open_fileContentChangedSinceImport_answersValidation() {
+    void open_fileContentChangedSinceImport_answersBookFileChangedAndKeepsDecisions() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
         TestBooks.markdown(book, OTHER_TEXT);
 
-        final Result<ImportedBook> continued = service.open(id);
+        final Result<ProjectOpening> continued = service.open(id);
 
-        assertThat(Objects.requireNonNull(continued.error()).code()).isEqualTo(ErrorCode.validation);
+        assertThat(continued.data()).isInstanceOf(ProjectOpening.BookFileChanged.class);
         assertThat(records(id).get(0).status()).isEqualTo(SegmentStatus.ACCEPTED);
     }
 

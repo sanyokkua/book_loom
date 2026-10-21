@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -13,7 +12,6 @@ import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
@@ -37,8 +35,8 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.ProjectServices;
 import ua.bookloom.pipeline.TestBooks;
-import ua.bookloom.pipeline.UuidIdSource;
 import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -323,13 +321,6 @@ public final class ReviewFixtures {
             final ProjectRepository projects,
             final SegmentRepository segments,
             final OpenProjects openProjects) {
-        return new ProjectServiceImpl(
-                injector.getInstance(BookInspector.class),
-                documents,
-                projects,
-                segments,
-                openProjects,
-                Clock.systemUTC(),
-                new UuidIdSource());
+        return ProjectServices.service(injector, documents, projects, segments, openProjects);
     }
 }

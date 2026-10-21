@@ -192,8 +192,9 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
 
         requestImport(DRACULA);
 
-        assertThat(projects.listCalls()).isEqualTo(1);
-        assertThat(projects.listCallsOnFxThread()).containsExactly(false);
+        // The guard's lookup, then the import's own lookup of the project it replaces (inline in this test's executor).
+        assertThat(projects.listCalls()).isEqualTo(2);
+        assertThat(projects.listCallsOnFxThread()).contains(false);
     }
 
     // A finished run is cleared only when the import goes ahead; backing out of the question leaves it showing.
