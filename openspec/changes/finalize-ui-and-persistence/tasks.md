@@ -658,7 +658,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     banner key); rewrite `StepAvailabilityTest` for the run-state rules. The no-project lock lands in 6.1, so the app
     keeps a way into Import until Projects exists.
   - **Compare:** the shell in Ready, Translating, Paused, Waiting for the AI model and Finished. → :ui
-- [ ] 5.9 Add "Show technical details" as one property every Simple/Detailed view and Advanced fold reads, so plain
+- [x] 5.9 Add "Show technical details" as one property every Simple/Detailed view and Advanced fold reads, so plain
   words are the default and the technical lines appear in one place.
   - **Satisfies:** app-shell "Hide technical words unless Show technical details is on"; app-shell "Show technical
     details of a failure only on request"; app-shell "Offer Simple and Detailed views of a step"; settings "Show a

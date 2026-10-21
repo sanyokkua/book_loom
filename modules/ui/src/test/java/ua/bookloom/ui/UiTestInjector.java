@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -241,6 +242,7 @@ public final class UiTestInjector {
                             .annotatedWith(BackgroundExecutor.class)
                             .toInstance(daemonExecutor());
                     bind(ProviderConfigs.class).toInstance(configs);
+                    bind(SettingsRepository.class).toInstance(new MemorySettings());
                     bind(ProviderVerifier.class).toInstance(verifier);
                     bind(ModelCatalog.class).toInstance(catalog);
                     bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);

@@ -277,4 +277,18 @@ class ErrorPresenterTest extends ShellTestBase {
         assertThat(buttonText("error-dismiss")).isEqualTo("Закрити");
         assertThat(textOf("error-title")).isEqualTo("Translation failed");
     }
+
+    // IF "Show technical details" did not reach the failure card, THEN the person who asked for codes would open it by
+    // hand.
+    @Test
+    void present_technicalDetailsOn_opensTheDetailsAndLabelsTheToggleHide() {
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.TechnicalDetails.class)
+                .property()
+                .set(true));
+
+        present(timeoutWithDetails());
+
+        assertThat(isPresent("error-details")).isTrue();
+        assertThat(toggleText()).isEqualTo("Hide details");
+    }
 }

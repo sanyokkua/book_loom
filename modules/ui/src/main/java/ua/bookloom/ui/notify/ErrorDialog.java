@@ -51,6 +51,7 @@ final class ErrorDialog {
     private final @Nullable Runnable onRetry;
     private final Runnable onDismiss;
     private final @Nullable MessageKey note;
+    private final boolean detailsOpen;
 
     /**
      * Prepares the card's content.
@@ -61,18 +62,21 @@ final class ErrorDialog {
      *     case no Retry button is built even for a retryable failure
      * @param onDismiss what Dismiss does
      * @param note a line shown beneath the message, or {@code null} for none
+     * @param detailsOpen whether the details start expanded ("Show technical details" is on)
      */
     ErrorDialog(
             final Messages messages,
             final AppError error,
             final @Nullable Runnable onRetry,
             final Runnable onDismiss,
-            final @Nullable MessageKey note) {
+            final @Nullable MessageKey note,
+            final boolean detailsOpen) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.error = Objects.requireNonNull(error, "error");
         this.onRetry = onRetry;
         this.onDismiss = Objects.requireNonNull(onDismiss, "onDismiss");
         this.note = note;
+        this.detailsOpen = detailsOpen;
     }
 
     /**
@@ -142,17 +146,23 @@ final class ErrorDialog {
         Tips.install(messages, toggle, MessageKey.ERROR_DETAILS_SHOW_TIP);
         toggle.getStyleClass().add("btn-secondary");
         final TextArea details = detailsArea();
-        toggle.setOnAction(event -> {
-            final boolean expanded = toggle.isSelected();
-            log.debug("error details {}", expanded ? "expanded" : "folded");
-            toggle.setText(messages.get(expanded ? MessageKey.ERROR_DETAILS_HIDE : MessageKey.ERROR_DETAILS_SHOW));
-            if (expanded) {
-                body.getChildren().add(details);
-            } else {
-                body.getChildren().remove(details);
-            }
-        });
+        toggle.setOnAction(event -> expand(toggle, body, details));
+        if (detailsOpen) {
+            toggle.setSelected(true);
+            expand(toggle, body, details);
+        }
         return toggle;
+    }
+
+    private void expand(final ToggleButton toggle, final VBox body, final TextArea details) {
+        final boolean expanded = toggle.isSelected();
+        log.debug("error details {}", expanded ? "expanded" : "folded");
+        toggle.setText(messages.get(expanded ? MessageKey.ERROR_DETAILS_HIDE : MessageKey.ERROR_DETAILS_SHOW));
+        if (expanded) {
+            body.getChildren().add(details);
+        } else {
+            body.getChildren().remove(details);
+        }
     }
 
     private TextArea detailsArea() {

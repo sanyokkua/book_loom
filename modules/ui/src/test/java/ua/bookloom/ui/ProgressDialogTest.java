@@ -353,6 +353,21 @@ class ProgressDialogTest extends ShellTestBase {
                 .isEqualTo("Call 42 · Translate · 4 segments · attempt 1 of 2");
     }
 
+    // IF the switch did not reach the dialog's default, THEN a person who asked for technical details would get Simple.
+    @Test
+    void technicalDetailsOn_newDialogOpensInDetailed() throws TimeoutException {
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.TechnicalDetails.class)
+                .property()
+                .set(true));
+        final ActivityTracker.Handle brief = begin(ActivityKind.SUGGEST_STYLE);
+        plan(brief, 2);
+        start(brief, 0);
+        onFx(() -> brief.calls(new LiveCalls(call(), null, java.util.Map.of(), null)));
+        awaitDialog();
+
+        await(() -> required("progress-call").isVisible());
+    }
+
     private static CallSnapshot call() {
         final List<CallSegment> segments = IntStream.rangeClosed(1, 4)
                 .mapToObj(n -> new CallSegment("s" + n, "p" + n, "Line " + n + "."))
