@@ -12,32 +12,31 @@ import ua.bookloom.api.project.Project;
 public interface ProjectService {
 
     /**
-     * Inspects and, when the file can be opened, opens a candidate book and creates its project.
+     * Lists the stored projects with how much of each is already decided, so a screen can ask before a new import
+     * discards work.
      *
-     * @param source the non-null candidate file
-     * @return the inspection result and, when it opened, the new project's profile and default brief
+     * @return one summary per stored project, most recently opened first; never null, empty when none is stored
      */
-    Result<ImportedBook> importBook(Path source);
+    Result<List<ProjectSummary>> list();
 
     /**
-     * Counts the segments already decided in the project that importing {@code source} would reuse, so the person is
-     * asked before an import discards them.
+     * Inspects and, when the file can be opened, opens a candidate book and creates its project (or, for a file that
+     * already has one, resets that project's segments and keeps its id).
      *
      * @param source the non-null candidate file
-     * @return the number of stored segments of that file's project that are not pending; {@code 0} when the file was
-     *     never imported or its content changed since, because stored decisions of another text mean nothing for it
+     * @return the inspection result and, when it opened, the project's id, profile and default brief; the id is
+     *     {@code null} when the inspection refused the file
      */
-    Result<Integer> decidedSegments(Path source);
+    Result<ImportedBook> create(Path source);
 
     /**
-     * Opens a file whose project is already stored and keeps that project, its brief and its decided segments, where
-     * {@link #importBook} would reset the segments.
+     * Opens a stored project and keeps its brief and decided segments, where {@link #create} would reset the segments.
      *
-     * @param source the non-null file whose project is stored
-     * @return the opened book with its stored brief; a {@code validation} error when no project is stored for it or
-     *     the file's content changed since it was imported
+     * @param projectId the non-null id of a stored project
+     * @return the opened book with its stored brief; a {@code validation} error when no such project is stored or its
+     *     source file is missing or its content changed since it was created
      */
-    Result<ImportedBook> continueBook(Path source);
+    Result<ImportedBook> open(String projectId);
 
     /**
      * Replaces a project's Book Brief.

@@ -152,7 +152,7 @@ final class SoakRun {
 
     private String importBook(final Path book) {
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(book));
+        final ImportedBook imported = dataOf(projects.create(book));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
         dataOf(projects.updateBrief(projectId, balancedUkrainian(Objects.requireNonNull(imported.brief(), "brief"))));
         return projectId;

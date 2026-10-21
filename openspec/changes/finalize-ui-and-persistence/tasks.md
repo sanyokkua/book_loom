@@ -409,7 +409,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     by hand against `ChunkPacker`; a repair round adds 1 step.
   - Edit `05_PIPELINE_ENGINE.md` (batches at `#tiered-loop`, the step announcements, `#generation-parameters`,
     `#rolling-summary`) and FR-ALGO-02/09 to the batched drafts the code already makes. → :pipeline, docs
-- [ ] 4.7a Move `ProjectService` to project ids with behaviour unchanged, so the later project features have an id
+- [x] 4.7a Move `ProjectService` to project ids with behaviour unchanged, so the later project features have an id
   surface and the build stays green.
   - **Satisfies:** enabling work for 4.7b and 6.1a
   - Design K7, first step: `list`, `create` and `open(projectId)` replace `importBook(Path)`, `continueBook(Path)` and

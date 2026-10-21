@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
@@ -17,6 +18,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -122,7 +124,7 @@ public final class ImportViewModel {
     }
 
     /**
-     * Opens a file whose earlier translation is kept, through the service's {@code continueBook}. Returns at once; the
+     * Opens a file whose earlier translation is kept, through the service's {@code open}. Returns at once; the
      * answer arrives on the FX thread. FX thread only.
      *
      * @param source the file whose stored project and decided segments are kept
@@ -169,11 +171,29 @@ public final class ImportViewModel {
 
     private Result<Answer> importGuarded(final Path source, final boolean keepEarlier) {
         try {
-            return answerOf(source, keepEarlier ? projects.continueBook(source) : projects.importBook(source));
+            return answerOf(source, keepEarlier ? openEarlier(source) : projects.create(source));
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(internalError(thrown));
         }
+    }
+
+    private Result<ImportedBook> openEarlier(final Path source) {
+        final Result<List<ProjectSummary>> listed = projects.list();
+        final List<ProjectSummary> all = listed.data();
+        if (all == null) {
+            return Result.err(Objects.requireNonNull(listed.error(), "error"));
+        }
+        return EarlierProjects.find(all, source)
+                .map(summary -> projects.open(summary.project().id()))
+                .orElseGet(() -> Result.err(noEarlierTranslation()));
+    }
+
+    private static AppError noEarlierTranslation() {
+        return AppError.of(
+                ErrorCode.validation,
+                "There is no earlier translation to continue",
+                "This file has no stored project; import it again.");
     }
 
     // A refusal and a malformed answer both become errors here, so the FX thread only routes by code.

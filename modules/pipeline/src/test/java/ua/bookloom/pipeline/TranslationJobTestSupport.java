@@ -105,8 +105,9 @@ final class TranslationJobTestSupport {
                 stores.projects(),
                 stores.segments(),
                 stores.openProjects(),
-                Clock.systemUTC());
-        final Result<ImportedBook> importResult = service.importBook(book);
+                Clock.systemUTC(),
+                new UuidIdSource());
+        final Result<ImportedBook> importResult = service.create(book);
         final ImportedBook imported =
                 Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());
         final String id = Objects.requireNonNull(imported.projectId(), "project id");

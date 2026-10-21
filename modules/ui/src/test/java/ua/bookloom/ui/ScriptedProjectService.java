@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -18,6 +19,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
@@ -25,7 +27,7 @@ import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 
 /**
- * A hand-written {@link ProjectService} that answers {@code importBook} with what the test scripted for that path (or
+ * A hand-written {@link ProjectService} that answers {@code create} with what the test scripted for that path (or
  * an {@code internal} error, or a thrown exception), records every source it was asked to import, every brief it was asked to
  * save and every project it was asked to close together with whether the call arrived on the FX Application Thread,
  * and can hold each import, and each round-trip check, until the test releases it. Round-trip and plan answers are
@@ -34,12 +36,13 @@ import ua.bookloom.api.project.Project;
 public final class ScriptedProjectService implements ProjectService {
 
     private static final long WAIT_SECONDS = 10;
+    private static final String ID_PREFIX = "id:";
 
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
-    private final List<Path> continues = new CopyOnWriteArrayList<>();
-    private final List<Path> decidedAsked = new CopyOnWriteArrayList<>();
-    private final List<Boolean> decidedOnFxThread = new CopyOnWriteArrayList<>();
+    private final List<Path> opens = new CopyOnWriteArrayList<>();
+    private final AtomicInteger listCalls = new AtomicInteger();
+    private final List<Boolean> listOnFxThread = new CopyOnWriteArrayList<>();
     private final Map<Path, Integer> decided = new ConcurrentHashMap<>();
     private volatile @Nullable AppError decidedFailure;
     private final List<Boolean> importsOnFxThread = new CopyOnWriteArrayList<>();
@@ -153,7 +156,7 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     @Override
-    public Result<ImportedBook> importBook(final Path source) {
+    public Result<ImportedBook> create(final Path source) {
         final CountDownLatch held = gate;
         imports.add(Objects.requireNonNull(source, "source"));
         events.add("import " + source);
@@ -172,47 +175,64 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     @Override
-    public Result<Integer> decidedSegments(final Path source) {
-        decidedAsked.add(Objects.requireNonNull(source, "source"));
-        decidedOnFxThread.add(Platform.isFxApplicationThread());
+    public Result<List<ProjectSummary>> list() {
+        listCalls.incrementAndGet();
+        listOnFxThread.add(Platform.isFxApplicationThread());
         final AppError failed = decidedFailure;
         if (failed != null) {
             return Result.err(failed);
         }
-        return Result.ok(decided.getOrDefault(source, 0));
+        return Result.ok(decided.entrySet().stream()
+                .map(entry -> new ProjectSummary(summaryProject(entry.getKey()), entry.getValue()))
+                .toList());
     }
 
     @Override
-    public Result<ImportedBook> continueBook(final Path source) {
-        continues.add(Objects.requireNonNull(source, "source"));
-        events.add("continue " + source);
+    public Result<ImportedBook> open(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        final Path source = Path.of(projectId.substring(ID_PREFIX.length()));
+        opens.add(source);
+        events.add("open " + projectId);
         final Result<ImportedBook> scripted = byPath.get(source);
         return scripted != null ? scripted : fallback;
     }
 
-    /** From now on answers {@link #decidedSegments} for {@code source} with {@code count}; other paths answer 0. */
+    private static Project summaryProject(final Path source) {
+        return new Project(
+                ID_PREFIX + source,
+                source.toAbsolutePath().normalize(),
+                BookFormat.TXT,
+                "hash",
+                BookBrief.defaults("en"),
+                "Book",
+                NameOrigin.AUTO,
+                Instant.EPOCH,
+                Instant.EPOCH);
+    }
+
+    /** From now on {@link #list} reports a project for {@code source} with {@code count} decided segments. */
     public void onDecided(final Path source, final int count) {
         decided.put(Objects.requireNonNull(source, "source"), count);
     }
 
-    /** From now on answers every {@link #decidedSegments} with {@code failure}. */
+    /** From now on answers every {@link #list} with {@code failure}. */
     public void failDecidedWith(final AppError failure) {
         decidedFailure = Objects.requireNonNull(failure, "failure");
     }
 
-    /** Every file {@link #decidedSegments} was asked about, in call order. */
-    public List<Path> decidedAsked() {
-        return List.copyOf(decidedAsked);
+    /** How many times {@link #list} was asked. */
+    public int listCalls() {
+        return listCalls.get();
     }
 
-    /** For each {@link #decidedSegments}, in call order, whether it arrived on the FX Application Thread. */
-    public List<Boolean> decidedCallsOnFxThread() {
-        return List.copyOf(decidedOnFxThread);
+    /** For each {@link #list}, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> listCallsOnFxThread() {
+        return List.copyOf(listOnFxThread);
     }
 
-    /** The source of every {@link #continueBook}, in call order. */
-    public List<Path> continues() {
-        return List.copyOf(continues);
+    /** The source of every {@link #open}, in call order. */
+    public List<Path> opens() {
+        return List.copyOf(opens);
     }
 
     @Override

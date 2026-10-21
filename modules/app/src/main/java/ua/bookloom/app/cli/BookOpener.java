@@ -41,7 +41,7 @@ final class BookOpener {
      */
     Result<Opened> open(TranslateArguments arguments) {
         Objects.requireNonNull(arguments, "arguments");
-        final Result<ImportedBook> imported = projects.importBook(arguments.source());
+        final Result<ImportedBook> imported = projects.create(arguments.source());
         if (imported.isErr()) {
             return Result.err(Objects.requireNonNull(imported.error()));
         }

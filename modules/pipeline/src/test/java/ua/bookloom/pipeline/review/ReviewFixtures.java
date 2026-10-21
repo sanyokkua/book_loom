@@ -38,6 +38,7 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.UuidIdSource;
 import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -297,7 +298,7 @@ public final class ReviewFixtures {
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
         final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
         final ImportedBook imported =
-                Objects.requireNonNull(service.importBook(book).data(), "imported book");
+                Objects.requireNonNull(service.create(book).data(), "imported book");
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
         service.updateBrief(id, brief);
         return new Desk(
@@ -328,6 +329,7 @@ public final class ReviewFixtures {
                 projects,
                 segments,
                 openProjects,
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                new UuidIdSource());
     }
 }

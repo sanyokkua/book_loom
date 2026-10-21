@@ -138,7 +138,7 @@ class TranslationEngineEndToEndTest {
                 new PipelineModule(),
                 new ReviewModeTestModule());
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(source));
+        final ImportedBook imported = dataOf(projects.create(source));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
         dataOf(projects.updateBrief(projectId, withTarget(Objects.requireNonNull(imported.brief()), "uk")));
         final TranslationJob job = dataOf(injector.getInstance(TranslationEngine.class)

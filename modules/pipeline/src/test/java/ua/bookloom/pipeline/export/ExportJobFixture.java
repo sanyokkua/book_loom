@@ -116,7 +116,7 @@ final class ExportJobFixture {
 
     String importBook(final Path source, final String sourceLanguage, final AlsoTranslate alsoTranslate) {
         final ProjectService service = injector.getInstance(ProjectService.class);
-        final String id = Objects.requireNonNull(ok(service.importBook(source)).projectId(), "project id");
+        final String id = Objects.requireNonNull(ok(service.create(source)).projectId(), "project id");
         ok(service.updateBrief(id, brief(sourceLanguage, alsoTranslate)));
         return id;
     }

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 
@@ -119,13 +121,15 @@ public final class ImportGuard {
     // A failed lookup never stops a book from opening: it counts as nothing decided.
     private int decidedOf(final Path source) {
         try {
-            final Result<Integer> counted = projects.decidedSegments(source);
-            final Integer count = counted.data();
-            if (count == null) {
-                log.debug("the decided segments of {} could not be counted: {}", fileNameOf(source), counted.error());
+            final Result<List<ProjectSummary>> listed = projects.list();
+            final List<ProjectSummary> all = listed.data();
+            if (all == null) {
+                log.debug("the decided segments of {} could not be counted: {}", fileNameOf(source), listed.error());
                 return 0;
             }
-            return count;
+            return EarlierProjects.find(all, source)
+                    .map(ProjectSummary::decidedSegments)
+                    .orElse(0);
         } catch (Throwable thrown) {
             log.warn("the project service threw while counting the decided segments", thrown);
             return 0;

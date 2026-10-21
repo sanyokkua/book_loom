@@ -8,7 +8,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NarratorHint;
 
 /**
- * What {@link ProjectService#importBook} found and, when the file could be opened, made of it.
+ * What {@link ProjectService#create} found and, when the file could be opened, made of it.
  *
  * @param projectId the new project's stable id, or null when the file was refused before a project was created
  * @param inspection what the pre-open inspection found

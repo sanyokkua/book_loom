@@ -25,6 +25,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.UuidIdSource;
 
 /** An import that fails after the book was opened leaves no open book and no open document behind. */
 class ProjectServiceImportFailureTest {
@@ -35,7 +36,7 @@ class ProjectServiceImportFailureTest {
     // IF storing the segments throws, THEN the import is an internal error, the opened document is closed and
     // nothing is registered as open.
     @Test
-    void importBook_storeThrows_closesTheDocumentAndRegistersNothing() {
+    void create_storeThrows_closesTheDocumentAndRegistersNothing() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
@@ -46,7 +47,7 @@ class ProjectServiceImportFailureTest {
         final ProjectServiceImpl service = serviceWhoseStoreBreaks(injector, closed, projectIds);
         final Path book = TestBooks.txt(tempDir.resolve("book.txt"), "It was a dark night.\n\nThe rain kept falling.");
 
-        final Result<ImportedBook> imported = service.importBook(book);
+        final Result<ImportedBook> imported = service.create(book);
 
         assertThat(imported.isErr()).isTrue();
         assertThat(imported.error())
@@ -78,7 +79,8 @@ class ProjectServiceImportFailureTest {
                     }
                 }),
                 injector.getInstance(OpenProjects.class),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                new UuidIdSource());
     }
 
     private interface Spy {

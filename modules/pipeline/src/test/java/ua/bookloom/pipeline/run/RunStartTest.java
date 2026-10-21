@@ -27,9 +27,11 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.UuidIdSource;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 
@@ -45,10 +47,11 @@ class RunStartTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        final Injector injector =
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
+                });
         service = injector.getInstance(ProjectServiceImpl.class);
         stores = new RunStores(
                 injector.getInstance(ProjectRepository.class),
@@ -62,7 +65,7 @@ class RunStartTest {
                 injector.getInstance(LexiconRepository.class));
         final Path book = Files.writeString(tempDir.resolve("Book.md"), "Hello.");
         projectId = Objects.requireNonNull(
-                Objects.requireNonNull(service.importBook(book).data()).projectId());
+                Objects.requireNonNull(service.create(book).data()).projectId());
     }
 
     // Narrowing the grammar would refuse one of these supported BCP-47-shaped values.

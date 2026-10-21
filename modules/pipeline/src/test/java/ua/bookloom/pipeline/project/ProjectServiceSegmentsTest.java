@@ -25,9 +25,11 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.UuidIdSource;
 
 /** The Structure screen's segment listing over the real document module, checked against the plan it must agree with. */
 class ProjectServiceSegmentsTest {
@@ -41,10 +43,11 @@ class ProjectServiceSegmentsTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        final Injector injector =
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
+                });
         service = injector.getInstance(ProjectServiceImpl.class);
     }
 
@@ -152,7 +155,7 @@ class ProjectServiceSegmentsTest {
     }
 
     private ImportedBook importOk(final Path book) {
-        final Result<ImportedBook> result = service.importBook(book);
+        final Result<ImportedBook> result = service.create(book);
         assertThat(result.isOk()).as("import %s", result.error()).isTrue();
         return Objects.requireNonNull(result.data());
     }

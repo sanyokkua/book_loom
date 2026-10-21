@@ -21,13 +21,16 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CountingIdSource;
+import ua.bookloom.pipeline.ProjectServices;
 import ua.bookloom.pipeline.TestBooks;
 
 /**
- * Importing a file again resets its stored decisions; the earlier translation can instead be counted and continued.
+ * Creating a project again resets its stored decisions; the earlier translation can instead be counted through list and continued through open.
  * The service, the document module and the in-memory repositories are real.
  */
 class ProjectServiceEarlierWorkTest {
@@ -39,6 +42,7 @@ class ProjectServiceEarlierWorkTest {
     @TempDir
     private Path tempDir;
 
+    private CountingIdSource ids;
     private ProjectService service;
     private ProjectRepository projects;
     private SegmentRepository segments;
@@ -46,10 +50,12 @@ class ProjectServiceEarlierWorkTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        ids = new CountingIdSource();
+        final Injector injector =
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(ids);
+                });
         service = injector.getInstance(ProjectServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
         segments = injector.getInstance(SegmentRepository.class);
@@ -57,7 +63,7 @@ class ProjectServiceEarlierWorkTest {
     }
 
     private ImportedBook importOk() {
-        final Result<ImportedBook> result = service.importBook(book);
+        final Result<ImportedBook> result = service.create(book);
         assertThat(result.isOk()).as("import result %s", result.error()).isTrue();
         return Objects.requireNonNull(result.data());
     }
@@ -72,18 +78,16 @@ class ProjectServiceEarlierWorkTest {
     }
 
     private int decided(final Path source) {
-        final Result<Integer> result = service.decidedSegments(source);
-        assertThat(result.isOk()).as("decided result %s", result.error()).isTrue();
-        return Objects.requireNonNull(result.data());
+        return ProjectServices.decidedOf(service, source);
     }
 
     @Test
-    void decidedSegments_fileNeverImported_isZero() {
+    void list_fileNeverImported_reportsNothingForIt() {
         assertThat(decided(book)).isZero();
     }
 
     @Test
-    void decidedSegments_importedWithNothingDecided_isZero() {
+    void list_importedWithNothingDecided_isZero() {
         importOk();
 
         assertThat(decided(book)).isZero();
@@ -91,7 +95,7 @@ class ProjectServiceEarlierWorkTest {
 
     // Accepted, revised and flagged segments all hold a decision; a pending one does not.
     @Test
-    void decidedSegments_acceptedRevisedAndFlaggedSegments_countsAllThree() {
+    void list_acceptedRevisedAndFlaggedSegments_countsAllThree() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
         decide(id, 1, SegmentStatus.REVISED, "Дощ не вщухав.");
@@ -103,7 +107,7 @@ class ProjectServiceEarlierWorkTest {
     // IF stored decisions of another text counted, THEN the person would be asked to continue a translation of a book
     // this file no longer is.
     @Test
-    void decidedSegments_fileContentChangedSinceImport_isZero() {
+    void list_fileContentChangedSinceImport_isZero() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
 
@@ -115,20 +119,20 @@ class ProjectServiceEarlierWorkTest {
     // The FictionBook reader hashes the unzipped member, not the archive; the stored hash must still match its own
     // file.
     @Test
-    void decidedSegments_zippedFictionBookUnchangedSinceImport_countsTheDecisions() {
+    void list_zippedFictionBookUnchangedSinceImport_countsTheDecisions() {
         final Path zipped = TestBooks.zippedFb2(
                 tempDir.resolve("Book.fb2.zip"), List.of("It was a dark night.", "The rain kept falling."), "en");
         final String id = Objects.requireNonNull(
-                Objects.requireNonNull(service.importBook(zipped).data()).projectId());
+                Objects.requireNonNull(service.create(zipped).data()).projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
 
         assertThat(decided(zipped)).isEqualTo(1);
-        assertThat(service.continueBook(zipped).isOk()).isTrue();
+        assertThat(service.open(id).isOk()).isTrue();
     }
 
     // IF Continue reset the records, THEN the question would promise work it then throws away.
     @Test
-    void continueBook_afterDecisions_keepsTheStoredDecisionsAndTheStoredBrief() {
+    void open_afterDecisions_keepsTheStoredDecisionsAndTheStoredBrief() {
         final ImportedBook first = importOk();
         final String id = Objects.requireNonNull(first.projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
@@ -136,7 +140,7 @@ class ProjectServiceEarlierWorkTest {
         final BookBrief fast = withDial(Objects.requireNonNull(first.brief()), QualityDial.FAST);
         assertThat(service.updateBrief(id, fast).isOk()).isTrue();
 
-        final Result<ImportedBook> continued = service.continueBook(book);
+        final Result<ImportedBook> continued = service.open(id);
 
         assertThat(continued.isOk()).as("continue result %s", continued.error()).isTrue();
         final ImportedBook again = Objects.requireNonNull(continued.data());
@@ -150,31 +154,31 @@ class ProjectServiceEarlierWorkTest {
 
     // The continued book must be open for the screens that follow: a plan needs the document in memory.
     @Test
-    void continueBook_afterDecisions_leavesTheBookOpenForAPlan() {
+    void open_afterDecisions_leavesTheBookOpenForAPlan() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
         service.close(id);
 
-        assertThat(service.continueBook(book).isOk()).isTrue();
+        assertThat(service.open(id).isOk()).isTrue();
 
         final Result<BookPlan> plan = service.plan(id);
         assertThat(plan.isOk()).as("plan result %s", plan.error()).isTrue();
     }
 
     @Test
-    void continueBook_fileNeverImported_answersValidation() {
-        final Result<ImportedBook> continued = service.continueBook(book);
+    void open_unknownProjectId_answersValidation() {
+        final Result<ImportedBook> continued = service.open("no-such-project");
 
         assertThat(Objects.requireNonNull(continued.error()).code()).isEqualTo(ErrorCode.validation);
     }
 
     @Test
-    void continueBook_fileContentChangedSinceImport_answersValidation() {
+    void open_fileContentChangedSinceImport_answersValidation() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
         TestBooks.markdown(book, OTHER_TEXT);
 
-        final Result<ImportedBook> continued = service.continueBook(book);
+        final Result<ImportedBook> continued = service.open(id);
 
         assertThat(Objects.requireNonNull(continued.error()).code()).isEqualTo(ErrorCode.validation);
         assertThat(records(id).get(0).status()).isEqualTo(SegmentStatus.ACCEPTED);
@@ -182,7 +186,7 @@ class ProjectServiceEarlierWorkTest {
 
     // Start over is the existing import: it resets every record, so nothing is left to ask about.
     @Test
-    void importBook_afterDecisions_resetsThemSoNothingIsDecidedAnyMore() {
+    void create_afterDecisions_resetsThemSoNothingIsDecidedAnyMore() {
         final String id = Objects.requireNonNull(importOk().projectId());
         decide(id, 0, SegmentStatus.ACCEPTED, "Була темна ніч.");
         assertThat(decided(book)).isEqualTo(1);

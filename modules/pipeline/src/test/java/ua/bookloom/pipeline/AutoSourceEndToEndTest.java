@@ -134,7 +134,7 @@ class AutoSourceEndToEndTest {
     private Outcome translated(final Path book) {
         final Injector injector = injector();
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(book));
+        final ImportedBook imported = dataOf(projects.create(book));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
         final BookBrief auto = Objects.requireNonNull(imported.brief(), "brief").withLanguages(null, "uk");
         dataOf(projects.updateBrief(projectId, auto));

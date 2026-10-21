@@ -35,6 +35,7 @@ import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
@@ -43,6 +44,7 @@ import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
+import ua.bookloom.pipeline.UuidIdSource;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.BlockingClosePort;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.ScriptedMoveOperation;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -68,10 +70,10 @@ class ExportServiceImplTest {
     @BeforeEach
     void setUp() {
         injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                new ReviewModeTestModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+                new DocumentModule(), new InMemoryPersistenceModule(), new ReviewModeTestModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
+                });
         service = injector.getInstance(ExportServiceImpl.class);
         projectService = injector.getInstance(ProjectServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
@@ -263,7 +265,7 @@ class ExportServiceImplTest {
     private String importBook(final String content, @Nullable final String targetLanguage) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), content);
         final String id =
-                Objects.requireNonNull(dataOf(projectService.importBook(source)).projectId(), "project id");
+                Objects.requireNonNull(dataOf(projectService.create(source)).projectId(), "project id");
         final Project project = dataOf(projects.find(id)).orElseThrow();
         projects.save(project.withBrief(withTarget(project.brief(), targetLanguage)));
         return id;

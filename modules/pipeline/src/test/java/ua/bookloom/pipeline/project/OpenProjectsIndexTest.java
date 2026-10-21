@@ -18,9 +18,11 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.UuidIdSource;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 
@@ -43,10 +45,11 @@ class OpenProjectsIndexTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        final Injector injector =
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
+                });
         service = injector.getInstance(ProjectServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);
         logEvents = new ListAppender<>();
@@ -144,7 +147,7 @@ class OpenProjectsIndexTest {
     }
 
     private String importedId(final String text) {
-        final var result = service.importBook(TestBooks.txt(tempDir.resolve("book.txt"), text));
+        final var result = service.create(TestBooks.txt(tempDir.resolve("book.txt"), text));
         assertThat(result.isOk()).as("import result %s", result.error()).isTrue();
         return Objects.requireNonNull(
                 Objects.requireNonNull(result.data(), "imported").projectId());

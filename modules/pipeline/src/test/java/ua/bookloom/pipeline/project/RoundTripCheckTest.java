@@ -33,6 +33,7 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.UuidIdSource;
 
 /** The zero-edit round trip over the real document module, with decorators that damage the written copy. */
 class RoundTripCheckTest {
@@ -129,7 +130,7 @@ class RoundTripCheckTest {
 
     private RoundTripReport roundTrip(final DocumentPort port, final Path book) {
         final ProjectServiceImpl service = service(port);
-        final Result<ImportedBook> imported = service.importBook(book);
+        final Result<ImportedBook> imported = service.create(book);
         final String id =
                 Objects.requireNonNull(Objects.requireNonNull(imported.data()).projectId());
         final Result<RoundTripReport> result = service.roundTrip(id);
@@ -144,7 +145,8 @@ class RoundTripCheckTest {
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
                 new OpenProjects(),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                new UuidIdSource());
     }
 
     private Path book(@Nullable final String language) {

@@ -1,10 +1,10 @@
 package ua.bookloom.pipeline.project;
 
 import com.google.inject.Inject;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,9 +30,11 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
@@ -40,7 +42,6 @@ import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
-import ua.bookloom.util.hash.HashUtil;
 import ua.bookloom.util.lang.LanguageTags;
 
 /**
@@ -51,20 +52,19 @@ import ua.bookloom.util.lang.LanguageTags;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ProjectServiceImpl implements ProjectService {
 
-    private static final int PROJECT_ID_LENGTH = 12;
-
     private final BookInspector inspector;
     private final DocumentPort documents;
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final OpenProjects openProjects;
     private final Clock clock;
+    private final IdSource ids;
 
     @Override
-    public Result<ImportedBook> importBook(final Path source) {
+    public Result<ImportedBook> create(final Path source) {
         Objects.requireNonNull(source, "source");
         try {
-            log.debug("importBook path={}", source);
+            log.debug("create path={}", source);
             final Result<BookInspection> inspected = inspector.inspect(source);
             if (inspected.isErr()) {
                 return Result.err(errorOf(inspected));
@@ -85,60 +85,46 @@ public final class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public Result<Integer> decidedSegments(final Path source) {
-        Objects.requireNonNull(source, "source");
+    public Result<List<ProjectSummary>> list() {
         try {
-            final String id = projectId(source.toAbsolutePath().normalize());
-            final Result<Optional<Project>> found = projects.find(id);
-            if (found.isErr()) {
-                return Result.err(errorOf(found));
-            }
-            final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
-            if (stored == null || !StoredBooks.isUnchanged(stored, source, documents)) {
-                log.debug("decidedSegments project={}: nothing stored for this content", id);
-                return Result.ok(0);
-            }
-            final Result<Integer> counted = segments.all(id).map(StoredBooks::countDecided);
-            log.debug("decidedSegments project={} decided={}", id, counted.data());
-            return counted;
+            return new ProjectSummaries(documents, projects, segments).list();
         } catch (Throwable cause) {
-            return Result.err(internalError("count the decided segments", cause));
+            return Result.err(internalError("list the projects", cause));
         }
     }
 
     @Override
-    public Result<ImportedBook> continueBook(final Path source) {
-        Objects.requireNonNull(source, "source");
+    public Result<ImportedBook> open(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
         try {
-            final Path normalized = source.toAbsolutePath().normalize();
-            final String id = projectId(normalized);
-            log.debug("continueBook path={} project={}", source, id);
-            final Result<Optional<Project>> found = projects.find(id);
-            if (found.isErr()) {
-                return Result.err(errorOf(found));
-            }
-            final Project stored = Objects.requireNonNull(found.data(), "found").orElse(null);
-            if (stored == null || !StoredBooks.isUnchanged(stored, source, documents)) {
-                log.warn("continueBook refused project={}: nothing stored for this content", id);
+            log.debug("open project={}", projectId);
+            final Result<Project> found = findProject(projectId);
+            final Project stored = found.data();
+            if (stored == null || !StoredBooks.isUnchanged(stored, stored.source(), documents)) {
+                log.warn("open refused project={}: nothing stored for this content", projectId);
                 return Result.err(StoredBooks.nothingToContinue());
             }
-            return inspector.inspect(source).flatMap(inspection -> reopen(stored, source, inspection));
+            final Result<BookInspection> inspected = inspector.inspect(stored.source());
+            if (inspected.isErr()) {
+                return Result.err(errorOf(inspected));
+            }
+            return reopen(stored, Objects.requireNonNull(inspected.data(), "inspection"));
         } catch (Throwable cause) {
-            return Result.err(internalError("continue the book", cause));
+            return Result.err(internalError("open the project", cause));
         }
     }
 
-    private Result<ImportedBook> reopen(final Project stored, final Path source, final BookInspection inspection) {
+    private Result<ImportedBook> reopen(final Project stored, final BookInspection inspection) {
         if (inspection.verdict() != InspectionVerdict.READABLE) {
             return Result.ok(new ImportedBook(null, inspection, null, null));
         }
         final Document previous = openProjects.remove(stored.id());
         if (previous != null) {
-            log.debug("continue replaces the open book of project={}", stored.id());
+            log.debug("open replaces the open book of project={}", stored.id());
             documents.close(previous);
         }
         return documents
-                .open(source)
+                .open(stored.source())
                 .flatMap(document ->
                         closingUnlessImported(document, () -> profileAndKeep(stored, inspection, document)));
     }
@@ -241,7 +227,8 @@ public final class ProjectServiceImpl implements ProjectService {
 
     private Result<ImportedBook> openAndStore(final Path source, final BookInspection inspection) {
         final Path normalized = source.toAbsolutePath().normalize();
-        final String id = projectId(normalized);
+        final String id = findBySource(normalized).map(Project::id).orElseGet(ids::newId);
+        log.debug("create uses project={} for path={}", id, normalized);
         final Document previous = openProjects.remove(id);
         if (previous != null) {
             log.debug("import replaces the open book of project={}", id);
@@ -355,9 +342,17 @@ public final class ProjectServiceImpl implements ProjectService {
                 .flatMap(found -> found.map(Result::ok).orElseGet(() -> Result.err(unknownProject(projectId))));
     }
 
-    private static String projectId(final Path normalizedPath) {
-        final String hash = HashUtil.sha256Hex(normalizedPath.toString().getBytes(StandardCharsets.UTF_8));
-        return hash.substring(0, PROJECT_ID_LENGTH);
+    // Today a file is its project: the same absolute path reuses the id. Step 4.7b replaces this lookup with the
+    // content hash and language pair.
+    private Optional<Project> findBySource(final Path normalized) {
+        final Result<List<Project>> all = projects.all();
+        final List<Project> stored = all.data();
+        if (stored == null) {
+            return Optional.empty();
+        }
+        return stored.stream()
+                .filter(project -> project.source().equals(normalized))
+                .max(Comparator.comparing(Project::lastOpenedAt));
     }
 
     private static AppError errorOf(final Result<?> result) {

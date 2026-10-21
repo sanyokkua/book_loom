@@ -191,7 +191,7 @@ writes what the project has decided, leaving the rest in the source, so a stoppe
   `LexiconRepository`, `TmRepository`, `SummaryRepository`, `DeferralRepository`, `RunRepository` and
   `CheckpointPort.commit(ChunkCommit)`, which makes a chunk's records, memory entries, deferrals and new names visible
   all together or not at all. `RepositoryContractTest` proves each port against its in-memory adapter.
-- Service ports in `ua.bookloom.api.pipeline`: `ProjectService` (import, continue, brief update, plan, segment
+- Service ports in `ua.bookloom.api.pipeline`: `ProjectService` (list, create, open, brief update, plan, segment
   previews, round-trip check), `GlossaryService` and `LexiconService` (tables, scans, model review, CSV),
   `NamesPass` (the autonomous names pass with Undo), `SetupAssistant` (suggested brief, file name, narrator recheck),
   `ReviewDesk` (the review actions and queries), `ExportService`.

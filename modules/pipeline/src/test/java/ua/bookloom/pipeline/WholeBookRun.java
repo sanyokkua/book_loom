@@ -166,7 +166,7 @@ final class WholeBookRun {
                 new PipelineModule(),
                 new ReviewModeTestModule());
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(book));
+        final ImportedBook imported = dataOf(projects.create(book));
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
         dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief("en", "uk", dial)));
         return new Project(injector, id);

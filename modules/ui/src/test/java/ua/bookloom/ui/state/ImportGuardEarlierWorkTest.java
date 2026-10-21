@@ -84,8 +84,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
 
     // The lookup runs on a real thread and answers through the FX queue, so wait until nothing more is in flight.
     private void settle() throws TimeoutException {
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS, TimeUnit.SECONDS, () -> !projects.decidedAsked().isEmpty());
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> projects.listCalls() > 0);
         WaitForAsyncUtils.waitForFxEvents();
         WaitForAsyncUtils.waitForFxEvents();
     }
@@ -112,7 +111,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
         assertThat(prompt.earlier()).containsExactly(new Earlier("Dracula.epub", 7));
         assertThat(prompt.asked()).isEmpty();
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN);
-        assertThat(projects.continues()).isEmpty();
+        assertThat(projects.opens()).isEmpty();
         assertThat(openProjectId()).isEqualTo("p1");
     }
 
@@ -124,7 +123,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
 
         answer(prompt::continueEarlier);
 
-        assertThat(projects.continues()).containsExactly(DRACULA);
+        assertThat(projects.opens()).containsExactly(DRACULA);
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN);
         assertThat(openProjectId()).isEqualTo("p2");
     }
@@ -137,7 +136,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
         answer(prompt::startOver);
 
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN, DRACULA);
-        assertThat(projects.continues()).isEmpty();
+        assertThat(projects.opens()).isEmpty();
         assertThat(openProjectId()).isEqualTo("p2");
     }
 
@@ -150,7 +149,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN);
-        assertThat(projects.continues()).isEmpty();
+        assertThat(projects.opens()).isEmpty();
         assertThat(openProjectId()).isEqualTo("p1");
     }
 
@@ -160,7 +159,19 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
 
         assertThat(prompt.earlier()).isEmpty();
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN, DRACULA);
-        assertThat(projects.continues()).isEmpty();
+        assertThat(projects.opens()).isEmpty();
+    }
+
+    // IF the question were asked for any project with decisions, THEN importing a fresh book would be blocked by
+    // another book's work.
+    @Test
+    void requestImport_onlyAnotherFileHasDecidedSegments_opensWithoutAsking() throws Exception {
+        projects.onDecided(FRANKENSTEIN, 5);
+
+        requestImport(DRACULA);
+
+        assertThat(prompt.earlier()).isEmpty();
+        assertThat(projects.imports()).containsExactly(FRANKENSTEIN, DRACULA);
     }
 
     // IF a failing lookup stopped the import, THEN a book could not be opened because of a side question.
@@ -181,8 +192,8 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
 
         requestImport(DRACULA);
 
-        assertThat(projects.decidedAsked()).containsExactly(DRACULA);
-        assertThat(projects.decidedCallsOnFxThread()).containsExactly(false);
+        assertThat(projects.listCalls()).isEqualTo(1);
+        assertThat(projects.listCallsOnFxThread()).containsExactly(false);
     }
 
     // A finished run is cleared only when the import goes ahead; backing out of the question leaves it showing.
@@ -202,7 +213,7 @@ class ImportGuardEarlierWorkTest extends RunnerTestBase {
         answer(prompt::continueEarlier);
 
         assertThat(state()).isEqualTo(RunState.IDLE);
-        assertThat(projects.continues()).containsExactly(DRACULA);
+        assertThat(projects.opens()).containsExactly(DRACULA);
     }
 
     // Replacing a live run asks its own question first; the file's earlier work is asked about once that is confirmed.

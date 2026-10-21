@@ -30,10 +30,12 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CountingIdSource;
 import ua.bookloom.pipeline.TestBooks;
 
 /** Import, brief update, plan and close over the real document module and the in-memory repositories. */
@@ -45,6 +47,7 @@ class ProjectServiceImplTest {
     @TempDir
     private Path tempDir;
 
+    private CountingIdSource ids;
     private ProjectService service;
     private DocumentPort documents;
     private ProjectRepository projects;
@@ -52,10 +55,12 @@ class ProjectServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new InMemoryPersistenceModule(),
-                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        ids = new CountingIdSource();
+        final Injector injector =
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule(), binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(ids);
+                });
         service = injector.getInstance(ProjectServiceImpl.class);
         documents = injector.getInstance(DocumentPort.class);
         projects = injector.getInstance(ProjectRepository.class);
@@ -63,12 +68,12 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_epubDeclaringEnUs_storesProjectWithSourceEnAndOnePendingRecordPerSegment() {
+    void create_epubDeclaringEnUs_storesProjectWithSourceEnAndOnePendingRecordPerSegment() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "en-US");
 
         final ImportedBook imported = importOk(book);
 
-        assertThat(idOf(imported)).hasSize(12).matches("[0-9a-f]{12}");
+        assertThat(idOf(imported)).isNotBlank();
         assertThat(imported.inspection().verdict()).isEqualTo(InspectionVerdict.READABLE);
         assertThat(imported.profile()).isNotNull();
         assertThat(briefOf(imported)).isNotNull();
@@ -81,42 +86,42 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_packageEnButContentUk_preselectsContentMajority() {
+    void create_packageEnButContentUk_preselectsContentMajority() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "en", "uk");
 
         assertThat(briefOf(importOk(book)).sourceLanguage()).isEqualTo("uk");
     }
 
     @Test
-    void importBook_noPackageLanguageContentDe_preselectsContentMajority() {
+    void create_noPackageLanguageContentDe_preselectsContentMajority() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, null, "de");
 
         assertThat(briefOf(importOk(book)).sourceLanguage()).isEqualTo("de");
     }
 
     @Test
-    void importBook_epubDeclaringLatin_preselectsLatin() {
+    void create_epubDeclaringLatin_preselectsLatin() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "la");
 
         assertThat(briefOf(importOk(book)).sourceLanguage()).isEqualTo("la");
     }
 
     @Test
-    void importBook_unrecognizedDeclaration_preselectsNothing() {
+    void create_unrecognizedDeclaration_preselectsNothing() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "xx-yy");
 
         assertThat(briefOf(importOk(book)).sourceLanguage()).isNull();
     }
 
     @Test
-    void importBook_plainText_preselectsNothing() {
+    void create_plainText_preselectsNothing() {
         final Path book = TestBooks.txt(tempDir.resolve("book.txt"), "It was a dark night.\n\nThe rain kept falling.");
 
         assertThat(briefOf(importOk(book)).sourceLanguage()).isNull();
     }
 
     @Test
-    void importBook_drmProtectedEpub_returnsVerdictWithNoProject() {
+    void create_drmProtectedEpub_returnsVerdictWithNoProject() {
         final Path book = TestBooks.encryptedEpub(tempDir.resolve("locked.epub"), TWO_CHAPTERS);
 
         final ImportedBook imported = importOk(book);
@@ -128,7 +133,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_pdfFile_returnsUnsupportedVerdict() throws IOException {
+    void create_pdfFile_returnsUnsupportedVerdict() throws IOException {
         final Path book =
                 Files.writeString(tempDir.resolve("notes.pdf"), "%PDF-1.7\n1 0 obj\n", StandardCharsets.UTF_8);
 
@@ -139,7 +144,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_samePathTwice_yieldsSameIdAndResetsRecords() {
+    void create_twiceFromTheSameFile_reusesIdAndResetsDecisions() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "en");
         final ImportedBook first = importOk(book);
         final String id = idOf(first);
@@ -150,7 +155,36 @@ class ProjectServiceImplTest {
         final ImportedBook second = importOk(book);
 
         assertThat(idOf(second)).isEqualTo(id);
+        assertThat(ids.issued()).isEqualTo(1);
         assertThat(records(second).get(0).status()).isEqualTo(SegmentStatus.PENDING);
+    }
+
+    // IF the id were derived from the path or the content, THEN two projects could never share a name or a file.
+    @Test
+    void create_newBook_returnsIdFromIdSource() {
+        final ImportedBook imported = importOk(markdownOfParagraphs(2, "A short paragraph."));
+
+        assertThat(idOf(imported)).isEqualTo("p1");
+        assertThat(storedProject(imported).id()).isEqualTo("p1");
+    }
+
+    @Test
+    void create_sameNameDifferentPath_getsTwoIds() throws IOException {
+        final Path first = TestBooks.txt(
+                Files.createDirectories(tempDir.resolve("one")).resolve("Book.txt"), "It was a dark night.");
+        final Path second = TestBooks.txt(
+                Files.createDirectories(tempDir.resolve("two")).resolve("Book.txt"), "The rain kept falling.");
+
+        assertThat(idOf(importOk(first))).isEqualTo("p1");
+        assertThat(idOf(importOk(second))).isEqualTo("p2");
+    }
+
+    @Test
+    void create_refusedFile_returnsNullProjectIdAndConsumesNoId() {
+        final Path book = TestBooks.encryptedEpub(tempDir.resolve("locked.epub"), TWO_CHAPTERS);
+
+        assertThat(importOk(book).projectId()).isNull();
+        assertThat(ids.issued()).isZero();
     }
 
     @Test
@@ -244,7 +278,7 @@ class ProjectServiceImplTest {
     }
 
     private ImportedBook importOk(final Path book) {
-        final Result<ImportedBook> result = service.importBook(book);
+        final Result<ImportedBook> result = service.create(book);
         assertThat(result.isOk()).as("import result %s", result.error()).isTrue();
         return Objects.requireNonNull(result.data());
     }
@@ -308,7 +342,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_englishBookToldInTheFirstPerson_carriesAFirstPersonHintAndLeavesTheBriefAlone() {
+    void create_englishBookToldInTheFirstPerson_carriesAFirstPersonHintAndLeavesTheBriefAlone() {
         final String chapter = String.join(
                 " ",
                 "I walked home through the cold rain. I did not look back.",
@@ -326,7 +360,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_bookWithNothingToJudge_carriesNoHint() {
+    void create_bookWithNothingToJudge_carriesNoHint() {
         assertThat(importOk(TestBooks.epub(tempDir.resolve("short.epub"), TWO_CHAPTERS, "en"))
                         .narratorHint())
                 .isNull();
@@ -341,7 +375,7 @@ class ProjectServiceImplTest {
 
     // IF the detector ran with a language nobody chose or declared, THEN Auto would read every book as English.
     @Test
-    void importBook_firstPersonTextDeclaringNothing_isAutoWithNoHint() {
+    void create_firstPersonTextDeclaringNothing_isAutoWithNoHint() {
         final Path book = TestBooks.txt(tempDir.resolve("first.txt"), FIRST_PERSON_CHAPTER);
 
         final ImportedBook imported = importOk(book);
@@ -351,7 +385,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void importBook_firstPersonEpubDeclaringALanguageNothingRecognises_isAutoWithNoHint() {
+    void create_firstPersonEpubDeclaringALanguageNothingRecognises_isAutoWithNoHint() {
         final Path book =
                 TestBooks.epub(tempDir.resolve("first.epub"), List.of(List.of(FIRST_PERSON_CHAPTER)), "xx-yy");
 
