@@ -40,6 +40,7 @@ public final class HttpErrorMapper {
                     + "|\\bmodel\\b[^\"]{0,256}\\bnot\\s+(?:currently\\s+)?loaded\\b",
             Pattern.CASE_INSENSITIVE);
     private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_UNPROCESSABLE = 422;
     private static final int HTTP_NOT_FOUND = 404;
     private static final int HTTP_SUCCESS_MIN = 200;
     private static final int HTTP_SUCCESS_MAX = 299;
@@ -189,7 +190,7 @@ public final class HttpErrorMapper {
                     "Provider server error",
                     "The provider could not complete the request.");
         }
-        if (status == HTTP_BAD_REQUEST) {
+        if (status == HTTP_BAD_REQUEST || status == HTTP_UNPROCESSABLE) {
             return classifyBadRequest(reply.body());
         }
         return mapping(

@@ -345,7 +345,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     calls changes the second request only; a context save during chunk 7 reaches chunk 8 and not the rest of chunk 7.
   - Edit FR-MODEL-03/07 in `01_FUNCTIONAL_REQUIREMENTS.md#fr-model` and DD-36/44 (temperature, context window).
     → :llm, :pipeline, docs
-- [ ] 4.3 Recognise any refused optional setting, drop it, repeat once and remember the refusal, so a model that
+- [x] 4.3 Recognise any refused optional setting, drop it, repeat once and remember the refusal, so a model that
   refuses `temperature` or `max_tokens` still translates and is not asked again.
   - **Satisfies:** inference "Recognise a refused setting only when the request sent it"; inference "Keep everything
     else when a setting is dropped, and do not count the repeat as an attempt"; inference "Remember a refused setting
@@ -966,6 +966,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     with a slider for My value; Use context window (with `num_ctx` in grey under technical details); Limit answer
     length; the Advanced output field (disabled for Ollama); "Settings this model refused" with Send again or "Nothing
     refused"; the pinned footer.
+  - A save carries `refused` through untouched (re-read the record just before saving), so a refusal recorded by a run
+    meanwhile is not lost; only Send again removes a row.
   - Tests: Save writes `ModelSettings` with OMIT; Send again removes a `RefusedSetting`.
   - **Compare:** `setSet('models')`. → :ui
 - [ ] 7.3 Build Generation and Appearance with only the knobs the code has, so nothing on them is fictional.

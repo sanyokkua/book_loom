@@ -187,10 +187,9 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return ProviderCallResult.withoutRetryAfter(response);
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final Result<HttpReply> mapped = HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId);
         return ProviderCallResult.fromHttpReply(
-                HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
-                reply,
-                CapabilityRejections.from(reply, request));
+                mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
     }
 
     private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply, Duration elapsed) {

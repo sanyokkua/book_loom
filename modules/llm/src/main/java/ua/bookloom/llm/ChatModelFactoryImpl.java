@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.provider.RefusalMemory;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.llm.retry.RetryPolicy;
 
@@ -35,6 +36,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final RetryPolicy retryPolicy;
     private final ObjectMapper mapper;
     private final ModelSettingsCache modelSettings;
+    private final RefusalMemory refusals;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -79,7 +81,8 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 selection.modelId(),
                 gate,
                 retryPolicy,
-                modelSettings::current));
+                modelSettings::current,
+                refusals));
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

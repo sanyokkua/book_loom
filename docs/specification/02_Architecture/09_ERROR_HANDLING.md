@@ -96,6 +96,9 @@ typed inputs, not from string-concatenating arbitrary exception messages, so sec
   `Result.err(AppError(internal, …, cause))`. Unhandled exceptions never cross a module edge.
 - Known failures are converted to their specific `ErrorCode` at the point they are recognized (HTTP mapping in `:llm`,
   SQL errors in `:persistence`, parse errors in `:document`, QA hard-gate in `:pipeline` → `validation`).
+- A refused setting is not an error: an HTTP 400 or 422 that names an optional setting the request sent
+  (`temperature`, `top_p`, `max_tokens`, `num_ctx`, ...) is repeated without it and remembered (FR-INFER-09e), and never
+  surfaces. Only one that names nothing sent is `validation`; 422 maps like 400.
 - Logging happens once, at the boundary that first constructs the `AppError`, with the `cause`; downstream layers do not
   re-log.
 

@@ -136,11 +136,12 @@ class GatedChatModelTest {
                 .anySatisfy(body -> assertThat(body).doesNotContain("response_format"));
     }
 
-    // A normal validation failure must retain all controls and return after its first provider request.
+    // A 400 that names nothing the request sent is a plain validation failure: it must retain all controls and return
+    // after its first provider request.
     @Test
     void chat_unrelatedValidationFailure_doesNotDowngradeControls() {
         server.stubFor(post(urlEqualTo(CHAT_PATH))
-                .willReturn(aResponse().withStatus(400).withBody("{\"error\":\"temperature is invalid\"}")));
+                .willReturn(aResponse().withStatus(400).withBody("{\"error\":\"invalid request\"}")));
 
         final Result<ChatResponse> result = model(ignored -> {}).chat(structuredRequest());
 
