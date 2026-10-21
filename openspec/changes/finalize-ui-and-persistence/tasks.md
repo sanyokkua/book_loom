@@ -532,7 +532,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - `ModalHostKeyQueueTest` (Enter runs the default; Esc on a hideable progress card hides it and on a question card
       closes it; a queued card opens only after the open one closes).
   - Edit FR-UI-10 (new) in `01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`. → :ui, docs
-- [ ] 5.2 Replace the raw prompt and reply panes with parsed views, so prompts show as System and User sections and a
+- [x] 5.2 Replace the raw prompt and reply panes with parsed views, so prompts show as System and User sections and a
   reply as one row per segment.
   - **Satisfies:** app-shell "Offer Simple and Detailed views of a step"; app-shell "Show all model work in one progress
     dialog"; translation-pipeline "Offer Simple and Detailed views in a list and detail split"

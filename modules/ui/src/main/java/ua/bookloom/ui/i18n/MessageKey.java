@@ -1400,12 +1400,48 @@ public enum MessageKey {
     LIVE_CALL_PROMPT_COPY("live.call.prompt.copy"),
     /** Hover explanation of Copy in the prompt-context section. */
     LIVE_CALL_PROMPT_COPY_TIP("live.call.prompt.copy.tip"),
-    /** Switch in the prompt-context section that shows the messages whole instead of the filled parts. */
-    LIVE_CALL_PROMPT_FULL("live.call.prompt.full"),
-    /** Hover explanation of the full-prompt switch. */
-    LIVE_CALL_PROMPT_FULL_TIP("live.call.prompt.full.tip"),
     /** Heading of the section while it shows the whole messages; argument 0 is their number. */
     LIVE_CALL_PROMPT_FULL_TITLE("live.call.prompt.fullTitle"),
+    /** Hover explanation of the raw block that holds the messages as sent. */
+    LIVE_CALL_PROMPT_FULL_TITLE_TIP("live.call.prompt.fullTitle.tip"),
+    /** Button in the raw messages block that copies the messages exactly as sent. */
+    LIVE_CALL_PROMPT_SENT_COPY("live.call.prompt.sentCopy"),
+    /** Hover explanation of Copy in the raw messages block. */
+    LIVE_CALL_PROMPT_SENT_COPY_TIP("live.call.prompt.sentCopy.tip"),
+    /** Heading of the reply section when the reply was read as items; argument 0 is their number. */
+    LIVE_CALL_REPLY_ITEMS("live.call.replyItems"),
+    /** Heading of the collapsed block holding the reply exactly as received. */
+    LIVE_CALL_REPLY_RAW("live.call.replyRaw"),
+    /** Column heading: a batch item's id. */
+    LIVE_CALL_COL_ID("live.call.col.id"),
+    /** Column heading: the segment an item stands for. */
+    LIVE_CALL_COL_SEGMENT("live.call.col.segment"),
+    /** Column heading: the text of a batch item in a prompt. */
+    LIVE_CALL_COL_TEXT("live.call.col.text"),
+    /** Column heading: the text a reply returned for an item. */
+    LIVE_CALL_COL_RETURNED("live.call.col.returned"),
+    /** Column heading: what the reply did with an item. */
+    LIVE_CALL_COL_RESULT("live.call.col.result"),
+    /** Column heading: a glossary or recurring term. */
+    LIVE_CALL_COL_TERM("live.call.col.term"),
+    /** Column heading: the rendering of a term. */
+    LIVE_CALL_COL_RENDERING("live.call.col.rendering"),
+    /** Column heading: the note beside a term. */
+    LIVE_CALL_COL_NOTE("live.call.col.note"),
+    /** Column heading: the source text of an earlier pair. */
+    LIVE_CALL_COL_SOURCE("live.call.col.source"),
+    /** Column heading: the translation of an earlier pair. */
+    LIVE_CALL_COL_TRANSLATION("live.call.col.translation"),
+    /** Result word: the item came back once with text. */
+    LIVE_CALL_ITEM_OK("live.call.item.ok"),
+    /** Result word: the item is absent from the reply or blank. */
+    LIVE_CALL_ITEM_MISSING("live.call.item.missing"),
+    /** Result word: the item came back more than once. */
+    LIVE_CALL_ITEM_DUPLICATE("live.call.item.duplicate"),
+    /** Result word: the reply holds an id the batch never had. */
+    LIVE_CALL_ITEM_EXTRA("live.call.item.extra"),
+    /** Result word: the item's text seems to carry the next item as well. */
+    LIVE_CALL_ITEM_MERGED("live.call.item.merged"),
     /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
     LIVE_CALL_OUTCOME("live.call.outcome"),
     /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */

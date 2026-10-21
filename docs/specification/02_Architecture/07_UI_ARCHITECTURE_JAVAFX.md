@@ -315,9 +315,10 @@ Translate actions, suggesting a file name, the export's last check and the list 
   Engine publications stay coalesced (the `RunSession` publishes at most once per 100 ms tick, `#state-mirror`), and a
   long item list (the consistency pass can list thousands) is a virtualized list of small row records with the detail
   looked up by segment id and full prompts kept only for the last 50 calls.
-- **Prompt and reply views:** `control/PromptContextPane` and `control/ReplyPane` (built) are replaced by a
-  **`PromptView`** (a `TitledPane` per `PromptSection`) and a **`ReplyView`** that shows a batch reply as an
-  Id \| Segment \| Translation returned \| Result grid (G5). They appear in Detailed views only (G12).
+- **Prompt and reply views:** `control/PromptContextPane` and `control/ReplyPane` were replaced (finalize 5.2) by a
+  **`PromptView`** (a card per message role, a `TitledPane` per `PromptSection` shaped by its slot, the messages as sent in
+  a collapsed raw block with Copy) and a **`ReplyView`** that shows a batch reply as an
+  Id \| Segment \| Translation returned \| Result grid (G5) over a raw-reply block with Copy. They appear in Detailed views only (G12).
 
 ### Dialogs and toasts {#dialog-list}
 

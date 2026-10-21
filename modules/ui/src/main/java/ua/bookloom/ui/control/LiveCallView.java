@@ -3,6 +3,7 @@ package ua.bookloom.ui.control;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -17,6 +18,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
@@ -63,8 +65,8 @@ public final class LiveCallView extends VBox {
     private final ScrollPane segments;
     private final InputPane input;
     private final Label replyNote = new Label();
-    private final ReplyPane reply;
-    private final PromptContextPane prompt;
+    private final ReplyView reply;
+    private final PromptView prompt;
     private @Nullable CallSnapshot shownCall;
     private Map<String, SegmentLive> shownSegments = Map.of();
 
@@ -90,8 +92,8 @@ public final class LiveCallView extends VBox {
         this.sourceName = Objects.requireNonNull(sourceName, "sourceName");
         this.targetName = Objects.requireNonNull(targetName, "targetName");
         this.input = new InputPane(id + "-input", messages);
-        this.reply = new ReplyPane(id + "-reply", messages);
-        this.prompt = new PromptContextPane(id + "-prompt", messages);
+        this.reply = new ReplyView(id + "-reply", messages);
+        this.prompt = new PromptView(id + "-prompt", messages);
         this.header = header();
         this.segments = segmentsArea();
         getStyleClass().add("live-call");
@@ -261,8 +263,8 @@ public final class LiveCallView extends VBox {
         input.show(aboutNone ? call.sent() : null);
         showRows(call, live);
         showReplyNote(call);
-        reply.show(call.reply());
-        prompt.show(call.sections(), call.sent());
+        reply.show(call.reply(), call.items(), segmentLocators(call));
+        prompt.show(call.sections(), call.sent(), itemLocators(call));
     }
 
     // What a call about no segment sent and got back, in a line, where the segments' box would stand empty.
@@ -303,6 +305,27 @@ public final class LiveCallView extends VBox {
                             ? MessageKey.LIVE_CALL_REPLY_WAITING
                             : MessageKey.LIVE_CALL_REPLY_NONE));
         }
+    }
+
+    private static Map<String, String> segmentLocators(final CallSnapshot call) {
+        return call.segments().stream()
+                .collect(Collectors.toMap(CallSegment::id, CallSegment::locator, (first, second) -> first));
+    }
+
+    // A batch numbers its items from one in segment order; once the reply is read, the ids it names are exact.
+    private static Map<String, String> itemLocators(final CallSnapshot call) {
+        final Map<String, String> byId = segmentLocators(call);
+        final Map<String, String> found = new HashMap<>();
+        for (int index = 0; index < call.segments().size(); index++) {
+            found.put(String.valueOf(index + 1), call.segments().get(index).locator());
+        }
+        for (final CallItem item : call.items()) {
+            final String locator = item.segmentId() == null ? null : byId.get(item.segmentId());
+            if (locator != null) {
+                found.put(item.id(), locator);
+            }
+        }
+        return found;
     }
 
     private static List<SegmentOutcomeNote> notesOf(final CallSnapshot call, final CallSegment segment) {

@@ -2010,6 +2010,24 @@
     -fx-padding: 8px 10px 8px 10px;
 }
 
+/* The parsed prompt and reply: bullets, wrapped text and small grids inside a context section. */
+.prompt-bullet,
+.prompt-plain,
+.parsed-cell {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12.5px;
+}
+
+.parsed-head {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.reply-result {
+    -fx-text-fill: -color-text-strong;
+}
+
 .context-sections {
     -fx-padding: 8px 10px 8px 10px;
 }

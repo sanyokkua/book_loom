@@ -86,9 +86,9 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         assertThat(labelText(CURRENT + "-clock")).isEqualTo("took 0:07");
         assertThat(labelText(CURRENT + "-tokens")).isEqualTo("tokens: 412 in · 96 out");
         assertThat(isShown(CURRENT + "-reply")).isTrue();
-        assertThat(bodyText(CURRENT + "-reply")).isEmpty();
+        assertThat(bodyText(CURRENT + "-reply-raw")).isEmpty();
         onFx(() -> ((TitledPane) required(CURRENT + "-reply")).setExpanded(true));
-        assertThat(bodyText(CURRENT + "-reply")).isEqualTo("{\"items\":[]}");
+        assertThat(bodyText(CURRENT + "-reply-raw")).isEqualTo("{\"items\":[]}");
     }
 
     // The text of a section's body; it is filled only while the section is open.
@@ -120,22 +120,29 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
 
         onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(true));
 
-        assertThat(bodyText(CURRENT + "-prompt"))
-                .startsWith("== System message ==\n\nStyle:\nLiterary, warm.\n\n== User message ==\n\n[Book so far]")
-                .containsSubsequence("[Glossary]", "[Characters]", "[Previous pairs]\nRain.\nДощ.");
+        assertThat(ThemeTestSupport.onFx(() -> required(CURRENT + "-prompt").lookupAll(".titled-pane").stream()
+                        .map(node -> ((TitledPane) node).getText())
+                        .toList()))
+                .containsSubsequence("Style:", "[Book so far]", "[Glossary]", "[Characters]", "[Previous pairs]");
         assertThat(((TitledPane) required(CURRENT + "-prompt")).getText()).isEqualTo("Prompt context · 5 parts");
     }
 
     // IF a closed section held its text, THEN every call would lay out a prompt nobody opened.
     @Test
     void promptContext_closed_holdsNoTextUntilOpenedAndEmptiesWhenClosed() {
-        showCalls(waiting(1, 1), null);
-        assertThat(bodyText(CURRENT + "-prompt")).isEmpty();
+        showCalls(
+                waiting(1, 1)
+                        .withSent(List.of(
+                                new ua.bookloom.api.llm.ChatMessage(ua.bookloom.api.llm.ChatRole.SYSTEM, "Rules"))),
+                null);
+        assertThat(bodyText(CURRENT + "-prompt-sent")).isEmpty();
 
         onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(true));
+        onFx(() -> ((TitledPane) required(CURRENT + "-prompt-sent")).setExpanded(true));
+        assertThat(bodyText(CURRENT + "-prompt-sent")).isEqualTo("== System message ==\n\nRules");
         onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(false));
 
-        assertThat(bodyText(CURRENT + "-prompt")).isEmpty();
+        assertThat(bodyText(CURRENT + "-prompt-sent")).isEmpty();
     }
 
     // IF a new call replaced the old one outright, THEN what the person was reading would vanish.

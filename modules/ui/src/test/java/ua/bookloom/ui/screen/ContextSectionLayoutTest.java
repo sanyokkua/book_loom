@@ -60,12 +60,12 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         onFx(() -> {});
     }
 
-    // How much of the opened body's text lies below its frame: the text area's own scroll pane's content past its
-    // viewport, zero when everything shows.
+    // How much of the opened body lies below its frame: the body's content past its viewport, zero when everything
+    // shows.
     private double hiddenBelow(final String row) {
         final Node body = required(row + "-prompt-body");
         return ThemeTestSupport.onFx(() -> {
-            final ScrollPane inner = (ScrollPane) body.lookup(".scroll-pane");
+            final ScrollPane inner = (ScrollPane) body;
             return Math.max(
                     0,
                     inner.getContent().getLayoutBounds().getHeight()
