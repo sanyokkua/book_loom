@@ -36,6 +36,13 @@ class NamesPassStepsTest extends NamesPassTestBase {
         return changes(kind, state).stream().map(StepChanged::label).toList();
     }
 
+    // IF the planned count drifted from the stage list, THEN the dialog would show a wrong number of steps.
+    @Test
+    void stageCount_isTheNumberOfPassStages() {
+        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(8);
+        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(ua.bookloom.api.pipeline.NamesPassStage.values().length);
+    }
+
     // IF a stage were left out of the announcements, THEN the dialog would list fewer than the eight steps the pass
     // takes.
     @Test

@@ -53,7 +53,7 @@ public class ModalCard extends DialogPane implements FooterFeedback {
     /** The tallest an XL card is, in pixels. */
     static final double XL_HEIGHT = 820;
 
-    private static final String FOOTER_ORDER = "+LHECUAO";
+    private static final String FOOTER_ORDER = "L+HECUAO";
     private static final double WINDOW_WIDTH_SHARE = 0.92;
     private static final double WINDOW_HEIGHT_SHARE = 0.9;
     private static final double FEEDBACK_INSET = 18;

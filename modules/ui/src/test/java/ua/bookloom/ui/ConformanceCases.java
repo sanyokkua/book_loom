@@ -67,6 +67,8 @@ final class ConformanceCases {
         REVIEW_SELECTED,
         BOOK_REPORTED,
         GLOSSARY_LISTED,
+        GLOSSARY_WHILE_TRANSLATING,
+        GLOSSARY_WHILE_HIDDEN,
         BOOK_WITHOUT_LANGUAGE,
         BRIEF_SUGGESTED,
         PROJECTS_LISTED,

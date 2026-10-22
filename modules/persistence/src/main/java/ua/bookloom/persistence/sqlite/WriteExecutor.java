@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ import ua.bookloom.api.Result;
 final class WriteExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "bookloom-sqlite-writer";
+    private static final long CLOSE_WAIT_SECONDS = 10;
 
     private final Jdbi jdbi;
     /** The thread this executor writes on, once it has started; a write asked for on it is nested. */
@@ -92,5 +94,12 @@ final class WriteExecutor implements AutoCloseable {
     public void close() {
         log.debug("Write executor closing");
         executor.shutdown();
+        try {
+            if (!executor.awaitTermination(CLOSE_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn("Write executor still busy {} s after closing", CLOSE_WAIT_SECONDS);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

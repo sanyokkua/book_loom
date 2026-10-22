@@ -85,6 +85,8 @@ final class ConformancePreparations {
             case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
             case GLOSSARY_LISTED -> listAGlossary();
+            case GLOSSARY_WHILE_TRANSLATING -> listAGlossaryAndStartARun();
+            case GLOSSARY_WHILE_HIDDEN -> listAGlossaryAndHideThePass();
             case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
             case BRIEF_SUGGESTED -> suggestTheBrief();
             case PROJECTS_LISTED -> listProjects();
@@ -178,6 +180,16 @@ final class ConformancePreparations {
                 new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
                         .withSuggestedTarget("Віктор"))));
         openABook();
+    }
+
+    private void listAGlossaryAndStartARun() throws TimeoutException {
+        listAGlossary();
+        startARun();
+    }
+
+    private void listAGlossaryAndHideThePass() throws TimeoutException {
+        listAGlossary();
+        HiddenPassPreparation.hide(injector);
     }
 
     // A diary that declares no language: the brief's source is Auto.

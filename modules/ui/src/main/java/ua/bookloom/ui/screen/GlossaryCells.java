@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -96,9 +97,10 @@ final class GlossaryCells {
     /** The action that removes the row, in the table's last column. */
     static final class RemoveCell extends EntryCell<Button> {
 
-        RemoveCell(final Messages messages, final NamesStyleViewModel model) {
+        RemoveCell(final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
             super(Tips.installOnHover(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP));
             control().getStyleClass().addAll("btn-ghost", "glossary-remove");
+            control().disableProperty().bind(frozen);
             control().setAccessibleText(messages.get(MessageKey.NAMES_STYLE_REMOVE));
             control().setOnAction(event -> {
                 final GlossaryEntry shown = getItem();
@@ -129,7 +131,7 @@ final class GlossaryCells {
         private @Nullable String syncedId;
         private String syncedText = "";
 
-        TargetCell(final Messages messages, final NamesStyleViewModel model) {
+        TargetCell(final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
             super(new HBox(BADGE_SPACING));
             this.model = model;
             field = Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP);
@@ -154,6 +156,7 @@ final class GlossaryCells {
             });
             control().setAlignment(Pos.CENTER_LEFT);
             control().getChildren().addAll(field, badge, accept);
+            control().disableProperty().bind(frozen);
         }
 
         private void onEnter() {
@@ -199,8 +202,9 @@ final class GlossaryCells {
     /** The lock as a switch, written as soon as it is turned. */
     static final class LockCell extends EntryCell<ToggleSwitch> {
 
-        LockCell(final Messages messages, final NamesStyleViewModel model) {
+        LockCell(final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
             super(Tips.installOnHover(messages, new ToggleSwitch(), MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP));
+            control().disableProperty().bind(frozen);
             control().selectedProperty().addListener((observed, was, now) -> {
                 final GlossaryEntry shown = getItem();
                 if (!isSyncing() && shown != null) {

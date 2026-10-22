@@ -49,6 +49,7 @@ import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.DirtySource;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.HiddenResultsAnnouncer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.LastOpened;
@@ -151,6 +152,8 @@ public final class UiModule extends AbstractModule {
         bind(SessionReporter.class).asEagerSingleton();
         // Eager, so a narrator the run inferred reaches the brief even when no brief screen exists when the run ends.
         bind(StoredNarratorFollower.class).asEagerSingleton();
+        // Eager, so a names pass that ends in the background is announced while any screen shows.
+        bind(HiddenResultsAnnouncer.class).asEagerSingleton();
     }
 
     private void bindShell() {

@@ -16,10 +16,11 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
-import ua.bookloom.ui.dialog.ChangeResultsDialog;
+import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
 import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOperation;
@@ -29,6 +30,7 @@ import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.LiveCalls;
+import ua.bookloom.ui.state.ResultsView;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -118,8 +120,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
             case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
-            case RESULTS ->
-                onFx(() -> injector.getInstance(ChangeResultsDialog.class).show(sampleResults(), () -> {}));
+            case RESULTS -> onFx(this::showSampleResults);
             case RETRY ->
                 onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
             case EXPORT_COMPLETE ->
@@ -128,6 +129,12 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
                         .ask("Earth Gravity · EN → UK", "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));
         }
+    }
+
+    private void showSampleResults() {
+        final ModalHost host = injector.getInstance(ModalHost.class);
+        final ResultsView view = new ResultsView(sampleResults(), () -> {}, host::hide);
+        host.show(ProgressDialog.results(view, injector.getInstance(Messages.class)), false);
     }
 
     // A review that removed one name, rewrote another and gave a reason, so the Why column is checked too.

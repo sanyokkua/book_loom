@@ -164,7 +164,7 @@ It is used by:
 | Part | Content | Behaviour |
 |---|---|---|
 | Header | Title, purpose line, determinate bar | The bar counts every step of every task of the operation (G10). Its tooltip says "n of N steps" |
-| Figures line | **"51 % · 26 of about 49 steps · Left about 1 min"**; in Detailed also elapsed, speed and task figures | Task and item counters live in the list rows ("25 of 30 requests"), not in the figures line |
+| Figures line | **"51 % · 26 of about 49 steps · Left about 1 min"**; in Detailed also elapsed, speed and task figures | Task and item counters live in the list rows ("25 requests so far"), not in the figures line |
 | Simple / Detailed | Simple: one plain sentence for the selected step (`.say`) and Input \| Output in plain words. Detailed: adds the info grid (attempt, a clock against the timeout, first token, tokens, speed), the call kind code and the parsed prompt (G5) | Opens in Detailed when **Show technical details** is on (G12) |
 | Follow current step | Switch | On: the list selects the step the work is on. **Only a person's click or key turns it off** (never a selection made by the code, JX-T3) |
 | Left list | Steps or items in groups, each with a marker (G11) and one result line, cut with a tooltip | Finished steps stay selectable with their data; a step not started says so |
@@ -567,7 +567,7 @@ language more than once, for example with another model, quality or thinking set
   | 7 | Suggest translations for repeated words | `terms-translate` |
   | 8 | Write the results | — |
 
-  Each row has its count ("25 of 30 requests", "about 4 requests").
+  Each row has its request count ("25 requests so far" while it runs, "6 requests" when done, "no request" when it sent none, "Not started" before it begins): no step knows its total up front, so a count never reads "of N".
 - **Figures.** "53 % · 26 of about 49 steps · Left about 1 min".
 - **Detail.** A plain sentence; What the model reads (candidates with counts and quotes) \| What it says. Detailed adds
   the info grid, the stage code and the parsed prompt. A finished step shows its result; one not started says so.
@@ -578,7 +578,7 @@ language more than once, for example with another model, quality or thinking set
   - Footer: Undo all · Show changed rows · Done.
 - **Scan / Review / Translate** on a card run the same dialog with two steps (the action's requests, then write). They
   are not hideable.
-- **Code.** `ChangeResultsDialog` becomes the Results view; `ChangeResults` and Undo all stay.
+- **Code.** `ProgressDialog.results(ResultsView, Messages)` is the Results view (it replaced `ChangeResultsDialog`); `ChangeResults` and Undo all stay, and `ProgressDialog.calls(...)` is the Calls view 6.5 uses.
 
 ---
 

@@ -64,6 +64,7 @@ public final class NamesStyleViewModel {
     private final GlossaryAdditions additions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
+    private final ResultsReview review = new ResultsReview();
     private final AutoEstimate autoEstimate;
     private String projectId = "";
     private final Openings openings = new Openings();
@@ -223,6 +224,11 @@ public final class NamesStyleViewModel {
      */
     public ReadOnlyObjectProperty<@Nullable ChangeResults> results() {
         return changeLog.results();
+    }
+
+    /** {@return the results of a pass that ended in the background, from the message that offers them to their opening} */
+    public ResultsReview resultsReview() {
+        return review;
     }
 
     /** {@return the marks of the rows the last operation added or changed, which the next operation clears} */

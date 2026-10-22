@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -69,26 +70,39 @@ final class TermTableCard<R> extends VBox {
     record Phrase(MessageKey caption, MessageKey tip) {}
 
     /**
+     * A link that opens a short explanation under the note.
+     *
+     * @param link the catalogue entry of the link's caption
+     * @param text the catalogue entry of the explanation
+     */
+    record Help(MessageKey link, MessageKey text) {}
+
+    /**
      * The words of a card.
      *
      * @param titleId the id of the title label
      * @param title the card's heading
      * @param note the line under the heading, or {@code null} for none
+     * @param help the "How it works" link under the note and the text it opens, or {@code null} for none
      * @param add + Add
      * @param importFile Import
      * @param exportFile Export
      * @param empty the table's placeholder while it holds no row
      * @param emptyFiltered the table's placeholder while the search matches no row
+     * @param emptyScan the caption of the placeholder's Scan button, or {@code null} for a placeholder with no buttons;
+     *     it also carries + Add
      */
     record Texts(
             String titleId,
             MessageKey title,
             @Nullable MessageKey note,
+            @Nullable Help help,
             Phrase add,
             Phrase importFile,
             Phrase exportFile,
             MessageKey empty,
-            MessageKey emptyFiltered) {}
+            MessageKey emptyFiltered,
+            @Nullable Phrase emptyScan) {}
 
     /**
      * What the toolbar does.
@@ -100,6 +114,8 @@ final class TermTableCard<R> extends VBox {
      * @param exportFile writes the chosen file
      * @param exportName the file name the save dialog starts with
      * @param extra a button that only this card carries, shown before the changed filter, or {@code null}
+     * @param frozen whether the screen is read-only because work in the background writes to it; the editing actions
+     *     of the toolbar follow it
      */
     record Toolbar(
             ModelActionBar.Words words,
@@ -108,7 +124,8 @@ final class TermTableCard<R> extends VBox {
             Consumer<Path> importFile,
             Consumer<Path> exportFile,
             String exportName,
-            @Nullable Button extra) {}
+            @Nullable Button extra,
+            ObservableBooleanValue frozen) {}
 
     /**
      * What the table lists.
@@ -136,6 +153,7 @@ final class TermTableCard<R> extends VBox {
     private final CsvFileChooser files;
     private final String id;
     private final Toolbar bar;
+    private @Nullable Button scan;
 
     TermTableCard(
             final Messages messages,
@@ -153,15 +171,10 @@ final class TermTableCard<R> extends VBox {
         this.bar = Objects.requireNonNull(toolbar, "toolbar");
         log.debug("building the {} card", id);
         final TextField search = search();
-        getChildren().add(title(texts));
-        if (texts.note() != null) {
-            getChildren().add(note(texts.note()));
-        }
+        getChildren().addAll(CardHeading.of(messages, id, texts, rows.items()));
+        final PriorityRow tools = toolbar(search, texts, rows.marks());
         getChildren()
-                .addAll(
-                        toolbar(search, texts, rows.marks()),
-                        blockedNote(),
-                        TermTables.of(messages, id, search, texts, rows));
+                .addAll(tools, blockedNote(), TermTables.of(messages, id, search, texts, rows, emptyActions(texts)));
         setId(id + "-card");
         getStyleClass().add("card");
     }
@@ -202,24 +215,6 @@ final class TermTableCard<R> extends VBox {
         return column;
     }
 
-    private Label title(final Texts texts) {
-        final Label title = new Label(messages.get(texts.title()));
-        title.setId(texts.titleId());
-        title.getStyleClass().add("card-title");
-        title.setWrapText(true);
-        title.setMinHeight(Region.USE_PREF_SIZE);
-        return title;
-    }
-
-    private Label note(final MessageKey key) {
-        final Label note = new Label(messages.get(key));
-        note.setId(id + "-note");
-        note.getStyleClass().add("muted");
-        note.setWrapText(true);
-        note.setMinHeight(Region.USE_PREF_SIZE);
-        return note;
-    }
-
     // Says why the model actions are off while other model work (a run, an export, a provider test) is under way.
     private Label blockedNote() {
         final Label note = new Label();
@@ -256,10 +251,15 @@ final class TermTableCard<R> extends VBox {
         row.setId(id + "-toolbar");
         row.setAlignment(Pos.CENTER_LEFT);
         final Button importButton = action("import", texts.importFile(), this::chooseImport);
+        importButton.disableProperty().bind(bar.frozen());
         final Button exportButton = action("export", texts.exportFile(), this::chooseExport);
         final MenuButton more = menu(texts, importButton, exportButton);
-        row.getChildren().addAll(search, action("add", texts.add(), bar.add()));
-        final ModelActionBar.Bar model = ModelActionBar.build(messages, id, bar.words(), bar.actions(), names);
+        final Button add = action("add", texts.add(), bar.add());
+        add.disableProperty().bind(bar.frozen());
+        row.getChildren().addAll(search, add);
+        final ModelActionBar.Bar model =
+                ModelActionBar.build(messages, id, bar.words(), bar.actions(), names, bar.frozen());
+        scan = model.scan();
         row.getChildren().addAll(model.buttons());
         if (bar.extra() != null) {
             row.getChildren().add(bar.extra());
@@ -274,6 +274,21 @@ final class TermTableCard<R> extends VBox {
         return row;
     }
 
+    // The empty table's own Scan and + Add, which do what the toolbar's do and are off when theirs are.
+    private EmptyState.@Nullable Actions emptyActions(final Texts texts) {
+        final Button toolbarScan = scan;
+        if (texts.emptyScan() == null || toolbarScan == null) {
+            return null;
+        }
+        return new EmptyState.Actions(
+                texts.emptyScan(),
+                texts.add(),
+                bar.actions().scan(),
+                bar.add(),
+                toolbarScan.disableProperty(),
+                bar.frozen());
+    }
+
     // Import and Export move here when the card is too narrow for them; the words are the buttons' own.
     private MenuButton menu(final Texts texts, final Button importButton, final Button exportButton) {
         final MenuButton more = Tips.install(messages, new MenuButton(), MessageKey.NAMES_STYLE_MORE_TIP);
@@ -286,6 +301,7 @@ final class TermTableCard<R> extends VBox {
         final MenuItem importItem = new MenuItem(messages.get(texts.importFile().caption()));
         importItem.setId(id + "-more-import");
         importItem.setOnAction(event -> chooseImport());
+        importItem.disableProperty().bind(bar.frozen());
         final MenuItem exportItem = new MenuItem(messages.get(texts.exportFile().caption()));
         exportItem.setId(id + "-more-export");
         exportItem.setOnAction(event -> chooseExport());

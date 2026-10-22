@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.NamesPassReport;
+import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.context.ContextBudget;
@@ -200,11 +201,17 @@ public final class NamesPassImpl implements NamesPass {
                 stage.namesBefore().size(),
                 stage.termsBefore().size());
         run.counter().planStages();
-        return step(run, "scan", () -> stage.glossaryService().scan(stage.projectId()))
+        return step(
+                        run,
+                        NamesPassStage.SCAN.code(),
+                        () -> stage.glossaryService().scan(stage.projectId()))
                 .flatMap(scanned -> {
                     run.counter()
                             .planRequests(logEstimate(stage, scanned.added().size()));
-                    return step(run, "names", () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
+                    return step(
+                            run,
+                            NamesPassStage.NAMES.code(),
+                            () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
                 })
                 .flatMap(reviewed -> readTerms(run)
                         .flatMap(read -> translate(run, reviewed))
@@ -228,14 +235,17 @@ public final class NamesPassImpl implements NamesPass {
     private Result<Boolean> readTerms(final Run run) {
         final Stage stage = run.stage();
         final String projectId = stage.projectId();
-        return step(run, "terms-scan", () -> stage.lexiconService().scan(projectId))
+        return step(
+                        run,
+                        NamesPassStage.TERMS_SCAN.code(),
+                        () -> stage.lexiconService().scan(projectId))
                 .flatMap(scanned -> step(
                         run,
-                        "terms-review",
+                        NamesPassStage.TERMS_REVIEW.code(),
                         () -> stage.lexiconService().review(projectId, run.model(), run.counter())))
                 .flatMap(reviewed -> step(
                         run,
-                        "terms-read",
+                        NamesPassStage.TERMS_READ.code(),
                         () -> stage.lexiconService().scanWithModel(projectId, run.model(), run.counter())))
                 .map(read -> {
                     log.info(
@@ -252,19 +262,19 @@ public final class NamesPassImpl implements NamesPass {
         final String projectId = stage.projectId();
         return step(
                         run,
-                        "names-translate",
+                        NamesPassStage.NAMES_TRANSLATE.code(),
                         () -> NamesTranslation.run(
                                 stage.names(), stage.scans(), projectId, stage.book(), reviewed, run.calls()))
                 .flatMap(locked -> step(
                         run,
-                        "terms-translate",
+                        NamesPassStage.TERMS_TRANSLATE.code(),
                         () -> stage.lexiconService().suggest(projectId, run.model(), run.counter())))
                 .map(suggested -> true);
     }
 
     // The only write: what the pass changed in the copies, applied to the stored tables in one go.
     private Result<NamesPassReport> finish(final Run run, final Reviewed reviewed) {
-        return step(run, "write", () -> write(run, reviewed));
+        return step(run, NamesPassStage.WRITE.code(), () -> write(run, reviewed));
     }
 
     private Result<NamesPassReport> write(final Run run, final Reviewed reviewed) {

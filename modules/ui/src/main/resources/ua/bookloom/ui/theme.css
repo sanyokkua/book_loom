@@ -1059,6 +1059,11 @@
     -fx-padding: 12px 0 6px 0;
 }
 
+.card-warm {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+}
+
 .card-title {
     -fx-text-fill: -color-text-strong;
     -fx-font-size: 13.5px;

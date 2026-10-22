@@ -4,15 +4,13 @@ import java.util.Objects;
 import java.util.Set;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
+import javafx.collections.ObservableList;
 import javafx.scene.control.ListView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -43,6 +41,17 @@ final class ProgressStepList extends VBox {
     private boolean personGesture;
 
     ProgressStepList(final ProgressDialogModel model, final Messages messages) {
+        this(model, messages, false);
+    }
+
+    /**
+     * Builds the list.
+     *
+     * @param model the steps, the selection and the follow switch it reads
+     * @param messages the catalogue the steps' words come from
+     * @param newestFirst whether the rows are shown last to first with no follow switch, as a list of finished calls
+     */
+    ProgressStepList(final ProgressDialogModel model, final Messages messages, final boolean newestFirst) {
         super(SPACING);
         this.model = Objects.requireNonNull(model, "model");
         Objects.requireNonNull(messages, "messages");
@@ -50,15 +59,26 @@ final class ProgressStepList extends VBox {
         final ToggleSwitch follow = Tips.install(
                 messages, new ToggleSwitch(messages.get(MessageKey.PROGRESS_FOLLOW)), MessageKey.PROGRESS_FOLLOW_TIP);
         follow.setId("progress-follow");
+        follow.setVisible(!newestFirst);
+        follow.setManaged(!newestFirst);
         follow.selectedProperty().bindBidirectional(model.follow());
         list.setId("progress-steps");
         list.getStyleClass().add("progress-steps");
         list.setFixedCellSize(ROW_HEIGHT);
-        list.setItems(model.rows());
-        list.setCellFactory(view -> new StepCell(messages));
+        list.setItems(newestFirst ? reversedRows() : model.rows());
+        list.setCellFactory(view -> new StepCell(messages, "progress-step-"));
         VBox.setVgrow(list, Priority.ALWAYS);
         getChildren().addAll(follow, list);
         wireSelection();
+    }
+
+    // A copy that follows the model's rows, last first.
+    private ObservableList<StepEntry> reversedRows() {
+        final ObservableList<StepEntry> reversed =
+                FXCollections.observableArrayList(model.rows().reversed());
+        model.rows().addListener((ListChangeListener<StepEntry>)
+                change -> reversed.setAll(model.rows().reversed()));
+        return reversed;
     }
 
     /**
@@ -111,44 +131,6 @@ final class ProgressStepList extends VBox {
             if (model.follow().get()) {
                 list.scrollTo(selected);
             }
-        }
-    }
-
-    /** One step: its marker, its name and its one result line. */
-    private static final class StepCell extends ListCell<StepEntry> {
-
-        private final Messages messages;
-        private final Label marker = new Label();
-        private final Label name = new Label();
-        private final Label result = new Label();
-        private final HBox row;
-
-        StepCell(final Messages messages) {
-            this.messages = messages;
-            name.getStyleClass().add("progress-step-name");
-            result.getStyleClass().add("progress-step-result");
-            marker.getStyleClass().add("progress-marker");
-            row = new HBox(marker, new VBox(name, result));
-            row.getStyleClass().add("progress-step");
-            row.setAlignment(Pos.CENTER_LEFT);
-        }
-
-        @Override
-        protected void updateItem(final @Nullable StepEntry item, final boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) {
-                setId(null);
-                setGraphic(null);
-                return;
-            }
-            setId("progress-step-" + getIndex());
-            final StepWords.Look look = StepWords.Look.of(item);
-            marker.setText(look.glyph());
-            marker.getStyleClass().removeIf(style -> style.startsWith("progress-marker-"));
-            marker.getStyleClass().add("progress-marker-" + look.token());
-            name.setText(StepWords.name(messages, item));
-            result.setText(StepWords.result(messages, item));
-            setGraphic(row);
         }
     }
 }

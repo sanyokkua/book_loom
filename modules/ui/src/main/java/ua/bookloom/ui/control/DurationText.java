@@ -68,6 +68,34 @@ public final class DurationText {
     }
 
     /**
+     * Words a duration with its two largest units spelled out, such as "1 min 48 s": seconds below a minute, minutes
+     * and seconds below an hour, hours and minutes from an hour.
+     *
+     * @param messages the catalogue that words the units in the display language
+     * @param duration a non-negative length of time
+     * @return the text, a whole minute giving no seconds
+     */
+    public static String spelled(final Messages messages, final Duration duration) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(duration, "duration");
+        final long seconds = duration.toSeconds();
+        final long minutes = seconds / SECONDS_PER_MINUTE;
+        final long rest = seconds % SECONDS_PER_MINUTE;
+        if (minutes >= MINUTES_PER_HOUR) {
+            return messages.get(
+                    MessageKey.DURATION_SPELLED_HM,
+                    Long.toString(minutes / MINUTES_PER_HOUR),
+                    Long.toString(minutes % MINUTES_PER_HOUR));
+        }
+        if (minutes == 0) {
+            return messages.get(MessageKey.DURATION_SPELLED_S, Long.toString(seconds));
+        }
+        return rest == 0
+                ? messages.get(MessageKey.DURATION_SPELLED_M, Long.toString(minutes))
+                : messages.get(MessageKey.DURATION_SPELLED_MS, Long.toString(minutes), Long.toString(rest));
+    }
+
+    /**
      * The waiting clock.
      *
      * @param seconds whole seconds, not negative

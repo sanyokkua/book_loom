@@ -60,6 +60,7 @@ public final class ProgressDialogModel {
     private final Map<Long, CallSnapshot> calls = new HashMap<>();
     private final Deque<Long> fullPrompts = new ArrayDeque<>();
     private final Set<Long> dropped = new HashSet<>();
+    private Map<String, String> lastRequestOfStage = Map.of();
     private @Nullable String selectedKey;
 
     /**
@@ -98,7 +99,9 @@ public final class ProgressDialogModel {
         final StepLog log = now.steps();
         attach(log.running(), now.calls().previous());
         attach(log.running(), now.calls().current());
-        final List<StepEntry> next = log.rows();
+        final StageRows stages = StageRows.of(log);
+        lastRequestOfStage = stages.lastRequest();
+        final List<StepEntry> next = stages.rows().isEmpty() ? log.rows() : stages.rows();
         if (!next.equals(rows)) {
             rows.setAll(next);
         }
@@ -198,7 +201,7 @@ public final class ProgressDialogModel {
      * @return the call as last seen, or {@code null} when the step made none that was seen
      */
     public @Nullable CallSnapshot callOf(final StepEntry step) {
-        final Long id = callOfStep.get(Objects.requireNonNull(step, "step").key());
+        final Long id = callOfStep.get(callKey(step));
         return id == null ? null : calls.get(id);
     }
 
@@ -209,8 +212,14 @@ public final class ProgressDialogModel {
      * @return {@code true} when its prompt was dropped, {@code false} otherwise
      */
     public boolean isPromptDropped(final StepEntry step) {
-        final Long id = callOfStep.get(Objects.requireNonNull(step, "step").key());
+        final Long id = callOfStep.get(callKey(step));
         return id != null && dropped.contains(id);
+    }
+
+    // A stage row shows the call of the last request it sent.
+    private String callKey(final StepEntry step) {
+        final String key = Objects.requireNonNull(step, "step").key();
+        return lastRequestOfStage.getOrDefault(key, key);
     }
 
     /** {@return the rows, steps announced then steps planned; never null} */

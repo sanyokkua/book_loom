@@ -29,6 +29,7 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.ProgressFigures;
 import ua.bookloom.ui.state.ResultOffer;
+import ua.bookloom.ui.state.ResultsView;
 
 /**
  * The one dialog of model work, on the work layer: a header with the title, a purpose line, a determinate bar and the
@@ -102,6 +103,30 @@ public final class ProgressDialog extends ModalCard {
                 model.activity().get().kind(),
                 model.activity().get().id(),
                 onHide != null);
+    }
+
+    /**
+     * Builds the Results view: the operation's counts, steps and time, its rows and steps in tabs, and Undo all, Show
+     * changed rows and Done.
+     *
+     * @param view the results and what the closing buttons do
+     * @param messages the catalogue every word comes from
+     * @return the card, for the modal host
+     */
+    public static ModalCard results(final ResultsView view, final Messages messages) {
+        return new ProgressResultsCard(view, messages);
+    }
+
+    /**
+     * Builds the Calls view: the model's calls, newest first, beside the selected call's detail, with Close.
+     *
+     * @param model one request step per call, each with its call attached
+     * @param messages the catalogue every word comes from
+     * @param onClose what Close and Escape do
+     * @return the card, for the modal host
+     */
+    public static ModalCard calls(final ProgressDialogModel model, final Messages messages, final Runnable onClose) {
+        return new ProgressCallsCard(model, messages, onClose);
     }
 
     private Node header() {
@@ -261,8 +286,7 @@ public final class ProgressDialog extends ModalCard {
     }
 
     private void showActivity(final Activity now) {
-        title.setText(
-                messages.get(now.kind() == ActivityKind.SUGGEST_STYLE ? MessageKey.BRIEF_DIALOG_TITLE : now.title()));
+        title.setText(messages.get(titleOf(now)));
         showOffer(now);
         purpose.setText(purposeOf(now));
         final Double fraction = now.fraction();
@@ -281,12 +305,25 @@ public final class ProgressDialog extends ModalCard {
         }
     }
 
+    // The work that has its own action name (the brief's fill-in, the names pass) shows it, not the title bar's
+    // wording.
+    private static MessageKey titleOf(final Activity now) {
+        return switch (now.kind()) {
+            case SUGGEST_STYLE -> MessageKey.BRIEF_DIALOG_TITLE;
+            case NAMES_PASS -> MessageKey.NAMES_STYLE_AUTO;
+            default -> now.title();
+        };
+    }
+
     private String purposeOf(final Activity now) {
         if (now.cancelling()) {
             return messages.get(MessageKey.BUSY_CANCELLING);
         }
         if (now.kind() == ActivityKind.SUGGEST_STYLE) {
             return messages.get(MessageKey.BRIEF_DIALOG_PURPOSE);
+        }
+        if (now.kind() == ActivityKind.NAMES_PASS) {
+            return messages.get(MessageKey.PROGRESS_NAMES_PURPOSE);
         }
         if (!now.cancellable()) {
             return messages.get(MessageKey.BUSY_NOT_CANCELLABLE);

@@ -1,10 +1,12 @@
 package ua.bookloom.ui.control;
 
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -81,12 +83,37 @@ final class StepWords {
 
     /** {@return the step's name, with the segment it is about; a planned step is named by its number} */
     static String name(final Messages messages, final StepEntry step) {
+        if (step.kind() == StepKind.STAGE && !step.label().isEmpty()) {
+            return stageName(messages, step.label());
+        }
         if (step.isPending()) {
             return messages.get(MessageKey.PROGRESS_STEP_PENDING, step.index() + 1);
         }
         final String item = step.itemRef();
         final String words = wordsOf(messages, step);
         return item == null ? words : words + ITEM_JOIN + item;
+    }
+
+    // A stage of the names pass is named by its code; the action variant's first stage is already words.
+    private static String stageName(final Messages messages, final String label) {
+        return Arrays.stream(NamesPassStage.values())
+                .filter(stage -> stage.code().equals(label))
+                .findFirst()
+                .map(stage -> messages.get(stageKey(stage)))
+                .orElse(label);
+    }
+
+    private static MessageKey stageKey(final NamesPassStage stage) {
+        return switch (stage) {
+            case SCAN -> MessageKey.PROGRESS_NAMES_STEP_SCAN;
+            case NAMES -> MessageKey.PROGRESS_NAMES_STEP_NAMES;
+            case TERMS_SCAN -> MessageKey.PROGRESS_NAMES_STEP_TERMS_SCAN;
+            case TERMS_REVIEW -> MessageKey.PROGRESS_NAMES_STEP_TERMS_REVIEW;
+            case TERMS_READ -> MessageKey.PROGRESS_NAMES_STEP_TERMS_READ;
+            case NAMES_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_NAMES_TRANSLATE;
+            case TERMS_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_TERMS_TRANSLATE;
+            case WRITE -> MessageKey.PROGRESS_NAMES_STEP_WRITE;
+        };
     }
 
     // The three request steps of the brief suggestion carry codes as labels; every other label is already words.
@@ -107,6 +134,13 @@ final class StepWords {
 
     /** {@return the step's one result line: its verdict when it gave one, else its state in words} */
     static String result(final Messages messages, final StepEntry step) {
+        if (step.requests() != StepEntry.NO_COUNT && !step.isPending() && Look.of(step) != Look.FAILED) {
+            return messages.get(
+                    step.isRunning()
+                            ? MessageKey.PROGRESS_STAGE_REQUESTS_RUNNING
+                            : MessageKey.PROGRESS_STAGE_REQUESTS_DONE,
+                    step.requests());
+        }
         final StepEntry.StepText text = step.text();
         final @Nullable String verdict = text == null ? null : text.verdict();
         if (verdict == null && step.isRunning() && SYNTHESIS.equals(step.label())) {

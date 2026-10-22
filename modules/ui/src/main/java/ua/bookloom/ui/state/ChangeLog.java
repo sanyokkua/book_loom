@@ -25,6 +25,7 @@ final class ChangeLog {
     private final Messages messages;
     private final ActivityTracker activities;
     private LiveCalls callsBefore = LiveCalls.EMPTY;
+    private RunEnd end = RunEnd.NONE;
     private final ReadOnlyObjectWrapper<@Nullable ChangeResults> results = new ReadOnlyObjectWrapper<>();
 
     ChangeLog(
@@ -48,6 +49,12 @@ final class ChangeLog {
         marks.clear();
         results.set(null);
         callsBefore = activities.lastCalls().get();
+        end = RunEnd.NONE;
+    }
+
+    /** Keeps what the operation's activity showed, for the results the operation is about to publish. */
+    void ended(final RunEnd shown) {
+        end = Objects.requireNonNull(shown, "shown");
     }
 
     void stopped(final ChangeOperation operation) {
@@ -142,6 +149,13 @@ final class ChangeLog {
         log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
         results.set(new ChangeResults(
-                operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last, untargeted));
+                operation,
+                false,
+                items,
+                last.equals(callsBefore) ? LiveCalls.EMPTY : last,
+                untargeted,
+                end.steps(),
+                end.elapsed(),
+                end.hidden()));
     }
 }

@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Tips;
@@ -18,6 +20,7 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.WaitingCall;
 
 /**
  * Model actions wait while a translation is at work (app-shell "Disable model actions while a translation is at
@@ -52,6 +55,22 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
+    private void stuckOnAJudge() {
+        mirror().live()
+                .publishWaitingCall(new WaitingCall(
+                        CallKind.REVIEW,
+                        "ch7 · p42",
+                        0,
+                        1,
+                        2,
+                        Duration.ofSeconds(61),
+                        Duration.ofSeconds(90),
+                        Duration.ofSeconds(61),
+                        true));
+        mirror().publishWaitingSeconds(61);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     private List<String> disabledNamesActions() {
         return NAMES_ACTIONS.stream().filter(id -> button(id).isDisabled()).toList();
     }
@@ -68,6 +87,30 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
 
         assertThat(disabledNamesActions()).isEqualTo(NAMES_ACTIONS);
         assertThat(Tips.explanationOf(button("names-style-auto"))).contains(PAUSE_FIRST);
+        assertThat(Tips.explanationOf(button("names-style-scan"))).contains(PAUSE_FIRST);
+    }
+
+    // IF a stuck call freed the model actions, THEN a second request would queue behind the one that hangs.
+    @Test
+    void namesActions_stuckCall_areOffAndSayPauseFirst() throws Exception {
+        runIn(RunState.RUNNING);
+        stuckOnAJudge();
+
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+
+        assertThat(disabledNamesActions()).isEqualTo(NAMES_ACTIONS);
+        assertThat(Tips.explanationOf(button("names-style-auto"))).contains(PAUSE_FIRST);
+    }
+
+    // IF waiting for the model freed the actions, THEN the person could start a pass the model cannot answer.
+    @Test
+    void namesActions_waitingForTheAiModel_areOffAndSayPauseFirst() throws Exception {
+        runIn(RunState.RUNNING);
+        waitForTheProgram();
+
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+
+        assertThat(disabledNamesActions()).isEqualTo(NAMES_ACTIONS);
         assertThat(Tips.explanationOf(button("names-style-scan"))).contains(PAUSE_FIRST);
     }
 
@@ -128,5 +171,17 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
         assertThat(button("translating-start").isDisabled()).isTrue();
         assertThat(Tips.explanationOf(button("translating-start"))).contains("Wait until the names pass ends");
+    }
+
+    // IF a pass still in the foreground did not hold Start, THEN a run would begin beside the names pass.
+    @Test
+    void start_namesPassVisible_isOffAndSaysWaitUntilTheNamesPassEnds() throws Exception {
+        readyToStart();
+        onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.NAMES_PASS, () -> {}));
+
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+
+        assertThat(button("names-style-start").isDisabled()).isTrue();
+        assertThat(labelText("names-style-start-hint")).isEqualTo("Wait until the names pass ends");
     }
 }

@@ -9,6 +9,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
@@ -22,7 +23,7 @@ import ua.bookloom.pipeline.prompt.StepAnnouncer;
 final class NamesPassSteps implements Consumer<JobEvent> {
 
     /** The stages of a pass, as the planned count of the stage rows. */
-    static final int STAGE_COUNT = 8;
+    static final int STAGE_COUNT = NamesPassStage.values().length;
 
     private final Consumer<JobEvent> receiver;
     private final StepAnnouncer announcer;

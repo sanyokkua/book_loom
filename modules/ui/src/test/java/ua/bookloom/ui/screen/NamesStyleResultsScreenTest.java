@@ -83,8 +83,8 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
 
         reviewTypingWell();
 
-        assertThat(textsUnder(required("results-card")))
-                .contains("Name review — results", "Changed (1)", "Well", "No target · other");
+        assertThat(textsUnder(required("results-card"))).contains("Name review — results", "Well", "No target · other");
+        assertThat(labelText("progress-subtitle")).startsWith("0 added · 0 removed · 1 changed");
     }
 
     // IF the edge had no words, THEN only a colour would tell a person why the row differs.
@@ -93,7 +93,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         showScreen();
         reviewTypingWell();
 
-        onFx(() -> button("results-close").fire());
+        onFx(() -> button("results-done").fire());
 
         assertThat(ThemeTestSupport.onFx(() -> required("names-style-table").lookupAll(".table-row-cell").stream()
                         .map(row -> (TableRow<?>) row)
@@ -109,7 +109,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         showScreen();
         reviewTypingWell();
 
-        onFx(() -> button("results-close").fire());
+        onFx(() -> button("results-done").fire());
 
         assertThat(visibleMarkers("names-style-table")).isEqualTo(1);
         assertThat(chipsInCells("names-style-table")).isZero();
@@ -122,7 +122,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
     void changedFilter_turnedOn_showsOnlyTheChangedRowsAndOffShowsAllAgain() throws Exception {
         showScreen();
         reviewTypingWell();
-        onFx(() -> button("results-close").fire());
+        onFx(() -> button("results-done").fire());
         final ToggleButton filter = (ToggleButton) required("names-style-changed-filter");
 
         onFx(filter::fire);
@@ -155,7 +155,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
     void nextOperation_findsNothing_dropsTheMarkersAndTheFilter() throws Exception {
         showScreen();
         reviewTypingWell();
-        onFx(() -> button("results-close").fire());
+        onFx(() -> button("results-done").fire());
         glossary.willAnswer(Result.ok(List.of()));
 
         onFx(() -> button("names-style-scan").fire());
@@ -178,7 +178,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         awaitFx(this::isCardShown);
 
         assertThat(textsUnder(required("results-card"))).contains("Term scan — results", "Added (1)", "pentacle");
-        onFx(() -> button("results-close").fire());
+        onFx(() -> button("results-done").fire());
         assertThat(visibleMarkers("recurring-table")).isEqualTo(1);
         assertThat(ThemeTestSupport.onFx(
                         () -> required("recurring-changed-filter").isVisible()))

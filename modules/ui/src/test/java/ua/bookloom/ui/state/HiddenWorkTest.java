@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
+import javafx.beans.binding.BooleanBinding;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ViewNames;
@@ -77,5 +79,59 @@ class HiddenWorkTest {
 
         assertThat(hidden.refuses(ActivityKind.MODEL_LISTING)).isFalse();
         assertThat(toasts.raised()).isEmpty();
+    }
+
+    // IF the freeze named no screen, THEN every screen would turn read-only while the pass writes to one.
+    @Test
+    void freezes_hiddenNamesPass_isTrueForNamesStyleOnly() {
+        hiddenNamesPass();
+
+        assertThat(hidden.freezes(ViewNames.NAMES_STYLE).get()).isTrue();
+        assertThat(hidden.freezes(ViewNames.EXPORT).get()).isFalse();
+    }
+
+    // IF the pass still showed in the window, THEN its screen would not be read-only: the person sees the dialog.
+    @Test
+    void freezes_namesPassInTheForeground_isFalse() {
+        tracker.begin(ActivityKind.NAMES_PASS, () -> {});
+
+        assertThat(hidden.freezes(ViewNames.NAMES_STYLE).get()).isFalse();
+    }
+
+    // IF the binding did not follow the work, THEN the screen would stay read-only after the pass ended.
+    @Test
+    void freezes_hiddenPassEnds_turnsFalseAgain() {
+        final ActivityTracker.Handle names = hiddenNamesPass();
+        final BooleanBinding frozen = hidden.freezes(ViewNames.NAMES_STYLE);
+
+        names.end();
+
+        assertThat(frozen.get()).isFalse();
+    }
+
+    // IF the toast named no operation, THEN the person could not tell which finished pass it speaks of.
+    @Test
+    void finished_raisesTheReviewToastWithTheKindLabel() {
+        hidden.finished(ActivityKind.NAMES_PASS, () -> {});
+
+        assertThat(toasts.raised())
+                .singleElement()
+                .isEqualTo(new RecordingToasts.Raised(
+                        "success", MessageKey.TOAST_HIDDEN_WORK_FINISHED, List.of("Preparing names")));
+        assertThat(toasts.actions())
+                .singleElement()
+                .extracting(ToastAction::label, ToastAction::tip)
+                .containsExactly(MessageKey.WORK_HIDDEN_RESULTS, MessageKey.WORK_HIDDEN_RESULTS_TIP);
+    }
+
+    // IF the toast action did not run what it was given, THEN "Review the results" would lead nowhere.
+    @Test
+    void finished_actionPressed_runsTheReview() {
+        final AtomicInteger reviewed = new AtomicInteger();
+        hidden.finished(ActivityKind.NAMES_PASS, reviewed::incrementAndGet);
+
+        toasts.actions().getFirst().run().run();
+
+        assertThat(reviewed.get()).isEqualTo(1);
     }
 }

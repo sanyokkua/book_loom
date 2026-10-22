@@ -41,7 +41,8 @@ public final class LayoutClass {
             return PseudoClass.getPseudoClass(pseudoClass);
         }
 
-        double floor() {
+        /** {@return the smallest content width of the class, in pixels} */
+        public double floor() {
             return floor;
         }
     }

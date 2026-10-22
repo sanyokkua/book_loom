@@ -772,7 +772,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: read-only while RUNNING; languages locked after one decision; the dialog's steps for a book with a known title on Balanced (knowledge, 4 samples, synthesis: 1 + 4 + 1) and, with a file-stem title, 4 + 1 with no knowledge row;
     Apply writes through `BriefSaver`.
   - **Compare:** idle, translating, and the dialog in Simple and Detailed. → :ui
-- [ ] 6.4 Give Names & style its purpose lines, empty states, "Used" column, wide-only side-by-side layout, read-only
+- [x] 6.4 Give Names & style its purpose lines, empty states, "Used" column, wide-only side-by-side layout, read-only
   state under hidden work, and the names pass in the long progress dialog with Results, so the tables explain
   themselves and the pass shows exact progress.
   - **Satisfies:** glossary "Keep both term tables editable while a translation runs"; glossary "Show the recurring
@@ -788,12 +788,16 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     (616 px) are wider than its card (532 px) and clip the Locked and remove columns. The `cards_atEachWindowSize…` test
     expects stacked cards below 1440 (windows of about 1700 or more for side by side).
   - `ProgressDialog` gains a Results mode (used here) and a Calls mode (used by 6.5's "All calls…").
-  - A hidden pass shows a "Names is running in the background" banner and opens no dialog by itself when it ends.
+  - A hidden pass shows a "Names is running in the background" banner (on Names & style only, since it says "this
+    screen") and, when it ends, opens nothing by itself: a message offers "Review the results", which opens the
+    Results view once. A pass in the foreground opens its Results view as it ends.
+  - The Used column reads the existing `LexiconService.usage` off the FX thread; no new `:pipeline` helper.
   - `RecurringTermsCard` gains the Used column.
   - The model actions are disabled while translating ("Pause the translation first — BookLoom sends one model request
     at a time").
-  - `AutoNamesBar` opens `ProgressDialog` with the 8 steps; `ChangeResultsDialog` becomes its Results view (Changes /
-    Steps tabs, Undo all, Show changed rows).
+  - The work layer opens `ProgressDialog` for the names pass with its 8 stage rows (`NamesPassStage`, each with its
+    request count: "25 requests so far", never "of N"); `ChangeResultsDialog` is gone, its Results view is
+    `ProgressDialog.results` (Changes / Steps tabs, Undo all, Show changed rows, Done).
   - Scan / Review / Translate run the 2-step variant.
   - Tests: rewrite `ChangeResultsDialogTest`; at 1280×800 the cards stack; while the pass runs (hidden too) Start
     translation waits with "Wait until the names pass ends"; a hidden pass disables `+ Add`, Scan,

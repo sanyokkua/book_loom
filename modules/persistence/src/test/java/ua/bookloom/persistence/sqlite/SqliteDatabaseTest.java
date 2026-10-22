@@ -88,6 +88,24 @@ class SqliteDatabaseTest {
         }
     }
 
+    // IF a background reader could still use a closed database, THEN it would open a connection and recreate the -wal
+    // files in a folder the application's owner (or a test) is deleting.
+    @Test
+    void closed_readOrWriteAfterClose_isRefusedAndLeavesNoSidecarFiles() throws IOException {
+        final SqliteDatabase db = open();
+        db.close();
+        Files.deleteIfExists(dir.resolve("bookloom.db-wal"));
+        Files.deleteIfExists(dir.resolve("bookloom.db-shm"));
+
+        final Result<List<String>> read = db.read("list tables", SqliteDatabaseTest::tables);
+        final Result<Integer> write = db.write("noop", handle -> 1);
+
+        assertThat(read.isErr()).isTrue();
+        assertThat(write.isErr()).isTrue();
+        assertThat(dir.resolve("bookloom.db-wal")).doesNotExist();
+        assertThat(dir.resolve("bookloom.db-shm")).doesNotExist();
+    }
+
     @Test
     void open_freshFile_createsEveryTable() {
         try (SqliteDatabase db = open()) {

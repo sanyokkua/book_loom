@@ -2,26 +2,25 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.layout.Region;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
-import ua.bookloom.ui.dialog.AddRecurringTermDialog;
-import ua.bookloom.ui.dialog.AddTermDialog;
-import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -29,8 +28,8 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.GlossaryNotice;
+import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.NamesStyleViewModel;
-import ua.bookloom.ui.state.RecurringTerms;
 import ua.bookloom.ui.state.RunRow;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
@@ -52,7 +51,9 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 final class NamesStyleView {
 
     private static final double SCREEN_SPACING = 14;
-    private static final double STACK_BELOW = 1040;
+    // The wide class of the content area (1440 px) less the 26 px of padding the shell puts on each side of a screen,
+    // since a screen decides the switch from its own width.
+    private static final double STACK_BELOW = LayoutClass.Width.WIDE.floor() - 2 * 26;
     private static final String LISTENER_KEY = "names-style-listener";
 
     private final Messages messages;
@@ -64,7 +65,7 @@ final class NamesStyleView {
     private final ModalHost modalHost;
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
-    private final ChangeResultsDialog changeResultsDialog;
+    private final HiddenWork hiddenWork;
     private final CsvFileChooser csvFiles;
 
     NamesStyleView(
@@ -77,7 +78,7 @@ final class NamesStyleView {
             final ModalHost modalHost,
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
-            final ChangeResultsDialog changeResultsDialog,
+            final HiddenWork hiddenWork,
             final CsvFileChooser csvFiles) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -88,7 +89,7 @@ final class NamesStyleView {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
-        this.changeResultsDialog = Objects.requireNonNull(changeResultsDialog, "changeResultsDialog");
+        this.hiddenWork = Objects.requireNonNull(hiddenWork, "hiddenWork");
         this.csvFiles = Objects.requireNonNull(csvFiles, "csvFiles");
     }
 
@@ -96,16 +97,58 @@ final class NamesStyleView {
         Objects.requireNonNull(projectId, "projectId");
         log.debug("showing the glossary of project {}", projectId);
         glossary.show(projectId);
-        final Banner skip = Tips.install(
-                messages,
-                new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP)),
-                MessageKey.NAMES_STYLE_SKIP_TIP);
-        final TwoColumns cards = new TwoColumns(glossaryCard(), recurringCard(), STACK_BELOW);
+        final BooleanBinding frozen = hiddenWork.freezes(ViewNames.NAMES_STYLE);
+        final NamesStyleCards parts = new NamesStyleCards(messages, glossary, csvFiles, modalHost, frozen);
+        final TwoColumns cards = new TwoColumns(parts.glossaryCard(), parts.recurringCard(), STACK_BELOW);
         cards.equalHeightsProperty().set(true);
         final VBox screen = new VBox(
-                SCREEN_SPACING, noticeBanner(), AutoNamesBar.build(messages, glossary, brief), cards, skip, footer());
-        ResultsOpener.attach(screen, glossary, changeResultsDialog);
+                SCREEN_SPACING,
+                purpose(),
+                runBanner(),
+                hiddenBanner(frozen),
+                noticeBanner(),
+                AutoNamesBar.build(messages, glossary, brief, frozen),
+                cards,
+                footer());
+        new ResultsOpener(glossary, modalHost, messages).attach(screen);
         return screen;
+    }
+
+    // What the screen is for, and that it may be skipped, above everything else on it.
+    private Label purpose() {
+        final Label purpose = new Label(messages.get(MessageKey.NAMES_STYLE_PURPOSE));
+        purpose.setId("names-style-purpose");
+        purpose.getStyleClass().add("muted");
+        purpose.setWrapText(true);
+        return purpose;
+    }
+
+    // Both tables stay editable while a translation is at work: the run reads the glossary as it is when it gets there.
+    private Banner runBanner() {
+        return BriefCards.shownWhile(
+                new Banner(
+                        "names-style-run-banner",
+                        Banner.Role.INFO,
+                        "ℹ",
+                        "",
+                        messages.get(MessageKey.NAMES_STYLE_RUN_BANNER)),
+                Bindings.createBooleanBinding(() -> runs.view().get().isAtWork(), runs.view()));
+    }
+
+    // Work in the background writes to this screen once, at its end, so it may not be edited meanwhile.
+    private Banner hiddenBanner(final BooleanBinding frozen) {
+        final Banner banner = BriefCards.shownWhile(
+                new Banner(
+                        "names-style-hidden-banner",
+                        Banner.Role.INFO,
+                        "ℹ",
+                        messages.get(MessageKey.NAMES_STYLE_HIDDEN_BANNER),
+                        messages.get(MessageKey.NAMES_STYLE_HIDDEN_NOTE)),
+                frozen);
+        final Button show = banner.addTrailingAction(
+                "names-style-hidden-show", messages.get(MessageKey.WORK_HIDDEN_SHOW), hiddenWork::showProgress);
+        Tips.install(messages, show, MessageKey.WORK_HIDDEN_SHOW_TIP);
+        return banner;
     }
 
     private Node noticeBanner() {
@@ -126,118 +169,6 @@ final class NamesStyleView {
             banner.setGlyph(failed ? "⚠" : "ℹ");
             banner.setText(notice.text());
         }
-    }
-
-    private TermTableCard<GlossaryEntry> glossaryCard() {
-        return new TermTableCard<>(
-                messages,
-                glossary,
-                csvFiles,
-                "names-style",
-                glossaryTexts(),
-                glossaryToolbar(),
-                GlossaryTable.rows(messages, glossary));
-    }
-
-    private static TermTableCard.Texts glossaryTexts() {
-        return new TermTableCard.Texts(
-                "names-style-glossary-title",
-                MessageKey.NAMES_STYLE_GLOSSARY_TITLE,
-                null,
-                new TermTableCard.Phrase(MessageKey.NAMES_STYLE_ADD, MessageKey.NAMES_STYLE_ADD_TIP),
-                new TermTableCard.Phrase(MessageKey.NAMES_STYLE_IMPORT, MessageKey.NAMES_STYLE_IMPORT_TIP),
-                new TermTableCard.Phrase(MessageKey.NAMES_STYLE_EXPORT, MessageKey.NAMES_STYLE_EXPORT_TIP),
-                MessageKey.NAMES_STYLE_EMPTY,
-                MessageKey.NAMES_STYLE_EMPTY_FILTERED);
-    }
-
-    private TermTableCard.Toolbar glossaryToolbar() {
-        final ModelActionBar.Words words = new ModelActionBar.Words(
-                MessageKey.NAMES_STYLE_MODEL_SCAN,
-                MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
-                MessageKey.NAMES_STYLE_REVIEW,
-                MessageKey.NAMES_STYLE_REVIEW_TIP,
-                MessageKey.NAMES_STYLE_TRANSLATE,
-                MessageKey.NAMES_STYLE_TRANSLATE_TIP);
-        return new TermTableCard.Toolbar(
-                words,
-                new ModelActionBar.Actions(glossary::modelScan, glossary::review, glossary::translate),
-                this::openAddTerm,
-                glossary::importCsv,
-                glossary::exportCsv,
-                "glossary.csv",
-                acceptAll());
-    }
-
-    private TermTableCard<LexiconEntry> recurringCard() {
-        return new TermTableCard<>(
-                messages,
-                glossary,
-                csvFiles,
-                "recurring",
-                recurringTexts(),
-                recurringToolbar(),
-                RecurringTermsCard.rows(messages, glossary));
-    }
-
-    private static TermTableCard.Texts recurringTexts() {
-        return new TermTableCard.Texts(
-                "recurring-title",
-                MessageKey.RECURRING_TITLE,
-                MessageKey.RECURRING_NOTE,
-                new TermTableCard.Phrase(MessageKey.RECURRING_ADD, MessageKey.RECURRING_ADD_TIP),
-                new TermTableCard.Phrase(MessageKey.RECURRING_IMPORT, MessageKey.RECURRING_IMPORT_TIP),
-                new TermTableCard.Phrase(MessageKey.RECURRING_EXPORT, MessageKey.RECURRING_EXPORT_TIP),
-                MessageKey.RECURRING_EMPTY,
-                MessageKey.NAMES_STYLE_EMPTY_FILTERED);
-    }
-
-    private TermTableCard.Toolbar recurringToolbar() {
-        final RecurringTerms recurring = glossary.recurring();
-        final ModelActionBar.Words words = new ModelActionBar.Words(
-                MessageKey.RECURRING_MODEL_SCAN,
-                MessageKey.RECURRING_MODEL_SCAN_TIP,
-                MessageKey.RECURRING_MODEL_REVIEW,
-                MessageKey.RECURRING_MODEL_REVIEW_TIP,
-                MessageKey.RECURRING_SUGGEST,
-                MessageKey.RECURRING_SUGGEST_TIP);
-        return new TermTableCard.Toolbar(
-                words,
-                new ModelActionBar.Actions(recurring::scan, recurring::review, recurring::translate),
-                this::openAddRecurring,
-                recurring::importCsv,
-                recurring::exportCsv,
-                "recurring-terms.csv",
-                null);
-    }
-
-    // Shown only while a row holds a suggestion, and off while a model action could replace the suggestions it would
-    // accept.
-    private Button acceptAll() {
-        final Button acceptAll = Tips.install(
-                messages,
-                new Button(messages.get(MessageKey.NAMES_STYLE_ACCEPT_ALL)),
-                MessageKey.NAMES_STYLE_ACCEPT_ALL_TIP);
-        acceptAll.setId("names-style-accept-all");
-        acceptAll.getStyleClass().add("btn-ghost");
-        acceptAll.setMinWidth(Region.USE_PREF_SIZE);
-        acceptAll.setMaxHeight(Double.MAX_VALUE);
-        acceptAll.setOnAction(event -> {
-            log.debug("names-style-accept-all pressed");
-            glossary.acceptAll();
-        });
-        acceptAll.disableProperty().bind(glossary.busy());
-        acceptAll.visibleProperty().bind(glossary.suggestedCount().greaterThan(0));
-        acceptAll.managedProperty().bind(acceptAll.visibleProperty());
-        return acceptAll;
-    }
-
-    private void openAddTerm() {
-        modalHost.show(new AddTermDialog(messages, glossary, modalHost::hide).card(), false);
-    }
-
-    private void openAddRecurring() {
-        modalHost.show(new AddRecurringTermDialog(messages, glossary.recurring(), modalHost::hide).card(), false);
     }
 
     private Node footer() {

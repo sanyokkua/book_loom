@@ -197,14 +197,14 @@ WHERE model work is long — the names pass or the export's last check — the p
 
 ### Requirement: Make the screen that hidden work writes to read-only
 
-WHILE long model work runs in the background, the screen it writes to SHALL be read-only behind a banner reading, for example, "Names is running in the background — this screen is read-only until it ends", and other model work SHALL be refused with a message that offers "Show progress". WHEN the work ends, the chip SHALL go and a message with "Review the results" SHALL appear; nothing SHALL open by itself.
+WHILE long model work runs in the background, the screen it writes to SHALL be read-only behind a banner reading, for example, "Names is running in the background" with the line "This screen is read-only until it ends, so its results and your edits do not overwrite each other." and a "Show progress" button, and other model work SHALL be refused with a message that offers "Show progress". WHEN the work ends, the chip SHALL go and a message with "Review the results" SHALL appear; nothing SHALL open by itself.
 
 **Source**: `docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1`. In plain words: the background pass is writing into the glossary, so editing it by hand at the same time would lose one of the two sets of changes. Saying so, and offering a way back, is better than a silent lock.
 
 #### Scenario: The glossary is read-only
 
 - **WHEN** the names pass is hidden at 53 %
-- **THEN** Names & style is read-only and the banner reads `Names is running in the background — this screen is read-only until it ends`
+- **THEN** Names & style is read-only and the banner reads `Names is running in the background` over `This screen is read-only until it ends, so its results and your edits do not overwrite each other.`
 
 #### Scenario: A second job is refused
 

@@ -267,7 +267,15 @@ public final class BusyHost {
         }
     }
 
+    // A clock that runs for ever is held by the toolkit's timer, so a window that has gone must not leave one behind:
+    // the shell and everything it holds would stay in memory with it.
     private void tick() {
+        final Scene scene = host.getScene();
+        if (scene == null || scene.getWindow() == null || !scene.getWindow().isShowing()) {
+            log.debug("work layer: the window is gone, the clock stops");
+            clock.stop();
+            return;
+        }
         final Shown shown = dialogs.get(shownId);
         if (shown != null) {
             shown.dialog().tick(activities.now());

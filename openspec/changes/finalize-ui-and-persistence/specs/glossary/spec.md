@@ -2,7 +2,7 @@
 
 ### Requirement: Keep both term tables editable while a translation runs
 
-WHILE a translation of the project is running, pausing or stopping, the Names & style screen SHALL keep the Glossary and the Recurring terms editable under the banner "Translating is going on. Changes apply to the next segments translated."
+WHILE a translation of the project is at work (running, pausing, stopping, waiting on a stuck call, or waiting for the model), the Names & style screen SHALL keep the Glossary and the Recurring terms editable under the banner "Translating is going on. Changes apply to the next segments translated."
 
 **Source**: `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1–N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: hand edits stay possible because the next group of segments reads the glossary again. Which model actions are disabled while a translation runs is the `app-shell` capability's rule ("Disable model actions while a translation runs"), and the read-only screen while the names pass runs hidden is also the `app-shell` capability's rule ("Make the screen that hidden work writes to read-only").
 
@@ -24,7 +24,7 @@ The glossary table SHALL let every column be resized, the last filling the remai
 
 ### Requirement: Show the recurring terms with their purpose, use count and empty state
 
-The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Translation, Used and a link to the glossary, Used being the number of times the term's words occur in the book's text, ignoring letter case and matching exact word forms only; an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
+The Recurring terms card SHALL show the purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and the columns Term, Translation, Used and a link to the glossary, Used being the number of times the term occurs in the book's text, ignoring letter case and matching exact word forms only (a term of several words counts the mentions of the whole phrase); an empty card SHALL read "No recurring terms yet. They are found when you prepare names, or while translating."
 
 **Source**: `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`, N1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees how often each repeated word occurs and where such words come from. Used counts the words as written: `Warden` and `warden` count together, while an inflected form such as `wardens` is a different word and is not counted.
 
@@ -40,18 +40,18 @@ The Recurring terms card SHALL show the purpose line "Words the book repeats —
 
 ### Requirement: List the eight steps of the names pass in its progress dialog
 
-The progress dialog of the names pass SHALL list eight steps in order — Find candidates in the book, Decide the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Write the results — each with its count ("25 of 30 requests") and a figures line such as "53 % · 26 of about 49 steps · Left about 1 min".
+The progress dialog of the names pass SHALL list eight steps in order — Find candidates in the book, Decide the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Write the results — each with the number of requests it sent ("25 requests so far" while it runs, "6 requests" when it has ended, "no request" when it sent none, "Not started" before it begins; no step knows its total up front, so a count never reads "of N") and a figures line such as "53 % · 26 of about 49 steps · Left about 1 min".
 
 **Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees which part of the pass is running and how much is left. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The eight steps are listed with counts
 
-- **WHEN** the pass is at its fifth step with 25 of 30 requests answered
-- **THEN** the list shows eight rows, the fifth reads "Read repeated words in context" with "25 of 30 requests", and the steps after it say they have not started
+- **WHEN** the pass is at its fifth step with 25 requests answered
+- **THEN** the list shows eight rows, the fifth reads "Read repeated words in context" with "25 requests so far", and the steps after it say "Not started"
 
 ### Requirement: Show the names pass's results with Undo all
 
-WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle "5 added · 0 removed · 1 changed · 49 steps · 1 min 48 s", the tabs Changes (Entry, Change, Before, After, grouped) and Steps, and the actions Undo all, Show changed rows and Done.
+WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle "5 added · 0 removed · 1 changed · 49 steps · 1 min 48 s", the tabs Changes (Entry, Change, Before, After, grouped; a Why column when some row has a reason, and a Revert on each row) and Steps (the eight stages with their request counts), and the actions Undo all, Show changed rows and Done.
 
 **Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: the person sees every change the pass made and can give all of them back.
 

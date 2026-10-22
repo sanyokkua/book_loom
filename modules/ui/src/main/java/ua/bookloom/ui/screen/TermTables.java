@@ -7,15 +7,14 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.css.PseudoClass;
-import javafx.scene.control.Label;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -46,7 +45,8 @@ final class TermTables {
             final String id,
             final TextField search,
             final TermTableCard.Texts texts,
-            final TermTableCard.Rows<R> rows) {
+            final TermTableCard.Rows<R> rows,
+            final EmptyState.@Nullable Actions emptyActions) {
         final FilteredList<R> filtered = new FilteredList<>(rows.items());
         filtered.predicateProperty()
                 .bind(Bindings.createObjectBinding(
@@ -58,7 +58,7 @@ final class TermTables {
         final TableView<R> table = new TableView<>(sorted);
         sorted.comparatorProperty()
                 .bind(Bindings.createObjectBinding(
-                        () -> tieBroken(table.getComparator(), rows.tieBreak()), table.comparatorProperty()));
+                        () -> tieBroken(table.getComparator(), rows.tieBreak()), sortInputs(table, rows)));
         // The sorted list follows the table's comparator through the binding above, so a sort always succeeds.
         table.setSortPolicy(_ -> true);
         table.setId(id + "-table");
@@ -66,7 +66,7 @@ final class TermTables {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setRowFactory(_ -> new MarkedRow<>(messages, rows.marks(), rows.markKey()));
         table.setFixedCellSize(ROW_HEIGHT);
-        table.setPlaceholder(emptyLabel(messages, texts, search.textProperty()));
+        table.setPlaceholder(EmptyState.of(messages, id, texts, search.textProperty(), emptyActions));
         table.setFocusTraversable(false);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(rows.columns());
@@ -115,6 +115,15 @@ final class TermTables {
                                 text != null && text.toLowerCase(Locale.ROOT).contains(wanted));
     }
 
+    // The comparator is made again when what a column sorts by arrives (the Used counts load after the person chose the
+    // sort), so the rows are put in order again; a comparator that stayed the same object would leave them as they
+    // were.
+    private static <R> Observable[] sortInputs(final TableView<R> table, final TermTableCard.Rows<R> rows) {
+        final List<Observable> inputs = new ArrayList<>(rows.refreshOn());
+        inputs.add(table.comparatorProperty());
+        return inputs.toArray(new Observable[0]);
+    }
+
     private static <R> @Nullable Comparator<R> tieBroken(
             final @Nullable Comparator<R> chosen, final Comparator<R> tieBreak) {
         return chosen == null ? null : chosen.thenComparing(tieBreak);
@@ -123,18 +132,6 @@ final class TermTables {
     private static <R> Predicate<R> changedOnly(final TermTableCard.Rows<R> rows) {
         return row -> !rows.marks().onlyChanged().get()
                 || rows.marks().isMarked(rows.markKey().apply(row));
-    }
-
-    private static Label emptyLabel(
-            final Messages messages, final TermTableCard.Texts texts, final StringProperty query) {
-        final Label empty = new Label();
-        empty.getStyleClass().add("glossary-empty");
-        empty.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                query.get() == null || query.get().isBlank() ? texts.empty() : texts.emptyFiltered()),
-                        query));
-        return empty;
     }
 
     // The table is shorter-lived than the view models, so what redraws it does so through weak listeners whose strong

@@ -205,10 +205,10 @@ know the planned review passes.
 
 - **`control/LayoutClass`.** One width listener on `#shell-content` sets the pseudo-classes `compact` (< 1040),
   `regular` (1040–1439) and `wide` (≥ 1440), with 16 px hysteresis. It never logs. Regions still decide their own
-  two-column switch from their own width (`TwoColumns`). Names & style switches at 1440.
+  two-column switch from their own width (`TwoColumns`). Names & style switches at 1388 px of its own width, which is the wide class's 1440 px of content less the 52 px the shell pads a screen with.
 - **`control/Overrun`.** It adds a tooltip to a `Labeled` only while its text is cut.
 - **`#shell-banners`.** A `VBox` between the toolbar and the content `ScrollPane`, fed by `state/ShellBanners`, which
-  is built from `RunStateView` (D8) and `HiddenWork`. Run banners show on every screen while they apply.
+  is built from `RunStateView` (D8). Run banners show on every screen while they apply. The hidden-work banner is not one of them: it says "this screen", so Names & style shows it itself, as a local `Banner` bound to `HiddenWork.freezes`.
 - **`fills-viewport`.** The style class opts a screen out of `minHeight = USE_PREF_SIZE` in `AppShellView.showContent`.
   Translating (live card min 460), Import (its browser `SplitPane` is at least 360 px high, see D15), Names & style and Settings each declare their minimum
   height, and below it the page scrolls.

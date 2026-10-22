@@ -145,7 +145,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         assertThat(namesPass.awaitStarted()).isTrue();
         awaitFx(this::isBusyCardShown);
-        assertThat(labelText("progress-title")).isEqualTo("Preparing names");
+        assertThat(labelText("progress-title")).isEqualTo("Prepare names automatically");
         assertThat(button("progress-cancel").isDisabled()).isFalse();
     }
 

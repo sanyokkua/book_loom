@@ -19,8 +19,8 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     // IF the glossary kept its Check column or hid the remove cross inside the Term cell, THEN the table would not
     // match the Recurring terms table beside it.
     @ParameterizedTest
-    @CsvSource({"en, Term, Type, Target, Gender, Locked", "uk, Термін, Тип, Переклад, Рід, Закріплено"})
-    void glossaryColumns_shown_areTermTypeTargetGenderLockedThenAnUnnamedRemoveColumn(
+    @CsvSource({"en, Term, Kind, Translation, Gender, Locked", "uk, Термін, Вид, Переклад, Рід, Закріплено"})
+    void glossaryColumns_shown_areTermKindTranslationGenderLockedThenAnUnnamedRemoveColumn(
             final String tag,
             final String term,
             final String type,
@@ -33,16 +33,15 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         assertThat(headers("names-style")).containsExactly(term, type, target, gender, locked, "");
     }
 
-    // IF the Used column stayed, THEN the Recurring terms table would be wider than its card and not alike the
-    // glossary.
+    // IF the Used column were missing, THEN the person could not tell how often the book writes a repeated word.
     @ParameterizedTest
-    @CsvSource({"en, Term, Target", "uk, Термін, Переклад"})
-    void recurringColumns_shown_areTermTargetThenTwoUnnamedActionColumns(
-            final String tag, final String term, final String target) throws Exception {
+    @CsvSource({"en, Term, Translation, Used", "uk, Термін, Переклад, Використано"})
+    void recurringColumns_shown_areTermTranslationUsedThenTwoUnnamedActionColumns(
+            final String tag, final String term, final String target, final String used) throws Exception {
         lexicon.holds(MASTER);
         showScreen(tag, 1024, 700, ROSALIND);
 
-        assertThat(headers("recurring")).containsExactly(term, target, "", "");
+        assertThat(headers("recurring")).containsExactly(term, target, used, "", "");
     }
 
     // IF a row's remove cross sat anywhere but the last cell, THEN the two tables would not end the same way.
@@ -74,7 +73,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         showScreen(tag, 1024, 700, ROSALIND);
         awaitFx(() -> !firstRowCells("recurring").isEmpty());
 
-        final TableCell<?, ?> promote = firstRowCells("recurring").get(2);
+        final TableCell<?, ?> promote = firstRowCells("recurring").get(3);
 
         assertThat(ThemeTestSupport.onFx(() -> ((Button) promote.lookup(".button")).getText()))
                 .startsWith(start);
@@ -84,7 +83,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     // placeholder. (The "No target" placeholder itself is the prompt text of the empty Target field, which is a text
     // node of its own, so it is not looked for here; a chip is what is absent.)
     @Test
-    void table_junkLookingAndTargetlessRows_showNoCheckChipsAndNoUsedText() throws Exception {
+    void table_junkLookingAndTargetlessRows_showNoCheckChipsAndNoNotUsedYetText() throws Exception {
         lexicon.holds(IMP);
         showScreen("en", 1024, 700, SHOUTED, HALE);
         awaitFx(() -> !firstRowCells("recurring").isEmpty());
@@ -93,7 +92,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
                         () -> table("names-style").lookupAll(".glossary-flag").size()))
                 .isZero();
         assertThat(textsUnder(required("names-style-table"))).doesNotContain("Likely junk", "Check");
-        assertThat(textsUnder(required("recurring-table"))).doesNotContain("not used yet", "Used");
+        assertThat(textsUnder(required("recurring-table"))).doesNotContain("not used yet");
     }
 
     // ---- the cells ---------------------------------------------------------------------------------------------

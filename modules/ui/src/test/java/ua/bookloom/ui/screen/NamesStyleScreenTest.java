@@ -43,16 +43,16 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         chooseTarget();
     }
 
-    // IF the screen had no heading, subtitle, note or footer, THEN the step would be an empty wall.
+    // IF the screen had no heading, purpose line or footer, THEN the step would be an empty wall.
     @Test
-    void screen_shown_holdsHeadingSubtitleNoteAndFooter() throws Exception {
+    void screen_shown_holdsHeadingPurposeAndFooter() throws Exception {
         openBookOnly();
         showNamesStyle();
 
         assertThat(labelText("names-style-title")).isEqualTo("Names & style");
-        assertThat(labelText("names-style-subtitle")).startsWith("The scan lists the names and terms");
-        assertThat(labelText("names-style-banner-text"))
-                .isEqualTo("Skip this and the app builds names on the fly as it translates.");
+        assertThat(labelText("names-style-purpose"))
+                .isEqualTo("Decide how names and repeated words are translated. Optional — skip it and BookLoom"
+                        + " builds both while it translates.");
         assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
         assertThat(button("names-style-start").getText()).isEqualTo("Start translation");
     }
@@ -177,7 +177,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
                         .map(column -> ((Label) column.getGraphic()).getText())
                         .toList()))
-                .containsExactly("Term", "Type", "Target", "Gender", "Locked", "");
+                .containsExactly("Term", "Kind", "Translation", "Gender", "Locked", "");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
         assertThat(button("names-style-start").isDisabled()).isFalse();
         assertThat(button("names-style-scan").getText()).isEqualTo("Scan");

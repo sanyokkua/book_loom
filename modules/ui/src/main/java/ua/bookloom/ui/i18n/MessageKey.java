@@ -137,8 +137,6 @@ public enum MessageKey {
     BUSY_NOT_CANCELLABLE("busy.notCancellable"),
     /** Busy card: heading of the folded section that shows the work's current model call. */
     BUSY_CALLS("busy.calls"),
-    /** Hover explanation of the busy card's model-call section. */
-    BUSY_CALLS_TIP("busy.calls.tip"),
     /** Progress dialog: the figures line; arguments: 0 percent, 1 steps done, 2 steps in all. */
     PROGRESS_FIGURES("progress.figures"),
     /** Progress dialog: the figures line with the time left; arguments: 0 the line, 1 "about 2 min" or the like. */
@@ -1161,12 +1159,6 @@ public enum MessageKey {
     STRUCTURE_CHECK_OVERSIZED("structure.check.oversized"),
     /** Heading of the names and style screen. */
     NAMES_STYLE_TITLE("namesStyle.title"),
-    /** One line under the heading saying what the screen is for. */
-    NAMES_STYLE_SUBTITLE("namesStyle.subtitle"),
-    /** Information banner saying the step can be skipped. */
-    NAMES_STYLE_SKIP("namesStyle.skip"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_SKIP}. */
-    NAMES_STYLE_SKIP_TIP("namesStyle.skip.tip"),
     /** Button that returns from names and style to the book brief. */
     NAMES_STYLE_BACK("namesStyle.back"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_BACK}. */
@@ -1343,6 +1335,11 @@ public enum MessageKey {
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_AUTO}. */
     NAMES_STYLE_AUTO_TIP("namesStyle.auto.tip"),
     /** The estimate under that button; arguments are the fewest and most minutes and the dial's name. */
+    NAMES_STYLE_AUTO_ABOUT("namesStyle.auto.about"),
+    PROGRESS_NAMES_PURPOSE("progress.namesPurpose"),
+    RECURRING_HELP_LINK("namesStyle.recurring.helpLink"),
+    RECURRING_HELP_LINK_TIP("namesStyle.recurring.helpLink.tip"),
+    RECURRING_HELP("namesStyle.recurring.help"),
     NAMES_STYLE_AUTO_ESTIMATE("namesStyle.auto.estimate"),
     /** The estimate when the fewest and most minutes are the same; arguments are the minutes and the dial's name. */
     NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimateOne"),
@@ -2283,8 +2280,6 @@ public enum MessageKey {
     RESULTS_SECTION_NAMES("results.section.names"),
     /** Heading of the recurring terms' rows in a sectioned results list; argument 0 is their count. */
     RESULTS_SECTION_TERMS("results.section.terms"),
-    /** The three counts at the top of the results dialog: added, removed, changed. */
-    RESULTS_SUMMARY("results.summary"),
     /** Heading of the rows an operation added, with their count. */
     RESULTS_ADDED("results.added"),
     /** Heading of the added rows a scan found in the book's text without a model, with their count. */
@@ -2750,7 +2745,76 @@ public enum MessageKey {
     /** Error shown when the chosen file has other content. */
     DIALOG_FIND_BOOK_DIFFERENT("dialog.findBook.different"),
     /** Title of the system file dialog. */
-    DIALOG_FIND_BOOK_CHOOSER_TITLE("dialog.findBook.chooserTitle");
+    DIALOG_FIND_BOOK_CHOOSER_TITLE("dialog.findBook.chooserTitle"),
+    /** Names and style: the line at the top that says what the screen is for and that it may be skipped. */
+    NAMES_STYLE_PURPOSE("namesStyle.purpose"),
+    /** Names and style: the note under the Glossary card's title. */
+    NAMES_STYLE_GLOSSARY_NOTE("namesStyle.glossary.note"),
+    /** Names and style: the empty glossary's button that scans the book for names. */
+    NAMES_STYLE_EMPTY_SCAN("namesStyle.empty.scan"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_EMPTY_SCAN}. */
+    NAMES_STYLE_EMPTY_SCAN_TIP("namesStyle.empty.scan.tip"),
+    /** Recurring terms: header of the column that counts how often the book writes each term. */
+    NAMES_STYLE_RECURRING_COLUMN_USED("namesStyle.recurring.column.used"),
+    /** Hover explanation of the column labelled by {@link #NAMES_STYLE_RECURRING_COLUMN_USED}. */
+    NAMES_STYLE_RECURRING_COLUMN_USED_TIP("namesStyle.recurring.column.used.tip"),
+    /** Recurring terms: a cell of the Used column; argument 0 is the count. */
+    NAMES_STYLE_RECURRING_USED("namesStyle.recurring.used"),
+    /** Names and style: the note shown while a translation is at work. */
+    NAMES_STYLE_RUN_BANNER("namesStyle.run.banner"),
+    /** Names and style: the note shown while work in the background writes to the screen. */
+    NAMES_STYLE_HIDDEN_BANNER("namesStyle.hidden.banner"),
+    NAMES_STYLE_HIDDEN_NOTE("namesStyle.hidden.note"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_SCAN("progress.names.step.scan"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_NAMES("progress.names.step.names"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_TERMS_SCAN("progress.names.step.termsScan"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_TERMS_REVIEW("progress.names.step.termsReview"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_TERMS_READ("progress.names.step.termsRead"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_NAMES_TRANSLATE("progress.names.step.namesTranslate"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_TERMS_TRANSLATE("progress.names.step.termsTranslate"),
+    /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_WRITE("progress.names.step.write"),
+    /** Progress dialog: a finished stage's count of requests; argument 0 is the count. */
+    PROGRESS_STAGE_REQUESTS_DONE("progress.stage.requests.done"),
+    /** Progress dialog: a running stage's count of requests so far; argument 0 is the count. */
+    PROGRESS_STAGE_REQUESTS_RUNNING("progress.stage.requests.running"),
+    /** Results view: the counts, the steps and the time of the operation; arguments 0 added, 1 removed, 2 changed, 3 steps, 4 time. */
+    PROGRESS_RESULTS_SUBTITLE("progress.results.subtitle"),
+    /** Results view: the counts alone, for an operation that announced no steps; arguments 0 added, 1 removed, 2 changed. */
+    PROGRESS_RESULTS_COUNTS("progress.results.counts"),
+    /** Results view: the tab that lists the rows the operation changed. */
+    PROGRESS_RESULTS_TAB_CHANGES("progress.results.tab.changes"),
+    /** Results view: the tab that lists the steps the operation took. */
+    PROGRESS_RESULTS_TAB_STEPS("progress.results.tab.steps"),
+    /** Results view: header of the column with each row's kind of change. */
+    PROGRESS_RESULTS_COLUMN_CHANGE("progress.results.column.change"),
+    /** Results view: the badge of an added row. */
+    PROGRESS_RESULTS_BADGE_ADDED("progress.results.badge.added"),
+    /** Results view: the badge of a removed row. */
+    PROGRESS_RESULTS_BADGE_REMOVED("progress.results.badge.removed"),
+    /** Results view: the badge of a changed row. */
+    PROGRESS_RESULTS_BADGE_CHANGED("progress.results.badge.changed"),
+    /** Results view: the button that closes it. */
+    PROGRESS_RESULTS_DONE("progress.results.done"),
+    /** Hover explanation of the button labelled by {@link #PROGRESS_RESULTS_DONE}. */
+    PROGRESS_RESULTS_DONE_TIP("progress.results.done.tip"),
+    /** Calls view: the line under its title. */
+    PROGRESS_CALLS_PURPOSE("progress.calls.purpose"),
+    /** A length of time in minutes and seconds, spelled out. */
+    DURATION_SPELLED_MS("duration.spelled.ms"),
+    /** A length of time under a minute, spelled out. */
+    DURATION_SPELLED_S("duration.spelled.s"),
+    /** A whole number of minutes, spelled out. */
+    DURATION_SPELLED_M("duration.spelled.m"),
+    /** A length of time in hours and minutes, spelled out. */
+    DURATION_SPELLED_HM("duration.spelled.hm");
 
     private final String key;
 

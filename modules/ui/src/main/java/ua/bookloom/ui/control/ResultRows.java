@@ -1,4 +1,4 @@
-package ua.bookloom.ui.dialog;
+package ua.bookloom.ui.control;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeKind;
@@ -31,9 +30,10 @@ import ua.bookloom.ui.state.ChangeSection;
 final class ResultRows {
 
     static final double ROW_HEIGHT = 40;
-    static final double WIDTH = 820;
+    static final double WIDTH = 940;
 
     private static final double TERM_WIDTH = 150;
+    private static final double BADGE_WIDTH = 100;
     private static final double VALUE_WIDTH = 200;
     private static final double WHY_WIDTH = 170;
     private static final double ACTION_WIDTH = 100;
@@ -111,11 +111,28 @@ final class ResultRows {
         };
     }
 
+    private static MessageKey badgeKey(final ChangeKind kind) {
+        return switch (kind) {
+            case ADDED -> MessageKey.PROGRESS_RESULTS_BADGE_ADDED;
+            case REMOVED -> MessageKey.PROGRESS_RESULTS_BADGE_REMOVED;
+            case CHANGED -> MessageKey.PROGRESS_RESULTS_BADGE_CHANGED;
+        };
+    }
+
+    private static String badgeStyle(final ChangeKind kind) {
+        return switch (kind) {
+            case ADDED -> "chip-ok";
+            case REMOVED -> "chip-err";
+            case CHANGED -> "chip-info";
+        };
+    }
+
     Node headings() {
         final HBox heads = new HBox(SPACING);
         heads.setId("results-columns");
         heads.setPadding(new Insets(0, SPACING, 0, SPACING));
         heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, "kv-key"));
+        heads.getChildren().add(text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, "kv-key"));
         heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, "kv-key"));
         heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, "kv-key"));
         if (hasReasons) {
@@ -146,6 +163,8 @@ final class ResultRows {
 
         private final Label heading = new Label();
         private final Label term = text("", TERM_WIDTH, "glossary-term");
+        private final Label badge = new Label();
+        private final HBox badgeBox = new HBox(badge);
         private final Label before = text("", VALUE_WIDTH, "kv-value");
         private final Label after = text("", VALUE_WIDTH, "kv-value");
         private final Label why = text("", WHY_WIDTH, "muted");
@@ -171,7 +190,11 @@ final class ResultRows {
             action.setPrefWidth(ACTION_WIDTH);
             action.setMinWidth(Region.USE_PREF_SIZE);
             row.setAlignment(Pos.CENTER_LEFT);
-            row.getChildren().addAll(term, before, after);
+            badge.getStyleClass().add("chip");
+            badgeBox.setPrefWidth(BADGE_WIDTH);
+            badgeBox.setMinWidth(BADGE_WIDTH);
+            badgeBox.setMaxWidth(BADGE_WIDTH);
+            row.getChildren().addAll(term, badgeBox, before, after);
             if (hasReasons) {
                 row.getChildren().add(why);
             }
@@ -196,6 +219,9 @@ final class ResultRows {
 
         private void fill(final ChangeRow shown) {
             show(term, shown.term());
+            badge.setText(messages.get(badgeKey(shown.kind())));
+            badge.getStyleClass().removeIf(name -> name.startsWith("chip-"));
+            badge.getStyleClass().add(badgeStyle(shown.kind()));
             show(before, shown.before());
             show(after, shown.after());
             show(why, shown.reason() == null ? NO_REASON : shown.reason());

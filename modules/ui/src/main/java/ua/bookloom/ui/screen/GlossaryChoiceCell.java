@@ -3,6 +3,7 @@ package ua.bookloom.ui.screen;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.collections.FXCollections;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -38,6 +39,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
     private final Function<GlossaryEntry, T> read;
     private final Function<GlossaryEntry, String> shownLabel;
     private final BiConsumer<String, T> write;
+    private final ObservableBooleanValue frozen;
     private @Nullable ComboBox<T> combo;
     private boolean filling;
 
@@ -48,7 +50,8 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
             final Function<T, String> label,
             final Function<GlossaryEntry, T> read,
             final Function<GlossaryEntry, String> shownLabel,
-            final BiConsumer<String, T> write) {
+            final BiConsumer<String, T> write,
+            final ObservableBooleanValue frozen) {
         super(Tips.installOnHover(messages, new Label(), tip));
         this.messages = messages;
         this.tip = tip;
@@ -57,8 +60,10 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         this.read = read;
         this.shownLabel = shownLabel;
         this.write = write;
+        this.frozen = frozen;
         final Label shown = control();
         shown.getStyleClass().add("glossary-choice");
+        shown.disableProperty().bind(frozen);
         shown.setFocusTraversable(true);
         shown.setMaxWidth(Double.MAX_VALUE);
         shown.setOnMouseClicked(event -> open(true));
@@ -101,6 +106,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         final ComboBox<T> made =
                 Tips.installOnHover(messages, new ComboBox<>(FXCollections.observableArrayList(values)), tip);
         made.setMaxWidth(Double.MAX_VALUE);
+        made.disableProperty().bind(frozen);
         made.setConverter(new LabelConverter());
         made.valueProperty().addListener((observed, was, now) -> chosen(now));
         made.focusedProperty().addListener((observed, was, now) -> {

@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.StepState;
  * @param itemRef the segment or chapter it is about, or {@code null} when it covers none
  * @param result how it ended, or {@code null} while it has not ended
  * @param text what it read and wrote, in plain words, or {@code null} when the work said nothing of it
+ * @param requests for a stage row, the requests it sent so far; {@link #NO_COUNT} for every other step
  */
 public record StepEntry(
         StepKind kind,
@@ -25,7 +26,11 @@ public record StepEntry(
         @Nullable StepState state,
         @Nullable String itemRef,
         @Nullable StepResult result,
-        @Nullable StepText text) {
+        @Nullable StepText text,
+        int requests) {
+
+    /** The {@code requests} of a step that is not a stage row and counts none. */
+    public static final int NO_COUNT = -1;
 
     /** What the pipeline calls the step of the nth brief sample, followed by n (BriefSteps). */
     public static final String SAMPLE_LABEL = "sample-";
@@ -34,6 +39,28 @@ public record StepEntry(
     public StepEntry {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(label, "label");
+    }
+
+    /** Builds a step that counts no requests. */
+    public StepEntry(
+            final StepKind kind,
+            final String label,
+            final int index,
+            final @Nullable StepState state,
+            final @Nullable String itemRef,
+            final @Nullable StepResult result,
+            final @Nullable StepText text) {
+        this(kind, label, index, state, itemRef, result, text, NO_COUNT);
+    }
+
+    /**
+     * The same stage row with the requests it has sent.
+     *
+     * @param count the requests sent so far
+     * @return a copy that carries the count
+     */
+    public StepEntry withRequests(final int count) {
+        return new StepEntry(kind, label, index, state, itemRef, result, text, count);
     }
 
     /**

@@ -107,7 +107,7 @@ check before saving, and All calls (the translation's model calls). Its parts:
 **Continue in background** is offered only for long work — the names pass and the export pass; short work (brief
 suggestion, file name, tests) cannot be hidden. Hiding collapses the dialog into the title bar's activity chip; a click
 on the chip reopens the same dialog with its state. While work is hidden, the screen it writes to is **read-only**
-behind a banner ("Names is running in the background — this screen is read-only until it ends"), and other model work is
+behind a banner ("Names is running in the background", then "This screen is read-only until it ends, so its results and your edits do not overwrite each other." and a Show progress button), and other model work is
 refused with a toast offering "Show progress". When it finishes, the chip goes and a toast with **Review the results**
 appears; nothing pops up by itself. A press of Cancel disables the button until the work ends; work that cannot be
 stopped shows no Cancel and says so. Esc hides long work, the export's last check included, and cancels short work;
@@ -219,7 +219,7 @@ so the rules are Java (mockup README, "Layout and sizes"):
 | **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` | `LayoutFitTest` (it absorbed the former title-bar fit test), at 960×640 and 1920×1080 (1000 high in the headless platform), in `en` and `uk` |
 
 Built today, the same intent is met screen by screen: `TwoColumns` switches by its own width (Import 760 px, Book Brief
-700 px, Names & style 1040 px), and the 960 × 640 fit above holds.
+700 px, Names & style 1388 px, the wide class less the 52 px of screen padding), and the 960 × 640 fit above holds.
 
 ## global-patterns {#global-patterns}
 
@@ -502,7 +502,7 @@ is narrower (one child order either way, so Tab reads the same); the tables fill
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |
 |------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| Prepare names automatically | `Button` (`names-style-auto`, secondary), above both cards, with a muted line under it (`names-style-auto-subtitle`) | One press runs the whole names pass (15i.N8) with the chosen model: scan, decide the names, scan and read the recurring terms, translate both, lock by rule. The line states the plan's estimate for the brief's dial ("about 15–25 min on Balanced"), asked of the port again when the screen opens and when a change of the dial has been saved, and blank when the port cannot say. Off while any model action runs, and with no model chosen it reports so in the banner and calls nothing. Built today the shared busy card shows it and that card's Cancel is the Stop; **Planned:** it runs in the progress dialog (`#names-progress-dialog`), whose Cancel is the Stop, and a stopped or failed pass changes neither table. Its results view is "Automatic names — results" with a "Names (n)" section and a "Recurring terms (n)" section, a Revert on each row and one Undo all across both; "Show changed rows" turns on both cards' changed filters |
+| Prepare names automatically | A warm card (`names-style-auto-bar`) above both cards: the title, a line on what it does, a muted line under it (`names-style-auto-subtitle`) and the primary `Button` (`names-style-auto`) | One press runs the whole names pass (15i.N8) with the chosen model: scan, decide the names, scan and read the recurring terms, translate both, lock by rule. The line states the plan's estimate for the brief's dial ("about 15–25 min on Balanced"), asked of the port again when the screen opens and when a change of the dial has been saved, and blank when the port cannot say. Off while any model action runs, and with no model chosen it reports so in the banner and calls nothing. Built today the shared busy card shows it and that card's Cancel is the Stop; **Planned:** it runs in the progress dialog (`#names-progress-dialog`), whose Cancel is the Stop, and a stopped or failed pass changes neither table. Its results view is "Prepare names automatically — results" with a "Names (n)" section and a "Recurring terms (n)" section, a Revert on each row and one Undo all across both; "Show changed rows" turns on both cards' changed filters |
 | Confirm suggested genders | `Button` (`names-style-confirm-genders`, ghost), beside Prepare names automatically | Shown only while a character's gender is a suggestion (marked "suggested"); one press turns every suggested character gender into the person's (15j.J3), kept in the results dialog with Undo all, which puts the suggested marks back. Off while any model action runs. The export notice and the Start question name suggested genders "suggested — confirm", apart from unknown ones |
 | Glossary table         | `TableView`                             | Columns: Term, Type (Planned: Kind), Target (Planned: Translation), Gender, Locked and an unnamed last column holding the row's ✕, every one resizable (`CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN`, minimum widths 140 / 96 / 170 / 110 / 64 / 36); Term, Type, Gender and Locked sort by header, ties by term. An empty target shows the placeholder "No target" in its field; Gender reads "—" for a row that is not a character, "(suggested)" follows only a gender the book's pronouns or the first-name list suggested (Planned: evidence "he ×6", or "(likely)"); a row the last model operation changed is marked by the row's left edge (the `:changed` row pseudo-class), never by a chip in the Term cell, with a tooltip saying so (G9). Start translation asks "N entries have no target — the model will choose" (listing them) when any entry has no target |
 | Recurring terms table  | `TableView`                             | Columns: Term, Target (the rendering the run keeps: the person's, else the learned or most used one), an unnamed "→ Glossary" column that moves the term to the glossary, and an unnamed last column holding the ✕. Built today there is no Used column: a learned rendering is the Target. **Planned (mockup README):** Term · Translation · Used ("13 times") · → Glossary. Same placeholder and changed-row mark |
@@ -554,14 +554,14 @@ and shows no table, no scan, and no `Start translation`.
 | 7 | Suggest translations for repeated words | `terms-translate` |
 | 8 | Write the results | — |
 
-Each row has its count ("25 of 30 requests", "about 4 requests"). Figures: "53 % · 26 of about 49 steps · Left about 1
+Each row has its request count ("25 requests so far", "6 requests", "no request", "Not started"; never "of N"). Figures: "53 % · 26 of about 49 steps · Left about 1
 min". Detail: a plain sentence; What the model reads (candidates with counts and quotes) \| What it says; Detailed adds
 the info grid, the stage code and the parsed prompt; a finished step shows its result, one not started says so.
 Footer: Continue in background · "Cancel writes nothing." · Cancel; Esc hides. The warm card on the screen says "About 1
 min. You can undo it all afterwards." **Results** (the same card when done; wide; fits the window): subtitle "5 added ·
 0 removed · 1 changed · 49 steps · 1 min 48 s"; tabs **Changes** (Entry \| Change \| Before \| After, grouped) and
-**Steps**; footer Undo all · Show changed rows · Done (`ChangeResultsDialog` becomes the Results view; `ChangeResults`
-and Undo all stay).
+**Steps**; footer Undo all · Show changed rows · Done (`ProgressDialog.results` is the Results view; `ChangeResults`
+and Undo all stay). Names & style states: **empty** (the glossary offers Scan the book and + Add), **translation at work** (a banner "Translating is going on. Changes apply to the next segments translated.", both tables stay editable), **read-only** (the pass runs in the background: a banner and every editing control off) and **Results**..
 
 Requirements: FR-GLOSS-01..05. P6 reference: Names & style / Glossary — proposed.
 

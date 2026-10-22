@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import lombok.AccessLevel;
@@ -50,19 +51,20 @@ final class GlossaryTable {
     private static final Comparator<GlossaryEntry> BY_TERM =
             Comparator.comparing(GlossaryEntry::term, Collator.getInstance());
 
-    static TermTableCard.Rows<GlossaryEntry> rows(final Messages messages, final NamesStyleViewModel model) {
+    static TermTableCard.Rows<GlossaryEntry> rows(
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return new TermTableCard.Rows<>(
                 model.rows(),
                 model.marks().glossary(),
                 GlossaryEntry::id,
                 entry -> Arrays.asList(entry.term(), entry.target()),
                 BY_TERM,
-                columns(messages, model),
+                columns(messages, model, frozen),
                 List.of(model.restorations()));
     }
 
     private static List<TableColumn<GlossaryEntry, GlossaryEntry>> columns(
-            final Messages messages, final NamesStyleViewModel model) {
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return List.of(
                 column(
                         messages,
@@ -81,15 +83,15 @@ final class GlossaryTable {
                         TYPE_WIDTH,
                         TYPE_MIN,
                         Comparator.comparing(GlossaryEntry::type),
-                        () -> typeCell(messages, model)),
-                targetColumn(messages, model),
-                genderColumn(messages, model),
-                lockColumn(messages, model),
-                removeColumn(messages, model));
+                        () -> typeCell(messages, model, frozen)),
+                targetColumn(messages, model, frozen),
+                genderColumn(messages, model, frozen),
+                lockColumn(messages, model, frozen),
+                removeColumn(messages, model, frozen));
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> targetColumn(
-            final Messages messages, final NamesStyleViewModel model) {
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return column(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_TARGET,
@@ -98,11 +100,11 @@ final class GlossaryTable {
                 TARGET_WIDTH,
                 TARGET_MIN,
                 null,
-                () -> new GlossaryCells.TargetCell(messages, model));
+                () -> new GlossaryCells.TargetCell(messages, model, frozen));
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> genderColumn(
-            final Messages messages, final NamesStyleViewModel model) {
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return column(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER,
@@ -111,11 +113,11 @@ final class GlossaryTable {
                 GENDER_WIDTH,
                 GENDER_MIN,
                 Comparator.comparing(GlossaryEntry::gender),
-                () -> genderCell(messages, model));
+                () -> genderCell(messages, model, frozen));
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> lockColumn(
-            final Messages messages, final NamesStyleViewModel model) {
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return column(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_LOCKED,
@@ -124,11 +126,11 @@ final class GlossaryTable {
                 LOCK_WIDTH,
                 LOCK_MIN,
                 Comparator.comparing(GlossaryEntry::locked),
-                () -> new GlossaryCells.LockCell(messages, model));
+                () -> new GlossaryCells.LockCell(messages, model, frozen));
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> removeColumn(
-            final Messages messages, final NamesStyleViewModel model) {
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return column(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_REMOVE,
@@ -137,7 +139,7 @@ final class GlossaryTable {
                 REMOVE_WIDTH,
                 REMOVE_MIN,
                 null,
-                () -> new GlossaryCells.RemoveCell(messages, model));
+                () -> new GlossaryCells.RemoveCell(messages, model, frozen));
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> column(
@@ -152,7 +154,8 @@ final class GlossaryTable {
         return TermTableCard.column(messages, header, shown, tip, width, minWidth, order, cell);
     }
 
-    private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {
+    private static GlossaryCells.EntryCell<?> typeCell(
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
@@ -160,10 +163,12 @@ final class GlossaryTable {
                 type -> GlossaryLabels.type(messages, type),
                 GlossaryEntry::type,
                 entry -> GlossaryLabels.type(messages, entry.type()),
-                model::setType);
+                model::setType,
+                frozen);
     }
 
-    private static GlossaryCells.EntryCell<?> genderCell(final Messages messages, final NamesStyleViewModel model) {
+    private static GlossaryCells.EntryCell<?> genderCell(
+            final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         return new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
@@ -171,7 +176,8 @@ final class GlossaryTable {
                 gender -> GlossaryLabels.gender(messages, gender),
                 GlossaryEntry::gender,
                 entry -> genderLabel(messages, entry),
-                model::setGender);
+                model::setGender,
+                frozen);
     }
 
     // Only a character has a gender to settle; a place or a term shows a dash instead of "unknown". A character the

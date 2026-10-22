@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,10 @@ public final class SqliteDatabase implements AutoCloseable {
     private final Jdbi jdbi;
     private final WriteExecutor writer;
     private final Set<String> warnedCallSites = ConcurrentHashMap.newKeySet();
+    // Every read and write holds the read side while it runs; close takes the write side, so it waits for them and
+    // nothing starts after it, which could otherwise open a connection and recreate the -wal files of a closed file.
+    private final ReentrantReadWriteLock use = new ReentrantReadWriteLock();
+    private boolean closed;
 
     private SqliteDatabase(final Path file, final SQLiteDataSource dataSource) {
         this.file = file;
@@ -113,14 +118,30 @@ public final class SqliteDatabase implements AutoCloseable {
         Objects.requireNonNull(work, "work");
         checkThread(operation);
         log.debug("Read operation={}", operation);
+        use.readLock().lock();
         try {
+            if (closed) {
+                return refusedAfterClose(operation);
+            }
             return Result.ok(jdbi.withHandle(work::apply));
         } catch (RuntimeException e) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Storage failure", "The data could not be read.", "storage " + operation, e);
             log.error("Storage read failed operation={} code={}", operation, error.code(), e);
             return Result.err(error);
+        } finally {
+            use.readLock().unlock();
         }
+    }
+
+    private static <T> Result<T> refusedAfterClose(final String operation) {
+        log.debug("Storage {} refused: the database is closed", operation);
+        return Result.err(AppError.of(
+                ErrorCode.internal,
+                "Storage closed",
+                "The data could not be reached because the application is closing.",
+                "storage " + operation,
+                null));
     }
 
     /**
@@ -135,13 +156,24 @@ public final class SqliteDatabase implements AutoCloseable {
         Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(work, "work");
         checkThread(operation);
-        return writer.execute(operation, work);
+        use.readLock().lock();
+        try {
+            return closed ? refusedAfterClose(operation) : writer.execute(operation, work);
+        } finally {
+            use.readLock().unlock();
+        }
     }
 
     @Override
     public void close() {
         log.info("Database closing file={}", file.getFileName());
-        writer.close();
+        use.writeLock().lock();
+        try {
+            closed = true;
+            writer.close();
+        } finally {
+            use.writeLock().unlock();
+        }
     }
 
     private void checkThread(final String operation) {

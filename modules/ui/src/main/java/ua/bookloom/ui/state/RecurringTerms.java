@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import ua.bookloom.api.project.LexiconEntry;
 
@@ -20,6 +21,7 @@ public final class RecurringTerms {
     private final Supplier<String> project;
     private final Supplier<Consumer<Runnable>> current;
     private final ModelActions model;
+    private final RecurringUsage usage;
 
     /**
      * The screen's model actions on the recurring terms; each runs through the glossary's one-at-a-time model runs.
@@ -40,6 +42,17 @@ public final class RecurringTerms {
         this.project = Objects.requireNonNull(project, "project");
         this.current = Objects.requireNonNull(current, "current");
         this.model = Objects.requireNonNull(model, "model");
+        this.usage = new RecurringUsage(actions.lexicon(), actions.calls(), project, current);
+        rows.addListener((ListChangeListener<LexiconEntry>) change -> {
+            if (!rows.isEmpty()) {
+                usage.reload();
+            }
+        });
+    }
+
+    /** {@return how often the book writes each term, for the Used column} */
+    public RecurringUsage usage() {
+        return usage;
     }
 
     /**
@@ -131,6 +144,7 @@ public final class RecurringTerms {
     /** Loads the rows of a project, scanning when it has none; called as the screen opens. */
     void show(final String projectId) {
         actions.rows().clear();
+        usage.clear();
         actions.show(projectId, current.get());
     }
 }

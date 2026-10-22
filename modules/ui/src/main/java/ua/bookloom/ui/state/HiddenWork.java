@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -70,6 +71,44 @@ public final class HiddenWork {
      */
     public ObjectBinding<@Nullable ViewNames> screen() {
         return screen;
+    }
+
+    /**
+     * Whether a screen is read-only because work in the background writes to it.
+     *
+     * @param view the screen whose editable controls follow the binding
+     * @return a binding that is {@code true} while hidden work writes to {@code view}
+     */
+    public BooleanBinding freezes(final ViewNames view) {
+        Objects.requireNonNull(view, "view");
+        return Bindings.createBooleanBinding(() -> screen.get() == view, screen);
+    }
+
+    /** Brings the progress of the oldest work in the background back, as the title bar's "open" does. */
+    public void showProgress() {
+        final Activity hidden = activity.get();
+        if (hidden == null) {
+            log.debug("show progress asked with no work in the background");
+            return;
+        }
+        log.debug("showing the progress of {} #{}", hidden.kind(), hidden.id());
+        activities.reveal(hidden.id());
+    }
+
+    /**
+     * Says that work in the background ended and offers its results, which open only when the person asks.
+     *
+     * @param kind the work that ended
+     * @param review what "Review the results" does
+     */
+    public void finished(final ActivityKind kind, final Runnable review) {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(review, "review");
+        log.info("{} ended in the background; the results are offered in a message", kind);
+        toasts.raiseWithAction(
+                ToastOccasion.HIDDEN_WORK_FINISHED,
+                new ToastAction(MessageKey.WORK_HIDDEN_RESULTS, MessageKey.WORK_HIDDEN_RESULTS_TIP, review),
+                messages.get(kind.label()));
     }
 
     /**
