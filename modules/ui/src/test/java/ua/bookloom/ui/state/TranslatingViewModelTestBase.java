@@ -2,8 +2,10 @@ package ua.bookloom.ui.state;
 
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import com.google.inject.Injector;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,7 @@ import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
@@ -24,6 +27,8 @@ import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.UiTestInjector;
+import ua.bookloom.ui.dialog.RecordingContinuePrompt;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -44,6 +49,9 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     static final String PROVIDER = "ProviderError";
     static final String NONE = "none";
 
+    protected Injector graph;
+    protected RecordingContinuePrompt continuePrompt;
+    protected ScriptedModelCatalog catalog;
     protected CurrentProject current;
     protected RecordingToasts toasts;
     protected RecordingErrorPresenter errors;
@@ -60,12 +68,22 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     @BeforeEach
     void setUpTranslatingFixtures() {
-        current = new CurrentProject();
         toasts = new RecordingToasts();
         errors = new RecordingErrorPresenter();
         models = ScriptedChatModelFactory.ok();
         engine = ScriptedTranslationEngine.returning(job);
         projects = new ScriptedProjectService();
+        continuePrompt = new RecordingContinuePrompt();
+        catalog = ScriptedModelCatalog.idle();
+        // The real guard, over the real navigator and project holder of a window graph; its background work runs
+        // inline.
+        graph = UiTestInjector.builder(Locale.ENGLISH)
+                .projects(projects)
+                .catalog(catalog)
+                .continuePrompt(continuePrompt)
+                .backgroundExecutor(new DirectExecutor())
+                .build();
+        current = graph.getInstance(CurrentProject.class);
         queued = new QueuedExecutor();
         prepExecutor = queued;
         imports = onFx(() -> new ImportViewModel(
@@ -91,7 +109,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                         activities),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
-                activities);
+                activities,
+                new MemorySettings());
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
@@ -108,7 +127,17 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 (providerId, modelId) -> Result.ok(ContextLength.unknown()),
                 activities);
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
+                mirror,
+                runner,
+                current,
+                settings,
+                starter,
+                toasts,
+                errors,
+                desk,
+                new DirectExecutor(),
+                activities,
+                graph.getInstance(ContinueGuard.class)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

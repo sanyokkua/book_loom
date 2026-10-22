@@ -698,7 +698,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - **Compare:** `go('projects')` with projects and the empty state.
   - Edit the FR-PERSIST-01 project lines and add FR-UI-15 (Projects) in `01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`.
     → :ui, docs
-- [ ] 6.1b Add the first-launch look and the AI-model questions on continue, so the first screen says whether
+- [x] 6.1b Add the first-launch look and the AI-model questions on continue, so the first screen says whether
   translation can start and a continued run never silently uses another model.
   - **Satisfies:** llm-provider "Look once for a local AI program at first launch"; llm-provider "Store what the
     first-launch look found"; llm-provider "Look again when the person presses Try again"; app-shell "Look again when
@@ -709,7 +709,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     it on request; a program with zero models counts as not found; saves what answered and sets `model.current` for one
     model, asks which one for several.
   - The continue dialogs: "AI model not answering" and "A different model is chosen" compare `RunRecord.model` with
-    `model.current` (design D11).
+    `model.current` (design D11), different-model first, then the answer test. Two meanings of "Try again": on
+    Projects it repeats the look (`LocalModelProbe`); in the continue dialog it re-asks the one stored model only.
   - Tests: `LocalModelProbeTest` (exactly `http://127.0.0.1:11434` and `http://127.0.0.1:1234/v1`, one call each, no
     second look; Try again calls again; zero models → "No AI model found"); a WireMock test of
     `ModelCatalog.listModels(ProviderConfig)` in both dialects receiving only `GET /api/tags` / `GET /v1/models`; the

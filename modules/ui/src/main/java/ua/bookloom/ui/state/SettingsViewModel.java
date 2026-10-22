@@ -18,10 +18,13 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
 
@@ -39,6 +42,8 @@ public final class SettingsViewModel {
     private final ModelListing modelListing;
     private final ProviderTestRunner tests;
     private final ProviderConfigs configs;
+    private final SettingsRepository settingsStore;
+    private final ExecutorService executor;
     private final ObservableList<ProviderRow> loaded = FXCollections.observableArrayList();
     private final ObservableList<ProviderRow> providers = FXCollections.unmodifiableObservableList(loaded);
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
@@ -57,6 +62,7 @@ public final class SettingsViewModel {
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param activities the work under way, which a provider test registers with and the inference test must not
      *     overlap
+     * @param settingsStore where the model chosen last time is read from, on the background executor
      */
     @Inject
     public SettingsViewModel(
@@ -65,8 +71,10 @@ public final class SettingsViewModel {
             final ModelListing modelListing,
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final SettingsRepository settingsStore) {
         this.configs = Objects.requireNonNull(configs, "configs");
+        this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
         this.tests = new ProviderTestRunner(
                 Objects.requireNonNull(verifier, "verifier"),
@@ -78,26 +86,74 @@ public final class SettingsViewModel {
         selectedProviderId.addListener((observed, was, now) -> refreshNotes());
         model.addListener((observed, was, now) -> refreshNotes());
         refreshNotes();
-        executor.execute(this::loadProviders);
+        this.executor = executor;
+        executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));
     }
 
     /** Reads the registry off the FX thread: storage is never touched where the window draws. */
-    private void loadProviders() {
+    private void loadProviders(final Optional<ModelSelection> stored, final Runnable afterPublished) {
         log.debug("loading the providers on {}", Thread.currentThread().getName());
         final List<ProviderRow> rows = rowsOf(configs);
         if (Platform.isFxApplicationThread()) {
-            publishProviders(rows);
+            publishProviders(rows, stored, afterPublished);
         } else {
-            Platform.runLater(() -> publishProviders(rows));
+            Platform.runLater(() -> publishProviders(rows, stored, afterPublished));
         }
     }
 
-    private void publishProviders(final List<ProviderRow> rows) {
+    private Optional<ModelSelection> readCurrentModel() {
+        final Result<Optional<ModelSelection>> read = settingsStore.get(AppSetting.CURRENT_MODEL);
+        if (read.isErr()) {
+            log.warn(
+                    "the stored model could not be read: {}",
+                    Objects.requireNonNull(read.error(), "error").code());
+            return Optional.empty();
+        }
+        return Objects.requireNonNull(read.data(), "data");
+    }
+
+    private void publishProviders(
+            final List<ProviderRow> rows, final Optional<ModelSelection> stored, final Runnable afterPublished) {
         loaded.setAll(rows);
         if (selectedProviderId.get().isEmpty()) {
             rows.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
         }
+        stored.ifPresent(this::adopt);
         log.info("settings ready: {} provider(s), selected '{}'", rows.size(), selectedProviderId.get());
+        afterPublished.run();
+    }
+
+    /**
+     * Reads the registry again, on the background executor, and then runs {@code afterPublished} on the FX thread, so
+     * a caller that has just saved a provider can adopt it once its row exists. FX thread only.
+     *
+     * @param afterPublished what to run once the rows are published
+     */
+    void reloadProviders(final Runnable afterPublished) {
+        Objects.requireNonNull(afterPublished, "afterPublished");
+        log.debug("providers reload requested");
+        executor.execute(() -> loadProviders(Optional.empty(), afterPublished));
+    }
+
+    /** Reads the registry again, on the background executor, and publishes the rows. FX thread only. */
+    public void reloadProviders() {
+        reloadProviders(() -> {});
+    }
+
+    /**
+     * Makes a provider and model the current ones, as if the person had picked them in Settings.
+     *
+     * @param chosen the provider and model; ignored when no row carries the provider
+     */
+    public void adopt(final ModelSelection chosen) {
+        Objects.requireNonNull(chosen, "chosen");
+        if (providers.stream().noneMatch(row -> row.id().equals(chosen.providerId()))) {
+            log.debug("adopt ignored: no provider '{}' is listed", chosen.providerId());
+            return;
+        }
+        selectedProviderId.set(chosen.providerId());
+        model.set(chosen.modelId());
+        log.info("model adopted: {}/{}", chosen.providerId(), chosen.modelId());
     }
 
     private void refreshNotes() {

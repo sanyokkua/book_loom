@@ -4,7 +4,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.project.BookBrief;
 
 /**
  * What the dashboard banner says instead of the plain run-state banner: a provider failure, a refusal in place, or the
@@ -78,6 +80,23 @@ public sealed interface RunNotice {
 
         Input(final String token) {
             this.token = token;
+        }
+
+        /**
+         * The first input a start lacks.
+         *
+         * @param brief the open book's brief, or {@code null} while no book is open
+         * @param modelChosen whether a provider and model are chosen
+         * @return the first missing input in the order a person supplies them, or empty when none is missing
+         */
+        public static Optional<Input> firstMissing(final @Nullable BookBrief brief, final boolean modelChosen) {
+            if (brief == null) {
+                return Optional.of(BOOK);
+            }
+            if (brief.targetLanguage() == null) {
+                return Optional.of(TARGET_LANGUAGE);
+            }
+            return modelChosen ? Optional.empty() : Optional.of(MODEL);
         }
 
         /**

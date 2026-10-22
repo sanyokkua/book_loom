@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -34,16 +33,13 @@ import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
-import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.ModelPickPrompt;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
-import ua.bookloom.ui.i18n.MessageKey;
-import ua.bookloom.ui.state.CsvFileChooser;
-import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ProjectActions;
-import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
@@ -117,6 +113,9 @@ public final class UiTestInjector {
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
+        private @Nullable ContinuePrompt continuePrompt;
+        private @Nullable ModelPickPrompt modelPickPrompt;
+        private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
         private SettingsRepository settings = new MemorySettings();
         private FileRevealer revealer = new RecordingFileRevealer();
@@ -235,6 +234,24 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** Replaces the real continue questions with this fake, so the test can read what was asked and answer it. */
+        public Builder continuePrompt(final ContinuePrompt value) {
+            continuePrompt = Objects.requireNonNull(value, "continuePrompt");
+            return this;
+        }
+
+        /** Replaces the real "which model" question of the first-launch look with this fake. */
+        public Builder modelPickPrompt(final ModelPickPrompt value) {
+            modelPickPrompt = Objects.requireNonNull(value, "modelPickPrompt");
+            return this;
+        }
+
+        /** Replaces the daemon pool behind {@code @BackgroundExecutor}, e.g. with a calling-thread executor. */
+        public Builder backgroundExecutor(final ExecutorService value) {
+            backgroundExecutor = Objects.requireNonNull(value, "backgroundExecutor");
+            return this;
+        }
+
         /**
          * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
          * first opening a book and choosing languages; only a test of the gating itself asks for it.
@@ -256,7 +273,22 @@ public final class UiTestInjector {
                             new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
                             new ScriptedPorts(),
                             replacementPrompt(prompt),
+                            replacementQuestions(),
                             open));
+        }
+
+        private Module replacementQuestions() {
+            return new AbstractModule() {
+                @Override
+                protected void configure() {
+                    if (continuePrompt != null) {
+                        bind(ContinuePrompt.class).toInstance(continuePrompt);
+                    }
+                    if (modelPickPrompt != null) {
+                        bind(ModelPickPrompt.class).toInstance(modelPickPrompt);
+                    }
+                }
+            };
         }
 
         private Module replacementPrompt(final @Nullable ReplaceRunPrompt replacement) {
@@ -280,7 +312,7 @@ public final class UiTestInjector {
                 bind(DiagnosticLog.class).toInstance(diagnosticLog);
                 bind(ExecutorService.class)
                         .annotatedWith(BackgroundExecutor.class)
-                        .toInstance(daemonExecutor());
+                        .toInstance(backgroundExecutor != null ? backgroundExecutor : daemonExecutor());
                 bindStores();
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
@@ -301,34 +333,6 @@ public final class UiTestInjector {
                 bind(SettingsRepository.class).toInstance(settings);
                 bind(Clock.class).toInstance(Clock.fixed(NOW, ZoneOffset.UTC));
             }
-        }
-    }
-
-    /** Every workflow step open, whatever the book and its languages. */
-    private static final class OpenStepsModule extends AbstractModule {
-
-        @Override
-        protected void configure() {
-            bind(StepLocks.class)
-                    .toInstance(step -> new ReadOnlyObjectWrapper<@Nullable MessageKey>().getReadOnlyProperty());
-        }
-    }
-
-    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the choosers. */
-    private static final class ExportExtrasModule extends AbstractModule {
-
-        private final FileRevealer revealer;
-
-        ExportExtrasModule(final FileRevealer revealer) {
-            this.revealer = revealer;
-        }
-
-        @Override
-        protected void configure() {
-            bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
-            bind(FileRevealer.class).toInstance(revealer);
-            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
-            bind(CsvFileChooser.class).toInstance(new RecordingCsvChooser());
         }
     }
 

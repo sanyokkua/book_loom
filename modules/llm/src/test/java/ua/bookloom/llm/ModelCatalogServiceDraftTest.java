@@ -1,9 +1,12 @@
 package ua.bookloom.llm;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -111,6 +114,58 @@ class ModelCatalogServiceDraftTest {
 
         assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.validation);
         assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    // IF the first-launch look sent anything but one listing GET, THEN it would reach a local program with more than
+    // ADR-0044 allows (no inference, no show, no retry).
+    @Test
+    void listModels_ollamaDraft_receivesOnlyApiTags() {
+        server.stubFor(get(urlEqualTo("/api/tags"))
+                .willReturn(okJson("{\"models\":[{\"name\":\"gemma4:e4b\",\"model\":\"gemma4:e4b\",\"size\":1}]}")));
+
+        final Result<List<ModelInfo>> result = catalog(Map.of()).listModels(ollamaDraft("ollama"));
+
+        assertThat(Objects.requireNonNull(result.data(), "models")).containsExactly(new ModelInfo("gemma4:e4b"));
+        assertThat(server.getAllServeEvents()).hasSize(1);
+        server.verify(1, getRequestedFor(urlEqualTo("/api/tags")));
+        server.verify(0, postRequestedFor(anyUrl()));
+    }
+
+    @Test
+    void listModels_openAiDraft_receivesOnlyV1Models() {
+        server.stubFor(get(urlEqualTo("/v1/models"))
+                .willReturn(okJson("{\"data\":[{\"id\":\"qwen3:8b\",\"object\":\"model\"}]}")));
+
+        final Result<List<ModelInfo>> result =
+                catalog(Map.of(KEY_VARIABLE, KEY_VALUE)).listModels(openAiDraft("lmstudio"));
+
+        assertThat(Objects.requireNonNull(result.data(), "models")).containsExactly(new ModelInfo("qwen3:8b"));
+        assertThat(server.getAllServeEvents()).hasSize(1);
+        server.verify(1, getRequestedFor(urlEqualTo("/v1/models")));
+        server.verify(0, postRequestedFor(anyUrl()));
+    }
+
+    // IF a listing that failed were retried, THEN a closed program would be asked twice and the look could not promise
+    // one call per address.
+    @Test
+    void listModels_ollamaDraftAnswers503_sendsExactlyOneRequestAndFails() {
+        server.stubFor(get(urlEqualTo("/api/tags")).willReturn(aResponse().withStatus(503)));
+
+        final Result<List<ModelInfo>> result = catalog(Map.of()).listModels(ollamaDraft("ollama"));
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(server.getAllServeEvents()).hasSize(1);
+    }
+
+    @Test
+    void listModels_openAiDraftAnswers503_sendsExactlyOneRequestAndFails() {
+        server.stubFor(get(urlEqualTo("/v1/models")).willReturn(aResponse().withStatus(503)));
+
+        final Result<List<ModelInfo>> result =
+                catalog(Map.of(KEY_VARIABLE, KEY_VALUE)).listModels(openAiDraft("lmstudio"));
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(server.getAllServeEvents()).hasSize(1);
     }
 
     private ProviderConfig ollamaDraft(String id) {

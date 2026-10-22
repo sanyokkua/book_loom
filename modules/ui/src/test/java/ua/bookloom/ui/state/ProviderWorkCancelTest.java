@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /**
@@ -68,7 +69,13 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
         executor = queued;
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.idle();
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), errors, executor, activities));
+                new FakeProviderConfigs(),
+                verifier,
+                newModelListing(),
+                errors,
+                executor,
+                activities,
+                new MemorySettings()));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         fx(() -> {

@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
@@ -99,7 +100,13 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), errors, executor, activities));
+                new FakeProviderConfigs(),
+                verifier,
+                newModelListing(),
+                errors,
+                executor,
+                activities,
+                new MemorySettings()));
         awaitProvidersLoaded();
         return built;
     }

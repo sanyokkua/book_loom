@@ -345,7 +345,7 @@ tense for "you".
 | fell back | "translated again alone" | tooltip: "the batch reply lacked this id" |
 | omission · ratio 0.29 | "may be missing words — if it reads well, press Accept" | `omission · length ratio 0.29, expected 0.35–3.6` |
 | run (noun) | "translation", "translating" ("Stop translating?") | Projects, Detailed |
-| Retry / Send again / Retry now | **"Try again now"** (the one retry verb) | — |
+| Retry / Send again / Retry now | **"Try again now"** (the one retry verb for a run); **"Try again"** is a check the person starts: the Projects AI-model line (repeats the look) and the continue dialogs (re-asks the one model) | — |
 | Skip segment | "Skip these 4 segments" (always the count) | — |
 | Stay paused | — (the toolbar's Pause does it) | — |
 | Suggest with model | "✦ Fill in from the book" | — |
@@ -781,7 +781,7 @@ BookLoom handles a refusal the same way for every optional setting:
 | Open another book? | Dropping a book while a translation exists — Open as a new project (primary) · Replace and delete this translation · Cancel | `ReplaceRunDialog` |
 | Model work is running | Leaving during long work — Stay · Continue in background | `LeaveDialog`, `LeaveGuard` |
 | Error with details | Unreadable file and other hard failures — plain message, "Details for support", Copy details | `notify/ErrorDialog` |
-| AI model not answering / A different model is chosen | Continuing a project — Try again · Use another AI model… · Not now; Use the earlier model · Continue with the new one | new (persistence) |
+| AI model not answering / A different model is chosen | Continuing a project — Try again (primary) · Use another AI model… · Not now; Use the earlier model (primary) · Continue with the new one; Escape is Not now / starts nothing | `ContinueDialog` |
 | Same language pair · Rename · Translate into another language | PN | new |
 | About | Title bar | `AboutDialog` |
 

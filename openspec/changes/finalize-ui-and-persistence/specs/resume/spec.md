@@ -73,7 +73,7 @@ WHEN a project is opened after a restart, the system SHALL make the run's step p
 
 ### Requirement: Ask when the stored AI model does not answer
 
-WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen.
+WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen. "Does not answer" means the model's program fails to list its models, or lists some and not this one (a listing, never a model call); a program that lists none counts as answering. The stored model is read from the project's latest run each time Continue is chosen. Escape counts as Not now. Try again here asks only that one model again: it does not look for programs and saves nothing (it is not the Projects screen's Try again).
 
 **Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
 
@@ -95,7 +95,7 @@ WHEN the person chooses Continue translation and the AI model the project's stor
 
 ### Requirement: Ask which model to use when a different one is chosen
 
-WHEN the person chooses Continue translation and the current AI model differs from the one the project's stored run used, the system SHALL show the dialog "A different model is chosen" with Use the earlier model and Continue with the new one, and SHALL start the run only on one of them.
+WHEN the person chooses Continue translation and the current AI model differs from the one the project's stored run used, the system SHALL show the dialog "A different model is chosen" with Use the earlier model and Continue with the new one, and SHALL start the run only on one of them. This question comes first; the answer test of the model that was chosen follows it. Escape starts nothing. Use the earlier model leaves the current model unchanged.
 
 **Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: continuing a half-translated book with another model can change its voice, so the person decides whether to keep the earlier model or accept the change.
 

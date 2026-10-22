@@ -52,6 +52,7 @@ import ua.bookloom.ui.notify.Toasts;
 public final class TranslatingViewModel {
 
     private final StateMirror mirror;
+    private final ContinueGuard guard;
     private final TranslationRunner runner;
     private final CurrentProject current;
     private final SettingsViewModel settings;
@@ -63,6 +64,12 @@ public final class TranslatingViewModel {
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ObjectBinding<@Nullable ActivityKind> otherWork;
+    // The countdown republishes the recovery every second; only whether it still waits changes the controls.
+    private final ChangeListener<@Nullable RecoveryState> onRecovery = (observed, was, now) -> {
+        if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
+            refreshControls();
+        }
+    };
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
@@ -82,6 +89,7 @@ public final class TranslatingViewModel {
      * @param desk where the count of undecided segments is read
      * @param executor the daemon executor that read runs on, never the FX thread
      * @param activities the model work under way, which holds start and resume while it runs
+     * @param guard what a continued run asks about the model before anything is prepared
      */
     @Inject
     public TranslatingViewModel(
@@ -94,7 +102,9 @@ public final class TranslatingViewModel {
             final ErrorPresenter errors,
             final ReviewDesk desk,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final ContinueGuard guard) {
+        this.guard = Objects.requireNonNull(guard, "guard");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.current = Objects.requireNonNull(current, "current");
@@ -113,12 +123,7 @@ public final class TranslatingViewModel {
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         otherWork.addListener((observed, was, now) -> refreshControls());
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
-        // The countdown republishes the recovery every second; only whether it still waits changes the controls.
-        mirror.review().recovery().addListener((observed, was, now) -> {
-            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
-                refreshControls();
-            }
-        });
+        mirror.review().recovery().addListener(onRecovery);
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
@@ -283,17 +288,6 @@ public final class TranslatingViewModel {
         }
     }
 
-    private Optional<RunNotice.Input> missingInput(final boolean modelChosen) {
-        final BookBrief brief = current.brief().get();
-        if (brief == null) {
-            return Optional.of(RunNotice.Input.BOOK);
-        }
-        if (brief.targetLanguage() == null) {
-            return Optional.of(RunNotice.Input.TARGET_LANGUAGE);
-        }
-        return modelChosen ? Optional.empty() : Optional.of(RunNotice.Input.MODEL);
-    }
-
     private boolean offered(final String control, final ControlState state) {
         final boolean enabled = state.isEnabled();
         log.debug(
@@ -306,7 +300,8 @@ public final class TranslatingViewModel {
 
     private void begin(final boolean announce) {
         final Optional<ModelSelection> selection = settings.selection();
-        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
+        final Optional<RunNotice.Input> missing =
+                RunNotice.Input.firstMissing(current.brief().get(), selection.isPresent());
         if (missing.isPresent()) {
             log.debug("run refused: {} is missing", missing.get());
             notice.set(new RunNotice.MissingInput(missing.get()));
@@ -316,7 +311,12 @@ public final class TranslatingViewModel {
         final ModelSelection chosen = selection.orElseThrow();
         log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
         preparing.set(true);
-        starter.start(chosen, failure -> finishPreparing(failure, announce));
+        guard.confirm(chosen, model -> launch(model, announce), () -> preparing.set(false));
+    }
+
+    private void launch(final ModelSelection model, final boolean announce) {
+        log.debug("launching the run with {}/{}", model.providerId(), model.modelId());
+        starter.start(model, failure -> finishPreparing(failure, announce));
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */

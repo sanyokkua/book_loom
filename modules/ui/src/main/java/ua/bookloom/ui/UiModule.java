@@ -17,6 +17,10 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.dialog.ContinueDialog;
+import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.ModelPickDialog;
+import ua.bookloom.ui.dialog.ModelPickPrompt;
 import ua.bookloom.ui.dialog.ReplaceRunDialog;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
@@ -28,6 +32,7 @@ import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.ContinueGuard;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
@@ -41,6 +46,7 @@ import ua.bookloom.ui.state.LastOpened;
 import ua.bookloom.ui.state.LastProjectRecorder;
 import ua.bookloom.ui.state.LaunchProject;
 import ua.bookloom.ui.state.LedgerFigures;
+import ua.bookloom.ui.state.LocalModelProbe;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.PendingProjectActions;
 import ua.bookloom.ui.state.PlatformFileRevealer;
@@ -96,6 +102,8 @@ public final class UiModule extends AbstractModule {
         bind(ModalErrorPresenter.class);
         bind(ErrorPresenter.class).to(ModalErrorPresenter.class);
         bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
+        bind(ContinuePrompt.class).to(ContinueDialog.class);
+        bind(ModelPickPrompt.class).to(ModelPickDialog.class);
     }
 
     private void bindState() {
@@ -118,6 +126,8 @@ public final class UiModule extends AbstractModule {
         bind(ProjectsViewModel.class);
         bind(ProjectOpener.class);
         bind(LaunchProject.class);
+        bind(LocalModelProbe.class);
+        bind(ContinueGuard.class);
         bind(ProjectActions.class).to(PendingProjectActions.class);
         // Eager, so a project opened from any screen is remembered for the next launch.
         bind(LastProjectRecorder.class).asEagerSingleton();

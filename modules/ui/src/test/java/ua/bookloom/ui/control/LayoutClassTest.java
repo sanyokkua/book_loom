@@ -26,6 +26,8 @@ class LayoutClassTest extends FxTestBase {
     public void start(final Stage stage) {
         host = new StackPane();
         stage.setScene(new Scene(host, 800, 300));
+        // A test that sized the shared window earlier would otherwise leave this scene as wide as that test made it.
+        stage.sizeToScene();
         stage.show();
     }
 

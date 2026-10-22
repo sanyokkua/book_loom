@@ -14,6 +14,7 @@ import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LastOpened;
+import ua.bookloom.ui.state.LocalModelProbe;
 import ua.bookloom.ui.state.ProjectsState;
 import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.RunStateSource;
@@ -47,6 +48,7 @@ public final class ProjectsController {
      * @param navigator where New translation and Settings lead
      * @param lastOpened the words for when a project was last opened
      * @param runState the chosen AI model the first-launch card names
+     * @param probe the look for a local AI program the card shows and can repeat
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -56,12 +58,13 @@ public final class ProjectsController {
             final Messages messages,
             final Navigator navigator,
             final LastOpened lastOpened,
-            final RunStateSource runState) {
+            final RunStateSource runState,
+            final LocalModelProbe probe) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.list = new ProjectsListView(messages, viewModel, lastOpened);
-        this.empty = new ProjectsEmptyView(messages, navigator, runState);
+        this.empty = new ProjectsEmptyView(messages, navigator, runState, Objects.requireNonNull(probe, "probe"));
     }
 
     @FXML

@@ -438,7 +438,7 @@ The application SHALL use plain words on the main screens and SHALL show chunks,
 
 ### Requirement: Use the words of the vocabulary on the main screens
 
-The application SHALL say "AI model" and not "provider", "to review" and not "flagged", "translated", "fixed automatically" and "left" for accepted, repaired and remaining, "translation" for a run, "Try again now" for every retry, and "Skip these 4 segments" with the real count. It SHALL explain "segment" once, in the tooltip of every segment count: "A segment is a paragraph, heading or caption — one piece of the book's text."
+The application SHALL say "AI model" and not "provider", "to review" and not "flagged", "translated", "fixed automatically" and "left" for accepted, repaired and remaining, "translation" for a run, "Try again now" for every retry of a run and "Try again" for a check the person starts (the Projects AI-model line and the two continue dialogs), and "Skip these 4 segments" with the real count. It SHALL explain "segment" once, in the tooltip of every segment count: "A segment is a paragraph, heading or caption — one piece of the book's text."
 
 **Source**: `docs/specification/mockups/README.md#words-w--user-facing-vocabulary`. In plain words: the words of the engine are not the words of a person translating a book. The owner kept "segment" as the unit and asked that it be explained where it is counted. Ukrainian follows the same rules.
 
@@ -559,7 +559,7 @@ WHERE Settings › Automation "Reopen the last project" is on, the window SHALL 
 
 ### Requirement: Show a first-launch state on Projects when none exist
 
-WHILE no project exists, the application SHALL show on Projects "Translate a book on your own computer", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". It SHALL hide search and the filter, and show "+ New translation" with a list too.
+WHILE no project exists, the application SHALL show on Projects "Translate a book on your own computer", How it works in four steps (choose a book · check the languages · let it translate · save the translated book, with "your original file is never changed"), the line with the result of the first-launch look, and "+ New translation". While the look runs the line reads `Looking for an AI program on this computer…` with `Try again` visible but disabled; a screen that shows no look this session still offers `Try again` under `No AI model found`. When several models are found the person is asked which one to use; dismissing that question with `Not now` shows the `No AI model found` line and `Try again` asks again. The words `(found on this computer when BookLoom first opened)` appear only in the session whose first-launch look found the model, and are not stored. It SHALL hide search and the filter, and show "+ New translation" with a list too.
 
 **Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: the first screen a new person sees must say what the program does, what to press, and whether the AI model it needs was found. The look itself is specified by llm-provider ("Look once for a local AI program at first launch").
 

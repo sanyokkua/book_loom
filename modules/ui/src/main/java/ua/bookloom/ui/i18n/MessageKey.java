@@ -1931,6 +1931,48 @@ public enum MessageKey {
     DIALOG_EARLIER_WORK_START_OVER("dialog.earlierWork.startOver"),
     /** Hover explanation of the control labelled by {@link #DIALOG_EARLIER_WORK_START_OVER}. */
     DIALOG_EARLIER_WORK_START_OVER_TIP("dialog.earlierWork.startOver.tip"),
+    /** Title of the question asked when the model a translation continues with does not answer. */
+    DIALOG_CONTINUE_NOT_ANSWERING_TITLE("dialog.continue.notAnswering.title"),
+    /** Body of the not-answering question: provider, model. */
+    DIALOG_CONTINUE_NOT_ANSWERING_BODY("dialog.continue.notAnswering.body"),
+    /** Button that checks again whether the model answers. */
+    DIALOG_CONTINUE_TRY_AGAIN("dialog.continue.tryAgain"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_CONTINUE_TRY_AGAIN}. */
+    DIALOG_CONTINUE_TRY_AGAIN_TIP("dialog.continue.tryAgain.tip"),
+    /** Button that opens Settings to choose another model. */
+    DIALOG_CONTINUE_USE_ANOTHER("dialog.continue.useAnother"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_CONTINUE_USE_ANOTHER}. */
+    DIALOG_CONTINUE_USE_ANOTHER_TIP("dialog.continue.useAnother.tip"),
+    /** Button that leaves the translation as it is. */
+    DIALOG_CONTINUE_NOT_NOW("dialog.continue.notNow"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_CONTINUE_NOT_NOW}. */
+    DIALOG_CONTINUE_NOT_NOW_TIP("dialog.continue.notNow.tip"),
+    /** Title of the question asked when the chosen model differs from the one the translation started with. */
+    DIALOG_CONTINUE_DIFFERENT_TITLE("dialog.continue.different.title"),
+    /** Body of the different-model question: earlier provider, earlier model, chosen provider, chosen model. */
+    DIALOG_CONTINUE_DIFFERENT_BODY("dialog.continue.different.body"),
+    /** Button that continues with the model the translation started with. */
+    DIALOG_CONTINUE_EARLIER("dialog.continue.earlier"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_CONTINUE_EARLIER}. */
+    DIALOG_CONTINUE_EARLIER_TIP("dialog.continue.earlier.tip"),
+    /** Button that continues with the model chosen now. */
+    DIALOG_CONTINUE_NEW("dialog.continue.new"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_CONTINUE_NEW}. */
+    DIALOG_CONTINUE_NEW_TIP("dialog.continue.new.tip"),
+    /** Title of the question asking which of several found models to use. */
+    DIALOG_MODEL_PICK_TITLE("dialog.modelPick.title"),
+    /** Body of the model-pick question: provider. */
+    DIALOG_MODEL_PICK_BODY("dialog.modelPick.body"),
+    /** Hover explanation of one model in the pick list: model. */
+    DIALOG_MODEL_PICK_OPTION_HINT("dialog.modelPick.optionHint"),
+    /** Button that uses the picked model. */
+    DIALOG_MODEL_PICK_USE("dialog.modelPick.use"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MODEL_PICK_USE}. */
+    DIALOG_MODEL_PICK_USE_TIP("dialog.modelPick.use.tip"),
+    /** Button that leaves the model unchosen. */
+    DIALOG_MODEL_PICK_NOT_NOW("dialog.modelPick.notNow"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MODEL_PICK_NOT_NOW}. */
+    DIALOG_MODEL_PICK_NOT_NOW_TIP("dialog.modelPick.notNow.tip"),
     /** Title of the question asked before starting with glossary entries that have no target. */
     DIALOG_NO_TARGET_TITLE("dialog.noTarget.title"),
     /** Body of that question; argument 0 is the number of entries without a target. */
@@ -2490,7 +2532,17 @@ public enum MessageKey {
     /** Button that opens Settings to set up another AI program. */
     PROJECTS_MODEL_OTHER_PROGRAM("projects.model.otherProgram"),
     /** Hover explanation of the other-program button. */
-    PROJECTS_MODEL_OTHER_PROGRAM_TIP("projects.model.otherProgram.tip");
+    PROJECTS_MODEL_OTHER_PROGRAM_TIP("projects.model.otherProgram.tip"),
+    /** The first-launch card's model line while the look for a local AI program runs. */
+    PROJECTS_MODEL_LOOKING("projects.model.looking"),
+    /** The model line when the first-launch look found the model: provider, model. */
+    PROJECTS_MODEL_READY_FOUND("projects.model.readyFound"),
+    /** Help under the model line when no AI program answered. */
+    PROJECTS_MODEL_NONE_HELP("projects.model.noneHelp"),
+    /** Button that looks again for a local AI program. */
+    PROJECTS_MODEL_TRY_AGAIN("projects.model.tryAgain"),
+    /** Hover explanation of the control labelled by {@link #PROJECTS_MODEL_TRY_AGAIN}. */
+    PROJECTS_MODEL_TRY_AGAIN_TIP("projects.model.tryAgain.tip");
 
     private final String key;
 

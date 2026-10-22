@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -92,7 +93,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                         activities),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
-                activities);
+                activities,
+                new MemorySettings());
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */

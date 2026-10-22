@@ -383,8 +383,12 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   interrupted when it opens. It shows **Ready to continue** and never continues by itself.
 - **How it continues.** Continue translation starts at the first pending segment through the existing resume path
   (`RunStarter`).
-- **The AI-model questions.** "AI model not answering" and "A different model is chosen" compare `RunRecord.model`
-  (now a `ModelSelection`) with `model.current`.
+- **The AI-model questions.** `state/ContinueGuard` runs inside `TranslatingViewModel.begin`, after the missing-input
+  check and before preparing (a paused resume skips it). It reads `RunRecord.model` of the latest run through
+  `ProjectService.list()` on every confirm and compares it with the chosen model. Order: "A different model is chosen"
+  first, then the answer test of the model to use ("not answering" = `ModelCatalog.listModels(providerId)` failed or
+  lacks the model; an empty list is answering). "Try again" there re-lists only that model; it never runs
+  `LocalModelProbe`. Escape is Not now / cancel.
 - **Reopen last project.** A listener on `CurrentProject` (`LastProjectRecorder`) writes `app.lastProject` whenever a project opens, from the Projects screen or from Import. At launch, with
   `automation.reopenLastProject` on and the project still stored, the window opens it; otherwise, or when it is gone,
   the window opens Projects.
@@ -439,7 +443,9 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
    there are several.
 3. It sets `firstLaunch.probed` whatever the result. The flag lives in the database, so a fresh database (another
    schema version, renamed aside) runs the look once more (ADR-0044).
-4. Projects shows the result; "Try again" runs steps 1–3 again because the person asked.
+4. Projects shows the result; "Try again" runs steps 1–3 again because the person asked. Stored providers use the
+   default timeouts (the 1 s connect timeout is for the look alone), and the look sends one request per address
+   (the retry lives in the verifier, not in the listing).
 5. A program that answers with zero models counts as not found.
 
 Tests: `LocalModelProbeTest` fakes the catalog and asserts the exact addresses, one call each and no second look; a

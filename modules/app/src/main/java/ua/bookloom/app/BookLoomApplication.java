@@ -156,7 +156,9 @@ public final class BookLoomApplication extends Application {
         if (ResolveAll.isEnabled() && initial.isPresent()) {
             ResolveAll.run(injector(), injector().getInstance(Navigator.class), initial.get());
         } else {
-            injector().getInstance(WindowLaunch.class).openLastProject();
+            final WindowLaunch launch = injector().getInstance(WindowLaunch.class);
+            launch.openLastProject();
+            launch.lookForLocalModel();
         }
     }
 
