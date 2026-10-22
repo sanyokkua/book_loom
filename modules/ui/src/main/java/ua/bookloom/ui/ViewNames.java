@@ -14,8 +14,14 @@ import ua.bookloom.ui.i18n.MessageKey;
  * the single place that says so, so a screen task turns its entry on by adding a path here and nowhere else.
  */
 public enum ViewNames {
-    /** Project list; has no screen and no step number. */
-    PROJECTS(MessageKey.NAV_PROJECTS, MessageKey.NAV_PROJECTS_TIP, NavGroup.WORKFLOW, null, null, Feather.FOLDER),
+    /** Project list, the way into the workflow; has no step number. */
+    PROJECTS(
+            MessageKey.NAV_PROJECTS,
+            MessageKey.NAV_PROJECTS_TIP,
+            NavGroup.WORKFLOW,
+            null,
+            "/ua/bookloom/ui/screen/projects.fxml",
+            Feather.FOLDER),
     /** Choosing the book to translate. */
     IMPORT(
             MessageKey.NAV_IMPORT,

@@ -28,7 +28,10 @@ class EarlierProjectsTest {
                         "Book",
                         Instant.EPOCH,
                         Instant.EPOCH),
-                decided);
+                decided,
+                decided,
+                null,
+                null);
     }
 
     @Test

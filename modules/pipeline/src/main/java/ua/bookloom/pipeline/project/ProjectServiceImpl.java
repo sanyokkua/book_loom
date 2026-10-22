@@ -87,7 +87,7 @@ public final class ProjectServiceImpl implements ProjectService {
     @Override
     public Result<List<ProjectSummary>> list() {
         try {
-            return new ProjectSummaries(documents, projects, segments).list();
+            return new ProjectSummaries(documents, projects, segments, runs).list();
         } catch (Throwable cause) {
             return Result.err(internalError("list the projects", cause));
         }

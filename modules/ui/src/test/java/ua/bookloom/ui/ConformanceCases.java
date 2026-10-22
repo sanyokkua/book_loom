@@ -66,7 +66,9 @@ final class ConformanceCases {
         BOOK_REPORTED,
         GLOSSARY_LISTED,
         BOOK_WITHOUT_LANGUAGE,
-        BRIEF_SUGGESTED
+        BRIEF_SUGGESTED,
+        PROJECTS_LISTED,
+        PROJECTS_EMPTY
     }
 
     /**
@@ -374,7 +376,10 @@ final class ConformanceCases {
 
     /** Every screen, the import screen's open-book cases and the names screen's included. */
     static final List<Screen> SCREENS = Stream.of(
-                    BASE.stream(), ImportConformanceCases.SCREENS.stream(), NamesStyleConformanceCases.SCREENS.stream())
+                    BASE.stream(),
+                    ImportConformanceCases.SCREENS.stream(),
+                    NamesStyleConformanceCases.SCREENS.stream(),
+                    ProjectsConformanceCases.SCREENS.stream())
             .flatMap(cases -> cases)
             .toList();
 }

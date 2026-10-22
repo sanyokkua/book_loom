@@ -22,6 +22,8 @@ class ScreenConformanceCoverageTest {
                         "SHELL",
                         "SHELL_RUN_STATUS",
                         "SETTINGS",
+                        "PROJECTS",
+                        "PROJECTS_EMPTY",
                         "IMPORT",
                         "BOOK_BRIEF",
                         "IMPORT_DETECTED",
@@ -49,7 +51,7 @@ class ScreenConformanceCoverageTest {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        assertThat(available).hasSize(6);
+        assertThat(available).hasSize(7);
         assertThat(covered).containsAll(available);
     }
 }

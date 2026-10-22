@@ -85,7 +85,47 @@ final class ConformancePreparations {
             case GLOSSARY_LISTED -> listAGlossary();
             case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
             case BRIEF_SUGGESTED -> suggestTheBrief();
+            case PROJECTS_LISTED -> listProjects();
+            case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
         }
+    }
+
+    // Projects listed after the screen was first shown: go away and come back, as a person does, then wait for the
+    // card.
+    private void listProjects() throws TimeoutException {
+        final Path source = Path.of("/books/earth-gravity.epub");
+        projects.willList(List.of(ProjectFixtures.summary(
+                ProjectFixtures.project(
+                        ScriptedProjectService.storedProjectOf(source).id(),
+                        "earth-gravity.epub",
+                        ProjectFixtures.BOOK_HASH,
+                        "en",
+                        "uk",
+                        ua.bookloom.api.project.NameOrigin.AUTO,
+                        "Earth Gravity · EN → UK",
+                        UiTestInjector.NOW),
+                10,
+                ProjectFixtures.run(
+                        ScriptedProjectService.storedProjectOf(source).id(), JobState.PAUSED),
+                null)));
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        onFx(() -> navigator.navigate(ViewNames.SETTINGS));
+        onFx(() -> navigator.navigate(ViewNames.PROJECTS));
+        awaitNode("projects-screen");
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> navigator.content().get().lookup(".card") != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void awaitNode(final String id) throws TimeoutException {
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> navigator.content().get().lookup("#" + id) != null));
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void openABook() throws TimeoutException {

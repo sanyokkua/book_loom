@@ -37,10 +37,17 @@ import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.LastOpened;
+import ua.bookloom.ui.state.LastProjectRecorder;
+import ua.bookloom.ui.state.LaunchProject;
 import ua.bookloom.ui.state.LedgerFigures;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.PendingProjectActions;
 import ua.bookloom.ui.state.PlatformFileRevealer;
 import ua.bookloom.ui.state.ProgressFigures;
+import ua.bookloom.ui.state.ProjectActions;
+import ua.bookloom.ui.state.ProjectOpener;
+import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStarter;
@@ -107,6 +114,13 @@ public final class UiModule extends AbstractModule {
         bind(RunStateSource.class);
         bind(ReviewPauseFollower.class);
         bind(DiagnosticActions.class);
+        bind(LastOpened.class);
+        bind(ProjectsViewModel.class);
+        bind(ProjectOpener.class);
+        bind(LaunchProject.class);
+        bind(ProjectActions.class).to(PendingProjectActions.class);
+        // Eager, so a project opened from any screen is remembered for the next launch.
+        bind(LastProjectRecorder.class).asEagerSingleton();
         // Eager, so the first book opened is told to the detailed log before any screen asks for the reporter.
         bind(SessionReporter.class).asEagerSingleton();
         // Eager, so a narrator the run inferred reaches the brief even when no brief screen exists when the run ends.
@@ -124,6 +138,7 @@ public final class UiModule extends AbstractModule {
         bind(LocaleProvider.class).to(OsLocaleProvider.class);
         bind(GuiceControllerFactory.class);
         bind(Navigator.class);
+        bind(WindowLaunch.class);
         bind(ModalHost.class);
         bind(LanguageNames.class);
         bind(DialogFeedback.class);

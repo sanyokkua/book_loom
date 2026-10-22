@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
 
-/** Which workflow steps are closed, and why, from the open book and the languages of its brief. */
+/** Which workflow steps are closed, and why, from the open project and the languages of its brief. */
 class StepAvailabilityTest {
 
     private final CurrentProject project = new CurrentProject();
@@ -25,22 +25,24 @@ class StepAvailabilityTest {
 
     @ParameterizedTest
     @CsvSource({
+        "IMPORT",
         "BOOK_BRIEF",
         "NAMES_STYLE",
         "TRANSLATING",
         "EXPORT",
     })
-    void lockReason_noBook_lockedWithOpenABookFirst(final ViewNames step) {
-        // IF a step opened with no book, THEN its screen would show a project that does not exist.
-        assertThat(availability.lockReason(step)).contains(MessageKey.NAV_LOCKED_NO_BOOK);
+    void lockReason_noProject_everyWorkflowStepIsLockedWithStepsUnlockWhenAProjectIsOpen(final ViewNames step) {
+        // IF a step opened with no project, THEN its screen would show a project that does not exist; Import is
+        // locked too, because a new translation reaches it through the toolbar, not through the step.
+        assertThat(availability.lockReason(step)).contains(MessageKey.NAV_LOCKED_NO_PROJECT);
     }
 
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"IMPORT", "SETTINGS", "PROJECTS"})
-    void lockReason_noBook_importSettingsAndInertStayOpen(final ViewNames step) {
-        // IF Import were locked with no book, THEN there would be no way to open one; Settings needs no book.
+            names = {"SETTINGS", "PROJECTS"})
+    void lockReason_noProject_projectsAndSettingsStayOpen(final ViewNames step) {
+        // IF Projects were locked with no project, THEN there would be no way to open one; Settings needs none.
         assertThat(availability.lockReason(step)).isEmpty();
     }
 
@@ -101,6 +103,6 @@ class StepAvailabilityTest {
         openBook("en", "uk");
         project.clear();
 
-        assertThat(availability.lock(ViewNames.EXPORT).get()).isEqualTo(MessageKey.NAV_LOCKED_NO_BOOK);
+        assertThat(availability.lock(ViewNames.EXPORT).get()).isEqualTo(MessageKey.NAV_LOCKED_NO_PROJECT);
     }
 }

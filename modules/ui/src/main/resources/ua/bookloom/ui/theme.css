@@ -458,6 +458,12 @@
     -fx-padding: 6px 8px 4px 8px;
 }
 
+.nav-hint {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 2px 10px 6px 12px;
+}
+
 .nav-item {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
@@ -1016,6 +1022,13 @@
     -fx-border-width: 1px;
     -fx-border-radius: 9px;
     -fx-padding: 14px;
+}
+
+.projects-empty-title {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 12px 0 6px 0;
 }
 
 .card-title {
@@ -2455,6 +2468,17 @@
 
 .menu-more > .arrow-button > .arrow {
     -fx-background-color: -color-muted;
+}
+
+/* The Projects row's ⋯ shows no arrow, as the mockup's does. */
+.menu-more-bare > .arrow-button {
+    -fx-padding: 0;
+}
+
+.menu-more-bare > .arrow-button > .arrow {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-shape: "M0 0";
 }
 
 .context-menu {

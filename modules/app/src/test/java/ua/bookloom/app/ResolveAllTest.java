@@ -63,7 +63,7 @@ class ResolveAllTest {
 
     private static ResolveAll.Outcome onFx(final Injector injector, final ResolveAll.Navigation navigation)
             throws Exception {
-        return WaitForAsyncUtils.asyncFx(() -> ResolveAll.check(injector, navigation, ViewNames.IMPORT))
+        return WaitForAsyncUtils.asyncFx(() -> ResolveAll.check(injector, navigation, ViewNames.PROJECTS))
                 .get();
     }
 
@@ -83,7 +83,7 @@ class ResolveAllTest {
         assertThat(outcome.loadedViews()).containsExactlyElementsOf(AVAILABLE);
         assertThat(outcome.resolvedPorts())
                 .contains("ReviewDesk", "ExportService", "GlossaryService", "ProjectService", "TranslationEngine");
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.PROJECTS);
     }
 
     @Test
@@ -104,14 +104,11 @@ class ResolveAllTest {
     @Test
     void check_exportScreenMissing_namesExportAsFailed() throws Exception {
         final Injector injector = boot().injector();
-        final Navigator real = injector.getInstance(Navigator.class);
-        final ResolveAll.Navigation noExport = view -> {
-            if (view == ViewNames.EXPORT) {
-                return Optional.ofNullable(real.currentView().get());
-            }
-            real.navigate(view);
-            return Optional.ofNullable(real.currentView().get());
-        };
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        final ResolveAll.Navigation real = ResolveAll.navigation(navigator);
+        final ResolveAll.Navigation noExport = view -> view == ViewNames.EXPORT
+                ? Optional.ofNullable(navigator.currentView().get())
+                : real.show(view);
 
         final ResolveAll.Outcome outcome = onFx(injector, noExport);
 

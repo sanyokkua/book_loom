@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.time.Clock;
+import java.time.ZoneId;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -64,7 +65,8 @@ public final class PipelineModule extends AbstractModule {
 
     @Provides
     Clock clock() {
-        return Clock.systemUTC();
+        // Instants do not care about the zone; the window words "today" and "yesterday" by the person's calendar days.
+        return Clock.system(ZoneId.systemDefault());
     }
 
     @Provides

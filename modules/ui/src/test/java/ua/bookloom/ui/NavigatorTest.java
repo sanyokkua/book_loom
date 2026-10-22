@@ -24,8 +24,8 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenBookForTest;
 
 /**
- * The navigator swaps the content region by enum constant and refuses an inert one. It is built by the real
- * {@link UiModule} graph and loads the real placeholder FXML on the headless toolkit.
+ * The navigator swaps the content region by enum constant, refuses a locked step and opens Import empty on request.
+ * It is built by the real {@link UiModule} graph and loads the real FXML on the headless toolkit.
  */
 class NavigatorTest extends FxTestBase {
 
@@ -69,31 +69,14 @@ class NavigatorTest extends FxTestBase {
         assertThat(navigator.content().get().lookup("#export-screen")).isNotNull();
     }
 
-    // IF an inert entry could be activated, THEN the current view or the content would change for a screen that
-    // does not exist.
-    @ParameterizedTest
-    @EnumSource(
-            value = ViewNames.class,
-            names = {"PROJECTS"})
-    void navigate_inertView_isRefusedAndNothingChanges(final ViewNames inert) {
-        navigateOnFxThread(navigator, ViewNames.IMPORT);
-        final Parent before = navigator.content().get();
-
-        final boolean accepted = navigateOnFxThread(navigator, inert);
-
-        assertThat(accepted).isFalse();
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
-        assertThat(navigator.content().get()).isSameAs(before);
-    }
-
+    // IF Projects had no screen, THEN the first entry of the workflow would be dead and no project could be opened.
     @Test
-    void navigate_inertViewBeforeAnyNavigation_leavesTheCurrentViewEmpty() {
-        // IF a refusal recorded its target, THEN the shell would mark an inert entry as current.
+    void navigate_projects_isAcceptedAndShowsTheProjectsScreen() {
         final boolean accepted = navigateOnFxThread(navigator, ViewNames.PROJECTS);
 
-        assertThat(accepted).isFalse();
-        assertThat(navigator.currentView().get()).isNull();
-        assertThat(navigator.content().get()).isNull();
+        assertThat(accepted).isTrue();
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.PROJECTS);
+        assertThat(navigator.content().get().lookup("#projects-screen")).isNotNull();
     }
 
     @Test
@@ -130,7 +113,6 @@ class NavigatorTest extends FxTestBase {
         navigator.currentView().addListener((observable, previous, current) -> seen.add(current));
 
         navigateOnFxThread(navigator, ViewNames.IMPORT);
-        navigateOnFxThread(navigator, ViewNames.PROJECTS);
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         navigateOnFxThread(navigator, ViewNames.BOOK_BRIEF);
 
@@ -153,16 +135,16 @@ class NavigatorTest extends FxTestBase {
         assertThat(labelText(localised, "#export-title")).isEqualTo(expected);
     }
 
-    // IF Continue followed declaration order without skipping inert entries, THEN it would land on a screen that
-    // does not exist.
+    // IF Continue did not follow the reading order, THEN it would land on the wrong step; Projects leads to Import.
     @ParameterizedTest
     @CsvSource({
+        "PROJECTS, IMPORT",
         "IMPORT, BOOK_BRIEF",
         "BOOK_BRIEF, NAMES_STYLE",
         "NAMES_STYLE, TRANSLATING",
         "TRANSLATING, EXPORT",
     })
-    void nextAvailableStep_workflowEntry_skipsInertEntries(final ViewNames after, final ViewNames expected) {
+    void nextAvailableStep_workflowEntry_isTheNextStepInReadingOrder(final ViewNames after, final ViewNames expected) {
         assertThat(navigator.nextAvailableStep(after)).isEqualTo(Optional.of(expected));
     }
 
@@ -216,8 +198,8 @@ class NavigatorTest extends FxTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
-    void navigate_noBook_isRefusedWithoutAToast(final ViewNames locked) {
+            names = {"IMPORT", "BOOK_BRIEF", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
+    void navigate_noProject_isRefusedWithoutAToast(final ViewNames locked) {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
         final Navigator guarded = guardedNavigator(graph);
 
@@ -245,11 +227,82 @@ class NavigatorTest extends FxTestBase {
     }
 
     @Test
-    void navigate_importAndSettingsWithNoBook_areNeverLocked() {
+    void navigate_noProject_acceptsProjectsAndSettings() {
         final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
         final Navigator guarded = guardedNavigator(graph);
 
-        assertThat(navigateOnFxThread(guarded, ViewNames.IMPORT)).isTrue();
+        assertThat(navigateOnFxThread(guarded, ViewNames.PROJECTS)).isTrue();
         assertThat(navigateOnFxThread(guarded, ViewNames.SETTINGS)).isTrue();
+    }
+
+    private boolean openImportEmptyOnFxThread(final Navigator target) {
+        final AtomicBoolean accepted = new AtomicBoolean();
+        interact(() -> accepted.set(target.openImportEmpty()));
+        return accepted.get();
+    }
+
+    // IF "+ New translation" were refused for want of a project, THEN the first book could never be imported: the
+    // step lock has no exception for it, this entry has.
+    @Test
+    void openImportEmpty_noProject_showsImportAndKeepsTheOtherStepsLocked() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final Navigator guarded = guardedNavigator(graph);
+
+        final boolean accepted = openImportEmptyOnFxThread(guarded);
+
+        assertThat(accepted).isTrue();
+        assertThat(guarded.currentView().get()).isEqualTo(ViewNames.IMPORT);
+        assertThat(guarded.content().get().getId()).isEqualTo("import-screen");
+        assertThat(navigateOnFxThread(guarded, ViewNames.BOOK_BRIEF)).isFalse();
+    }
+
+    // IF the entry ignored short work the window waits for, THEN its answer would land on a screen nobody is looking
+    // at.
+    @Test
+    void openImportEmpty_blockingWorkRunning_isRefusedUntilItEnds() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final ActivityTracker tracker = graph.getInstance(ActivityTracker.class);
+        final Navigator guarded = guardedNavigator(graph);
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        interact(() -> handle.set(tracker.begin(ActivityKind.SUGGEST_STYLE, null)));
+
+        final boolean whileBusy = openImportEmptyOnFxThread(guarded);
+        interact(() -> Objects.requireNonNull(handle.get()).end());
+        final boolean afterwards = openImportEmptyOnFxThread(guarded);
+
+        assertThat(whileBusy).isFalse();
+        assertThat(afterwards).isTrue();
+    }
+
+    // IF a repeat reloaded Import, THEN the drop zone would flicker under a double click.
+    @Test
+    void openImportEmpty_importAlreadyCurrent_isRefusedAndKeepsTheContent() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final Navigator guarded = guardedNavigator(graph);
+        openImportEmptyOnFxThread(guarded);
+        final Parent first = guarded.content().get();
+
+        final boolean accepted = openImportEmptyOnFxThread(guarded);
+
+        assertThat(accepted).isFalse();
+        assertThat(guarded.content().get()).isSameAs(first);
+    }
+
+    // IF opening Import empty closed the project that is open, THEN a person who pressed "+ New translation" and
+    // changed their mind would have lost their place.
+    @Test
+    void openImportEmpty_projectOpen_showsTheDropZoneAndKeepsTheProjectOpen() {
+        final Injector graph = UiTestInjector.builder(Locale.ENGLISH).gated().build();
+        final Navigator guarded = guardedNavigator(graph);
+        final CurrentProject current = graph.getInstance(CurrentProject.class);
+        interact(() -> OpenBookForTest.open(current, "en", "uk"));
+        navigateOnFxThread(guarded, ViewNames.BOOK_BRIEF);
+
+        final boolean accepted = openImportEmptyOnFxThread(guarded);
+
+        assertThat(accepted).isTrue();
+        assertThat(guarded.currentView().get()).isEqualTo(ViewNames.IMPORT);
+        assertThat(guarded.content().get().getId()).isEqualTo("import-screen");
+        assertThat(current.book().get()).isNotNull();
     }
 }

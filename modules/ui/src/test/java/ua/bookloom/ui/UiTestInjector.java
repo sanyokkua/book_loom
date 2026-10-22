@@ -6,6 +6,9 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +42,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
@@ -60,6 +64,9 @@ public final class UiTestInjector {
 
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
+
+    /** The moment every graph's clock stands at, so "today" and "yesterday" on a project row never depend on the day. */
+    public static final Instant NOW = Instant.parse("2026-10-22T12:00:00Z");
 
     /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
     public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
@@ -111,6 +118,9 @@ public final class UiTestInjector {
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
         private boolean gated;
+        private SettingsRepository settings = new MemorySettings();
+        private FileRevealer revealer = new RecordingFileRevealer();
+        private @Nullable ProjectActions projectActions;
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
 
         private Builder(final Locale locale) {
@@ -195,6 +205,24 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link SettingsRepository} is, so the test can read what the window stored. */
+        public Builder settings(final SettingsRepository value) {
+            settings = Objects.requireNonNull(value, "settings");
+            return this;
+        }
+
+        /** What the graph's {@link FileRevealer} is, so the test can read what the window asked to show. */
+        public Builder revealer(final FileRevealer value) {
+            revealer = Objects.requireNonNull(value, "revealer");
+            return this;
+        }
+
+        /** Replaces the Projects screen's rename, remove, translate-into and find-book actions with this recording one. */
+        public Builder projectActions(final ProjectActions value) {
+            projectActions = Objects.requireNonNull(value, "projectActions");
+            return this;
+        }
+
         /** Where the graph says its logs are, and whether the detailed log is on. */
         public Builder diagnosticLog(final DiagnosticLog value) {
             diagnosticLog = Objects.requireNonNull(value, "diagnosticLog");
@@ -226,37 +254,53 @@ public final class UiTestInjector {
             return Guice.createInjector(Modules.override(new UiModule())
                     .with(
                             new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
-                            scriptedPorts(prompt),
+                            new ScriptedPorts(),
+                            replacementPrompt(prompt),
                             open));
         }
 
-        private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
+        private Module replacementPrompt(final @Nullable ReplaceRunPrompt replacement) {
             return new AbstractModule() {
                 @Override
                 protected void configure() {
-                    bind(LocaleProvider.class).toInstance(() -> locale);
-                    bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
-                    bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                    bind(DiagnosticLog.class).toInstance(diagnosticLog);
-                    bind(ExecutorService.class)
-                            .annotatedWith(BackgroundExecutor.class)
-                            .toInstance(daemonExecutor());
-                    bind(ProviderConfigs.class).toInstance(configs);
-                    bind(SettingsRepository.class).toInstance(new MemorySettings());
-                    bind(ProviderVerifier.class).toInstance(verifier);
-                    bind(ModelCatalog.class).toInstance(catalog);
-                    bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
-                    bind(ChatModelFactory.class).toInstance(models);
-                    bind(TranslationEngine.class).toInstance(engine);
-                    bind(ProjectService.class).toInstance(projects);
-                    bind(LanguageSupport.class).toInstance(languages);
-                    bind(ExportService.class).toInstance(exports);
-                    install(new ExportExtrasModule());
                     if (replacement != null) {
                         bind(ReplaceRunPrompt.class).toInstance(replacement);
                     }
                 }
             };
+        }
+
+        private final class ScriptedPorts extends AbstractModule {
+
+            @Override
+            protected void configure() {
+                bind(LocaleProvider.class).toInstance(() -> locale);
+                bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                bind(DiagnosticLog.class).toInstance(diagnosticLog);
+                bind(ExecutorService.class)
+                        .annotatedWith(BackgroundExecutor.class)
+                        .toInstance(daemonExecutor());
+                bindStores();
+                bind(ProviderVerifier.class).toInstance(verifier);
+                bind(ModelCatalog.class).toInstance(catalog);
+                bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
+                bind(ChatModelFactory.class).toInstance(models);
+                bind(TranslationEngine.class).toInstance(engine);
+                bind(ProjectService.class).toInstance(projects);
+                bind(LanguageSupport.class).toInstance(languages);
+                bind(ExportService.class).toInstance(exports);
+                install(new ExportExtrasModule(revealer));
+                if (projectActions != null) {
+                    bind(ProjectActions.class).toInstance(projectActions);
+                }
+            }
+
+            private void bindStores() {
+                bind(ProviderConfigs.class).toInstance(configs);
+                bind(SettingsRepository.class).toInstance(settings);
+                bind(Clock.class).toInstance(Clock.fixed(NOW, ZoneOffset.UTC));
+            }
         }
     }
 
@@ -273,10 +317,16 @@ public final class UiTestInjector {
     /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the choosers. */
     private static final class ExportExtrasModule extends AbstractModule {
 
+        private final FileRevealer revealer;
+
+        ExportExtrasModule(final FileRevealer revealer) {
+            this.revealer = revealer;
+        }
+
         @Override
         protected void configure() {
             bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
-            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+            bind(FileRevealer.class).toInstance(revealer);
             bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
             bind(CsvFileChooser.class).toInstance(new RecordingCsvChooser());
         }

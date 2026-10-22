@@ -6,7 +6,6 @@ import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.time.Clock;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,6 +28,7 @@ import ua.bookloom.ui.OpenStepsModule;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.WindowLaunch;
 
 /**
  * The JavaFX application: everything after the launcher, and the only place an injector is constructed.
@@ -155,12 +155,14 @@ public final class BookLoomApplication extends Application {
                 injector().getInstance(Navigator.class).currentView().get());
         if (ResolveAll.isEnabled() && initial.isPresent()) {
             ResolveAll.run(injector(), injector().getInstance(Navigator.class), initial.get());
+        } else {
+            injector().getInstance(WindowLaunch.class).openLastProject();
         }
     }
 
-    /** The first entry with a screen, so the window never opens on an empty screen area while any screen exists. */
+    /** Projects, the way into the workflow: with no project open every numbered step is locked. */
     private static Optional<ViewNames> initialView() {
-        return Arrays.stream(ViewNames.values()).filter(ViewNames::isAvailable).findFirst();
+        return Optional.of(ViewNames.PROJECTS);
     }
 
     @Override

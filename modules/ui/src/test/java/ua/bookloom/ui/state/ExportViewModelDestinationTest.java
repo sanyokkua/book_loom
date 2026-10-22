@@ -186,7 +186,10 @@ class ExportViewModelDestinationTest extends ExportViewModelTestBase {
                         "Frankenstein",
                         Instant.EPOCH,
                         Instant.EPOCH),
-                0);
+                0,
+                0,
+                null,
+                null);
     }
 
     private void listTwoProjectsOfOnePair() {

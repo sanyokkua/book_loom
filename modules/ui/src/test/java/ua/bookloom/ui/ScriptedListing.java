@@ -56,7 +56,11 @@ final class ScriptedListing {
     private List<ProjectSummary> decidedSummaries() {
         return decided.entrySet().stream()
                 .map(e -> new ProjectSummary(
-                        projectOf(ScriptedProjectService.ID_PREFIX + e.getKey(), e.getKey()), e.getValue()))
+                        projectOf(ScriptedProjectService.ID_PREFIX + e.getKey(), e.getKey()),
+                        e.getValue(),
+                        e.getValue(),
+                        null,
+                        null))
                 .toList();
     }
 }

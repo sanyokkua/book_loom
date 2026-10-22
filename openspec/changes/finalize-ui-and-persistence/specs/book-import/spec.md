@@ -115,7 +115,7 @@ WHEN a book is dropped or chosen on the import screen while a project is open, t
 
 ### Requirement: Open the import screen empty from New translation
 
-WHEN the person presses "+ New translation" on Projects, the application SHALL open step 1 · Import showing only its heading, the formats line and the drop zone, and SHALL create the project only when a book is opened; until then Projects SHALL list no new project and steps 2 to 5 SHALL stay locked.
+WHEN the person presses "+ New translation" on Projects, the application SHALL open step 1 · Import showing only its heading, the formats line and the drop zone, and SHALL create the project only when a book is opened; until then Projects SHALL list no new project and, WHILE no project is open, steps 2 to 5 SHALL stay locked.
 
 **Source**: docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d, docs/specification/mockups/README.md#g6--workflow-steps-need-an-open-project. In plain words: a translation is always of a book, so pressing New translation leads to choosing the book, and leaving without one leaves nothing behind.
 

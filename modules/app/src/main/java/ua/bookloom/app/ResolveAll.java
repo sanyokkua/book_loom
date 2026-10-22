@@ -70,8 +70,9 @@ final class ResolveAll {
 
     static Navigation navigation(final Navigator navigator) {
         Objects.requireNonNull(navigator, "navigator");
+        // No project is open, so the numbered steps are locked; the smoke loads their screens all the same.
         return view -> {
-            navigator.navigate(view);
+            navigator.showIgnoringLocks(view);
             return Optional.ofNullable(navigator.currentView().get());
         };
     }

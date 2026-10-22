@@ -670,7 +670,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 6. Screens, in workflow order
 
-- [ ] 6.1a Build the Projects screen and lock the steps until a project is open, so the way into the workflow is a list
+- [x] 6.1a Build the Projects screen and lock the steps until a project is open, so the way into the workflow is a list
   of translations grouped by book.
   - **Satisfies:** app-shell "Lock the five workflow steps until a project is open"; app-shell "Group the navigation and
     number the workflow"; app-shell "Show the Projects screen as a list grouped by book"; app-shell "Show what a project
@@ -685,6 +685,9 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - "+ New translation" opens Import;
     - the empty state with How it works and the AI-model line (its data comes in 6.1b; until then it reads the
       current provider list).
+  - `ProjectSummary` gains `totalSegments`, the latest run (state, model) and the last export, so a row and "Same
+    language pair" can show them; the quality comes from the project's brief, because a run record keeps no dial; "+ New translation" uses `Navigator.openImportEmpty()`, which opens Import although steps 1–5 are
+    locked without a project.
   - `ViewNames.PROJECTS` gets its resource; `StepAvailability` locks steps 1–5 without an open project ("Steps unlock
     when a project is open").
   - Opening a project writes `app.lastProject`; at launch, with `automation.reopenLastProject` on and the project still
@@ -766,7 +769,6 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     Apply writes through `BriefSaver`.
   - **Compare:** idle, translating, and the dialog in Simple and Detailed. → :ui
 - [ ] 6.4 Give Names & style its purpose lines, empty states, "Used" column, wide-only side-by-side layout, read-only
-  - **Carried from 5.7:** the Names & style cards must sit side by side only from the wide class (content ≥ 1440 px); from 1040 the glossary's column minimums (616 px) are wider than its card (532 px) and clip the Locked and remove columns. The `cards_atEachWindowSize…` test must expect stacked cards below 1440.
   state under hidden work, and the names pass in the long progress dialog with Results, so the tables explain
   themselves and the pass shows exact progress.
   - **Satisfies:** glossary "Keep both term tables editable while a translation runs"; glossary "Show the recurring
@@ -778,7 +780,11 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     app-shell "Make the screen that hidden work writes to read-only"; app-shell "Let long work continue in the
     background"; app-shell "Keep list and detail side by side and stack cards where they do not fit"; app-shell "Match
     the reference rendering"
-  - `NamesStyleView` switches at 1440 px.
+  - `NamesStyleView` switches at 1440 px of content width (carried from 5.7): from 1040 the glossary's column minimums
+    (616 px) are wider than its card (532 px) and clip the Locked and remove columns. The `cards_atEachWindowSize…` test
+    expects stacked cards below 1440 (windows of about 1700 or more for side by side).
+  - `ProgressDialog` gains a Results mode (used here) and a Calls mode (used by 6.5's "All calls…").
+  - A hidden pass shows a "Names is running in the background" banner and opens no dialog by itself when it ends.
   - `RecurringTermsCard` gains the Used column.
   - The model actions are disabled while translating ("Pause the translation first — BookLoom sends one model request
     at a time").
@@ -817,7 +823,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - per-item rows (a 4-item batch with 1 MISSING → 3 "translated", 1 "translated again alone");
     - auto-show selects the first new row unless one was clicked;
     - the live card is ≥ 460 px high at 960×640;
-    - the scene summary line says "Updated every 20 segments." under BALANCED;
+    - the scene summary line carries the spec's wording for the dial (every 20 accepted segments and at each chapter
+      end; the summary text is read through `SummaryRepository`);
     - rewrite `LiveCallPanel*Test`.
   - Kept behaviour shown in the new card, with tests: each model call is announced as it starts and appears as the
     current call; after 60 s with no answer the live line says the model is taking longer than usual with one clock;

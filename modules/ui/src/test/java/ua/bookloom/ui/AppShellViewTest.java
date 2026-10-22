@@ -187,21 +187,21 @@ class AppShellViewTest extends ShellTestBase {
         assertThat(((Label) required(id).lookup(".nav-step")).getText()).isEqualTo(number);
     }
 
-    // IF an entry's unavailable mark disagreed with ViewNames.isAvailable, THEN a working screen would look
-    // greyed out or an inert one would look usable.
+    // IF an entry were marked unavailable although its screen exists, THEN a working screen would look greyed out;
+    // every entry has a screen now, so none carries the mark.
     @ParameterizedTest
-    @CsvSource({
-        "nav-projects, true",
-        "nav-import, false",
-        "nav-book-brief, false",
-        "nav-names-style, false",
-        "nav-translating, false",
-        "nav-export, false",
-        "nav-settings, false"
-    })
-    void navigation_entry_isMarkedUnavailableExactlyWhenItIsInert(final String id, final boolean unavailable) {
-        assertThat(required(id).getStyleClass().contains("nav-item-unavailable"))
-                .isEqualTo(unavailable);
+    @ValueSource(
+            strings = {
+                "nav-projects",
+                "nav-import",
+                "nav-book-brief",
+                "nav-names-style",
+                "nav-translating",
+                "nav-export",
+                "nav-settings"
+            })
+    void navigation_entry_isNeverMarkedUnavailableBecauseEveryScreenExists(final String id) {
+        assertThat(required(id).getStyleClass()).doesNotContain("nav-item-unavailable");
     }
 
     @Test
@@ -210,31 +210,11 @@ class AppShellViewTest extends ShellTestBase {
         assertThat(currentEntryIds()).isEmpty();
     }
 
-    // IF activating an inert entry (through the shell or by pressing its button) moved the screen or the mark, THEN a
-    // screen that does not exist would be shown or claimed as current.
-    @ParameterizedTest
-    @CsvSource({"PROJECTS, nav-projects"})
-    void activate_inertEntry_changesNeitherTheScreenAreaNorTheCurrentMark(final ViewNames inert, final String id) {
-        onFx(() -> shell.activate(ViewNames.IMPORT));
-        final List<Node> contentBefore = List.copyOf(contentHost().getChildren());
-        final String breadcrumbBefore = breadcrumb().getText();
-
-        onFx(() -> shell.activate(inert));
-        onFx(() -> navButton(id).fire());
-
-        assertThat(contentHost().getChildren()).containsExactlyElementsOf(contentBefore);
-        assertThat(currentEntryIds()).containsExactly("nav-import");
-        assertThat(breadcrumb().getText()).isEqualTo(breadcrumbBefore);
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
-        assertThat(navButton(id).isDisabled())
-                .as("an inert entry is greyed, not disabled, so the click reaches the shell and is refused there")
-                .isFalse();
-    }
-
     // IF activating an available entry did not mark exactly that entry and write the breadcrumb, THEN the shell would
     // disagree with the screen shown.
     @ParameterizedTest
     @CsvSource(delimiter = '|', textBlock = """
+            PROJECTS    | nav-projects    | Workflow / Projects
             IMPORT      | nav-import      | Workflow / Import book · step 1 of 5
             BOOK_BRIEF  | nav-book-brief  | Workflow / Book Brief · step 2 of 5
             NAMES_STYLE | nav-names-style | Workflow / Names & style · step 3 of 5

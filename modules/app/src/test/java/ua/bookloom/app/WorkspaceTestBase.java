@@ -49,6 +49,7 @@ import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -117,7 +118,7 @@ abstract class WorkspaceTestBase {
             final Scene scene = shell.createScene(WINDOW_WIDTH, WINDOW_HEIGHT);
             stage.setScene(scene);
             stage.show();
-            shell.activate(ViewNames.IMPORT);
+            injector.getInstance(Navigator.class).openImportEmpty();
         });
     }
 

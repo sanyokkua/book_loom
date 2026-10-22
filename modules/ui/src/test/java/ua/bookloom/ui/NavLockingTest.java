@@ -33,29 +33,29 @@ class NavLockingTest extends ShellTestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"nav-book-brief", "nav-names-style", "nav-translating", "nav-export"})
-    void navigation_noBook_lockedEntriesCarryTheStyleAndSayOpenABookFirst(final String id) {
-        // IF the column did not follow the lock, THEN every step would look available with no book open.
+    @ValueSource(strings = {"nav-import", "nav-book-brief", "nav-names-style", "nav-translating", "nav-export"})
+    void navigation_noProject_lockedEntriesCarryTheStyleAndSayStepsUnlockWhenAProjectIsOpen(final String id) {
+        // IF the column did not follow the lock, THEN every step would look available with no project open.
         final Button entry = (Button) required(id);
 
         assertThat(entry.getStyleClass()).contains(LOCKED);
         assertThat(entry.isDisabled()).isFalse();
-        assertThat(TooltipProbe.tipText(entry)).isEqualTo("Open a book first");
+        assertThat(TooltipProbe.tipText(entry)).isEqualTo("Steps unlock when a project is open");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"nav-import", "nav-settings"})
-    void navigation_noBook_importAndSettingsAreNotLocked(final String id) {
+    @ValueSource(strings = {"nav-projects", "nav-settings"})
+    void navigation_noProject_projectsAndSettingsAreNotLocked(final String id) {
         final Button entry = (Button) required(id);
 
         assertThat(entry.getStyleClass()).doesNotContain(LOCKED);
         assertThat(TooltipProbe.tipText(entry))
-                .isNotEqualTo("Open a book first")
+                .isNotEqualTo("Steps unlock when a project is open")
                 .isNotBlank();
     }
 
     @Test
-    void navigation_noBook_clickingALockedEntryChangesNothing() {
+    void navigation_noProject_clickingALockedEntryChangesNothing() {
         onFx(() -> ((Button) required("nav-translating")).fire());
 
         assertThat(navigator.currentView().get()).isNull();
@@ -85,7 +85,8 @@ class NavLockingTest extends ShellTestBase {
     void navigation_underUkrainian_theReasonIsInUkrainian() {
         useLocale(Locale.forLanguageTag("uk"));
 
-        assertThat(TooltipProbe.tipText(required("nav-export"))).isEqualTo("Спершу відкрийте книгу");
+        assertThat(TooltipProbe.tipText(required("nav-export")))
+                .isEqualTo("Кроки стануть доступні, коли відкрито проєкт");
     }
 
     private void show(final ViewNames view) {
@@ -127,7 +128,8 @@ class NavLockingTest extends ShellTestBase {
     }
 
     // IF the run's state locked a step, THEN a person could not reach Settings to fix an unreachable program, or Import
-    // while a run waits; the run-state table locks model actions, never navigation (the no-project lock is 6.1a's).
+    // while a run waits; the run-state table locks model actions, never navigation (the no-project lock is a separate
+    // rule).
     @ParameterizedTest
     @EnumSource(RunState.class)
     void navigation_everyRunState_locksNoStep(final RunState state) {

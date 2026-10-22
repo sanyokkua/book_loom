@@ -105,17 +105,16 @@ class AppBootSmokeTest {
     }
 
     // IF the composition root showed the window before navigating, THEN the person would open on an empty screen
-    // area with no entry marked; the first available view is Import.
+    // area with no entry marked; with no project open the first view is Projects.
     @Test
-    void start_realApplication_opensOnTheFirstAvailableViewWithItsBreadcrumb() throws Exception {
+    void start_realApplication_opensOnProjectsWithItsBreadcrumb() throws Exception {
         StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
 
         FxToolkit.setupApplication(BookLoomApplication.class);
 
         final Scene scene = FxToolkit.toolkitContext().getRegisteredStage().getScene();
-        assertThat(((Label) scene.lookup("#shell-breadcrumb")).getText())
-                .isEqualTo("Workflow / Import book · step 1 of 5");
+        assertThat(((Label) scene.lookup("#shell-breadcrumb")).getText()).isEqualTo("Workflow / Projects");
     }
 
     /**

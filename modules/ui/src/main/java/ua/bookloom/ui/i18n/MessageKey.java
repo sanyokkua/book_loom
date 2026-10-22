@@ -41,8 +41,6 @@ public enum MessageKey {
     NAV_SETTINGS("nav.settings"),
     /** Hover explanation of the control labelled by {@link #NAV_SETTINGS}. */
     NAV_SETTINGS_TIP("nav.settings.tip"),
-    /** Why a workflow step cannot be opened yet: no book is open. Also the hover text of the locked entry and Continue. */
-    NAV_LOCKED_NO_BOOK("nav.locked.noBook"),
     /** Why a workflow step cannot be opened yet: the languages are unset or identical. */
     NAV_LOCKED_NO_LANGUAGES("nav.locked.noLanguages"),
     /** The navigation footer naming the chosen provider and model: provider, model. */
@@ -2384,7 +2382,115 @@ public enum MessageKey {
     /** The answer that saves the changes and leaves. */
     DIALOG_UNSAVED_SAVE("dialog.unsaved.save"),
     /** Hover explanation of the control labelled by {@link #DIALOG_UNSAVED_SAVE}. */
-    DIALOG_UNSAVED_SAVE_TIP("dialog.unsaved.save.tip");
+    DIALOG_UNSAVED_SAVE_TIP("dialog.unsaved.save.tip"),
+    /** Why a workflow step cannot be opened yet: no project is open. Also the hover text of the locked entry and Continue. */
+    NAV_LOCKED_NO_PROJECT("nav.locked.noProject"),
+    /** The purpose line under the Projects title. */
+    PROJECTS_PURPOSE("projects.purpose"),
+    /** Prompt text of the Projects search field. */
+    PROJECTS_SEARCH("projects.search"),
+    /** Hover explanation of the search field. */
+    PROJECTS_SEARCH_TIP("projects.search.tip"),
+    /** Filter segment showing every project. */
+    PROJECTS_FILTER_ALL("projects.filter.all"),
+    /** Hover explanation of the All segment. */
+    PROJECTS_FILTER_ALL_TIP("projects.filter.all.tip"),
+    /** Filter segment showing projects not yet finished. */
+    PROJECTS_FILTER_IN_PROGRESS("projects.filter.inProgress"),
+    /** Hover explanation of the In progress segment. */
+    PROJECTS_FILTER_IN_PROGRESS_TIP("projects.filter.inProgress.tip"),
+    /** Filter segment showing finished projects. */
+    PROJECTS_FILTER_FINISHED("projects.filter.finished"),
+    /** Hover explanation of the Finished segment. */
+    PROJECTS_FILTER_FINISHED_TIP("projects.filter.finished.tip"),
+    /** The line shown when a search keeps no project: the searched text. */
+    PROJECTS_NO_MATCH("projects.noMatch"),
+    /** The link that empties the search. */
+    PROJECTS_CLEAR_SEARCH("projects.clearSearch"),
+    /** Hover explanation of the clear-search link. */
+    PROJECTS_CLEAR_SEARCH_TIP("projects.clearSearch.tip"),
+    /** A book header's second line: file name, format, segment count. */
+    PROJECTS_BOOK_META("projects.book.meta"),
+    /** The number of translations of a book. */
+    PROJECTS_BOOK_TRANSLATIONS("projects.book.translations"),
+    /** Button on a book header that starts another translation of the same book. */
+    PROJECTS_BOOK_TRANSLATE_INTO("projects.book.translateInto"),
+    /** Hover explanation of the translate-into button. */
+    PROJECTS_BOOK_TRANSLATE_INTO_TIP("projects.book.translateInto.tip"),
+    /** A project row's second line: source, target, provider, model, quality. */
+    PROJECTS_ROW_META("projects.row.meta"),
+    /** A never-run project row's second line: source, target. */
+    PROJECTS_ROW_NOT_STARTED("projects.row.notStarted"),
+    /** Progress percent and when the project was last opened. */
+    PROJECTS_ROW_PROGRESS("projects.row.progress"),
+    /** Chip on a project whose name the person typed. */
+    PROJECTS_ROW_NAMED("projects.row.named"),
+    /** Hover explanation of the named chip. */
+    PROJECTS_ROW_NAMED_TIP("projects.row.named.tip"),
+    /** Chip on the project that is open in the window. */
+    PROJECTS_ROW_OPEN("projects.row.open"),
+    /** Hover explanation of the open chip. */
+    PROJECTS_ROW_OPEN_TIP("projects.row.open.tip"),
+    /** Row button that opens a project that has a run. */
+    PROJECTS_ROW_CONTINUE("projects.row.continue"),
+    /** Hover explanation of Continue. */
+    PROJECTS_ROW_CONTINUE_TIP("projects.row.continue.tip"),
+    /** Row button that opens a project with no run to continue, or the open one. */
+    PROJECTS_ROW_OPEN_ACTION("projects.row.openAction"),
+    /** Hover explanation of Open. */
+    PROJECTS_ROW_OPEN_ACTION_TIP("projects.row.openAction.tip"),
+    /** The row menu button's caption. */
+    PROJECTS_ROW_MORE("projects.row.more"),
+    /** Hover explanation of the row menu. */
+    PROJECTS_ROW_MORE_TIP("projects.row.more.tip"),
+    /** Row menu item. */
+    PROJECTS_MENU_RENAME("projects.menu.rename"),
+    /** Row menu item. */
+    PROJECTS_MENU_SHOW_BOOK("projects.menu.showBook"),
+    /** Row menu item. */
+    PROJECTS_MENU_REMOVE("projects.menu.remove"),
+    /** Status chip of a project never run. */
+    PROJECTS_STATUS_NOT_STARTED("projects.status.notStarted"),
+    /** Status chip of a project with an unfinished run. */
+    PROJECTS_STATUS_TRANSLATING("projects.status.translating"),
+    /** Status chip of a project whose run completed. */
+    PROJECTS_STATUS_FINISHED("projects.status.finished"),
+    /** Status chip of a project that was exported. */
+    PROJECTS_STATUS_EXPORTED("projects.status.exported"),
+    /** Status chip of a project whose run failed. */
+    PROJECTS_STATUS_FAILED("projects.status.failed"),
+    /** When a project was opened: today. */
+    PROJECTS_WHEN_TODAY("projects.when.today"),
+    /** When a project was opened: yesterday. */
+    PROJECTS_WHEN_YESTERDAY("projects.when.yesterday"),
+    /** When a project was opened: a date. */
+    PROJECTS_WHEN_DATE("projects.when.date"),
+    /** The line under the list about what removing does. */
+    PROJECTS_REMOVE_HINT("projects.removeHint"),
+    /** Toolbar and empty-state button that opens Import empty. */
+    PROJECTS_NEW("projects.new"),
+    /** Hover explanation of the new-translation buttons. */
+    PROJECTS_NEW_TIP("projects.new.tip"),
+    /** Title of the first-launch card. */
+    PROJECTS_EMPTY_TITLE("projects.empty.title"),
+    /** First step of how it works. */
+    PROJECTS_EMPTY_STEP1("projects.empty.step1"),
+    /** Second step of how it works. */
+    PROJECTS_EMPTY_STEP2("projects.empty.step2"),
+    /** Third step of how it works. */
+    PROJECTS_EMPTY_STEP3("projects.empty.step3"),
+    /** Fourth step of how it works. */
+    PROJECTS_EMPTY_STEP4("projects.empty.step4"),
+    /** The first-launch card's model line when a model is chosen: provider, model. */
+    PROJECTS_MODEL_READY("projects.model.ready"),
+    /** Button that opens Settings to change the AI model. */
+    PROJECTS_MODEL_CHANGE("projects.model.change"),
+    /** Hover explanation of Change…. */
+    PROJECTS_MODEL_CHANGE_TIP("projects.model.change.tip"),
+    /** Button that opens Settings to set up another AI program. */
+    PROJECTS_MODEL_OTHER_PROGRAM("projects.model.otherProgram"),
+    /** Hover explanation of the other-program button. */
+    PROJECTS_MODEL_OTHER_PROGRAM_TIP("projects.model.otherProgram.tip");
 
     private final String key;
 

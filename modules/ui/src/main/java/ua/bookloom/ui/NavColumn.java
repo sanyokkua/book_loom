@@ -192,7 +192,26 @@ final class NavColumn {
                 box.getChildren().add(entry(view));
             }
         }
+        if (group == NavGroup.WORKFLOW) {
+            box.getChildren().add(noProjectHint());
+        }
         return box;
+    }
+
+    // The mockup says it in words under the steps, not only on hover: while no project is open the steps are shut.
+    private Label noProjectHint() {
+        final Label hint = new Label(messages.get(MessageKey.NAV_LOCKED_NO_PROJECT));
+        hint.getStyleClass().add("nav-hint");
+        hint.setWrapText(true);
+        final ReadOnlyObjectProperty<@Nullable MessageKey> lock = locks.lock(ViewNames.IMPORT);
+        final Runnable show = () -> {
+            final boolean shut = lock.get() == MessageKey.NAV_LOCKED_NO_PROJECT;
+            hint.setVisible(shut);
+            hint.setManaged(shut);
+        };
+        lock.addListener((observed, old, reason) -> show.run());
+        show.run();
+        return hint;
     }
 
     private Button entry(final ViewNames view) {
