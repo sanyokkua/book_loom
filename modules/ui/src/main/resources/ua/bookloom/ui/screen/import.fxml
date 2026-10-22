@@ -9,7 +9,7 @@
 
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="ua.bookloom.ui.screen.ImportController" id="import-screen" styleClass="import-scroll, fills-viewport, content-capped"
-            fitToWidth="true" hbarPolicy="NEVER">
+            fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER">
     <VBox spacing="14">
         <padding>
             <Insets right="8"/>
@@ -22,6 +22,6 @@
             <Label fx:id="dropzoneOr" styleClass="muted" text="%import.dropzone.or"/>
             <Button fx:id="browseButton" id="import-browse" styleClass="btn-secondary" text="%import.browse"/>
         </GridPane>
-        <VBox fx:id="stateHost" id="import-state" spacing="14"/>
+        <VBox fx:id="stateHost" id="import-state" spacing="14" VBox.vgrow="ALWAYS"/>
     </VBox>
 </ScrollPane>

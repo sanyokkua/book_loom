@@ -47,7 +47,7 @@ common words (lower-case share, stop-word lists, aliases), "Review with model" r
 table sorts and searches.
 
 The window opens a book on the stored project (one current project, the import states chosen from the inspection's
-verdict, a replace-run prompt because there is one translation per application run, start and resume without importing again), shows the run and a connection chip in its
+verdict, an "Open another book?" question whenever a project is open, the book's content matched against the stored projects so a known book is named and never imported again, one verdict line with a closed "About this book" fold and a three-pane text browser, start and resume without importing again), shows the run and a connection chip in its
 title bar, numbers five workflow steps (Import holds the book's structure since 15i.U3) with a provider footer, and its Book Brief, Structure, Names & style, Translating
 and Export screens are live: the glossary table with scans, model review, suggested targets by the name policy and
 CSV; the seven run states with a live panel showing each model call (kind, segment, attempt, its clock against the timeout), the current and the previous call with every source sent, the

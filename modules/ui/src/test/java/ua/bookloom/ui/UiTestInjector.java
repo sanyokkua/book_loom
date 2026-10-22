@@ -36,8 +36,8 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
 import ua.bookloom.ui.dialog.RenamePrompt;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.dialog.SamePairPrompt;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
@@ -115,7 +115,7 @@ public final class UiTestInjector {
         private ScriptedNamesPass namesPass = new ScriptedNamesPass();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
-        private @Nullable ReplaceRunPrompt prompt;
+        private @Nullable OpenAnotherBookPrompt prompt;
         private @Nullable ContinuePrompt continuePrompt;
         private @Nullable ModelPickPrompt modelPickPrompt;
         private @Nullable RenamePrompt renamePrompt;
@@ -238,8 +238,8 @@ public final class UiTestInjector {
             return this;
         }
 
-        /** Replaces the real replace-run card with this question, so the test can read what was asked. */
-        public Builder prompt(final ReplaceRunPrompt value) {
+        /** Replaces the real "Open another book?" card with this question, so the test can read what was asked. */
+        public Builder prompt(final OpenAnotherBookPrompt value) {
             prompt = Objects.requireNonNull(value, "prompt");
             return this;
         }
@@ -343,12 +343,12 @@ public final class UiTestInjector {
             };
         }
 
-        private Module replacementPrompt(final @Nullable ReplaceRunPrompt replacement) {
+        private Module replacementPrompt(final @Nullable OpenAnotherBookPrompt replacement) {
             return new AbstractModule() {
                 @Override
                 protected void configure() {
                     if (replacement != null) {
-                        bind(ReplaceRunPrompt.class).toInstance(replacement);
+                        bind(OpenAnotherBookPrompt.class).toInstance(replacement);
                     }
                 }
             };

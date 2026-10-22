@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -81,6 +83,27 @@ public sealed interface ImportState {
         public Refused {
             Objects.requireNonNull(fileName, "fileName");
             Objects.requireNonNull(error, "error");
+        }
+    }
+
+    /**
+     * The chosen file's content is already stored as one or more projects, so nothing was imported: importing it again
+     * would reset a stored project's segments.
+     *
+     * @param fileName the name of the chosen file
+     * @param source the chosen file
+     * @param projectNames the display names of the stored projects holding this content, in list order; at least one
+     * @param bookTitle the title of the first stored project's book, which "Show them" searches for
+     */
+    record AlreadyInProjects(String fileName, Path source, List<String> projectNames, String bookTitle)
+            implements ImportState {
+
+        /** Rejects a missing part and copies the names, so the state cannot change after it is shown. */
+        public AlreadyInProjects {
+            Objects.requireNonNull(fileName, "fileName");
+            Objects.requireNonNull(source, "source");
+            projectNames = List.copyOf(projectNames);
+            Objects.requireNonNull(bookTitle, "bookTitle");
         }
     }
 }

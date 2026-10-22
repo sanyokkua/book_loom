@@ -27,9 +27,10 @@ class ImportFocusTraversalTest extends ImportBookTestBase {
     // Far more presses than the screen has controls: a screen that needs more is trapping the focus.
     private static final int MAX_PRESSES = 200;
 
-    // In reading order: the drop zone, the tree, then the segment browser, then the way on.
+    // In reading order: the drop zone, the closed fold, the tree, then the segment browser, then the way on.
     private static final List<String> IN_ORDER = List.of(
             "import-browse",
+            "import-about",
             "structure-tree",
             "structure-segments-search",
             "structure-segments-kind",

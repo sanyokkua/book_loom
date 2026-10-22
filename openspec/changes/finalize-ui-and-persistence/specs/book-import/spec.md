@@ -2,19 +2,25 @@
 
 ### Requirement: Say in one line what the import found
 
-The import screen SHALL show exactly one verdict line: can translate (with the chapters and the words), Reading… (a bar "chapter n of N" and Cancel), Already in projects (naming them, with Show them), Two language marks, DRM, Damaged or Unsupported; each refusal SHALL offer Choose another file….
+The import screen SHALL show exactly one verdict line: can translate (with the chapters and the words), Reading… (an indeterminate bar and Cancel, because the parsers report no chapter count while they work), Already in projects (naming them, with Show them), Two language marks, DRM, Damaged or Unsupported; each refusal SHALL offer Choose another file….
 
 **Source**: docs/specification/mockups/README.md#step-1--import--i1i4. In plain words: after choosing a file the person gets one plain sentence saying whether BookLoom can translate it, and what to do when it cannot.
 
-#### Scenario: Reading shows a chapter count and Cancel
+#### Scenario: Reading shows an indeterminate bar and Cancel
 
-- **WHEN** a book is being read and the third of 5 chapters has been parsed
-- **THEN** the verdict is Reading… with a bar labelled "chapter 3 of 5" and a Cancel button
+- **WHEN** a book is being read
+- **THEN** the verdict is "Reading…" with an indeterminate progress bar and a Cancel button
+
+#### Scenario: Cancel while reading abandons the import
+
+- **WHEN** the person presses Cancel on the Reading line and the read finishes afterwards
+- **THEN** the page returns to the drop zone at once, the project the read created is removed, its result is ignored, and a project that was already open stays open
 
 #### Scenario: A book that is already a project is named
 
 - **WHEN** the person opens a file whose content matches the existing projects `Earth Gravity · EN → UK` and `Earth Gravity · EN → PL`
 - **THEN** the verdict line is Already in projects, names both projects, and offers Show them, and no dialog opens
+- **AND** no project is created or removed, and Continue is not offered
 
 #### Scenario: Show them opens the book's projects
 
@@ -97,6 +103,8 @@ WHEN a book is dropped or chosen on the import screen while a project is open, t
 
 **Source**: docs/specification/mockups/README.md#step-1--import--i1i4, docs/specification/mockups/README.md#other-dialogs, docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers. In plain words: a second book never silently destroys the first project, and the safe choice is the primary one.
 
+The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, delete the open project, open the book and leave the run idle.
+
 #### Scenario: Dropping a second book asks first
 
 - **WHEN** the project `Earth Gravity · EN → UK` is open and `velk.fb2` is dropped
@@ -112,6 +120,11 @@ WHEN a book is dropped or chosen on the import screen while a project is open, t
 
 - **WHEN** the person presses "Open as a new project"
 - **THEN** `velk.fb2` opens as a new project, and `Earth Gravity · EN → UK` is still listed on Projects with its progress
+
+#### Scenario: A running translation is stopped before the new book opens
+
+- **WHEN** the translation of `earth-gravity.epub` is running, `velk.fb2` is chosen and the person answers `Open as a new project`
+- **THEN** the card shows "Stopping the run…" with its buttons disabled, the run is stopped and waited for, and only then does `velk.fb2` open while `Earth Gravity · EN → UK` stays in Projects and can be continued later
 
 ### Requirement: Open the import screen empty from New translation
 

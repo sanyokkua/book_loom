@@ -23,10 +23,10 @@ import ua.bookloom.ui.dialog.FindBookDialog;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.ui.dialog.OpenAnotherBookDialog;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
 import ua.bookloom.ui.dialog.RenameDialog;
 import ua.bookloom.ui.dialog.RenamePrompt;
-import ua.bookloom.ui.dialog.ReplaceRunDialog;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.dialog.SamePairDialog;
 import ua.bookloom.ui.dialog.SamePairPrompt;
 import ua.bookloom.ui.dialog.TranslateIntoDialog;
@@ -112,7 +112,7 @@ public final class UiModule extends AbstractModule {
     private void bindDialogs() {
         bind(ModalErrorPresenter.class);
         bind(ErrorPresenter.class).to(ModalErrorPresenter.class);
-        bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
+        bind(OpenAnotherBookPrompt.class).to(OpenAnotherBookDialog.class);
         bind(ContinuePrompt.class).to(ContinueDialog.class);
         bind(ModelPickPrompt.class).to(ModelPickDialog.class);
         bind(RenamePrompt.class).to(RenameDialog.class);

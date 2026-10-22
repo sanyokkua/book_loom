@@ -235,10 +235,44 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
     void filter_matchesNothing_saysSo() throws TimeoutException {
         openChapterOne();
 
-        filterText("zzz");
+        filterText("xyz");
         awaitFx(() -> segmentRows().isEmpty());
 
-        assertThat(labelText("structure-segments-state")).isEqualTo("No segment matches the filter.");
+        assertThat(labelText("structure-segments-state")).isEqualTo("Nothing matches 'xyz'.");
+    }
+
+    // The place is searchable too, so a person who knows "ch1 · p03" can jump to it.
+    @Test
+    void filter_text_findsTheRowByItsPlace() throws TimeoutException {
+        openChapterOne();
+
+        filterText("ch1 · p03");
+        awaitFx(() -> segmentRows().size() == 1);
+
+        assertThat(segmentRows().get(0).get(0)).isEqualTo("ch1 · p03");
+    }
+
+    // IF clearing the search left the list narrowed, THEN the rest of the chapter would look deleted.
+    @Test
+    void filter_textCleared_restoresEveryRowAndTheCount() throws TimeoutException {
+        openChapterOne();
+        filterText("STORMY");
+        awaitFx(() -> segmentRows().size() == 1);
+
+        filterText("");
+        awaitFx(() -> segmentRows().size() == 4);
+
+        assertThat(labelText("structure-segments-shown")).isEqualTo("Showing 4 of 4");
+    }
+
+    @Test
+    void filter_kindHeading_countsTheShownAgainstTheChapter() throws TimeoutException {
+        openChapterOne();
+
+        onFx(() -> kinds().getSelectionModel().select(SegmentKind.HEADING));
+        awaitFx(() -> segmentRows().size() == 1);
+
+        assertThat(labelText("structure-segments-shown")).isEqualTo("Showing 1 of 4");
     }
 
     // IF rows had their own heights, THEN scrolling a long chapter would measure every row it passes.

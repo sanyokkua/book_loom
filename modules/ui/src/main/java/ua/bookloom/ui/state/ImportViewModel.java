@@ -5,7 +5,7 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -43,11 +43,14 @@ public final class ImportViewModel {
     private final ErrorPresenter errors;
     private final ExecutorService executor;
     private final ActivityTracker activities;
+    private final ProjectDisposal disposal;
     private ActivityTracker.@Nullable Handle openingActivity;
     private final ReadOnlyObjectWrapper<ImportState> state = new ReadOnlyObjectWrapper<>(new ImportState.Idle());
     private final ReadOnlyBooleanWrapper opening = new ReadOnlyBooleanWrapper(false);
     // What was showing when the open began, for a fault that leaves the book already open untouched. FX thread only.
     private ImportState stateBeforeOpen = new ImportState.Idle();
+    // Counts opens and cancels, so an answer that arrives after a cancel can tell it is no longer wanted.
+    private int openSerial;
 
     /**
      * Wires the view model to the service it imports books through.
@@ -73,6 +76,7 @@ public final class ImportViewModel {
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.activities = Objects.requireNonNull(activities, "activities");
+        this.disposal = new ProjectDisposal(projects, executor);
     }
 
     /**
@@ -95,107 +99,131 @@ public final class ImportViewModel {
 
     /**
      * Imports a book. Returns at once; the answer arrives on the FX thread. Ignored while another import is
-     * unanswered, so two imports can never race to be the open book. FX thread only.
+     * unanswered, so two imports can never race to be the open book. Never removes a stored project. FX thread only.
      *
      * @param source the file to import
      */
     public void open(final Path source) {
         Objects.requireNonNull(source, "source");
-        open(source, false);
+        begin(source, null);
     }
 
-    private void open(final Path source, final boolean keepEarlier) {
-        log.debug("open requested for {}, keeping the earlier translation: {}", source, keepEarlier);
+    /**
+     * Removes a stored project, then imports a book: the one destructive path, taken only when the person chose
+     * "Replace and delete this translation". Returns at once. FX thread only.
+     *
+     * @param source the file to import
+     * @param projectId the stored project to delete first; it is no longer the open book when this returns
+     */
+    public void openReplacing(final Path source, final String projectId) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(projectId, "projectId");
+        begin(source, projectId);
+    }
+
+    private void begin(final Path source, final @Nullable String replacedId) {
+        log.debug("open requested for {}, replacing project {}", source, replacedId);
         if (opening.get()) {
             log.debug("open of {} ignored: a book is still being opened", source);
             return;
         }
         final String fileName = fileNameOf(source);
         stateBeforeOpen = state.get();
+        final OpenedBook open = current.book().get();
+        if (replacedId != null && open != null && open.projectId().equals(replacedId)) {
+            log.debug("project {} is deleted by the replacement: it stops being the open book", replacedId);
+            current.clear();
+        }
         opening.set(true);
+        openSerial++;
         final ActivityTracker.Handle registered = activities.begin(ActivityKind.IMPORT, null);
         registered.indeterminate(fileName);
         openingActivity = registered;
         state.set(new ImportState.Opening(fileName));
         log.info("opening {}", fileName);
         log.trace("opening the file at {}", source);
-        submit(source, fileName, keepEarlier);
+        submit(source, fileName, replacedId, openSerial);
     }
 
     /**
-     * Opens a file whose earlier translation is kept, through the service's {@code open}. Returns at once; the
-     * answer arrives on the FX thread. FX thread only.
+     * Shows that a chosen file is already stored as projects, without importing anything. FX thread only.
      *
-     * @param source the file whose stored project and decided segments are kept
+     * @param source the chosen file
+     * @param found the stored projects holding its content, in list order; at least one
      */
-    public void continueWith(final Path source) {
-        Objects.requireNonNull(source, "source");
-        open(source, true);
+    void showAlready(final Path source, final List<ProjectSummary> found) {
+        final List<String> names =
+                found.stream().map(summary -> summary.project().name()).toList();
+        log.debug("{} is already stored as {} project(s)", fileNameOf(source), names.size());
+        state.set(new ImportState.AlreadyInProjects(
+                fileNameOf(source), source, names, found.get(0).project().title()));
     }
 
     /**
-     * Releases the open book and returns the screen to the drop zone. Ignored while an import is unanswered, because
-     * its answer decides what is open. FX thread only.
+     * Releases the open book and returns the screen to the drop zone. While an import is unanswered it instead
+     * abandons that import: the screen goes idle at once, the book that was open stays open, and the project the
+     * import goes on to create is removed and its answer ignored. FX thread only.
      */
     public void cancel() {
         if (opening.get()) {
-            log.debug("cancel ignored: a book is still being opened");
+            log.info("the opening of a book was cancelled before it was answered");
+            openSerial++;
+            opening.set(false);
+            endActivity();
+            state.set(new ImportState.Idle());
             return;
         }
         final OpenedBook previous = current.book().get();
         log.debug("cancel requested, a book is open: {}", previous != null);
         current.clear();
         state.set(new ImportState.Idle());
-        release(previous);
+        disposal.release(previous);
     }
 
-    private void submit(final Path source, final String fileName, final boolean keepEarlier) {
+    private void submit(final Path source, final String fileName, final @Nullable String replacedId, final int serial) {
         try {
-            executor.execute(() -> importOffThread(source, fileName, keepEarlier));
+            executor.execute(() -> importOffThread(source, fileName, replacedId, serial));
         } catch (RuntimeException rejected) {
             log.error("importing {} could not be submitted", fileName, rejected);
             publish(fileName, Result.err(ImportAnswers.internalError(rejected)));
         }
     }
 
-    private void importOffThread(final Path source, final String fileName, final boolean keepEarlier) {
+    private void importOffThread(
+            final Path source, final String fileName, final @Nullable String replacedId, final int serial) {
         log.debug(
-                "importing {} on {}, keeping the earlier translation: {}",
+                "importing {} on {}, replacing project {}",
                 fileName,
                 Thread.currentThread().getName(),
-                keepEarlier);
-        final Result<ImportAnswers.Answer> answer = importGuarded(source, keepEarlier);
-        Platform.runLater(() -> publish(fileName, answer));
+                replacedId);
+        final Set<String> before = disposal.storedIds();
+        final Result<ImportAnswers.Answer> answer = importGuarded(source, replacedId);
+        Platform.runLater(() -> deliver(fileName, answer, serial, before));
     }
 
-    private Result<ImportAnswers.Answer> importGuarded(final Path source, final boolean keepEarlier) {
+    private Result<ImportAnswers.Answer> importGuarded(final Path source, final @Nullable String replacedId) {
         try {
-            return ImportAnswers.answerOf(
-                    source, keepEarlier ? openEarlier(source) : createAfterRemovingEarlier(source));
+            if (replacedId != null) {
+                disposal.remove(replacedId);
+            }
+            return ImportAnswers.answerOf(source, projects.create(source));
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(ImportAnswers.internalError(thrown));
         }
     }
 
-    private Result<ImportedBook> openEarlier(final Path source) {
-        final Result<List<ProjectSummary>> listed = projects.list();
-        final List<ProjectSummary> all = listed.data();
-        if (all == null) {
-            return Result.err(Objects.requireNonNull(listed.error(), "error"));
+    // An answer that arrives after a cancel is no longer wanted: the cancel advanced the serial.
+    private void deliver(
+            final String fileName,
+            final Result<ImportAnswers.Answer> result,
+            final int serial,
+            final @Nullable Set<String> before) {
+        if (serial == openSerial) {
+            publish(fileName, result);
+        } else {
+            discardCancelled(fileName, result, before);
         }
-        return EarlierProjects.find(all, source)
-                .map(summary ->
-                        projects.open(summary.project().id()).flatMap(opening -> ImportAnswers.bookOf(opening, source)))
-                .orElseGet(() -> Result.err(ImportAnswers.noEarlierTranslation()));
-    }
-
-    // One project per file until the Projects screen exists: importing again replaces the earlier project.
-    private Result<ImportedBook> createAfterRemovingEarlier(final Path source) {
-        final List<ProjectSummary> all = projects.list().data();
-        final Optional<ProjectSummary> earlier = all == null ? Optional.empty() : EarlierProjects.find(all, source);
-        earlier.ifPresent(summary -> projects.remove(summary.project().id()));
-        return projects.create(source);
     }
 
     private void publish(final String fileName, final Result<ImportAnswers.Answer> result) {
@@ -222,9 +250,26 @@ public final class ImportViewModel {
             opening.set(false);
             endActivity();
             if (replacesPrevious) {
-                release(previous);
+                disposal.release(previous);
             }
         }
+    }
+
+    // The person cancelled while this import ran: a project it newly made is deleted and nothing is shown. A project
+    // that was stored before (the import reused it) is never removed.
+    private void discardCancelled(
+            final String fileName, final Result<ImportAnswers.Answer> result, final @Nullable Set<String> before) {
+        final ImportAnswers.Answer answer = result.data();
+        final String created = answer == null ? null : answer.imported().projectId();
+        log.info("{} finished after it was cancelled: its answer is ignored, project created {}", fileName, created);
+        if (created == null) {
+            return;
+        }
+        if (before == null || before.contains(created)) {
+            log.warn("project {} was stored before the cancelled import: it is kept", created);
+            return;
+        }
+        disposal.removeLater(created);
     }
 
     private void endActivity() {
@@ -294,7 +339,7 @@ public final class ImportViewModel {
         state.set(ImportStates.of(fileNameOf(source), imported));
         log.info("adopted stored project {}", opened.projectId());
         if (previous != null && !previous.projectId().equals(opened.projectId())) {
-            release(previous);
+            disposal.release(previous);
         }
     }
 
@@ -343,35 +388,5 @@ public final class ImportViewModel {
     private static String fileNameOf(final Path source) {
         final Path name = source.getFileName();
         return name == null ? source.toString() : name.toString();
-    }
-
-    private void release(final @Nullable OpenedBook previous) {
-        if (previous == null) {
-            log.debug("no previous book to release");
-            return;
-        }
-        try {
-            executor.execute(() -> closeGuarded(previous.projectId()));
-            log.debug("releasing project {} submitted", previous.projectId());
-        } catch (RuntimeException rejected) {
-            log.warn("releasing the previous project could not be submitted", rejected);
-        }
-    }
-
-    private void closeGuarded(final String projectId) {
-        log.debug(
-                "releasing project {} on {}", projectId, Thread.currentThread().getName());
-        try {
-            final Result<Boolean> released = projects.close(projectId);
-            final AppError failure = released.error();
-            if (failure != null) {
-                log.warn("releasing project {} failed with {}", projectId, failure.code());
-            } else {
-                log.info("released project {}", projectId);
-                log.debug("released project {}; it was open: {}", projectId, released.data());
-            }
-        } catch (Throwable thrown) {
-            log.error("the project service threw while releasing project {}", projectId, thrown);
-        }
     }
 }

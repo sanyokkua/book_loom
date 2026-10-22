@@ -38,34 +38,31 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
                 Arguments.of("en", "English", "uk", "Ukrainian"), Arguments.of("fr", "French", "pl", "Polish"));
     }
 
-    // IF a protected book's refusal lacked its own title, its message or its code, THEN the person would get no reason
-    // they could act on; and IF Continue or the card stayed, THEN they could proceed with a book that never opened.
+    // IF a refused book's typed reason were lost, THEN the person would get no reason to report; and IF Continue or the
+    // fold stayed, THEN they could proceed with a book that never opened. The reason is behind Details.
     @Test
-    void refusal_protectedBook_showsTitleMessageAndCodeWithNoContinueOrCard() throws TimeoutException {
+    void refusal_protectedBook_saysTryAgainKeepsTheReasonBehindDetailsWithNoContinueOrFold() throws TimeoutException {
         final Path source = dir.resolve("secret.epub");
-        projects.on(
-                source,
-                Result.err(AppError.of(
-                        ErrorCode.validation, "This book is protected", "The book is encrypted and cannot be read.")));
+        final AppError refusal = AppError.of(
+                ErrorCode.validation, "This book is protected", "The book is encrypted and cannot be read.");
+        projects.on(source, Result.err(refusal));
         openImport();
 
         openBook(source);
+        onFx(() -> button("import-verdict-details").fire());
 
-        assertThat(isShown("import-refusal")).isTrue();
-        assertThat(textOf("import-refusal"))
-                .contains("This book is protected")
-                .contains("The book is encrypted and cannot be read.")
-                .contains("validation");
+        assertThat(textOf("import-verdict-text")).isEqualTo("secret.epub could not be read. Try downloading it again.");
+        assertThat(errors.presented()).containsExactly(refusal);
         assertThat(optional("import-continue")).isNull();
-        assertThat(isShown("import-card")).isFalse();
-        assertThat(optional("import-choose-another")).isNotNull();
+        assertThat(optional("import-about")).isNull();
+        assertThat(optional("import-verdict-choose")).isNotNull();
         assertThat(idsStartingWith("import-row-")).isEmpty();
     }
 
     // IF a file the application cannot read were not refused with its typed code on screen, THEN the person could not
     // tell why it was refused.
     @Test
-    void refusal_droppedPdf_reportsValidationAndOffersNoContinue() throws TimeoutException {
+    void refusal_droppedPdf_offersTheValidationDetailsAndNoContinue() throws TimeoutException {
         final Path source = dir.resolve("notes.pdf");
         projects.on(
                 source,
@@ -77,15 +74,16 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         openBook(source);
 
-        assertThat(isShown("import-refusal")).isTrue();
-        assertThat(textOf("import-refusal")).contains("validation");
+        onFx(() -> button("import-verdict-details").fire());
+
+        assertThat(errors.presented()).extracting(AppError::code).containsExactly(ErrorCode.validation);
         assertThat(optional("import-continue")).isNull();
     }
 
     // IF the refusal stayed on screen after a good book was chosen, THEN the person could never recover from one bad
     // drop; the screen must follow the view model from refusal to card.
     @Test
-    void screen_goodBookAfterARefusal_replacesTheRefusalWithTheCard() throws TimeoutException {
+    void screen_goodBookAfterARefusal_replacesTheRefusalWithTheFold() throws TimeoutException {
         final Path bad = dir.resolve("secret.epub");
         final Path good = dir.resolve("Frankenstein.epub");
         projects.on(bad, Result.err(AppError.of(ErrorCode.validation, "This book is protected", "Encrypted.")));
@@ -95,8 +93,8 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         openBook(good);
 
-        assertThat(isShown("import-refusal")).isFalse();
-        assertThat(isShown("import-card")).isTrue();
+        assertThat(optional("import-verdict-choose")).isNull();
+        assertThat(isShown("import-about")).isTrue();
         assertThat(optional("import-continue")).isNotNull();
     }
 
@@ -114,17 +112,17 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         projects.awaitEntered();
         awaitFx(() -> viewModel().opening().get());
 
-        assertThat(isShown("import-progress")).isTrue();
+        assertThat(isShown("import-verdict-bar")).isTrue();
         assertThat(button("import-browse").isDisable()).isTrue();
-        assertThat(isShown("import-card")).isFalse();
+        assertThat(optional("import-about")).isNull();
         assertThat(optional("import-continue")).isNull();
 
         projects.release();
         awaitFx(() -> !viewModel().opening().get());
 
-        assertThat(isShown("import-progress")).isFalse();
+        assertThat(optional("import-verdict-bar")).isNull();
         assertThat(button("import-browse").isDisable()).isFalse();
-        assertThat(isShown("import-card")).isTrue();
+        assertThat(isShown("import-about")).isTrue();
     }
 
     // IF the mismatch warning named only one language, or was not reached from an open book, THEN the person could
@@ -153,12 +151,10 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         openBook(source);
 
-        assertThat(isShown("import-mismatch")).isTrue();
-        assertThat(textOf("import-mismatch"))
-                .contains(declaredName + " (" + declared + ")")
-                .contains(detectedName + " (" + detected + ")");
+        assertThat(textOf("import-verdict-text"))
+                .contains("its details say " + declaredName + ", its chapters are marked " + detectedName + ".");
         assertThat(button("import-continue").isDisable()).isFalse();
-        assertThat(isShown("import-card")).isTrue();
+        assertThat(isShown("import-about")).isTrue();
     }
 
     // IF an unrecognized declaration were swallowed or shown as a mismatch, THEN the person would not know the source
@@ -184,57 +180,50 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         openBook(source);
 
-        assertThat(textOf("import-unrecognized")).contains("xx-yy").contains("Book Brief");
-        assertThat(isShown("import-mismatch")).isFalse();
+        assertThat(textOf("import-verdict-text")).contains("xx-yy").contains("Book Brief");
+        assertThat(textOf("import-verdict-text")).doesNotContain("two languages");
         assertThat(optional("import-row-declaredLang")).isNull();
         assertThat(button("import-continue").isDisable()).isFalse();
     }
 
     // IF a DRM-protected book rendered like any refusal, THEN the person would not learn it is encrypted or by what.
     @Test
-    void drmBlocked_adobeAdeptBook_showsBannerSchemeStatusNoteAndOnlyChooseAnother() throws TimeoutException {
+    void drmBlocked_adobeAdeptBook_showsTheLockedLineWithItsSchemeAndOnlyChooseAnother() throws TimeoutException {
         final Path source = dir.resolve("Purchased_Novel.epub");
         projects.on(source, Result.ok(BookFixtures.drmProtected("EPUB", "Adobe ADEPT")));
         openImport();
 
         openBook(source);
 
-        assertThat(textOf("import-drm")).contains("This book is DRM-protected.");
-        assertThat(textOf("import-drm-file")).contains("Purchased_Novel.epub");
-        assertThat(textOf("import-drm-scheme")).contains("Adobe ADEPT");
-        assertThat(textOf("import-drm-status")).contains("Import blocked");
-        assertThat(textOf("import-drm-note")).contains("Only DRM-free EPUB and FB2 files are supported.");
+        assertThat(textOf("import-verdict-text"))
+                .isEqualTo("Purchased_Novel.epub is locked by the shop it came from. Encryption: Adobe ADEPT.");
         assertOnlyChooseAnotherFooter();
-        assertThat(isShown("import-refusal")).isFalse();
     }
 
     @Test
-    void drmBlocked_schemeNotIdentified_omitsTheEncryptionRow() throws TimeoutException {
+    void drmBlocked_schemeNotIdentified_omitsTheEncryptionSentence() throws TimeoutException {
         final Path source = dir.resolve("Mystery.epub");
         projects.on(source, Result.ok(BookFixtures.drmProtected("EPUB", null)));
         openImport();
 
         openBook(source);
 
-        assertThat(isShown("import-drm")).isTrue();
-        assertThat(optional("import-drm-scheme")).isNull();
+        assertThat(textOf("import-verdict-text")).isEqualTo("Mystery.epub is locked by the shop it came from.");
     }
 
     // IF a PDF rendered like a damaged book, THEN the person would not learn the file is simply not a supported type.
     @Test
-    void unsupported_pdf_showsBannerDetectedTypeBadgeHintAndOnlyChooseAnother() throws TimeoutException {
+    void unsupported_pdf_namesTheTypeAndTheSupportedFormatsAndOnlyChooseAnother() throws TimeoutException {
         final Path source = dir.resolve("book.pdf");
         projects.on(source, Result.ok(BookFixtures.refused(InspectionVerdict.UNSUPPORTED, "PDF")));
         openImport();
 
         openBook(source);
 
-        assertThat(textOf("import-unsupported")).contains("Couldn't read this file.");
-        assertThat(textOf("import-unsupported-file")).contains("book.pdf");
-        assertThat(textOf("import-unsupported-type")).contains("PDF").contains("not supported");
-        assertThat(textOf("import-unsupported-hint")).contains("EPUB, FB2 (.fb2 / .fb2.zip), Markdown, TXT");
+        assertThat(textOf("import-verdict-text"))
+                .startsWith("book.pdf is PDF, which is not supported.")
+                .endsWith("It reads EPUB, FB2, Markdown and plain text.");
         assertOnlyChooseAnotherFooter();
-        assertThat(isShown("import-drm")).isFalse();
     }
 
     // IF a refused book's footer offered Continue or Cancel, THEN a person could move on with no book.
@@ -262,7 +251,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         assertThat(projects.closedProjects()).containsExactly("p1");
         assertThat(state()).isEqualTo(new ImportState.Idle());
-        assertThat(isShown("import-card")).isFalse();
+        assertThat(optional("import-about")).isNull();
         assertThat(isShown("import-dropzone")).isTrue();
     }
 
@@ -300,14 +289,14 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         onFx(() -> button("confirm-cancel").fire());
 
         assertThat(projects.closedProjects()).isEmpty();
-        assertThat(isShown("import-card")).isTrue();
+        assertThat(isShown("import-about")).isTrue();
     }
 
     private void assertOnlyChooseAnotherFooter() {
         assertThat(optional("import-continue")).isNull();
         assertThat(optional("import-cancel")).isNull();
-        assertThat(isShown("import-card")).isFalse();
-        assertThat(button("import-choose-another").getText()).isEqualTo("Choose another file");
+        assertThat(optional("import-about")).isNull();
+        assertThat(button("import-verdict-choose").getText()).isEqualTo("Choose another file…");
         assertThat(idsStartingWith("import-row-")).isEmpty();
     }
 

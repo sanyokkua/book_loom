@@ -12,52 +12,45 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 
-/** Which stored project a file would reuse: the one whose source is that file's absolute, normalized path. */
+/** Which stored projects a dropped file already has: every one whose content hash is the file's, in list order. */
 class EarlierProjectsTest {
 
-    private static ProjectSummary summary(final String id, final Path source, final int decided) {
+    private static ProjectSummary summary(final String id, final String name, final String hash, final Path source) {
         return new ProjectSummary(
                 new Project(
                         id,
                         source,
                         BookFormat.EPUB,
-                        "hash",
+                        hash,
                         BookBrief.defaults("en"),
-                        "Book",
+                        name,
                         NameOrigin.AUTO,
-                        "Book",
+                        "Earth Gravity",
                         Instant.EPOCH,
                         Instant.EPOCH),
-                decided,
-                decided,
+                3,
+                9,
                 null,
                 null);
     }
 
+    // The match is by content, so a copy of the book under another name or folder is still the same book.
     @Test
-    void find_projectWithTheSameSource_returnsIt() {
-        final Path source = Path.of("/books/Dracula.epub");
-        final List<ProjectSummary> all =
-                List.of(summary("p1", Path.of("/books/Other.epub"), 3), summary("p2", source, 7));
+    void matching_sameContentUnderOtherPaths_returnsEveryProjectInListOrder() {
+        final List<ProjectSummary> all = List.of(
+                summary("p1", "Earth Gravity · EN → UK", "abc", Path.of("/a/earth.epub")),
+                summary("p2", "Other", "zzz", Path.of("/a/other.epub")),
+                summary("p3", "Earth Gravity · EN → PL", "abc", Path.of("/b/copy.epub")));
 
-        assertThat(EarlierProjects.find(all, source)).hasValueSatisfying(found -> {
-            assertThat(found.project().id()).isEqualTo("p2");
-            assertThat(found.decidedSegments()).isEqualTo(7);
-        });
+        assertThat(EarlierProjects.matching(all, "abc"))
+                .extracting(found -> found.project().id())
+                .containsExactly("p1", "p3");
     }
 
     @Test
-    void find_sourceGivenWithDotSegments_matchesTheNormalizedProject() {
-        final List<ProjectSummary> all = List.of(summary("p1", Path.of("/books/Dracula.epub"), 2));
+    void matching_noProjectHasTheHash_isEmptyEvenWhenAPathWouldMatch() {
+        final List<ProjectSummary> all = List.of(summary("p1", "Book", "abc", Path.of("/a/earth.epub")));
 
-        assertThat(EarlierProjects.find(all, Path.of("/books/../books/Dracula.epub")))
-                .isPresent();
-    }
-
-    @Test
-    void find_noProjectForTheSource_isEmpty() {
-        final List<ProjectSummary> all = List.of(summary("p1", Path.of("/books/Other.epub"), 2));
-
-        assertThat(EarlierProjects.find(all, Path.of("/books/Dracula.epub"))).isEmpty();
+        assertThat(EarlierProjects.matching(all, "def")).isEmpty();
     }
 }

@@ -72,14 +72,14 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
     // IF the full box stayed once a book is open, THEN the book's structure would start below the fold.
     @Test
-    void dropzone_bookOpen_isOneLineAboveTheBookDetails() throws TimeoutException {
+    void dropzone_bookOpen_isOneLineAboveTheVerdict() throws TimeoutException {
         openFactsBook();
 
         assertThat(isCompact()).isTrue();
         assertThat(required("import-dropzone").getStyleClass()).contains("dropzone");
         assertThat(isOneLine()).isTrue();
         assertThat(boundsOf("import-dropzone").getMaxY())
-                .isLessThanOrEqualTo(boundsOf("import-card").getMinY());
+                .isLessThanOrEqualTo(boundsOf("import-verdict").getMinY());
     }
 
     // IF compacting the box hid or disabled the one way to pick another book, THEN a person could not change books.
@@ -116,7 +116,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         openBook(source);
 
-        assertThat(isShown("import-refusal")).isTrue();
+        assertThat(isShown("import-verdict")).isTrue();
         assertThat(isCompact()).isFalse();
     }
 }

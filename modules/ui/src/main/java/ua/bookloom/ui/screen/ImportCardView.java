@@ -11,7 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -22,11 +22,12 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookCard;
+import ua.bookloom.ui.state.WordCount;
 
 /**
- * The card that reports what identifies an opened book: its cover or a placeholder beside the rows the inspection could
- * fill. Every count the translation depends on is in the facts card beside it, so none is repeated here except the
- * chapters, which this card owns together with the words.
+ * What identifies an opened book, shown in the "About this book" fold: its cover or the words "No cover" beside the rows
+ * the inspection could fill. Every count the translation depends on is in the facts beside it, so none is repeated
+ * here except the chapters, which this section owns together with the words.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -39,20 +40,17 @@ final class ImportCardView {
     private static final double CARD_SPACING = 16;
     private static final double COVER_WIDTH = 110;
     private static final double COVER_HEIGHT = 150;
-    private static final int WORD_ROUNDING = 1000;
     private static final String DOT = " · ";
 
     /** Rows only for what the inspection carries; a field the book did not declare gets no row at all. */
     static Node card(final Messages messages, final LanguageNames names, final BookCard card) {
         final VBox rows = new VBox(SECTION_SPACING);
-        final Label heading = new Label(messages.get(MessageKey.IMPORT_CARD_TITLE));
-        heading.getStyleClass().add("card-title");
-        rows.getChildren().add(heading);
         rows.getChildren().addAll(rowsOf(messages, names, card));
+        HBox.setHgrow(rows, Priority.ALWAYS);
         final HBox box = new HBox(CARD_SPACING, cover(messages, card.cover()), rows);
         box.setId("import-card");
         box.setAlignment(Pos.TOP_LEFT);
-        box.getStyleClass().addAll("card", "import-details");
+        box.getStyleClass().add("import-details");
         return box;
     }
 
@@ -75,11 +73,6 @@ final class ImportCardView {
             return format;
         }
         return version.regionMatches(true, 0, format, 0, format.length()) ? version : format + " " + version;
-    }
-
-    /** From 1,000 the figure is rounded to the nearest thousand; below it stays exact. */
-    static int approximateWords(final int words) {
-        return words < WORD_ROUNDING ? words : Math.round((float) words / WORD_ROUNDING) * WORD_ROUNDING;
     }
 
     private static List<Node> rowsOf(final Messages messages, final LanguageNames names, final BookCard card) {
@@ -114,10 +107,7 @@ final class ImportCardView {
                 ImportViews.keyValue(
                         "import-row-chapters",
                         messages.get(MessageKey.IMPORT_CARD_CHAPTERS),
-                        messages.get(
-                                MessageKey.IMPORT_CARD_CHAPTERS_WORDS,
-                                card.chapters(),
-                                approximateWords(card.words()))),
+                        card.chapters() + DOT + WordCount.text(messages, card.words())),
                 ImportViews.keyValueNode("import-row-drm", messages.get(MessageKey.IMPORT_CARD_DRM), none));
     }
 
@@ -143,9 +133,10 @@ final class ImportCardView {
             }
             log.warn("the cover {} could not be decoded; the placeholder is shown", cover.resourcePath());
         }
-        final Region placeholder = new Region();
-        placeholder.setId("import-cover-placeholder");
-        placeholder.getStyleClass().add("cover-placeholder");
+        final Label placeholder = new Label(messages.get(MessageKey.IMPORT_ABOUT_NO_COVER));
+        placeholder.setId("import-cover-none");
+        placeholder.setAlignment(Pos.CENTER);
+        placeholder.getStyleClass().addAll("cover-placeholder", "muted");
         placeholder.setMinSize(COVER_WIDTH, COVER_HEIGHT);
         placeholder.setPrefSize(COVER_WIDTH, COVER_HEIGHT);
         placeholder.setMaxSize(COVER_WIDTH, COVER_HEIGHT);

@@ -48,10 +48,10 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         assertThat(projects.segmentCalls()).containsExactly("p1/unit-0", "p1/unit-1");
     }
 
-    // IF the picked segment's text were not shown whole below the list, THEN a person could not read what the model is
+    // IF the picked segment's text were not shown whole in its own pane, THEN a person could not read what the model is
     // given.
     @Test
-    void preview_segmentPicked_showsItsWholeTextBelowTheList() throws TimeoutException {
+    void preview_segmentPicked_showsItsWholeTextInTheTextPane() throws TimeoutException {
         openFactsBook();
         awaitFx(() -> segmentRows().size() == 4);
 
@@ -59,8 +59,8 @@ class ImportStructureScreenTest extends ImportBookTestBase {
 
         assertThat(previewText()).isEqualTo(LONG_TEXT);
         assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · chunk 1 of 2");
-        assertThat(boundsOf("structure-preview").getMinY())
-                .isGreaterThanOrEqualTo(boundsOf("structure-segments").getMaxY());
+        assertThat(isInside("structure-preview", "structure-text-card")).isTrue();
+        assertThat(isInside("structure-preview", "structure-segments-card")).isFalse();
     }
 
     // IF the search narrowed nothing on Import, THEN the browser would be reused in name only.

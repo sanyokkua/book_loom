@@ -38,12 +38,16 @@ final class StructureBrowser {
 
     private static final double CARD_SPACING = 10;
     private static final double TREE_MIN_HEIGHT = 204;
+    private static final double TREE_MIN_WIDTH = 160;
+    private static final double SEGMENTS_MIN_WIDTH = 240;
+    private static final double TEXT_MIN_WIDTH = 220;
     private static final BookStats EMPTY_STATS = new BookStats(0, 0, 0, 0, 0, 0, 0, 0, Set.of());
 
     private final Messages messages;
     private final StructureSegmentsViewModel segments;
     private final BookBriefViewModel brief;
     private final NumberFormat numbers;
+    private final StructureTextPane reading;
     private final ChangeListener<Boolean> onBriefSaved;
 
     StructureBrowser(
@@ -52,6 +56,7 @@ final class StructureBrowser {
         this.segments = Objects.requireNonNull(segments, "segments");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
+        this.reading = new StructureTextPane(messages);
         this.onBriefSaved = (observed, was, now) -> {
             if (was && !now) {
                 segments.refresh();
@@ -90,6 +95,7 @@ final class StructureBrowser {
         final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots(), projectId));
         card.setId("structure-card");
         card.getStyleClass().add("card");
+        card.setMinWidth(TREE_MIN_WIDTH);
         return card;
     }
 
@@ -103,9 +109,28 @@ final class StructureBrowser {
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_SEGMENTS_TITLE));
         heading.getStyleClass().add("card-title");
         Tips.install(messages, heading, MessageKey.STRUCTURE_SEGMENTS_TITLE_TIP);
-        final VBox card = new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages));
+        final VBox card = new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages, reading));
         card.setId("structure-segments-card");
         card.getStyleClass().add("card");
+        card.setMinWidth(SEGMENTS_MIN_WIDTH);
+        return card;
+    }
+
+    /**
+     * The card holding the picked segment's text in full, which follows what the segment list picks.
+     *
+     * @return the card, id {@code structure-text-card}
+     */
+    Node textCard() {
+        log.debug("building the text card");
+        final Label heading = new Label(messages.get(MessageKey.IMPORT_BROWSER_TEXT));
+        heading.getStyleClass().add("card-title");
+        Tips.install(messages, heading, MessageKey.STRUCTURE_PREVIEW_HINT);
+        final VBox card = new VBox(CARD_SPACING, heading, reading);
+        VBox.setVgrow(reading, Priority.ALWAYS);
+        card.setId("structure-text-card");
+        card.getStyleClass().add("card");
+        card.setMinWidth(TEXT_MIN_WIDTH);
         return card;
     }
 

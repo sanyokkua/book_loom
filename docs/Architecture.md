@@ -319,7 +319,7 @@ is empty by design; the order is enforced). `start` shows a 1024×700 `Scene` (m
   Book Brief, Names & style, Translating, Export and Settings — FXML plus a thin controller; the structure tree lives
   on Import, review lives inside Translating), `.control` (the shared controls: searchable choice box, step footer,
   banner, stat tile, the two-column layout, the term-table card, smooth scrolling), `.dialog` (the confirmation and
-  input cards: replace-run, leave, narrator, character genders, retry with a note, export complete, change results),
+  input cards: open-another-book, leave, narrator, character genders, retry with a note, export complete, change results),
   `.state` (`StateMirror`, `RunSession`, `TranslationRunner`, `RunStarter`, `CurrentProject` and the view models),
   `.i18n` (`en`/`uk` bundles, typed `MessageKey`, a locale chosen by the OS — no in-app switch), `.notify` (error
   dialog, toasts) and `.theme` (token-only light and dark). **Projects** is the one inert navigation entry. Six workflow

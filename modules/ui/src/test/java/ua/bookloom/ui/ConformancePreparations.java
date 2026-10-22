@@ -75,6 +75,8 @@ final class ConformancePreparations {
             case BOOK_REFUSED -> refuseABook();
             case BOOK_DRM_BLOCKED -> blockABook();
             case BOOK_UNSUPPORTED -> refuseAnUnsupportedFile();
+            case BOOK_READING -> new ImportPreparations(injector, projects).readABook();
+            case BOOK_ALREADY_STORED -> new ImportPreparations(injector, projects).dropAKnownBook();
             case LANGUAGE_MISMATCH -> openAMismatchedBook();
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();

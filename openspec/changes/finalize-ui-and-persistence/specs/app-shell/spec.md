@@ -1018,6 +1018,8 @@ WHEN a book is chosen for import while a project is open, whatever its run state
 
 **Source**: `docs/specification/mockups/README.md#step-1--import--i1i4` (Header row), `docs/specification/mockups/README.md#other-dialogs`. In plain words: the safe answer is the main one: the earlier translation stays, saved, in Projects; deleting it is a separate, named choice. The dialog is book-import's ("Ask before another book is opened while a project is open").
 
+The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, delete the open project, open the book and leave the run idle.
+
 #### Scenario: Keeping a paused translation
 
 - **WHEN** the translation of `earth-gravity.epub` is paused, `velk-chronicle.fb2` is chosen, and the person answers `Open as a new project`
@@ -1032,6 +1034,11 @@ WHEN a book is chosen for import while a project is open, whatever its run state
 
 - **WHEN** the translation of `earth-gravity.epub` is finished and `velk-chronicle.fb2` is chosen
 - **THEN** the dialog `Open another book?` is shown, and nothing is opened until the person answers
+
+#### Scenario: A running translation is stopped before the new book opens
+
+- **WHEN** the translation of `earth-gravity.epub` is running, `velk.fb2` is chosen and the person answers `Open as a new project`
+- **THEN** the card shows "Stopping the run…" with its buttons disabled, the run is stopped and waited for, and only then does `velk.fb2` open while `Earth Gravity · EN → UK` stays in Projects and can be continued later
 
 #### Scenario: Cancel leaves the screen as it was
 

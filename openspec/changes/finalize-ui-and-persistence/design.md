@@ -208,7 +208,7 @@ know the planned review passes.
 - **`#shell-banners`.** A `VBox` between the toolbar and the content `ScrollPane`, fed by `state/ShellBanners`, which
   is built from `RunStateView` (D8) and `HiddenWork`. Run banners show on every screen while they apply.
 - **`fills-viewport`.** The style class opts a screen out of `minHeight = USE_PREF_SIZE` in `AppShellView.showContent`.
-  Translating (live card min 460), Import (browser min 360), Names & style and Settings each declare their minimum
+  Translating (live card min 460), Import (its browser `SplitPane` is at least 360 px high, see D15), Names & style and Settings each declare their minimum
   height, and below it the page scrolls.
 - **Sizes.** The content is capped at 1320 px on form and list screens; prose at 680 px. The nav column is 236 px, or
   200 px under a 1200 px window.
@@ -451,6 +451,31 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
 Tests: `LocalModelProbeTest` fakes the catalog and asserts the exact addresses, one call each and no second look; a
 WireMock test of `ModelCatalog.listModels(ProviderConfig)` in both dialects asserts the server receives only `GET
 /api/tags` or `GET /v1/models`.
+
+### D15 — Import page (task 6.2)
+
+- **One verdict line.** `state/ImportVerdicts.of(Messages, ImportState)` words one `ImportVerdict(kind, text)` per
+  state without a scene, and `screen/ImportVerdictView` draws it as a `Banner` (role by kind: ok, warn, err, info) with
+  the controls the kind offers. Reading is indeterminate with the text "Reading…", because the parsers and
+  `ProjectService.create(Path)` report no chapter count while they work; the line "chapter n of N" is not built.
+- **Words.** `state/WordCount.text` is the one owner of the count's wording (exact below 1,000, else "about" and the
+  nearest hundred); the verdict, the fold's summary and the chapters row all use it.
+- **Fold.** `screen/AboutBookFold` is a closed `TitledPane` whose graphic is the one-line summary; its body keeps the
+  details and facts under their old `import-row-*` and `import-facts-card` ids, and shows "No cover" in place of a
+  blank box.
+- **Browser.** `screen/StructureTextBrowser` is one `SplitPane` (`import-browser`) of the chapters, the segments and the
+  text, with minimum widths 160 / 240 / 220 and a minimum height of 360 px. Below a 760 px content width the text is
+  re-parented under the segments in an inner vertical split; the three panes are fields, so the pick, the search and
+  the text survive the change. The page is a `ScrollPane` with `fitToHeight`, so it scrolls only below the sum of its
+  minimums and needs no scroll bar on a large window.
+- **The guard.** While a project is open `ImportGuard` asks "Open another book?" first, whatever the run state. "Open
+  as a new project" stops a RUNNING run and waits for it (other states are left as they are) and never removes the
+  open project; "Replace and delete this translation" ends any run that has not ended, then
+  `ImportViewModel.openReplacing` removes the project and creates the book. With no project open, or after "Open as a
+  new project", the file's SHA-256 is read off the FX thread and matched with the stored projects' content hashes: a
+  match is `ImportState.AlreadyInProjects` and creates and removes nothing. `ImportViewModel.open` never removes a
+  project, and its `cancel()` during a read sets the state idle at once, removes the project the read creates when it
+  finishes, and ignores its answer.
 
 ## Risks / Trade-offs
 

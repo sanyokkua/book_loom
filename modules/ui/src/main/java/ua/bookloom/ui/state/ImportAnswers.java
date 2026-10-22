@@ -10,7 +10,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
-import ua.bookloom.api.pipeline.ProjectOpening;
 
 /** Turns what the project service answered for an import into one checked answer or one error, off the FX thread. */
 // Checkstyle parses source text before Lombok runs, so it cannot see the private constructor (ADR-0024).
@@ -21,27 +20,6 @@ final class ImportAnswers {
 
     /** A checked answer: the book file and what the service made of it. */
     record Answer(Path source, ImportedBook imported) {}
-
-    static Result<ImportedBook> bookOf(final ProjectOpening opening, final Path source) {
-        return switch (opening) {
-            case ProjectOpening.Opened opened -> Result.ok(opened.book());
-            case ProjectOpening.BookFileMissing missing -> {
-                log.warn("the book file of {} is missing", source.getFileName());
-                yield Result.err(noEarlierTranslation());
-            }
-            case ProjectOpening.BookFileChanged changed -> {
-                log.warn("the book file of {} changed", source.getFileName());
-                yield Result.err(noEarlierTranslation());
-            }
-        };
-    }
-
-    static AppError noEarlierTranslation() {
-        return AppError.of(
-                ErrorCode.validation,
-                "There is no earlier translation to continue",
-                "This file has no stored project; import it again.");
-    }
 
     // A refusal and a malformed answer both become errors here, so the FX thread only routes by code.
     static Result<Answer> answerOf(final Path source, final Result<ImportedBook> answer) {

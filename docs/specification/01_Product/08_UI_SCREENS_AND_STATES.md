@@ -407,10 +407,10 @@ that fills the height (L5), capped at 1320 px (L4):
 
 | Element | Behaviour | Code |
 |---|---|---|
-| Header row | Title and a one-row drop zone: "Drop another book here or Choose a file…". Dropping a book while one is open asks **Open another book?** (`#dialogs-other`), whose primary is **Open as a new project**; "Replace and delete this translation" is the named destructive choice | `ImportController`, `ImportGuard`, `dialog/ReplaceRunDialog` |
-| **Verdict** (one line) | ✓ "BookLoom can translate this book: 5 chapters, about 4,100 words. Your file is never changed." · **Reading…** (a bar "chapter 3 of 5", Cancel) · **Already in projects** (names them, Show them) · **Two language marks** ("The file names two languages: its details say English, its chapters are marked Ukrainian. BookLoom does not read the text to decide — check “Translate from” in the Book Brief." — a comparison of the file's own declarations, never a text analysis) · **DRM** ("locked by the shop it came from") · **Damaged** ("Try downloading it again", Details) · **Unsupported** ("It reads EPUB, FB2, Markdown and plain text"); each error offers Choose another file… | `ImportState` variants |
-| **About this book** (fold, closed) | Summary line: format · chapters · words · images · cover. Open: cover (or "No cover · N/A", I2), file, title · author, the declared language, DRM; segments to translate, kept as they are, images · footnotes · tables "kept in place", formatting "kept exactly", the check "read and written back with nothing lost". The technical line (round trip, ids, code blocks, fonts) shows only with Show technical details | `ImportCardView`, `ImportBookView`, `StructureChecks*` |
-| **The book's text** (I3) | Three panes in one `SplitPane` (minimum widths 160 / 240 / 220): **Chapters** (tree, count pills) → **Segments** of the chapter (search the text or a place like "ch1 · p05", kind filter I4, one-line rows with the kind chip or "kept as is"; marks left out, full text in the tooltip) → **Text** of the segment (location and kind; tokens and chunk only with technical details; marks as chips). In compact, Text moves under the other two (200 px). Search with no hits: "Nothing matches 'xyz'." | `StructureBrowser` + `StructureSegmentsPane` (virtualised) |
+| Header row | Title and a one-row drop zone: "Drop another book here or Choose a file…". Dropping a book while one is open asks **Open another book?** (`#dialogs-other`), whose primary is **Open as a new project**; "Replace and delete this translation" is the named destructive choice | `ImportController`, `ImportGuard`, `dialog/OpenAnotherBookDialog` |
+| **Verdict** (one line) | ✓ "BookLoom can translate this book: 5 chapters, about 4,100 words. Your file is never changed." · **Reading…** (an indeterminate bar, Cancel) · **Already in projects** (names them, Show them; no project is created) · **Two language marks** ("The file names two languages: its details say English, its chapters are marked Ukrainian. BookLoom does not read the text to decide — check “Translate from” in the Book Brief." — a comparison of the file's own declarations, never a text analysis) · **DRM** ("locked by the shop it came from") · **Damaged** ("Try downloading it again", Details) · **Unsupported** ("It reads EPUB, FB2, Markdown and plain text"); each error offers Choose another file… | `ImportState` variants |
+| **About this book** (fold, closed) | Summary line: format · chapters · words · images · cover. Open: cover (or "No cover · N/A", I2), file, title · author, the declared language, DRM; segments to translate, kept as they are, images · footnotes · tables "kept in place", formatting "kept exactly", the check "read and written back with nothing lost". The technical line (round trip, ids, code blocks, fonts) shows only with Show technical details | `AboutBookFold`, `ImportCardView`, `ImportBookView`, `StructureChecks*` |
+| **The book's text** (I3) | Three panes in one `SplitPane` (minimum widths 160 / 240 / 220): **Chapters** (tree, count pills) → **Segments** of the chapter (search the text or a place like "ch1 · p05", kind filter I4, one-line rows with the kind chip or "kept as is"; marks left out, full text in the tooltip) → **Text** of the segment (location and kind; tokens and chunk only with technical details; marks as chips). In compact, Text moves under the other two (200 px). Search with no hits: "Nothing matches 'xyz'." | `StructureTextBrowser` (one `SplitPane`) over `StructureBrowser` + `StructureSegmentsPane` (virtualised) |
 
 Requirements: FR-IMPORT-01..07. P6 reference: Import and each import state.
 
@@ -896,7 +896,7 @@ window while a run or any activity is under way; confirming stops the work and c
 the default: **Cancel** (`#confirm-cancel`) is the default button and takes the focus, Escape and a click outside do
 nothing but close the card, and only the confirming button (`#confirm-yes`, worded for the action and in the danger
 look) runs the action. Review's Skip discards nothing and asks nothing. A card whose answer something waits on (the
-replace-run question) is not closed by Escape. Control: `Dialog`. P6 reference: Confirm dialogs.
+open-another question while a run is stopping) keeps its buttons disabled until the answer is carried out. Control: `Dialog`. P6 reference: Confirm dialogs.
 
 ### dialog-confirm-delete {#dialog-confirm-delete}
 
@@ -941,7 +941,7 @@ non-release build. Control: `Dialog`; the only dialog that closes on a click out
 | Unsaved changes | Leaving Providers or Models with changes — Keep editing · Discard · Save | new |
 | Cancel the export? / Write the file now? | Export dialog footer — they open above it (G1) | `ConfirmDialog` |
 | Delete provider / Remove project | Settings / Projects | `ConfirmDialog` |
-| Open another book? | Dropping a book while a translation exists — Open as a new project (primary) · Replace and delete this translation · Cancel | `ReplaceRunDialog` |
+| Open another book? | Dropping a book while a translation exists — Open as a new project (primary) · Replace and delete this translation · Cancel | `OpenAnotherBookDialog` |
 | Model work is running | Leaving during long work — Stay · Continue in background | `LeaveDialog`, `LeaveGuard` |
 | Error with details | Unreadable file and other hard failures | `notify/ErrorDialog` |
 | AI model not answering / A different model is chosen | Continuing a project — Try again · Use another AI model… · Not now; Use the earlier model · Continue with the new one | new (persistence) |

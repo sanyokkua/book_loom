@@ -1320,6 +1320,31 @@
     -fx-border-radius: 10px, 7px;
 }
 
+/* A link-looking button: the information foreground role, underlined, so colour is not the only sign it acts. */
+.btn-link {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 5px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-text-fill: -color-info-fg;
+    -fx-underline: true;
+    -fx-padding: 3px 4px 3px 4px;
+    -fx-cursor: hand;
+}
+
+.btn-link:hover {
+    -fx-text-fill: -color-text-strong;
+}
+
+.btn-link:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 8px, 5px;
+}
+
 /* An unavailable button is dimmed, not recoloured, so its role stays readable and no colour is invented. */
 .btn-primary:disabled,
 .btn-secondary:disabled,
@@ -2686,4 +2711,59 @@
 .dialog-error {
     -fx-text-fill: -color-err-fg;
     -fx-font-size: 12px;
+}
+
+/* --- Import page: the "About this book" fold and the three-pane text browser (ui-mockup.html: .fold, .browser) --- */
+/* Modena paints a titled pane and a split pane from its own greys; every part is reset to roles so both blocks reach it. */
+.import-fold {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 9px;
+    -fx-padding: 0;
+}
+
+.import-fold > .title {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 8px 12px 8px 12px;
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+    -fx-graphic-text-gap: 8px;
+}
+
+.import-fold > .title > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+}
+
+.import-fold > .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: -color-divider transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 10px 14px 12px 14px;
+}
+
+.import-fold:focus-visible {
+    -fx-border-color: -color-focus, -color-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 12px, 9px;
+}
+
+.import-split {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.import-split > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-padding: 0 4px 0 4px;
+}
+
+.import-split:vertical > .split-pane-divider {
+    -fx-padding: 4px 0 4px 0;
 }

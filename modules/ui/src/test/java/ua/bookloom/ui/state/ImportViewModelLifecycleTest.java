@@ -304,33 +304,6 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
     }
 
-    // IF Cancel during an unanswered import discarded the current book, THEN the answer would then open a second book
-    // beside a project that was already released; it is ignored until the answer decides what is open.
-    @Test
-    void cancel_whileOpening_isIgnored() throws InterruptedException, TimeoutException {
-        final Path first = dir.resolve("first.epub");
-        final Path second = dir.resolve("second.epub");
-        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
-        projects.on(second, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, "en", "Other", "Someone", 1)));
-        useBackgroundThread();
-        final ImportViewModel viewModel = viewModel();
-        open(viewModel, first);
-        awaitAnswered(viewModel);
-        projects.hold();
-        open(viewModel, second);
-        projects.awaitEntered();
-
-        onFx(() -> {
-            viewModel.cancel();
-            return null;
-        });
-
-        assertThat(projects.closedProjects()).isEmpty();
-        assertThat(openedBook()).isNotNull();
-        projects.release();
-        awaitAnswered(viewModel);
-    }
-
     // IF the replaced project were closed before the new one was current, THEN a screen reading the holder in between
     // would find nothing open; the new project is current once the old one is released.
     @Test

@@ -1,23 +1,23 @@
 package ua.bookloom.ui.state;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.ProjectSummary;
 
-/** Finds, among the stored projects, the one a file would reuse, so the import screens ask before replacing it. */
+/** Finds the stored projects a dropped file already has, so importing it again is never offered silently. */
 // Checkstyle reads the source before Lombok adds the private constructor.
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class EarlierProjects {
 
-    // The list arrives newest first, so the first match is the most recently opened one.
-    static Optional<ProjectSummary> find(final List<ProjectSummary> projects, final Path source) {
-        final Path wanted = source.toAbsolutePath().normalize();
+    /** Every project whose book content has this hash, in list order; a copy under another name is the same book. */
+    static List<ProjectSummary> matching(final List<ProjectSummary> projects, final String contentHash) {
+        Objects.requireNonNull(projects, "projects");
+        Objects.requireNonNull(contentHash, "contentHash");
         return projects.stream()
-                .filter(summary -> summary.project().source().equals(wanted))
-                .findFirst();
+                .filter(summary -> summary.project().contentHash().equals(contentHash))
+                .toList();
     }
 }

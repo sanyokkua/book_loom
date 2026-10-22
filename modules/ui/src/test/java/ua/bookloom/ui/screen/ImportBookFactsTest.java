@@ -66,7 +66,7 @@ class ImportBookFactsTest extends ImportBookTestBase {
                 "format | EPUB",
                 "titleAuthor | Title · Author",
                 "declaredLang | English (en)",
-                "chapters | 2 · ~78,000 words",
+                "chapters | 2 · about 78,200 words",
                 "drm | none"
             })
     void details_bookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {
@@ -158,12 +158,15 @@ class ImportBookFactsTest extends ImportBookTestBase {
                 .hasSize(1);
     }
 
-    // IF the word count were shown in the facts as well as with the chapters, THEN two roundings could disagree.
+    // IF one place on the page rounded the word count differently from another, THEN the page would give two figures
+    // for one book; the verdict, the fold's summary and the chapters row all word it through the same owner.
     @Test
-    void figures_bookOpened_theWordCountIsOnTheScreenOnce() throws TimeoutException {
+    void figures_bookOpened_everyPlaceTheWordCountAppearsSaysTheSameRoundedFigure() throws TimeoutException {
         openCheckedFactsBook();
 
-        assertThat(labelsContaining("78,000", "import-screen")).hasSize(1);
+        assertThat(labelsContaining("78,", "import-screen"))
+                .hasSize(3)
+                .allSatisfy(text -> assertThat(text).contains("about 78,200 words"));
     }
 
     // IF the run total were a second card or lost with the old Structure screen, THEN the person would not learn why

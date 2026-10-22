@@ -15,7 +15,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -25,8 +24,6 @@ import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.api.pipeline.SegmentPreview;
-import ua.bookloom.ui.control.PlaceholderFlow;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -46,7 +43,6 @@ import ua.bookloom.ui.state.StructureSegmentsViewModel;
 final class StructureSegmentsPane extends VBox {
 
     private static final double SPACING = 8;
-    private static final double PREVIEW_HEIGHT = 120;
     private static final double ROW_HEIGHT = 34;
     private static final int MIN_ROWS = 6;
     private static final int PREFERRED_ROWS = 10;
@@ -62,21 +58,22 @@ final class StructureSegmentsPane extends VBox {
     private final Label note = new Label();
     private final TextField search = new TextField();
     private final ComboBox<SegmentKind> kinds = new ComboBox<>();
-    private final Label meta = new Label();
-    private final PlaceholderFlow text = new PlaceholderFlow("structure-preview-text");
+    private final StructureTextPane reading;
     private final ChangeListener<StructureSegments> onState = (observed, was, now) -> show(now);
     private boolean isLoaded;
 
-    StructureSegmentsPane(final StructureSegmentsViewModel model, final Messages messages) {
+    StructureSegmentsPane(
+            final StructureSegmentsViewModel model, final Messages messages, final StructureTextPane reading) {
         super(SPACING);
         Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.reading = Objects.requireNonNull(reading, "reading");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
         header.setId("structure-segments-header");
         header.getStyleClass().add("muted");
         final StackPane stack = listStack();
         VBox.setVgrow(stack, Priority.ALWAYS);
-        getChildren().addAll(header, filters(), stack, reading());
+        getChildren().addAll(header, filters(), stack);
         model.state().addListener(new WeakChangeListener<>(onState));
         show(model.state().get());
     }
@@ -117,28 +114,13 @@ final class StructureSegmentsPane extends VBox {
         list.setMinHeight(MIN_ROWS * ROW_HEIGHT + FRAME);
         list.setPrefHeight(PREFERRED_ROWS * ROW_HEIGHT + FRAME);
         Tips.install(messages, list, MessageKey.STRUCTURE_SEGMENTS_HINT);
-        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> preview(now));
+        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> reading.show(now));
         note.setId("structure-segments-state");
         note.getStyleClass().add("muted");
         note.setWrapText(true);
         note.setMouseTransparent(true);
         note.managedProperty().bind(note.visibleProperty());
         return new StackPane(list, note);
-    }
-
-    private VBox reading() {
-        meta.setId("structure-preview-meta");
-        meta.getStyleClass().add("muted");
-        meta.setWrapText(true);
-        text.getStyleClass().add("structure-preview-flow");
-        final ScrollPane scroll = new ScrollPane(text);
-        scroll.setId("structure-preview");
-        scroll.getStyleClass().add("structure-preview");
-        scroll.setFitToWidth(true);
-        scroll.setPrefViewportHeight(PREVIEW_HEIGHT);
-        scroll.setMinHeight(PREVIEW_HEIGHT);
-        Tips.install(messages, scroll, MessageKey.STRUCTURE_PREVIEW_HINT);
-        return new VBox(SPACING, meta, scroll);
     }
 
     private void show(final StructureSegments state) {
@@ -150,7 +132,7 @@ final class StructureSegmentsPane extends VBox {
             case StructureSegments.Failed _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_FAILED);
             case StructureSegments.Loaded loaded -> loaded(loaded);
         }
-        preview(null);
+        reading.show(null);
     }
 
     private void unlisted(final MessageKey why) {
@@ -190,34 +172,17 @@ final class StructureSegmentsPane extends VBox {
         shown.setText(messages.get(MessageKey.STRUCTURE_SEGMENTS_SHOWN, visible.size(), backing.size()));
         if (backing.isEmpty()) {
             message(MessageKey.STRUCTURE_SEGMENTS_NONE);
+        } else if (visible.isEmpty()) {
+            final String wanted =
+                    !needle.isBlank() || kind == null ? needle.strip() : messages.get(StructureKindLabels.of(kind));
+            message(MessageKey.STRUCTURE_SEGMENTS_NO_MATCH, wanted);
         } else {
-            message(visible.isEmpty() ? MessageKey.STRUCTURE_SEGMENTS_NO_MATCH : null);
+            message(null);
         }
     }
 
-    private void message(final @Nullable MessageKey key) {
+    private void message(final @Nullable MessageKey key, final Object... args) {
         note.setVisible(key != null);
-        note.setText(key == null ? "" : messages.get(key));
-    }
-
-    private void preview(final @Nullable StructureSegmentRow row) {
-        if (row == null) {
-            meta.setText(messages.get(MessageKey.STRUCTURE_PREVIEW_EMPTY));
-            text.show("", List.of());
-            return;
-        }
-        final SegmentPreview preview = row.preview();
-        final String chunk = preview.chunkIndex() > 0
-                ? messages.get(MessageKey.STRUCTURE_PREVIEW_CHUNK, preview.chunkIndex(), preview.chunkCount())
-                : messages.get(MessageKey.STRUCTURE_PREVIEW_UNCHUNKED);
-        final String caption = messages.get(
-                MessageKey.STRUCTURE_PREVIEW_META,
-                preview.locator(),
-                messages.get(StructureKindLabels.of(preview.kind())),
-                preview.tokenEstimate(),
-                chunk);
-        meta.setText(
-                preview.oversized() ? caption + " · " + messages.get(MessageKey.STRUCTURE_PREVIEW_OVERSIZED) : caption);
-        text.show(preview.maskedSource(), List.of());
+        note.setText(key == null ? "" : messages.get(key, args));
     }
 }

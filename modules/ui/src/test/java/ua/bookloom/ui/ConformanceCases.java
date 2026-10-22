@@ -57,6 +57,8 @@ final class ConformanceCases {
         BOOK_REFUSED,
         BOOK_DRM_BLOCKED,
         BOOK_UNSUPPORTED,
+        BOOK_READING,
+        BOOK_ALREADY_STORED,
         LANGUAGE_MISMATCH,
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
@@ -131,8 +133,8 @@ final class ConformanceCases {
                     null,
                     Overlay.REPLACE_RUN,
                     List.of(
-                            new Part("#replace-run-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#replace-run-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#open-another-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#open-another-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             new Screen(
                     "RETRY_DIALOG",
                     null,
@@ -171,32 +173,32 @@ final class ConformanceCases {
                     Preparation.BOOK_REFUSED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-refusal", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-refusal", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_DRM_BLOCKED",
                     ViewNames.IMPORT,
                     Preparation.BOOK_DRM_BLOCKED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-drm", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-drm", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_UNSUPPORTED",
                     ViewNames.IMPORT,
                     Preparation.BOOK_UNSUPPORTED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-unsupported", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-unsupported", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_LANGUAGE_MISMATCH",
                     ViewNames.IMPORT,
                     Preparation.LANGUAGE_MISMATCH,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-mismatch", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
-                            new Part("#import-mismatch", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part("#import-verdict", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             new Screen(
                     "BOOK_BRIEF",
                     ViewNames.BOOK_BRIEF,

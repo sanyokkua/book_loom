@@ -730,7 +730,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: each dialog's buttons call the recording fake with the expected arguments; Rename shows the error for a name
     used in the same book and accepts one used in another book; Find the book refuses a file with different content.
   - **Compare:** each dialog. → :ui
-- [ ] 6.2 Rebuild Import around the one-line verdict, the centred drop zone, the "About this book" fold and the
+- [x] 6.2 Rebuild Import around the one-line verdict, the centred drop zone, the "About this book" fold and the
   three-pane text browser, so the page fits one screen and the book's text is browsed in one widget.
   - **Satisfies:** app-shell "Report an action that has not answered yet"; book-import "Say in one line what the import
     found"; book-import "Round the word count only from a thousand up"; book-import "Compare only the file's own
@@ -748,6 +748,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
       Text below in compact) with search, the kind filter and "Nothing matches 'xyz'.";
     - "Open another book?" with "Open as a new project" as primary;
     - "Already in projects".
+  - Added by this task: `ImportState.AlreadyInProjects` and `ImportVerdicts`/`WordCount` in `state/`; the `ImportGuard` open-another flow (a content-hash lookup, run stop-and-wait, `ImportViewModel.openReplacing`); `ReplaceRunDialog` becomes `OpenAnotherBookDialog`; `askEarlierWork` and `createAfterRemovingEarlier` are retired; Reading is indeterminate ("Reading…"), see design D15.
   - Tests: rewrite the Structure/Import layout tests (at 960×640 the browser is ≥ 360 px high and the page needs no
     scroll at 1920×1080); verdict cases per state.
   - **Compare:** each verdict, and the browser at both sizes. → :ui

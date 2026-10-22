@@ -18,7 +18,7 @@ import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.dialog.ChangeResultsDialog;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.ChangeKind;
@@ -125,8 +125,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
             case REPLACE_RUN ->
-                onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
-                        .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));
+                onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
+                        .ask("Earth Gravity · EN → UK", "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));
         }
     }
 

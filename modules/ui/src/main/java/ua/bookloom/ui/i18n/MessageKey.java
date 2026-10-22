@@ -617,10 +617,6 @@ public enum MessageKey {
     IMPORT_CHOOSER_TITLE("import.chooser.title"),
     /** Name of the picker's filter that lists every openable format. */
     IMPORT_CHOOSER_FILTER("import.chooser.filter"),
-    /** Line shown while a book is being opened; argument 0 is the file name, passed as a String. */
-    IMPORT_PROGRESS("import.progress"),
-    /** Heading of the card that reports an opened book. */
-    IMPORT_CARD_TITLE("import.card.title"),
     /** Label of the file-name row of the book card. */
     IMPORT_CARD_FILE("import.card.file"),
     /** Label of the format row of the book card. */
@@ -637,22 +633,14 @@ public enum MessageKey {
     IMPORT_FORMAT_TXT("import.format.txt"),
     /** A language with its code; argument 0 is the language name and argument 1 its code, both Strings. */
     IMPORT_LANGUAGE("import.language"),
-    /** Line of a refusal naming the file; argument 0 is the file name, passed as a String. */
-    IMPORT_REFUSAL_FILE("import.refusal.file"),
     /** Button of a refusal that lets the person pick a different file. */
     IMPORT_CHOOSE_ANOTHER("import.refusal.chooseAnother"),
     /** Hover explanation of the control labelled by {@link #IMPORT_CHOOSE_ANOTHER}. */
     IMPORT_CHOOSE_ANOTHER_TIP("import.refusal.chooseAnother.tip"),
-    /** Heading of the language-mismatch warning. */
-    IMPORT_MISMATCH_TITLE("import.mismatch.title"),
-    /** Body of the language-mismatch warning; argument 0 is the declared language and argument 1 the language of the text, both Strings. */
-    IMPORT_MISMATCH_TEXT("import.mismatch.text"),
     /** Label of the row joining the title and the author. */
     IMPORT_CARD_TITLE_AUTHOR("import.card.titleAuthor"),
     /** Label of the row counting chapters and approximate words. */
     IMPORT_CARD_CHAPTERS("import.card.chapters"),
-    /** Chapters and approximate words; argument 0 is the chapter count and argument 1 the already formatted word figure. */
-    IMPORT_CARD_CHAPTERS_WORDS("import.card.chaptersWords"),
     /** Heading of the card that holds the book's counts and its checks. */
     IMPORT_FACTS_TITLE("import.facts.title"),
     /** Label of the row saying whether the book is DRM-protected. */
@@ -665,40 +653,56 @@ public enum MessageKey {
     IMPORT_CANCEL("import.cancel"),
     /** Hover explanation of the control labelled by {@link #IMPORT_CANCEL}. */
     IMPORT_CANCEL_TIP("import.cancel.tip"),
-    /** Heading of the warning about a declared language the application cannot name. */
-    IMPORT_UNRECOGNIZED_TITLE("import.unrecognized.title"),
     /** Body of that warning; argument 0 is the code as the book wrote it. */
     IMPORT_UNRECOGNIZED_TEXT("import.unrecognized.text"),
-    /** Heading of the DRM-blocked banner. */
-    IMPORT_DRM_TITLE("import.drm.title"),
-    /** Body of the DRM-blocked banner. */
-    IMPORT_DRM_TEXT("import.drm.text"),
-    /** Label of the file row of the DRM-blocked state. */
-    IMPORT_DRM_FILE("import.drm.file"),
-    /** Label of the encryption row of the DRM-blocked state. */
-    IMPORT_DRM_SCHEME("import.drm.scheme"),
-    /** Label of the status row of the DRM-blocked state. */
-    IMPORT_DRM_STATUS("import.drm.status"),
-    /** Value of that status row. */
-    IMPORT_DRM_STATUS_VALUE("import.drm.statusValue"),
-    /** Note that only DRM-free books are supported. */
-    IMPORT_DRM_NOTE("import.drm.note"),
-    /** Heading of the unsupported-file banner. */
-    IMPORT_UNSUPPORTED_TITLE("import.unsupported.title"),
-    /** Body of the unsupported-file banner. */
-    IMPORT_UNSUPPORTED_TEXT("import.unsupported.text"),
-    /** Label of the file row of the unsupported state. */
-    IMPORT_UNSUPPORTED_FILE("import.unsupported.file"),
-    /** Label of the detected-type row. */
-    IMPORT_UNSUPPORTED_TYPE("import.unsupported.type"),
-    /** Badge beside the detected type. */
-    IMPORT_UNSUPPORTED_BADGE("import.unsupported.badge"),
-    /** Hint listing the supported formats. */
-    IMPORT_UNSUPPORTED_HINT("import.unsupported.hint"),
     /** Button that moves on from an opened book to the brief. */
     IMPORT_CONTINUE("import.continue"),
     /** Hover explanation of the control labelled by {@link #IMPORT_CONTINUE}. */
     IMPORT_CONTINUE_TIP("import.continue.tip"),
+    /** A word count below a thousand, exact; argument 0 is the count, a plural. */
+    IMPORT_WORDS_EXACT("import.words.exact"),
+    /** A word count of a thousand or more, rounded to the hundred; argument 0 is the rounded count. */
+    IMPORT_WORDS_ABOUT("import.words.about"),
+    /** Verdict line while a book is being read. */
+    IMPORT_VERDICT_READING("import.verdict.reading"),
+    /** Button beside the reading line that abandons the import. */
+    IMPORT_VERDICT_CANCEL("import.verdict.cancel"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_VERDICT_CANCEL}. */
+    IMPORT_VERDICT_CANCEL_TIP("import.verdict.cancel.tip"),
+    /** Verdict line of a book that can be translated; argument 0 is the chapter count, argument 1 the worded word count. */
+    IMPORT_VERDICT_READY("import.verdict.ready"),
+    /** Verdict line of a book whose details and chapters name two languages; arguments are the two language names. */
+    IMPORT_VERDICT_TWO_MARKS("import.verdict.twoMarks"),
+    /** Verdict line of a book that is already stored; argument 0 is the project names, joined. */
+    IMPORT_VERDICT_ALREADY("import.verdict.already"),
+    /** Link that opens Projects on the book that is already stored. */
+    IMPORT_VERDICT_ALREADY_SHOW("import.verdict.already.show"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_VERDICT_ALREADY_SHOW}. */
+    IMPORT_VERDICT_ALREADY_SHOW_TIP("import.verdict.already.show.tip"),
+    /** Verdict line of a book locked by DRM; argument 0 is the file name. */
+    IMPORT_VERDICT_DRM("import.verdict.drm"),
+    /** Sentence appended to the DRM line; argument 0 is the encryption scheme. */
+    IMPORT_VERDICT_DRM_SCHEME("import.verdict.drm.scheme"),
+    /** Verdict line of a file that could not be read; argument 0 is the file name. */
+    IMPORT_VERDICT_DAMAGED("import.verdict.damaged"),
+    /** Button that shows why a file could not be read. */
+    IMPORT_VERDICT_DAMAGED_DETAILS("import.verdict.damaged.details"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_VERDICT_DAMAGED_DETAILS}. */
+    IMPORT_VERDICT_DAMAGED_DETAILS_TIP("import.verdict.damaged.details.tip"),
+    /** Verdict line of a file that is not a supported format; argument 0 is the file name, argument 1 what it is. */
+    IMPORT_VERDICT_UNSUPPORTED("import.verdict.unsupported"),
+    /** Heading of the closed fold holding the book's details. */
+    IMPORT_ABOUT_TITLE("import.about"),
+    /** Hover explanation of the fold labelled by {@link #IMPORT_ABOUT_TITLE}. */
+    IMPORT_ABOUT_TIP("import.about.tip"),
+    /** One-line summary of the closed fold: format, chapters, words, images and cover. */
+    IMPORT_ABOUT_SUMMARY("import.about.summary"),
+    /** Word in the fold summary for a book that has a cover. */
+    IMPORT_ABOUT_COVER("import.about.cover.yes"),
+    /** Text where a cover would be, and in the summary, for a book without one. */
+    IMPORT_ABOUT_NO_COVER("import.about.cover.none"),
+    /** Heading of the pane showing the picked segment in full. */
+    IMPORT_BROWSER_TEXT("import.browser.text"),
     /** Heading of the book-brief screen. */
     BRIEF_TITLE("brief.title"),
     /** Line under the heading saying what the brief is for. */
@@ -1903,34 +1907,6 @@ public enum MessageKey {
     GENRE_TRUE_CRIME("genre.trueCrime"),
     /** Display name of the graphic novel genre offered on the Book Brief. */
     GENRE_GRAPHIC_NOVEL("genre.graphicNovel"),
-    /** Title of the question asked before an import discards the current translation. */
-    DIALOG_REPLACE_RUN_TITLE("dialog.replaceRun.title"),
-    /** Body when the run is still going: {0} is the run's file, {1} the file about to be imported. */
-    DIALOG_REPLACE_RUN_ACTIVE("dialog.replaceRun.active"),
-    /** Body when the run was stopped and could be resumed: {0} is the run's file, {1} the file to import. */
-    DIALOG_REPLACE_RUN_STOPPED("dialog.replaceRun.stopped"),
-    /** Button that leaves the run and the open book untouched. */
-    DIALOG_REPLACE_RUN_KEEP("dialog.replaceRun.keep"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_REPLACE_RUN_KEEP}. */
-    DIALOG_REPLACE_RUN_KEEP_TIP("dialog.replaceRun.keep.tip"),
-    /** Button that discards the run and imports the other book. */
-    DIALOG_REPLACE_RUN_CONFIRM("dialog.replaceRun.confirm"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_REPLACE_RUN_CONFIRM}. */
-    DIALOG_REPLACE_RUN_CONFIRM_TIP("dialog.replaceRun.confirm.tip"),
-    /** Line shown while the discarded run is being stopped. */
-    DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
-    /** Title of the question asked before an import resets a book's earlier translation. */
-    DIALOG_EARLIER_WORK_TITLE("dialog.earlierWork.title"),
-    /** Body of that question; argument 0 is the file name, argument 1 the number of segments already decided. */
-    DIALOG_EARLIER_WORK_BODY("dialog.earlierWork.body"),
-    /** Button that keeps the earlier translation and opens the book where it stopped. */
-    DIALOG_EARLIER_WORK_CONTINUE("dialog.earlierWork.continue"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_EARLIER_WORK_CONTINUE}. */
-    DIALOG_EARLIER_WORK_CONTINUE_TIP("dialog.earlierWork.continue.tip"),
-    /** Button that discards the earlier translation and imports the book afresh. */
-    DIALOG_EARLIER_WORK_START_OVER("dialog.earlierWork.startOver"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_EARLIER_WORK_START_OVER}. */
-    DIALOG_EARLIER_WORK_START_OVER_TIP("dialog.earlierWork.startOver.tip"),
     /** Title of the question asked when the model a translation continues with does not answer. */
     DIALOG_CONTINUE_NOT_ANSWERING_TITLE("dialog.continue.notAnswering.title"),
     /** Body of the not-answering question: provider, model. */
@@ -1973,6 +1949,26 @@ public enum MessageKey {
     DIALOG_MODEL_PICK_NOT_NOW("dialog.modelPick.notNow"),
     /** Hover explanation of the control labelled by {@link #DIALOG_MODEL_PICK_NOT_NOW}. */
     DIALOG_MODEL_PICK_NOT_NOW_TIP("dialog.modelPick.notNow.tip"),
+    /** Title of the question asked when a book is chosen while a project is open. */
+    DIALOG_OPEN_ANOTHER_TITLE("dialog.openAnother.title"),
+    /** Body of that question; argument 0 is the open project's name, argument 1 the file chosen. */
+    DIALOG_OPEN_ANOTHER_BODY("dialog.openAnother.body"),
+    /** Note added while a run is going: it is stopped before either answer is carried out. */
+    DIALOG_OPEN_ANOTHER_RUNNING("dialog.openAnother.running"),
+    /** Default button: keep the open project and open the book as a new one. */
+    DIALOG_OPEN_ANOTHER_NEW("dialog.openAnother.new"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_OPEN_ANOTHER_NEW}. */
+    DIALOG_OPEN_ANOTHER_NEW_TIP("dialog.openAnother.new.tip"),
+    /** Destructive button: delete the open project and open the book in its place. */
+    DIALOG_OPEN_ANOTHER_REPLACE("dialog.openAnother.replace"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_OPEN_ANOTHER_REPLACE}. */
+    DIALOG_OPEN_ANOTHER_REPLACE_TIP("dialog.openAnother.replace.tip"),
+    /** Button that closes the question and changes nothing. */
+    DIALOG_OPEN_ANOTHER_CANCEL("dialog.openAnother.cancel"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_OPEN_ANOTHER_CANCEL}. */
+    DIALOG_OPEN_ANOTHER_CANCEL_TIP("dialog.openAnother.cancel.tip"),
+    /** Line shown while the run is stopped for the answer. */
+    DIALOG_OPEN_ANOTHER_STOPPING("dialog.openAnother.stopping"),
     /** Title of the question asked before starting with glossary entries that have no target. */
     DIALOG_NO_TARGET_TITLE("dialog.noTarget.title"),
     /** Body of that question; argument 0 is the number of entries without a target. */
