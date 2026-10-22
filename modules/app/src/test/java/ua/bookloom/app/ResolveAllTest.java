@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,9 +42,14 @@ class ResolveAllTest {
         System.setProperty(PROPERTY, "true");
     }
 
+    private @Nullable BookLoomApplication booted;
+
     @AfterEach
     void cleanup() throws Exception {
         System.clearProperty(PROPERTY);
+        if (booted != null) {
+            FxToolkit.cleanupApplication(booted);
+        }
         FxToolkit.cleanupStages();
     }
 
@@ -58,7 +64,8 @@ class ResolveAllTest {
     private BookLoomApplication boot() throws Exception {
         StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
-        return (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        booted = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        return booted;
     }
 
     private static ResolveAll.Outcome onFx(final Injector injector, final ResolveAll.Navigation navigation)

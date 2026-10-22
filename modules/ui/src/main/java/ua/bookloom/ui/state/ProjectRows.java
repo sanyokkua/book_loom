@@ -50,6 +50,17 @@ public final class ProjectRows {
         return groups;
     }
 
+    /**
+     * The row of one stored project, as the Projects screen would show it.
+     *
+     * @param summary the stored project with its counts
+     * @param openId the id of the project open in the window, or {@code null} when none is
+     * @return the row; its provider name is the provider's id
+     */
+    public static ProjectRow rowOf(final ProjectSummary summary, final @Nullable String openId) {
+        return row(Objects.requireNonNull(summary, "summary"), openId, Map.of());
+    }
+
     private static BookGroup group(
             final List<ProjectSummary> book, final @Nullable String openId, final Map<String, String> providerNames) {
         final ProjectSummary first = book.getFirst();

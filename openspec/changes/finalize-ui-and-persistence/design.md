@@ -129,6 +129,8 @@ with decision 1.
 - Full prompts are kept only for the last 50 calls. Max's consistency list is a virtualised `ListView` of small row
   records whose detail is looked up by segment id.
 
+A dialog of short work whose result needs a decision stays open after its work ends, offers the result action, and ends only on that action, Cancel or Esc (the brief suggestion's Apply).
+
 **Continue in background** exists for long work only (the names pass, the export pass).
 - `ActivityChip` gains an "open" action for hidden work.
 - A `HiddenWork` property names the screen the work writes to. Its editable controls bind `disable` to it, under a

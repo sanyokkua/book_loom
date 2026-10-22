@@ -68,6 +68,7 @@ class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private BookBrief stored() {
@@ -91,7 +92,7 @@ class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
     // IF a stop were shown as a failure or applied as an answer, THEN pressing Stop would change the brief or put an
     // error banner over a book the person chose to stop reading.
     @Test
-    void suggestStyle_stoppedByThePerson_changesNothingAndSaysNothing() {
+    void suggestStyle_stoppedByThePerson_changesNothingAndSaysItWasStopped() {
         chooseModel();
         assistant.answersBrief(Result.err(AppError.of(ErrorCode.cancelled, "Stopped", "The call was stopped.")));
         final BookBrief before = stored();
@@ -100,7 +101,7 @@ class BookBriefViewModelNarratorOriginTest extends ExportViewModelTestBase {
 
         assertThat(stored()).isEqualTo(before);
         assertThat(onFx(() -> brief.styleSuggestion().outcome().get().kind()))
-                .isEqualTo(StyleSuggestionOutcome.Kind.NONE);
+                .isEqualTo(StyleSuggestionOutcome.Kind.STOPPED);
         assertThat(onFx(() -> brief.styleSuggestion().suggesting().get())).isFalse();
     }
 

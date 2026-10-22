@@ -43,7 +43,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
                         Gender.UNKNOWN,
                         Map.of(),
                         tag)));
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> briefModel().styleSuggestion().outcome().get().kind() == StyleSuggestionOutcome.Kind.DONE);
     }
 
@@ -115,7 +115,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
                 .answersBrief(Result.ok(new BriefSuggestion(
                         null, Register.NEUTRAL, null, null, NarratorPerson.UNSPECIFIED, Gender.UNKNOWN)));
 
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-suggest-outcome"));
 
         assertThat(isShown("brief-source-proposal")).isFalse();

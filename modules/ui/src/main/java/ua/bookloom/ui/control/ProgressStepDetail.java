@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -66,7 +67,7 @@ final class ProgressStepDetail extends VBox {
         reply = new ReplyView("progress-reply", messages);
         name();
         layOut(mode);
-        wireMode(mode.getToggleGroup());
+        wireMode(mode);
         model.selected().addListener((observed, was, now) -> refresh());
         model.activity().addListener((observed, was, now) -> refresh());
         refresh();
@@ -122,8 +123,9 @@ final class ProgressStepDetail extends VBox {
     }
 
     // A segmented control lets its chosen button be pressed off; the view always has one of the two.
-    private void wireMode(final ToggleGroup group) {
-        group.selectToggle(model.mode().get() == ProgressDialogModel.Mode.DETAILED ? detailed : simple);
+    private void wireMode(final SegmentedButton mode) {
+        final ToggleGroup group = mode.getToggleGroup();
+        group.selectToggle(chosen());
         group.selectedToggleProperty().addListener((observed, was, now) -> {
             if (now == null) {
                 group.selectToggle(was);
@@ -132,10 +134,17 @@ final class ProgressStepDetail extends VBox {
             model.mode()
                     .set(detailed.equals(now) ? ProgressDialogModel.Mode.DETAILED : ProgressDialogModel.Mode.SIMPLE);
         });
+        // The segmented button puts its buttons in the group only when its skin is made, so a choice made before that
+        // is dropped and neither button shows as chosen; it is made again once they belong to the group.
+        mode.skinProperty().addListener((observed, was, now) -> group.selectToggle(chosen()));
         model.mode().addListener((observed, was, now) -> {
             group.selectToggle(now == ProgressDialogModel.Mode.DETAILED ? detailed : simple);
             refresh();
         });
+    }
+
+    private ToggleButton chosen() {
+        return model.mode().get() == ProgressDialogModel.Mode.DETAILED ? detailed : simple;
     }
 
     private void refresh() {
@@ -214,10 +223,14 @@ final class ProgressStepDetail extends VBox {
                 : made.segments().stream().map(CallSegment::displaySource).collect(Collectors.joining(PARAGRAPHS));
     }
 
-    private static @Nullable String outputOf(final StepEntry step, final @Nullable CallSnapshot made) {
+    private @Nullable String outputOf(final StepEntry step, final @Nullable CallSnapshot made) {
         final StepEntry.StepText text = step.text();
         if (text != null && text.after() != null) {
             return text.after();
+        }
+        final String answered = sampleAnswers(step);
+        if (answered != null) {
+            return answered;
         }
         if (made == null) {
             return null;
@@ -227,6 +240,23 @@ final class ProgressStepDetail extends VBox {
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining(PARAGRAPHS));
         return targets.isEmpty() ? made.reply() : targets;
+    }
+
+    // A brief sample's answer: each field it answered, with its value and the quote that makes the value count.
+    private @Nullable String sampleAnswers(final StepEntry step) {
+        final OptionalInt sample = step.sampleNumber();
+        if (sample.isEmpty()) {
+            return null;
+        }
+        final String lines = model.activity().get().outcome().decisions().stream()
+                .flatMap(row -> row.samplesRead().stream()
+                        .filter(line -> line.sample() == sample.getAsInt())
+                        .map(line -> DecisionWords.nameOf(messages, row.group()) + ": " + line.value() + " — "
+                                + (line.verified()
+                                        ? "“" + line.quote() + "”"
+                                        : messages.get(MessageKey.BRIEF_DECIDES_NO_QUOTE))))
+                .collect(Collectors.joining("\n"));
+        return lines.isEmpty() ? null : lines;
     }
 
     private String orNothing(final @Nullable String text) {

@@ -5,9 +5,7 @@ import com.google.inject.Singleton;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -42,7 +40,7 @@ public final class ActivityTracker {
 
     private final ObservableList<Activity> running = FXCollections.observableArrayList();
     private final ObservableList<Activity> runningView = FXCollections.unmodifiableObservableList(running);
-    private final Map<Long, Runnable> cancels = new HashMap<>();
+    private final ActivityStops stops = new ActivityStops();
     private final ReadOnlyObjectWrapper<LiveCalls> lastCalls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private long lastId;
     private final AwakeHolders awake;
@@ -110,7 +108,7 @@ public final class ActivityTracker {
         Objects.requireNonNull(kind, "kind");
         final long id = ++lastId;
         if (cancel != null) {
-            cancels.put(id, cancel);
+            stops.register(id, cancel);
         }
         running.add(new Activity(
                 id, kind, 0, cancel != null, kind.label(), clock.instant(), Activity.Progress.NONE, false, false));
@@ -215,18 +213,7 @@ public final class ActivityTracker {
     }
 
     private void stop(final Activity activity) {
-        final Runnable cancel = cancels.get(activity.id());
-        if (cancel == null) {
-            log.debug("activity {} #{} cannot be stopped from outside", activity.kind(), activity.id());
-            return;
-        }
-        if (activity.cancelling()) {
-            log.debug("activity {} #{} is already being stopped", activity.kind(), activity.id());
-            return;
-        }
-        replace(activity.id(), Activity::asCancelling);
-        log.info("activity {} #{} asked to stop", activity.kind(), activity.id());
-        cancel.run();
+        stops.stop(activity, () -> replace(activity.id(), Activity::asCancelling));
     }
 
     private void replace(final long id, final UnaryOperator<Activity> change) {
@@ -252,35 +239,24 @@ public final class ActivityTracker {
         private final ActivityKind kind;
         private final StepTimer timer = new StepTimer();
         private boolean ended;
+        private boolean awakeReleased;
 
         private Handle(final long id, final ActivityKind kind) {
             this.id = id;
             this.kind = kind;
         }
 
-        /**
-         * The activity's id, which {@link ActivityTracker#stop(long)} takes.
-         *
-         * @return the id
-         */
+        /** {@return the activity's id, which {@link ActivityTracker#stop(long)} takes} */
         public long id() {
             return id;
         }
 
-        /**
-         * Records how many model requests the activity has sent; ignored once it has ended.
-         *
-         * @param count the requests so far
-         */
+        /** Records how many model requests the activity has sent so far; ignored once it has ended. */
         public void requests(final int count) {
             update(shown -> shown.requests() == count ? shown : shown.withRequests(count));
         }
 
-        /**
-         * Words the card's heading more closely than the kind's name; ignored once ended.
-         *
-         * @param title the heading's catalogue key; non-null
-         */
+        /** Words the card's heading more closely than the kind's name; ignored once ended. */
         public void title(final MessageKey title) {
             Objects.requireNonNull(title, "title");
             update(shown -> shown.withTitle(title));
@@ -301,8 +277,7 @@ public final class ActivityTracker {
             log.debug("activity {} #{} step '{}' at {} of {}", kind, id, stepText, done, total);
             update(shown -> {
                 final Duration eta = timer.eta(shown.startedAt(), done, total, stepText, now);
-                return shown.withProgress(
-                        new Activity.Progress(fraction, stepText, shown.details(), eta, shown.calls(), shown.steps()));
+                return shown.withProgress(shown.progress().withFigures(fraction, stepText, eta));
             });
         }
 
@@ -312,15 +287,10 @@ public final class ActivityTracker {
          * @param stepText what is being done, already worded; {@code null} for none
          */
         public void indeterminate(final @Nullable String stepText) {
-            update(shown -> shown.withProgress(
-                    new Activity.Progress(null, stepText, shown.details(), null, shown.calls(), shown.steps())));
+            update(shown -> shown.withProgress(shown.progress().withFigures(null, stepText, null)));
         }
 
-        /**
-         * Replaces the card's detail lines.
-         *
-         * @param lines the lines in the order they are shown; non-null
-         */
+        /** Replaces the card's detail lines, in the order they are shown. */
         public void details(final List<Activity.Detail> lines) {
             Objects.requireNonNull(lines, "lines");
             update(shown -> shown.withProgress(shown.progress().withDetails(lines)));
@@ -355,11 +325,7 @@ public final class ActivityTracker {
                     shown.withProgress(shown.progress().withSteps(shown.steps().apply(changed, text))));
         }
 
-        /**
-         * Replaces the model calls the card shows; ignored once ended.
-         *
-         * @param calls the calls as the live call view shows them; non-null
-         */
+        /** Replaces the model calls the card shows; ignored once ended. */
         public void calls(final LiveCalls calls) {
             Objects.requireNonNull(calls, "calls");
             if (!ended && calls.current() != null) {
@@ -368,9 +334,39 @@ public final class ActivityTracker {
             update(shown -> shown.withProgress(shown.progress().withCalls(calls)));
         }
 
+        /** Replaces the rows of "What it decides", in the order they are shown; ignored once ended. */
+        public void decisions(final List<DecisionRow> rows) {
+            Objects.requireNonNull(rows, "rows");
+            log.debug("activity {} #{} decides {} rows", kind, id, rows.size());
+            update(shown -> shown.withProgress(
+                    shown.progress().withOutcome(shown.outcome().withDecisions(rows))));
+        }
+
+        /**
+         * Holds the work's answer for the person: the activity stays registered, still blocking other model work and
+         * still stoppable, but no longer keeps the computer awake. Either action of the offer ends it.
+         *
+         * @param offer what takes the answer and what drops it; non-null
+         */
+        public void offer(final ResultOffer offer) {
+            Objects.requireNonNull(offer, "offer");
+            log.debug("activity {} #{} holds an offer, enabled={}", kind, id, offer.enabled());
+            final ResultOffer held = offer.ending(this::end);
+            update(shown -> shown.withProgress(
+                    shown.progress().withOutcome(shown.outcome().withOffer(held))));
+            releaseAwake();
+        }
+
         private void update(final UnaryOperator<Activity> change) {
             if (!ended) {
                 replace(id, change);
+            }
+        }
+
+        private void releaseAwake() {
+            if (!awakeReleased) {
+                awakeReleased = true;
+                awake.release(kind);
             }
         }
 
@@ -381,10 +377,10 @@ public final class ActivityTracker {
                 return;
             }
             ended = true;
-            cancels.remove(id);
+            stops.forget(id);
             running.removeIf(activity -> activity.id() == id);
             log.info("activity {} #{} ended; running now {}", kind, id, kinds());
-            awake.release(kind);
+            releaseAwake();
         }
     }
 }

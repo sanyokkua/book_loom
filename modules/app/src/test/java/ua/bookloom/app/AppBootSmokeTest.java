@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -49,9 +50,23 @@ class AppBootSmokeTest {
     @TempDir
     private Path dataDir;
 
+    private @Nullable BookLoomApplication booted;
+
+    // The application is stopped before the temp folder goes: stop() closes the database it opened there, whose
+    // connections and write-ahead files would otherwise still be alive while JUnit deletes the folder.
     @AfterEach
     void cleanup() throws Exception {
+        if (booted != null) {
+            FxToolkit.cleanupApplication(booted);
+        }
         FxToolkit.cleanupStages();
+    }
+
+    private BookLoomApplication boot() throws Exception {
+        StartupContext.publish(startup());
+        FxToolkit.registerPrimaryStage();
+        booted = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        return booted;
     }
 
     private AppPaths tempPaths() throws Exception {
@@ -66,10 +81,7 @@ class AppBootSmokeTest {
 
     @Test
     void start_realApplication_buildsTheInjectorRunsBothPhasesAndShowsTheStage() throws Exception {
-        StartupContext.publish(startup());
-        FxToolkit.registerPrimaryStage();
-
-        final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        final BookLoomApplication app = boot();
 
         assertThat(app.injector())
                 .as("an injector spanning eight JPMS modules either assembles or it does not; this is the signal")
@@ -94,10 +106,7 @@ class AppBootSmokeTest {
     // IF the real stage had no minimum, THEN a person could shrink the window until nothing was visible.
     @Test
     void start_realApplication_setsTheWindowMinimum() throws Exception {
-        StartupContext.publish(startup());
-        FxToolkit.registerPrimaryStage();
-
-        FxToolkit.setupApplication(BookLoomApplication.class);
+        boot();
 
         final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
         assertThat(stage.getMinWidth()).isEqualTo(960);
@@ -108,10 +117,7 @@ class AppBootSmokeTest {
     // area with no entry marked; with no project open the first view is Projects.
     @Test
     void start_realApplication_opensOnProjectsWithItsBreadcrumb() throws Exception {
-        StartupContext.publish(startup());
-        FxToolkit.registerPrimaryStage();
-
-        FxToolkit.setupApplication(BookLoomApplication.class);
+        boot();
 
         final Scene scene = FxToolkit.toolkitContext().getRegisteredStage().getScene();
         assertThat(((Label) scene.lookup("#shell-breadcrumb")).getText()).isEqualTo("Workflow / Projects");
@@ -123,10 +129,7 @@ class AppBootSmokeTest {
      */
     @Test
     void injector_afterBoot_suppliesTheApplicationScopedBindings() throws Exception {
-        StartupContext.publish(startup());
-        FxToolkit.registerPrimaryStage();
-
-        final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        final BookLoomApplication app = boot();
 
         assertThat(app.injector().getInstance(AppPaths.class).dataDir()).isEqualTo(dataDir);
         assertThat(app.injector().getInstance(AppEnvironment.class)).isEqualTo(AppEnvironment.DEV);

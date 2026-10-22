@@ -245,12 +245,13 @@ class ProgressDialogTest extends ShellTestBase {
 
     // IF short work offered the background, THEN a brief suggestion could end with nobody looking.
     @Test
-    void footer_brief_hasNoContinueInBackgroundAndReadsCancelWritesNothing() throws TimeoutException {
+    void footer_brief_hasNoContinueInBackgroundAndSaysNothingIsWrittenUntilApplied() throws TimeoutException {
         begin(ActivityKind.SUGGEST_STYLE);
         awaitDialog();
 
         assertThat(scene.getRoot().lookup("#progress-background")).isNull();
-        assertThat(((Label) required("progress-footnote")).getText()).isEqualTo("Cancel writes nothing.");
+        assertThat(((Label) required("progress-footnote")).getText())
+                .isEqualTo("Nothing is written to the brief until you apply it.");
         assertThat(((Button) required("progress-cancel")).getText()).isEqualTo("Cancel");
     }
 

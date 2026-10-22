@@ -219,6 +219,7 @@ final class BriefToneCard {
         return switch (outcome.kind()) {
             case NONE -> "";
             case DONE -> messages.get(MessageKey.BRIEF_SUGGEST_DONE);
+            case STOPPED -> messages.get(MessageKey.BRIEF_SUGGEST_STOPPED);
             case NO_MODEL -> messages.get(MessageKey.BRIEF_SUGGEST_NO_MODEL);
             case BUSY -> messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_STYLE.label()));
             case FAILED -> outcome.message();

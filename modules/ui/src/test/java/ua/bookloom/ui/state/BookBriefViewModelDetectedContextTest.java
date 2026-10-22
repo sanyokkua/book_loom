@@ -68,6 +68,7 @@ class BookBriefViewModelDetectedContextTest extends ExportViewModelTestBase {
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private ModelCapabilities reporting(final Result<ContextLength> answer) {

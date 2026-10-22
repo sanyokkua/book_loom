@@ -66,6 +66,7 @@ public final class ScriptedProjectService implements ProjectService {
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
     private volatile @Nullable CountDownLatch briefGate;
+    private volatile @Nullable Result<ProjectChange> briefAnswer;
 
     /** From now on answers an import of {@code source} with {@code answer}; other paths keep the default. */
     public void on(final Path source, final Result<ImportedBook> answer) {
@@ -96,6 +97,10 @@ public final class ScriptedProjectService implements ProjectService {
         }
     }
 
+    /** Answers every brief save with {@code answer} (a refused pair, say); null restores "saved". */
+    public void onUpdateBrief(final @Nullable Result<ProjectChange> answer) {
+        briefAnswer = answer;
+    }
     /** From now on blocks each brief save until {@link #releaseBriefSaves()}, the way a slow disk would. */
     public void holdBriefSaves() {
         briefGate = new CountDownLatch(1);
@@ -203,7 +208,6 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     private final ScriptedProjectEdits edits = new ScriptedProjectEdits();
-
     /** What rename, translate-into, second-translation and relocate answer, and a record of each. */
     public ScriptedProjectEdits edits() {
         return edits;
@@ -268,8 +272,11 @@ public final class ScriptedProjectService implements ProjectService {
         awaitGate(briefGate);
         briefs.add(brief);
         briefsOnFxThread.add(Platform.isFxApplicationThread());
-        return Result.ok(
-                new ProjectChange.Saved(projectOf(projectId, imports.getLast()).withBrief(brief)));
+        final Result<ProjectChange> scripted = briefAnswer;
+        return scripted != null
+                ? scripted
+                : Result.ok(new ProjectChange.Saved(
+                        projectOf(projectId, imports.getLast()).withBrief(brief)));
     }
 
     @Override

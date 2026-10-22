@@ -16,6 +16,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +28,7 @@ import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.ProgressFigures;
+import ua.bookloom.ui.state.ResultOffer;
 
 /**
  * The one dialog of model work, on the work layer: a header with the title, a purpose line, a determinate bar and the
@@ -42,6 +44,7 @@ public final class ProgressDialog extends ModalCard {
 
     private static final double DIVIDER = 0.36;
     private static final String DETAIL_JOIN = " · ";
+    private static final double FOOTNOTE_WIDTH = 380;
 
     private final ProgressDialogModel model;
     private final Messages messages;
@@ -53,8 +56,13 @@ public final class ProgressDialog extends ModalCard {
     private final VBox kindLines = new VBox();
     private List<ProgressFigures.KindFigures> shownKinds = List.of();
     private final ProgressStepDetail detail;
+    private final DecisionPane decisions;
+    private final BriefAnswerPane answers;
+    private final ScrollPane detailScroll;
     private final Button cancel;
+    private @Nullable Button apply;
     private @Nullable Boolean shownCancelling;
+    private @Nullable Boolean shownOffered;
 
     /**
      * Builds the dialog over its model.
@@ -76,6 +84,9 @@ public final class ProgressDialog extends ModalCard {
         setId("busy-card");
         getStyleClass().addAll("dialog-card", "elevation-lg");
         detail = new ProgressStepDetail(model, messages);
+        decisions = new DecisionPane(model, messages);
+        answers = new BriefAnswerPane(messages);
+        detailScroll = new ScrollPane(detail);
         setHeader(header());
         setContent(body());
         if (getContent() instanceof ScrollPane scroll) {
@@ -119,10 +130,21 @@ public final class ProgressDialog extends ModalCard {
     }
 
     private Node body() {
-        final ScrollPane detailScroll = new ScrollPane(detail);
         detailScroll.setFitToWidth(true);
         detailScroll.getStyleClass().add("progress-detail-scroll");
-        final SplitPane split = new SplitPane(new ProgressStepList(model, messages), detailScroll);
+        final ScrollPane answersScroll = new ScrollPane(answers);
+        answersScroll.setFitToWidth(true);
+        answersScroll.getStyleClass().add("progress-detail-scroll");
+        final ProgressStepList steps = new ProgressStepList(model, messages);
+        VBox.setVgrow(steps, Priority.ALWAYS);
+        decisions.managedProperty().addListener((observed, was, now) -> steps.sizeToRows(now));
+        steps.sizeToRows(decisions.isManaged());
+        showAnswers(answersScroll);
+        final ScrollPane left = new ScrollPane(new VBox(decisions, decisions.stepsHeading(), steps));
+        left.setFitToWidth(true);
+        left.setFitToHeight(true);
+        left.getStyleClass().add("progress-detail-scroll");
+        final SplitPane split = new SplitPane(left, new StackPane(detailScroll, answersScroll));
         split.setDividerPositions(DIVIDER);
         split.getStyleClass().add("progress-split");
         VBox.setVgrow(split, Priority.ALWAYS);
@@ -138,6 +160,18 @@ public final class ProgressDialog extends ModalCard {
         return body;
     }
 
+    // A selected decision row replaces the selected step's detail with what each sample answered for it.
+    private void showAnswers(final ScrollPane answersScroll) {
+        showFor(answersScroll, false);
+        decisions.selected().addListener((observed, was, row) -> {
+            if (row != null) {
+                answers.show(row);
+            }
+            showFor(answersScroll, row != null);
+            showFor(detailScroll, row == null);
+        });
+    }
+
     private Button footer(final Runnable onCancel, final @Nullable Runnable onHide) {
         final ButtonType cancelType =
                 new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -145,6 +179,7 @@ public final class ProgressDialog extends ModalCard {
                 new ButtonType(messages.get(MessageKey.PROGRESS_BACKGROUND), ButtonBar.ButtonData.LEFT);
         if (onHide == null) {
             getButtonTypes().setAll(cancelType);
+            addApply();
         } else {
             getButtonTypes().setAll(hideType, cancelType);
             final Button hide = (Button) lookupButton(hideType);
@@ -167,13 +202,57 @@ public final class ProgressDialog extends ModalCard {
         return stop;
     }
 
+    // Work whose answer needs a decision gets a button that takes it, disabled until the answer is held.
+    private void addApply() {
+        if (model.activity().get().kind() != ActivityKind.SUGGEST_STYLE) {
+            return;
+        }
+        final ButtonType applyType = new ButtonType(messages.get(MessageKey.BRIEF_APPLY), ButtonBar.ButtonData.OK_DONE);
+        getButtonTypes().add(applyType);
+        final Button button = (Button) lookupButton(applyType);
+        button.setId("progress-apply");
+        button.getStyleClass().add("btn-primary");
+        button.setOnAction(event -> {
+            final ResultOffer offer = model.activity().get().outcome().offer();
+            log.info("progress dialog: apply pressed, an answer is held: {}", offer != null);
+            if (offer != null) {
+                offer.apply().run();
+            }
+        });
+        apply = button;
+    }
+
+    private void showOffer(final Activity now) {
+        final Button button = apply;
+        if (button == null) {
+            return;
+        }
+        final ResultOffer offer = now.outcome().offer();
+        final boolean offered = offer != null && offer.enabled();
+        button.setDisable(!offered);
+        if (shownOffered == null) {
+            shownOffered = offered;
+            Tips.install(messages, button, MessageKey.BRIEF_APPLY_TIP);
+        }
+    }
+
     // The line saying what Cancel does sits in the footer's left group, after Continue in background.
     private void footnote() {
-        final boolean export = model.activity().get().kind() == ActivityKind.EXPORT;
-        final Label footnote = new Label(
-                messages.get(export ? MessageKey.PROGRESS_FOOTER_EXPORT : MessageKey.PROGRESS_FOOTER_WRITES_NOTHING));
+        final ActivityKind kind = model.activity().get().kind();
+        final Label footnote = new Label(messages.get(
+                switch (kind) {
+                    case EXPORT -> MessageKey.PROGRESS_FOOTER_EXPORT;
+                    case SUGGEST_STYLE -> MessageKey.BRIEF_DIALOG_WRITES_NOTHING;
+                    default -> MessageKey.PROGRESS_FOOTER_WRITES_NOTHING;
+                }));
         footnote.setId("progress-footnote");
         footnote.getStyleClass().add("progress-footnote");
+        if (kind == ActivityKind.SUGGEST_STYLE) {
+            // Its Ukrainian sentence is long: held to a width the buttons beside it leave, at the smallest window.
+            footnote.setMinWidth(FOOTNOTE_WIDTH);
+            footnote.setPrefWidth(FOOTNOTE_WIDTH);
+            footnote.setMaxWidth(FOOTNOTE_WIDTH);
+        }
         ButtonBar.setButtonData(footnote, ButtonBar.ButtonData.LEFT);
         ButtonBar.setButtonUniformSize(footnote, false);
         if (lookup(".button-bar") instanceof ButtonBar buttons) {
@@ -182,7 +261,9 @@ public final class ProgressDialog extends ModalCard {
     }
 
     private void showActivity(final Activity now) {
-        title.setText(messages.get(now.title()));
+        title.setText(
+                messages.get(now.kind() == ActivityKind.SUGGEST_STYLE ? MessageKey.BRIEF_DIALOG_TITLE : now.title()));
+        showOffer(now);
         purpose.setText(purposeOf(now));
         final Double fraction = now.fraction();
         bar.setProgress(fraction == null ? ProgressBar.INDETERMINATE_PROGRESS : fraction);
@@ -203,6 +284,9 @@ public final class ProgressDialog extends ModalCard {
     private String purposeOf(final Activity now) {
         if (now.cancelling()) {
             return messages.get(MessageKey.BUSY_CANCELLING);
+        }
+        if (now.kind() == ActivityKind.SUGGEST_STYLE) {
+            return messages.get(MessageKey.BRIEF_DIALOG_PURPOSE);
         }
         if (!now.cancellable()) {
             return messages.get(MessageKey.BUSY_NOT_CANCELLABLE);

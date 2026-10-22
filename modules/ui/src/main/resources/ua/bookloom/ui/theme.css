@@ -895,6 +895,30 @@
     -fx-text-fill: -color-muted;
 }
 
+/* The fill-in dialog's decided fields above its steps, and what each sample answered for a selected field. */
+.progress-decisions-pane {
+    -fx-spacing: 6px;
+}
+
+.progress-decision-uncertain {
+    -fx-text-fill: -color-warn-fg;
+}
+
+.progress-sample-grid {
+    -fx-hgap: 12px;
+    -fx-vgap: 12px;
+}
+
+.progress-sample-notused {
+    -fx-text-fill: -color-muted;
+}
+
+/* The project name line of the Book Brief's languages card. */
+.brief-project-name {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
 /* Every link is underlined and painted in the information foreground role, so colour is not the only sign it is one.   */
 /* (The chip's "open" link below sits on the title bar, which is dark in both blocks, and keeps the title bar's words.) */
 .hyperlink {

@@ -3,6 +3,9 @@ package ua.bookloom.ui;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +32,8 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private final List<Boolean> recheckedOnFxThread = new ArrayList<>();
     private final List<String> asked = new ArrayList<>();
     private final List<@Nullable Integer> detectedContexts = new ArrayList<>();
+    private final List<JobEvent> announced = new CopyOnWriteArrayList<>();
+    private volatile @Nullable CountDownLatch gate;
 
     @SuppressWarnings("unchecked")
     private static <T> Result<T> cast() {
@@ -59,6 +64,26 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
         return this;
     }
 
+    /** From now on announces these events to the progress receiver of each brief suggestion, before it answers. */
+    public ScriptedSetupAssistant announces(final List<? extends JobEvent> events) {
+        announced.clear();
+        announced.addAll(events);
+        return this;
+    }
+
+    /** From now on holds each brief suggestion, after its announcements, until {@link #releaseAnswer()}. */
+    public void holdAnswer() {
+        gate = new CountDownLatch(1);
+    }
+
+    /** Lets the held brief suggestions answer. */
+    public void releaseAnswer() {
+        final CountDownLatch held = gate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
     /** The project ids whose narrator was re-checked, in order. */
     public List<String> rechecked() {
         return List.copyOf(rechecked);
@@ -86,6 +111,8 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
             @Nullable final Integer detectedContext,
             final Consumer<JobEvent> progress) {
         detectedContexts.add(detectedContext);
+        announced.forEach(progress);
+        awaitGate();
         return suggestBrief(projectId, model);
     }
 
@@ -106,5 +133,17 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     public Result<BriefSuggestion> suggestBrief(final String projectId, final ChatModel model) {
         asked.add(projectId);
         return brief;
+    }
+
+    private void awaitGate() {
+        final CountDownLatch held = gate;
+        if (held == null) {
+            return;
+        }
+        try {
+            held.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException stopped) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

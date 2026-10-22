@@ -27,6 +27,7 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.BriefLock;
 
 /**
  * The Languages card: two searchable boxes over the same list, the source one led by Auto, where the brief names no
@@ -48,7 +49,10 @@ final class BriefLanguagesCard {
     // True while a value from the view model is written into a box, so it is not handed back as a person's choice.
     private boolean applying;
 
-    BriefLanguagesCard(final BookBriefViewModel viewModel, final Messages messages, final LanguageNames names) {
+    BriefLanguagesCard(final BriefParts parts) {
+        final BookBriefViewModel viewModel = parts.viewModel();
+        final Messages messages = parts.messages();
+        final LanguageNames names = parts.names();
         final Locale locale = messages.locale();
         final List<String> tags = names.list(locale);
         this.source = Tips.install(
@@ -61,7 +65,15 @@ final class BriefLanguagesCard {
                 MessageKey.BRIEF_TARGET_LABEL_TIP);
         source.committedProperty().addListener((observed, was, now) -> pickedSource(now, viewModel));
         target.committedProperty().addListener((observed, was, now) -> picked(now, viewModel::setTargetLanguage));
-        this.node = BriefCards.card(
+        this.node = card(parts);
+        source.disableProperty().bind(parts.lock().languagesLocked());
+        target.disableProperty().bind(parts.lock().languagesLocked());
+    }
+
+    private Node card(final BriefParts parts) {
+        final Messages messages = parts.messages();
+        final BookBriefViewModel viewModel = parts.viewModel();
+        return BriefCards.card(
                 "brief-languages-card",
                 messages,
                 MessageKey.BRIEF_CARD_LANGUAGES,
@@ -69,13 +81,23 @@ final class BriefLanguagesCard {
                         FIELD_SPACING,
                         BriefCards.field(messages, MessageKey.BRIEF_SOURCE_LABEL, source),
                         undeclared(messages, viewModel),
-                        proposal(viewModel, messages, names)),
+                        proposal(viewModel, messages, parts.names())),
                 new VBox(
                         FIELD_SPACING,
                         BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target),
                         required(messages, target),
                         untested(messages, viewModel)),
-                sameLanguage(messages, viewModel));
+                sameLanguage(messages, viewModel),
+                locked(messages, parts.lock()),
+                new BriefProjectLine(messages, parts.project()).node());
+    }
+
+    // Once translating has started the pair is fixed; the hint names the way to another language.
+    private static Label locked(final Messages messages, final BriefLock lock) {
+        final Label hint = BriefCards.shownWhile(
+                BriefCards.hint(messages, MessageKey.BRIEF_LANGUAGES_LOCKED), lock.languagesLocked());
+        hint.setId("brief-languages-locked");
+        return hint;
     }
 
     private static Label undeclared(final Messages messages, final BookBriefViewModel viewModel) {

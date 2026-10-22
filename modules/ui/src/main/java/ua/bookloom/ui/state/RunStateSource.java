@@ -11,6 +11,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -47,9 +49,11 @@ public final class RunStateSource {
     private final CurrentProject current;
     private final ReviewViewModel review;
     private final Messages messages;
+    private final BriefProject briefProject;
     private final ReadOnlyObjectWrapper<RunStateView> view = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper projectOpen = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<ModelChoice> model = new ReadOnlyObjectWrapper<>(ModelChoice.NONE);
+    private final ReadOnlyIntegerWrapper decidedSegments = new ReadOnlyIntegerWrapper();
     private final ReadOnlyStringWrapper projectName = new ReadOnlyStringWrapper("");
     private final InvalidationListener refresh = observed -> refresh();
 
@@ -62,6 +66,7 @@ public final class RunStateSource {
      * @param current the open project
      * @param review the count of flagged segments
      * @param messages the catalogue the time left and the program's name are worded from
+     * @param briefProject the open project's stored name, which the title bar shows as the Brief does
      */
     @Inject
     public RunStateSource(
@@ -70,7 +75,9 @@ public final class RunStateSource {
             final SettingsViewModel settings,
             final CurrentProject current,
             final ReviewViewModel review,
-            final Messages messages) {
+            final Messages messages,
+            final BriefProject briefProject) {
+        this.briefProject = Objects.requireNonNull(briefProject, "briefProject");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.settings = Objects.requireNonNull(settings, "settings");
@@ -105,6 +112,7 @@ public final class RunStateSource {
                 settings.model(),
                 current.book(),
                 current.brief(),
+                briefProject.name(),
                 review.flaggedCount());
         inputs.forEach(input -> input.addListener(refresh));
     }
@@ -148,6 +156,15 @@ public final class RunStateSource {
     }
 
     /**
+     * How many segments are decided: the run's own count while a run exists, else the stored project's.
+     *
+     * @return a read-only property; FX thread only
+     */
+    public ReadOnlyIntegerProperty decidedSegments() {
+        return decidedSegments.getReadOnlyProperty();
+    }
+
+    /**
      * How far the run is, for the question asked before it is stopped.
      *
      * @return the segments decided, the segments in all and the segments in flight; never null
@@ -171,8 +188,10 @@ public final class RunStateSource {
         model.set(choice);
         final OpenedBook book = current.book().get();
         final String runFile = mirror.runFileName().get();
-        projectName.set(book != null ? nameOf(book, current.brief().get()) : runFile == null ? "" : runFile);
-        setView(RunStateView.of(inputs(choice)));
+        projectName.set(book != null ? titleName(book) : runFile == null ? "" : runFile);
+        final RunStateInputs in = inputs(choice);
+        decidedSegments.set(in.decided());
+        setView(RunStateView.of(in));
         final boolean open = book != null || runFile != null;
         if (open != projectOpen.get()) {
             log.debug("project open: {}", open);
@@ -270,6 +289,12 @@ public final class RunStateSource {
         final String first = segments.getFirst().locator();
         final String last = segments.getLast().locator();
         return first.equals(last) ? first : first + "–" + last;
+    }
+
+    // The name the project is stored by; the title and the language pair worked out from the book until it is known.
+    private String titleName(final OpenedBook book) {
+        final String named = briefProject.name().get();
+        return named.isEmpty() ? nameOf(book, current.brief().get()) : named;
     }
 
     // The book's title up to a subtitle, or the file's name without its extension, and the language pair.

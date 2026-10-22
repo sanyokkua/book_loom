@@ -44,6 +44,17 @@ abstract class BookBriefScreenTestBase extends ImportScreenTestBase {
         openBookThenShowBrief(FRANKENSTEIN, BookFixtures.frankensteinImport());
     }
 
+    /**
+     * Presses "Fill in from the book", waits for the dialog to offer the answer, and presses Apply, which is what
+     * writes the suggestion into the brief.
+     */
+    void fillInAndApply() throws TimeoutException {
+        onFx(() -> button("brief-suggest-style").fire());
+        awaitFx(() ->
+                optional("progress-apply") != null && !button("progress-apply").isDisabled());
+        onFx(() -> button("progress-apply").fire());
+    }
+
     BookBriefViewModel briefModel() {
         return injector.getInstance(BookBriefViewModel.class);
     }

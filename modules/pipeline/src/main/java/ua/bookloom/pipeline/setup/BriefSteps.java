@@ -56,8 +56,8 @@ final class BriefSteps {
         announcer.ended(StepKind.REQUEST, KNOWLEDGE, failed ? StepResult.FAILED : StepResult.DONE);
     }
 
-    void sampleStarted(final int number) {
-        announcer.started(StepKind.REQUEST, label(number), label(number), null);
+    void sampleStarted(final int number, final String location) {
+        announcer.started(StepKind.REQUEST, label(number), label(number), location.isEmpty() ? null : location);
     }
 
     void sampleFailed(final int number, final AppError error) {
@@ -67,14 +67,14 @@ final class BriefSteps {
     }
 
     /** Ends the window's step and shows what it answered; a reply that could not be read ends it failed. */
-    void sampleRead(final int number, final @Nullable Map<BriefField, Answer> answers) {
+    void sampleRead(final int number, final BookSample window, final @Nullable Map<BriefField, Answer> answers) {
         announcer.ended(StepKind.REQUEST, label(number), answers == null ? StepResult.FAILED : StepResult.DONE);
         final Map<BriefField, SampleAnswer> shown = new EnumMap<>(BriefField.class);
         if (answers != null) {
             answers.forEach((field, answer) -> shown.put(field, new SampleAnswer(answer.value(), answer.quote())));
         }
         log.trace("Brief window {} of {} answered {}", number, samples, shown);
-        sink.accept(new BriefSampleRead(number, samples, shown));
+        sink.accept(new BriefSampleRead(number, samples, shown, window.location(), window.text()));
     }
 
     void synthesisSkipped() {

@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 
 /**
@@ -61,8 +62,11 @@ public record ProjectNameRules(
                                 other.brief().sourceLanguage(), own.brief().sourceLanguage())
                         && Objects.equals(
                                 other.brief().targetLanguage(), own.brief().targetLanguage()));
-        return new ProjectNameRules(
-                keysOf(siblings), automaticOf(own, own.brief().targetLanguage()), !taken);
+        // An automatic name is the name the project has; a typed one leaves the automatic name to be worked out.
+        final String automatic = own.nameOrigin() == NameOrigin.AUTO
+                ? own.name()
+                : automaticOf(own, own.brief().targetLanguage());
+        return new ProjectNameRules(keysOf(siblings), automatic, !taken);
     }
 
     /**

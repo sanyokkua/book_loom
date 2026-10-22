@@ -2,7 +2,7 @@
 
 ### Requirement: Make the brief read-only while a translation is going on
 
-WHILE the run state of the open project is Translating, Stuck call, Pausing or Stopping, the Book Brief SHALL be read-only and SHALL show the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button; in every other run state, Paused included, it SHALL be editable except the languages, which "Lock the languages once translating has started" governs.
+WHILE the run state of the open project is Translating, Stuck call, Waiting for the AI program, Pausing or Stopping, the Book Brief SHALL be read-only and SHALL show the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." with a Pause button; in every other run state, Paused included, it SHALL be editable except the languages, which "Lock the languages once translating has started" governs.
 
 **Source**: docs/specification/mockups/README.md#changes-while-translating-i, docs/specification/mockups/README.md#run-states-a, docs/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (open question 7, recorded default: read-only until a pause). In plain words: the engine rereads the brief's switches only when it resumes, so an edit made mid-run would look accepted and change nothing; the screen therefore waits for a pause and says so.
 
@@ -20,6 +20,11 @@ WHILE the run state of the open project is Translating, Stuck call, Pausing or S
 
 - **WHEN** the person presses Stop and the run state is Stopping
 - **THEN** every control of the Book Brief is still disabled and the banner is still shown
+
+#### Scenario: Waiting for the AI program keeps it read-only
+
+- **WHEN** the run is waiting for the AI program and retries by itself
+- **THEN** every control of the Book Brief is disabled and the banner is shown, because an edit then would be as lost as while translating
 
 #### Scenario: A paused run with decided segments keeps only the languages locked
 
@@ -54,6 +59,16 @@ The Book Brief's languages card SHALL show a Project name line reading "automati
 - **THEN** the Project name line reads "automatic — follows the languages" and the project is named `Earth Gravity · EN → UK`
 - **AND** a toast says that the name changed
 
+#### Scenario: A typed name is shown as the person's own
+
+- **WHEN** the project was renamed to `Earth Gravity, 26b`
+- **THEN** the Project name line shows `Earth Gravity, 26b` with the words "named by you" and the same Rename… link, and the title bar shows the same name
+
+#### Scenario: The line shows the stored name
+
+- **WHEN** the Book Brief is shown for a stored project
+- **THEN** the Project name line and the title bar show the name the project is stored under, never a name worked out on the screen
+
 #### Scenario: A typed name never changes
 
 - **WHEN** the person renamed the project to `Earth Gravity, 26b` and then changes the target from Ukrainian to Polish
@@ -70,6 +85,21 @@ IF the person chooses a source and target that another project of the same book 
 - **WHEN** `Earth Gravity · EN → UK` exists and the person sets the target of a second project of the same book to Ukrainian
 - **THEN** the dialog "Same language pair" names `Earth Gravity · EN → UK` and offers "Open that project" and "Make a second Ukrainian translation"
 
+#### Scenario: Keep and Esc keep the previous pair
+
+- **WHEN** the dialog is open and the person presses "Keep Ukrainian" (or "Keep the current choice" when no language was chosen before) or Esc
+- **THEN** the two language boxes show the previous pair again and nothing is stored
+
+#### Scenario: Open that project discards the edit
+
+- **WHEN** the person presses "Open that project"
+- **THEN** the other project opens and the edit of the first one is discarded
+
+#### Scenario: Only a second translation keeps the new pair
+
+- **WHEN** the person chooses "Make a second Ukrainian translation" with a name that is unused
+- **THEN** the brief and that name are stored together and the brief keeps the new pair
+
 #### Scenario: The second translation needs its own name
 
 - **WHEN** the person chooses "Make a second Ukrainian translation" and the name field is empty
@@ -84,7 +114,7 @@ The Quality and speed card SHALL show an estimate line, such as "For this book o
 #### Scenario: A measured speed gives an estimate
 
 - **WHEN** the inference test measured 3.0 seconds per segment for the chosen model
-- **THEN** the card shows an estimate line "For this book on this computer: about … (estimate from the model test)"
+- **THEN** the card shows an estimate line "For this book on this computer: about … (estimate from the model test)", worked out from the speed, the book's segment count and the chosen quality (Fast, Balanced or Max)
 
 #### Scenario: Tokens per second alone give no estimate
 
@@ -98,7 +128,7 @@ The Quality and speed card SHALL show an estimate line, such as "For this book o
 
 ### Requirement: Show the brief suggestion in a progress dialog that is not hideable
 
-The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (skipped when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers and voice; Esc SHALL cancel it and it SHALL NOT be hideable.
+The brief suggestion SHALL run in a progress dialog whose Steps group lists what the model knows about the book (not listed when the title is the file name), reading sample 1 to K (K = 3, 4 or 5 for Fast, Balanced or Max, fewer when the story is too short for K windows), and deciding genre, readers and voice; Esc SHALL cancel it and it SHALL NOT be hideable.
 
 **Source**: docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/specification/mockups/README.md#g4--the-progress-dialog-one-pattern-for-model-work-e1, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B1–B3). In plain words: the suggestion is short work, so the person watches its steps and can stop it, but it is not pushed into the background.
 
@@ -107,6 +137,11 @@ The brief suggestion SHALL run in a progress dialog whose Steps group lists what
 - **WHEN** the person presses "✦ Fill in from the book" on Balanced for a book whose title is only its file name
 - **THEN** the dialog lists no "what the model knows" step, then Read sample 1 to Read sample 4 with their location ranges, then Decide genre, readers and voice
 
+#### Scenario: A known title adds the knowledge step
+
+- **WHEN** the person presses "✦ Fill in from the book" on Balanced for a book with a known title
+- **THEN** the dialog lists what the model knows about the book, Read sample 1 to Read sample 4 and Decide genre, readers and voice (1 + 4 + 1 steps)
+
 #### Scenario: Esc cancels the suggestion
 
 - **WHEN** the person presses Esc in the dialog before it has ended
@@ -114,7 +149,7 @@ The brief suggestion SHALL run in a progress dialog whose Steps group lists what
 
 ### Requirement: Show what the suggestion decides with its agreement and verified quote
 
-The dialog's "What it decides" group SHALL list genre, register, who tells the story and who reads it, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without a quote SHALL NOT be used.
+The dialog's "What it decides" group SHALL list four rows, genre, register, who tells the story and who reads it with the voice, each with its value so far and its agreement ("3 of 4 samples agree"); selecting one SHALL show each sample's answer with its verified quote, and a value without a quote SHALL NOT be used.
 
 **Source**: docs/specification/mockups/README.md#dialog--fill-in-the-brief-from-the-book-g4-short--b1b3, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (B2, B3). In plain words: the person can see why each field has its value and read the sentence of the book that supports it.
 
@@ -133,6 +168,16 @@ The application SHALL write nothing to the brief until the person presses "Apply
 
 - **WHEN** all steps have ended and the person closes the dialog with Esc before pressing "Apply to the brief"
 - **THEN** the suggestion is cancelled and the brief is unchanged
+
+#### Scenario: A failed or stopped suggestion offers no Apply
+
+- **WHEN** the model cannot answer or the person stops the suggestion
+- **THEN** the dialog closes, no "Apply to the brief" is offered, the brief is unchanged and the card says "The suggestion was stopped. The brief is unchanged." after a stop
+
+#### Scenario: The language proposal and the evidence are kept only on Apply
+
+- **WHEN** the person closes the dialog without pressing "Apply to the brief"
+- **THEN** no evidence line and no proposed source language is kept, and both appear only after Apply
 
 #### Scenario: Apply writes the decided fields
 

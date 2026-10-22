@@ -50,13 +50,11 @@ final class BriefQualityCard {
     // references.
     private final ChangeListener<Object> onSettings = (observed, was, now) -> showModel();
 
-    BriefQualityCard(
-            final BookBriefViewModel viewModel,
-            final SettingsViewModel settings,
-            final Messages messages,
-            final Navigator navigator) {
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.settings = Objects.requireNonNull(settings, "settings");
+    BriefQualityCard(final BriefParts parts) {
+        final BookBriefViewModel viewModel = parts.viewModel();
+        this.messages = parts.messages();
+        this.settings = parts.settings();
+        final Messages messages = this.messages;
         this.dial = new BriefChoice<>(
                 "brief-quality",
                 messages,
@@ -73,8 +71,18 @@ final class BriefQualityCard {
         settings.model().addListener(new WeakChangeListener<>(onSettings));
         settings.selectedProviderId().addListener(new WeakChangeListener<>(onSettings));
         showModel();
-        this.node = BriefCards.card(
-                "brief-quality-card", messages, MessageKey.BRIEF_CARD_QUALITY, dial.node(), hint, modelRow(navigator));
+        this.node = card(parts);
+    }
+
+    private Node card(final BriefParts parts) {
+        return BriefCards.card(
+                "brief-quality-card",
+                messages,
+                MessageKey.BRIEF_CARD_QUALITY,
+                dial.node(),
+                hint,
+                new BriefEstimateLines(messages, parts.estimate()).node(),
+                modelRow(parts.navigator()));
     }
 
     Node node() {

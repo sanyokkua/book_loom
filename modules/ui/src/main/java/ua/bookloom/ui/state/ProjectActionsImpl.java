@@ -112,10 +112,29 @@ public final class ProjectActionsImpl implements ProjectActions {
     @Override
     public void rename(final ProjectRow row) {
         Objects.requireNonNull(row, "row");
-        askRename(row, null, null);
+        askRename(row, null, null, () -> {});
     }
 
-    private void askRename(final ProjectRow row, final @Nullable String error, final @Nullable String typed) {
+    @Override
+    public void renameOpen(final String projectId, final Runnable renamed) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(renamed, "renamed");
+        calls.call("find the open project", projects::list, result -> {
+            final @Nullable List<ProjectSummary> listed = dataOrPresent(result);
+            if (listed == null) {
+                return;
+            }
+            listed.stream()
+                    .filter(summary -> summary.project().id().equals(projectId))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            summary -> askRename(ProjectRows.rowOf(summary, projectId), null, null, renamed),
+                            () -> log.warn("the open project {} is not stored; nothing to rename", projectId));
+        });
+    }
+
+    private void askRename(
+            final ProjectRow row, final @Nullable String error, final @Nullable String typed, final Runnable renamed) {
         final Project own = row.summary().project();
         withBook(own.contentHash(), book -> {
             final List<Project> siblings =
@@ -126,27 +145,30 @@ public final class ProjectActionsImpl implements ProjectActions {
                     ProjectNameRules.forProject(siblings, own),
                     error,
                     typed,
-                    text -> applyRename(row, text),
+                    text -> applyRename(row, text, renamed),
                     () -> remove(row),
                     () -> log.debug("rename of project={} cancelled", own.id()));
         });
     }
 
-    private void applyRename(final ProjectRow row, final @Nullable String text) {
+    private void applyRename(final ProjectRow row, final @Nullable String text, final Runnable renamed) {
         final String id = row.summary().project().id();
         log.info("project rename requested project={} automatic={}", id, text == null);
         calls.call("rename a project", () -> projects.rename(id, text), result -> {
             final ProjectChange change = dataOrPresent(result);
             switch (change) {
                 case null -> log.debug("rename of project={} failed", id);
-                case ProjectChange.Saved _ -> list.get().refresh();
+                case ProjectChange.Saved _ -> {
+                    list.get().refresh();
+                    renamed.run();
+                }
                 case ProjectChange.NameInUse _ -> {
                     log.warn("rename refused project={} clash=NameInUse", id);
-                    askRename(row, messages.get(MessageKey.DIALOG_PROJECT_NAME_ERROR_USED), text);
+                    askRename(row, messages.get(MessageKey.DIALOG_PROJECT_NAME_ERROR_USED), text, renamed);
                 }
                 case ProjectChange.PairInUse _ -> {
                     log.warn("rename refused project={} clash=PairInUse", id);
-                    askRename(row, null, null);
+                    askRename(row, null, null, renamed);
                 }
             }
         });

@@ -420,7 +420,7 @@ banner (L3), the live panel's line and the markers of the current call's segment
 ## Changes while translating (I)
 - **Names & style**: editable. Banner: "Changes apply to the next segments translated." The glossary is read again for
   every group of segments.
-- **Book Brief**: **read-only while translating**, with "Pause the translation to change the brief. Changes apply to
+- **Book Brief**: **read-only while translating (and while waiting for the AI program)**, with "Pause the translation to change the brief. Changes apply to
   segments not translated yet." [Pause].
   - The engine rereads the brief's switches only at resume, and it is not proven that tone and style are rederived.
   - **The languages are locked** once translating has started ("To translate into another language, use Translate into
@@ -528,7 +528,7 @@ language more than once, for example with another model, quality or thinking set
   and its agreement ("3 of 4 samples agree"). Selecting one shows each sample's answer with its **verified quote**; a
   value without a quote is not used.
 - **Group "Steps".**
-  1. What the model knows about the book — skipped when the title is the file name.
+  1. What the model knows about the book — not listed when the title is the file name.
   2. Read sample 1…K (K = 3 / 4 / 5 for Fast / Balanced / Max), with the location range.
   3. Decide genre, readers and voice.
 - **Detail.**

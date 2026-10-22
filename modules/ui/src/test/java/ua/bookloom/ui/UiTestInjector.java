@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
@@ -131,6 +132,7 @@ public final class UiTestInjector {
         private FileRevealer revealer = new RecordingFileRevealer();
         private @Nullable ProjectActions projectActions;
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
+        private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -229,6 +231,12 @@ public final class UiTestInjector {
         /** Replaces the Projects screen's rename, remove, translate-into and find-book actions with this recording one. */
         public Builder projectActions(final ProjectActions value) {
             projectActions = Objects.requireNonNull(value, "projectActions");
+            return this;
+        }
+
+        /** The measured speeds the graph's estimate reads. */
+        public Builder modelSettings(final ModelSettingsRepository value) {
+            modelSettings = Objects.requireNonNull(value, "modelSettings");
             return this;
         }
 
@@ -383,6 +391,7 @@ public final class UiTestInjector {
             private void bindStores() {
                 bind(ProviderConfigs.class).toInstance(configs);
                 bind(SettingsRepository.class).toInstance(settings);
+                bind(ModelSettingsRepository.class).toInstance(modelSettings);
                 bind(Clock.class).toInstance(Clock.fixed(NOW, ZoneOffset.UTC));
             }
         }

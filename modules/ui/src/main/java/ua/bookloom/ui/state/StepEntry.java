@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import java.util.Objects;
+import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
@@ -26,6 +27,9 @@ public record StepEntry(
         @Nullable StepResult result,
         @Nullable StepText text) {
 
+    /** What the pipeline calls the step of the nth brief sample, followed by n (BriefSteps). */
+    public static final String SAMPLE_LABEL = "sample-";
+
     /** Rejects a missing kind or label. */
     public StepEntry {
         Objects.requireNonNull(kind, "kind");
@@ -39,6 +43,22 @@ public record StepEntry(
      */
     public String key() {
         return kind.name() + ":" + index;
+    }
+
+    /**
+     * The number of the brief sample this step reads.
+     *
+     * @return the sample's number from 1, or empty when the step is not a brief sample
+     */
+    public OptionalInt sampleNumber() {
+        if (!label.startsWith(SAMPLE_LABEL)) {
+            return OptionalInt.empty();
+        }
+        try {
+            return OptionalInt.of(Integer.parseInt(label.substring(SAMPLE_LABEL.length())));
+        } catch (final NumberFormatException e) {
+            return OptionalInt.empty();
+        }
     }
 
     /**

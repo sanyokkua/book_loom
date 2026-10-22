@@ -195,6 +195,24 @@ final class ConformancePreparations {
             injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b");
             return null;
         });
+        scriptTheDiaryAnswer();
+        onFx(() -> {
+            brief.styleSuggestion().ask();
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> brief.styleSuggestion().pending().get() != null));
+        pressApply();
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> brief.styleSuggestion().languageProposal().get() != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void scriptTheDiaryAnswer() {
         ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
                 .answersBrief(Result.ok(new BriefSuggestion(
                         "Diary",
@@ -205,15 +223,21 @@ final class ConformancePreparations {
                         Gender.UNKNOWN,
                         Map.of(BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 4)),
                         "en")));
+    }
+
+    // What the dialog's Apply button does: the offer's action writes the brief and ends the dialog.
+    private void pressApply() {
         onFx(() -> {
-            brief.styleSuggestion().ask();
+            java.util.Objects.requireNonNull(injector.getInstance(ua.bookloom.ui.state.ActivityTracker.class)
+                            .running()
+                            .getFirst()
+                            .progress()
+                            .outcome()
+                            .offer())
+                    .apply()
+                    .run();
             return null;
         });
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> brief.styleSuggestion().languageProposal().get() != null));
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void refuseABook() throws TimeoutException {

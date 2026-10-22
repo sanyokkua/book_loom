@@ -235,17 +235,23 @@ public final class BusyHost {
         fade.stop();
         if (Motion.isReduced()) {
             host.setOpacity(0);
-            host.setVisible(false);
+            hideHost();
             return;
         }
         fade.setFromValue(host.getOpacity());
         fade.setToValue(0);
         fade.setOnFinished(event -> {
             if (!revealed) {
-                host.setVisible(false);
+                hideHost();
             }
         });
         fade.playFromStart();
+    }
+
+    // A dialog that has gone is not left in the scene behind the invisible layer; the next one is put there again.
+    private void hideHost() {
+        host.setVisible(false);
+        host.getChildren().setAll(scrim);
     }
 
     private void fit() {

@@ -717,6 +717,84 @@ public enum MessageKey {
     BRIEF_SUGGEST_DONE("brief.suggest.done"),
     /** Line shown when a style is suggested but no model is chosen. */
     BRIEF_SUGGEST_NO_MODEL("brief.suggest.noModel"),
+    /** Banner over the brief while a translation is at work: why nothing can be changed. */
+    BRIEF_READ_ONLY_BANNER("brief.readOnly.banner"),
+    /** Second line of the read-only banner: when a change takes effect. */
+    BRIEF_READ_ONLY_NOTE("brief.readOnly.note"),
+    /** Button on the read-only banner that pauses the translation. */
+    BRIEF_READ_ONLY_PAUSE("brief.readOnly.pause"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_READ_ONLY_PAUSE}. */
+    BRIEF_READ_ONLY_PAUSE_TIP("brief.readOnly.pause.tip"),
+    /** Hint under the language boxes once translating has started: the way to another language. */
+    BRIEF_LANGUAGES_LOCKED("brief.languages.locked"),
+    /** Label of the project name line in the languages card. */
+    BRIEF_PROJECT_NAME_LABEL("brief.projectName.label"),
+    /** Words after a project name that follows the languages. */
+    BRIEF_PROJECT_NAME_AUTOMATIC("brief.projectName.automatic"),
+    /** Words after a project name the person typed. */
+    BRIEF_PROJECT_NAME_NAMED("brief.projectName.named"),
+    /** Link beside the project name that opens the rename question. */
+    BRIEF_PROJECT_NAME_RENAME("brief.projectName.rename"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_PROJECT_NAME_RENAME}. */
+    BRIEF_PROJECT_NAME_RENAME_TIP("brief.projectName.rename.tip"),
+    /** Button of the same-pair question that keeps the previous language: the language's name. */
+    BRIEF_SAME_PAIR_KEEP("brief.samePair.keep"),
+    /** Button of the same-pair question when no language was chosen before. */
+    BRIEF_SAME_PAIR_KEEP_PREVIOUS("brief.samePair.keepPrevious"),
+    /** The name of an automatic source language in the keep button. */
+    BRIEF_SAME_PAIR_AUTO("brief.samePair.auto"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_MEASURED}. */
+    ESTIMATE_MEASURED_TIP("estimate.measured.tip"),
+    /** Heading of the dialog that fills in the brief from the book. */
+    BRIEF_DIALOG_TITLE("brief.dialog.title"),
+    /** Line under the heading of the fill-in dialog. */
+    BRIEF_DIALOG_PURPOSE("brief.dialog.purpose"),
+    /** Footer line of the fill-in dialog: nothing is written before Apply. */
+    BRIEF_DIALOG_WRITES_NOTHING("brief.dialog.writesNothing"),
+    /** Button of the fill-in dialog that writes the decided fields to the brief. */
+    BRIEF_APPLY("brief.apply"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_APPLY}. */
+    BRIEF_APPLY_TIP("brief.apply.tip"),
+    /** Heading of the group of decided fields in the fill-in dialog. */
+    BRIEF_DECIDES_GROUP("brief.decides.group"),
+    /** Heading of the group of steps in the fill-in dialog. */
+    BRIEF_STEPS_GROUP("brief.steps.group"),
+    /** Row of the decided fields: the genre. */
+    BRIEF_DECIDES_GENRE("brief.decides.genre"),
+    /** Row of the decided fields: the register. */
+    BRIEF_DECIDES_REGISTER("brief.decides.register"),
+    /** Row of the decided fields: who tells the story. */
+    BRIEF_DECIDES_NARRATOR("brief.decides.narrator"),
+    /** Row of the decided fields: the readers and the voice. */
+    BRIEF_DECIDES_READERS("brief.decides.readers"),
+    /** How many of the samples read gave the decided value: agreeing, samples. */
+    BRIEF_DECIDES_AGREE("brief.decides.agree"),
+    /** Mark on a tally shown before the last step has decided. */
+    BRIEF_DECIDES_SO_FAR("brief.decides.soFar"),
+    /** Chip on a decided field the samples did not agree on. */
+    BRIEF_DECIDES_UNCERTAIN("brief.decides.uncertain"),
+    /** Line of a field no sample has answered yet. */
+    BRIEF_DECIDES_PENDING("brief.decides.pending"),
+    /** Mark on a sample's answer that quoted nothing from the book. */
+    BRIEF_DECIDES_NO_QUOTE("brief.decides.noQuote"),
+    /** Note under the per-sample answers. */
+    BRIEF_DECIDES_NOTE("brief.decides.note"),
+    /** Column heading of the per-sample answers: the sample. */
+    BRIEF_DECIDES_COL_SAMPLE("brief.decides.col.sample"),
+    /** Column heading of the per-sample answers: the answer. */
+    BRIEF_DECIDES_COL_ANSWER("brief.decides.col.answer"),
+    /** Column heading of the per-sample answers: the quote. */
+    BRIEF_DECIDES_COL_QUOTE("brief.decides.col.quote"),
+    /** Step of the fill-in dialog: what the model knows of the book. */
+    BRIEF_STEP_KNOWLEDGE("brief.step.knowledge"),
+    /** Step of the fill-in dialog: one sample read; the sample's number. */
+    BRIEF_STEP_SAMPLE("brief.step.sample"),
+    /** Step of the fill-in dialog: the decision over every sample. */
+    BRIEF_STEP_SYNTHESIS("brief.step.synthesis"),
+    /** Sentence about the deciding step. */
+    BRIEF_STEP_SYNTHESIS_SUB("brief.step.synthesis.sub"),
+    /** Line shown after the person stopped the suggestion. */
+    BRIEF_SUGGEST_STOPPED("brief.suggest.stopped"),
     /** Line under a suggested field: the book's words the model quoted for it and how many samples agree. */
     BRIEF_EVIDENCE_QUOTED("brief.evidence.quoted"),
     /** Line under a suggested field that needed no quote: how many samples agree. */

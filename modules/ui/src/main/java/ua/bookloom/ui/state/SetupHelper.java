@@ -2,6 +2,8 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -19,6 +21,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -133,7 +136,106 @@ public final class SetupHelper {
             final ActivityKind kind,
             final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
             final Consumer<Result<T>> done) {
+        return start(kind, work, false, (handle, answer, reads) -> {
+            handle.end();
+            log.info("setup proposal {} ended ok={}", kind, answer.isOk());
+            done.accept(answer);
+        });
+    }
+
+    /**
+     * Starts one proposal whose answer needs the person's decision: when {@code offerOf} gives an offer, the activity
+     * stays registered with it after the work has ended, so its dialog stays open until the offer's action, Cancel or
+     * Esc; with no offer (a failure, a stop) it ends as any other. FX thread only.
+     *
+     * @param kind the model work it is registered as
+     * @param work as for {@link #runShown}
+     * @param offerOf receives the answer on the FX thread, once, and gives what the person may do with it
+     * @return empty when it started, else why it did not, in which case {@code offerOf} is never called
+     */
+    public <T> Optional<Refusal> runForDecision(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final Function<Result<T>, Optional<ResultOffer>> offerOf) {
+        return runForDecision(kind, work, offerOf, (answer, reads) -> List.of());
+    }
+
+    /**
+     * As {@link #runForDecision(ActivityKind, BiFunction, Function)}, and the dialog's "What it decides" rows follow
+     * the samples read while the work runs and become what {@code decided} says once the answer has arrived.
+     *
+     * @param decided the rows of the final answer, given the answer and what each sample read
+     */
+    public <T> Optional<Refusal> runForDecision(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final Function<Result<T>, Optional<ResultOffer>> offerOf,
+            final BiFunction<Result<T>, List<BriefSampleRead>, List<DecisionRow>> decided) {
+        return start(kind, work, true, (handle, answer, reads) -> {
+            final Optional<ResultOffer> offer = offerOf.apply(answer);
+            log.info("setup proposal {} ended ok={} offer={}", kind, answer.isOk(), offer.isPresent());
+            if (offer.isEmpty()) {
+                handle.end();
+                return;
+            }
+            handle.decisions(decided.apply(answer, reads));
+            handle.offer(offer.get());
+        });
+    }
+
+    /**
+     * The offer a proposal of {@code kind} holds for the person right now.
+     *
+     * @param kind the kind of work
+     * @return its offer, with the actions that end the activity; empty when none is held
+     */
+    public Optional<ResultOffer> heldOffer(final ActivityKind kind) {
+        return activities.running().stream()
+                .filter(activity -> activity.kind() == kind)
+                .map(activity -> activity.outcome().offer())
+                .filter(Objects::nonNull)
+                .findFirst();
+    }
+
+    /** What happens on the FX thread when the work's answer arrives. */
+    @FunctionalInterface
+    private interface Delivery<T> {
+        void accept(ActivityTracker.Handle handle, Result<T> answer, List<BriefSampleRead> reads);
+    }
+
+    private <T> Optional<Refusal> start(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final boolean tallies,
+            final Delivery<T> delivery) {
         final Optional<ModelSelection> selection = settings.selection();
+        final Optional<Refusal> refusal = refusalFor(kind, selection);
+        if (refusal.isPresent()) {
+            return refusal;
+        }
+        log.info(
+                "setup proposal {} started with provider {}",
+                kind,
+                selection.get().providerId());
+        final InterruptibleWork running = new InterruptibleWork();
+        final ActivityTracker.Handle handle = activities.begin(kind, running::stop);
+        final List<BriefSampleRead> reads = new ArrayList<>();
+        final CallFeed feed = new CallFeed(handle, activities::now, read -> {
+            reads.add(read);
+            if (tallies) {
+                handle.decisions(BriefDecisions.running(reads));
+            }
+        });
+        final Consumer<JobEvent> progress = event -> Platform.runLater(() -> feed.accept(event));
+        submit(
+                kind,
+                handle,
+                () -> running.run(() -> answer(selection.get(), work, progress), SetupHelper::stopped),
+                answer -> delivery.accept(handle, answer, reads));
+        return Optional.empty();
+    }
+
+    private Optional<Refusal> refusalFor(final ActivityKind kind, final Optional<ModelSelection> selection) {
         if (selection.isEmpty()) {
             log.debug("setup proposal {} not started: no model is chosen", kind);
             return Optional.of(Refusal.NO_MODEL);
@@ -146,19 +248,6 @@ public final class SetupHelper {
             log.debug("setup proposal {} not started: {} is running", kind, activities.conflictFor(kind));
             return Optional.of(Refusal.BUSY);
         }
-        log.info(
-                "setup proposal {} started with provider {}",
-                kind,
-                selection.get().providerId());
-        final InterruptibleWork running = new InterruptibleWork();
-        final ActivityTracker.Handle handle = activities.begin(kind, running::stop);
-        final CallFeed feed = new CallFeed(handle, activities::now);
-        final Consumer<JobEvent> progress = event -> Platform.runLater(() -> feed.accept(event));
-        submit(
-                kind,
-                handle,
-                () -> running.run(() -> answer(selection.get(), work, progress), SetupHelper::stopped),
-                done);
         return Optional.empty();
     }
 
@@ -168,24 +257,15 @@ public final class SetupHelper {
             final Supplier<Result<T>> job,
             final Consumer<Result<T>> done) {
         try {
-            executor.execute(() -> deliver(kind, handle, job.get(), done));
+            executor.execute(() -> {
+                final Result<T> answer = job.get();
+                Platform.runLater(() -> done.accept(answer));
+            });
         } catch (RejectedExecutionException rejected) {
             log.error("the setup proposal {} could not be submitted", kind, rejected);
             handle.end();
             done.accept(Result.err(AppError.of(ErrorCode.internal, "Suggestion failed", "It could not be started.")));
         }
-    }
-
-    private <T> void deliver(
-            final ActivityKind kind,
-            final ActivityTracker.Handle handle,
-            final Result<T> answer,
-            final Consumer<Result<T>> done) {
-        Platform.runLater(() -> {
-            handle.end();
-            log.info("setup proposal {} ended ok={}", kind, answer.isOk());
-            done.accept(answer);
-        });
     }
 
     private static <T> Result<T> stopped() {

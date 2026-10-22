@@ -11,6 +11,7 @@ import ua.bookloom.ui.state.ProjectRow;
 public final class RecordingProjectActions implements ProjectActions {
 
     private final List<ProjectRow> renamed = new CopyOnWriteArrayList<>();
+    private final List<String> renamedOpen = new CopyOnWriteArrayList<>();
     private final List<ProjectRow> removed = new CopyOnWriteArrayList<>();
     private final List<BookGroup> translatedInto = new CopyOnWriteArrayList<>();
     private final List<ProjectRow> findBookRows = new CopyOnWriteArrayList<>();
@@ -19,6 +20,11 @@ public final class RecordingProjectActions implements ProjectActions {
     @Override
     public void rename(final ProjectRow row) {
         renamed.add(row);
+    }
+
+    @Override
+    public void renameOpen(final String projectId, final Runnable renamed) {
+        renamedOpen.add(projectId);
     }
 
     @Override
@@ -40,6 +46,11 @@ public final class RecordingProjectActions implements ProjectActions {
     /** The rows Rename… was chosen for, in call order. */
     public List<ProjectRow> renamed() {
         return List.copyOf(renamed);
+    }
+
+    /** The ids of the open projects Rename… was chosen for on the Book Brief, in call order. */
+    public List<String> renamedOpen() {
+        return List.copyOf(renamedOpen);
     }
 
     /** The rows Remove project… was chosen for, in call order. */

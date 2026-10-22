@@ -105,6 +105,15 @@ public record Activity(
     }
 
     /**
+     * The decided rows and the offer the work holds.
+     *
+     * @return the outcome; {@link ActivityOutcome#NONE} for work with none
+     */
+    public ActivityOutcome outcome() {
+        return progress.outcome();
+    }
+
+    /**
      * The time left.
      *
      * @return the estimate, or {@code null} when not known
@@ -158,6 +167,7 @@ public record Activity(
      * @param calls the model calls the work is making, as the live call view shows them; {@link LiveCalls#EMPTY}
      *     for work that shows none
      * @param steps the steps the work announced; {@link StepLog#EMPTY} for work that announces none
+     * @param outcome the decided rows and the held offer; {@link ActivityOutcome#NONE} for work with none
      */
     public record Progress(
             @Nullable Double fraction,
@@ -165,28 +175,49 @@ public record Activity(
             List<Detail> details,
             @Nullable Duration eta,
             LiveCalls calls,
-            StepLog steps) {
+            StepLog steps,
+            ActivityOutcome outcome) {
 
-        /** Freezes the details and rejects missing calls or steps. */
+        /** Freezes the details and rejects missing calls, steps or outcome. */
         public Progress {
             details = List.copyOf(details);
             Objects.requireNonNull(calls, "calls");
             Objects.requireNonNull(steps, "steps");
+            Objects.requireNonNull(outcome, "outcome");
+        }
+
+        /** A progress that has no outcome yet. */
+        public Progress(
+                final @Nullable Double fraction,
+                final @Nullable String stepText,
+                final List<Detail> details,
+                final @Nullable Duration eta,
+                final LiveCalls calls,
+                final StepLog steps) {
+            this(fraction, stepText, details, eta, calls, steps, ActivityOutcome.NONE);
         }
 
         /** What an activity shows before it says anything: indeterminate, no step, no facts. */
         static final Progress NONE = new Progress(null, null, List.of(), null, LiveCalls.EMPTY, StepLog.EMPTY);
 
+        Progress withFigures(final @Nullable Double now, final @Nullable String text, final @Nullable Duration left) {
+            return new Progress(now, text, details, left, calls, steps, outcome);
+        }
+
         Progress withDetails(final List<Detail> lines) {
-            return new Progress(fraction, stepText, lines, eta, calls, steps);
+            return new Progress(fraction, stepText, lines, eta, calls, steps, outcome);
         }
 
         Progress withCalls(final LiveCalls now) {
-            return new Progress(fraction, stepText, details, eta, now, steps);
+            return new Progress(fraction, stepText, details, eta, now, steps, outcome);
         }
 
         Progress withSteps(final StepLog now) {
-            return new Progress(fraction, stepText, details, eta, calls, now);
+            return new Progress(fraction, stepText, details, eta, calls, now, outcome);
+        }
+
+        Progress withOutcome(final ActivityOutcome now) {
+            return new Progress(fraction, stepText, details, eta, calls, steps, now);
         }
     }
 }

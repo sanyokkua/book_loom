@@ -1510,12 +1510,11 @@ const BRIEF_STEPS = [
     {group: 'What it decides', name: 'Register', state: mk('ok', 'so far'), res: 'Neutral — 3 of 4 samples agree', f: true},
     {group: 'What it decides', name: 'Who tells the story', state: mk('ok', 'so far'), res: 'Third person — 1 of 2 samples', f: true},
     {group: 'What it decides', name: 'Who reads it · voice', state: mk('wait'), res: 'Decided by the last step', f: true},
-    {group: 'Steps', name: '1 · What the model knows about the book', state: mk('keep', 'skipped'), res: 'The title is the file name — nothing to look up', s: 'skip'},
-    {group: 'Steps', name: '2 · Read sample 1 of 4 · ch1', state: mk('done', 'answered'), res: 'popular science · neutral · third person', s: 'done', at: 'ch1 · p02–p14', text: 'Gravity is the force by which a planet or other body draws objects toward its centre… (12 paragraphs)'},
-    {group: 'Steps', name: '3 · Read sample 2 of 4 · ch2', state: mk('done', 'answered'), res: 'popular science · neutral', s: 'done', at: 'ch2 · p03–p17', text: 'An orbit is the curved path an object follows around a planet or a star… (15 paragraphs)'},
-    {group: 'Steps', name: '4 · Read sample 3 of 4 · ch3', state: mk('run', 'reading…'), res: 'The model is answering', s: 'run', at: 'ch3 · p01–p12', text: 'Tides rise and fall twice a day. The Moon pulls the ocean on the near side of the Earth a little more than the Earth itself… (12 paragraphs)'},
-    {group: 'Steps', name: '5 · Read sample 4 of 4 · ch4', state: mk('wait'), res: '', s: 'wait'},
-    {group: 'Steps', name: '6 · Decide genre, readers and voice', state: mk('wait'), res: 'One request over every sample’s answers', s: 'wait'},
+    {group: 'Steps', name: '1 · Read sample 1 of 4 · ch1', state: mk('done', 'answered'), res: 'popular science · neutral · third person', s: 'done', at: 'ch1 · p02–p14', text: 'Gravity is the force by which a planet or other body draws objects toward its centre… (12 paragraphs)'},
+    {group: 'Steps', name: '2 · Read sample 2 of 4 · ch2', state: mk('done', 'answered'), res: 'popular science · neutral', s: 'done', at: 'ch2 · p03–p17', text: 'An orbit is the curved path an object follows around a planet or a star… (15 paragraphs)'},
+    {group: 'Steps', name: '3 · Read sample 3 of 4 · ch3', state: mk('run', 'reading…'), res: 'The model is answering', s: 'run', at: 'ch3 · p01–p12', text: 'Tides rise and fall twice a day. The Moon pulls the ocean on the near side of the Earth a little more than the Earth itself… (12 paragraphs)'},
+    {group: 'Steps', name: '4 · Read sample 4 of 4 · ch4', state: mk('wait'), res: '', s: 'wait'},
+    {group: 'Steps', name: '5 · Decide genre, readers and voice', state: mk('wait'), res: 'One request over every sample’s answers', s: 'wait'},
 ];
 function briefDetail(s, mode) {
     const h = `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}${mode === 'detailed' && !s.f ? `<span class="badge b-neutral mono">${s.name.includes('knows') ? 'book-knowledge' : s.name.includes('Decide') ? 'brief-synthesis' : 'brief-suggestion'}</span>` : ''}</div>`;
@@ -1532,7 +1531,7 @@ function briefDetail(s, mode) {
 WORK.brief = () => progressDialog({
     id: 'brief', ico: '✦', title: 'Fill in the brief from the book', sub: 'The model reads four samples of the book and suggests the brief. Finished steps stay open to look at.',
     overall: [3, 6], left: 'about 30 s', extra: [['Elapsed', '0:24'], ['Speed', '11 tok/s']],
-    steps: BRIEF_STEPS, sel: 7, detail: briefDetail, cancelSays: 'Nothing is written to the brief until you apply it.',
+    steps: BRIEF_STEPS, sel: 6, detail: briefDetail, cancelSays: 'Nothing is written to the brief until you apply it.',
     footer: `<button class="btn btn-ghost" onclick="closeWork();toast('info','Stopped','The brief is unchanged.')">Cancel</button><button class="btn btn-primary" disabled title="Available when every step has finished">Apply to the brief</button>`,
 });
 WORK_ESC.brief = () => closeWork();

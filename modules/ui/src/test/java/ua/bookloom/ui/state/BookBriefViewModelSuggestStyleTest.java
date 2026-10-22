@@ -61,12 +61,14 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         });
     }
 
+    // The answer is held until Apply, so a test that wants the fields written presses Apply as the dialog does.
     private void suggest() {
         onFx(() -> {
             brief.styleSuggestion().ask();
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private BookBrief stored() {

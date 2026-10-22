@@ -73,12 +73,14 @@ class BookBriefViewModelLanguageProposalTest extends ExportViewModelTestBase {
                 languageProposal)));
     }
 
+    // The proposal is kept only on Apply, so the test presses Apply as the dialog's button does.
     private void suggest() {
         onFx(() -> {
             brief.styleSuggestion().ask();
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private @Nullable String proposal() {

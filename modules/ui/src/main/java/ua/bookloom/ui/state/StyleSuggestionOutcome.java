@@ -14,8 +14,10 @@ public record StyleSuggestionOutcome(Kind kind, String message) {
     public enum Kind {
         /** Nothing was asked, or the last answer was dismissed. */
         NONE,
-        /** The model's suggestion was written into the brief. */
+        /** The model's suggestion was applied to the brief. */
         DONE,
+        /** The person stopped the suggestion; the brief is unchanged. */
+        STOPPED,
         /** No provider and model are chosen. */
         NO_MODEL,
         /** Other model work is running. */

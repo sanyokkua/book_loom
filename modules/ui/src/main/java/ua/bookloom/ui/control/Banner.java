@@ -6,6 +6,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
@@ -152,6 +153,25 @@ public final class Banner extends HBox {
         button.getStyleClass().add("btn-secondary");
         button.setOnAction(event -> action.run());
         column.getChildren().add(button);
+        return button;
+    }
+
+    /**
+     * Adds an action button at the banner's right edge, level with its first line.
+     *
+     * @param id the button's node id
+     * @param label the visible, already translated text
+     * @param action what pressing it does
+     * @return the button, shown
+     */
+    public Button addTrailingAction(final String id, final String label, final Runnable action) {
+        Objects.requireNonNull(action, "action");
+        final Button button = new Button(Objects.requireNonNull(label, "label"));
+        button.setId(Objects.requireNonNull(id, "id"));
+        button.getStyleClass().add("btn-secondary");
+        button.setOnAction(event -> action.run());
+        HBox.setHgrow(column, Priority.ALWAYS);
+        getChildren().add(button);
         return button;
     }
 

@@ -752,7 +752,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: rewrite the Structure/Import layout tests (at 960×640 the browser is ≥ 360 px high and the page needs no
     scroll at 1920×1080); verdict cases per state.
   - **Compare:** each verdict, and the browser at both sizes. → :ui
-- [ ] 6.3 Make the Book Brief read-only while translating, lock its languages once started, add the project-name line,
+- [x] 6.3 Make the Book Brief read-only while translating, lock its languages once started, add the project-name line,
   and move "Fill in from the book" into the short progress dialog, so the brief cannot change under a running
   translation and its suggestion shows each sample's evidence.
   - **Satisfies:** book-brief "Make the brief read-only while a translation is going on"; book-brief "Lock the languages
@@ -768,7 +768,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - "✦ Fill in from the book" opens `ProgressDialog` (steps and "What it decides", "Nothing is written to the brief
     until you apply it.", Apply to the brief).
   - The estimate line shows only when measured.
-  - Tests: read-only while RUNNING; languages locked after one decision; the dialog's steps for BALANCED (1 + 4 + 1);
+  - The button reads "✦ Fill in from the book"; a brief edit that picks a used pair is held until the person decides in Same language pair (the brief shows the previous pair, only a second translation keeps the new one); the dialog stays open after its work ends and offers Apply (pipeline: each sample step carries its location and the text sent).
+  - Tests: read-only while RUNNING; languages locked after one decision; the dialog's steps for a book with a known title on Balanced (knowledge, 4 samples, synthesis: 1 + 4 + 1) and, with a file-stem title, 4 + 1 with no knowledge row;
     Apply writes through `BriefSaver`.
   - **Compare:** idle, translating, and the dialog in Simple and Detailed. → :ui
 - [ ] 6.4 Give Names & style its purpose lines, empty states, "Used" column, wide-only side-by-side layout, read-only

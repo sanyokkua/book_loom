@@ -1,8 +1,11 @@
 package ua.bookloom.ui.control;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -16,6 +19,9 @@ import ua.bookloom.ui.state.StepEntry;
 final class StepWords {
 
     private static final String ITEM_JOIN = " · ";
+    private static final String KNOWLEDGE = "knowledge";
+    private static final String SYNTHESIS = "synthesis";
+    private static final Pattern SAMPLE = Pattern.compile("sample-(\\d+)");
 
     /** The look of each state a step can be in. */
     enum Look {
@@ -79,13 +85,33 @@ final class StepWords {
             return messages.get(MessageKey.PROGRESS_STEP_PENDING, step.index() + 1);
         }
         final String item = step.itemRef();
-        return item == null ? step.label() : step.label() + ITEM_JOIN + item;
+        final String words = wordsOf(messages, step);
+        return item == null ? words : words + ITEM_JOIN + item;
+    }
+
+    // The three request steps of the brief suggestion carry codes as labels; every other label is already words.
+    private static String wordsOf(final Messages messages, final StepEntry step) {
+        if (step.kind() != StepKind.REQUEST) {
+            return step.label();
+        }
+        final String label = step.label();
+        if (KNOWLEDGE.equals(label)) {
+            return messages.get(MessageKey.BRIEF_STEP_KNOWLEDGE);
+        }
+        if (SYNTHESIS.equals(label)) {
+            return messages.get(MessageKey.BRIEF_STEP_SYNTHESIS);
+        }
+        final Matcher sample = SAMPLE.matcher(label);
+        return sample.matches() ? messages.get(MessageKey.BRIEF_STEP_SAMPLE, Integer.parseInt(sample.group(1))) : label;
     }
 
     /** {@return the step's one result line: its verdict when it gave one, else its state in words} */
     static String result(final Messages messages, final StepEntry step) {
         final StepEntry.StepText text = step.text();
         final @Nullable String verdict = text == null ? null : text.verdict();
+        if (verdict == null && step.isRunning() && SYNTHESIS.equals(step.label())) {
+            return messages.get(MessageKey.BRIEF_STEP_SYNTHESIS_SUB);
+        }
         return verdict != null ? verdict : messages.get(Look.of(step).result());
     }
 

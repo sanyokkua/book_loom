@@ -108,6 +108,63 @@ class SetupAssistantBriefStepsTest extends SetupAssistantBriefTestBase {
         assertThat(requests(StepState.STARTED)).extracting(StepChanged::index).containsExactly(0, 1, 2, 3, 4);
     }
 
+    // Balanced (the default) reads four windows: knowledge, four samples and the synthesis, six steps in all.
+    @Test
+    void suggestBrief_balancedKnownTitle_plansKnowledgeFourSamplesSynthesis() {
+        knowledgeAnswers(KNOWN);
+        windowsRead(WINDOWS, window("crime", "formal"));
+        synthesisAnswers(SYNTHESIS);
+
+        assertThat(suggest().isOk()).isTrue();
+
+        assertThat(plans()).containsExactly(new StepsPlanned(StepKind.REQUEST, 6, false));
+        assertThat(startedLabels())
+                .containsExactly("knowledge", "sample-1", "sample-2", "sample-3", "sample-4", "synthesis");
+    }
+
+    // Each sample step names the window's place in the book, and the answer event carries the same place and the text
+    // sent.
+    @Test
+    void suggestBrief_sampleSteps_carryTheWindowLocationAndTheSentText() {
+        dialIs(QualityDial.FAST);
+        knowledgeAnswers(KNOWN);
+        windowsRead(3, window("crime", "formal"));
+        synthesisAnswers(SYNTHESIS);
+
+        assertThat(suggest().isOk()).isTrue();
+
+        final List<BriefSampleRead> reads = events.stream()
+                .filter(BriefSampleRead.class::isInstance)
+                .map(BriefSampleRead.class::cast)
+                .toList();
+        assertThat(reads)
+                .extracting(BriefSampleRead::location)
+                .doesNotContain("")
+                .isNotEmpty();
+        assertThat(reads).extracting(BriefSampleRead::sent).allMatch(sent -> sent.startsWith("Passage 1: "));
+        assertThat(requests(StepState.STARTED))
+                .filteredOn(change -> change.label().startsWith("sample-"))
+                .extracting(StepChanged::itemRef)
+                .containsExactlyElementsOf(
+                        reads.stream().map(BriefSampleRead::location).toList());
+    }
+
+    // The knowledge and synthesis steps are not places in the book, so they carry no item reference.
+    @Test
+    void suggestBrief_knowledgeAndSynthesisSteps_carryNoItemReference() {
+        dialIs(QualityDial.FAST);
+        knowledgeAnswers(KNOWN);
+        windowsRead(3, window("crime", "formal"));
+        synthesisAnswers(SYNTHESIS);
+
+        assertThat(suggest().isOk()).isTrue();
+
+        assertThat(requests(StepState.STARTED))
+                .filteredOn(change -> !change.label().startsWith("sample-"))
+                .extracting(StepChanged::itemRef)
+                .containsOnlyNulls();
+    }
+
     // The title is the file stem, so the model is not asked what it knows: four windows and the synthesis.
     @Test
     void suggestBrief_balancedTitleIsFileStem_plansFourSamplesSynthesisNoKnowledge() {

@@ -3,6 +3,7 @@ package ua.bookloom.ui.control;
 import java.util.Objects;
 import java.util.Set;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -13,6 +14,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
@@ -32,6 +34,7 @@ final class ProgressStepList extends VBox {
 
     private static final double SPACING = 8;
     private static final double ROW_HEIGHT = 44;
+    private static final double LIST_BORDER = 2;
     private static final Set<KeyCode> CHOOSING_KEYS = Set.of(
             KeyCode.UP, KeyCode.DOWN, KeyCode.HOME, KeyCode.END, KeyCode.PAGE_UP, KeyCode.PAGE_DOWN, KeyCode.SPACE);
 
@@ -56,6 +59,22 @@ final class ProgressStepList extends VBox {
         VBox.setVgrow(list, Priority.ALWAYS);
         getChildren().addAll(follow, list);
         wireSelection();
+    }
+
+    /**
+     * Makes the list as tall as its rows while another group shares the column, so every step is shown and the column
+     * scrolls instead; restores the list that fills the column and scrolls itself otherwise.
+     *
+     * @param own {@code true} to size the list to its rows
+     */
+    void sizeToRows(final boolean own) {
+        if (own) {
+            list.minHeightProperty()
+                    .bind(Bindings.size(model.rows()).multiply(ROW_HEIGHT).add(LIST_BORDER));
+        } else {
+            list.minHeightProperty().unbind();
+            list.setMinHeight(Region.USE_COMPUTED_SIZE);
+        }
     }
 
     private void wireSelection() {

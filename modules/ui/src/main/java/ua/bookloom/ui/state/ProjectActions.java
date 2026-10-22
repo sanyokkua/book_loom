@@ -16,6 +16,14 @@ public interface ProjectActions {
     void rename(ProjectRow row);
 
     /**
+     * Renames the open project from the Book Brief, with the question the Projects screen asks.
+     *
+     * @param projectId the id of the open project
+     * @param renamed what runs once the new name is stored
+     */
+    void renameOpen(String projectId, Runnable renamed);
+
+    /**
      * Removes the project of a row after asking.
      *
      * @param row the row Remove project… was chosen on

@@ -210,7 +210,7 @@ final class BriefSuggester {
             final ModelCalls calls,
             final BriefSteps steps,
             final int number) {
-        steps.sampleStarted(number);
+        steps.sampleStarted(number, window.location());
         final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
@@ -224,7 +224,7 @@ final class BriefSuggester {
                 : new Reading(
                         BriefReplies.read(node, window, genders),
                         BriefReplies.language(node, chosen).orElse(null));
-        steps.sampleRead(number, reading.answers());
+        steps.sampleRead(number, window, reading.answers());
         return Result.ok(reading);
     }
 
