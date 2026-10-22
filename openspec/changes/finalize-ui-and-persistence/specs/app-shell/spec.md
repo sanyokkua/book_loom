@@ -659,7 +659,7 @@ WHILE a project's name is automatic, the application SHALL change it when the la
 
 ### Requirement: Allow one project per language pair of a book unless it is named
 
-The application SHALL allow one unnamed project for each language pair of a book (same content). IF a person chooses a used pair, in the Brief or in "Translate into another language", THEN a dialog "Same language pair" SHALL show the existing project with its AI model, quality and progress and offer "Open that project" or "Make a second <language> translation", which needs a name of its own.
+The application SHALL allow one unnamed project for each language pair of a book (same content). IF a person chooses a used pair in the Brief, THEN a dialog "Same language pair" SHALL show the existing project with its AI model, quality and progress and offer "Open that project" or "Make a second <language> translation", which needs a name of its own; "Translate into another language" asks for that name in its own form and opens the dialog only when the pair turns out to be used.
 
 **Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 3). In plain words: two identically named translations would be confused and overwrite each other's files. Asking once, with the choice to open the first, prevents it.
 

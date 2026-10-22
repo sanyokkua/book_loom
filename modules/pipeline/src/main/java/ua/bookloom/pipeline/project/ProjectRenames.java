@@ -55,6 +55,20 @@ final class ProjectRenames {
         return result;
     }
 
+    Result<ProjectChange> named(final Project project, final BookBrief brief, final String name) {
+        if (name.isBlank()) {
+            log.warn("second translation refused project={}: blank name", project.id());
+            return Result.err(AppError.of(
+                    ErrorCode.validation, "The name is empty", "A second translation needs a name of its own."));
+        }
+        final Result<ProjectChange> result =
+                saveUnlessClash(project.withBrief(brief).withName(name.strip(), NameOrigin.USER));
+        if (result.data() instanceof ProjectChange.Saved) {
+            log.info("second translation stored project={}", project.id());
+        }
+        return result;
+    }
+
     private Result<ProjectChange> saveUnlessClash(final Project candidate) {
         return projects.all().flatMap(stored -> clashOrSave(candidate, stored));
     }

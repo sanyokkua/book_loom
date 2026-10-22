@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 
 /**
@@ -31,6 +32,10 @@ public record Project(
         String title,
         Instant createdAt,
         Instant lastOpenedAt) {
+
+    private static final String NAME_SEPARATOR = " · ";
+    private static final String ARROW = "→ ";
+    private static final String NO_TARGET = "…";
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -65,6 +70,27 @@ public record Project(
      */
     public static String keyOf(final String name) {
         return Objects.requireNonNull(name, "name").strip().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Builds the automatic name: the book's title, then the language pair, each shown as its primary subtag.
+     *
+     * @param title the non-null book title
+     * @param source the source language tag, or {@code null} when it is not known yet
+     * @param target the target language tag, or {@code null} when none is chosen yet
+     * @return for example {@code Title · EN → UK}; the target reads {@code …} while unchosen
+     */
+    public static String automaticName(
+            final String title, final @Nullable String source, final @Nullable String target) {
+        Objects.requireNonNull(title, "title");
+        final String from = source == null ? "" : primaryCode(source) + " ";
+        final String to = target == null ? NO_TARGET : primaryCode(target);
+        return title + NAME_SEPARATOR + from + ARROW + to;
+    }
+
+    private static String primaryCode(final String tag) {
+        final int dash = tag.indexOf('-');
+        return (dash < 0 ? tag : tag.substring(0, dash)).toUpperCase(Locale.ROOT);
     }
 
     /**

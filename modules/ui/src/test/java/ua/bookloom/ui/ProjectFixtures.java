@@ -20,6 +20,8 @@ import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
+import ua.bookloom.ui.state.ProjectRow;
+import ua.bookloom.ui.state.ProjectStatus;
 
 /** Stored projects, runs and exports a Projects test lists; every title and file name is invented. */
 public final class ProjectFixtures {
@@ -75,6 +77,17 @@ public final class ProjectFixtures {
             final @Nullable RunRecord run,
             final @Nullable ExportRecord export) {
         return new ProjectSummary(project, decided, BOOK_SEGMENTS, run, export);
+    }
+
+    /** The row of a project that is not open, shown as Ollama's, opening at the Book Brief. */
+    public static ProjectRow row(final Project project, final int percent, final @Nullable RunRecord run) {
+        return new ProjectRow(
+                summary(project, percent * BOOK_SEGMENTS / 100, run, null),
+                percent,
+                run == null ? ProjectStatus.NOT_STARTED : ProjectStatus.TRANSLATING,
+                false,
+                ViewNames.BOOK_BRIEF,
+                run == null ? "" : "Ollama");
     }
 
     /** A run of {@code state} by Ollama's {@code gemma4:e4b}, ended when its state is terminal. */

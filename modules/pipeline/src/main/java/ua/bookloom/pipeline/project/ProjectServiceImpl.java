@@ -147,6 +147,20 @@ public final class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    public Result<ProjectChange> makeSecondTranslation(
+            final String projectId, final BookBrief brief, final String name) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(brief, "brief");
+        Objects.requireNonNull(name, "name");
+        try {
+            log.debug("makeSecondTranslation project={}", projectId);
+            return findProject(projectId).flatMap(project -> new ProjectRenames(projects).named(project, brief, name));
+        } catch (Throwable cause) {
+            return Result.err(internalError("make a second translation", cause));
+        }
+    }
+
+    @Override
     public Result<Boolean> remove(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         try {

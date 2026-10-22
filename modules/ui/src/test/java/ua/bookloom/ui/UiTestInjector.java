@@ -13,7 +13,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -35,11 +34,18 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.ui.dialog.RenamePrompt;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
+import ua.bookloom.ui.dialog.SamePairPrompt;
+import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ProjectActions;
+import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
@@ -66,9 +72,6 @@ public final class UiTestInjector {
 
     /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
     public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
-
-    // Two, so that a held provider check and a held model listing never block each other.
-    private static final int BACKGROUND_THREADS = 2;
 
     /**
      * Creates an injector over {@link UiModule} whose display locale is fixed, whose operating system always reports
@@ -115,6 +118,13 @@ public final class UiTestInjector {
         private @Nullable ReplaceRunPrompt prompt;
         private @Nullable ContinuePrompt continuePrompt;
         private @Nullable ModelPickPrompt modelPickPrompt;
+        private @Nullable RenamePrompt renamePrompt;
+        private @Nullable SamePairPrompt samePairPrompt;
+        private @Nullable TranslateIntoPrompt translateIntoPrompt;
+        private @Nullable FindBookPrompt findBookPrompt;
+        private @Nullable BookFileChooser bookFileChooser;
+        private @Nullable RowOpener rowOpener;
+        private @Nullable ErrorPresenter errorPresenter;
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
         private SettingsRepository settings = new MemorySettings();
@@ -246,6 +256,48 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** Replaces the real Rename card with this fake. */
+        public Builder renamePrompt(final RenamePrompt value) {
+            renamePrompt = Objects.requireNonNull(value, "renamePrompt");
+            return this;
+        }
+
+        /** Replaces the real Same language pair card with this fake. */
+        public Builder samePairPrompt(final SamePairPrompt value) {
+            samePairPrompt = Objects.requireNonNull(value, "samePairPrompt");
+            return this;
+        }
+
+        /** Replaces the real Translate into another language card with this fake. */
+        public Builder translateIntoPrompt(final TranslateIntoPrompt value) {
+            translateIntoPrompt = Objects.requireNonNull(value, "translateIntoPrompt");
+            return this;
+        }
+
+        /** Replaces the real Find the book card with this fake. */
+        public Builder findBookPrompt(final FindBookPrompt value) {
+            findBookPrompt = Objects.requireNonNull(value, "findBookPrompt");
+            return this;
+        }
+
+        /** Replaces the system file dialog that finds a moved book with this fake. */
+        public Builder bookFileChooser(final BookFileChooser value) {
+            bookFileChooser = Objects.requireNonNull(value, "bookFileChooser");
+            return this;
+        }
+
+        /** Replaces what opens a row's project after a dialog (the real one navigates) with this fake. */
+        public Builder rowOpener(final RowOpener value) {
+            rowOpener = Objects.requireNonNull(value, "rowOpener");
+            return this;
+        }
+
+        /** Replaces the modal error presenter with this fake, so the test can read what was shown. */
+        public Builder errorPresenter(final ErrorPresenter value) {
+            errorPresenter = Objects.requireNonNull(value, "errorPresenter");
+            return this;
+        }
+
         /** Replaces the daemon pool behind {@code @BackgroundExecutor}, e.g. with a calling-thread executor. */
         public Builder backgroundExecutor(final ExecutorService value) {
             backgroundExecutor = Objects.requireNonNull(value, "backgroundExecutor");
@@ -278,16 +330,16 @@ public final class UiTestInjector {
         }
 
         private Module replacementQuestions() {
-            return new AbstractModule() {
-                @Override
-                protected void configure() {
-                    if (continuePrompt != null) {
-                        bind(ContinuePrompt.class).toInstance(continuePrompt);
-                    }
-                    if (modelPickPrompt != null) {
-                        bind(ModelPickPrompt.class).toInstance(modelPickPrompt);
-                    }
-                }
+            return binder -> {
+                UiTestBindings.bindIfSet(binder, ContinuePrompt.class, continuePrompt);
+                UiTestBindings.bindIfSet(binder, ModelPickPrompt.class, modelPickPrompt);
+                UiTestBindings.bindIfSet(binder, RenamePrompt.class, renamePrompt);
+                UiTestBindings.bindIfSet(binder, SamePairPrompt.class, samePairPrompt);
+                UiTestBindings.bindIfSet(binder, TranslateIntoPrompt.class, translateIntoPrompt);
+                UiTestBindings.bindIfSet(binder, FindBookPrompt.class, findBookPrompt);
+                UiTestBindings.bindIfSet(binder, BookFileChooser.class, bookFileChooser);
+                UiTestBindings.bindIfSet(binder, RowOpener.class, rowOpener);
+                UiTestBindings.bindIfSet(binder, ErrorPresenter.class, errorPresenter);
             };
         }
 
@@ -312,7 +364,7 @@ public final class UiTestInjector {
                 bind(DiagnosticLog.class).toInstance(diagnosticLog);
                 bind(ExecutorService.class)
                         .annotatedWith(BackgroundExecutor.class)
-                        .toInstance(backgroundExecutor != null ? backgroundExecutor : daemonExecutor());
+                        .toInstance(backgroundExecutor != null ? backgroundExecutor : UiTestBindings.daemonExecutor());
                 bindStores();
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
@@ -334,45 +386,5 @@ public final class UiTestInjector {
                 bind(Clock.class).toInstance(Clock.fixed(NOW, ZoneOffset.UTC));
             }
         }
-    }
-
-    /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
-    private static final class ReviewPortsModule extends AbstractModule {
-
-        private final GlossaryService glossary;
-        private final LexiconService lexicon;
-        private final NamesPass namesPass;
-        private final ReviewDesk desk;
-        private final ReviewMode reviewMode;
-
-        ReviewPortsModule(
-                final GlossaryService glossary,
-                final LexiconService lexicon,
-                final NamesPass namesPass,
-                final ReviewDesk desk,
-                final ReviewMode reviewMode) {
-            this.glossary = glossary;
-            this.lexicon = lexicon;
-            this.namesPass = namesPass;
-            this.desk = desk;
-            this.reviewMode = reviewMode;
-        }
-
-        @Override
-        protected void configure() {
-            bind(GlossaryService.class).toInstance(glossary);
-            bind(LexiconService.class).toInstance(lexicon);
-            bind(NamesPass.class).toInstance(namesPass);
-            bind(ReviewDesk.class).toInstance(desk);
-            bind(ReviewMode.class).toInstance(reviewMode);
-        }
-    }
-
-    private static ExecutorService daemonExecutor() {
-        return Executors.newFixedThreadPool(BACKGROUND_THREADS, task -> {
-            final Thread thread = new Thread(task, "ui-test-background");
-            thread.setDaemon(true);
-            return thread;
-        });
     }
 }

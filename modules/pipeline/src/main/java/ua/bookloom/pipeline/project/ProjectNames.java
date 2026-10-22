@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -21,14 +20,8 @@ import ua.bookloom.api.project.Project;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ProjectNames {
 
-    private static final String SEPARATOR = " · ";
-    private static final String ARROW = "→ ";
-    private static final String NO_TARGET = "…";
-
     static String automatic(final String title, final @Nullable String source, final @Nullable String target) {
-        final String from = source == null ? "" : primaryCode(source) + " ";
-        final String to = target == null ? NO_TARGET : primaryCode(target);
-        return title + SEPARATOR + from + ARROW + to;
+        return Project.automaticName(title, source, target);
     }
 
     static String titleOf(final @Nullable String metadataTitle, final Path source) {
@@ -110,10 +103,5 @@ final class ProjectNames {
 
     private static boolean sameValue(final @Nullable String left, final @Nullable String right) {
         return Objects.equals(left, right);
-    }
-
-    private static String primaryCode(final String tag) {
-        final int dash = tag.indexOf('-');
-        return (dash < 0 ? tag : tag.substring(0, dash)).toUpperCase(Locale.ROOT);
     }
 }

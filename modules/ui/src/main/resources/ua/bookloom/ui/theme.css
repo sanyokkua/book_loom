@@ -780,11 +780,15 @@
     -fx-spacing: 8px;
 }
 
-/* The body is the one part of a card that scrolls; the scroll pane adds no frame of its own. */
+/* The body is the one part of a card that scrolls; the scroll pane adds no frame of its own and keeps the 18px
+   the card's content gets from `.dialog-card > .content`. */
 .dialog-card .dialog-body,
 .dialog-card .dialog-body > .viewport {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
+}
+
+.dialog-card .dialog-body > .viewport {
     -fx-padding: 0;
 }
 
@@ -2669,4 +2673,17 @@
     -fx-border-color: -color-focus;
     -fx-border-width: 2px;
     -fx-border-insets: 0;
+}
+
+/* --- Project dialogs: the name field's chips and its refusal line -------------------------------------- */
+.name-chip {
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-padding: 2px 9px 2px 9px;
+    -fx-font-size: 12px;
+}
+
+.dialog-error {
+    -fx-text-fill: -color-err-fg;
+    -fx-font-size: 12px;
 }

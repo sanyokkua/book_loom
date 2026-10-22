@@ -19,10 +19,18 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.FindBookDialog;
+import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.ui.dialog.RenameDialog;
+import ua.bookloom.ui.dialog.RenamePrompt;
 import ua.bookloom.ui.dialog.ReplaceRunDialog;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
+import ua.bookloom.ui.dialog.SamePairDialog;
+import ua.bookloom.ui.dialog.SamePairPrompt;
+import ua.bookloom.ui.dialog.TranslateIntoDialog;
+import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
@@ -32,6 +40,7 @@ import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.ContinueGuard;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
@@ -48,13 +57,14 @@ import ua.bookloom.ui.state.LaunchProject;
 import ua.bookloom.ui.state.LedgerFigures;
 import ua.bookloom.ui.state.LocalModelProbe;
 import ua.bookloom.ui.state.ModelListing;
-import ua.bookloom.ui.state.PendingProjectActions;
 import ua.bookloom.ui.state.PlatformFileRevealer;
 import ua.bookloom.ui.state.ProgressFigures;
 import ua.bookloom.ui.state.ProjectActions;
+import ua.bookloom.ui.state.ProjectActionsImpl;
 import ua.bookloom.ui.state.ProjectOpener;
 import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.ReviewPauseFollower;
+import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStarter;
 import ua.bookloom.ui.state.RunStateSource;
@@ -64,6 +74,7 @@ import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepAvailability;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.StoredNarratorFollower;
+import ua.bookloom.ui.state.SystemBookFileChooser;
 import ua.bookloom.ui.state.SystemCsvFileChooser;
 import ua.bookloom.ui.state.SystemDestinationChooser;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -104,6 +115,10 @@ public final class UiModule extends AbstractModule {
         bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
         bind(ContinuePrompt.class).to(ContinueDialog.class);
         bind(ModelPickPrompt.class).to(ModelPickDialog.class);
+        bind(RenamePrompt.class).to(RenameDialog.class);
+        bind(SamePairPrompt.class).to(SamePairDialog.class);
+        bind(TranslateIntoPrompt.class).to(TranslateIntoDialog.class);
+        bind(FindBookPrompt.class).to(FindBookDialog.class);
     }
 
     private void bindState() {
@@ -128,7 +143,8 @@ public final class UiModule extends AbstractModule {
         bind(LaunchProject.class);
         bind(LocalModelProbe.class);
         bind(ContinueGuard.class);
-        bind(ProjectActions.class).to(PendingProjectActions.class);
+        bind(ProjectActions.class).to(ProjectActionsImpl.class);
+        bind(RowOpener.class).to(ProjectOpener.class);
         // Eager, so a project opened from any screen is remembered for the next launch.
         bind(LastProjectRecorder.class).asEagerSingleton();
         // Eager, so the first book opened is told to the detailed log before any screen asks for the reporter.
@@ -164,6 +180,7 @@ public final class UiModule extends AbstractModule {
         bind(FileRevealer.class).to(PlatformFileRevealer.class);
         bind(DestinationChooser.class).to(SystemDestinationChooser.class);
         bind(CsvFileChooser.class).to(SystemCsvFileChooser.class);
+        bind(BookFileChooser.class).to(SystemBookFileChooser.class);
         requireBinding(ProviderConfigs.class);
         requireBinding(ProviderVerifier.class);
         requireBinding(ModelCatalog.class);

@@ -465,7 +465,7 @@ language more than once, for example with another model, quality or thinking set
 2. **It follows the languages** while it is automatic (`nameOrigin` AUTO); a toast says when it changes. A typed name
    (USER) never changes.
 3. **A language pair is unique per book** (same `Project.contentHash`) **unless the project is named.**
-   - Choosing a used pair (in the Brief, or in Translate into another language) opens **Same language pair**:
+   - Choosing a used pair in the Brief opens **Same language pair** (Translate into another language asks for the name in its own form and opens it only when the pair turns out to be used):
      - the existing project, with its AI model, quality and progress;
      - **Open that project**;
      - **Make a second <language> translation**, which needs a name of its own. The field starts empty, with
@@ -493,7 +493,7 @@ language more than once, for example with another model, quality or thinking set
 | **List** (when there are projects) | Search (books and projects) · All / In progress / Finished. **Grouped by book**: a book header (cover, title, file · format · segments, "n translations", **＋ Translate into another language**) and one row per project: name (a "named" chip if named, "open" for the open one), languages · AI model · quality, a bar with % and last opened, a status chip coloured by G11 (Translating, Finished, Exported, Not started, and "Stopped by an error" for a run that failed — the stores keep no failure code, so the chip names no cause), **Continue** or **Open**, ⋯ (Rename…, Show book file, Remove project…). Search with no hits: "No project matches 'xyz'. [Clear search]" | new `ProjectsViewModel` over `ProjectService.list()` (`ProjectSummary`: counts, latest run, last export; quality from the brief) |
 | **First launch / empty** | "Translate a book on your own computer" with **How it works** in four steps (choose a book · check the languages · let it translate · save the translated book; "your original file is never changed"), the **AI-model line** (found ✓ or not found, see First launch), and **＋ New translation** | — |
 | ＋ New translation | Toolbar (list) or the empty state; creates a project and opens Import | — |
-| Translate into another language | Dialog: Translate into (a used language is marked "already in n projects"), From (the book's source), project name (automatic, or required for a used pair, with chips), **Start from**: the brief · Glossary and Recurring terms (entries, kinds, genders; translations emptied) · optionally the latest project's AI model. "Create and open the brief"; nothing is imported again | new; the book is reused by `contentHash` |
+| Translate into another language | Dialog: Translate into (a used language is marked "already in n projects"), From (the book's source), project name (automatic, or required for a used pair, with chips), **Start from**: the brief · Glossary and Recurring terms (entries, kinds, genders; translations emptied), as fixed text; no AI model is copied. "Create and open the brief"; nothing is imported again | new; the book is reused by `contentHash` |
 | Rename… / Remove project… | Rename dialog (chips, uniqueness error, "Use the automatic name again"); Remove deletes this project's saved work only — never the book, the exported files or the book's other projects | new |
 | Continue / Open | Opens the project at its step; a translation that was going waits paused (Ready to continue). If the AI model is missing or changed, the continue dialogs appear | `CurrentProject`, `ImportGuard`; `bindUnavailable`, `bindChanged` |
 
@@ -782,7 +782,8 @@ BookLoom handles a refusal the same way for every optional setting:
 | Model work is running | Leaving during long work — Stay · Continue in background | `LeaveDialog`, `LeaveGuard` |
 | Error with details | Unreadable file and other hard failures — plain message, "Details for support", Copy details | `notify/ErrorDialog` |
 | AI model not answering / A different model is chosen | Continuing a project — Try again (primary) · Use another AI model… · Not now; Use the earlier model (primary) · Continue with the new one; Escape is Not now / starts nothing | `ContinueDialog` |
-| Same language pair · Rename · Translate into another language | PN | new |
+| Same language pair · Rename · Translate into another language | PN | `dialog/SamePairDialog`, `RenameDialog`, `TranslateIntoDialog` |
+| Find the book | Continue on a project whose book file is missing or changed — Find the book… (primary; only a file with the same content is accepted, otherwise "This is a different book") · Cancel; `DLG.findBook` | `dialog/FindBookDialog` |
 | About | Title bar | `AboutDialog` |
 
 ---

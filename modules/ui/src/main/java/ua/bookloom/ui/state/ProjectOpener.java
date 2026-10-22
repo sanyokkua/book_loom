@@ -22,7 +22,7 @@ import ua.bookloom.ui.notify.ErrorPresenter;
  */
 @Slf4j
 @Singleton
-public final class ProjectOpener {
+public final class ProjectOpener implements RowOpener {
 
     private final ProjectService projects;
     private final ImportViewModel importer;
@@ -67,6 +67,7 @@ public final class ProjectOpener {
      *
      * @param row the row to open
      */
+    @Override
     public void open(final ProjectRow row) {
         Objects.requireNonNull(row, "row");
         final String id = row.summary().project().id();

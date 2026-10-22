@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.BookFormat;
 
 class ProjectTest {
@@ -45,5 +47,20 @@ class ProjectTest {
         assertThat(changed.nameOrigin()).isEqualTo(NameOrigin.USER);
         assertThat(changed.createdAt()).isEqualTo(CREATED);
         assertThat(changed.lastOpenedAt()).isEqualTo(OPENED);
+    }
+
+    // IF a language is absent or carries a region, THEN the name shows only the primary subtag in capitals.
+    @ParameterizedTest
+    @CsvSource(
+            value = {
+                "Earth Gravity,en,uk,Earth Gravity · EN → UK",
+                "Earth Gravity,,uk,Earth Gravity · → UK",
+                "Earth Gravity,en,,Earth Gravity · EN → …",
+                "Earth Gravity,en-US,uk-UA,Earth Gravity · EN → UK",
+                "Земля,uk,de,Земля · UK → DE"
+            })
+    void automaticName_titleAndLanguages_buildsTitleSourceArrowTarget(
+            final String title, final String source, final String target, final String expected) {
+        assertThat(Project.automaticName(title, source, target)).isEqualTo(expected);
     }
 }

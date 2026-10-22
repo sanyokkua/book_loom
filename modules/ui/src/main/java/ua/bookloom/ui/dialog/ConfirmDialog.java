@@ -84,6 +84,13 @@ public final class ConfirmDialog {
                 MessageKey.EXPORT_CANCEL_YES_TIP,
                 MessageKey.EXPORT_CANCEL_NO);
 
+        /** Removing a project and its saved work; its title names the project. */
+        public static final Question REMOVE_PROJECT = new Question(
+                MessageKey.CONFIRM_REMOVE_PROJECT_TITLE,
+                MessageKey.CONFIRM_REMOVE_PROJECT_TEXT,
+                MessageKey.CONFIRM_REMOVE_PROJECT_YES,
+                MessageKey.CONFIRM_REMOVE_PROJECT_YES_TIP);
+
         /**
          * A question whose safe answer is Cancel.
          *
@@ -139,7 +146,24 @@ public final class ConfirmDialog {
      * @param onConfirm what the confirming button does, after the card has closed
      */
     public void ask(final Question question, final List<Object> textArgs, final Runnable onConfirm) {
+        ask(question, List.of(), textArgs, onConfirm);
+    }
+
+    /**
+     * Asks with figures in the heading and the text, and runs {@code onConfirm} only if the person confirms.
+     *
+     * @param question what is asked
+     * @param titleArgs the arguments of the question's heading, in its order (the project's name)
+     * @param textArgs the arguments of the question's text, in its order
+     * @param onConfirm what the confirming button does, after the card has closed
+     */
+    public void ask(
+            final Question question,
+            final List<Object> titleArgs,
+            final List<Object> textArgs,
+            final Runnable onConfirm) {
         Objects.requireNonNull(question, "question");
+        Objects.requireNonNull(titleArgs, "titleArgs");
         Objects.requireNonNull(textArgs, "textArgs");
         Objects.requireNonNull(onConfirm, "onConfirm");
         log.debug("asking: {} with {}", question.title(), textArgs);
@@ -149,7 +173,7 @@ public final class ConfirmDialog {
         final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(question.title()));
+        final Label title = new Label(messages.get(question.title(), titleArgs.toArray()));
         title.getStyleClass().add("dialog-title");
         final VBox header = new VBox(title);
         header.getStyleClass().add("dialog-h");

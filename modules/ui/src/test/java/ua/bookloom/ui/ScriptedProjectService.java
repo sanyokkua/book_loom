@@ -39,6 +39,7 @@ public final class ScriptedProjectService implements ProjectService {
     static final String ID_PREFIX = "id:";
 
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
+    private final ScriptedSegments segments = new ScriptedSegments();
     private final ScriptedListing listing = new ScriptedListing();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
     private final List<Path> opens = new CopyOnWriteArrayList<>();
@@ -54,10 +55,6 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<Boolean> roundTripsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> plans = new CopyOnWriteArrayList<>();
     private final List<Boolean> plansOnFxThread = new CopyOnWriteArrayList<>();
-    private final Map<String, Result<List<SegmentPreview>>> segmentAnswers = new ConcurrentHashMap<>();
-    private final Map<String, CountDownLatch> segmentGates = new ConcurrentHashMap<>();
-    private final List<String> segmentCalls = new CopyOnWriteArrayList<>();
-    private final List<Boolean> segmentsOnFxThread = new CopyOnWriteArrayList<>();
     private final CountDownLatch entered = new CountDownLatch(1);
     private final CountDownLatch roundTripEntered = new CountDownLatch(1);
     private volatile Result<RoundTripReport> roundTripAnswer = notScripted();
@@ -205,15 +202,28 @@ public final class ScriptedProjectService implements ProjectService {
         return List.copyOf(removed);
     }
 
+    private final ScriptedProjectEdits edits = new ScriptedProjectEdits();
+
+    /** What rename, translate-into, second-translation and relocate answer, and a record of each. */
+    public ScriptedProjectEdits edits() {
+        return edits;
+    }
+
     @Override
     public Result<ProjectChange> translateInto(
             final String projectId, final String target, final @Nullable String name) {
-        return notScripted();
+        return edits.translateInto(projectId, target, name);
+    }
+
+    @Override
+    public Result<ProjectChange> makeSecondTranslation(
+            final String projectId, final BookBrief brief, final String name) {
+        return edits.makeSecondTranslation(projectId, brief, name);
     }
 
     @Override
     public Result<BookRelocation> relocate(final String projectId, final Path chosen) {
-        return notScripted();
+        return edits.relocate(projectId, chosen);
     }
 
     /** The project this service lists for {@code source}, the one {@link #onDecided} reports. */
@@ -264,7 +274,7 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<ProjectChange> rename(final String projectId, final @Nullable String name) {
-        return notScripted();
+        return edits.rename(projectId, name);
     }
 
     @Override
@@ -276,40 +286,32 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<List<SegmentPreview>> segments(final String projectId, final String unitId) {
-        segmentCalls.add(
-                Objects.requireNonNull(projectId, "projectId") + "/" + Objects.requireNonNull(unitId, "unitId"));
-        segmentsOnFxThread.add(Platform.isFxApplicationThread());
-        awaitGate(segmentGates.get(unitId));
-        final Result<List<SegmentPreview>> scripted = segmentAnswers.get(unitId);
-        return scripted != null ? scripted : notScripted();
+        return segments.list(projectId, unitId);
     }
 
     /** From now on answers a segment listing of {@code unitId} with {@code answer}. */
     public void onSegments(final String unitId, final Result<List<SegmentPreview>> answer) {
-        segmentAnswers.put(Objects.requireNonNull(unitId, "unitId"), Objects.requireNonNull(answer, "answer"));
+        segments.on(unitId, answer);
     }
 
     /** From now on blocks each listing of {@code unitId} until {@link #releaseSegments}. */
     public void holdSegments(final String unitId) {
-        segmentGates.put(unitId, new CountDownLatch(1));
+        segments.hold(unitId);
     }
 
     /** Lets the held listings of {@code unitId} answer. */
     public void releaseSegments(final String unitId) {
-        final CountDownLatch held = segmentGates.get(unitId);
-        if (held != null) {
-            held.countDown();
-        }
+        segments.release(unitId);
     }
 
     /** Every segment listing asked for, as {@code projectId/unitId}, in call order. */
     public List<String> segmentCalls() {
-        return List.copyOf(segmentCalls);
+        return segments.calls();
     }
 
     /** For each segment listing, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> segmentCallsOnFxThread() {
-        return List.copyOf(segmentsOnFxThread);
+        return segments.onFxThread();
     }
 
     @Override

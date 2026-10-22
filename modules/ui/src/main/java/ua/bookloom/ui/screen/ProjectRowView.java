@@ -23,6 +23,7 @@ import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.i18n.QualityLabels;
 import ua.bookloom.ui.state.LastOpened;
 import ua.bookloom.ui.state.ProjectRow;
 import ua.bookloom.ui.state.ProjectStatus;
@@ -112,7 +113,7 @@ final class ProjectRowView {
         if (run == null) {
             return messages.get(MessageKey.PROJECTS_ROW_NOT_STARTED, source, target);
         }
-        final String quality = messages.get(qualityOf(brief));
+        final String quality = messages.get(QualityLabels.of(brief));
         if (model == null) {
             return String.join(SEPARATOR, source + " → " + target, quality);
         }
@@ -121,14 +122,6 @@ final class ProjectRowView {
 
     private static String tag(final @Nullable String language) {
         return language == null ? "?" : language.toUpperCase(Locale.ROOT);
-    }
-
-    private static MessageKey qualityOf(final BookBrief brief) {
-        return switch (brief.dial()) {
-            case FAST -> MessageKey.BRIEF_QUALITY_FAST;
-            case BALANCED -> MessageKey.BRIEF_QUALITY_BALANCED;
-            case MAX -> MessageKey.BRIEF_QUALITY_MAX;
-        };
     }
 
     private Node progress(final ProjectRow row) {

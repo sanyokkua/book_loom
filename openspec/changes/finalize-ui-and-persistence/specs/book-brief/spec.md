@@ -61,7 +61,7 @@ The Book Brief's languages card SHALL show a Project name line reading "automati
 
 ### Requirement: Open Same language pair when the chosen pair is already used
 
-IF the person chooses a source and target that another project of the same book already uses, THEN the Book Brief SHALL open the dialog "Same language pair" naming that project, with "Open that project" and "Make a second translation" that requires a name of its own.
+IF the person chooses a source and target that another project of the same book already uses, THEN the Book Brief SHALL open the dialog "Same language pair" naming that project, with "Open that project" and "Make a second <language> translation" that requires a name of its own.
 
 **Source**: docs/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN2). In plain words: two projects with the same pair would be indistinguishable, so the person either goes to the existing one or names a deliberate second one.
 

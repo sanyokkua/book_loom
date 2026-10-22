@@ -716,7 +716,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     `ModelCatalog.listModels(ProviderConfig)` in both dialects receiving only `GET /api/tags` / `GET /v1/models`; the
     two continue dialogs with a stored model `gemma4:e4b` against current `qwen3:8b`.
   - **Compare:** the empty state with and without a model, and both continue dialogs. → :ui, :llm
-- [ ] 6.1c Add the project dialogs, so projects can be named, renamed, copied into another language, removed and
+- [x] 6.1c Add the project dialogs, so projects can be named, renamed, copied into another language, removed and
   relinked to a moved book file.
   - **Satisfies:** app-shell "Allow one project per language pair of a book unless it is named"; app-shell "Let an
     automatic name follow the languages and a typed name stay"; app-shell "Refuse a project name already used by the
@@ -726,6 +726,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     matches"; app-shell "Match the reference rendering"
   - Same language pair; Rename (chips, a uniqueness error within the book after the first edit, "Use the automatic
     name again"); Translate into another language; Remove project; Find the book… (only a file with the same content).
+  - Added by this task: `ProjectService.makeSecondTranslation` (the brief and a typed name stored together) and `Project.automaticName` in `:api`; the dialogs reach the service through `ProjectActionsImpl`, which replaces `PendingProjectActions`.
   - Tests: each dialog's buttons call the recording fake with the expected arguments; Rename shows the error for a name
     used in the same book and accepts one used in another book; Find the book refuses a file with different content.
   - **Compare:** each dialog. → :ui

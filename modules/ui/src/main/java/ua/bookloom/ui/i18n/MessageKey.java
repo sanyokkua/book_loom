@@ -2542,7 +2542,141 @@ public enum MessageKey {
     /** Button that looks again for a local AI program. */
     PROJECTS_MODEL_TRY_AGAIN("projects.model.tryAgain"),
     /** Hover explanation of the control labelled by {@link #PROJECTS_MODEL_TRY_AGAIN}. */
-    PROJECTS_MODEL_TRY_AGAIN_TIP("projects.model.tryAgain.tip");
+    PROJECTS_MODEL_TRY_AGAIN_TIP("projects.model.tryAgain.tip"),
+    /** Caption of the project-name field on the project dialogs. */
+    DIALOG_PROJECT_NAME_FIELD("dialog.projectName.field"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_PROJECT_NAME_FIELD}. */
+    DIALOG_PROJECT_NAME_FIELD_TIP("dialog.projectName.field.tip"),
+    /** The line shown when a project name is already used by another project of the same book. */
+    DIALOG_PROJECT_NAME_ERROR_USED("dialog.projectName.error.used"),
+    /** Caption before the name chips. */
+    DIALOG_PROJECT_NAME_CHIPS("dialog.projectName.chips"),
+    /** Name chip that appends the model size. */
+    DIALOG_PROJECT_NAME_CHIP_26B("dialog.projectName.chip.26b"),
+    /** Name chip that appends the quality. */
+    DIALOG_PROJECT_NAME_CHIP_MAX_QUALITY("dialog.projectName.chip.maxQuality"),
+    /** Name chip that appends the thinking amount. */
+    DIALOG_PROJECT_NAME_CHIP_THINKING_LOW("dialog.projectName.chip.thinkingLow"),
+    /** Name chip that appends the tone. */
+    DIALOG_PROJECT_NAME_CHIP_FORMAL("dialog.projectName.chip.formal"),
+    /** Name chip that appends a version. */
+    DIALOG_PROJECT_NAME_CHIP_V2("dialog.projectName.chip.v2"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_PROJECT_NAME_CHIPS}. */
+    DIALOG_PROJECT_NAME_CHIPS_TIP("dialog.projectName.chips.tip"),
+    /** Heading of the Rename card. */
+    DIALOG_RENAME_TITLE("dialog.rename.title"),
+    /** Rename card text for an automatic name. */
+    DIALOG_RENAME_BODY_AUTO("dialog.rename.body.auto"),
+    /** Rename card text for a name the person typed. */
+    DIALOG_RENAME_BODY_NAMED("dialog.rename.body.named"),
+    /** Button that gives the project its automatic name back. */
+    DIALOG_RENAME_USE_AUTO("dialog.rename.useAuto"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RENAME_USE_AUTO}. */
+    DIALOG_RENAME_USE_AUTO_TIP("dialog.rename.useAuto.tip"),
+    /** Note beside the use-automatic-name button. */
+    DIALOG_RENAME_USE_AUTO_NOTE("dialog.rename.useAuto.note"),
+    /** Confirming button of the Rename card. */
+    DIALOG_RENAME_CONFIRM("dialog.rename.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RENAME_CONFIRM}. */
+    DIALOG_RENAME_CONFIRM_TIP("dialog.rename.confirm.tip"),
+    /** Button on the Rename card that leads to removing the project. */
+    DIALOG_RENAME_REMOVE("dialog.rename.remove"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RENAME_REMOVE}. */
+    DIALOG_RENAME_REMOVE_TIP("dialog.rename.remove.tip"),
+    /** Heading of the Same language pair card. */
+    DIALOG_SAME_PAIR_TITLE("dialog.samePair.title"),
+    /** Same language pair card text. */
+    DIALOG_SAME_PAIR_BODY("dialog.samePair.body"),
+    /** Column heading: the existing project. */
+    DIALOG_SAME_PAIR_COL_PROJECT("dialog.samePair.col.project"),
+    /** Column heading: its model and quality. */
+    DIALOG_SAME_PAIR_COL_MODEL("dialog.samePair.col.model"),
+    /** Column heading: its progress. */
+    DIALOG_SAME_PAIR_COL_PROGRESS("dialog.samePair.col.progress"),
+    /** The existing project's progress. */
+    DIALOG_SAME_PAIR_PROGRESS("dialog.samePair.progress"),
+    /** The existing project's progress when it has not run. */
+    DIALOG_SAME_PAIR_NOT_STARTED("dialog.samePair.notStarted"),
+    /** Choice and button: open the existing project. */
+    DIALOG_SAME_PAIR_OPEN("dialog.samePair.open"),
+    /** Note under the open choice. */
+    DIALOG_SAME_PAIR_OPEN_NOTE("dialog.samePair.open.note"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_OPEN}. */
+    DIALOG_SAME_PAIR_OPEN_TIP("dialog.samePair.open.tip"),
+    /** Choice: a second project with the same languages. */
+    DIALOG_SAME_PAIR_SECOND("dialog.samePair.second"),
+    /** Note under the second-translation choice. */
+    DIALOG_SAME_PAIR_SECOND_NOTE("dialog.samePair.second.note"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_SECOND}. */
+    DIALOG_SAME_PAIR_SECOND_TIP("dialog.samePair.second.tip"),
+    /** Caption of the name field on the Same language pair card. */
+    DIALOG_SAME_PAIR_NAME_LABEL("dialog.samePair.name.label"),
+    /** Placeholder of that field. */
+    DIALOG_SAME_PAIR_NAME_PLACEHOLDER("dialog.samePair.name.placeholder"),
+    /** Hint under that field. */
+    DIALOG_SAME_PAIR_NAME_HINT("dialog.samePair.name.hint"),
+    /** Confirming button of the Same language pair card. */
+    DIALOG_SAME_PAIR_USE("dialog.samePair.use"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_USE}. */
+    DIALOG_SAME_PAIR_USE_TIP("dialog.samePair.use.tip"),
+    /** Button that keeps the language the person had; {0} names it. */
+    DIALOG_SAME_PAIR_KEEP("dialog.samePair.keep"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_KEEP}. */
+    DIALOG_SAME_PAIR_KEEP_TIP("dialog.samePair.keep.tip"),
+    /** Heading of the Translate into another language card. */
+    DIALOG_TRANSLATE_INTO_TITLE("dialog.translateInto.title"),
+    /** Text of that card; {0} names the book. */
+    DIALOG_TRANSLATE_INTO_BODY("dialog.translateInto.body"),
+    /** Caption of the target language list. */
+    DIALOG_TRANSLATE_INTO_INTO("dialog.translateInto.into"),
+    /** Prompt of the target language list. */
+    DIALOG_TRANSLATE_INTO_INTO_PROMPT("dialog.translateInto.into.prompt"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_TRANSLATE_INTO_INTO}. */
+    DIALOG_TRANSLATE_INTO_INTO_TIP("dialog.translateInto.into.tip"),
+    /** Caption of the source language. */
+    DIALOG_TRANSLATE_INTO_FROM("dialog.translateInto.from"),
+    /** The source language when it was not chosen. */
+    DIALOG_TRANSLATE_INTO_FROM_AUTO("dialog.translateInto.fromAuto"),
+    /** A language the book is already translated into; {0} the language, {1} the number of projects. */
+    DIALOG_TRANSLATE_INTO_USED("dialog.translateInto.used"),
+    /** Caption of the name field. */
+    DIALOG_TRANSLATE_INTO_NAME("dialog.translateInto.name"),
+    /** Hint for an unused pair. */
+    DIALOG_TRANSLATE_INTO_HINT_AUTO("dialog.translateInto.hint.auto"),
+    /** Hint for a used pair. */
+    DIALOG_TRANSLATE_INTO_HINT_USED("dialog.translateInto.hint.used"),
+    /** Caption of what is copied. */
+    DIALOG_TRANSLATE_INTO_START_FROM("dialog.translateInto.startFrom"),
+    /** What is copied: the brief. */
+    DIALOG_TRANSLATE_INTO_START_FROM_BRIEF("dialog.translateInto.startFrom.brief"),
+    /** What is copied: glossary and recurring terms. */
+    DIALOG_TRANSLATE_INTO_START_FROM_GLOSSARY("dialog.translateInto.startFrom.glossary"),
+    /** Confirming button of that card. */
+    DIALOG_TRANSLATE_INTO_CREATE("dialog.translateInto.create"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_TRANSLATE_INTO_CREATE}. */
+    DIALOG_TRANSLATE_INTO_CREATE_TIP("dialog.translateInto.create.tip"),
+    /** Heading of the Remove project question; {0} names the project. */
+    CONFIRM_REMOVE_PROJECT_TITLE("confirm.removeProject.title"),
+    /** Text of the Remove project question. */
+    CONFIRM_REMOVE_PROJECT_TEXT("confirm.removeProject.text"),
+    /** Confirming button of the Remove project question. */
+    CONFIRM_REMOVE_PROJECT_YES("confirm.removeProject.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_REMOVE_PROJECT_YES}. */
+    CONFIRM_REMOVE_PROJECT_YES_TIP("confirm.removeProject.yes.tip"),
+    /** Heading of the Find the book card. */
+    DIALOG_FIND_BOOK_TITLE("dialog.findBook.title"),
+    /** Text when the stored file is gone; {0} names the project. */
+    DIALOG_FIND_BOOK_MISSING("dialog.findBook.missing"),
+    /** Text when the stored file's content changed. */
+    DIALOG_FIND_BOOK_CHANGED("dialog.findBook.changed"),
+    /** Button that opens the file dialog. */
+    DIALOG_FIND_BOOK_CHOOSE("dialog.findBook.choose"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_FIND_BOOK_CHOOSE}. */
+    DIALOG_FIND_BOOK_CHOOSE_TIP("dialog.findBook.choose.tip"),
+    /** Error shown when the chosen file has other content. */
+    DIALOG_FIND_BOOK_DIFFERENT("dialog.findBook.different"),
+    /** Title of the system file dialog. */
+    DIALOG_FIND_BOOK_CHOOSER_TITLE("dialog.findBook.chooserTitle");
 
     private final String key;
 

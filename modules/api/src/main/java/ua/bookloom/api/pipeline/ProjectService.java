@@ -113,6 +113,18 @@ public interface ProjectService {
     Result<ProjectChange> translateInto(String projectId, String target, @Nullable String name);
 
     /**
+     * Replaces a project's brief and gives it the name the person typed, in one stored change; the way out of a
+     * language pair another project of the book already uses.
+     *
+     * @param projectId the non-null id of a stored project
+     * @param brief the non-null replacement brief
+     * @param name the non-null typed name; it then stays
+     * @return {@link ProjectChange.Saved}, or {@link ProjectChange.NameInUse} as data with nothing stored; a
+     *     {@code validation} error for an unknown project or a blank name
+     */
+    Result<ProjectChange> makeSecondTranslation(String projectId, BookBrief brief, String name);
+
+    /**
      * Points a project's book, and every project of it, at another file when its content hash matches.
      *
      * @param projectId the non-null id of a stored project

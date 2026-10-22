@@ -1493,7 +1493,7 @@ S.components = () => `<div class="page">
 const DLG_INDEX = [
     ['Progress dialogs (G4, E1) — the work layer', [['w:brief', 'Fill in from the book'], ['n:auto', 'Prepare names → Results'], ['w:fileName', 'Suggest a file name'], ['w:exportRun', 'Export with the last check'], ['w:calls', 'All model calls']]],
     ['Work dialogs', [['review', 'Review desk'], ['test:inference', 'Inference test'], ['addterm', 'Add a term'], ['narrator', 'Who tells the story?'], ['genders', 'Character genders']]],
-    ['Project names (PN)', [['samePair', 'Same language pair'], ['rename', 'Rename the project'], ['translateAgain', 'Translate into another language']]],
+    ['Project names (PN)', [['samePair', 'Same language pair'], ['rename', 'Rename the project'], ['translateAgain', 'Translate into another language'], ['findBook', 'Find the book']]],
     ['Confirm and result', [['confirmStop', 'Stop translating?'], ['changeDuringRun', 'Change the AI model mid-book'], ['unsaved', 'Unsaved changes'], ['confirmDelete', 'Delete provider'], ['confirmRemove', 'Remove project'], ['replaceRun', 'Open another book'], ['leave', 'Model work is running'], ['exported', 'Export complete'], ['err', 'Error with details'], ['bindUnavailable', 'AI model unavailable on continue'], ['bindChanged', 'Model changed on continue'], ['about', 'About']]],
 ];
 S.dialogs = () => `<div class="page"><h2 class="page-h">Dialogs</h2><p class="page-sub">Every dialog is in the window: it dims the window, keeps focus inside, Esc closes or hides it. Model work uses the work layer, so a question opens above it without losing it. ${req('G1', 'E1')}</p>
@@ -1747,7 +1747,7 @@ DLG.about = () => simple('BL', 'brand', 'BookLoom', 'Offline book translator · 
 const TAKEN = BOOKS.flatMap(b => b.tr.map(t => t.name.toLowerCase()));
 function nameCheck(inp, errId, btnSel, touched) {
     const v = inp.value.trim(), taken = TAKEN.includes(v.toLowerCase());
-    const msg = !v ? (touched ? 'Enter a name — this book already has a project with these languages.' : '') : taken ? 'Another project already has this name.' : '';
+    const msg = !v ? '' : taken ? 'That name is already used' : '';
     inp.classList.toggle('err-field', !!msg);
     $('#' + errId).textContent = msg;
     const b = $(btnSel); if (b) b.disabled = !v || taken;
@@ -1769,9 +1769,8 @@ DLG.translateAgain = (title = D.book) => simple('＋', 'brand', 'Translate into 
     <div class="field"><label class="fld">From</label><div class="input" style="background:var(--surface-2)">English (as in this book’s projects)</div></div></div>
     <div class="field"><label class="fld">Project name</label><input id="pname" data-err="taErr" data-btn="#taGo" class="input" oninput="nameCheck(this,'taErr','#taGo',true)"><div class="field-err" id="taErr"></div><div id="taHint" class="hint"></div><div id="taChips"></div></div>
     <label class="fld">Start from</label>
-    <div class="chk"><input type="checkbox" checked> The brief — tone, how to translate, narrator, quality</div>
-    <div class="chk"><input type="checkbox" checked> Glossary and recurring terms — the entries, kinds and genders; translations left empty</div>
-    <div class="chk"><input type="checkbox"> The AI model of the latest project</div>`,
+    <div class="small">The brief — tone, how to translate, narrator, quality</div>
+    <div class="small">Glossary and recurring terms — the entries, kinds and genders; translations left empty</div>`,
     `${closeBtn()}<button class="btn btn-primary" id="taGo" onclick="closeDialog();ST.projectOpen=true;go('brief');toast('ok','Project created','“'+$('#pname')?.value+'” — check the brief, then continue.')">Create and open the brief</button>`, true);
 function taUpdate() {
     const code = $('#taLang').value, used = ['UK', 'PL'].includes(code), auto = 'Earth Gravity · EN → ' + code;
@@ -1783,6 +1782,8 @@ function taUpdate() {
     nameCheck(i, 'taErr', '#taGo', false);
 }
 DLG_AFTER.translateAgain = taUpdate;
+
+DLG.findBook = (changed = false) => simple('⌕', 'warn', 'Find the book', '', `The book file of “Earth Gravity · EN → UK” ${changed ? 'has changed since it was imported' : 'is not where it was'}. Choose the same book to go on.<div class="field-err" id="fbErr"></div>`, `${closeBtn()}<button class="btn btn-primary" onclick="$('#fbErr').textContent='This is a different book'">Find the book…</button>`, true);
 
 /* ============================================================ BOOT */
 buildNav();
