@@ -24,9 +24,25 @@ public final class OpenBookForTest {
      */
     public static void open(
             final CurrentProject project, final @Nullable String source, final @Nullable String target) {
+        open(project, "p1", source, target);
+    }
+
+    /**
+     * Opens the Frankenstein fixture as the stored project {@code projectId}; call on the FX thread.
+     *
+     * @param project the current project to open it on
+     * @param projectId the stored project's id
+     * @param source the source language tag, or {@code null}
+     * @param target the target language tag, or {@code null}
+     */
+    public static void open(
+            final CurrentProject project,
+            final String projectId,
+            final @Nullable String source,
+            final @Nullable String target) {
         final ImportedBook imported = BookFixtures.frankensteinImport();
         project.open(new OpenedBook(
-                "p1",
+                projectId,
                 Path.of("Frankenstein.epub"),
                 imported.inspection(),
                 imported.profile(),

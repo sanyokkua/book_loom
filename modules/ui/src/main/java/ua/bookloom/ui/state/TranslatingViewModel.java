@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -64,6 +63,7 @@ public final class TranslatingViewModel {
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ObjectBinding<@Nullable ActivityKind> otherWork;
+    private final MissingInputNotice missingInputs;
     // The countdown republishes the recovery every second; only whether it still waits changes the controls.
     private final ChangeListener<@Nullable RecoveryState> onRecovery = (observed, was, now) -> {
         if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
@@ -113,6 +113,7 @@ public final class TranslatingViewModel {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.pending = new PendingCount(desk, executor);
+        this.missingInputs = new MissingInputNotice(notice, current, settings);
         // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
         final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);
         this.otherWork = Bindings.createObjectBinding(
@@ -129,6 +130,7 @@ public final class TranslatingViewModel {
         current.book().addListener(onOpenedBook);
         current.brief().addListener(onBrief);
         mirror.review().providerError().addListener(onProviderError);
+        missingInputs.briefChanged(current.brief().get());
         log.debug("translating view model ready");
     }
 
@@ -267,25 +269,15 @@ public final class TranslatingViewModel {
     }
 
     private void onModelTextChanged() {
-        clearIfSupplied(RunNotice.Input.MODEL, () -> settings.selection().isPresent());
+        missingInputs.modelTextChanged();
     }
 
     private void onBookChanged(final @Nullable OpenedBook book) {
-        clearIfSupplied(RunNotice.Input.BOOK, () -> book != null);
+        missingInputs.bookChanged(book);
     }
 
     private void onBriefChanged(final @Nullable BookBrief brief) {
-        clearIfSupplied(RunNotice.Input.TARGET_LANGUAGE, () -> brief != null && brief.targetLanguage() != null);
-    }
-
-    /** Withdraws a refusal that named {@code input} once that input exists, so a ready start never reads as refused. */
-    private void clearIfSupplied(final RunNotice.Input input, final BooleanSupplier supplied) {
-        if (notice.get() instanceof RunNotice.MissingInput missing
-                && missing.which() == input
-                && supplied.getAsBoolean()) {
-            log.debug("{} is now supplied: withdrawing the missing-input notice", input);
-            notice.set(null);
-        }
+        missingInputs.briefChanged(brief);
     }
 
     private boolean offered(final String control, final ControlState state) {
@@ -299,16 +291,11 @@ public final class TranslatingViewModel {
     }
 
     private void begin(final boolean announce) {
-        final Optional<ModelSelection> selection = settings.selection();
-        final Optional<RunNotice.Input> missing =
-                RunNotice.Input.firstMissing(current.brief().get(), selection.isPresent());
-        if (missing.isPresent()) {
-            log.debug("run refused: {} is missing", missing.get());
-            notice.set(new RunNotice.MissingInput(missing.get()));
+        final Optional<ModelSelection> selection = missingInputs.refuseIfMissing();
+        if (selection.isEmpty()) {
             return;
         }
-        notice.set(null);
-        final ModelSelection chosen = selection.orElseThrow();
+        final ModelSelection chosen = selection.get();
         log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
         preparing.set(true);
         guard.confirm(chosen, model -> launch(model, announce), () -> preparing.set(false));

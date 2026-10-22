@@ -2,21 +2,30 @@ package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
 import java.util.Objects;
+import javafx.beans.binding.BooleanBinding;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
+import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
+import ua.bookloom.ui.state.SleepHelp;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -41,9 +50,16 @@ public final class TranslatingController {
     private final SectionMemory sections;
     private final Navigator navigator;
     private final RunStateSource runs;
+    private final TranslatingView.Reads reads;
 
     @FXML
     private Pane host;
+
+    @FXML
+    private Label title;
+
+    @FXML
+    private Label subtitle;
 
     /**
      * Receives the collaborators the injector owns.
@@ -61,6 +77,8 @@ public final class TranslatingController {
      * @param narratorDialog the question asked before a start when the book is told in the first person
      * @param confirm the question asked before the run is stopped
      * @param runs the run-state row the run actions and the live line follow
+     * @param parts what the strip, the help line and the live card read and open: the start estimate, the scene
+     *     summary, the sleep help, the technical-details switch, the modal host and the activities' clock
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -78,7 +96,8 @@ public final class TranslatingController {
             final SectionMemory sections,
             final NarratorDialog narratorDialog,
             final ConfirmDialog confirm,
-            final RunStateSource runs) {
+            final RunStateSource runs,
+            final Parts parts) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -89,10 +108,45 @@ public final class TranslatingController {
         this.dialogs = new TranslatingDialogs(
                 Objects.requireNonNull(retryDialog, "retryDialog"),
                 Objects.requireNonNull(narratorDialog, "narratorDialog"),
-                Objects.requireNonNull(confirm, "confirm"));
+                Objects.requireNonNull(confirm, "confirm"),
+                parts.modals(),
+                messages,
+                parts.activities());
         this.pauses = Objects.requireNonNull(pauses, "pauses");
         this.sections = Objects.requireNonNull(sections, "sections");
         this.runs = Objects.requireNonNull(runs, "runs");
+        this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
+    }
+
+    /**
+     * The collaborators the strip, the help line and the live card need, injected as one so the controller's
+     * constructor stays short.
+     *
+     * @param estimate the start estimate the strip shows before a run
+     * @param summary the scene summary line's text
+     * @param sleep the sleep help line
+     * @param technical whether technical details are on
+     * @param modals where "All calls…" opens
+     * @param activities whose clock the calls dialog reads
+     */
+    public record Parts(
+            BriefEstimate estimate,
+            SceneSummary summary,
+            SleepHelp sleep,
+            TechnicalDetails technical,
+            ModalHost modals,
+            ActivityTracker activities) {
+
+        /** Receives the parts from the injector. */
+        @Inject
+        public Parts {
+            Objects.requireNonNull(estimate, "estimate");
+            Objects.requireNonNull(summary, "summary");
+            Objects.requireNonNull(sleep, "sleep");
+            Objects.requireNonNull(technical, "technical");
+            Objects.requireNonNull(modals, "modals");
+            Objects.requireNonNull(activities, "activities");
+        }
     }
 
     @FXML
@@ -101,7 +155,13 @@ public final class TranslatingController {
                 "building the translating screen in state {}", mirror.runState().get());
         final TranslatingView.Exits exits =
                 new TranslatingView.Exits(navigator, review, dialogs, pauses, sections, runs);
-        host.getChildren().setAll(TranslatingView.build(viewModel, mirror, current, names, messages, exits));
+        // Once a run has started the live card needs the height, as the mockup's running page has no heading either.
+        final BooleanBinding beforeRun = mirror.runState().isEqualTo(RunState.IDLE);
+        for (final Label heading : new Label[] {title, subtitle}) {
+            heading.visibleProperty().bind(beforeRun);
+            heading.managedProperty().bind(beforeRun);
+        }
+        host.getChildren().setAll(TranslatingView.build(viewModel, mirror, current, names, messages, exits, reads));
         viewModel.refreshPending();
         review.refreshCount();
     }

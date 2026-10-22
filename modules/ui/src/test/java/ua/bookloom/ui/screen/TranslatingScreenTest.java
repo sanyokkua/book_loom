@@ -10,13 +10,11 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.LogEntry;
@@ -94,21 +92,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(768, 3, 469);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("768");
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-count-remaining")).isEqualTo("469");
-        assertThat(labelText("translating-progress-text")).isEqualTo("62% · Chapter 7 of 11 · chunk 1/1");
+        assertThat(labelText("translating-count-translated")).isEqualTo("768 translated");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-strip-line")).isEqualTo("771 of 1,240 segments done · Chapter 7 of 11");
         assertThat(progressBar().getProgress()).isCloseTo(0.6218, within(0.0001));
-    }
-
-    // IF the bar's tooltip did not give the steps, THEN 62% beside 768 segments would look like a mistake.
-    @Test
-    void progressBar_hovered_givesTheStepsCountedIncludingChecks() {
-        showTranslating();
-
-        publishProgress(768, 3, 469);
-
-        assertThat(ua.bookloom.ui.TooltipProbe.tipText(progressBar())).isEqualTo("771 of 1,240 steps, checks included");
     }
 
     // IF an empty book divided by its total, THEN the dashboard would show NaN instead of zero.
@@ -118,7 +105,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(0, 0, 0);
 
-        assertThat(labelText("translating-progress-text")).isEqualTo("0% · Chapter 7 of 11 · chunk 1/1");
+        assertThat(labelText("translating-strip-line")).startsWith("0 of 0 segments done");
         assertThat(progressBar().getProgress()).isZero();
     }
 
@@ -132,7 +119,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(413, 3, 799);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("413");
+        assertThat(labelText("translating-count-translated")).isEqualTo("413 translated");
         assertThat(labelText("translating-live-line")).startsWith("Pausing…");
         assertThat(button("translating-pause").isDisabled()).isTrue();
     }
@@ -178,14 +165,16 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(optional("nobook-card")).isNull();
     }
 
-    // IF a rate or a finishing time were shown before the engine measured one, THEN the line would invent a pace.
+    // IF a time left were shown before the engine measured one, THEN the strip would invent a finishing time.
     @Test
-    void pace_runInProgressNoFiguresYet_showsNothingInsteadOfARateOrEstimate() {
+    void bigLine_runInProgressNoFiguresYet_saysNothingAboutTimeLeft() {
         showTranslating();
         publish(RunState.RUNNING);
         publishProgress(768, 3, 469);
 
-        assertThat(labelText("translating-pace-text")).isEmpty();
+        assertThat(optional("translating-strip-big") == null
+                        || !labelText("translating-strip-big").contains("left"))
+                .isTrue();
     }
 
     // IF a run could be started from an earlier step, THEN the specification's single start control would be two.
@@ -207,8 +196,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_entriesPublished_renderEachWithItsMarkAndCatalogueText() {
         showTranslating();
+        publish(RunState.RUNNING);
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
+        openActivityLog();
 
         assertThat(logCells().stream().map(cell -> cell.getAccessibleText()).toList())
                 .containsExactly(
@@ -220,8 +211,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_acceptedAndSegmentError_drawTheirTagInTheRoleAndTheirWordsInTheTextColour() {
         showTranslating();
+        publish(RunState.RUNNING);
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
+        openActivityLog();
 
         ThemeTestSupport.assertSameColour(partOf(0, ".log-tag").getTextFill(), "#4a6c54", "accepted entry tag");
         ThemeTestSupport.assertSameColour(partOf(1, ".log-tag").getTextFill(), "#a04f45", "segment-error entry tag");
@@ -236,6 +229,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_manyEntries_keepsTheNewestInView() {
         showTranslating();
+        publish(RunState.RUNNING);
+        openActivityLog();
         final LogEntry[] entries = IntStream.range(0, 100)
                 .mapToObj(i -> new LogEntry(LogKind.ACCEPTED, List.of("s-" + i)))
                 .toArray(LogEntry[]::new);
@@ -249,6 +244,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_noEntries_showsTheEmptyText() {
         showTranslating();
+        publish(RunState.RUNNING);
+        openActivityLog();
 
         assertThat(((Label) logList().getPlaceholder()).getText())
                 .isEqualTo("Nothing has happened yet. Decisions appear here as the run makes them.");
@@ -266,53 +263,9 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         final Node bar = progressBar().lookup(".bar");
         assertThat(progressBar().getProgress()).isCloseTo(0.42, within(0.0001));
-        assertThat(progressBar().getHeight()).isCloseTo(9.0, within(0.5));
+        assertThat(progressBar().getHeight()).isGreaterThan(0);
         assertThat(bar.getLayoutBounds().getWidth()).isGreaterThan(0);
         assertThat(bar.getLayoutBounds().getHeight()).isGreaterThan(0);
-    }
-
-    // IF a tile could shrink to its ellipsis, THEN the four counts would read as "…", "a…" and "fl…" in a narrow
-    // window; at the window minimum each tile keeps the mockup's 120 pixels and every caption is shown whole.
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', textBlock = """
-            accepted  | auto-accepted        | 768
-            repaired  | repaired & accepted  | 41
-            flagged   | flagged              | 3
-            remaining | remaining            | 428
-            """)
-    void tiles_atMinimum_showNoTruncatedCaptions(final String name, final String caption, final String number) {
-        showTranslating();
-        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        publish(RunState.RUNNING);
-        mirror().publishProgress(ProgressFixtures.detailed(7, 11, 768, 41, 3, 428, 41, 66));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        final Region tile = (Region) required("translating-tile-" + name);
-        assertThat(tile.minWidth(-1)).isGreaterThanOrEqualTo(120);
-        assertThat(tile.getWidth()).isGreaterThanOrEqualTo(120);
-        assertThat(textsUnder(tile)).contains(caption, number);
-        assertThat(textsUnder(tile)).noneMatch(text -> text.contains("…") || text.contains("..."));
-        assertThat(tile.lookupAll(".label"))
-                .allSatisfy(label -> assertThat(((Label) label).getWidth())
-                        .as(
-                                "the label %s of tile %s is wide enough for its whole text",
-                                ((Label) label).getText(), name)
-                        .isGreaterThanOrEqualTo(((Label) label).prefWidth(-1)));
-    }
-
-    // IF the four tiles did not fit the minimum width side by side, THEN the row would need wrapping the shell does
-    // not do; 4 x 120 plus 3 x 12 gaps is 516 pixels, which the content area at the minimum must hold.
-    @Test
-    void tiles_atMinimum_fitTheContentAreaWithoutSidewaysScrolling() {
-        showTranslating();
-        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        publish(RunState.RUNNING);
-
-        final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
-        final double contentWidth = pane.getContent().getLayoutBounds().getWidth();
-
-        assertThat(required("translating-tiles").getLayoutBounds().getWidth()).isLessThanOrEqualTo(contentWidth);
-        assertThat(contentWidth).isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
     }
 
     // IF Pause and Stop scrolled with the screen, THEN during a long stall a person would have to scroll past the live

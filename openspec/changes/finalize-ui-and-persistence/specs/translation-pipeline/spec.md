@@ -2,7 +2,7 @@
 
 ### Requirement: Always show the scene summary under the live detail
 
-The Translating screen's live card SHALL always show, under its detail, the current scene summary and where it comes from: "Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter."; WHERE no summary exists yet, it SHALL say so rather than hide the line.
+The Translating screen's live card SHALL always show, under its detail, the current scene summary — its target-language text, else its source text — and where it comes from, in one wording on every quality: "Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter."; WHERE no summary exists yet, it SHALL read "No scene summary yet." rather than hide the line.
 
 **Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Scene summary), `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T5), "Keep a rolling summary of the book so far". In plain words: the summary the model carries from segment to segment is part of why a translation reads as it does, so the person can always see it and how often it is refreshed. On every quality it is refreshed after 20 accepted segments and at each chapter's end; only on Max is the chapter-end one written by the model. Writing it more often belongs to the pipeline redesign, not to this change.
 
@@ -14,11 +14,11 @@ The Translating screen's live card SHALL always show, under its detail, the curr
 #### Scenario: No summary yet is stated
 
 - **WHEN** 12 segments are accepted, no chapter has ended and no summary has been written
-- **THEN** the line is still shown and says that no summary exists yet
+- **THEN** the line is still shown and reads "No scene summary yet."
 
 ### Requirement: Explain sleep and keep-awake in a closable help line
 
-The Translating screen SHALL show once per project a closable help line: "BookLoom keeps the computer awake while it translates. Closing a laptop lid still puts it to sleep — after sleep, translating goes on by itself. Nothing finished is lost." and, WHILE keep-awake is off in Settings, instead "The computer may sleep while translating — turn on Keep awake in Settings."
+WHILE a translation is running, the Translating screen SHALL show once per project a closable help line: "BookLoom keeps the computer awake while it translates. Closing a laptop lid still puts it to sleep — after sleep, translating goes on by itself. Nothing finished is lost." and, WHILE keep-awake is off in Settings, instead "The computer may sleep while translating — turn on Keep awake in Settings."
 
 **Source**: `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Help line). In plain words: a person who closes a laptop lid mid-run should know what happens; the README marks the sentence about continuing after sleep as to be verified once with a real laptop sleep before it ships.
 
@@ -67,7 +67,7 @@ The live card SHALL offer Simple and Detailed views in a list | detail split tha
 
 ### Requirement: Send a batch reply's per-segment results to the rows
 
-WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, so that a segment the batch lacked reads "translated again alone".
+WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, so that a segment the batch could not be used for reads "translated again alone" from its solo draft on, even while its chunk's check runs, and "to review" if it is then flagged; its tooltip SHALL name the fault (a missing id, a duplicate id, a merged answer). An extra id the batch never asked for has no row.
 
 **Source**: `docs/specification/mockups/README.md#g5--parsed-prompts-and-replies-in-detailed-views-only`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1, T4). In plain words: a batch answers for several segments at once, and each row must show what happened to its own segment.
 
@@ -75,6 +75,16 @@ WHEN the reply to a batch is parsed, each segment's result SHALL reach its row, 
 
 - **WHEN** a batch reply for segments 5–8 lacks the id of segment 7 and segment 7 is drafted alone
 - **THEN** the row of segment 7 reads "translated again alone" with the tooltip "the batch reply lacked this id"
+
+#### Scenario: The tooltip names the fault
+
+- **WHEN** the batch reply answered the id of segment 6 twice, and ran segment 8 into the next one
+- **THEN** their rows' tooltips read "the batch reply answered this id twice" and "the batch reply ran this segment into the next one"; an extra id shows only in Detailed's reply grid as "extra"
+
+#### Scenario: A batch of four with one missing
+
+- **WHEN** a batch for `ch7 · p41`–`p44` answers every id but that of `ch7 · p43`, which is drafted alone, and all four are accepted
+- **THEN** the rows read translated, translated, translated again alone, translated
 
 ### Requirement: Follow the newly translated segment until the person picks another
 
@@ -268,7 +278,7 @@ WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dia
 
 ### Requirement: Show the segment just decided and the one in progress in the live panel
 
-WHILE a run translates, the live card SHALL list the segments of the call in flight in reading order, one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, translated, to review, translated again alone, or kept as is.
+WHILE a run translates, the live card SHALL list the segments of the chunk being translated in reading order (the call in flight among them), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, translated, to review, translated again alone, or kept as is.
 
 **Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows.
 
@@ -295,7 +305,22 @@ WHILE a run translates, the live card SHALL list the segments of the call in fli
 #### Scenario: The second row is empty between segments
 
 - **WHEN** the last segment of a call is decided and the next call has not started
-- **THEN** the rows of the finished call stay, all marked translated, until the next call's segments arrive
+- **THEN** the rows of the chunk stay, the decided ones marked translated, until the next chunk's segments arrive
+
+#### Scenario: A directed fix keeps the chunk's rows
+
+- **WHEN** a directed-fix call for `ch7 · p42` is made in the chunk `ch7 · p41`–`p44`
+- **THEN** the rows `ch7 · p41` to `ch7 · p44` stay, and `ch7 · p42` reads translating… while the fix waits for the model
+
+#### Scenario: A verbatim segment reads kept as is
+
+- **WHEN** `ch7 · p43` is a chapter number accepted as it is, with no model call
+- **THEN** its row reads "kept as is"
+
+#### Scenario: A run that stopped shows its undecided rows as waiting
+
+- **WHEN** the run ends Stopped or Failed while `ch7 · p43` and `ch7 · p44` were in a call
+- **THEN** both rows read "waiting", and no row reads translating…
 
 #### Scenario: Rows show display text from the announcements
 
@@ -364,7 +389,7 @@ WHILE no translation has started for the open project, the Translating screen SH
 
 ### Requirement: Tell the person when the model is slow to answer
 
-WHILE the run is running and a model call has been outstanding for at least `10` seconds, the live line SHALL read "Waiting for the model… m:ss", updated once a second and counting across the client's own retries, and the screen SHALL withdraw it when the segment is decided, a new call starts, or a pause or stop is requested.
+WHILE the run is running and a model call has been outstanding for at least `10` seconds, the live line SHALL read "Waiting for the model… m:ss", updated once a second and counting across the client's own retries, and the screen SHALL withdraw it when the segment is decided, a new call starts, or a pause or stop is requested; from a minute without an answer the stuck line ("The model is taking longer than usual with segments …") replaces the waiting text.
 
 **Source**: FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/mockups/README.md#run-states-a`. In plain words: a slow local model can make the counters stand still for minutes; ten seconds in the live line tells the person it is waiting, and the stuck state beside this one, at a minute without an answer, says when to look closer.
 
@@ -382,6 +407,11 @@ WHILE the run is running and a model call has been outstanding for at least `10`
 
 - **WHEN** the draft call's first attempt timed out after `3` minutes and the client has sent its second attempt `5` seconds ago
 - **THEN** the live line reads "Waiting for the model… 3:05", and not "Waiting for the model… 0:05"
+
+#### Scenario: A minute without an answer is the stuck line
+
+- **WHEN** a draft attempt of `ch2 · p05` has had no answer for `1:00`
+- **THEN** the live line reads "The model is taking longer than usual with segments ch2 · p05." and no waiting text
 
 #### Scenario: A decision withdraws it
 
@@ -473,7 +503,7 @@ WHEN the engine starts a model call, it SHALL emit one event naming the call's k
 
 ### Requirement: Tag every activity-log entry with one of seven kinds
 
-Every entry the activity log holds SHALL carry one kind from a fixed vocabulary of seven, each shown by its tag, with both a status role from the token catalogue and a mark that is not its colour. The run SHALL produce each kind at its own event, and the text of every entry SHALL come from the message catalogue by key. The log SHALL retain its most recent entries up to a fixed bound and SHALL drop the oldest first.
+Every entry the activity log holds SHALL carry one kind from a fixed vocabulary of seven, each shown by its tag, with both a status role from the token catalogue and a mark that is not its colour. The run SHALL produce each kind at its own event, and the text of every entry SHALL come from the message catalogue by key. An answered draft, review, summary or revision call, a call interrupted by a pause or stop, and a repair round starting SHALL be technical `info` lines, listed only while Show technical details is on; a failed attempt and each step of an automatic recovery SHALL be `retry` lines. The log SHALL retain its most recent entries up to a fixed bound and SHALL drop the oldest first.
 
 **Source**: FR-NOTIF-6a, FR-NOTIF-6b, FR-NOTIF-6c (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#activity-log`), FR-A11Y-6 (`docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#accessibility`), FR-UI-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`). In plain words: the log is the only record of what a multi-hour run decided. A fixed vocabulary of seven short tags, lined up in a column, is what makes it scannable, and now that the engine repairs, remembers and summarises, every one of the seven actually appears. Colour alone cannot carry the kind, and the text comes from the catalogue so a Ukrainian window never shows an English log. An entry names a segment the way the review dialog does, by its locator, because a file name and an ordinal mean nothing to the person reading it.
 
@@ -492,6 +522,11 @@ Every entry the activity log holds SHALL carry one kind from a fixed vocabulary 
 
 - **WHEN** the segment `ch7 · p43` gets one placeholder repair, and later the run pauses on `ErrorCode.unreachable` and the person presses Try again now
 - **THEN** an entry tagged `retry` naming `ch7 · p43` is appended for the repair, the pause is logged as `info`, and the resume appends a second `retry` entry
+
+#### Scenario: An answered draft is a technical line
+
+- **WHEN** the draft call for `ch7 · p42` is answered while Show technical details is off, and later while it is on
+- **THEN** the first answer adds no visible line, and the second adds one `info` line
 
 #### Scenario: Entry text comes from the catalogue
 

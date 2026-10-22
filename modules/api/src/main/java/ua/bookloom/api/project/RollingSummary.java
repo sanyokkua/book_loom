@@ -25,6 +25,12 @@ public record RollingSummary(
         int tokensSince) {
 
     /**
+     * How many accepted segments pass between two refreshes of the summary; it is also refreshed at the end of every
+     * chapter. Kept here, beside the summary, because the run refreshes by it and the window tells the person by it.
+     */
+    public static final int REFRESH_EVERY = 20;
+
+    /**
      * Validates the invariants a caller is entitled to assume.
      */
     public RollingSummary {

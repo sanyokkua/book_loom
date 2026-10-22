@@ -1457,28 +1457,15 @@ public enum MessageKey {
     TRANSLATING_STOP("translating.stop"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_STOP}. */
     TRANSLATING_STOP_TIP("translating.stop.tip"),
-    /** Caption of the accepted-segments tile. */
-    TRANSLATING_COUNT_ACCEPTED("translating.count.accepted"),
-    /** Caption of the flagged-segments tile. */
-    TRANSLATING_COUNT_FLAGGED("translating.count.flagged"),
-    /** Caption of the remaining-segments tile. */
-    TRANSLATING_COUNT_REMAINING("translating.count.remaining"),
-    /** Hover explanation of the remaining-segments tile: what the count includes besides the book text. */
-    TRANSLATING_COUNT_REMAINING_TIP("translating.count.remaining.tip"),
+
     /** Heading of the activity log card. */
     TRANSLATING_LOG_TITLE("translating.log.title"),
     /** Text shown in the activity log before the run has decided anything. */
     TRANSLATING_LOG_EMPTY("translating.log.empty"),
-    /** Heading of the live chunk card. */
-    LIVE_TITLE("live.title"),
-    /** Target text of the segment in progress until its draft arrives. */
-    LIVE_WAITING("live.waiting"),
-    /** Live-row tracker; arguments: 0 the round, 1 the rounds allowed, 2 the judge's score or {@code none}, 3 the finding being repaired or {@code none}; all Strings. */
-    LIVE_ROUND("live.round"),
+
     /** Source pane of a segment that has no visible text. */
     LIVE_EMPTY_SOURCE("live.emptySource"),
-    /** Target pane of a decided segment whose target is empty. */
-    LIVE_NO_TARGET("live.noTarget"),
+
     /** Heading of the collapsed section that shows what a draft was sent with. */
     LIVE_CONTEXT_TITLE("live.context.title"),
     /** Counts beside {@link #LIVE_CONTEXT_TITLE}; arguments: 0 preceding translations, 1 {@code yes} when a summary was sent else {@code no}, 2 names, 3 memory hits. */
@@ -1509,36 +1496,19 @@ public enum MessageKey {
     LIVE_CONTEXT_NO_RENDERING("live.context.noRendering"),
     /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
     LIVE_CONTEXT_LOCKED("live.context.locked"),
-    /** Badge on a draft the reviewer has not read yet. */
-    LIVE_AWAITING_REVIEW("live.awaitingReview"),
+
     /** Badge with the judge's score; argument 0 is the formatted score. */
     LIVE_JUDGE("live.judge"),
-    /** Heading of the live panel's block for the call in flight. */
-    LIVE_CALL_CURRENT("live.call.current"),
-    /** Heading of the live panel's first block once the run has ended. */
-    LIVE_CALL_LAST("live.call.last"),
-    /** Heading of the live panel's block for the call before the current one. */
-    LIVE_CALL_PREVIOUS("live.call.previous"),
+
     /** Text of the live panel before the run has made a model call. */
     LIVE_CALL_NONE("live.call.none"),
-    /** Attempt chip of a call; arguments: 0 the attempt, 1 the most attempts allowed; both Strings. */
-    LIVE_CALL_ATTEMPT("live.call.attempt"),
-    /** Clock of a call still waiting for the model; argument 0 is the {@code m:ss} time since it went out. */
-    LIVE_CALL_WAITED("live.call.waited"),
+
     /** Clock of a finished call; argument 0 is the {@code m:ss} time the answered attempt took. */
     LIVE_CALL_TOOK("live.call.took"),
-    /** Bound of a call's attempt; argument 0 is the {@code m:ss} time it may wait. */
-    LIVE_CALL_TIMEOUT("live.call.timeout"),
+
     /** Token usage of an answered call; arguments: 0 prompt tokens or {@code none}, 1 completion tokens or {@code none}. */
     LIVE_CALL_TOKENS("live.call.tokens"),
-    /** State chip of a call; argument 0 is {@code waiting}, {@code answered}, {@code failed} or {@code cancelled}. */
-    LIVE_CALL_STATE("live.call.state"),
-    /** Caption above the segments a call sent; argument 0 is their number. */
-    LIVE_CALL_SEGMENTS("live.call.segments"),
-    /** Summary of an answered call about no segment; arguments: 0 characters sent, 1 characters in the reply. */
-    LIVE_CALL_SUMMARY("live.call.summary"),
-    /** Summary of a call about no segment that has no reply; argument 0 is the characters sent. */
-    LIVE_CALL_SUMMARY_PENDING("live.call.summary.pending"),
+
     /** Heading of the section holding the user message a call about no segment sent. */
     LIVE_CALL_INPUT("live.call.input"),
     /** Hover explanation of the input section. */
@@ -1615,8 +1585,7 @@ public enum MessageKey {
     LIVE_CALL_ITEM_EXTRA("live.call.item.extra"),
     /** Result word: the item's text seems to carry the next item as well. */
     LIVE_CALL_ITEM_MERGED("live.call.item.merged"),
-    /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
-    LIVE_CALL_OUTCOME("live.call.outcome"),
+
     /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
     LIVE_CALL_DETAIL("live.call.detail"),
     /** Context-section heading of the style sheet. */
@@ -1629,36 +1598,14 @@ public enum MessageKey {
     LIVE_CONTEXT_LEXICON("live.context.lexicon"),
     /** Context-section heading of the characters a segment names. */
     LIVE_CONTEXT_CHARACTERS("live.context.characters"),
-    /** Badge of a segment accepted as drafted. */
-    LIVE_PATH_DRAFT("live.path.draft"),
-    /** Badge of a segment accepted after a repair. */
-    LIVE_PATH_REPAIRED("live.path.repaired"),
-    /** Badge of a segment reused from the translation memory. */
-    LIVE_PATH_TM_REUSE("live.path.tmReuse"),
-    /** Badge of a segment the person edited. */
-    LIVE_PATH_USER("live.path.user"),
-    /** Badge of a segment kept as source. */
-    LIVE_PATH_SOURCE_KEPT("live.path.sourceKept"),
-    /** Badge of a segment kept as it is because it had nothing to translate (a number, symbols). */
-    LIVE_PATH_VERBATIM("live.path.verbatim"),
+
     /** Heading of the source pane when no source language is set. */
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
     /** Heading of the target pane when no target language is set. */
     LIVE_TARGET_FALLBACK("live.target.fallback"),
     /** Line under the Translating heading: progress of a stopped run lasts only until the application closes. */
     TRANSLATING_SUBTITLE("translating.subtitle"),
-    /** Caption of the tile counting segments accepted without repair. */
-    TRANSLATING_COUNT_AUTO("translating.count.auto"),
-    /** Caption of the tile counting segments accepted after repair. */
-    TRANSLATING_COUNT_REPAIRED("translating.count.repaired"),
-    /** Caption of the outcome tile counting auxiliary segments kept as source by choice. */
-    TRANSLATING_COUNT_KEPT("translating.count.kept"),
-    /** Caption of the outcome tile counting segments kept as they are: numbers, symbols, nothing to translate. */
-    TRANSLATING_COUNT_VERBATIM("translating.count.verbatim"),
-    /** Caption of the outcome tile counting accepted segments the final audit doubts. */
-    TRANSLATING_COUNT_SUSPICIOUS("translating.count.suspicious"),
-    /** Hover explanation of the tile labelled by {@link #TRANSLATING_COUNT_SUSPICIOUS}. */
-    TRANSLATING_COUNT_SUSPICIOUS_TIP("translating.count.suspicious.tip"),
+
     /** Title of the ready card shown before a run exists. */
     TRANSLATING_READY_TITLE("translating.ready.title"),
     /** Label of the ready card's book row. */
@@ -1675,18 +1622,13 @@ public enum MessageKey {
     TRANSLATING_READY_PENDING("translating.ready.pending"),
     /** Name of a review mode; argument 0 is its lower-case token (unattended, assisted or manual). */
     TRANSLATING_READY_REVIEW_MODE("translating.ready.reviewMode"),
-    /** Title of the card that reports what a finished or failed run decided. */
-    TRANSLATING_OUTCOME_TITLE("translating.outcome.title"),
-    /** The percentage of the progress line; argument 0 is the whole percent. */
-    TRANSLATING_LINE_PERCENT("translating.line.percent"),
+
     /** The chapter part of the progress line; arguments are the section and the number of sections. */
     TRANSLATING_LINE_SECTION("translating.line.section"),
-    /** The chunk part of the progress line; arguments are the chunk and the number of chunks. */
-    TRANSLATING_LINE_CHUNK("translating.line.chunk"),
+
     /** The time-left part of the pace text; argument 0 is the rounded time, "about 20 min" or the like. */
     TRANSLATING_PACE_LEFT("translating.pace.left"),
-    /** The rate part of the pace text; argument 0 is the rate, passed as a String, with a leading ~ when estimated. */
-    TRANSLATING_PACE_RATE("translating.pace.rate"),
+
     /** Button that leaves a completed run for the Export step. */
     TRANSLATING_CONTINUE("translating.continue"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_CONTINUE}. */
@@ -1699,10 +1641,7 @@ public enum MessageKey {
     TRANSLATING_REFUSED_TITLE("translating.refusedTitle"),
     /** Banner text naming the missing input; argument 0 is its token (book or model). */
     TRANSLATING_MISSING_TEXT("translating.missingText"),
-    /** Toggle over the activity log that shows only the lines about something that went wrong. */
-    TRANSLATING_LOG_ERRORS_ONLY("translating.log.errorsOnly"),
-    /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_ERRORS_ONLY}. */
-    TRANSLATING_LOG_ERRORS_ONLY_TIP("translating.log.errorsOnly.tip"),
+
     /** Chip over the activity log offered once the person scrolled up, which stops the log following its newest line. */
     TRANSLATING_LOG_JUMP("translating.log.jump"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_JUMP}. */
@@ -2814,7 +2753,105 @@ public enum MessageKey {
     /** A whole number of minutes, spelled out. */
     DURATION_SPELLED_M("duration.spelled.m"),
     /** A length of time in hours and minutes, spelled out. */
-    DURATION_SPELLED_HM("duration.spelled.hm");
+    DURATION_SPELLED_HM("duration.spelled.hm"),
+    /** Translating strip: the big line of a finished run; its argument is how long it took. */
+    TRANSLATING_STRIP_FINISHED_IN("translating.strip.finishedIn"),
+    /** Translating strip: the segments decided of all. */
+    TRANSLATING_STRIP_DONE("translating.strip.done"),
+    /** Hover explanation of the count labelled by {@link #TRANSLATING_STRIP_DONE}. */
+    TRANSLATING_STRIP_DONE_TIP("translating.strip.done.tip"),
+    /** Translating strip: segments translated with no repair. */
+    TRANSLATING_STRIP_TRANSLATED("translating.strip.translated"),
+    /** Translating strip: segments accepted after a repair. */
+    TRANSLATING_STRIP_FIXED("translating.strip.fixed"),
+    /** Translating strip: segments flagged for review. */
+    TRANSLATING_STRIP_TO_REVIEW("translating.strip.toReview"),
+    /** Translating strip: segments kept as they are. */
+    TRANSLATING_STRIP_KEPT("translating.strip.kept"),
+    /** Translating strip: accepted segments the final audit doubts. */
+    TRANSLATING_STRIP_SECOND_LOOK("translating.strip.secondLook"),
+    /** Hover explanation of the count labelled by {@link #TRANSLATING_STRIP_SECOND_LOOK}. */
+    TRANSLATING_STRIP_SECOND_LOOK_TIP("translating.strip.secondLook.tip"),
+    /** Translating strip: how long the run has been working. */
+    TRANSLATING_STRIP_ELAPSED("translating.strip.elapsed"),
+    /** Translating strip: the button that opens the segments to review. */
+    TRANSLATING_STRIP_REVIEW("translating.strip.review"),
+    /** Hover explanation of the button labelled by {@link #TRANSLATING_STRIP_REVIEW}. */
+    TRANSLATING_STRIP_REVIEW_TIP("translating.strip.review.tip"),
+    /** Translating: the help line while keep-awake is on. */
+    TRANSLATING_HELP_SLEEP("translating.help.sleep"),
+    /** Translating: the help line while keep-awake is off. */
+    TRANSLATING_HELP_SLEEP_OFF("translating.help.sleepOff"),
+    /** Translating: the name of the button that closes the help line. */
+    TRANSLATING_HELP_CLOSE("translating.help.close"),
+    /** Hover explanation of the button labelled by {@link #TRANSLATING_HELP_CLOSE}. */
+    TRANSLATING_HELP_CLOSE_TIP("translating.help.close.tip"),
+    /** Live card: the first tab. */
+    LIVE_TAB_LIVE("live.tab.live"),
+    /** Live card: the name of the Simple and Detailed choice. */
+    LIVE_MODE("live.mode"),
+    /** Hover explanation of the choice labelled by {@link #LIVE_MODE}. */
+    LIVE_MODE_TIP("live.mode.tip"),
+    /** Live card: the switch that follows each newly translated segment. */
+    LIVE_FOLLOW("live.follow"),
+    /** Hover explanation of the switch labelled by {@link #LIVE_FOLLOW}. */
+    LIVE_FOLLOW_TIP("live.follow.tip"),
+    /** Live card: the button that follows the translation again after a pick. */
+    LIVE_FOLLOW_AGAIN("live.followAgain"),
+    /** Hover explanation of the button labelled by {@link #LIVE_FOLLOW_AGAIN}. */
+    LIVE_FOLLOW_AGAIN_TIP("live.followAgain.tip"),
+    /** Live card: the button that lists every kept call. */
+    LIVE_ALL_CALLS("live.allCalls"),
+    /** Hover explanation of the button labelled by {@link #LIVE_ALL_CALLS}. */
+    LIVE_ALL_CALLS_TIP("live.allCalls.tip"),
+    /** Activity log tab: the choice that lists every line. */
+    LIVE_LOG_ALL("live.log.all"),
+    /** Hover explanation of the choice labelled by {@link #LIVE_LOG_ALL}. */
+    LIVE_LOG_ALL_TIP("live.log.all.tip"),
+    /** Activity log tab: the choice that lists only the problems. */
+    LIVE_LOG_PROBLEMS("live.log.problems"),
+    /** Hover explanation of the choice labelled by {@link #LIVE_LOG_PROBLEMS}. */
+    LIVE_LOG_PROBLEMS_TIP("live.log.problems.tip"),
+    /** Live row marker: not sent yet, or the run does not work. */
+    LIVE_MARKER_WAITING("live.marker.waiting"),
+    /** Live row marker: in a call the model works on. */
+    LIVE_MARKER_TRANSLATING("live.marker.translating"),
+    /** Live row marker: accepted. */
+    LIVE_MARKER_TRANSLATED("live.marker.translated"),
+    /** Live row marker: flagged for review. */
+    LIVE_MARKER_TO_REVIEW("live.marker.toReview"),
+    /** Live row marker: drafted again on its own after a bad batch reply. */
+    LIVE_MARKER_ALONE("live.marker.alone"),
+    /** Hover explanation of the marker labelled by {@link #LIVE_MARKER_ALONE}; its argument is the reply's fault in lower case. */
+    LIVE_MARKER_ALONE_TIP("live.marker.alone.tip"),
+    /** Live row marker: kept as it is. */
+    LIVE_MARKER_KEPT("live.marker.kept"),
+    /** Live detail: why a flagged segment waits; its argument names the findings. */
+    LIVE_DETAIL_WHY("live.detail.why"),
+    /** Live detail: the translation of a segment being translated. */
+    LIVE_DETAIL_PENDING("live.detail.pending"),
+    /** Live detail: the translation of a segment not sent yet. */
+    LIVE_DETAIL_NOT_YET("live.detail.notYet"),
+    /** Live detail: the heading of the box of what the model works on. */
+    LIVE_DETAIL_IN_FLIGHT("live.detail.inFlight"),
+    /** Live detail: the box of what the model works on, with nothing in flight. */
+    LIVE_DETAIL_IN_FLIGHT_NONE("live.detail.inFlight.none"),
+    /** Live detail, Detailed: a segment no call has carried yet. */
+    LIVE_DETAIL_NOT_SENT("live.detail.notSent"),
+    /** Live card, Detailed: the call line; id, kind, segment count, range or none, attempt, attempts, clock. */
+    LIVE_CALL_LINE("live.callLine"),
+    /** Live card, Detailed: the name of a draft call on the call line. */
+    LIVE_CALL_DRAFT("live.call.draft"),
+    /** Live card: a waiting clock against its limit. */
+    LIVE_CLOCK_OF("live.clock.of"),
+    /** Live card: the line while a call has waited ten seconds; its argument is the clock. */
+    LIVE_WAITING_FOR_MODEL("live.waitingForModel"),
+    /** Live card: the heading of the scene summary line. */
+    LIVE_SUMMARY_TITLE("live.summary.title"),
+    /** Live card: the scene summary line before there is one. */
+    LIVE_SUMMARY_NONE("live.summary.none"),
+    /** Live card: how the scene summary is kept; its argument is the refresh interval. */
+    LIVE_SUMMARY_SOURCE("live.summary.source");
 
     private final String key;
 

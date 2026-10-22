@@ -6,10 +6,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -35,7 +38,8 @@ import ua.bookloom.ui.state.StatusRole;
  * The activity log: each entry shows the time it happened, its kind's tag and mark in the kind's role colour, its
  * catalogue text in the ordinary text colour so it reads on both themes, and {@code ×n} when it repeated.
  *
- * <p>The errors-only switch filters the mirror's entries without copying them. The log follows its newest line only
+ * <p>Problems only and the technical-details switch filter the mirror's entries without copying them: a technical
+ * line (an answered call, a repair round) is listed only while technical details are on. The log follows its newest line only
  * while the person has left it at the end: scrolling up stops the following, so a line being read is never pulled away,
  * and scrolling back to the end, or {@link #jumpToLatest()}, resumes it. The cell and the scroll listener log nothing:
  * they run on every scroll; the cell only changes its texts and role class as it is reused.
@@ -51,7 +55,11 @@ public final class TaggedLog extends ListView<LogEntry> {
 
     private static final double END_TOLERANCE = 1e-6;
 
-    private final BooleanProperty errorsOnly = new SimpleBooleanProperty(false);
+    private final BooleanProperty problemsOnly = new SimpleBooleanProperty(false);
+    private final FilteredList<LogEntry> shown;
+    private final ObservableBooleanValue technical;
+    // Kept so the weak listener on the long-lived switch lives as long as this list.
+    private final InvalidationListener onTechnical = observed -> filter();
     private final ReadOnlyBooleanWrapper following = new ReadOnlyBooleanWrapper(true);
     private @Nullable VirtualFlow<?> flow;
     private boolean followQueued;
@@ -60,14 +68,18 @@ public final class TaggedLog extends ListView<LogEntry> {
      * Builds the list over the mirror's entries.
      *
      * @param entries the mirror's activity log; the list follows it
+     * @param technical whether technical lines are listed; observed weakly
      * @param messages the catalogue the entries are worded from
      */
-    public TaggedLog(final ObservableList<LogEntry> entries, final Messages messages) {
+    public TaggedLog(
+            final ObservableList<LogEntry> entries, final ObservableBooleanValue technical, final Messages messages) {
         Objects.requireNonNull(entries, "entries");
+        this.technical = Objects.requireNonNull(technical, "technical");
         Objects.requireNonNull(messages, "messages");
-        final FilteredList<LogEntry> shown = new FilteredList<>(entries);
-        errorsOnly.addListener((observed, was, now) ->
-                shown.setPredicate(now ? entry -> entry.kind().isTrouble() : null));
+        shown = new FilteredList<>(entries);
+        problemsOnly.addListener(onTechnical);
+        technical.addListener(new WeakInvalidationListener(onTechnical));
+        filter();
         setItems(shown);
         getStyleClass().add("activity-log");
         setFocusTraversable(false);
@@ -146,8 +158,18 @@ public final class TaggedLog extends ListView<LogEntry> {
      *
      * @return the switch; FX thread only
      */
-    public BooleanProperty errorsOnlyProperty() {
-        return errorsOnly;
+    public BooleanProperty problemsOnlyProperty() {
+        return problemsOnly;
+    }
+
+    private void filter() {
+        final boolean problems = problemsOnly.get();
+        final boolean all = technical.get();
+        shown.setPredicate(
+                problems || !all
+                        ? entry -> (all || !entry.technical())
+                                && (!problems || entry.kind().isTrouble())
+                        : null);
     }
 
     /**
@@ -165,7 +187,7 @@ public final class TaggedLog extends ListView<LogEntry> {
 
     private static String textOf(final LogEntry entry, final Messages messages) {
         final Object[] args = entry.args().toArray();
-        if (entry.kind().namesACall() && args.length > 0) {
+        if (entry.namesACall() && args.length > 0) {
             args[0] = messages.get(MessageKey.RUN_CALL_KIND, args[0]);
         }
         return messages.get(entry.messageKey(), args);

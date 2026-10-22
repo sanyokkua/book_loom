@@ -3,11 +3,13 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleButton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -15,9 +17,11 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.LiveCallFixtures;
+import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.ConnectionStatus;
+import ua.bookloom.ui.state.LiveRow;
+import ua.bookloom.ui.state.LiveRow.Stage;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.Throughput;
 
@@ -27,8 +31,7 @@ import ua.bookloom.ui.state.Throughput;
  */
 class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
-    private static final String CURRENT_PROMPT = "translating-live-card-current-prompt";
-    private static final String PREVIOUS_PROMPT = "translating-live-card-previous-prompt";
+    private static final String PROMPT = "translating-live-call-prompt";
 
     private Bounds sceneBounds(final String id) {
         return ThemeTestSupport.onFx(() -> {
@@ -37,7 +40,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         });
     }
 
-    // IF Review flagged (0) opened its panel below the live card and the log, THEN pressing it would seem to do
+    // IF Review flagged (0) opened its panel below the live card, THEN pressing it would seem to do
     // nothing; the panel opens under the run controls, inside the viewport, and says nothing is flagged.
     @ParameterizedTest
     @EnumSource(
@@ -59,34 +62,15 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
                 .isGreaterThanOrEqualTo(sceneBounds("translating-head").getMaxY())
                 .isLessThan(viewport.getMaxY());
         assertThat(sceneBounds("review-panel").getMaxY())
-                .isLessThanOrEqualTo(sceneBounds("translating-progress-card").getMinY());
+                .isLessThanOrEqualTo(sceneBounds("translating-strip").getMinY());
     }
 
-    // IF the remaining tile were silent about what it counts, THEN its first figure, above the book-text total on
-    // Structure, would read as a mistake.
-    @Test
-    void remainingTile_hovered_explainsTheOtherTextsItCounts() {
-        showTranslating();
-        publish(RunState.RUNNING);
-
-        assertThat(TooltipProbe.tipText(required("translating-tile-remaining")))
-                .startsWith("Segments not translated yet.")
-                .contains("titles, alt texts, contents entries and metadata");
-    }
-
-    private void runningWithPrompt() {
-        mirror().publishRunStarted("Frankenstein.epub", null);
-        publishCalls(2);
-        showTranslating();
-    }
-
-    private void publishCalls(final long newest) {
-        mirror().live()
-                .publishCalls(LiveCallFixtures.calls(
-                        LiveCallFixtures.waiting(newest, 2, "Text.", LiveCallFixtures.smallPrompt()),
-                        LiveCallFixtures.answered(
-                                LiveCallFixtures.waiting(newest - 1, 2, "Text.", LiveCallFixtures.smallPrompt()),
-                                "{}")));
+    // The row of segment 1 records call 1, so the Detailed detail shows that call's prompt section.
+    private void runningWithPrompt(final long callId) {
+        final LiveRow row = new LiveRow("s-1-1", "ch7 · p101", "Text.", null, Stage.IN_CALL, null, List.of(), callId);
+        showLive(LiveRowFixtures.calls(
+                LiveCallFixtures.waiting(callId, 2, "Text.", LiveCallFixtures.smallPrompt()), List.of(row)));
+        onFx(() -> ((ToggleButton) required("translating-live-mode-detailed")).fire());
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -95,30 +79,34 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
     }
 
     // IF the prompt the person opened closed itself whenever they looked at another step, THEN they would have to
-    // reopen it on every return; each block's section stays as they left it, open or closed again.
+    // reopen it on every return; the section stays as they left it, open or closed again.
     @Test
     void promptSection_openedThenAnotherStepVisited_isStillOpenOnReturn() {
-        runningWithPrompt();
-        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(true));
+        runningWithPrompt(1);
+        onFx(() -> ((TitledPane) required(PROMPT)).setExpanded(true));
 
         showTranslating();
 
-        assertThat(isExpanded(CURRENT_PROMPT)).isTrue();
-        assertThat(isExpanded(PREVIOUS_PROMPT)).isFalse();
-        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(false));
+        assertThat(isExpanded(PROMPT)).isTrue();
+        onFx(() -> ((TitledPane) required(PROMPT)).setExpanded(false));
         showTranslating();
-        assertThat(isExpanded(CURRENT_PROMPT)).isFalse();
+        assertThat(isExpanded(PROMPT)).isFalse();
     }
 
-    // IF the open section closed when the next call took the block, THEN it could not be read during a run.
+    // IF the open section closed when the next call took its place, THEN it could not be read during a run.
     @Test
-    void promptSection_opened_staysOpenWhenTheCallsChange() {
-        runningWithPrompt();
-        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(true));
+    void promptSection_opened_staysOpenWhenTheCallChanges() {
+        runningWithPrompt(1);
+        onFx(() -> ((TitledPane) required(PROMPT)).setExpanded(true));
 
-        publishCalls(3);
+        mirror().live()
+                .publishCalls(LiveRowFixtures.calls(
+                        LiveCallFixtures.waiting(2, 2, "Text.", LiveCallFixtures.smallPrompt()),
+                        List.of(new LiveRow(
+                                "s-1-1", "ch7 · p101", "Text.", null, Stage.IN_CALL, null, List.of(), 2L))));
+        WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(isExpanded(CURRENT_PROMPT)).isTrue();
+        assertThat(isExpanded(PROMPT)).isTrue();
     }
 
     // IF the Flagged tile kept the run's last figure while Review flagged counts what is still flagged, THEN a person
@@ -132,8 +120,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.COMPLETED);
 
-        awaitFx(() -> "3".equals(labelText("translating-outcome-flagged")));
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
+        awaitFx(() -> "3 to review".equals(labelText("translating-count-to-review")));
         assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (3)");
     }
 
@@ -148,7 +135,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         publish(RunState.RUNNING);
         publishProgress(80, 5, 10);
 
-        assertThat(labelText("translating-count-flagged")).isEqualTo("5");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("5 to review");
     }
 
     private void endedRunWithZeroLeft(final RunState state) {
@@ -170,7 +157,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         endedRunWithZeroLeft(state);
 
         assertThat(labelText("shell-run-state")).doesNotContain("left");
-        assertThat(labelText("translating-pace-text")).doesNotContain("left");
+        assertThat(textOf("translating-strip")).doesNotContain("left");
     }
 
     @Test
@@ -182,7 +169,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         publish(RunState.RUNNING);
 
         assertThat(labelText("shell-run-state")).isEqualTo("0 % done · about 5 min left");
-        assertThat(labelText("translating-pace-text")).contains("about 5 min left");
+        assertThat(labelText("translating-strip-big")).isEqualTo("about 5 min left");
     }
 
     // IF the chip still said the model answers after the run ended, THEN it would claim a live conversation.

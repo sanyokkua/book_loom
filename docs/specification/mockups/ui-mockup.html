@@ -1251,10 +1251,9 @@ function liveDetail() {
     }
     if (s === 'wait' && r.call !== 42) return `${head}<p class="small muted">Not sent yet — it goes out in a later call.</p>`;
     const answered = r.call === 41 || LIVE.filter(x => x.call === 42).every(x => x.st === 'done');
-    return `${head}${callInfo({'Call': `${r.call || 43} · Draft · 4 segments`, 'Attempt': '1 of 2', 'Clock': answered ? '6.2 s' : clock(12, '0:21 of 3:00'), 'First token': answered ? '4.1 s' : '—', 'Tokens in · cached · out': answered ? '2,100 · 1,380 · 212' : '2,100 · 1,380 · —', 'Speed': answered ? '9.6 tok/s' : '—'})}
+    return `${head}${callInfo({'Call': `${r.call || 43} · Draft · 4 segments`, 'Attempt': '1 of 2', 'Clock': answered ? '6.2 s' : clock(12, '0:21 of 3:00'), 'Tokens in · cached · out': answered ? '2,100 · 1,380 · 212' : '2,100 · 1,380 · —', 'Speed': answered ? '9.6 tok/s' : '—'})}
   <div class="io-pair"><div><label class="fld">Sent to the model</label>${parsedPrompt(CALL42_SYS, CALL42_USER, {raw: RAW42})}</div>
-  <div><label class="fld">The model's reply</label>${answered ? replyTable(LIVE.filter(x => x.call === r.call).map(x => [x.id, x.loc, x.tgt, mk(rowState(x))])) : '<div class="card pad muted">The model is answering… 0:21</div>'}<details class="sec mt2"><summary>Raw reply <span class="cnt">for diagnostics</span></summary><pre class="raw">{"items":[{"id":"1","target":"Уявіть гармату…"}, …]}</pre></details></div></div>
-  <div class="mt3"><label class="fld">Next call</label><div class="small muted">Call 43 · ch2 · p09–p10 · prepared</div></div>`;
+  <div><label class="fld">The model's reply</label>${answered ? replyTable(LIVE.filter(x => x.call === r.call).map(x => [x.id, x.loc, x.tgt, mk(rowState(x))])) : '<div class="card pad muted">The model is answering… 0:21</div>'}<details class="sec mt2"><summary>Raw reply <span class="cnt">for diagnostics</span></summary><pre class="raw">{"items":[{"id":"1","target":"Уявіть гармату…"}, …]}</pre></details></div></div>`;
 }
 const HELP_SLEEP = () => ST.helpClosed ? '' : `<div class="banner" style="margin-bottom:10px"><span class="ico">ℹ</span><div class="grow small">BookLoom keeps the computer awake while it translates. Closing a laptop lid still puts it to sleep — after sleep, translating goes on by itself. Nothing finished is lost.</div><button class="btn btn-ghost btn-sm" title="Do not show again for this project" onclick="ST.helpClosed=true;rerender()">✕</button></div>`;
 function strip() {
@@ -1291,7 +1290,7 @@ ${['running', 'stuck'].includes(r) ? HELP_SLEEP() : ''}${strip()}
   ${ST.liveTab === 'live' ? `
   <div class="callline">${detailedLive() ? `<b>Call ${D.call}</b><span class="badge b-neutral">Draft · 4 segments · ch2 · p05–p08</span>` : ''}<span>${RUN[r].line}</span>${RUN[r].clock && detailedLive() ? `<span class="muted">attempt 1 of 2 · ${r === 'stuck' ? '3:40 of 6:00' : '0:21 of 3:00'}</span>` : ''}</div>
   <div class="split"><div class="side">${liveList()}</div><div class="main-pane">${liveDetail()}
-    <div class="banner mt3"><span class="ico">≡</span><div class="small"><b>Scene summary</b> · Chapter 2 introduces orbits; a cannon on a mountain follows. <span class="muted">Updated every 20 segments. On Max quality the model also writes one at the end of each chapter.</span> ${req('T5')}</div></div></div></div>` : `
+    <div class="banner mt3"><span class="ico">≡</span><div class="small"><b>Scene summary</b> · Chapter 2 introduces orbits; a cannon on a mountain follows. <span class="muted">Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter.</span> ${req('T5')}</div></div></div></div>` : `
   <div class="card-b log" style="overflow:auto">
     <div class="ln"><span class="tm">11:41:05</span><span class="lv">info</span><span>Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review (name in the wrong form)</span></div>
     <div class="ln"><span class="tm">11:41:07</span><span class="lv">info</span><span>Sent segments 5–8 of chapter 2</span></div>

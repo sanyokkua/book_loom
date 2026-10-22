@@ -1,13 +1,14 @@
 package ua.bookloom.ui;
 
 import com.google.inject.AbstractModule;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 
-/** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
+/** The review-side ports, the launch-time review mode, and the in-memory rolling summaries the live card reads. */
 final class ReviewPortsModule extends AbstractModule {
 
     private final GlossaryService glossary;
@@ -15,6 +16,7 @@ final class ReviewPortsModule extends AbstractModule {
     private final NamesPass namesPass;
     private final ReviewDesk desk;
     private final ReviewMode reviewMode;
+    private final MemorySummaries summaries = new MemorySummaries();
 
     ReviewPortsModule(
             final GlossaryService glossary,
@@ -36,5 +38,6 @@ final class ReviewPortsModule extends AbstractModule {
         bind(NamesPass.class).toInstance(namesPass);
         bind(ReviewDesk.class).toInstance(desk);
         bind(ReviewMode.class).toInstance(reviewMode);
+        bind(SummaryRepository.class).toInstance(summaries);
     }
 }

@@ -8,6 +8,7 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -203,5 +204,6 @@ public final class UiModule extends AbstractModule {
         requireBinding(ReviewDesk.class);
         requireBinding(ExportService.class);
         requireBinding(ReviewMode.class);
+        requireBinding(SummaryRepository.class);
     }
 }

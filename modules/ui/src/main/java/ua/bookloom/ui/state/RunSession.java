@@ -233,8 +233,12 @@ final class RunSession implements JobListener {
             case Paused paused -> onPaused(paused);
             case Resumed resumed -> onResumed(resumed);
             case ModelCallStarted started -> onModelCall(started);
-            case SegmentStarted started -> onSegmentStarted(started);
-            case SegmentDrafted drafted -> onSegmentDrafted(drafted);
+            case SegmentStarted started ->
+                locked(() -> {
+                    feed.segmentStarted(started);
+                    liveCalls.started(started);
+                });
+            case SegmentDrafted drafted -> locked(() -> liveCalls.drafted(drafted));
             case ModelCallFinished finished -> onModelCallFinished(finished);
             case MemoryUpdated updated -> onMemory(updated);
             case ContextAssembled assembled ->
@@ -282,14 +286,6 @@ final class RunSession implements JobListener {
         locked(() -> progress.changed(changed, clock.instant()));
     }
 
-    private void onSegmentStarted(final SegmentStarted started) {
-        locked(() -> feed.segmentStarted(started));
-    }
-
-    private void onSegmentDrafted(final SegmentDrafted drafted) {
-        locked(() -> liveCalls.drafted(drafted));
-    }
-
     private void onModelCallFinished(final ModelCallFinished finished) {
         locked(() -> {
             throughputMeter.finished(finished);
@@ -299,7 +295,10 @@ final class RunSession implements JobListener {
 
     private void onMemory(final MemoryUpdated updated) {
         log.debug("memory updated: {}", updated.kind());
-        locked(() -> queue(feed.memory(updated)));
+        locked(() -> {
+            liveCalls.memory(updated);
+            queue(feed.memory(updated));
+        });
     }
 
     private void onStage(final StageStarted started) {

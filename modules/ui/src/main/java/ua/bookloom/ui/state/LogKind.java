@@ -11,25 +11,23 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum LogKind {
     /** A segment was accepted. */
     ACCEPTED(MessageKey.LOG_ACCEPTED, StatusRole.SUCCESS, "✓", "ok"),
-    /** One attempt of a model call was answered; its first argument names the call's kind. */
-    MODEL_CALL(MessageKey.LOG_MODEL_CALL, StatusRole.INFO, "⇄", "call"),
-    /** One attempt of a model call failed, timed out or was refused; its first argument names the call's kind. */
-    CALL_FAILED(MessageKey.LOG_CALL_FAILED, StatusRole.WARNING, "⚠", "fail"),
-    /** One attempt of a model call the person's pause or stop interrupted: neutral, not a failure. */
-    CALL_PAUSED(MessageKey.LOG_CALL_PAUSED, StatusRole.INFO, "⏸", "pause"),
-    /** A segment the checks did not accept entered a repair round. */
-    ROUND(MessageKey.LOG_ROUND, StatusRole.INFO, "↺", "round"),
+    /** The model repaired a segment on a directed fix; worded as the call that did it. */
+    REPAIRED(MessageKey.LOG_MODEL_CALL, StatusRole.INFO, "↺", "fix"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
-    GLOSSARY_APPLIED(MessageKey.LOG_GLOSSARY_APPLIED, StatusRole.INFO, "≡", "mem"),
+    MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, StatusRole.INFO, "≡", "mem"),
     /** The rolling summary was refreshed. */
-    SUMMARY_UPDATED(MessageKey.LOG_SUMMARY_UPDATED, StatusRole.INFO, "Σ", "sum"),
-    /** The run resumed after a provider error. */
+    SUMMARY(MessageKey.LOG_SUMMARY_UPDATED, StatusRole.INFO, "Σ", "sum"),
+    /**
+     * Something was tried again: a failed or refused attempt, a structure or placeholder repair, the run resuming after
+     * a provider error, or a step of the automatic recovery.
+     */
     RETRIED(MessageKey.LOG_RETRIED, StatusRole.WARNING, "↻", "retry"),
-    /** The run waits for the provider by itself: the next try, what the last probe found, or why it stopped. */
-    WAITING(MessageKey.LOG_WAITING, StatusRole.WARNING, "⏲", "wait"),
     /** A segment was flagged instead of accepted. */
     SEGMENT_ERROR(MessageKey.LOG_SEGMENT_ERROR, StatusRole.DANGER, "✕", "err"),
-    /** A run-level event: a stage started, a pause, a resume, the end. */
+    /**
+     * A run-level event (a stage started, a pause, a resume, the end), or a technical line: an answered call, an
+     * interrupted call or a repair round starting.
+     */
     MILESTONE(MessageKey.LOG_MILESTONE, StatusRole.INFO, "◆", "info");
 
     private final MessageKey messageKey;
@@ -45,7 +43,7 @@ public enum LogKind {
     }
 
     /**
-     * The catalogue message this kind is worded by.
+     * The catalogue message this kind is worded by when an entry names none of its own.
      *
      * @return a defined catalogue key
      */
@@ -74,24 +72,14 @@ public enum LogKind {
     /**
      * The short tag that starts this kind's entry in the log.
      *
-     * @return one of {@code ok}, {@code call}, {@code fail}, {@code pause}, {@code round}, {@code mem}, {@code sum},
-     *     {@code retry}, {@code wait}, {@code err} or {@code info}
+     * @return one of {@code ok}, {@code fix}, {@code mem}, {@code sum}, {@code retry}, {@code err} or {@code info}
      */
     public String tag() {
         return tag;
     }
 
     /**
-     * Whether the entry's first argument is a call kind's token, which the log words by the catalogue's call names.
-     *
-     * @return {@code true} for a model call's line, {@code false} otherwise
-     */
-    public boolean namesACall() {
-        return this == MODEL_CALL || this == CALL_FAILED || this == CALL_PAUSED;
-    }
-
-    /**
-     * Whether the entry reports something that went wrong, which the log's errors-only view keeps.
+     * Whether the entry reports something that went wrong, which the log's Problems only view keeps.
      *
      * @return {@code true} for a warning or a danger, {@code false} otherwise
      */

@@ -803,7 +803,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     translation waits with "Wait until the names pass ends"; a hidden pass disables `+ Add`, Scan,
     Review, Translate, every Translation input and the Locked switches (README "Names & style": read-only under hidden work).
   - **Compare:** at 1280 and 1920, the dialog, Results, hidden. → :ui
-- [ ] 6.5 Rebuild Translating as a summary strip and a full-height live card, so the person sees time left, every
+- [x] 6.5 Rebuild Translating as a summary strip and a full-height live card, so the person sees time left, every
   segment of the call in flight with its own marker, and the scene summary without scrolling.
   - **Satisfies:** translation-pipeline "Always show the scene summary under the live detail"; translation-pipeline
     "Explain sleep and keep-awake in a closable help line"; translation-pipeline "Offer Simple and Detailed views in a
@@ -831,8 +831,12 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - per-item rows (a 4-item batch with 1 MISSING → 3 "translated", 1 "translated again alone");
     - auto-show selects the first new row unless one was clicked;
     - the live card is ≥ 460 px high at 960×640;
-    - the scene summary line carries the spec's wording for the dial (every 20 accepted segments and at each chapter
-      end; the summary text is read through `SummaryRepository`);
+    - the scene summary line carries the spec's one wording on every dial (every 20 accepted segments and at each
+      chapter end; the summary text is read through `SummaryRepository`, target text else source text, "No scene
+      summary yet." when none);
+    - a directed fix of `ch7 · p42` keeps the chunk's rows `p41`–`p44`; a verbatim `ch7 · p43` reads "kept as is";
+      a Stopped or Failed run shows undecided rows as "waiting"; a fallback row reads "translated again alone" from
+      its solo draft on, "to review" if then flagged, with the tooltip by its fault (missing, duplicate, merged);
     - rewrite `LiveCallPanel*Test`.
   - Kept behaviour shown in the new card, with tests: each model call is announced as it starts and appears as the
     current call; after 60 s with no answer the live line says the model is taking longer than usual with one clock;

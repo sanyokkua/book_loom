@@ -231,9 +231,9 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
         pauseOnError(UNREACHABLE);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("412");
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-count-remaining")).isEqualTo("825");
+        assertThat(labelText("translating-count-translated")).isEqualTo("412 translated");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-strip-line")).startsWith("415 of 1,240 segments done");
     }
 
     // IF the paused state also opened a dialog, THEN the same failure would be said twice.
@@ -310,9 +310,9 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
         assertThat(labelText("translating-banner-title")).isEqualTo("The run was refused");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-warn");
-        assertThat(labelText("translating-count-accepted")).isEqualTo("412");
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-count-remaining")).isEqualTo("825");
+        assertThat(labelText("translating-count-translated")).isEqualTo("412 translated");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-strip-line")).startsWith("415 of 1,240 segments done");
     }
 
     // IF a code that is not a provider failure offered the provider settings, THEN the person would be sent to the

@@ -85,4 +85,20 @@ class CallFeedTest {
                 .extracting(CallSnapshot::callId)
                 .isEqualTo(1L);
     }
+
+    // IF a scan's calls had no history, THEN the dialog opened on a scan could list only its last two calls; and a
+    // scan has segments of no chunk, so it must show no rows.
+    @Test
+    void accept_threeCalls_keepsThemAllInTheHistoryAndShowsNoRows() {
+        final ActivityTracker.Handle handle = tracker.begin(ActivityKind.GLOSSARY_SCAN, null);
+        final CallFeed feed = new CallFeed(handle, () -> AT);
+
+        feed.accept(new CallSnapshotUpdated(call(1, CallKind.PRESCAN)));
+        feed.accept(new CallSnapshotUpdated(call(2, CallKind.REVIEW_TERMS)));
+        feed.accept(new CallSnapshotUpdated(call(3, CallKind.SUGGEST_TARGETS)));
+
+        final LiveCalls shown = tracker.running().getFirst().calls();
+        assertThat(shown.recent()).extracting(CallSnapshot::callId).containsExactly(1L, 2L, 3L);
+        assertThat(shown.rows()).isEmpty();
+    }
 }

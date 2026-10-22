@@ -9,17 +9,21 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.ui.LiveCallFixtures;
+import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.LiveRow;
+import ua.bookloom.ui.state.LiveRow.Stage;
 
 /**
- * The live blocks' "Prompt context" sections measured in the real shell: an opened section grows its block, the
- * live card and the page by what it shows, at its natural height up to 320 pixels and scrolling inside beyond that, and
+ * The Detailed detail's "Prompt context" section measured in the real shell: an opened section is as tall as what
+ * it shows, at its natural height up to 320 pixels and scrolling inside beyond that, and
  * closing it gives the height back. Earlier tests asserted only that the texts existed, which a section crushed to one
  * line also passes; these read the laid-out sizes, at the content area a 960 by 640 window leaves and at 1400 by 900.
  */
@@ -39,15 +43,15 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         resizeScene(width, height);
     }
 
+    private static final String CALL = "translating-live-call";
+
+    // The Detailed detail of a row that was sent in call 2, whose prompt section is the one measured.
     private void running(final boolean large) {
-        mirror().publishRunStarted("Frankenstein.epub", null);
         final List<PromptSection> prompt = large ? LiveCallFixtures.largePrompt(LONG) : LiveCallFixtures.smallPrompt();
-        mirror().live()
-                .publishCalls(LiveCallFixtures.calls(
-                        LiveCallFixtures.waiting(2, 2, TEXT, prompt),
-                        LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 2, TEXT, prompt), "{}")));
+        final LiveRow row = new LiveRow("s-2-1", "ch7 · p201", TEXT, null, Stage.IN_CALL, null, List.of(), 2L);
+        showLive(LiveRowFixtures.calls(LiveCallFixtures.waiting(2, 2, TEXT, prompt), List.of(row)));
+        onFx(() -> ((ToggleButton) required("translating-live-mode-detailed")).fire());
         WaitForAsyncUtils.waitForFxEvents();
-        showTranslating();
     }
 
     private double heightOf(final String id) {
@@ -97,35 +101,26 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     }
 
     // IF an opened section kept a fixed or crushed height, THEN it would show one clipped line of what the model was
-    // given; opened, its body is as tall as its content up to 320 px, its row and the live card grow by that much, and
-    // nothing above it is squeezed below its own height.
+    // given; opened, its body is as tall as its content up to 320 px, and nothing above it is squeezed below its own
+    // height.
     @ParameterizedTest
-    @CsvSource({
-        "944, 600, translating-live-card-current, false",
-        "944, 600, translating-live-card-previous, true",
-        "1400, 900, translating-live-card-current, true",
-        "1400, 900, translating-live-card-previous, false"
-    })
-    void context_expanded_growsItsRowAndTheCardByItsContent(
-            final double width, final double height, final String row, final boolean large) {
+    @CsvSource({"944, 600, false", "944, 600, true", "1400, 900, false", "1400, 900, true"})
+    void context_expanded_showsItsWholeContentOrScrollsAt320(
+            final double width, final double height, final boolean large) {
         running(large);
         sizeTo(width, height);
-        final double cardBefore = heightOf("translating-live-card");
-        final double rowBefore = heightOf(row);
 
-        expand(row, true);
+        expand(CALL, true);
 
-        final double body = heightOf(row + "-prompt-body");
-        assertThat(Math.min(hiddenBelow(row), BODY_MAX - body))
+        final double body = heightOf(CALL + "-prompt-body");
+        assertThat(Math.min(hiddenBelow(CALL), BODY_MAX - body))
                 .as("either the whole text shows or the body is at its 320 px")
                 .isLessThanOrEqualTo(SLACK);
         assertThat(body).isLessThanOrEqualTo(BODY_MAX + SLACK);
-        assertThat(heightOf(row) - rowBefore).isGreaterThanOrEqualTo(body);
-        assertThat(heightOf("translating-live-card") - cardBefore).isCloseTo(heightOf(row) - rowBefore, within(SLACK));
-        assertThat(crushed(row)).isEmpty();
+        assertThat(crushed(CALL)).isEmpty();
     }
 
-    // IF a long context grew without limit, THEN one row would push the activity log off the page; past 320 px the body
+    // IF a long context grew without limit, THEN one row would push the detail off the page; past 320 px the body
     // scrolls inside and holds the rest.
     @ParameterizedTest
     @CsvSource({"944, 600", "1400, 900"})
@@ -133,25 +128,23 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         running(true);
         sizeTo(width, height);
 
-        expand("translating-live-card-current", true);
+        expand(CALL, true);
 
-        assertThat(hiddenBelow("translating-live-card-current")).isGreaterThan(0);
-        assertThat(heightOf("translating-live-card-current-prompt-body")).isCloseTo(BODY_MAX, within(SLACK));
+        assertThat(hiddenBelow(CALL)).isGreaterThan(0);
+        assertThat(heightOf(CALL + "-prompt-body")).isCloseTo(BODY_MAX, within(SLACK));
     }
 
-    // IF closing a section left its space behind, THEN the card would keep a gap the size of the context.
+    // IF closing a section left its space behind, THEN the detail would keep a gap the size of the context.
     @ParameterizedTest
-    @CsvSource({"944, 600, translating-live-card-current", "1400, 900, translating-live-card-previous"})
-    void context_collapsedAgain_restoresTheHeights(final double width, final double height, final String row) {
+    @CsvSource({"944, 600", "1400, 900"})
+    void context_collapsedAgain_restoresTheHeights(final double width, final double height) {
         running(true);
         sizeTo(width, height);
-        final double cardBefore = heightOf("translating-live-card");
-        final double rowBefore = heightOf(row);
-        expand(row, true);
+        final double callBefore = heightOf(CALL);
+        expand(CALL, true);
 
-        expand(row, false);
+        expand(CALL, false);
 
-        assertThat(heightOf(row)).isCloseTo(rowBefore, within(SLACK));
-        assertThat(heightOf("translating-live-card")).isCloseTo(cardBefore, within(SLACK));
+        assertThat(heightOf(CALL)).isCloseTo(callBefore, within(SLACK));
     }
 }

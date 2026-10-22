@@ -87,4 +87,21 @@ class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
 
         assertThat(optional("translating-banner")).isNull();
     }
+
+    // IF Start with no target language began a run, THEN the model would be asked to translate into nothing; the
+    // banner names the missing language and Start is off.
+    @Test
+    void cannotStart_noTargetLanguage_namesItAndKeepsStartOff() throws TimeoutException {
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
+        openImport();
+        openBook(BOOK);
+        chooseModel();
+        showTranslating();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet — no target language is chosen.");
+        assertThat(button("translating-start").isDisabled()).isTrue();
+        assertThat(engine.requests()).isEmpty();
+        assertNoDialogOrErrorToast();
+    }
 }

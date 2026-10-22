@@ -13,6 +13,8 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.MemoryKind;
+import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.PromptSection;
 
 /** The two calls of the live panel as the run session hands them to the mirror. */
@@ -98,5 +100,33 @@ class RunSessionLiveCallsTest extends LiveSessionTestBase {
         tick(session);
 
         assertThat(changes.get()).isEqualTo(1);
+    }
+
+    // IF a waiting draft call did not reach the rows, THEN the card would show nothing happening while the model works.
+    @Test
+    void waitingDraftCall_afterTheSegmentsStarted_showsTheirRowsTranslatingWithTheCallId() {
+        final RunSession session = session();
+        session.onEvent(started("s-1", "ch1 · p1", "Source 1"));
+        session.onEvent(started("s-2", "ch1 · p2", "Source 2"));
+
+        session.onEvent(new CallSnapshotUpdated(waiting(1)));
+        tick(session);
+
+        assertThat(calls().rows()).extracting(LiveRow::segmentId).containsExactly("s-1", "s-2");
+        assertThat(calls().rows().get(0).callId()).isEqualTo(1L);
+        assertThat(RowMarker.of(calls().rows().get(0), RunRow.TRANSLATING)).isEqualTo(RowMarker.TRANSLATING);
+        assertThat(RowMarker.of(calls().rows().get(1), RunRow.TRANSLATING)).isEqualTo(RowMarker.WAITING);
+        assertThat(Objects.requireNonNull(calls().current()).callId()).isEqualTo(1);
+    }
+
+    // IF the run's own summary refresh did not reach the published calls, THEN the summary line would stay stale.
+    @Test
+    void memoryUpdatedSummary_thenTick_publishesTheSummaryVersion() {
+        final RunSession session = session();
+
+        session.onEvent(new MemoryUpdated(MemoryKind.SUMMARY, "3"));
+        tick(session);
+
+        assertThat(calls().summaryVersion()).isEqualTo(3);
     }
 }

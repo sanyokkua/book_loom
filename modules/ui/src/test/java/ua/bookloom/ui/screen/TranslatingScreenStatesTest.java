@@ -6,8 +6,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -72,6 +70,9 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-ready-dial")).isEqualTo("Balanced");
         assertThat(enabledControls()).containsExactly("translating-start");
         assertThat(isShown("translating-review-flagged")).isFalse();
+        assertThat(labelText("translating-ready-line")).isEqualTo("Nothing translated yet.");
+        assertThat(isShown("translating-live-card")).isFalse();
+        assertThat(isShown("translating-strip")).isTrue();
     }
 
     // IF the card only said "not chosen", THEN a first-time person would press Start to learn what to do; the hint says
@@ -102,45 +103,45 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
                         + " restart.");
     }
 
-    // IF the tiles mixed repaired with auto-accepted, THEN the repair rate would be invisible.
+    // IF the counts mixed repaired with auto-accepted, THEN the repair rate would be invisible.
     @Test
-    void running_decisionsPublished_showTheFourTilesAndTheProgressLine() {
+    void running_decisionsPublished_showTheCountsAndTheFactsLine() {
         showTranslating();
 
         publishRunning(700, 68, 3, 469);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("700");
-        assertThat(labelText("translating-count-repaired")).isEqualTo("68");
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-count-remaining")).isEqualTo("469");
-        assertThat(labelText("translating-progress-text")).isEqualTo("62% · Chapter 7 of 11 · chunk 41/66");
+        assertThat(labelText("translating-count-translated")).isEqualTo("700 translated");
+        assertThat(labelText("translating-count-fixed")).isEqualTo("68 fixed automatically");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-strip-line")).isEqualTo("771 of 1,240 segments done · Chapter 7 of 11");
     }
 
-    // IF a part were shown while unknown, THEN the line would read "0 of 0" or "~ left" before there is anything to
-    // say.
-    @ParameterizedTest(name = "{0}")
-    @CsvSource(
-            delimiter = '|',
-            value = {
-                "time and rate|24.0|false|80|about 1 h 20 min left · 24 tok/s",
-                "estimated rate|24.0|true|80|about 1 h 20 min left · ~24 tok/s",
-                "rate only|24.0|false|-1|24 tok/s",
-                "time only|-1|false|80|about 1 h 20 min left"
-            })
-    void pace_figuresPublished_omitEachPartWhileUnknown(
-            final String name, final double rate, final boolean estimated, final long minutes, final String expected) {
-        showTranslating();
+    private void publishTimeLeft(final Duration left) {
         publishRunning(700, 68, 3, 469);
-
-        mirror().live()
-                .publishThroughput(new Throughput(
-                        rate < 0 ? null : rate,
-                        estimated,
-                        minutes < 0 ? null : Duration.ofMinutes(minutes),
-                        Duration.ofMinutes(5)));
+        publish(RunState.RUNNING);
+        mirror().live().publishThroughput(new Throughput(24.0, false, left, Duration.ofMinutes(5)));
         WaitForAsyncUtils.waitForFxEvents();
+    }
 
-        assertThat(labelText("translating-pace-text")).isEqualTo(expected);
+    // IF the strip did not lead with the time left once it is measured, THEN the first question has no answer.
+    @Test
+    void bigLine_timeLeftMeasured_saysAboutHowLong() {
+        showTranslating();
+
+        publishTimeLeft(Duration.ofMinutes(80));
+
+        assertThat(labelText("translating-strip-big")).isEqualTo("about 1 h 20 min left");
+    }
+
+    // IF a time left were shown before it is measured, THEN the strip would invent a finishing time.
+    @Test
+    void bigLine_timeLeftNotMeasured_doesNotSayLeft() {
+        showTranslating();
+
+        publishRunning(700, 68, 3, 469);
+        publish(RunState.RUNNING);
+
+        assertThat(textOf("translating-strip")).doesNotContain("left");
     }
 
     // IF the paused line did not say what resume redoes, THEN a person would wonder whether the segments in flight are
@@ -230,10 +231,10 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
         completeWith(1180, 45, 3, 12);
 
-        assertThat(labelText("translating-outcome-accepted")).isEqualTo("1,180");
-        assertThat(labelText("translating-outcome-repaired")).isEqualTo("45");
-        assertThat(labelText("translating-outcome-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-outcome-kept")).isEqualTo("12");
+        assertThat(labelText("translating-count-translated")).isEqualTo("1,180 translated");
+        assertThat(labelText("translating-count-fixed")).isEqualTo("45 fixed automatically");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-count-kept")).isEqualTo("12 kept as is");
         assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (3)");
         assertThat(enabledControls()).isEmpty();
         assertThat(isShown("translating-continue")).isTrue();
@@ -241,7 +242,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
     // IF the audit's doubts were not on the outcome card, THEN a silent leak in an accepted segment would pass unseen.
     @Test
-    void completed_auditDoubtsThreeSegments_showsTheSuspiciousTileWithItsHover() throws Exception {
+    void completed_auditDoubtsThreeSegments_showsTheSecondLookCountWithItsHover() throws Exception {
         bookReadyWithPending(0);
         desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0, 0, 3));
         showTranslating();
@@ -250,14 +251,14 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         mirror().publishOutcome(RunState.COMPLETED, completedReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-outcome-suspicious")).isEqualTo("3");
-        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("translating-outcome-tile-suspicious")))
+        assertThat(labelText("translating-count-second-look")).isEqualTo("3 worth a second look");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("translating-count-second-look")))
                 .startsWith("Accepted segments that a last check");
     }
 
-    // IF chapter numbers kept as they are were counted as kept by choice, THEN the outcome would misreport the book.
+    // IF text kept verbatim and text kept as the source were counted apart, THEN "kept as is" would under-report.
     @Test
-    void completed_twoKeptAsIs_showsThemApartFromKeptAsSource() throws Exception {
+    void completed_twoKeptVerbatimAndOneKeptAsSource_countsThreeKeptAsIs() throws Exception {
         bookReadyWithPending(0);
         desk.willAnswerCounts(new ReviewCounts(40, 0, 0, 0, 0, 0, 0, 0, 2));
         showTranslating();
@@ -267,9 +268,8 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         mirror().publishOutcome(RunState.COMPLETED, completedReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-outcome-accepted")).isEqualTo("38");
-        assertThat(labelText("translating-outcome-verbatim")).isEqualTo("2");
-        assertThat(labelText("translating-outcome-kept")).isEqualTo("1");
+        assertThat(labelText("translating-count-translated")).isEqualTo("38 translated");
+        assertThat(labelText("translating-count-kept")).isEqualTo("3 kept as is");
     }
 
     // IF Continue to Export did not lead to the export step, THEN the finished book could not be found.
@@ -330,7 +330,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
                 .isEqualTo("The translation stopped because of an error. Finished segments are saved.");
         assertThat(labelText("error-note"))
                 .isEqualTo("Finished segments are saved. Continue translation picks up where the run stopped.");
-        assertThat(labelText("translating-outcome-accepted")).isEqualTo("412");
+        assertThat(labelText("translating-count-translated")).isEqualTo("412 translated");
         assertThat(enabledControls()).containsExactly("translating-start");
     }
 }

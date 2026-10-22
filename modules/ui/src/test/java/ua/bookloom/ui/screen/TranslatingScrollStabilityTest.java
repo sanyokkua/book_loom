@@ -45,6 +45,7 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
     private void showATallRunningDashboard() {
         chooseModel();
         showTranslating();
+        resizeScene(960, 640);
         mirror().publishRunStarted("Frankenstein.epub", null);
         publish(RunState.RUNNING);
         mirror().live()
@@ -95,12 +96,13 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
         assertThat(offset()).isCloseTo(before, within(PIXEL));
     }
 
-    // The same for any focused control that goes away below the viewport, here the log's errors-only chip while the
-    // person reads the top of the page: the next focusable control, the log list, must not pull the page down.
+    // The same for any focused control that goes away, here the log tab's Problems only choice while the person reads
+    // the top of the page: the next focusable control, the log list, must not pull the page down.
     @Test
     void focusedNodeBelowTheViewportHidden_pageStaysAtTheTop() {
         showATallRunningDashboard();
-        final Node focused = required("translating-log-errors-only");
+        openActivityLog();
+        final Node focused = required("translating-log-problems");
         onFx(focused::requestFocus);
         onFx(() -> content().setVvalue(0.0));
         final double before = offset();

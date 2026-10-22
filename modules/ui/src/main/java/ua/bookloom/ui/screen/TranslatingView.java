@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -8,46 +9,54 @@ import java.util.function.Function;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.kordamp.ikonli.feather.Feather;
+import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.LiveCallPanel;
 import ua.bookloom.ui.control.StepFooter;
-import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BlockedWords;
+import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
+import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
+import ua.bookloom.ui.state.SleepHelp;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * Builds the Translating screen: the live line of the run-state row, the ready card before a run, the progress card and
- * tiles while one lives, the outcome once it ends, the live panel and log, and the footer whose run actions the
- * toolbar shows.
+ * Builds the Translating screen: why a start waits and the sleep help line, the summary strip in every state, the ready
+ * card before a run and the full-height live card from its start on, and the footer whose run actions the toolbar
+ * shows.
  *
  * <p>Everything that follows a property is bound to it, and the bindings hold their sources weakly, so a screen that
- * is replaced on the next visit is not kept alive by the mirror it observed. Which cards show is decided by the run
- * state alone: the ready card while idle, the progress card and tiles while a run is under way or stopped, the
- * outcome once it completed or failed. The run actions and the banner follow the run-state row ({@link RunStateSource})
- * instead, so they read as the title bar does. The log's cells log nothing, since they are refreshed on every scroll.
+ * is replaced on the next visit is not kept alive by the mirror it observed. Which card shows under the strip is
+ * decided by the run state: the ready card while idle, the live card otherwise. The run actions and the banner follow
+ * the run-state row ({@link RunStateSource}) instead, so they read as the title bar does.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -58,11 +67,8 @@ final class TranslatingView {
 
     private static final double SCREEN_SPACING = 14;
     private static final double CARD_SPACING = 8;
-    private static final double TILE_SPACING = 12;
 
-    private static final Set<RunState> UNDER_WAY =
-            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPING, RunState.STOPPED);
-    private static final Set<RunState> ENDED = Set.of(RunState.COMPLETED, RunState.FAILED);
+    private static final Set<RunState> RUNNING = Set.of(RunState.RUNNING, RunState.PAUSING);
     private static final Set<RunState> REVIEWABLE =
             Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPED, RunState.COMPLETED);
     private static final Set<RunState> WATCHED = EnumSet.complementOf(EnumSet.of(RunState.IDLE));
@@ -80,70 +86,146 @@ final class TranslatingView {
             SectionMemory sections,
             RunStateSource runs) {}
 
+    /**
+     * What the strip and the live card read besides the mirror: the estimate before a start, the scene summary, the
+     * sleep help line and whether technical details are on.
+     */
+    record Reads(BriefEstimate estimate, SceneSummary summary, SleepHelp sleep, TechnicalDetails technical) {}
+
     static Node build(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
             final CurrentProject current,
             final LanguageNames names,
             final Messages messages,
-            final Exits exits) {
+            final Exits exits,
+            final Reads reads) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(mirror, "mirror");
         Objects.requireNonNull(current, "current");
         Objects.requireNonNull(names, "names");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(exits, "exits");
+        Objects.requireNonNull(reads, "reads");
         log.debug("building the translating screen");
-        final ReadOnlyObjectProperty<RunState> state = mirror.runState();
-        final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
+        return layout(viewModel, mirror, current, names, messages, exits, reads);
+    }
+
+    private static Node layout(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
+            final Messages messages,
+            final Exits exits,
+            final Reads reads) {
         final ObservableValue<String> sourceName =
                 languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
         final ObservableValue<String> targetName =
                 languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
-        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
-        return new VBox(
-                SCREEN_SPACING,
-                head(exits.runs(), viewModel, messages),
-                review,
-                StateVisibility.shownIn(
-                        TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
-                StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
-                StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
-                StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
-                StateVisibility.shownIn(
-                        watch(logList, mirror, sourceName, targetName, messages, exits), state, WATCHED),
-                footer(viewModel, mirror, review, messages, exits));
+        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, mirror.runState());
+        final VBox screen = new VBox(SCREEN_SPACING, head(viewModel, mirror, reads.sleep(), messages), review);
+        screen.getChildren()
+                .addAll(
+                        TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads, review), messages),
+                        StateVisibility.shownIn(
+                                TranslatingReadyCard.build(
+                                        viewModel, mirror, current, exits.runs().view(), messages),
+                                mirror.runState(),
+                                Set.of(RunState.IDLE)),
+                        StateVisibility.shownIn(
+                                liveCard(mirror, List.of(sourceName, targetName), messages, exits, reads),
+                                mirror.runState(),
+                                WATCHED),
+                        footer(viewModel, mirror, review, messages, exits));
+        return screen;
     }
 
-    // The live line of the run-state row (until the live card's own line, task 6.5) and why start or resume waits.
-    // The banner is not part of the page: the shell pins it above the scrolling content on every screen (RunBanner).
-    private static Node head(final RunStateSource runs, final TranslatingViewModel viewModel, final Messages messages) {
-        final Label line = new Label();
-        line.setId("translating-live-line");
-        line.setWrapText(true);
-        line.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> runs.view().get().liveLine().in(messages), runs.view()));
-        final VBox head = new VBox(CARD_SPACING, line, heldNote(viewModel, messages));
+    private static TranslatingSummaryStrip.Inputs stripInputs(
+            final StateMirror mirror, final Exits exits, final Reads reads, final ReviewPanel review) {
+        return new TranslatingSummaryStrip.Inputs(
+                exits.runs().view(),
+                reads.estimate().estimate(),
+                // The desk's count, or the run's own flagged rows while the desk has not counted them yet.
+                Bindings.createIntegerBinding(
+                        () -> Math.max(
+                                exits.review().flaggedCount().get(),
+                                mirror.live().flaggedQueue().size()),
+                        exits.review().flaggedCount(),
+                        mirror.live().flaggedQueue()),
+                () -> openReview(mirror, exits.review(), review));
+    }
+
+    // Why start or resume waits, and the help line about sleep while a translation runs. The banner is not part of the
+    // page: the shell pins it above the scrolling content on every screen (RunBanner).
+    private static Node head(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final SleepHelp sleep,
+            final Messages messages) {
+        final VBox head = new VBox(CARD_SPACING, heldNote(viewModel, messages), sleepLine(mirror, sleep, messages));
         head.setId("translating-head");
         return head;
     }
 
-    private static Node watch(
-            final TaggedLog logList,
+    private static Node sleepLine(final StateMirror mirror, final SleepHelp sleep, final Messages messages) {
+        final HBox line = new HBox(CARD_SPACING, sleepText(sleep, messages), closeButton(sleep, messages));
+        line.setId("translating-help-sleep");
+        line.setAlignment(Pos.CENTER_LEFT);
+        line.getStyleClass().addAll("banner", "banner-info");
+        line.visibleProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> sleep.shown().get()
+                                && RUNNING.contains(mirror.runState().get()),
+                        sleep.shown(),
+                        mirror.runState()));
+        line.managedProperty().bind(line.visibleProperty());
+        return line;
+    }
+
+    private static Label sleepText(final SleepHelp sleep, final Messages messages) {
+        final Label text = new Label();
+        text.setGraphic(new FontIcon(Feather.INFO));
+        text.setWrapText(true);
+        text.getStyleClass().add("banner-text");
+        text.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                sleep.keepAwake().get()
+                                        ? MessageKey.TRANSLATING_HELP_SLEEP
+                                        : MessageKey.TRANSLATING_HELP_SLEEP_OFF),
+                        sleep.keepAwake()));
+        HBox.setHgrow(text, Priority.ALWAYS);
+        return text;
+    }
+
+    private static Button closeButton(final SleepHelp sleep, final Messages messages) {
+        final Button close = Tips.install(messages, new Button(), MessageKey.TRANSLATING_HELP_CLOSE_TIP);
+        close.setGraphic(new FontIcon(Feather.X));
+        close.setAccessibleText(messages.get(MessageKey.TRANSLATING_HELP_CLOSE));
+        close.setId("translating-help-sleep-close");
+        close.getStyleClass().add("btn-ghost");
+        close.setOnAction(event -> {
+            log.debug("sleep help line: close pressed");
+            sleep.close();
+        });
+        return close;
+    }
+
+    private static Node liveCard(
             final StateMirror mirror,
-            final ObservableValue<String> sourceName,
-            final ObservableValue<String> targetName,
+            final List<ObservableValue<String>> columnNames,
             final Messages messages,
-            final Exits exits) {
-        final LiveCallPanel live = new LiveCallPanel(
-                "translating-live-card", mirror.live().calls(), mirror.runState(), sourceName, targetName, messages);
-        live.rememberSectionsIn(exits.sections());
-        final Node logCard = TranslatingLogCard.build(logList, messages);
-        final VBox row = new VBox(TILE_SPACING, live, logCard);
-        row.setId("translating-watch");
-        VBox.setVgrow(row, Priority.ALWAYS);
-        return row;
+            final Exits exits,
+            final Reads reads) {
+        final LiveCallPanel.Sources sources = new LiveCallPanel.Sources(
+                mirror.live().calls(),
+                exits.runs().view(),
+                mirror.live().waitingCall(),
+                mirror.activityLog(),
+                reads.technical().property(),
+                reads.summary().text());
+        return new LiveCallPanel(sources, columnNames, exits.sections(), exits.dialogs()::showCalls, messages);
     }
 
     private static ObservableValue<String> languageName(

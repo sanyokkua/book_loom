@@ -50,8 +50,7 @@ The window opens a book on the stored project (one current project, the import s
 verdict, an "Open another book?" question whenever a project is open, the book's content matched against the stored projects so a known book is named and never imported again, one verdict line with a closed "About this book" fold and a three-pane text browser, start and resume without importing again), shows the run and a connection chip in its
 title bar, numbers five workflow steps (Import holds the book's structure since 15i.U3) with a provider footer, and its Book Brief, Structure, Names & style, Translating
 and Export screens are live: the glossary table with scans, model review, suggested targets by the name policy and
-CSV; the seven run states with a live panel showing each model call (kind, segment, attempt, its clock against the timeout), the current and the previous call with every source sent, the
-reply and the prompt context in the order it was sent, a timed activity log with an errors-only view, the provider-error and stuck-call banners with
+CSV; the Translating screen as a summary strip (time left, bar, segments done, counts, "n to review") over a full-height live card (finalize 6.5: the chunk's rows with their markers beside the selected row's detail, Simple and Detailed with the row's call, prompt and reply, follow the newest translation, the scene summary, All calls… over the last 50 calls, the sleep help line, and an Activity log tab with seven kinds and Problems only), the provider-error and stuck-call banners with
 Skip segment and Retry now, and the review panel with retry and proposals; the Export screen writes the book (Save to,
 side files, consistency pass, result tiles and checks, a neutral line for the file just written, the export-complete
 dialog), and the Settings Providers tab tests a provider three ways with measured values. The theme is token-only in

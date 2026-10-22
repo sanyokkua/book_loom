@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.CallKind;
@@ -19,16 +20,26 @@ import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /** Every event the log reports becomes one tagged entry that names its segment by the locator a person reads. */
 class RunSessionLogFeedTest extends LiveSessionTestBase {
 
     private static final String LOCATOR = "ch7 · p42";
 
-    // IF a call's line named the segment by its id, THEN it would mean nothing to someone who reads chapters.
+    // An answered call that only a person reading the technical details wants: an info line, listed on request.
+    private static LogEntry technicalCall(final String... args) {
+        return LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, List.of(args));
+    }
+
+    // IF a call's line named the segment by its id, THEN it would mean nothing to someone who reads chapters; an
+    // ordinary answered call is a technical info line, not a line every reader sees.
     @ParameterizedTest
-    @EnumSource(CallKind.class)
-    void answeredCall_logsItsKindLocatorAttemptAndDuration(final CallKind kind) {
+    @EnumSource(
+            value = CallKind.class,
+            mode = Mode.EXCLUDE,
+            names = {"DIRECTED_FIX", "STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"})
+    void answeredCall_logsATechnicalInfoLineWithItsKindLocatorAttemptAndDuration(final CallKind kind) {
         final RunSession session = session();
         session.onEvent(started("ch07.xhtml:41", LOCATOR, "He opened the old door."));
 
@@ -36,7 +47,43 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
         tick(session);
 
         assertThat(logEntries())
-                .containsExactly(log(LogKind.MODEL_CALL, WaitingCall.tokenOf(kind), " · " + LOCATOR, "0", "1", "0:01"));
+                .containsExactly(technicalCall(WaitingCall.tokenOf(kind), " · " + LOCATOR, "0", "1", "0:01"));
+    }
+
+    // IF a directed fix looked like a routine call, THEN the person could not see which segments the model repaired.
+    @Test
+    void answeredDirectedFix_logsAFixLine() {
+        final RunSession session = session();
+        session.onEvent(started("s-1", LOCATOR, "Text."));
+
+        session.onEvent(call("s-1", CallKind.DIRECTED_FIX));
+        tick(session);
+
+        assertThat(logEntries())
+                .containsExactly(LogEntry.of(
+                        LogKind.REPAIRED,
+                        MessageKey.LOG_MODEL_CALL,
+                        List.of("directed_fix", " · " + LOCATOR, "0", "1", "0:01")));
+    }
+
+    // IF a structure or placeholder repair did not read as a retry, THEN a model that keeps breaking tags would not
+    // show.
+    @ParameterizedTest
+    @EnumSource(
+            value = CallKind.class,
+            names = {"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"})
+    void answeredRepairCall_logsARetryLine(final CallKind kind) {
+        final RunSession session = session();
+        session.onEvent(started("s-1", LOCATOR, "Text."));
+
+        session.onEvent(call("s-1", kind));
+        tick(session);
+
+        assertThat(logEntries())
+                .containsExactly(LogEntry.of(
+                        LogKind.RETRIED,
+                        MessageKey.LOG_MODEL_CALL,
+                        List.of(WaitingCall.tokenOf(kind), " · " + LOCATOR, "0", "1", "0:01")));
     }
 
     // IF a failed attempt were not logged, THEN a stall would leave no trace but the clock.
@@ -50,7 +97,10 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
         tick(session);
 
         assertThat(logEntries())
-                .containsExactly(log(LogKind.CALL_FAILED, "review", " · " + LOCATOR, "0", "2", "1:30", "timeout"));
+                .containsExactly(LogEntry.of(
+                        LogKind.RETRIED,
+                        MessageKey.LOG_CALL_FAILED,
+                        List.of("review", " · " + LOCATOR, "0", "2", "1:30", "timeout")));
     }
 
     // IF a chunk's reviewer call named only its first segment, THEN the line would hide that it reviewed several.
@@ -64,8 +114,7 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
                 null, CallKind.REVIEW, Duration.ofSeconds(6), null, 40, false, List.of("s-1", "s-2"), 1, null));
         tick(session);
 
-        assertThat(logEntries())
-                .containsExactly(log(LogKind.MODEL_CALL, "review", " · ch7 · p41 +1", "0", "1", "0:06"));
+        assertThat(logEntries()).containsExactly(technicalCall("review", " · ch7 · p41 +1", "0", "1", "0:06"));
     }
 
     // IF a call in a repair round did not name its round, THEN three fixes of one segment would read as one.
@@ -80,8 +129,12 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
 
         assertThat(logEntries())
                 .containsExactly(
-                        log(LogKind.ROUND, LOCATOR, "2", "3", "meaning"),
-                        log(LogKind.MODEL_CALL, "directed_fix", " · " + LOCATOR, "2", "1", "0:01"));
+                        LogEntry.technical(
+                                LogKind.MILESTONE, MessageKey.LOG_ROUND, List.of(LOCATOR, "2", "3", "meaning")),
+                        LogEntry.of(
+                                LogKind.REPAIRED,
+                                MessageKey.LOG_MODEL_CALL,
+                                List.of("directed_fix", " · " + LOCATOR, "2", "1", "0:01")));
     }
 
     // IF a summary call named a segment, THEN the line would point at text the call never read.
@@ -92,7 +145,7 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
         session.onEvent(new ModelCallFinished(null, CallKind.SUMMARY, Duration.ofSeconds(1), null, 10, false));
         tick(session);
 
-        assertThat(logEntries()).containsExactly(log(LogKind.MODEL_CALL, "summary", "", "0", "1", "0:01"));
+        assertThat(logEntries()).containsExactly(technicalCall("summary", "", "0", "1", "0:01"));
     }
 
     // IF the same failure repeated as four lines, THEN a stall would push every other line out of view.
@@ -139,9 +192,9 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
 
         assertThat(logEntries())
                 .containsExactly(
-                        log(LogKind.GLOSSARY_APPLIED, "glossary", "+2"),
-                        log(LogKind.GLOSSARY_APPLIED, "memory", LOCATOR),
-                        log(LogKind.SUMMARY_UPDATED, "3"));
+                        log(LogKind.MEMORY, "glossary", "+2"),
+                        log(LogKind.MEMORY, "memory", LOCATOR),
+                        log(LogKind.SUMMARY, "3"));
     }
 
     // IF an accepted or flagged segment named its id, THEN the two most common entries would be unreadable.

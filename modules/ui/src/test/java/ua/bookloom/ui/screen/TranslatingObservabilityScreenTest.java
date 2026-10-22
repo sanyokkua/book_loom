@@ -23,6 +23,7 @@ import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.ConnectionStatus;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
@@ -131,15 +132,17 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         assertThat(job.calls()).last().isEqualTo("skipSegment");
     }
 
-    // IF the run controls sat under the log, THEN during a stall they would be out of view below the fold; the head
-    // holds the live line and the controls are in the toolbar.
+    // IF the run controls sat under the log, THEN during a stall they would be out of view below the fold; the live
+    // line is in the live card, below the strip, and the controls are in the toolbar.
     @Test
-    void head_holdsTheLiveLineAndTheControlsAreInTheToolbar() {
+    void liveLine_isInTheLiveCardAndTheControlsAreInTheToolbar() {
         showTranslating();
         publish(RunState.RUNNING);
 
         final Node head = required("translating-head");
-        assertThat(head.lookup("#translating-live-line")).isNotNull();
+        assertThat(head.lookup("#translating-live-line")).isNull();
+        assertThat(required("translating-live-card").lookup("#translating-live-line"))
+                .isNotNull();
         assertThat(head.lookup("#translating-pause")).isNull();
         assertThat(required("shell-actions").lookup("#translating-pause")).isNotNull();
         assertThat(head.lookup("#translating-live-card")).isNull();
@@ -147,19 +150,22 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
 
     // IF the log could not hide the routine lines, THEN one failure would be lost among hundreds of answered calls.
     @Test
-    void errorsOnly_switchedOn_keepsOnlyTheTroubleLines() {
+    void problemsOnly_chosen_keepsOnlyTheTroubleLines() {
         showTranslating();
         publish(RunState.RUNNING);
         publishLog(
                 new LogEntry(LogKind.ACCEPTED, List.of("ch9 · p01")),
-                new LogEntry(LogKind.CALL_FAILED, List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout")),
+                LogEntry.of(
+                        LogKind.RETRIED,
+                        MessageKey.LOG_CALL_FAILED,
+                        List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout")),
                 new LogEntry(LogKind.MILESTONE, List.of("paused")));
+        openActivityLog();
 
-        onFx(() -> ((ToggleButton) required("translating-log-errors-only")).fire());
+        onFx(() -> ((ToggleButton) required("translating-log-problems")).fire());
 
-        assertThat(logCells()).extracting(cell -> cell.getItem().kind()).containsExactly(LogKind.CALL_FAILED);
-        assertThat(TooltipProbe.tipText(required("translating-log-errors-only")))
-                .isNotBlank();
+        assertThat(logCells()).extracting(cell -> cell.getItem().kind()).containsExactly(LogKind.RETRIED);
+        assertThat(TooltipProbe.tipText(required("translating-log-problems"))).isNotBlank();
     }
 
     // IF a repeated line were not counted, or the time not shown, THEN a stall's length could not be read off the log.
@@ -167,13 +173,10 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
     void line_showsItsTimeAndHowOftenItRepeated() {
         showTranslating();
         publish(RunState.RUNNING);
-        final LogEntry failed = new LogEntry(
-                LogKind.CALL_FAILED,
-                List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout"),
-                LocalTime.of(8, 43, 0),
-                1);
+        final LogEntry failed = new LogEntry(LogKind.SEGMENT_ERROR, List.of("ch9 · p02"), LocalTime.of(8, 43, 0), 1);
 
         publishLog(failed, failed, failed, failed);
+        openActivityLog();
 
         final Node cell = logCells().getFirst();
         assertThat(((Label) cell.lookup(".log-time")).getText()).isEqualTo("08:43:00");
@@ -184,6 +187,8 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_shown_linesShareOneFixedHeight() {
         showTranslating();
+        publish(RunState.RUNNING);
+        openActivityLog();
 
         assertThat(logList().getFixedCellSize()).isEqualTo(34.0);
     }

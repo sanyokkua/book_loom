@@ -18,41 +18,52 @@ import ua.bookloom.ui.i18n.MessageKey;
 /** Every activity-log entry carries a kind, a status role, a non-colour mark and a catalogue message key. */
 class LogKindTest {
 
-    // IF a kind mapped to the wrong role or catalogue message, THEN the log would colour or word an entry wrongly.
+    // IF a kind mapped to the wrong role or default message, THEN the log would colour or word an entry wrongly.
     @ParameterizedTest
     @CsvSource({
         "ACCEPTED, SUCCESS, LOG_ACCEPTED",
-        "MODEL_CALL, INFO, LOG_MODEL_CALL",
-        "CALL_FAILED, WARNING, LOG_CALL_FAILED",
-        "ROUND, INFO, LOG_ROUND",
-        "GLOSSARY_APPLIED, INFO, LOG_GLOSSARY_APPLIED",
-        "SUMMARY_UPDATED, INFO, LOG_SUMMARY_UPDATED",
+        "REPAIRED, INFO, LOG_MODEL_CALL",
+        "MEMORY, INFO, LOG_GLOSSARY_APPLIED",
+        "SUMMARY, INFO, LOG_SUMMARY_UPDATED",
         "RETRIED, WARNING, LOG_RETRIED",
-        "WAITING, WARNING, LOG_WAITING",
         "SEGMENT_ERROR, DANGER, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
-    void kind_eachOfTheNine_hasItsRoleAndCatalogueKey(final LogKind kind, final StatusRole role, final MessageKey key) {
+    void kind_eachOfTheSeven_hasItsRoleAndDefaultCatalogueKey(
+            final LogKind kind, final StatusRole role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
     }
 
-    // IF a kind carried the wrong tag, THEN the log's tag column would mislabel the entry.
+    // IF a kind carried the wrong tag or glyph, THEN the log's tag column would mislabel the entry.
     @ParameterizedTest
     @CsvSource({
-        "ACCEPTED, ok",
-        "MODEL_CALL, call",
-        "CALL_FAILED, fail",
-        "ROUND, round",
-        "GLOSSARY_APPLIED, mem",
-        "SUMMARY_UPDATED, sum",
-        "RETRIED, retry",
-        "WAITING, wait",
-        "SEGMENT_ERROR, err",
-        "MILESTONE, info"
+        "ACCEPTED, ok, ✓",
+        "REPAIRED, fix, ↺",
+        "MEMORY, mem, ≡",
+        "SUMMARY, sum, Σ",
+        "RETRIED, retry, ↻",
+        "SEGMENT_ERROR, err, ✕",
+        "MILESTONE, info, ◆"
     })
-    void tag_eachOfTheNine_isItsFixedWord(final LogKind kind, final String tag) {
+    void tagAndMark_eachOfTheSeven_isItsFixedWordAndGlyph(final LogKind kind, final String tag, final String mark) {
         assertThat(kind.tag()).isEqualTo(tag);
+        assertThat(kind.mark()).isEqualTo(mark);
+    }
+
+    // IF a kind that is not a problem were counted as one, THEN Problems only would list routine lines.
+    @ParameterizedTest
+    @CsvSource({
+        "ACCEPTED, false",
+        "REPAIRED, false",
+        "MEMORY, false",
+        "SUMMARY, false",
+        "RETRIED, true",
+        "SEGMENT_ERROR, true",
+        "MILESTONE, false"
+    })
+    void isTrouble_eachOfTheSeven_isTrueOnlyForRetriesAndErrors(final LogKind kind, final boolean trouble) {
+        assertThat(kind.isTrouble()).isEqualTo(trouble);
     }
 
     // IF two kinds shared a tag or one were not lower-case, THEN the column could not be read at a glance.
@@ -77,7 +88,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
 
-        assertThat(LogKind.values()).hasSize(11);
+        assertThat(LogKind.values()).hasSize(7);
         assertThat(marks).doesNotHaveDuplicates();
     }
 
@@ -102,6 +113,18 @@ class LogKindTest {
 
         assertThat(entry.args()).containsExactly("s-1");
         assertThatThrownBy(() -> entry.args().add("s-3")).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    // IF a technical line looked like any other, THEN Show technical details could not hide it.
+    @Test
+    void logEntry_technicalFactory_keepsItsMessageAndIsTechnical() {
+        final LogEntry entry = LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, List.of("draft"));
+
+        assertThat(entry.technical()).isTrue();
+        assertThat(entry.messageKey()).isEqualTo(MessageKey.LOG_MODEL_CALL);
+        assertThat(entry.wording()).isEqualTo(entry);
+        assertThat(new LogEntry(LogKind.MILESTONE, List.of("paused")).technical())
+                .isFalse();
     }
 
     // IF a null were accepted, THEN a bad entry would fail later in the FX thread instead of at the boundary.

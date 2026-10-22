@@ -4,7 +4,10 @@ import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -17,6 +20,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunMode;
+import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
@@ -37,19 +41,21 @@ final class TranslatingReadyCard {
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
             final CurrentProject current,
+            final ReadOnlyObjectProperty<RunStateView> runs,
             final Messages messages) {
         Objects.requireNonNull(viewModel, "viewModel");
+        Objects.requireNonNull(runs, "runs");
         final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
         final String review = messages.get(
                 MessageKey.TRANSLATING_READY_REVIEW_MODE,
                 viewModel.reviewMode().name().toLowerCase(Locale.ROOT));
-        final Label book = TranslatingFigures.boundLabel(
+        final Label book = boundLabel(
                 "translating-ready-book",
                 "kv-value",
                 () -> bookName(mirror.runFileName().get(), current.book().get()),
                 mirror.runFileName(),
                 current.book());
-        final Label pending = TranslatingFigures.boundLabel(
+        final Label pending = boundLabel(
                 "translating-ready-pending",
                 "kv-value",
                 () -> grouping.format(viewModel.pendingCount().get()),
@@ -63,7 +69,16 @@ final class TranslatingReadyCard {
                 row("review", MessageKey.TRANSLATING_READY_REVIEW, fixed("translating-ready-review", review), messages),
                 row("dial", MessageKey.TRANSLATING_READY_DIAL, dialLabel(current, messages), messages),
                 row("pending", MessageKey.TRANSLATING_READY_PENDING, pending, messages),
-                modelHint(viewModel, messages));
+                modelHint(viewModel, messages),
+                readyLine(runs, messages));
+    }
+
+    // The run-state row's own line ("Nothing translated yet.", where Continue translation picks up).
+    private static Label readyLine(final ReadOnlyObjectProperty<RunStateView> runs, final Messages messages) {
+        final Label line = boundLabel(
+                "translating-ready-line", "muted", () -> runs.get().liveLine().in(messages), runs);
+        line.setWrapText(true);
+        return line;
     }
 
     // Before a first start: "not chosen" alone does not say where a model is chosen.
@@ -76,7 +91,7 @@ final class TranslatingReadyCard {
     }
 
     private static Label modelLabel(final TranslatingViewModel viewModel, final Messages messages) {
-        return TranslatingFigures.boundLabel(
+        return boundLabel(
                 "translating-ready-model",
                 "kv-value",
                 () -> viewModel.modelText().get().isBlank()
@@ -86,7 +101,7 @@ final class TranslatingReadyCard {
     }
 
     private static Label dialLabel(final CurrentProject current, final Messages messages) {
-        return TranslatingFigures.boundLabel(
+        return boundLabel(
                 "translating-ready-dial",
                 "kv-value",
                 () -> current.brief().get() == null
@@ -104,6 +119,15 @@ final class TranslatingReadyCard {
         }
         final Path name = book.source().getFileName();
         return name == null ? book.source().toString() : name.toString();
+    }
+
+    private static Label boundLabel(
+            final String id, final String styleClass, final Callable<String> text, final Observable... sources) {
+        final Label label = new Label();
+        label.setId(id);
+        label.getStyleClass().add(styleClass);
+        label.textProperty().bind(Bindings.createStringBinding(text, sources));
+        return label;
     }
 
     private static Label fixed(final String id, final String text) {

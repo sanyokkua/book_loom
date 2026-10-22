@@ -41,6 +41,7 @@ import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
@@ -345,16 +346,15 @@ final class ConformancePreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    // A run with a call waiting and the one before it answered, so the live blocks and the prompt context are drawn.
+    // A run with a call waiting and two rows in it, so the strip, the live list and the prompt context are drawn.
     private void startARun() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
         final List<PromptSection> prompt = LiveCallFixtures.smallPrompt();
         mirror.live()
-                .publishCalls(LiveCallFixtures.calls(
+                .publishCalls(LiveRowFixtures.calls(
                         LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
-                        LiveCallFixtures.answered(
-                                LiveCallFixtures.waiting(1, 2, "It was a dreary night.", prompt), "{}")));
+                        LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

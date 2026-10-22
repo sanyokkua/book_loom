@@ -1128,6 +1128,12 @@
     -fx-background-color: transparent;
 }
 
+/* A tab pane used as a tab strip only (the live card lays its bodies out itself) has no content area. */
+.tab-pane.tab-strip > .tab-content-area {
+    -fx-padding: 0;
+    -fx-pref-height: 0;
+}
+
 /* Modena paints a blue ring on the selected tab while the pane has focus; it is recoloured to the focus role. */
 .tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
     -fx-border-color: -color-focus;
@@ -2187,6 +2193,85 @@
     -fx-border-radius: 8px;
     -fx-text-fill: -color-text-strong;
     -fx-padding: 0 6px 0 6px;
+}
+
+/* --- Translating: the summary strip and the live card (ui-mockup.html: .strip, .split, .li, .io, .callline) ----- */
+.strip-big {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.strip-line {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+}
+
+.strip-count {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+}
+
+.strip-count-warn {
+    -fx-text-fill: -color-warn-fg;
+}
+
+.live-line {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+}
+
+/* The rows sit in a framed list whose cells keep one fixed height (LiveRowList.ROW_HEIGHT). */
+.live-rows {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 0;
+}
+
+.live-rows .list-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 4px 8px 4px 8px;
+    -fx-pref-width: 0;
+}
+
+.live-rows .list-cell:filled:selected,
+.live-rows .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.live-row-text {
+    -fx-text-fill: -color-text;
+    -fx-text-overrun: ellipsis;
+}
+
+.live-detail-locator {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.live-detail-text {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 14px;
+}
+
+.live-detail-text.live-placeholder {
+    -fx-text-fill: -color-muted;
+    -fx-font-style: italic;
+}
+
+/* What the model works on now: a tinted, framed box under the texts. */
+.live-inflight {
+    -fx-background-color: -color-surface-alt;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8px 10px 8px 10px;
 }
 
 /* A pane that says why it has no text (none visible, none yet, waiting) is slanted, never an empty box; it keeps the */

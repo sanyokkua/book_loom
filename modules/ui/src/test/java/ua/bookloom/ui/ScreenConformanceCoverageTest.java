@@ -31,6 +31,8 @@ class ScreenConformanceCoverageTest {
                         "NAMES_STYLE",
                         "NAMES_STYLE_AUTO",
                         "TRANSLATING",
+                        "TRANSLATING_RUNNING",
+                        "TRANSLATING_COMPLETED",
                         "EXPORT",
                         "ABOUT_DIALOG",
                         "ERROR_DIALOG",

@@ -103,9 +103,9 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.SETTINGS);
     }
 
-    // IF the title bar and the card each worked out the share, THEN at 81 of 163 they could read 50% and 49%.
+    // IF the title bar and the strip each worked out the share, THEN at 81 of 163 they could read 50% and 49%.
     @Test
-    void bar_andTheProgressCard_atOneShare_showTheSamePercent() {
+    void bar_andTheStrip_atOneShare_showTheSamePercent() {
         showTranslating();
         mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.progress(8, 12, 81, 0, 82));
@@ -113,7 +113,8 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(labelText("shell-run-state")).startsWith("50 % done");
-        assertThat(labelText("translating-progress-text")).startsWith("50%");
+        assertThat(progressBar().getProgress()).isCloseTo(0.4969, org.assertj.core.api.Assertions.within(0.0001));
+        assertThat(labelText("translating-strip-line")).startsWith("81 of 163 segments done");
     }
 
     // IF the time left were shown when the run reports none, THEN the bar would claim an estimate it does not have.

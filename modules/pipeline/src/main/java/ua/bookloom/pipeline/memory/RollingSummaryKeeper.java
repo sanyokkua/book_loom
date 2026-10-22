@@ -28,15 +28,13 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * Keeps the rolling summary of one book: a short record of who is who that travels with every draft prompt, because
- * the model forgets earlier chapters. It is refreshed after every {@value #REFRESH_EVERY} accepted segments and at
- * the end of every unit from the glossary and the headings, at no cost; where the dial asks for it, the refresh at a
- * unit's end is one model call instead. Built by the run and used from its one thread, so it holds its counters
- * without locking.
+ * the model forgets earlier chapters. It is refreshed after every {@value RollingSummary#REFRESH_EVERY} accepted
+ * segments and at the end of every unit from the glossary and the headings, at no cost; where the dial asks for it,
+ * the refresh at a unit's end is one model call instead. Built by the run and used from its one thread, so it holds
+ * its counters without locking.
  */
 @Slf4j
 public final class RollingSummaryKeeper {
-
-    static final int REFRESH_EVERY = 20;
 
     private enum Trigger {
         COUNT,
@@ -161,7 +159,7 @@ public final class RollingSummaryKeeper {
             return Result.ok(Optional.empty());
         }
         remember(segment, record);
-        if (acceptedSinceRefresh < REFRESH_EVERY) {
+        if (acceptedSinceRefresh < RollingSummary.REFRESH_EVERY) {
             return Result.ok(Optional.empty());
         }
         return refresh(Trigger.COUNT, segment.unit());

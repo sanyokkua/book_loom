@@ -30,7 +30,7 @@ import ua.bookloom.ui.state.RunState;
 class ShellLayoutScreenTest extends TranslatingScreenTestBase {
 
     private static final double TABLE_MIN = 400;
-    private static final double LOG_MIN = 260;
+    private static final double LIVE_CARD_MIN = 460;
     private static final double REVIEW_ROWS_MIN = 10 * 34;
     private static final String TEXT = "She had lost her mother, and the poor girl wept as she followed the coffin. ";
 
@@ -102,17 +102,23 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
         assertThat(shellScrolls()).isEqualTo(scrolls);
     }
 
-    // IF the dashboard were squeezed into the window, THEN the activity log would be a strip a few lines high; the
-    // running dashboard scrolls the shell and the log keeps its height.
+    // IF the dashboard were squeezed into the window, THEN the live card would be a strip of a few rows; the card keeps
+    // at least 460 pixels, and the shell scrolls where the strip and the card do not fit (the heading is hidden while
+    // a run exists, so a 900 pixel window holds them).
     @ParameterizedTest
-    @CsvSource({CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT, "1000, 900"})
-    void translating_running_keepsTheLogTallAndScrollsTheShell(final double width, final double height) {
+    @CsvSource({
+        "960, 640, true",
+        CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT + ", true",
+        "1000, 900, false"
+    })
+    void translating_running_keepsTheLiveCardTallAndScrollsTheShellWhenItMust(
+            final double width, final double height, final boolean scrolls) {
         running();
 
         sizeTo(width, height);
 
-        assertThat(heightOf("translating-log")).isGreaterThanOrEqualTo(LOG_MIN);
-        assertThat(shellScrolls()).isTrue();
+        assertThat(heightOf("translating-live-card")).isGreaterThanOrEqualTo(LIVE_CARD_MIN);
+        assertThat(shellScrolls()).isEqualTo(scrolls);
     }
 
     // IF the review list took only what was left of the window, THEN it would show a handful of rows; it shows at

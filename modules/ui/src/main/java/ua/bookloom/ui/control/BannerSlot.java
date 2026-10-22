@@ -25,6 +25,8 @@ public final class BannerSlot extends VBox {
         Objects.requireNonNull(banners, "banners");
         setId("shell-banners");
         getStyleClass().add("shell-banners");
+        // The content below gives way, never the banners: a squeezed slot cut a long line to one row.
+        setMinHeight(USE_PREF_SIZE);
         final ListChangeListener<Node> follow = change -> {
             getChildren().setAll(banners.banners());
             markFilled(!getChildren().isEmpty());

@@ -70,6 +70,9 @@ public final class Banner extends HBox {
         this.text.setId(id + "-text");
         setAlignment(Pos.TOP_LEFT);
         getStyleClass().addAll("banner", role.styleClass());
+        // The words take the width the banner has and wrap in it, so a long line grows the banner instead of being cut.
+        HBox.setHgrow(column, Priority.ALWAYS);
+        column.setMinWidth(0);
         getChildren().addAll(icon, column);
         setGlyph(glyph);
         setTitle(title);
