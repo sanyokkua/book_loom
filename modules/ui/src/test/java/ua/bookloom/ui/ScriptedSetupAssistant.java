@@ -126,6 +126,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
         asked.add(projectId);
+        awaitGate();
         return fileName;
     }
 

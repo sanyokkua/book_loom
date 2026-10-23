@@ -56,14 +56,35 @@ class ExportJobProgressTest {
         final ExportJob job = ok(fixture.service().newExport(request, model, seen::add));
         ok(job.run());
 
-        assertThat(seen)
-                .containsExactly(
-                        new ExportProgress(Step.VALIDATING, 0, 1),
-                        new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 0, 2),
-                        new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 2, FIRST, "Один.", null, "unchanged"),
-                        new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 2, 2, SECOND, "Два.", null, "unchanged"),
-                        new ExportProgress(Step.WRITING, 0, 1),
-                        new ExportProgress(Step.WRITING, 1, 1));
+        assertThat(seen).containsExactly(twoUnchangedParagraphs());
+    }
+
+    // Both paragraphs answered unchanged, each announced with the paragraph beside it.
+    private static ExportProgress[] twoUnchangedParagraphs() {
+        return new ExportProgress[] {
+            new ExportProgress(Step.VALIDATING, 0, 1),
+            new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 0, 2),
+            new ExportProgress(
+                    Step.CONSISTENCY_NEIGHBOUR,
+                    1,
+                    2,
+                    FIRST,
+                    "Один.",
+                    null,
+                    "unchanged",
+                    new ExportProgress.Neighbours(null, null, "One.", "Two.", "Два.")),
+            new ExportProgress(
+                    Step.CONSISTENCY_NEIGHBOUR,
+                    2,
+                    2,
+                    SECOND,
+                    "Два.",
+                    null,
+                    "unchanged",
+                    new ExportProgress.Neighbours("One.", "Один.", "Two.", null, null)),
+            new ExportProgress(Step.WRITING, 0, 1),
+            new ExportProgress(Step.WRITING, 1, 1)
+        };
     }
 
     // IF the dialog got no before and after, THEN a fixed paragraph could not be shown next to what it was.
@@ -85,7 +106,14 @@ class ExportJobProgressTest {
 
         assertThat(seen)
                 .contains(new ExportProgress(
-                        Step.CONSISTENCY_NEIGHBOUR, 1, 1, FIRST, "Він йшов додому.", "Він ішов додому.", "fixed"));
+                        Step.CONSISTENCY_NEIGHBOUR,
+                        1,
+                        1,
+                        FIRST,
+                        "Він йшов додому.",
+                        "Він ішов додому.",
+                        "fixed",
+                        new ExportProgress.Neighbours(null, null, "He went home.", null, null)));
     }
 
     // A paragraph the model leaves alone has an item with no after, so the dialog shows only the before.
@@ -101,7 +129,15 @@ class ExportJobProgressTest {
         ok(ok(fixture.service().newExport(request, model, seen::add)).run());
 
         assertThat(seen)
-                .contains(new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 1, FIRST, "Один.", null, "unchanged"));
+                .contains(new ExportProgress(
+                        Step.CONSISTENCY_NEIGHBOUR,
+                        1,
+                        1,
+                        FIRST,
+                        "Один.",
+                        null,
+                        "unchanged",
+                        new ExportProgress.Neighbours(null, null, "One.", null, null)));
     }
 
     // IF a remembered paragraph counted no item, THEN the bar of a second export could never reach its total.
@@ -119,7 +155,15 @@ class ExportJobProgressTest {
 
         assertThat(model.requests()).hasSize(1);
         assertThat(seen)
-                .contains(new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 1, FIRST, "Один.", null, "remembered"));
+                .contains(new ExportProgress(
+                        Step.CONSISTENCY_NEIGHBOUR,
+                        1,
+                        1,
+                        FIRST,
+                        "Один.",
+                        null,
+                        "remembered",
+                        new ExportProgress.Neighbours(null, null, "One.", null, null)));
     }
 
     // Without the pass there are no calls to count: only the checking and the writing are announced.

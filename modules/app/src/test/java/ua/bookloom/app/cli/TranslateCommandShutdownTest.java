@@ -210,6 +210,11 @@ class TranslateCommandShutdownTest {
                 delegate.cancel();
                 cancelled.countDown();
             }
+
+            @Override
+            public void writeNow() {
+                delegate.writeNow();
+            }
         }
     }
 }

@@ -10,8 +10,11 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.OriginalTitle;
@@ -19,6 +22,8 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The book's one translated title and author as the Book Brief shows and edits them. They are the metadata segments of
@@ -63,17 +68,26 @@ public final class BookTitleViewModel {
      * @param target the translated text, or empty until the run has translated it
      * @param editable whether the translated text can be edited now, which it can once it exists
      * @param origin where the original title came from, or null for the author row and while nothing is read
+     * @param sourceShown the original with its formatting marks in the number form ({@code ⟦0⟧}), as the card shows
+     *     it and as an edit is checked against; the same as {@code source} when it has none
      */
     public record Row(
             String source,
             String target,
             boolean editable,
-            @Nullable TitleOrigin origin) {
+            @Nullable TitleOrigin origin,
+            String sourceShown) {
 
         /** Rejects a missing text. */
         public Row {
             Objects.requireNonNull(source, "source");
             Objects.requireNonNull(target, "target");
+            Objects.requireNonNull(sourceShown, "sourceShown");
+        }
+
+        /** A row whose original carries no formatting marks. */
+        Row(final String source, final String target, final boolean editable, final @Nullable TitleOrigin origin) {
+            this(source, target, editable, origin, source);
         }
 
         static Row none() {
@@ -87,6 +101,8 @@ public final class BookTitleViewModel {
     private final ReadOnlyObjectWrapper<Row> title = new ReadOnlyObjectWrapper<>(Row.none());
     private final ReadOnlyObjectWrapper<Row> author = new ReadOnlyObjectWrapper<>(Row.none());
     private final ReadOnlyIntegerWrapper edits = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
+    private final Messages messages;
     // The segment the shown title row was read from; null while there is none. FX thread only.
     private @Nullable String titleSegmentId;
 
@@ -96,10 +112,15 @@ public final class BookTitleViewModel {
      * @param project the holder of the open book
      * @param desk the port the metadata segments are read and edited through
      * @param executor the daemon executor a read or save runs on, never the FX thread
+     * @param messages the catalogue a refused edit is said from
      */
     @Inject
     public BookTitleViewModel(
-            final CurrentProject project, final ReviewDesk desk, @BackgroundExecutor final ExecutorService executor) {
+            final CurrentProject project,
+            final ReviewDesk desk,
+            @BackgroundExecutor final ExecutorService executor,
+            final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.project = Objects.requireNonNull(project, "project");
         this.desk = Objects.requireNonNull(desk, "desk");
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -134,6 +155,15 @@ public final class BookTitleViewModel {
         return edits.getReadOnlyProperty();
     }
 
+    /**
+     * Why the person's last edit was not saved: marks it lacks, or the store's refusal.
+     *
+     * @return a read-only property; empty while the last edit was saved or none was made
+     */
+    public ReadOnlyStringProperty refusal() {
+        return refusal.getReadOnlyProperty();
+    }
+
     /** Reads both rows again from the stored project, which a run may have filled since they were last read. */
     public void refresh() {
         final OpenedBook book = project.book().get();
@@ -149,7 +179,8 @@ public final class BookTitleViewModel {
      * Saves a person's edit of the title or author, which the export then writes everywhere it stands.
      *
      * @param part which row was edited
-     * @param text the new translated text; blank text or the text already stored changes nothing
+     * @param text the new translated text with its marks in the number form; blank text or the text already stored
+     *     changes nothing, and a text lacking a mark of the original is refused here with the message
      */
     public void save(final Part part, final String text) {
         Objects.requireNonNull(part, "part");
@@ -165,13 +196,21 @@ public final class BookTitleViewModel {
             log.debug("{} edit not saved: nothing to change", part);
             return;
         }
+        final MarkStatus marks = MarkStatus.of(row.sourceShown(), text);
+        log.debug("{} edit marks complete {}", part, marks.isComplete());
+        if (!marks.isComplete()) {
+            refusal.set(messages.get(MessageKey.EXPORT_BOOK_TITLE_MARKS_MISSING, String.join(" ", marks.missing())));
+            return;
+        }
+        refusal.set("");
         log.debug("saving the edited {} of project {}", part, book.projectId());
         log.trace("edited {} is '{}'", part, text);
-        submit(() -> saveOffThread(book.projectId(), part, segmentId, text.strip()));
+        submit(() -> saveOffThread(book.projectId(), part, segmentId, MarkStatus.store(text.strip())));
     }
 
     private void reset(final @Nullable OpenedBook book) {
         titleSegmentId = null;
+        refusal.set("");
         title.set(Row.none());
         author.set(Row.none());
         if (book != null) {
@@ -181,11 +220,11 @@ public final class BookTitleViewModel {
 
     private void saveOffThread(final String projectId, final Part part, final String segmentId, final String text) {
         final Result<?> saved = desk.saveEdit(projectId, segmentId, text);
-        if (saved.isErr()) {
-            log.warn(
-                    "the edited {} was not saved: code {}",
-                    part,
-                    Objects.requireNonNull(saved.error()).code());
+        final AppError error = saved.error();
+        if (error != null) {
+            log.warn("the edited {} was not saved: code {}", part, error.code());
+            final String said = messages.get(MessageKey.EXPORT_BOOK_TITLE_NOT_SAVED, error.message());
+            Platform.runLater(() -> refusal.set(said));
         }
         readBoth(projectId, saved.isOk());
     }
@@ -221,11 +260,16 @@ public final class BookTitleViewModel {
             log.debug("no {} segment in project {}", segmentId, projectId);
             return Row.none();
         }
-        final String user = view.userTarget();
+        final String user = view.maskedUserTarget() != null ? view.maskedUserTarget() : view.userTarget();
         final String machine = view.maskedMachineTarget();
-        final String target = user != null ? user : machine == null ? "" : machine;
+        final String target = MarkStatus.show(user != null ? user : machine == null ? "" : machine);
         final boolean translated = view.status() != SegmentStatus.PENDING;
-        return new Row(view.displaySource(), translated ? target : "", translated && !target.isBlank(), origin);
+        return new Row(
+                view.displaySource(),
+                translated ? target : "",
+                translated && !target.isBlank(),
+                origin,
+                MarkStatus.show(view.maskedSource()));
     }
 
     private record Read(Row row, @Nullable String segmentId) {}

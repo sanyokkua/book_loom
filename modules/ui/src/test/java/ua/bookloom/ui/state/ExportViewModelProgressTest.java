@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,10 +32,9 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
     @BeforeEach
     void openTheBook() throws IOException {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
-        Files.write(dir.resolve("Frankenstein.uk.epub"), new byte[1]);
+        exportService.writeFiles(true);
         worker = Executors.newSingleThreadExecutor();
         exports = onFx(() -> newExports(worker));
-        setOverwrite(true);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -69,7 +67,6 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         });
         try {
             exports = onFx(() -> newExports(dying));
-            setOverwrite(true);
             onFx(() -> {
                 exports.export();
                 return null;
@@ -105,7 +102,7 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         assertThat(shown.cancellable()).isTrue();
         // The bar counts every step of the export: the check before it (1) and the first of the 4 rereads, of 5.
         assertThat(shown.fraction()).isEqualTo(0.4);
-        assertThat(shown.stepText()).isEqualTo("Checking paragraphs against their neighbours");
+        assertThat(shown.stepText()).isEqualTo("Reread next to the neighbours");
         assertThat(shown.details()).extracting(Activity.Detail::value).contains("1 of 4", "Frankenstein.uk.epub");
         exportService.release();
     }
@@ -143,7 +140,7 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
                 () -> onFx(() -> activities.running().getFirst().fraction() != null));
 
         final Activity shown = onFx(() -> activities.running().getFirst());
-        assertThat(shown.stepText()).isEqualTo("Drafting flagged and doubtful segments again");
+        assertThat(shown.stepText()).isEqualTo("Translate unsure segments again");
         assertThat(shown.details()).contains(new Activity.Detail("Segments", "3 of 8"));
         exportService.release();
     }

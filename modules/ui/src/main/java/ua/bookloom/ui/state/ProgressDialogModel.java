@@ -126,12 +126,24 @@ public final class ProgressDialogModel {
         reselect();
     }
 
+    // The export's next reread has nothing to show until its answer arrives, so its dialog follows the last item read.
     private void selectRunning() {
-        final StepEntry running = activity.get().steps().running();
+        final StepEntry running = activity.get().kind() == ActivityKind.EXPORT
+                ? lastItem().orElse(activity.get().steps().running())
+                : activity.get().steps().running();
         if (running != null) {
             selectedKey = running.key();
+        } else if (selectedKey == null && !rows.isEmpty()) {
+            // Work that ended before the dialog read it (a quick answer) still shows its last step.
+            selectedKey = rows.getLast().key();
         }
         reselect();
+    }
+
+    private java.util.Optional<StepEntry> lastItem() {
+        return activity.get().steps().entries().reversed().stream()
+                .filter(entry -> entry.itemRef() != null && entry.text() != null)
+                .findFirst();
     }
 
     private void reselect() {

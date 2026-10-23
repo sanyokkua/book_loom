@@ -904,7 +904,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     - `⟦g0⟧ text ⟦g1⟧` loads as `⟦0⟧ text ⟦1⟧` and saves back unchanged.
   - At 960×640 the translation editor and the mark strip are visible (README "Review desk").
   - **Compare:** the desk edited, and with a missing mark. → :ui
-- [ ] 6.7 Finish Export: the toolbar action and its reasons, partial export, tiles from the project, the title fallback,
+- [x] 6.7 Finish Export: the toolbar action and its reasons, partial export, tiles from the project, the title fallback,
   asking before a replace, and the file-name and last-check progress dialogs. The screen is then never empty, and
   never overwrites a file without asking.
   - **Satisfies:** export "Show the tiles from the project before any export"; export "Show the book's title and author
@@ -942,6 +942,10 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     replaces the destination (a failed check leaves the destination untouched); on Max the backward revision runs
     before the file is written and leaves segments the person edited alone.
   - Verify: `./gradlew clean build check spotlessCheck`. → :ui, docs
+  - Note (as built): the replace question is asked from the export's own existence check off the FX thread, before
+    any model call; the 15f automatic re-suggest after a title edit is now a notice; ⬇ Export book stays in the
+    toolbar, and Open folder / Open book join it once a file is written (the app-shell scenario); tile 1 reads "done" before an export and "written" from the
+    stored `ExportRecord` after; no "Adds about 3 min" (no measured export speed). → :api, :pipeline, :ui, docs
 
 ## 7. Settings
 

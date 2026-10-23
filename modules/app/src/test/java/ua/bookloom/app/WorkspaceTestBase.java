@@ -217,10 +217,17 @@ abstract class WorkspaceTestBase {
      */
     protected void exportBook(final Path written) throws Exception {
         onFx(() -> shell.activate(ViewNames.EXPORT));
-        assertThat(exportText("#export-save-to")).isEqualTo(written.toString());
+        // Save as reads as a short path ending in the file name; the full path is the destination itself.
+        assertThat(exportText("#export-save-to")).endsWith(written.getFileName().toString());
+        assertThat(onFx(() -> injector.getInstance(ExportViewModel.class)
+                        .destination()
+                        .get()))
+                .isEqualTo(written.toString());
         waitUntil(() ->
                 injector.getInstance(ExportViewModel.class).exportAvailable().get());
         final int toastsBefore = onFx(() -> toastCount());
+        // A card left open (the review desk a run opened) would hold the complete card back until it is closed.
+        onFx(() -> injector.getInstance(ua.bookloom.ui.ModalHost.class).hide());
         onFx(() -> ((Button) exportNode("#export-run")).fire());
         waitUntil(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
         WaitForAsyncUtils.waitForFxEvents();

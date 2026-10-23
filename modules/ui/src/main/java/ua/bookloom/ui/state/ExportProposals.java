@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -27,13 +28,54 @@ final class ExportProposals {
 
     private final ProjectService projects;
     private final ExecutorService executor;
+    private final Supplier<@Nullable OpenedBook> openBook;
     // The label last found and the project it was found for.
     private @Nullable String label;
     private @Nullable String labelledProject;
+    // The target the last proposal was made for, so a brief change that leaves it alone proposes nothing.
+    private @Nullable String proposedFor;
 
-    ExportProposals(final ProjectService projects, final ExecutorService executor) {
+    /** Where a proposal goes: first the immediate one, then the labelled one if the book is still the one asked about. */
+    @FunctionalInterface
+    interface Sink {
+        void proposed(String path, boolean labelled);
+    }
+
+    ExportProposals(
+            final ProjectService projects,
+            final ExecutorService executor,
+            final Supplier<@Nullable OpenedBook> openBook) {
         this.projects = Objects.requireNonNull(projects, "projects");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.openBook = Objects.requireNonNull(openBook, "openBook");
+    }
+
+    /** Whether the last proposal was made for {@code target}. */
+    boolean isProposedFor(final @Nullable String target) {
+        return Objects.equals(target, proposedFor);
+    }
+
+    /**
+     * Proposes the destination for {@code book}: an empty one while no book or no target is chosen, the command
+     * line's name at once, and the labelled name once the stored projects are read, if still current.
+     */
+    void propose(final @Nullable OpenedBook book, final @Nullable String target, final Sink sink) {
+        proposedFor = target;
+        if (book == null || target == null) {
+            log.debug("no proposal: a book is open {}, a target is chosen {}", book != null, target != null);
+            sink.proposed("", false);
+            return;
+        }
+        sink.proposed(proposal(book, target).toString(), false);
+        load(book, target, proposed -> {
+            final OpenedBook now = openBook.get();
+            final boolean current =
+                    now != null && now.projectId().equals(book.projectId()) && target.equals(proposedFor);
+            log.debug("file label arrived: still current {}", current);
+            if (current) {
+                sink.proposed(proposed.toString(), true);
+            }
+        });
     }
 
     /**

@@ -96,6 +96,6 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
 
         final Node node = required("export-aux-consistency");
 
-        assertThat(((ToggleSwitch) node).getText()).isEqualTo("Run before writing");
+        assertThat(((ToggleSwitch) node).getText()).isEqualTo("Check the uncertain places again");
     }
 }

@@ -269,6 +269,7 @@ final class ConformanceCases {
                     ImportConformanceCases.SCREENS.stream(),
                     NamesStyleConformanceCases.SCREENS.stream(),
                     ProjectsConformanceCases.SCREENS.stream(),
+                    ExportConformanceCases.SCREENS.stream(),
                     TranslatingConformanceCases.SCREENS.stream())
             .flatMap(cases -> cases)
             .toList();

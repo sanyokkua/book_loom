@@ -94,8 +94,26 @@ public final class ExportCompleteDialog {
      */
     public void show(final ExportOutcome outcome) {
         Objects.requireNonNull(outcome, "outcome");
+        log.debug("showing the export-complete card for {}", outcome.report().destination());
+        modalHost.show(card(outcome), false);
+    }
+
+    /**
+     * Shows the card when the window is free: at once when no card is open and no model work is visible, else after
+     * they are gone, so a finished export never lands on a question or on the work's own dialog. FX thread only.
+     *
+     * @param outcome the report and the size of the written file
+     */
+    public void showWhenFree(final ExportOutcome outcome) {
+        Objects.requireNonNull(outcome, "outcome");
+        log.debug(
+                "export-complete card for {} waits for a free window",
+                outcome.report().destination());
+        modalHost.showWhenFree(card(outcome));
+    }
+
+    private DialogPane card(final ExportOutcome outcome) {
         final Path file = outcome.report().destination();
-        log.debug("showing the export-complete card for {}", file);
         final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
@@ -107,7 +125,7 @@ public final class ExportCompleteDialog {
         card.setContent(body(file, outcome));
         buttons(card, file);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        modalHost.show(card, false);
+        return card;
     }
 
     private Node body(final Path file, final ExportOutcome outcome) {
@@ -156,6 +174,11 @@ public final class ExportCompleteDialog {
             row.getStyleClass().add("kv");
             body.getChildren().add(row);
         }
+        ExportReportLines.lastCheck(messages, report.consistency()).ifPresent(line -> {
+            final Label value = plain(line);
+            value.setId("export-complete-last-check");
+            body.getChildren().add(row(MessageKey.EXPORT_COMPLETE_LAST_CHECK, value));
+        });
         addPartialWarnings(body, report);
         for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
             final Label text = new Label(line);
@@ -208,6 +231,8 @@ public final class ExportCompleteDialog {
                 MessageKey.EXPORT_COMPLETE_COPY_TIP);
         copy.setId("export-complete-copy");
         copy.getStyleClass().add("btn-ghost");
+        // A long folder wraps beside it; the button keeps its whole word (Ukrainian is longer).
+        copy.setMinWidth(Region.USE_PREF_SIZE);
         copy.setOnAction(event -> {
             log.debug("export-complete copy path pressed");
             clipboard.accept(file.toString());

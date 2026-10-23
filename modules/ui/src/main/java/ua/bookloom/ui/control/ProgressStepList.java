@@ -2,11 +2,13 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.ListView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -52,6 +54,31 @@ final class ProgressStepList extends VBox {
      * @param newestFirst whether the rows are shown last to first with no follow switch, as a list of finished calls
      */
     ProgressStepList(final ProgressDialogModel model, final Messages messages, final boolean newestFirst) {
+        this(model, messages, newestFirst, null, true);
+    }
+
+    /**
+     * Builds a list of only the rows {@code shown} keeps, as one section of a dialog that groups its steps.
+     *
+     * @param model the steps, the selection and the follow switch it reads
+     * @param messages the catalogue the steps' words come from
+     * @param shown which rows the section holds
+     * @param withFollow whether this section carries the follow switch; one section of a dialog does
+     */
+    ProgressStepList(
+            final ProgressDialogModel model,
+            final Messages messages,
+            final Predicate<StepEntry> shown,
+            final boolean withFollow) {
+        this(model, messages, false, shown, withFollow);
+    }
+
+    private ProgressStepList(
+            final ProgressDialogModel model,
+            final Messages messages,
+            final boolean newestFirst,
+            final @Nullable Predicate<StepEntry> shown,
+            final boolean withFollow) {
         super(SPACING);
         this.model = Objects.requireNonNull(model, "model");
         Objects.requireNonNull(messages, "messages");
@@ -59,13 +86,14 @@ final class ProgressStepList extends VBox {
         final ToggleSwitch follow = Tips.install(
                 messages, new ToggleSwitch(messages.get(MessageKey.PROGRESS_FOLLOW)), MessageKey.PROGRESS_FOLLOW_TIP);
         follow.setId("progress-follow");
-        follow.setVisible(!newestFirst);
-        follow.setManaged(!newestFirst);
+        follow.setVisible(!newestFirst && withFollow);
+        follow.setManaged(!newestFirst && withFollow);
         follow.selectedProperty().bindBidirectional(model.follow());
         list.setId("progress-steps");
         list.getStyleClass().add("progress-steps");
         list.setFixedCellSize(ROW_HEIGHT);
-        list.setItems(newestFirst ? reversedRows() : model.rows());
+        list.setItems(
+                newestFirst ? reversedRows() : shown == null ? model.rows() : new FilteredList<>(model.rows(), shown));
         list.setCellFactory(view -> new StepCell(messages, "progress-step-"));
         VBox.setVgrow(list, Priority.ALWAYS);
         getChildren().addAll(follow, list);
@@ -89,11 +117,15 @@ final class ProgressStepList extends VBox {
      */
     void sizeToRows(final boolean own) {
         if (own) {
-            list.minHeightProperty()
-                    .bind(Bindings.size(model.rows()).multiply(ROW_HEIGHT).add(LIST_BORDER));
+            final var rowsHeight =
+                    Bindings.size(list.getItems()).multiply(ROW_HEIGHT).add(LIST_BORDER);
+            list.minHeightProperty().bind(rowsHeight);
+            list.prefHeightProperty().bind(rowsHeight);
         } else {
             list.minHeightProperty().unbind();
+            list.prefHeightProperty().unbind();
             list.setMinHeight(Region.USE_COMPUTED_SIZE);
+            list.setPrefHeight(Region.USE_COMPUTED_SIZE);
         }
     }
 

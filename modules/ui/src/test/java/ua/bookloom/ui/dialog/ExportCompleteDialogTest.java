@@ -78,7 +78,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
                 .contains(
-                        "Also written",
+                        "Also saved",
                         "Frankenstein.uk.glossary.csv",
                         "Frankenstein.uk.report.md",
                         "Consistency pass: 1 segment adjusted");
@@ -115,7 +115,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
         show();
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
-                .noneMatch(text -> text.startsWith("Also written") || text.startsWith("Consistency pass"));
+                .noneMatch(text -> text.startsWith("Also saved") || text.startsWith("Consistency pass"));
     }
 
     // Segments written in the source for a broken translation are named, so a partial book is never a surprise.

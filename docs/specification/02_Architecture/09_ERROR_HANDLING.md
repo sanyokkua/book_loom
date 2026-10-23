@@ -120,6 +120,10 @@ separate `Result`. A **cancelled** run is not itself an error: `TranslationJob.r
 destination exists without overwrite) is instead returned as `Result.err(AppError)` directly, before any report is
 built.
 
+An export whose last check the person ended early ("Write the file now") is a **partial pass, not a failure**: the
+model call in flight answers `cancelled`, which the pass reads as the stop, keeps every fix already stored, writes the
+book and reports the paragraphs it never reached as `ConsistencyChecks.notReread`.
+
 ## ui-surfacing {#ui-surfacing}
 
 - A failed `Result` reaching `:ui` produces: (1) a **toast** (`err`) with `title`, and (2) for actionable/hard failures

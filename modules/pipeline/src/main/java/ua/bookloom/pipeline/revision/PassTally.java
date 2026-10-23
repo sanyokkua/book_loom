@@ -26,6 +26,7 @@ final class PassTally {
     private int neighbourUnchanged;
     private int neighbourRemembered;
     private int skipped;
+    private int notReread;
     private final Map<String, Integer> refused = new TreeMap<>();
 
     /** Records a machine target the sweep replaced, with the number of term deferrals it swept into it. */
@@ -82,6 +83,15 @@ final class PassTally {
         skipped++;
     }
 
+    /** Records paragraphs the check never reached because the person had the file written early. */
+    void notReread(final int paragraphs) {
+        notReread += paragraphs;
+    }
+
+    int notRereadCount() {
+        return notReread;
+    }
+
     /** Records a proposal stored for a segment the person edited. */
     void proposed(final String segmentId, final String locator) {
         proposals++;
@@ -101,7 +111,7 @@ final class PassTally {
                 notes,
                 openDeferrals,
                 neighbourFixes,
-                new ConsistencyChecks(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped),
+                new ConsistencyChecks(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped, notReread),
                 waits.characters(),
                 waits.suggestedSegments(),
                 waits.unknownSegments());

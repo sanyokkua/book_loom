@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -11,18 +12,24 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * The model's proposal of the translated book's file name: asks for it and, when it arrives, puts it in the destination
- * as the person's own choice, keeping the folder and the format suffix the destination already has. FX thread only.
+ * The model's proposal of the translated book's file name: asks for it and holds the answer in the short progress
+ * dialog until the person presses "Use this name", which puts it in the destination as the person's own choice, keeping
+ * the folder and the format suffix the destination already has; Cancel keeps the current name. A title edit asks the
+ * model nothing: it only says the title changed. FX thread only.
  */
 @Slf4j
 public final class NameSuggestion {
 
     private static final String FB2_ZIP = ".fb2.zip";
+    private static final LanguageNames LANGUAGES = new LanguageNames();
 
     private final CurrentProject project;
     private final Messages messages;
@@ -81,17 +88,17 @@ public final class NameSuggestion {
     }
 
     /**
-     * Reconsiders the file name after the title or author was edited: a name the model suggested is suggested again from
-     * the new title, while a name the person typed or chose, or no suggestion at all, is left alone.
+     * Says, after the title or author was edited, that a name the model suggested may no longer match; the model is
+     * asked again only when the person presses Suggest a name. A name the person chose is left without a word.
      */
     public void afterTitleEdit() {
         log.debug("title edited: the destination holds a suggested name {}", nameIsSuggested);
         if (nameIsSuggested) {
-            ask();
+            notice.set(messages.get(MessageKey.EXPORT_SUGGEST_NAME_TITLE_CHANGED));
         }
     }
 
-    /** Asks the model for the translated book's file name and puts it in the destination. */
+    /** Asks the model for the translated book's file name and offers it in the dialog. */
     public void ask() {
         final OpenedBook book = project.book().get();
         if (setup == null || book == null || suggesting.get()) {
@@ -102,11 +109,34 @@ public final class NameSuggestion {
         notice.set("");
         authorKept.set(false);
         suggesting.set(true);
-        setup.runShown(
+        setup.runForOneStep(
                         ActivityKind.SUGGEST_NAME,
                         (model, progress) -> setup.assistant().suggestFileName(book.projectId(), model, progress),
-                        answer -> answered(book.projectId(), answer))
+                        answer -> answered(book.projectId(), answer),
+                        messages.get(MessageKey.EXPORT_SUGGEST_NAME_STEP),
+                        sentOf(book),
+                        this::answerOf)
                 .ifPresent(this::refused);
+    }
+
+    // What the model was given, in plain words: the title, the language the name is written in and the file format.
+    private String sentOf(final OpenedBook book) {
+        final BookProfile profile = book.profile();
+        final String title = profile == null || profile.title() == null ? "" : profile.title();
+        // The open book holds the brief it was opened with; the target the person chose since lives on the project.
+        final BookBrief brief = project.brief().get();
+        final String target = brief == null ? null : brief.targetLanguage();
+        final String format = String.valueOf(book.inspection().format());
+        return messages.get(
+                MessageKey.EXPORT_SUGGEST_NAME_SENT,
+                title,
+                target == null ? "" : LANGUAGES.nameOf(target, messages.locale()),
+                format);
+    }
+
+    private String answerOf(final Result<FileNameSuggestion> answer) {
+        final FileNameSuggestion suggestion = answer.data();
+        return suggestion == null ? "" : messages.get(MessageKey.EXPORT_SUGGEST_NAME_HOW, suggestion.name());
     }
 
     private void refused(final SetupHelper.Refusal refusal) {
@@ -121,29 +151,34 @@ public final class NameSuggestion {
                 });
     }
 
-    private void answered(final String projectId, final Result<FileNameSuggestion> answer) {
+    private Optional<ResultOffer> answered(final String projectId, final Result<FileNameSuggestion> answer) {
         suggesting.set(false);
         final OpenedBook now = project.book().get();
         if (now == null || !now.projectId().equals(projectId)) {
             log.debug("the file name suggestion is dropped: the open book changed");
-            return;
+            return Optional.empty();
         }
         final AppError failure = answer.error();
         if (failure != null && failure.code() == ErrorCode.cancelled) {
             log.info("the file name suggestion was stopped by the person");
-            return;
+            return Optional.empty();
         }
         if (failure != null) {
             log.warn("the file name suggestion failed with {}", failure.code());
             notice.set(failure.message());
-            return;
+            return Optional.empty();
         }
         if (!Objects.equals(askedFor, destination.destination().get())) {
             log.debug("the file name suggestion is dropped: the person changed the destination while it waited");
-            return;
+            return Optional.empty();
         }
         final FileNameSuggestion suggestion = Objects.requireNonNull(answer.data(), "data");
-        destination.destinationPath().ifPresent(current -> take(current, suggestion));
+        log.debug("the file name suggestion is offered for the person to use");
+        return Optional.of(new ResultOffer(
+                MessageKey.EXPORT_SUGGEST_NAME_USE,
+                true,
+                () -> destination.destinationPath().ifPresent(current -> take(current, suggestion)),
+                () -> log.info("the suggested file name was not used: the current name stays")));
     }
 
     private void take(final java.nio.file.Path current, final FileNameSuggestion suggestion) {

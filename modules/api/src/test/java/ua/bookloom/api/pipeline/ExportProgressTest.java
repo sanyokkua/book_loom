@@ -64,4 +64,39 @@ class ExportProgressTest {
 
         assertThat(seen).containsExactly(request);
     }
+
+    // IF the seven-argument form invented neighbours, THEN a step with no paragraph would draw an empty grid.
+    @Test
+    void new_sevenArguments_hasNoNeighbours() {
+        final ExportProgress progress =
+                new ExportProgress(ExportProgress.Step.RETRY_DOUBTED, 1, 4, "Book.md:2", "Old.", "New.", "kept");
+
+        assertThat(progress.neighbours()).isNull();
+    }
+
+    @Test
+    void new_withNeighbours_keepsEachSideOfTheParagraph() {
+        final ExportProgress.Neighbours around =
+                new ExportProgress.Neighbours("Before.", "Перед.", "Now.", "After.", "Після.");
+
+        final ExportProgress progress = new ExportProgress(
+                ExportProgress.Step.CONSISTENCY_NEIGHBOUR, 2, 6, "Book.md:2", "Тепер.", null, "unchanged", around);
+
+        assertThat(progress.neighbours()).isEqualTo(around);
+        final ExportProgress.Neighbours shown = java.util.Objects.requireNonNull(progress.neighbours(), "neighbours");
+        assertThat(shown.previousSource()).isEqualTo("Before.");
+        assertThat(shown.previousTarget()).isEqualTo("Перед.");
+        assertThat(shown.source()).isEqualTo("Now.");
+        assertThat(shown.nextSource()).isEqualTo("After.");
+        assertThat(shown.nextTarget()).isEqualTo("Після.");
+    }
+
+    // The first and the last paragraph of a book have only one neighbour.
+    @Test
+    void neighbours_firstParagraph_hasNoPrevious() {
+        final ExportProgress.Neighbours first = new ExportProgress.Neighbours(null, null, "Now.", "After.", "Після.");
+
+        assertThat(first.previousSource()).isNull();
+        assertThat(first.previousTarget()).isNull();
+    }
 }

@@ -9,6 +9,9 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ImportedBook;
@@ -41,7 +44,11 @@ class BookTitleViewModelTest extends FxTestBase {
     void setUpViewModel() {
         current = new CurrentProject();
         desk = new ScriptedReviewDesk();
-        titles = onFx(() -> new BookTitleViewModel(current, desk, new DirectExecutor()));
+        titles = onFx(() -> new BookTitleViewModel(
+                current,
+                desk,
+                new DirectExecutor(),
+                new ua.bookloom.ui.i18n.Messages((ua.bookloom.ui.i18n.LocaleProvider) () -> java.util.Locale.ENGLISH)));
     }
 
     private static SegmentView view(final String id, final String source, final String target) {
@@ -91,7 +98,9 @@ class BookTitleViewModelTest extends FxTestBase {
 
         openBook();
 
-        assertThat(title()).isEqualTo(new Row("Field Notes", "Польові нотатки", true, TitleOrigin.FRONT_MATTER));
+        assertThat(title())
+                .extracting(Row::source, Row::target, Row::editable, Row::origin)
+                .containsExactly("Field Notes", "Польові нотатки", true, TitleOrigin.FRONT_MATTER);
     }
 
     // IF the file name were editable, THEN an edit would have no stored segment to land in.
@@ -101,7 +110,9 @@ class BookTitleViewModelTest extends FxTestBase {
 
         openBook();
 
-        assertThat(title()).isEqualTo(new Row("earth-gravity", "", false, TitleOrigin.FILE_NAME));
+        assertThat(title())
+                .extracting(Row::source, Row::target, Row::editable, Row::origin)
+                .containsExactly("earth-gravity", "", false, TitleOrigin.FILE_NAME);
         // The author row still reads its own segment; only the title must not be read.
         assertThat(desk.calls()).noneMatch(call -> call.startsWith("segment(") && !call.contains("aux:creator"));
     }
@@ -147,5 +158,90 @@ class BookTitleViewModelTest extends FxTestBase {
         openBook();
 
         assertThat(onFx(() -> titles.author().get()).origin()).isNull();
+    }
+
+    private static SegmentView markedHeading() {
+        return new SegmentView(
+                "ch1:0",
+                "ch1:0",
+                SegmentKind.HEADING,
+                SegmentStatus.ACCEPTED,
+                "The ⟦g0⟧Field⟦g1⟧ Notes",
+                "The Field Notes",
+                "Нотатки ⟦g0⟧Поля⟦g1⟧",
+                null,
+                null,
+                List.of(),
+                null,
+                SegmentPath.DRAFT,
+                false,
+                null,
+                null);
+    }
+
+    private void openMarkedHeading() {
+        desk.willAnswerOriginalTitle(new OriginalTitle("The Field Notes", TitleOrigin.FIRST_HEADING, "ch1:0"));
+        desk.willAnswerSegment(markedHeading());
+        openBook();
+    }
+
+    private void save(final String text) {
+        onFx(() -> {
+            titles.save(Part.TITLE, text);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF a heading title showed its stored codes, THEN the person would read ⟦g0⟧ in the book's own title.
+    @Test
+    void title_headingWithMarks_showsNumberedMarksInTheSourceAndTheTranslation() {
+        openMarkedHeading();
+
+        assertThat(title().sourceShown()).isEqualTo("The ⟦0⟧Field⟦1⟧ Notes");
+        assertThat(title().target()).isEqualTo("Нотатки ⟦0⟧Поля⟦1⟧");
+    }
+
+    // IF the shown form were stored as typed, THEN the desk would receive marks it does not know.
+    @Test
+    void save_headingWithMarks_storesTheTextWithTheMarksPutBackToTheStoredForm() {
+        openMarkedHeading();
+
+        save("Записи ⟦0⟧Поля⟦1⟧");
+
+        assertThat(desk.calls()).contains("saveEdit(p1, ch1:0, Записи ⟦g0⟧Поля⟦g1⟧)");
+    }
+
+    // IF an edit lacking a mark reached the desk, THEN the gate would refuse it with only a log line.
+    @Test
+    void save_headingMissingAMark_isRefusedHereWithTheMessageAndNoDeskCall() {
+        openMarkedHeading();
+
+        save("Записи ⟦0⟧Поля");
+
+        assertThat(desk.calls()).noneMatch(call -> call.startsWith("saveEdit("));
+        assertThat(onFx(() -> titles.refusal().get()))
+                .isEqualTo("Not saved: the title lacks the formatting marks ⟦1⟧.");
+    }
+
+    // IF a refusal by the gate were silent, THEN a person would think the title was saved.
+    @Test
+    void save_gateRefusesTheEdit_showsANotSavedMessage() {
+        openMarkedHeading();
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Refused", "The placeholders differ.")));
+
+        save("Записи ⟦0⟧Поля⟦1⟧");
+
+        assertThat(onFx(() -> titles.refusal().get())).startsWith("Not saved:");
+    }
+
+    @Test
+    void save_afterARefusal_aGoodEditClearsTheMessage() {
+        openMarkedHeading();
+        save("Записи ⟦0⟧Поля");
+
+        save("Записи ⟦0⟧Поля⟦1⟧");
+
+        assertThat(onFx(() -> titles.refusal().get())).isEmpty();
     }
 }

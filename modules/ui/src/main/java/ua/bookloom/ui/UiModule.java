@@ -49,6 +49,8 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.DirtySource;
+import ua.bookloom.ui.state.ExportAnnouncement;
+import ua.bookloom.ui.state.ExportAnnouncer;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.HiddenResultsAnnouncer;
@@ -135,6 +137,7 @@ public final class UiModule extends AbstractModule {
         bind(ImportGuard.class);
         bind(BookBriefViewModel.class);
         bind(ExportViewModel.class);
+        bind(ExportAnnouncer.class).to(ExportAnnouncement.class);
         bind(RunStarter.class);
         bind(TranslatingViewModel.class);
         bind(RunStateSource.class);
@@ -154,6 +157,10 @@ public final class UiModule extends AbstractModule {
         bind(SessionReporter.class).asEagerSingleton();
         // Eager, so a narrator the run inferred reaches the brief even when no brief screen exists when the run ends.
         bind(StoredNarratorFollower.class).asEagerSingleton();
+        bindAnnouncers();
+    }
+
+    private void bindAnnouncers() {
         // Eager, so a names pass that ends in the background is announced while any screen shows.
         bind(HiddenResultsAnnouncer.class).asEagerSingleton();
         // Eager, so the review desk opens by itself when a run completes, whichever screen is shown.

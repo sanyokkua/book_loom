@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextFormatter;
+import javafx.scene.control.TextInputControl;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.state.MarkStatus;
 
@@ -25,9 +26,11 @@ public final class ProtectedMarks implements UnaryOperator<TextFormatter.Change>
     private static final Pattern MARK = Pattern.compile("⟦\\d+⟧");
 
     private final Supplier<String> sourceDisplay;
+    private final boolean keepsEveryMark;
 
-    private ProtectedMarks(final Supplier<String> sourceDisplay) {
+    private ProtectedMarks(final Supplier<String> sourceDisplay, final boolean keepsEveryMark) {
         this.sourceDisplay = sourceDisplay;
+        this.keepsEveryMark = keepsEveryMark;
     }
 
     /**
@@ -40,7 +43,21 @@ public final class ProtectedMarks implements UnaryOperator<TextFormatter.Change>
         Objects.requireNonNull(area, "area");
         Objects.requireNonNull(sourceDisplay, "sourceDisplay");
         log.debug("protecting the formatting marks of the editor {}", area.getId());
-        area.setTextFormatter(new TextFormatter<String>(new ProtectedMarks(sourceDisplay)));
+        area.setTextFormatter(new TextFormatter<String>(new ProtectedMarks(sourceDisplay, false)));
+    }
+
+    /**
+     * Protects the marks of a one-line field, such as the book's title, where no mark may be deleted at all: a delete
+     * or replace keeps every whole mark it covers, so the text can never lack one.
+     *
+     * @param field the non-null field
+     * @param sourceDisplay the non-null supplier of the original in the number form, read at each paste
+     */
+    public static void install(final TextInputControl field, final Supplier<String> sourceDisplay) {
+        Objects.requireNonNull(field, "field");
+        Objects.requireNonNull(sourceDisplay, "sourceDisplay");
+        log.debug("protecting every formatting mark of the field {}", field.getId());
+        field.setTextFormatter(new TextFormatter<String>(new ProtectedMarks(sourceDisplay, true)));
     }
 
     @Override
@@ -58,7 +75,8 @@ public final class ProtectedMarks implements UnaryOperator<TextFormatter.Change>
             start = widenedStart(old, start);
             end = relocated(old, end);
         }
-        final String kept = dedupe(old.substring(0, start) + old.substring(end), change.getText());
+        final String covered = keepsEveryMark ? String.join("", MarkStatus.marksOf(old.substring(start, end))) : "";
+        final String kept = covered + dedupe(old.substring(0, start) + covered + old.substring(end), change.getText());
         change.setRange(start, end);
         change.setText(kept);
         final int caret = start + kept.length();

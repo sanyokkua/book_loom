@@ -7,6 +7,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 
@@ -111,7 +112,36 @@ public interface ModelCalls {
      */
     default void reread(
             final String segmentId, final String before, @Nullable final String after, final String verdict) {
+        reread(segmentId, before, after, verdict, null);
+    }
+
+    /**
+     * Announces one reread paragraph with the paragraphs around it, so the item can be read in its place. A seam that
+     * shows nothing ignores it.
+     *
+     * @param segmentId the segment that was reread; non-null
+     * @param before the target before the reread; book text, never logged above TRACE; non-null
+     * @param after the target the reread stored, or null when it changed nothing
+     * @param verdict as for {@link #reread(String, String, String, String)}
+     * @param neighbours the paragraphs around it, or null when the stage cannot name them
+     */
+    default void reread(
+            final String segmentId,
+            final String before,
+            @Nullable final String after,
+            final String verdict,
+            final ExportProgress.@Nullable Neighbours neighbours) {
         // Nothing shows rereads.
+    }
+
+    /**
+     * Whether the person asked to write the file now, so a stage sends no further call and leaves what it has not
+     * reached as stored. A seam with no early stop always answers {@code false}.
+     *
+     * @return {@code true} if the stages should stop before their next item, {@code false} otherwise
+     */
+    default boolean isStoppingEarly() {
+        return false;
     }
 
     /** The stages of a backward revision whose calls are counted before the first is sent. */

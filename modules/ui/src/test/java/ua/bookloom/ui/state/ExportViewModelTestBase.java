@@ -3,9 +3,12 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
@@ -15,7 +18,9 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingProjectRepository;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedExportService;
@@ -23,8 +28,11 @@ import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
+import ua.bookloom.ui.UiTestInjector;
+import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.DialogFeedback;
 
 /**
  * What the export view model tests share: a real {@link ImportViewModel} over the scripted project service and a
@@ -48,6 +56,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     ScriptedChatModelFactory models;
     SettingsViewModel settings;
     WorkflowProgress progress;
+    final MemorySettings storedSettings = new MemorySettings();
+    final RecordingProjectRepository store = new RecordingProjectRepository();
 
     /** A provider that never says what window its model has. */
     final ModelCapabilities capabilities = (providerId, modelId) -> Result.ok(ContextLength.unknown());
@@ -99,6 +109,11 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     /** Builds an export view model over this test's collaborators and the given executor. */
     ExportViewModel newExports(final ExecutorService executor) {
+        return newExports(executor, null);
+    }
+
+    /** Builds an export view model with a setup helper, or none. FX thread only (the question card is a node). */
+    ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
                 current,
                 desk,
@@ -110,7 +125,12 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 progress,
                 executor,
                 activities,
-                null);
+                setup,
+                storedSettings,
+                store,
+                new ConfirmDialog(new ModalHost(new WorkVisibility(), new DialogFeedback()), messages),
+                (ExportOutcome outcome) -> {},
+                Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC));
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */
@@ -159,14 +179,6 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    void setOverwrite(final boolean overwrite) {
-        onFx(() -> {
-            exports.setOverwrite(overwrite);
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
     void refresh() {
         onFx(() -> {
             exports.refresh();
@@ -181,10 +193,6 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     String target() {
         return onFx(() -> String.valueOf(current.brief().get().targetLanguage()));
-    }
-
-    boolean overwrite() {
-        return onFx(() -> exports.overwrite().get());
     }
 
     boolean destinationExists() {

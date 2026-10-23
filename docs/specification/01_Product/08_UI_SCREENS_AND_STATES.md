@@ -720,54 +720,44 @@ Purpose: choose the destination and export the translated book.
 
 | Control                   | JavaFX control                | Behaviour                                                                                                                                |
 |------------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| Save to / Browse             | `TextField` + `FileChooser`      | Output path, defaulted from the source name and target language, with the shared naming rule and an "already exists" warning when overwrite is off; **Suggest name** asks the model for the author and title in the target language, and when the author was kept in the source alphabet a hint under the field says so ("The author's name was kept in Latin — edit it if you want it translated"), gone once the name is edited; while the field is empty a note under it says Export book waits for a path ("Choose where to write the book…") |
-| Overwrite                    | `ToggleSwitch`                    | Built today: allows writing over an existing file at the chosen path. **Planned:** no Replace switch — if the file exists, BookLoom asks before replacing it |
+| Save as / Change…            | `Label` + `FileChooser`          | The destination as a short path ("Books ▸ earth-gravity.uk.md", "(in your home folder)" beside it) whose tooltip is the full path; it is chosen, never typed. Defaulted from the source name and target language with the shared naming rule. **✦ Suggest a name** asks the model in a short progress dialog and the answer is used only on "Use this name"; when the author was kept in the source alphabet a hint says so, gone once the name changes; an edit of the title only says "The title changed. Press ✦ Suggest a name…" and asks nothing. Under it: "If a file with this name exists, BookLoom asks before replacing it." |
 | Format                       | read-only `Label`                 | The book's original format (EPUB/FB2/MD/TXT) — export is same-format only; there is **no format chooser** (DD-30, FR-EXPORT-01)          |
-| Also export (side files)     | three `CheckBox`es (live)         | Glossary (CSV) / bilingual copy / quality report (FR-EXPORT-05) — each produces its file when checked                                    |
-| Final consistency pass       | `ToggleSwitch` (live)             | FR-EXPORT-06 — runs the consistency pass on export at any quality dial setting. **Planned wording:** "Last check before saving" — "Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours. Adds about 3 min for this book."; off and disabled for a partial export |
-| Checks                       | banner(s)                         | The round-trip and resource checks carried over from the Import screen, re-shown here before writing                                             |
-| Counts                       | stat tiles                        | Accepted, flagged, pending, and kept-as-source, named apart                                                                              |
-| `Export book`                | `Button`                          | Writes the book; **unavailable while a run of this project is translating**                                                              |
-| Open folder                  | `Button`                          | Shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows (an exit code of 1 still counts as success), `xdg-open` on its folder on Linux |
+| Title and author             | read-only `Label`s + `TextField`s | Original (read-only) and translated (editable); a book that names no author says "The book names no author"; the title's reason line names where it came from. A title with formatting marks shows them as `⟦0⟧` and the field keeps every one; an edit that is not saved says "Not saved: …" |
+| Also save (side files)       | three `CheckBox`es (live)         | Glossary (CSV) / bilingual copy / quality report (FR-EXPORT-05) — each produces its file when checked; an existing chosen side file is asked about like the book |
+| Last check before saving     | `ToggleSwitch` (live)             | FR-EXPORT-06 — "Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours."; starts from the stored Automation setting, else on at Max; off and disabled for a partial export ("Runs when the whole book is translated") without changing the setting |
+| Banners                      | `Banner`s                         | Translating: "Pause or stop the translation to export. You can export what is done so far; the rest keeps the original text." [Pause]. Partial: "74 of 142 segments are translated. The other segments keep the original text". Nothing translated: "Nothing is translated yet." The export in the background: the screen is read-only until it ends |
+| Tiles                        | stat tiles                        | Before any export, from the project: **74 of 142** segments done · translated without changes · reviewed by you · "checked when written" (—). After a written export, the first from the stored export ("70 of 142" segments written, also after a restart) and the fourth ✓ "checked: opens, nothing missing"; the middle two stay live |
+| `⬇ Export book`              | `Button` in the toolbar           | Writes the book; unavailable while a run of this project is translating ("Pause or stop the translation to export") or nothing is translated ("Nothing is translated yet."), the reason beside it. When the book or a chosen side file exists it asks first ("Replace 2 existing files?" naming each path); Cancel writes nothing |
+| Open folder · Open book      | `Button`s                         | After an export. Open folder shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows (an exit code of 1 still counts as success), `xdg-open` on its folder on Linux |
 
 The partial-export statement names **pending segments** (not yet decided), **segments kept as source by choice** and
 **segments kept as is** (a chapter number, a scene break — nothing to translate, decided with no model call) apart, so a
 partial export never describes every remaining segment as the same kind of gap. The
 **export-complete dialog** (`#dialog-export-complete`) is the export's **only** success notice — no `ok` toast
-duplicates it.
+duplicates it; it opens also when the export finished in the background, and holds the row **Last check** ("18
+segments reread · 1 fixed") when the check ran. A finished export is recorded on its project (`ExportRecord`) by the
+window only; the command line keeps nothing.
 
-**Planned — UI finalization + SQLite (E1–E3, I).**
-
-| Element | Behaviour | Code |
-|---|---|---|
-| Toolbar | Back · **⬇ Export book** (disabled while translating), then Open folder · Open book (L2) | `ExportView`, `StepFooter` |
-| Banner | Translating: "Pause or stop the translation to export. You can export what is done so far; the rest keeps the original text." [Pause]. Paused or stopped: "74 of 142 segments are translated. The other segments keep the original text." | new |
-| **Tiles** (E1) | From the project **before** any export: **74 of 142** segments done · translated without changes · reviewed by you · "checked when written" (— until written, then ✓ "opens, nothing missing") | a pre-export source; `ExportResult.reset()` blanks today |
-| **Title and author** (E1) | Original (read-only) and translated (editable); when there is none, one line says why ("The book names no author"). Markdown takes the title from its first heading or front matter | `ExportTitleCard`, `BookTitleViewModel.read` |
-| **Where to save** | "Books ▸ earth-gravity.uk.md (in your home folder)" with the full path as tooltip · Change… · ✦ Suggest a name; the same format as the original; if the file exists, BookLoom asks before replacing it | `ExportDestinationCard`, `ExportPathRules`, `ExportOccupancy` |
-| Also save | Glossary (CSV) · Bilingual copy · Quality report | `ExportSideFilesColumn` |
-| **Last check before saving** | As the table row above | `ExportSideFilesColumn` |
-
-States: **populated** (a book is open, ready to export) and **empty** ("No book is open", with a hint to Import;
-nothing to reveal).
+States: **populated** (ready to export), **running** (a run translates: banner with Pause, action disabled), **partial**
+(banner, last check locked off), **nothing translated** (banner, action disabled) and **exported** (checks, Open folder,
+Open book). With no book open the screen shows only its tiles and the unavailable action.
 
 ### Suggest a file name — progress dialog {#dialog-progress-file-name}
 
-**Planned (G4, short).** One step: Sent (title, target, format) \| Answer (the name and how it was made). Footer: "Cancel
-keeps the current name." · Cancel · **Use this name**.
+One step: what was sent and the answer. Footer: "Cancel keeps the current name." · Cancel · **Use this name**, which
+puts the name in Save as; Cancel keeps the current name.
 
 ### Export · last check before saving — progress dialog {#dialog-progress-export}
 
-**Planned (G4, long; E2, E3).** Groups: **Steps** — Check the translation is complete · Fix he/she forms that became
-known (`CONSISTENCY_RETRY`) · Translate unsure segments again (`RETRY_DOUBTED`); **Reread next to the neighbours · 6 of
-18** (one item per segment: unchanged · kept · fixed · reading… · waiting); **Finish** — Write the file. Figures: "48 % ·
-12 of 25 steps · Left about 2 min". Item detail: a plain sentence, then a bordered **Before \| After** grid (the segment
-before, this segment, the segment after; a fix shows the old text struck through above the new one; "unchanged" is said
-in words); Detailed adds the parsed prompt and the raw reply note. Footer: left, Continue in background and "Cancel
-writes no file."; right, **Write the file now** (asks: "6 of 18 reread, 1 fixed; the other 12 stay as they are") and
-**Cancel**, which asks "Cancel the export? No file is written."; Esc hides. On finish **Export complete** opens
-(`#dialog-export-complete`). `ExportProgress.Step` is VALIDATING → CONSISTENCY_RETRY → RETRY_DOUBTED →
-CONSISTENCY_NEIGHBOUR → WRITING.
+Sections: **Steps** — Check the translation is complete · Fix he/she forms that became known (`CONSISTENCY_RETRY`) ·
+Translate unsure segments again (`RETRY_DOUBTED`); **Reread next to the neighbours · 6 of 18** (one item per segment);
+**Finish** — Write the file. Item detail: a plain sentence, then a bordered **Before \| After** grid (the segment before,
+this segment, the segment after, source above translation; a fix shows the old text struck through above the new one;
+"Unchanged — kept as it was" in words). Footer: left, Continue in background and "Cancel writes no file."; right,
+**Write the file now** (asks: "6 of 18 reread, 1 fixed; the other 12 stay as they are"; yes keeps every fix made,
+gives up the call in flight and reports the rest as not reread) and **Cancel**, which asks "Cancel the export? No file is
+written."; Esc hides and the activity chip reopens it. On finish **Export complete** opens (`#dialog-export-complete`).
+`ExportProgress.Step` is VALIDATING → CONSISTENCY_RETRY → RETRY_DOUBTED → CONSISTENCY_NEIGHBOUR → WRITING.
 
 Requirements: FR-EXPORT-01..06. Export always writes the book back in its original format; converting to another format
 is out of scope (DD-30). P6 reference: Translated book ready / Export.

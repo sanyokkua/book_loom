@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
@@ -158,6 +159,24 @@ final class NeighbourPrompt {
                     record.userTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
             final String target = masked == null ? "" : DisplayText.of(masked).strip();
             return target.isEmpty() ? null : new Neighbour(source, target);
+        }
+
+        /**
+         * The paragraphs around a reread one as a person reads them: plain text, no formatting marks.
+         *
+         * @param before the paragraph before it, or null
+         * @param source the reread paragraph's opened segment
+         * @param after the paragraph after it, or null
+         * @return never null
+         */
+        static ExportProgress.Neighbours around(
+                @Nullable final Neighbour before, final Segment source, @Nullable final Neighbour after) {
+            return new ExportProgress.Neighbours(
+                    before == null ? null : DisplayText.of(before.source().masked()),
+                    before == null ? null : before.target(),
+                    DisplayText.of(source.masked()),
+                    after == null ? null : DisplayText.of(after.source().masked()),
+                    after == null ? null : after.target());
         }
     }
 }

@@ -20,13 +20,12 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
-import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
-import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -37,7 +36,7 @@ import ua.bookloom.ui.state.RunState;
  * The export screen as the place the book is written: where it goes, what is written beside it, the action, and the
  * result it reports afterwards. Nothing here may write except the one Export book action.
  */
-class ExportScreenTest extends TranslatingScreenTestBase {
+class ExportScreenTest extends ExportScreenTestBase {
 
     private static final Path EPUB = Path.of("Frankenstein.epub");
 
@@ -59,10 +58,6 @@ class ExportScreenTest extends TranslatingScreenTestBase {
 
     private void openEpubAndShowExport() throws TimeoutException {
         openBookAndShowExport(EPUB, BookFixtures.frankensteinImport());
-    }
-
-    private ScriptedExportService exportService() {
-        return (ScriptedExportService) injector.getInstance(ExportService.class);
     }
 
     private RecordingDestinationChooser chooser() {
@@ -95,19 +90,22 @@ class ExportScreenTest extends TranslatingScreenTestBase {
                 0);
     }
 
-    // IF the tiles were not filled from the report, THEN a person would not see what the written book contains.
+    // IF the tile still counted the live book, THEN the record of what was written would never show.
     @Test
-    void screen_afterExport_showsTheTilesAndAPassedMark() throws TimeoutException {
+    void screen_afterExport_showsTheWrittenTileFromTheRecordAndAPassedMark() throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
         openEpubAndShowExport();
 
-        exportBook(report(1240, 1224, 16));
+        exportBook(new ExportReport(
+                Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, ConsistencySummary.NOT_RUN, 0));
 
-        assertThat(labelText("export-written-value")).isEqualTo("1,240");
-        assertThat(labelText("export-auto-value")).isEqualTo("98.7%");
-        assertThat(labelText("export-reviewed-value")).isEqualTo("16");
+        assertThat(labelText("export-written-value")).isEqualTo("70 of 142");
+        assertThat(textOf("export-written")).contains("segments written");
         assertThat(labelText("export-valid-value")).isEqualTo("✓");
+        assertThat(textOf("export-valid")).contains("checked: opens, nothing missing");
         assertThat(textOf("export-check-reopened")).contains("Re-opened and verified");
-        assertThat(isShown("export-actions")).isTrue();
+        assertThat(isShown("export-reveal")).isTrue();
+        assertThat(isShown("export-open-book")).isTrue();
     }
 
     private static ExportReport reportWith(final List<Path> sideFiles, final ConsistencySummary consistency) {
@@ -178,28 +176,21 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         assertThat(isShown("export-refusal")).isFalse();
     }
 
-    // IF the result stayed after Replace changed, THEN the tiles and Open buttons would vouch for another run.
+    // IF the result stayed after the destination changed, THEN the checks and Open buttons would vouch for another
+    // file.
     @Test
-    void screen_replaceChangedAfterExport_clearsTheResult() throws TimeoutException {
+    void screen_destinationChangedAfterExport_keepsTheTilesButHidesTheChecksAndActions() throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
         openEpubAndShowExport();
-        exportBook(report(10, 10, 0));
+        exportBook(report(70, 0, 0));
+        chooser().answer(Path.of("/archive/out.epub"));
 
-        onFx(() -> ((ToggleSwitch) required("export-replace")).setSelected(true));
+        onFx(() -> button("export-browse").fire());
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("export-written-value")).isEqualTo("—");
-        assertThat(isShown("export-actions")).isFalse();
+        assertThat(labelText("export-written-value")).isNotEqualTo("—");
+        assertThat(isShown("export-open-book")).isFalse();
         assertThat(optional("export-check-reopened")).isNull();
-    }
-
-    // IF nothing written still showed a percentage, THEN the tile would divide by zero.
-    @Test
-    void screen_exportWroteNothing_showsDashesForThePercentage() throws TimeoutException {
-        openEpubAndShowExport();
-
-        exportBook(report(0, 0, 0));
-
-        assertThat(labelText("export-auto-value")).isEqualTo("—");
     }
 
     // IF a Markdown book with no declared language claimed a metadata update, THEN the line would be false.
@@ -237,28 +228,25 @@ class ExportScreenTest extends TranslatingScreenTestBase {
 
     // IF checks and result actions showed before an export, THEN they would vouch for a file that does not exist.
     @Test
-    void screen_beforeAnyExport_hasNoChecksAndDashesAndNoResultActions() throws TimeoutException {
+    void screen_beforeAnyExport_hasNoChecksNoResultActionsAndTheDestinationAsAReadOnlyPath() throws TimeoutException {
         openEpubAndShowExport();
 
         assertThat(optional("export-check-reopened")).isNull();
         assertThat(optional("export-check-language")).isNull();
-        assertThat(labelText("export-written-value")).isEqualTo("—");
-        assertThat(labelText("export-valid-value")).isEqualTo("—");
-        assertThat(isShown("export-actions")).isFalse();
-        assertThat(((TextField) required("export-save-to")).getText()).isEqualTo("Frankenstein.uk.epub");
+        assertThat(isShown("export-open-book")).isFalse();
+        assertThat(TooltipProbe.tipText(required("export-save-to"))).isEqualTo("Frankenstein.uk.epub");
+        assertThat(required("export-save-to")).isNotInstanceOf(TextField.class);
         assertThat(textOf("export-format")).contains("EPUB — same as the original");
         assertThat(labelText("export-title")).isEqualTo("Export");
     }
 
-    // IF the no-book state offered a destination or an export, THEN there would be nothing to write.
+    // IF the no-book state were a screen of its own, THEN Export would be empty exactly where it must say why.
     @Test
-    void screen_noBookOpen_showsTheNoBookStateAndNextIsUnavailable() {
+    void screen_noBookOpen_showsNoSeparateEmptyStateAndExportIsUnavailable() {
         showExport();
 
-        assertThat(isShown("nobook-card")).isTrue();
-        assertThat(optional("export-save-to")).isNull();
-        assertThat(optional("export-run")).isNull();
-        assertThat(button("export-next").isDisabled()).isTrue();
+        assertThat(optional("nobook-card")).isNull();
+        assertThat(button("export-run").isDisabled()).isTrue();
     }
 
     // IF the side files stayed usable while a run translates, THEN a person could choose outputs that cannot be
@@ -276,7 +264,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
                 .isTrue();
         assertThat(isShown("export-aux-consistency")).isTrue();
         assertThat(button("export-run").isDisabled()).isTrue();
-        assertThat(labelText("export-note")).isEqualTo("Pause the run to export");
+        assertThat(labelText("export-run-hint")).isEqualTo("Pause or stop the translation to export");
     }
 
     // IF a pause did not free the choices again, THEN a paused run could never export.
@@ -289,7 +277,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
 
         assertThat(required("export-aux-glossary").isDisabled()).isFalse();
         assertThat(button("export-run").isDisabled()).isFalse();
-        assertThat(isShown("export-note")).isFalse();
+        assertThat(isShown("export-run-hint")).isFalse();
     }
 
     // IF a side-file box did not reach the viewmodel, THEN the chosen file would never be written.
@@ -304,9 +292,9 @@ class ExportScreenTest extends TranslatingScreenTestBase {
                 .contains(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML);
     }
 
-    // IF Browse did not hand the choice to the viewmodel, THEN the picked file would not be the destination.
+    // IF Change… did not hand the choice to the viewmodel, THEN the picked file would not be the destination.
     @Test
-    void browse_pressed_callsChooseDestinationWithThePickedFile() throws TimeoutException {
+    void change_pressed_callsChooseDestinationWithThePickedFile() throws TimeoutException {
         openEpubAndShowExport();
         chooser().answer(Path.of("/archive/out.epub"));
 
@@ -314,7 +302,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(chooser().initials()).containsExactly(Path.of("Frankenstein.uk.epub"));
-        assertThat(((TextField) required("export-save-to")).getText()).isEqualTo("/archive/out.epub");
+        assertThat(TooltipProbe.tipText(required("export-save-to"))).isEqualTo("/archive/out.epub");
         assertThat(ThemeTestSupport.onFx(() -> injector.getInstance(ExportViewModel.class)
                         .destination()
                         .get()))
@@ -346,7 +334,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
 
         assertThat(labelText("export-failure")).isEqualTo("Frankenstein.uk.epub is taken.");
         assertThat(optional("export-complete-card")).isNull();
-        assertThat(isShown("export-actions")).isFalse();
+        assertThat(isShown("export-open-book")).isFalse();
     }
 
     // IF Open folder or Open book were not wired, THEN pressing them would do nothing.
@@ -370,18 +358,6 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         assertThat(textOf("export-subtitle")).doesNotContain("The run wrote");
     }
 
-    // IF the replace switch did not reach the viewmodel, THEN an occupied path could never be overwritten.
-    @Test
-    void replaceSwitch_on_allowsReplacing() throws TimeoutException {
-        openEpubAndShowExport();
-
-        onFx(() -> ((ToggleSwitch) required("export-replace")).setSelected(true));
-
-        assertThat(ThemeTestSupport.onFx(() ->
-                        injector.getInstance(ExportViewModel.class).overwrite().get()))
-                .isTrue();
-    }
-
     // IF the labels were not from the active catalogue, THEN a Ukrainian session would read English.
     @ParameterizedTest
     @ValueSource(strings = {"uk"})
@@ -389,7 +365,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         useLocale(Locale.forLanguageTag(language));
         openEpubAndShowExport();
 
-        assertThat(button("export-run").getText()).isEqualTo("Експортувати книгу");
-        assertThat(button("export-browse").getText()).isEqualTo("Огляд…");
+        assertThat(button("export-run").getText()).isEqualTo("⬇ Експортувати книгу");
+        assertThat(button("export-browse").getText()).isEqualTo("Змінити…");
     }
 }

@@ -20,4 +20,12 @@ public interface ExportJob {
      * stops the side files not yet written. It may be called before or during {@link #run()}, from any thread.
      */
     void cancel();
+
+    /**
+     * Ends the last check early so the book is written now: the model call in flight is interrupted, no further call
+     * is made, every fix already stored is kept, and the items the check never reached are reported as not reread
+     * ({@link ConsistencyChecks#notReread()}). Ignored when no consistency pass runs or writing has already begun. It
+     * may be called from any thread.
+     */
+    void writeNow();
 }

@@ -6,7 +6,6 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -18,20 +17,23 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The export screen for an open book, laid out like the mockup: the result tiles across the top, the card that writes
- * the book beside the side-file cards, and the step footer.
+ * The export screen, laid out like the mockup: the banners, the tiles across the top, the title card and the card that
+ * writes the book beside the side-file cards, and the step footer whose forward action is ⬇ Export book, in the
+ * toolbar, with the reason beside it whenever it cannot be pressed.
  *
  * <p>Everything a person can set or read is the view model's; this class only arranges it and fills the result parts
  * when an export finishes. The view model outlives it, so it is observed through weak listeners held by the fields
@@ -41,7 +43,6 @@ import ua.bookloom.ui.state.OpenedBook;
 final class ExportView {
 
     private static final double SCREEN_SPACING = 14;
-    private static final double CARD_SPACING = 12;
     private static final double LINE_SPACING = 4;
 
     private final ExportViewModel viewModel;
@@ -53,9 +54,14 @@ final class ExportView {
     private final ExportDestinationCard destination;
     private final ExportSideFilesColumn sideFiles;
     private final ExportResult result;
+    private final ExportBanners banners;
+    private final HiddenWork hidden;
     private final VBox statement = new VBox(LINE_SPACING);
     private final ListChangeListener<String> onStatement = change -> showStatement();
-    // A stored edit of the title or author gives a file name the model suggested a reason to be suggested again.
+    private final ChangeListener<@Nullable ExportFigures> onFigures = (observed, was, now) -> showFigures(now);
+    private final ChangeListener<String> onReason = (observed, was, now) -> explain();
+    private @Nullable StepFooter footer;
+    // A stored edit of the title or author makes a file name the model suggested worth suggesting again, on request.
     private final ChangeListener<Number> onTitleEdited;
     private final WeakChangeListener<Number> weakTitleEdited;
 
@@ -66,11 +72,13 @@ final class ExportView {
             final Messages messages,
             final Navigator navigator,
             final DestinationChooser chooser,
-            final FileRevealer revealer) {
+            final FileRevealer revealer,
+            final TranslatingViewModel translating,
+            final HiddenWork hidden) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.titleModel = Objects.requireNonNull(titleModel, "titleModel");
         this.onTitleEdited = (observed, was, now) -> {
-            log.debug("the title or author was edited; the suggested file name is reconsidered");
+            log.debug("the title or author was edited; a suggested file name gets a notice");
             viewModel.nameSuggestion.afterTitleEdit();
         };
         this.weakTitleEdited = new WeakChangeListener<>(onTitleEdited);
@@ -81,6 +89,19 @@ final class ExportView {
         this.destination = new ExportDestinationCard(viewModel, messages, chooser);
         this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
         this.result = new ExportResult(messages, revealer, navigator);
+        this.hidden = Objects.requireNonNull(hidden, "hidden");
+        this.banners = new ExportBanners(viewModel, translating, hidden, messages);
+        viewModel.figures().addListener(new WeakChangeListener<>(onFigures));
+        viewModel.blockReason().addListener(new WeakChangeListener<>(onReason));
+        viewModel.runNote().addListener(new WeakChangeListener<>(onReason));
+    }
+
+    /** The content shown while no book is open: no separate empty state, only the disabled action and its footer. */
+    Node empty() {
+        log.debug("building the export screen with no book open");
+        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
+        subtitle.setId("export-subtitle");
+        return new VBox(SCREEN_SPACING, subtitle, result.tiles(), footer());
     }
 
     /** The screen's content for {@code book}, filled for the export the view model last finished, if any. */
@@ -95,9 +116,16 @@ final class ExportView {
         final VBox left = new VBox(SCREEN_SPACING, titles.node(), writeCard(book));
         HBox.setHgrow(left, Priority.ALWAYS);
         final HBox columns = new HBox(SCREEN_SPACING, left, sideFiles.build());
+        // Work in the background writes this book: its choices wait until it ends.
+        columns.disableProperty().bind(hidden.freezes(ViewNames.EXPORT));
         showOutcome(viewModel.outcome().get());
+        showFigures(viewModel.figures().get());
         viewModel.refreshStatement();
-        return new VBox(SCREEN_SPACING, subtitle, result.tiles(), columns, footer(messages, navigator));
+        return new VBox(SCREEN_SPACING, subtitle, banners.build(), result.tiles(), columns, footer());
+    }
+
+    private void showFigures(final @Nullable ExportFigures figures) {
+        result.showFigures(figures);
     }
 
     /** Fills or clears the result parts; called on the FX thread when the view model's outcome changes. */
@@ -110,21 +138,45 @@ final class ExportView {
         result.show(outcome, book.inspection(), tag(brief.sourceLanguage()), tag(brief.targetLanguage()));
     }
 
-    /** The step footer whose forward action is drawn unavailable, because no step follows the export. */
-    static Node footer(final Messages messages, final Navigator navigator) {
-        return StepFooter.withUnavailableForward(
+    // Back leads to Translating; the forward action is ⬇ Export book, which asks before replacing a file.
+    private Node footer() {
+        final StepFooter built = StepFooter.of(
                 new StepFooter.Action(
                         "export-back",
-                        messages.get(MessageKey.BRIEF_BACK),
-                        messages.get(MessageKey.BRIEF_BACK_TIP),
+                        messages.get(MessageKey.EXPORT_BACK),
+                        messages.get(MessageKey.EXPORT_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.TRANSLATING)),
                 new StepFooter.Action(
-                        "export-next",
-                        messages.get(MessageKey.EXPORT_NEXT),
-                        messages.get(MessageKey.EXPORT_NEXT_TIP),
+                        "export-run",
+                        messages.get(MessageKey.EXPORT_ACTION),
+                        messages.get(MessageKey.EXPORT_ACTION_TIP),
                         "btn-primary",
-                        () -> {}));
+                        () -> {
+                            log.debug(
+                                    "export book pressed, available {}",
+                                    viewModel.exportAvailable().get());
+                            viewModel.export();
+                        }));
+        built.forwardButton()
+                .disableProperty()
+                .bind(viewModel
+                        .exportAvailable()
+                        .not()
+                        .or(viewModel.blockReason().isNotEmpty()));
+        built.withRunGroup(result.toolbarActions());
+        footer = built;
+        explain();
+        return built;
+    }
+
+    private void explain() {
+        final StepFooter shown = footer;
+        if (shown == null) {
+            return;
+        }
+        final String reason = viewModel.blockReason().get();
+        shown.explainDisabledForward(reason.isEmpty() ? null : reason);
     }
 
     private Node writeCard(final OpenedBook book) {
@@ -142,9 +194,7 @@ final class ExportView {
                 result.checks(),
                 destination.build(),
                 statementBox(),
-                runRow(),
-                failure(),
-                result.actions());
+                failure());
     }
 
     private Node statementBox() {
@@ -162,28 +212,6 @@ final class ExportView {
             label.getStyleClass().add("hint");
             statement.getChildren().add(label);
         }
-    }
-
-    private Node runRow() {
-        final Button run = new Button(messages.get(MessageKey.EXPORT_ACTION));
-        run.setId("export-run");
-        Tips.install(messages, run, MessageKey.EXPORT_ACTION_TIP);
-        run.getStyleClass().add("btn-primary");
-        run.disableProperty().bind(viewModel.exportAvailable().not());
-        run.setOnAction(event -> {
-            log.debug(
-                    "export book pressed, available {}",
-                    viewModel.exportAvailable().get());
-            viewModel.export();
-        });
-        final Label note = new Label();
-        note.setId("export-note");
-        note.getStyleClass().add("hint");
-        note.textProperty().bind(viewModel.runNote());
-        return new HBox(
-                CARD_SPACING,
-                run,
-                BriefCards.shownWhile(note, viewModel.runNote().isNotEmpty()));
     }
 
     private Node failure() {

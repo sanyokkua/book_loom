@@ -1300,6 +1300,36 @@
     -fx-padding: 6px 8px 6px 8px;
 }
 
+/* Export: the last check's reread item, Before | After, with a fixed text struck through above the new one. */
+.reread-grid {
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8px;
+}
+
+.reread-heading,
+.reread-label {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.reread-old {
+    -fx-fill: -color-muted;
+    -fx-strikethrough: true;
+}
+
+/* Export: a value shown, never edited (the original title and author). */
+.input-readonly {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 5px 8px 5px 8px;
+    -fx-text-fill: -color-text;
+}
+
 /* --- Buttons that sit beside the primary and secondary ones --------------------------------------------- */
 .btn-ghost {
     -fx-background-color: transparent;

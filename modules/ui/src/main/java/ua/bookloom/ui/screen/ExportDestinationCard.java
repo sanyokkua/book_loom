@@ -1,66 +1,64 @@
 package ua.bookloom.ui.screen;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WeakChangeListener;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportViewModel;
+import ua.bookloom.ui.state.ShortPath;
 
 /**
- * Save to with Browse, the replace switch and the refusal or occupied-path warning under the field.
+ * Save as: the destination as a short path with the full path on hover, Change… and ✦ Suggest a name beside it, and
+ * under it the line that an existing file is asked about, the name notices, and the refusal or the note about the file
+ * just exported.
  *
- * <p>The view model outlives this card, so it is observed through weak listeners held by the fields below; the screen
- * keeps the card alive for as long as its nodes are shown. The refusal text and the replace switch are the view
- * model's own words and state, never recomputed here.
+ * <p>The path is chosen, never typed: Change… opens the save dialog and a suggested name is used only when the person
+ * presses "Use this name". The view model outlives this card, so the bindings below are the only links to it; the
+ * screen keeps the card alive for as long as its nodes are shown.
  */
 @Slf4j
 final class ExportDestinationCard {
 
     private static final double ROW_SPACING = 8;
-    private static final double FIELD_SPACING = 5;
 
     private final ExportViewModel viewModel;
     private final Messages messages;
     private final DestinationChooser chooser;
-    private final TextField field = new TextField();
-    private final ToggleSwitch replace = new ToggleSwitch();
-    private final ChangeListener<String> onDestination = (observed, was, now) -> showDestination(now);
-    private final ChangeListener<Boolean> onOverwrite = (observed, was, now) -> replace.setSelected(now);
+    private final Path home;
 
     ExportDestinationCard(final ExportViewModel viewModel, final Messages messages, final DestinationChooser chooser) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.chooser = Objects.requireNonNull(chooser, "chooser");
+        this.home = Path.of(System.getProperty("user.home", ""));
     }
 
     Node build() {
-        field.setId("export-save-to");
-        Tips.install(messages, field, MessageKey.EXPORT_SAVE_TO_TIP);
-        field.setText(viewModel.destination().get());
-        field.end();
-        field.textProperty().addListener((observed, was, now) -> onTyped(now));
-        viewModel.destination().addListener(new WeakChangeListener<>(onDestination));
-        HBox.setHgrow(field, Priority.ALWAYS);
-        final Button browse = new Button(messages.get(MessageKey.EXPORT_BROWSE));
-        browse.setId("export-browse");
-        Tips.install(messages, browse, MessageKey.EXPORT_BROWSE_TIP);
-        browse.getStyleClass().add("btn-secondary");
-        browse.setOnAction(event -> browse());
-        final HBox row = new HBox(ROW_SPACING, field, browse);
+        final Label path = new Label();
+        path.setId("export-save-to");
+        path.getStyleClass().add("export-save-to");
+        path.textProperty().bind(Bindings.createStringBinding(() -> shortPath().text(), viewModel.destination()));
+        Tips.installLive(path, viewModel.destination());
+        HBox.setHgrow(path, Priority.ALWAYS);
+        path.setMaxWidth(Double.MAX_VALUE);
+        final Label inHome = new Label(messages.get(MessageKey.EXPORT_SAVE_TO_HOME));
+        inHome.setId("export-save-to-home");
+        inHome.getStyleClass().add("hint");
+        BriefCards.shownWhile(
+                inHome, Bindings.createBooleanBinding(() -> shortPath().inHome(), viewModel.destination()));
+        final HBox row = new HBox(ROW_SPACING, path, inHome, changeButton());
         if (viewModel.nameSuggestion.isOffered()) {
             row.getChildren().add(suggestButton());
         }
@@ -68,11 +66,28 @@ final class ExportDestinationCard {
         return new VBox(
                 ROW_SPACING,
                 BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row),
+                BriefCards.hint(messages, MessageKey.EXPORT_REPLACE_HINT),
                 nameNotice(),
                 authorNote(),
                 refusal(),
-                currentNote(),
-                replaceSwitch());
+                currentNote());
+    }
+
+    // The folders under home and the file name; a path inside home says so beside it, since home is not shown.
+    private ShortPath shortPath() {
+        return viewModel
+                .destinationPath()
+                .map(chosen -> ShortPath.of(chosen, home))
+                .orElse(new ShortPath(List.of(), "", false));
+    }
+
+    private Button changeButton() {
+        final Button change = new Button(messages.get(MessageKey.EXPORT_BROWSE));
+        change.setId("export-browse");
+        Tips.install(messages, change, MessageKey.EXPORT_BROWSE_TIP);
+        change.getStyleClass().add("btn-secondary");
+        change.setOnAction(event -> change());
+        return change;
     }
 
     private Button suggestButton() {
@@ -107,7 +122,7 @@ final class ExportDestinationCard {
         return BriefCards.shownWhile(refusal, viewModel.refusal().isNotEmpty());
     }
 
-    // Not an error: the result above is current, and this only says why Export book waits for Replace.
+    // Not an error: the result above is current, and exporting again only asks before replacing it.
     private Node currentNote() {
         final Label note = new Label();
         note.setId("export-current-note");
@@ -117,36 +132,9 @@ final class ExportDestinationCard {
         return BriefCards.shownWhile(note, viewModel.currentNote().isNotEmpty());
     }
 
-    private Node replaceSwitch() {
-        replace.setId("export-replace");
-        Tips.install(messages, replace, MessageKey.EXPORT_REPLACE_TIP);
-        replace.setText(messages.get(MessageKey.EXPORT_REPLACE));
-        replace.setSelected(viewModel.overwrite().get());
-        replace.selectedProperty().addListener((observed, was, now) -> {
-            log.debug("replace switch is now {}", now);
-            viewModel.setOverwrite(now);
-        });
-        viewModel.overwrite().addListener(new WeakChangeListener<>(onOverwrite));
-        return new VBox(FIELD_SPACING, replace);
-    }
-
-    private void onTyped(final String text) {
-        if (!text.equals(viewModel.destination().get())) {
-            viewModel.editDestination(text);
-        }
-    }
-
-    // The caret goes to the end so a long path shows its file name, the part a person checks, not its first folders.
-    private void showDestination(final String text) {
-        if (!text.equals(field.getText())) {
-            field.setText(text);
-            field.end();
-        }
-    }
-
-    private void browse() {
+    private void change() {
         final Path initial = viewModel.destinationPath().orElse(Path.of(""));
-        log.debug("browse pressed, the dialog starts at {}", initial);
+        log.debug("change pressed, the dialog starts at {}", initial);
         chooser.choose(initial).ifPresent(viewModel::chooseDestination);
     }
 }

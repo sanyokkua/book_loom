@@ -5,6 +5,7 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -16,23 +17,27 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportReportLines;
 import ua.bookloom.ui.state.FileRevealer;
 
 /**
- * What the screen reports about the last export: the four result tiles, the checks that hold once the file was
- * re-opened, and Open folder and Open book.
+ * What the screen reports about the book and its last export: the four tiles, the checks that hold once the file was
+ * re-opened, and the visibility of Open folder and Open book, which the toolbar holds.
  *
- * <p>Before an export the tiles read a dash, no check is listed and no action is offered, because each of them would
- * vouch for a file that does not exist. The language line names the source and target the person chose, and is listed
- * only for a format whose metadata the export rewrites.
+ * <p>The tiles come from the project: before any export the first reads the segments done of those that could be,
+ * after one it reads what the stored export wrote, also after a restart, and the fourth says the written file was
+ * checked; the second and third are always the live counts. No check is listed and no action is offered until an
+ * export is shown, because each would vouch for a file that does not exist. The language line names the source and
+ * target the person chose, and is listed only for a format whose metadata the export rewrites.
  */
 @Slf4j
 final class ExportResult {
@@ -47,29 +52,32 @@ final class ExportResult {
     private final Label auto = number("export-auto-value");
     private final Label reviewed = number("export-reviewed-value");
     private final Label valid = number("export-valid-value");
+    private final Label writtenCaption = new Label();
+    private final Label validCaption = new Label();
     private final Navigator navigator;
     private final VBox checks = new VBox(ROW_SPACING);
-    private final HBox actions = new HBox(ROW_SPACING);
+    private final List<Button> actions;
     private @Nullable Path file;
 
     ExportResult(final Messages messages, final FileRevealer revealer, final Navigator navigator) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         checks.setId("export-checks");
-        actions.setId("export-actions");
-        actions.getChildren()
-                .addAll(
-                        action(
-                                "export-reveal",
-                                MessageKey.EXPORT_REVEAL,
-                                MessageKey.EXPORT_REVEAL_TIP,
-                                () -> revealer.reveal(target())),
-                        action(
-                                "export-open-book",
-                                MessageKey.EXPORT_OPEN_BOOK,
-                                MessageKey.EXPORT_OPEN_BOOK_TIP,
-                                () -> revealer.open(target())));
+        checks.visibleProperty().bind(Bindings.isNotEmpty(checks.getChildren()));
+        checks.managedProperty().bind(checks.visibleProperty());
+        actions = List.of(
+                action(
+                        "export-reveal",
+                        MessageKey.EXPORT_REVEAL,
+                        MessageKey.EXPORT_REVEAL_TIP,
+                        () -> revealer.reveal(target())),
+                action(
+                        "export-open-book",
+                        MessageKey.EXPORT_OPEN_BOOK,
+                        MessageKey.EXPORT_OPEN_BOOK_TIP,
+                        () -> revealer.open(target())));
         reset();
+        showFigures(null);
     }
 
     /** Whether an export of this format rewrites language metadata that the book itself declared. */
@@ -85,10 +93,10 @@ final class ExportResult {
     Node tiles() {
         final HBox row = new HBox(
                 TILE_SPACING,
-                tile("export-written", written, MessageKey.EXPORT_TILE_WRITTEN),
+                new StatTile("export-written", written, writtenCaption),
                 tile("export-auto", auto, MessageKey.EXPORT_TILE_AUTO),
                 tile("export-reviewed", reviewed, MessageKey.EXPORT_TILE_REVIEWED),
-                tile("export-valid", valid, MessageKey.EXPORT_TILE_VALID));
+                new StatTile("export-valid", valid, validCaption));
         row.setPadding(new Insets(0));
         return row;
     }
@@ -97,7 +105,8 @@ final class ExportResult {
         return checks;
     }
 
-    Node actions() {
+    /** Open folder and Open book, which the toolbar holds from the moment a file is written. */
+    List<Button> toolbarActions() {
         return actions;
     }
 
@@ -113,16 +122,8 @@ final class ExportResult {
             return;
         }
         final ExportReport report = outcome.report();
-        log.debug("the export result shows {} written, {} auto-accepted", report.written(), report.autoAccepted());
+        log.debug("the export result shows {} written", report.written());
         file = report.destination();
-        final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
-        written.setText(grouping.format(report.written()));
-        auto.setText(share(report));
-        reviewed.setText(grouping.format(report.reviewed()));
-        valid.setText(CHECK);
-        if (!valid.getStyleClass().contains("status-ok")) {
-            valid.getStyleClass().add("status-ok");
-        }
         checks.getChildren().setAll(check("export-check-reopened", messages.get(MessageKey.EXPORT_CHECK_REOPENED)));
         if (rewritesLanguage(inspection)) {
             checks.getChildren()
@@ -167,31 +168,49 @@ final class ExportResult {
                 () -> navigator.navigate(ViewNames.NAMES_STYLE));
     }
 
+    /**
+     * Fills the tiles from the project's figures; a dash while they are not known.
+     *
+     * @param figures the counts and the last written export, or null
+     */
+    void showFigures(final @Nullable ExportFigures figures) {
+        final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
+        final ExportRecord last = figures == null ? null : figures.last();
+        log.debug("the tiles show figures known {}, from the stored export {}", figures != null, last != null);
+        writtenCaption.setText(
+                messages.get(last == null ? MessageKey.EXPORT_TILE_DONE : MessageKey.EXPORT_TILE_WRITTEN));
+        validCaption.setText(
+                messages.get(last == null ? MessageKey.EXPORT_TILE_VALID : MessageKey.EXPORT_TILE_VALID_DONE));
+        valid.setText(last == null ? DASH : CHECK);
+        valid.getStyleClass().remove("status-ok");
+        if (last != null) {
+            valid.getStyleClass().add("status-ok");
+        }
+        if (figures == null) {
+            for (final Label label : new Label[] {written, auto, reviewed}) {
+                label.setText(DASH);
+            }
+            return;
+        }
+        written.setText(
+                last == null
+                        ? messages.get(MessageKey.EXPORT_TILE_OF, figures.translated(), figures.ofTotal())
+                        : messages.get(MessageKey.EXPORT_TILE_OF, last.written(), last.written() + last.pending()));
+        auto.setText(grouping.format(figures.counts().autoAccepted()));
+        reviewed.setText(grouping.format(figures.counts().reviewed()));
+    }
+
     private void reset() {
         file = null;
-        for (final Label label : new Label[] {written, auto, reviewed, valid}) {
-            label.setText(DASH);
-        }
-        valid.getStyleClass().remove("status-ok");
         checks.getChildren().clear();
         setActionsShown(false);
     }
 
     private void setActionsShown(final boolean shown) {
-        actions.setVisible(shown);
-        actions.setManaged(shown);
-    }
-
-    private String share(final ExportReport report) {
-        // Lines kept as they are never needed a decision, and a segment still pending did: the share is of the segments
-        // a model or a person had to decide.
-        final int decided = report.written() - report.keptVerbatim() + report.pending();
-        if (decided <= 0) {
-            return DASH;
+        for (final Button button : actions) {
+            button.setVisible(shown);
+            button.setManaged(shown);
         }
-        final NumberFormat percent = NumberFormat.getPercentInstance(messages.locale());
-        percent.setMaximumFractionDigits(1);
-        return percent.format(report.autoAccepted() / (double) decided);
     }
 
     private Path target() {

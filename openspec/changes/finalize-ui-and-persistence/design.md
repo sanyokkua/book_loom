@@ -199,7 +199,11 @@ Each hook is the smallest change that gives the UI data the pipeline already has
 - **The names pass.** `NamesPassImpl.step(name)` emits each of its 7 stages plus "write".
 - **The brief.** `BriefSuggester` emits book-knowledge (or skipped), K samples (3 / 4 / 5 by dial) with each sample's
   value, agreement and quote, and synthesis.
-- **The export.** `ExportCalls` reports each item's before, after and verdict through `ExportProgress`.
+- **The export.** `ExportCalls` reports each item's before, after, verdict and the paragraphs around it
+  (`ExportProgress.Neighbours`) through `ExportProgress`; `ExportActivity` adds one `STAGE` group row per stage reached
+  (uncounted while items are planned), which the dialog shows as Steps, the reread items and Finish. "Write the file
+  now" is `ExportJob.writeNow()`: the stages read `ModelCalls.isStoppingEarly()` before each item, the call in flight
+  is interrupted, every stored fix stays and the rest is `ConsistencyChecks.notReread`.
 
 **Alternative rejected:** deriving steps in `:ui` from call kinds. The UI would duplicate the dial's plan and could not
 know the planned review passes.

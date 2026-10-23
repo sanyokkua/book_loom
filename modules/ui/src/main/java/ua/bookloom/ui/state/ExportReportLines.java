@@ -146,7 +146,28 @@ public final class ExportReportLines {
         if (checks.skipped() > 0) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_SKIPPED, checks.skipped()));
         }
+        if (checks.notReread() > 0) {
+            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NOT_REREAD, checks.notReread()));
+        }
         return lines;
+    }
+
+    /**
+     * What the last check did, for the export-complete card: the paragraphs it reread next to their neighbours and
+     * those it fixed.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param summary the consistency pass's summary from the report
+     * @return the line, or empty when the last check did not run
+     */
+    public static Optional<String> lastCheck(final Messages messages, final ConsistencySummary summary) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(summary, "summary");
+        if (summary.status() == ConsistencySummary.Status.NOT_RUN) {
+            return Optional.empty();
+        }
+        final int reread = summary.neighbourFixes() + summary.checks().neighbourUnchanged();
+        return Optional.of(messages.get(MessageKey.EXPORT_COMPLETE_LAST_CHECK_VALUE, reread, summary.neighbourFixes()));
     }
 
     /**

@@ -37,7 +37,7 @@ class ExportJobLogTest {
     private Path tempDir;
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-    private final Logger logger = (Logger) LoggerFactory.getLogger(ExportJobImpl.class);
+    private final Logger logger = (Logger) LoggerFactory.getLogger(ExportJobImpl.class.getPackageName());
     private ExportServiceImpl service;
     private ProjectRepository projects;
 

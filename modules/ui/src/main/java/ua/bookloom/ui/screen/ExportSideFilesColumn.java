@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +17,12 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportViewModel;
 
 /**
- * The right-hand cards: the three side files written beside the book and the final consistency pass.
+ * The right-hand cards: the three side files written beside the book and the last check before saving.
  *
  * <p>Both stay visible while a run translates and are unavailable then, because nothing can be exported until the run
- * pauses; the view model's run note is what says so, so the cards follow it and never recompute the run state.
+ * pauses; the view model's run note is what says so, so the cards follow it and never recompute the run state. The
+ * last check is shown off and locked while the book is partial, with a note saying when it runs; the person's choice
+ * and the saved setting stay as they were.
  */
 @Slf4j
 final class ExportSideFilesColumn {
@@ -30,7 +33,9 @@ final class ExportSideFilesColumn {
     private final ExportViewModel viewModel;
     private final Messages messages;
     private final ToggleSwitch consistency = new ToggleSwitch();
+    private final Label note = new Label();
     private final ChangeListener<Boolean> onConsistency = (observed, was, now) -> consistency.setSelected(now);
+    private final ChangeListener<Boolean> onLocked = (observed, was, now) -> showNote(now);
 
     ExportSideFilesColumn(final ExportViewModel viewModel, final Messages messages) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
@@ -42,22 +47,32 @@ final class ExportSideFilesColumn {
         consistency.setId("export-aux-consistency");
         consistency.setText(messages.get(MessageKey.EXPORT_CONSISTENCY_SWITCH));
         consistency.setAccessibleText(messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE));
-        consistency.setSelected(viewModel.consistencyPass().get());
-        consistency.selectedProperty().addListener((observed, was, now) -> viewModel.setConsistencyPass(now));
-        viewModel.consistencyPass().addListener(new WeakChangeListener<>(onConsistency));
-        consistency.disableProperty().bind(viewModel.runNote().isNotEmpty());
+        consistency.setSelected(viewModel.lastCheckShown().get());
+        consistency.selectedProperty().addListener((observed, was, now) -> {
+            if (now != viewModel.lastCheckShown().get()) {
+                log.debug("last check switched {}", now);
+                viewModel.setConsistencyPass(now);
+            }
+        });
+        viewModel.lastCheckShown().addListener(new WeakChangeListener<>(onConsistency));
+        viewModel.lastCheckLocked().addListener(new WeakChangeListener<>(onLocked));
+        consistency.disableProperty().bind(viewModel.runNote().isNotEmpty().or(viewModel.lastCheckLocked()));
         Tips.install(consistency, messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE_TIP));
+        note.setId("export-consistency-note");
+        note.getStyleClass().add("hint");
+        note.setWrapText(true);
+        showNote(viewModel.lastCheckLocked().get());
         final VBox pass = BriefCards.card(
-                "export-consistency-card",
-                messages,
-                MessageKey.EXPORT_CONSISTENCY_TITLE,
-                consistency,
-                BriefCards.hint(messages, MessageKey.EXPORT_CONSISTENCY_NOTE));
+                "export-consistency-card", messages, MessageKey.EXPORT_CONSISTENCY_TITLE, consistency, note);
         final VBox column = new VBox(COLUMN_SPACING, also, pass);
         column.setPrefWidth(WIDTH);
         column.setMinWidth(WIDTH);
         column.setMaxWidth(WIDTH);
         return column;
+    }
+
+    private void showNote(final boolean locked) {
+        note.setText(messages.get(locked ? MessageKey.EXPORT_CONSISTENCY_PARTIAL : MessageKey.EXPORT_CONSISTENCY_NOTE));
     }
 
     private VBox sideFilesCard() {

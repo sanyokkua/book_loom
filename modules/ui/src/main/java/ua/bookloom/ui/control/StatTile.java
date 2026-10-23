@@ -17,10 +17,20 @@ public final class StatTile extends VBox {
      * @param caption the visible, already translated caption
      */
     public StatTile(final String id, final Label number, final String caption) {
+        this(id, number, new Label(Objects.requireNonNull(caption, "caption")));
+    }
+
+    /**
+     * Builds the tile around a number and a caption label the caller owns, for a tile whose caption changes.
+     *
+     * @param id the tile's node id
+     * @param number the label holding the figure; it gets the {@code stat-number} class
+     * @param label the label holding the caption; it gets the {@code stat-caption} class
+     */
+    public StatTile(final String id, final Label number, final Label label) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(number, "number");
-        Objects.requireNonNull(caption, "caption");
-        final Label label = new Label(caption);
+        Objects.requireNonNull(label, "label");
         label.getStyleClass().add("stat-caption");
         if (!number.getStyleClass().contains("stat-number")) {
             number.getStyleClass().add("stat-number");

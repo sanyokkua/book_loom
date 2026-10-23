@@ -24,6 +24,11 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -184,6 +189,61 @@ public final class SetupHelper {
     }
 
     /**
+     * As {@link #runForDecision(ActivityKind, BiFunction, Function)} for work that is one step the person can read in
+     * plain words: the dialog shows that one step, what was sent to the model and what came back, instead of one step
+     * per raw model call. FX thread only.
+     *
+     * @param label the step's name
+     * @param sent what the step was given, in plain words (book text; logged at TRACE only)
+     * @param answerText what it gave back for an answer, in plain words, or {@code null} for none
+     */
+    public <T> Optional<Refusal> runForOneStep(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final Function<Result<T>, Optional<ResultOffer>> offerOf,
+            final String label,
+            final String sent,
+            final Function<Result<T>, String> answerText) {
+        Objects.requireNonNull(label, "label");
+        Objects.requireNonNull(sent, "sent");
+        final List<JobEvent> opening = List.of(
+                new StepsPlanned(StepKind.REQUEST, 1, false),
+                new StepChanged(StepKind.REQUEST, label, 0, StepState.STARTED, null, null));
+        return start(
+                kind,
+                work,
+                false,
+                (handle, answer, reads) ->
+                        endedStep(kind, handle, answer, label, sent, answerText.apply(answer), offerOf),
+                opening,
+                handle -> handle.step(
+                        new StepChanged(StepKind.REQUEST, label, 0, StepState.STARTED, null, null),
+                        new StepEntry.StepText(sent, null, null)));
+    }
+
+    private <T> void endedStep(
+            final ActivityKind kind,
+            final ActivityTracker.Handle handle,
+            final Result<T> answer,
+            final String label,
+            final String sent,
+            final String answered,
+            final Function<Result<T>, Optional<ResultOffer>> offerOf) {
+        final StepResult result = answer.isOk() ? StepResult.DONE : StepResult.NO_CALL;
+        handle.step(
+                new StepChanged(StepKind.REQUEST, label, 0, StepState.ENDED, null, result),
+                new StepEntry.StepText(sent, answered, null));
+        final Optional<ResultOffer> offer = offerOf.apply(answer);
+        log.info("setup proposal {} ended ok={} offer={}", kind, answer.isOk(), offer.isPresent());
+        if (offer.isEmpty()) {
+            handle.end();
+            return;
+        }
+        handle.decisions(List.of());
+        handle.offer(offer.get());
+    }
+
+    /**
      * The offer a proposal of {@code kind} holds for the person right now.
      *
      * @param kind the kind of work
@@ -208,6 +268,17 @@ public final class SetupHelper {
             final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
             final boolean tallies,
             final Delivery<T> delivery) {
+        return start(kind, work, tallies, delivery, List.of(), handle -> {});
+    }
+
+    // The opening events are shown at once, so a work that announces its own steps is not shown as one step per call.
+    private <T> Optional<Refusal> start(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final boolean tallies,
+            final Delivery<T> delivery,
+            final List<JobEvent> opening,
+            final Consumer<ActivityTracker.Handle> started) {
         final Optional<ModelSelection> selection = settings.selection();
         final Optional<Refusal> refusal = refusalFor(kind, selection);
         if (refusal.isPresent()) {
@@ -226,6 +297,8 @@ public final class SetupHelper {
                 handle.decisions(BriefDecisions.running(reads));
             }
         });
+        opening.forEach(feed::accept);
+        started.accept(handle);
         final Consumer<JobEvent> progress = event -> Platform.runLater(() -> feed.accept(event));
         submit(
                 kind,

@@ -126,6 +126,21 @@ class ExportJobPassCallsTest {
         assertThat(summary.checks().neighbourUnchanged()).isEqualTo(1);
     }
 
+    // IF the grid had no neighbours to show, THEN a reread item could not be read next to the paragraphs around it.
+    @Test
+    void run_flaggedParagraphBetweenTwoDecided_announcesItsNeighboursWithThePreviousAndTheNextSides() {
+        fixture.accept(projectId, FIRST, "Один.");
+        fixture.flag(projectId, SECOND, "Два.");
+        final ScriptedChatModel model = new ScriptedChatModel().answerTo("consistency", reply("Два."));
+
+        export(model);
+
+        assertThat(progress)
+                .filteredOn(reached -> reached.step() == Step.CONSISTENCY_NEIGHBOUR && reached.neighbours() != null)
+                .extracting(ExportProgress::neighbours)
+                .contains(new ExportProgress.Neighbours("One.", "Один.", "Two.", null, null));
+    }
+
     private static Result<ChatResponse> reply(final String target) {
         return Result.ok(new ChatResponse("{\"target\":\"" + target + "\"}", FinishReason.STOP));
     }

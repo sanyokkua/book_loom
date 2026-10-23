@@ -30,6 +30,7 @@ final class ExportCalls implements ModelCalls {
 
     private final ModelCalls delegate;
     private final AtomicBoolean cancelled;
+    private final AtomicBoolean stopEarly;
     private final ExportProgressListener progress;
     private final AtomicReference<@Nullable Thread> waiting = new AtomicReference<>();
     private ExportProgress.Step step = ExportProgress.Step.CONSISTENCY_RETRY;
@@ -37,9 +38,14 @@ final class ExportCalls implements ModelCalls {
     private int total;
     private boolean countsCalls = true;
 
-    ExportCalls(final ModelCalls delegate, final AtomicBoolean cancelled, final ExportProgressListener progress) {
+    ExportCalls(
+            final ModelCalls delegate,
+            final AtomicBoolean cancelled,
+            final AtomicBoolean stopEarly,
+            final ExportProgressListener progress) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.cancelled = Objects.requireNonNull(cancelled, "cancelled");
+        this.stopEarly = Objects.requireNonNull(stopEarly, "stopEarly");
         this.progress = Objects.requireNonNull(progress, "progress");
     }
 
@@ -79,8 +85,12 @@ final class ExportCalls implements ModelCalls {
     }
 
     private Result<ChatResponse> guarded(final CallKind kind, final Supplier<Result<ChatResponse>> send) {
-        if (cancelled.get()) {
-            log.debug("export model call refused: the export is cancelled kind={}", kind);
+        if (cancelled.get() || stopEarly.get()) {
+            log.debug(
+                    "export model call refused kind={} cancelled={} stopEarly={}",
+                    kind,
+                    cancelled.get(),
+                    stopEarly.get());
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
         waiting.set(Thread.currentThread());
@@ -88,8 +98,10 @@ final class ExportCalls implements ModelCalls {
             return send.get();
         } finally {
             waiting.set(null);
-            // A cancel racing the end of the call must not leave the flag on the thread that goes on to write files.
-            if (cancelled.get()) {
+            // A cancel or an early stop racing the end of the call must not leave the flag on the thread that goes on
+            // to
+            // write files.
+            if (cancelled.get() || stopEarly.get()) {
                 Thread.interrupted();
             }
             finished();
@@ -122,14 +134,29 @@ final class ExportCalls implements ModelCalls {
     }
 
     @Override
+    public boolean isStoppingEarly() {
+        return stopEarly.get();
+    }
+
+    @Override
     public void reread(
-            final String segmentId, final String before, @Nullable final String after, final String verdict) {
+            final String segmentId,
+            final String before,
+            @Nullable final String after,
+            final String verdict,
+            final ExportProgress.@Nullable Neighbours neighbours) {
         if (total == 0) {
             return;
         }
         done = Math.min(done + 1, total);
-        log.debug("export reread segmentId={} verdict={} done={} of {}", segmentId, verdict, done, total);
-        progress.onProgress(new ExportProgress(step, done, total, segmentId, before, after, verdict));
+        log.debug(
+                "export reread segmentId={} verdict={} done={} of {} neighbours={}",
+                segmentId,
+                verdict,
+                done,
+                total,
+                neighbours != null);
+        progress.onProgress(new ExportProgress(step, done, total, segmentId, before, after, verdict, neighbours));
     }
 
     /** Interrupts the call now waiting on the provider, if any; a no-op between calls. */

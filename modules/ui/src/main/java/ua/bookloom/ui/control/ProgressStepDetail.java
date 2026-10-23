@@ -51,6 +51,7 @@ final class ProgressStepDetail extends VBox {
     private final Label notKept = new Label();
     private final PromptView prompt;
     private final ReplyView reply;
+    private final RereadGrid grid;
     private @Nullable Instant lastTick;
 
     ProgressStepDetail(final ProgressDialogModel model, final Messages messages) {
@@ -65,6 +66,7 @@ final class ProgressStepDetail extends VBox {
         final SegmentedButton mode = modes();
         prompt = new PromptView("progress-prompt", messages);
         reply = new ReplyView("progress-reply", messages);
+        grid = new RereadGrid(messages);
         name();
         layOut(mode);
         wireMode(mode);
@@ -78,6 +80,7 @@ final class ProgressStepDetail extends VBox {
                 .addAll(
                         mode,
                         say,
+                        grid,
                         heading(MessageKey.PROGRESS_INPUT),
                         input,
                         heading(MessageKey.PROGRESS_OUTPUT),
@@ -151,6 +154,7 @@ final class ProgressStepDetail extends VBox {
         final StepEntry step = model.selected().get();
         final CallSnapshot made = step == null ? null : model.callOf(step);
         say.setText(step == null ? "" : StepWords.sentence(messages, step));
+        show(grid, step != null && grid.show(step.text(), step.isRunning()));
         input.setText(orNothing(step == null ? null : inputOf(step, made)));
         output.setText(orNothing(step == null ? null : outputOf(step, made)));
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.pipeline.StepState;
@@ -112,9 +113,23 @@ public record StepEntry(
      * @param before the text the step was given, or {@code null}; book text, logged at TRACE only
      * @param after the text it gave back, or {@code null}; book text, logged at TRACE only
      * @param verdict its one-line result, such as {@code kept}, or {@code null}
+     * @param neighbours the paragraphs around a reread item, or {@code null} for a step that reads none; book text
      */
     public record StepText(
             @Nullable String before,
             @Nullable String after,
-            @Nullable String verdict) {}
+            @Nullable String verdict,
+            ExportProgress.@Nullable Neighbours neighbours) {
+
+        /**
+         * What a step read and wrote with no neighbours to show.
+         *
+         * @param before the text the step was given, or {@code null}
+         * @param after the text it gave back, or {@code null}
+         * @param verdict its one-line result, or {@code null}
+         */
+        public StepText(final @Nullable String before, final @Nullable String after, final @Nullable String verdict) {
+            this(before, after, verdict, null);
+        }
+    }
 }

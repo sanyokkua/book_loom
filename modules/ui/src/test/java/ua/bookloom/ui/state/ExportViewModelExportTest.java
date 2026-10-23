@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -28,8 +27,6 @@ import ua.bookloom.ui.ViewNames;
 /** What pressing Export book does: the request it builds, the work it moves off the FX thread and the outcome it keeps. */
 class ExportViewModelExportTest extends ExportViewModelTestBase {
 
-    private static final int SIZE = 958_464;
-
     @TempDir
     private Path dir;
 
@@ -40,7 +37,7 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     void openTheBook() throws IOException {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         destination = dir.resolve("Frankenstein.uk.epub");
-        Files.write(destination, new byte[SIZE]);
+        exportService.writeFiles(true);
         worker = Executors.newSingleThreadExecutor();
     }
 
@@ -64,19 +61,16 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
 
     private void useWorker() {
         exports = onFx(() -> newExports(worker));
-        setOverwrite(true);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     @Test
     void export_success_publishesTheOutcomeWithItsSizeAndMarksTheStepDone() {
-        setOverwrite(true);
-
         export();
 
         final ExportOutcome outcome = onFx(() -> exports.outcome().get());
         assertThat(outcome.report().destination()).isEqualTo(destination);
-        assertThat(outcome.sizeBytes()).isEqualTo(SIZE);
+        assertThat(outcome.sizeBytes()).isEqualTo(1);
         assertThat(onFx(() -> progress.done())).contains(ViewNames.EXPORT);
         assertThat(onFx(() -> exports.failure().get())).isEmpty();
     }
@@ -153,7 +147,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     void export_whileTheJobRuns_isUnavailableAndReturnsWhenItAnswers() {
         final QueuedExecutor queued = new QueuedExecutor();
         exports = onFx(() -> newExports(queued));
-        setOverwrite(true);
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(onFx(() -> exports.exportAvailable().get())).isTrue();
@@ -171,7 +164,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     void export_whileTheJobRuns_asksTheServiceOnceEvenIfPressedAgain() {
         final QueuedExecutor queued = new QueuedExecutor();
         exports = onFx(() -> newExports(queued));
-        setOverwrite(true);
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
 
@@ -205,8 +197,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
             settings.model().set("gemma3:12b");
             return null;
         });
-        setOverwrite(true);
-
         export();
 
         assertThat(models.selections()).hasSize(1);
@@ -216,22 +206,18 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         assertThat(onFx(() -> exports.failure().get())).isEmpty();
     }
 
-    // IF the file just written were offered as a free name, THEN a second press would be refused by the job with a
-    // message that does not say why; IF it were said as an error, THEN a red line would sit beside the green checks of
-    // an export that went well.
+    // IF the file just written were said as an error, THEN a red line would sit beside the green checks of an export
+    // that went well; IF it blocked Export, THEN asking before replacing would never be reached.
     @Test
     void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() throws IOException {
-        Files.delete(destination);
         refresh();
-        exportService.writeFiles(true);
 
         export();
 
         assertThat(onFx(() -> exports.refusal().get())).isEmpty();
         assertThat(onFx(() -> exports.currentNote().get()))
-                .isEqualTo(
-                        "This is the file just exported. To write it again, turn on Replace or choose another name.");
-        assertThat(onFx(() -> exports.exportAvailable().get())).isFalse();
+                .isEqualTo("This is the file just exported. Exporting again asks before replacing it.");
+        assertThat(onFx(() -> exports.exportAvailable().get())).isTrue();
     }
 
     // IF a result stayed after the choices that produced it changed, THEN its tiles and Open buttons would describe a
@@ -241,15 +227,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         exportedOnce();
 
         editDestination(dir.resolve("Other.epub").toString());
-
-        assertThat(onFx(() -> exports.outcome().get())).isNull();
-    }
-
-    @Test
-    void export_thenReplaceChanged_forgetsTheOutcome() {
-        exportedOnce();
-
-        setOverwrite(false);
 
         assertThat(onFx(() -> exports.outcome().get())).isNull();
     }
@@ -288,7 +265,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     }
 
     private void exportedOnce() {
-        setOverwrite(true);
         export();
         assertThat(onFx(() -> exports.outcome().get())).isNotNull();
     }

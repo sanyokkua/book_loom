@@ -956,8 +956,6 @@ public enum MessageKey {
     EXPORT_BOOK_AUTHOR("export.bookAuthor"),
     /** Hover explanation of the control labelled by {@link #EXPORT_BOOK_AUTHOR}. */
     EXPORT_BOOK_AUTHOR_TIP("export.bookAuthor.tip"),
-    /** Line under a title or author field naming the text the book carries, with that text as the argument. */
-    EXPORT_BOOK_TITLE_SOURCE("export.bookTitle.source"),
     /** Reason line under the original title: it comes from the book's details. */
     EXPORT_BOOK_TITLE_FROM_DETAILS("export.bookTitle.fromDetails"),
     /** Reason line under the original title: it comes from a Markdown book's front matter. */
@@ -1329,6 +1327,10 @@ public enum MessageKey {
     /** The estimate under that button; arguments are the fewest and most minutes and the dial's name. */
     NAMES_STYLE_AUTO_ABOUT("namesStyle.auto.about"),
     PROGRESS_NAMES_PURPOSE("progress.namesPurpose"),
+    /** Heading of the progress dialog of an export that runs the last check before saving. */
+    PROGRESS_EXPORT_TITLE("progress.exportTitle"),
+    /** Purpose line of the progress dialog of an export that runs the last check before saving. */
+    PROGRESS_EXPORT_PURPOSE("progress.exportPurpose"),
     RECURRING_HELP_LINK("namesStyle.recurring.helpLink"),
     RECURRING_HELP_LINK_TIP("namesStyle.recurring.helpLink.tip"),
     RECURRING_HELP("namesStyle.recurring.help"),
@@ -1629,6 +1631,18 @@ public enum MessageKey {
     TRANSLATING_BACK("translating.back"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_BACK}. */
     TRANSLATING_BACK_TIP("translating.back.tip"),
+    /** Label of the Export screen's Back action. */
+    EXPORT_BACK("export.back"),
+    /** Name of the one step of the file name suggestion dialog. */
+    EXPORT_SUGGEST_NAME_STEP("export.suggestName.step"),
+    /** What the name suggestion sent; arguments: the title, the target language's name and the format. */
+    EXPORT_SUGGEST_NAME_SENT("export.suggestName.sent"),
+    /** What the name suggestion answered; argument: the suggested name. */
+    EXPORT_SUGGEST_NAME_HOW("export.suggestName.how"),
+    /** Purpose line of the file name suggestion dialog. */
+    PROGRESS_SUGGEST_NAME_PURPOSE("progress.suggestNamePurpose"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_BACK}. */
+    EXPORT_BACK_TIP("export.back.tip"),
     /** Banner title of a failure reported in place, such as a destination that may not be replaced. */
     TRANSLATING_REFUSED_TITLE("translating.refusedTitle"),
     /** Banner text naming the missing input; argument 0 is its token (book or model). */
@@ -1696,8 +1710,6 @@ public enum MessageKey {
     EXPORT_REFUSAL_SOURCE("export.refusal.source"),
     /** Refusal beside Save to when the destination's file type differs from the source's. */
     EXPORT_REFUSAL_TYPE("export.refusal.type"),
-    /** Refusal naming an occupied book or side-file path; argument: the path. */
-    EXPORT_REFUSAL_OCCUPIED("export.refusal.occupied"),
     /** Note shown while a run is translating, so the book cannot be exported yet. */
     EXPORT_NOTE_PAUSE("export.note.pause"),
     /** Counted line: segments written in the source language. */
@@ -1751,8 +1763,6 @@ public enum MessageKey {
     EXPORT_OPEN_BOOK_TIP("export.openBook.tip"),
     /** Label of the destination field beside Browse. */
     EXPORT_SAVE_TO("export.saveTo"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_SAVE_TO}. */
-    EXPORT_SAVE_TO_TIP("export.saveTo.tip"),
     /** Export button that asks the model for the translated book's file name. */
     EXPORT_SUGGEST_NAME("export.suggestName"),
     /** Hover explanation of the control labelled by {@link #EXPORT_SUGGEST_NAME}. */
@@ -1767,10 +1777,6 @@ public enum MessageKey {
     EXPORT_BROWSE("export.browse"),
     /** Hover explanation of the control labelled by {@link #EXPORT_BROWSE}. */
     EXPORT_BROWSE_TIP("export.browse.tip"),
-    /** Label of the switch that allows replacing an existing file at the destination. */
-    EXPORT_REPLACE("export.replace"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_REPLACE}. */
-    EXPORT_REPLACE_TIP("export.replace.tip"),
     /** The read-only format row; argument 0 is the format's display name. */
     EXPORT_FORMAT_SAME("export.format.same"),
     /** The button that writes the book. */
@@ -1785,6 +1791,106 @@ public enum MessageKey {
     EXPORT_TILE_REVIEWED("export.tile.reviewed"),
     /** Caption of the tile that shows a passed mark once the written file was re-opened. */
     EXPORT_TILE_VALID("export.tile.valid"),
+    /** Caption of the first tile before any export: the segments done. */
+    EXPORT_TILE_DONE("export.tile.done"),
+    /** A tile figure read against its whole; argument 0 is the part, argument 1 the whole. */
+    EXPORT_TILE_OF("export.tile.of"),
+    /** Caption of the fourth tile once a written book was checked. */
+    EXPORT_TILE_VALID_DONE("export.tile.validDone"),
+    /** Banner title while a run translates. */
+    EXPORT_BANNER_RUNNING("export.banner.running"),
+    /** Banner text while a run translates. */
+    EXPORT_BANNER_RUNNING_NOTE("export.banner.running.note"),
+    /** The banner button that pauses the translating run. */
+    EXPORT_BANNER_PAUSE("export.banner.pause"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_BANNER_PAUSE}. */
+    EXPORT_BANNER_PAUSE_TIP("export.banner.pause.tip"),
+    /** Banner of a partial book; argument 0 is the translated segments, argument 1 all that could be. */
+    EXPORT_BANNER_PARTIAL("export.banner.partial"),
+    /** Banner title and toolbar reason while nothing is translated. */
+    EXPORT_BANNER_NOTHING("export.banner.nothing"),
+    /** Banner text while nothing is translated. */
+    EXPORT_BANNER_NOTHING_NOTE("export.banner.nothing.note"),
+    /** Banner while the export runs in the background. */
+    EXPORT_HIDDEN_BANNER("export.hidden.banner"),
+    /** Label of the original title. */
+    EXPORT_BOOK_TITLE_ORIGINAL("export.bookTitle.original"),
+    /** Label of the translated title field. */
+    EXPORT_BOOK_TITLE_TRANSLATED("export.bookTitle.translated"),
+    /** Label of the original author. */
+    EXPORT_BOOK_AUTHOR_ORIGINAL("export.bookAuthor.original"),
+    /** Label of the translated author field. */
+    EXPORT_BOOK_AUTHOR_TRANSLATED("export.bookAuthor.translated"),
+    /** The original author of a book that names none. */
+    EXPORT_BOOK_AUTHOR_NONE("export.bookAuthor.none"),
+    /** A title edit that was not saved; argument 0 is the marks it lacks. */
+    EXPORT_BOOK_TITLE_MARKS_MISSING("export.bookTitle.marksMissing"),
+    /** A title or author edit the store refused; argument 0 is why, in words. */
+    EXPORT_BOOK_TITLE_NOT_SAVED("export.bookTitle.notSaved"),
+    /** The note after a short path inside the home folder. */
+    EXPORT_SAVE_TO_HOME("export.saveTo.home"),
+    /** The line under Save as about an existing file. */
+    EXPORT_REPLACE_HINT("export.replace.hint"),
+    /** Heading of the question before replacing; argument 0 is how many files exist. */
+    EXPORT_REPLACE_TITLE("export.replace.title"),
+    /** Text of the question before replacing; argument 0 is how many files exist, argument 1 their paths, one per line. */
+    EXPORT_REPLACE_TEXT("export.replace.text"),
+    /** The button that allows replacing the existing files. */
+    EXPORT_REPLACE_YES("export.replace.yes"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_REPLACE_YES}. */
+    EXPORT_REPLACE_YES_TIP("export.replace.yes.tip"),
+    /** The progress dialog button that takes the suggested file name. */
+    EXPORT_SUGGEST_NAME_USE("export.suggestName.use"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_SUGGEST_NAME_USE}. */
+    EXPORT_SUGGEST_NAME_USE_TIP("export.suggestName.use.tip"),
+    /** The file-name dialog's line saying what Cancel does. */
+    EXPORT_SUGGEST_NAME_CANCEL_KEEPS("export.suggestName.cancelKeeps"),
+    /** The notice after a title edit: the file name is suggested again only on request. */
+    EXPORT_SUGGEST_NAME_TITLE_CHANGED("export.suggestName.titleChanged"),
+    /** The last check's note while the book is partial. */
+    EXPORT_CONSISTENCY_PARTIAL("export.consistency.partial"),
+    /** Heading of the export dialog's steps. */
+    EXPORT_GROUP_STEPS("export.group.steps"),
+    /** Heading of the reread items; argument 0 is how many were reread, argument 1 how many there are. */
+    EXPORT_GROUP_REREAD("export.group.reread"),
+    /** Heading of the export dialog's last step. */
+    EXPORT_GROUP_FINISH("export.group.finish"),
+    /** Column heading of the reread grid: the text before. */
+    EXPORT_REREAD_BEFORE("export.reread.before"),
+    /** Column heading of the reread grid: the text after. */
+    EXPORT_REREAD_AFTER("export.reread.after"),
+    /** Row label of the reread grid: the paragraph before. */
+    EXPORT_REREAD_PREVIOUS("export.reread.previous"),
+    /** Row label of the reread grid: the reread paragraph. */
+    EXPORT_REREAD_THIS("export.reread.this"),
+    /** Row label of the reread grid: the paragraph after. */
+    EXPORT_REREAD_NEXT("export.reread.next"),
+    /** The after cell of an item the reread left alone. */
+    EXPORT_REREAD_UNCHANGED("export.reread.unchanged"),
+    /** The after cell of an item whose call is under way. */
+    EXPORT_REREAD_READING("export.reread.reading"),
+    /** The progress dialog button that ends the last check and writes the file. */
+    EXPORT_WRITE_NOW("export.writeNow"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW}. */
+    EXPORT_WRITE_NOW_TIP("export.writeNow.tip"),
+    /** Heading of the question before writing early. */
+    EXPORT_WRITE_NOW_TITLE("export.writeNow.title"),
+    /** Text of the question before writing early; arguments are reread, all, fixed and the rest. */
+    EXPORT_WRITE_NOW_TEXT("export.writeNow.text"),
+    /** Text of the question before writing early when nothing was reread yet. */
+    EXPORT_WRITE_NOW_TEXT_EARLY("export.writeNow.textEarly"),
+    /** The button that writes the file early. */
+    EXPORT_WRITE_NOW_YES("export.writeNow.yes"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW_YES}. */
+    EXPORT_WRITE_NOW_YES_TIP("export.writeNow.yes.tip"),
+    /** The safe answer of the write-early question. */
+    EXPORT_WRITE_NOW_NO("export.writeNow.no"),
+    /** Check line after an early write; argument 0 is how many paragraphs were not reread. */
+    EXPORT_CHECK_CONSISTENCY_NOT_REREAD("export.check.consistency.notReread"),
+    /** Row label of the export-complete card: the last check. */
+    EXPORT_COMPLETE_LAST_CHECK("export.complete.lastCheck"),
+    /** Row value of the last check; argument 0 is the segments reread, argument 1 those fixed. */
+    EXPORT_COMPLETE_LAST_CHECK_VALUE("export.complete.lastCheckValue"),
     /** Check line after an export: the file was re-opened and verified. */
     EXPORT_CHECK_REOPENED("export.check.reopened"),
     /** Check line after an export: the language metadata changed; arguments are the source and the target tags. */
@@ -1829,10 +1935,6 @@ public enum MessageKey {
     EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
     /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
     EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
-    /** The forward action of the last step, always unavailable. */
-    EXPORT_NEXT("export.next"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_NEXT}. */
-    EXPORT_NEXT_TIP("export.next.tip"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */

@@ -2,7 +2,7 @@
 
 ### Requirement: Show the tiles from the project before any export
 
-The export screen SHALL show four tiles filled from the project before any export: how many segments are done ("74 of 142"), how many were translated without changes, how many were reviewed by the person, and "checked when written", which SHALL read "—" until a file is written and "opens, nothing missing" afterwards.
+The export screen SHALL show four tiles filled from the project before any export: how many segments are done ("74 of 142"), how many were translated without changes, how many were reviewed by the person, and "checked when written", "—" until a file is written. After a written export the first tile SHALL read what the stored export wrote and the fourth "checked: opens, nothing missing", also after a restart.
 
 **Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (E1). In plain words: the person sees how much of the book is done before choosing to write it, instead of four empty tiles that only fill after the file exists.
 
@@ -14,7 +14,12 @@ The export screen SHALL show four tiles filled from the project before any expor
 #### Scenario: The check tile fills in after writing
 
 - **WHEN** the book is written and its check passes
-- **THEN** the fourth tile reads "opens, nothing missing", and the other three tiles keep their figures
+- **THEN** the fourth tile reads "✓" with "checked: opens, nothing missing", and the translated-without-changes and reviewed tiles keep the project's live figures
+
+#### Scenario: The tiles after a restart come from the stored export
+
+- **WHEN** the last export of `Earth Gravity · EN → UK` wrote 70 segments with 72 pending, the application restarts, and the project now has 74 of 142 segments done
+- **THEN** the first tile reads "70 of 142" with "segments written", and the fourth reads "✓" with "checked: opens, nothing missing"
 
 ### Requirement: Show the book's title and author with a reason when there is none
 
@@ -31,6 +36,11 @@ The export screen's title and author card SHALL show the original title and auth
 
 - **WHEN** `earth-gravity.epub` names the title `Earth Gravity` and no author
 - **THEN** the card shows the original title, an editable translated title, and the line "The book names no author"
+
+#### Scenario: A title with formatting marks keeps them
+
+- **WHEN** the title of `notes.md` is its first heading `# The *Field* Notes`, translated as `Нотатки *Поля*`
+- **THEN** the original title reads `The ⟦0⟧Field⟦1⟧ Notes` and the translated field `Нотатки ⟦0⟧Поля⟦1⟧`; deleting `⟦1⟧` in the field leaves it in place, and an edit the store refuses shows a line starting "Not saved:"
 
 ### Requirement: Take the original title in a fixed order and say where it came from
 
@@ -74,6 +84,11 @@ WHEN the person presses "✦ Suggest a name", the application SHALL open a short
 - **WHEN** the person presses Cancel while the model has not answered
 - **THEN** the Save to field is unchanged
 
+#### Scenario: A title edit asks the model nothing
+
+- **WHEN** a suggested name `Земне тяжіння.uk.md` is in use and the person edits the translated title
+- **THEN** the name stays, no model call is made, and the line "The title changed. Press ✦ Suggest a name for a file name that matches it." appears
+
 ### Requirement: Show the last check as a progress dialog the person can leave or end
 
 WHEN an export runs the last check before saving, the application SHALL show a progress dialog with the groups Steps (Check the translation is complete, Fix he/she forms that became known, Translate unsure segments again), Reread next to the neighbours (one item per segment with its result) and Finish (Write the file), and the figures line "48 % · 12 of 25 steps · Left about 2 min".
@@ -111,6 +126,11 @@ The last-check dialog SHALL offer "Write the file now", which asks first "6 of 1
 
 - **WHEN** 6 of 18 items are reread and 1 is fixed, and the person presses "Write the file now"
 - **THEN** a question reads "6 of 18 reread, 1 fixed; the other 12 stay as they are", and confirming writes the file
+
+#### Scenario: Write the file now keeps what was fixed
+
+- **WHEN** paragraphs `ch01.xhtml:0` to `ch01.xhtml:2` are to be reread, the first is fixed to `Вона втомилася після довгої дороги додому.`, and the person confirms "Write the file now" while the second is with the model
+- **THEN** the call in flight is given up, no third call is made, the file holds the fixed first paragraph and the other two as stored, and the report says "2 paragraphs were not reread: the file was written before the last check reached them"
 
 #### Scenario: Cancel asks before discarding
 
@@ -361,7 +381,7 @@ WHILE the run state is Translating, Stuck call, Pausing or Stopping, Export book
 
 ### Requirement: Run the final consistency pass before writing when it is switched on
 
-The export screen SHALL offer the last check before saving as a switch ("Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours."), its starting value coming from the Automation setting for the last check.
+The export screen SHALL offer the last check before saving as a switch ("Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours."), starting from the stored Automation setting for the last check, or, with none stored, on at the Max dial; the screen SHALL only read that setting, never write it.
 
 The switch SHALL be off and disabled for a partial export, with the note "Runs when the whole book is translated".
 
@@ -382,6 +402,11 @@ The switch SHALL be off and disabled for a partial export, with the note "Runs w
 
 - **WHEN** 74 of 142 segments are translated and the export screen is shown
 - **THEN** the last-check switch is off and disabled with "Runs when the whole book is translated"
+
+#### Scenario: A partial export does not change the saved choice
+
+- **WHEN** `automation.lastCheck` is stored as `true`, the export screen shows 74 of 142 segments translated, and the book is later finished
+- **THEN** the switch is off and disabled while the book is partial, on again once it is finished, and `automation.lastCheck` still reads `true`
 
 ## REMOVED Requirements
 
