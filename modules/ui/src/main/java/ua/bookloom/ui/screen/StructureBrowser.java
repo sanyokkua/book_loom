@@ -24,6 +24,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
+import ua.bookloom.ui.state.UnitPart;
 
 /**
  * The reading-order tree and the segment browser of the picked part, as two cards that every screen showing the book's
@@ -153,7 +154,7 @@ final class StructureBrowser {
                             tree.getSelectionModel().select(first);
                             segments.showUnlessShown(
                                     projectId,
-                                    StructureListing.unitsOf(first.getValue()),
+                                    StructureListing.partsOf(first.getValue()),
                                     brief.brief().get());
                         },
                         segments::clear);
@@ -162,14 +163,14 @@ final class StructureBrowser {
     }
 
     private void picked(final String projectId, final @Nullable TreeItem<StructureNode> item) {
-        final List<String> units = item == null ? List.of() : StructureListing.unitsOf(item.getValue());
-        log.debug("structure node picked, {} unit(s) to list", units.size());
-        segments.show(projectId, units);
+        final List<UnitPart> parts = item == null ? List.of() : StructureListing.partsOf(item.getValue());
+        log.debug("structure node picked, {} unit part(s) to list", parts.size());
+        segments.show(projectId, parts);
     }
 
     private static Optional<TreeItem<StructureNode>> firstWithUnits(final TreeItem<StructureNode> parent) {
         for (final TreeItem<StructureNode> child : parent.getChildren()) {
-            if (!StructureListing.unitsOf(child.getValue()).isEmpty()) {
+            if (!StructureListing.partsOf(child.getValue()).isEmpty()) {
                 return Optional.of(child);
             }
             final Optional<TreeItem<StructureNode>> deeper = firstWithUnits(child);

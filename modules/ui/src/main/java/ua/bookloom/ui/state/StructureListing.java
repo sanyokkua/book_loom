@@ -62,22 +62,24 @@ public record StructureListing(List<StructureNode> roots) {
     }
 
     /**
-     * The units whose segments a node stands for: its own unit, or, for a grouping node with none, those of its
-     * descendants in reading order.
+     * The segments a node stands for: its own part of its unit — the whole unit, or for a chapter of a single-unit book
+     * the run from its first segment — or, for a grouping node with no unit, those of its descendants in reading order.
      *
      * @param node the node picked in the tree
-     * @return the unit ids without repeats; empty when neither the node nor anything under it points into a unit
+     * @return the parts without repeats; empty when neither the node nor anything under it points into a unit
      */
-    public static List<String> unitsOf(final StructureNode node) {
+    public static List<UnitPart> partsOf(final StructureNode node) {
         Objects.requireNonNull(node, "node");
         final String own = node.unitId();
-        if (own != null) {
-            return List.of(own);
+        if (own == null) {
+            return node.children().stream()
+                    .flatMap(child -> partsOf(child).stream())
+                    .distinct()
+                    .toList();
         }
-        return node.children().stream()
-                .flatMap(child -> unitsOf(child).stream())
-                .distinct()
-                .toList();
+        final Integer first = node.firstSegment();
+        final Integer count = node.segmentCount();
+        return List.of(first == null ? UnitPart.whole(own) : new UnitPart(own, first, count == null ? 0 : count));
     }
 
     private static int sizeOf(final StructureNode node) {

@@ -62,6 +62,8 @@ final class StructureSegmentsPane extends VBox {
     private final StructureTextPane reading;
     private final ChangeListener<StructureSegments> onState = (observed, was, now) -> show(now);
     private boolean isLoaded;
+    private boolean isRelisting;
+    private @Nullable String pickedId;
 
     StructureSegmentsPane(
             final StructureSegmentsViewModel model, final Messages messages, final StructureTextPane reading) {
@@ -116,7 +118,7 @@ final class StructureSegmentsPane extends VBox {
         list.setMinHeight(MIN_ROWS * ROW_HEIGHT + FRAME);
         list.setPrefHeight(PREFERRED_ROWS * ROW_HEIGHT + FRAME);
         Tips.install(messages, list, MessageKey.STRUCTURE_SEGMENTS_HINT);
-        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> reading.show(now));
+        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> picked(now));
         note.setId("structure-segments-state");
         note.getStyleClass().add("muted");
         note.setWrapText(true);
@@ -125,16 +127,55 @@ final class StructureSegmentsPane extends VBox {
         return new StackPane(list, note);
     }
 
+    // A row the list drops while it is filled again is no choice of the person's, so the picked segment and its text
+    // stay until the new listing says whether it still holds that segment.
+    private void picked(final @Nullable StructureSegmentRow row) {
+        if (isRelisting && row == null) {
+            return;
+        }
+        if (!isRelisting) {
+            pickedId = row == null ? null : row.preview().segmentId();
+        }
+        reading.show(row);
+    }
+
     private void show(final StructureSegments state) {
         log.debug("segment browser shows {}", state.getClass().getSimpleName());
         isLoaded = state instanceof StructureSegments.Loaded;
-        switch (state) {
-            case StructureSegments.Idle _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_PICK);
-            case StructureSegments.Loading _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_LOADING);
-            case StructureSegments.Failed _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_FAILED);
-            case StructureSegments.Loaded loaded -> loaded(loaded);
+        isRelisting = true;
+        try {
+            switch (state) {
+                case StructureSegments.Idle _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_PICK);
+                case StructureSegments.Loading _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_LOADING);
+                case StructureSegments.Failed _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_FAILED);
+                case StructureSegments.Loaded loaded -> loaded(loaded);
+            }
+            if (!(state instanceof StructureSegments.Loading)) {
+                restorePick();
+            }
+        } finally {
+            isRelisting = false;
         }
-        reading.show(null);
+    }
+
+    // A listing asked again (a brief save, the checks) keeps the picked segment when it still lists it.
+    private void restorePick() {
+        final String wanted = pickedId;
+        final StructureSegmentRow again = wanted == null
+                ? null
+                : visible.stream()
+                        .filter(row -> row.preview().segmentId().equals(wanted))
+                        .findFirst()
+                        .orElse(null);
+        log.debug("the picked segment {} is {}", wanted, again == null ? "no longer listed" : "listed again");
+        if (again == null) {
+            pickedId = null;
+            list.getSelectionModel().clearSelection();
+            reading.show(null);
+            return;
+        }
+        list.getSelectionModel().select(again);
+        list.scrollTo(again);
     }
 
     private void unlisted(final MessageKey why) {

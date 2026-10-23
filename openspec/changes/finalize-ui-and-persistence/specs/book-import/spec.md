@@ -97,6 +97,16 @@ The book's text browser SHALL be three panes — Chapters, the selected chapter'
 - **WHEN** the person selects chapter 1 and then the segment at `ch1 · p05`
 - **THEN** the Text pane shows that segment's location, its kind and its text with formatting marks as chips
 
+#### Scenario: A Markdown chapter lists its own segments
+
+- **WHEN** a Markdown book `# One` / `First.` / `Second.` / `# Two` / `Third.` is opened and the person selects `One`
+- **THEN** the Segments pane lists exactly `One`, `First.` and `Second.`, and selecting `First.` shows `First.` in the Text pane
+
+#### Scenario: The picked segment survives the listing being asked again
+
+- **WHEN** the person has selected a segment and a brief save lists the chapter's segments again
+- **THEN** the same row stays selected and the Text pane still shows its text
+
 ### Requirement: Ask before another book is opened while a project is open
 
 WHEN a book is dropped or chosen on the import screen while a project is open, the application SHALL ask "Open another book?" with "Open as a new project" as the primary choice, "Replace and delete this translation" as the named destructive choice and Cancel, and SHALL change nothing of the open project until the person chooses.

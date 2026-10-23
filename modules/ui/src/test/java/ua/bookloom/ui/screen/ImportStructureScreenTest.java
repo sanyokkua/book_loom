@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.StructureSegmentsViewModel;
 
 /**
  * The reading-order tree and the segment browser on the import screen, with the ids of the structure screen they
@@ -71,6 +73,22 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · group 1 of 2");
         assertThat(isInside("structure-preview", "structure-text-card")).isTrue();
         assertThat(isInside("structure-preview", "structure-segments-card")).isFalse();
+    }
+
+    // IF listing the chapter again (a brief save, which re-plans the chunks) blanked the text pane, THEN the picked
+    // segment's text would vanish by itself while its row stays in the list.
+    @Test
+    void preview_listingAskedAgainAfterAPick_keepsTheRowAndItsText() throws TimeoutException {
+        openFactsBook();
+        awaitFx(() -> segmentRows().size() == 4);
+        pickSegment(1);
+
+        onFx(() -> injector.getInstance(StructureSegmentsViewModel.class).refresh());
+        awaitFx(() -> projects.segmentCalls().size() == 2 && segmentRows().size() == 4);
+
+        assertThat(previewText()).isEqualTo(LONG_TEXT);
+        assertThat(ThemeTestSupport.onFx(() -> segmentList().getSelectionModel().getSelectedIndex()))
+                .isEqualTo(1);
     }
 
     // IF the search narrowed nothing on Import, THEN the browser would be reused in name only.
