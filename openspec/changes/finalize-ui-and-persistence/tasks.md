@@ -1078,7 +1078,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 9. Gate and hand run
 
-- [ ] 9.1 Bring the project's own documents up to date, so the next reader finds what was built.
+- [x] 9.1 Bring the project's own documents up to date, so the next reader finds what was built.
   - `AGENTS.md` "Where it stands": Projects, the full Settings, SQLite storage, continue after restart, the first-launch
     look.
   - The `AGENTS.md` Modules table (`:persistence`: SQLite + JDBI; Flyway from the first release).

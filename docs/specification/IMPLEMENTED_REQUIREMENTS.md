@@ -283,3 +283,37 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
   (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`).
 - Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
   is single-flight).
+
+## Requirements implemented by `finalize-ui-and-persistence`
+
+The Projects screen, the full Settings, SQLite storage, continue after a restart, the first-launch look and the words in English and Ukrainian. Rows for FR-SETTINGS-03, -05 and -06 stand in the table above. The `local-storage` capability is new: its spec sits in `openspec/changes/finalize-ui-and-persistence/specs/local-storage/` until the change is archived and folded into `openspec/specs/`.
+
+| Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |
+|---|---|---|---|---|
+| FR-THEME-4 | implemented | `finalize-ui-and-persistence` | `settings` | Accent fixed; the theme choice is stored (Settings › Appearance). |
+| FR-PROV-01 | implemented | `finalize-ui-and-persistence` | `settings` | Two local providers offered from first launch; one silent look at the two local addresses on the very first launch (ADR-0044). |
+| FR-PROV-04 | implemented | `finalize-ui-and-persistence` | `settings` | Providers are stored in SQLite and survive a restart (was partial). |
+| FR-MODEL-04 | implemented | `finalize-ui-and-persistence` | `settings` | The chosen model and its per-model settings are stored (was partial). |
+| FR-EXPORT-04 | implemented | `finalize-ui-and-persistence` | `export` | Export screen with the Save as path, early write, tiles from the project and a replace question. |
+| FR-REVIEW-05 | implemented | `finalize-ui-and-persistence` | `review-queue` | Review desk as an extra-large dialog with row markers, one main button and More; protected formatting marks in the editor. |
+| FR-UI-06 | implemented | `finalize-ui-and-persistence` | `localization` | Language stored as `ui.language`, applied after a restart with Restart now. |
+| FR-UI-15 | implemented | `finalize-ui-and-persistence` | `app-shell` | Projects screen grouped by book, with open, continue, rename, remove and translate-into-another-language. |
+| FR-PERSIST-01 | implemented | `finalize-ui-and-persistence` | `local-storage` | Projects, segments, glossary and translation memory in SQLite (WAL) from one schema file. |
+| FR-PERSIST-02 | implemented | `finalize-ui-and-persistence` | `local-storage` | A chunk's decisions and run record are one transaction. |
+| FR-PERSIST-03 | implemented | `finalize-ui-and-persistence` | `local-storage` | Database `bookloom.db` under the per-OS data folder. |
+| FR-PERSIST-04 | implemented | `finalize-ui-and-persistence` | `local-storage` | Single-instance lock held before the database opens. |
+| FR-PERSIST-05 | implemented | `finalize-ui-and-persistence` | `local-storage` | Secrets stay references; the database holds none. |
+| FR-PERSIST-06 | implemented | `finalize-ui-and-persistence` | `local-storage` | Development builds use the separate `-Dev` folders. |
+| FR-PERSIST-07 | implemented | `finalize-ui-and-persistence` | `local-storage` | Settings KV serialised with `Locale.ROOT`. |
+| FR-PERSIST-08 | implemented | `finalize-ui-and-persistence` | `local-storage` | `busy_timeout` and pragmas per connection; one writer (`WriteExecutor`). |
+| FR-PERSIST-09 | implemented | `finalize-ui-and-persistence` | `local-storage` | The provider sits in the project's document, so deleting a provider keeps projects. |
+| FR-PERSIST-10 | implemented | `finalize-ui-and-persistence` | `local-storage` | A file that cannot be opened is set aside as `bookloom.db.old-<time>`. |
+| FR-PERSIST-11 | implemented | `finalize-ui-and-persistence` | `local-storage` | A changed schema number or record-shape fingerprint sets the file aside (ADR-0043). |
+| FR-SETTINGS-01 | implemented | `finalize-ui-and-persistence` | `settings` | Settings, providers and per-model settings in their own SQLite stores. |
+| FR-SETTINGS-02 | implemented | `finalize-ui-and-persistence` | `settings` | Providers and Models tabs live. |
+| FR-SETTINGS-04 | implemented | `finalize-ui-and-persistence` | `settings` | Theme and technical details stored; language applies after a restart. |
+| FR-SETTINGS-07 | implemented | `finalize-ui-and-persistence` | `settings` | Every setting validated against its range. |
+| FR-SETTINGS-08 | implemented | `finalize-ui-and-persistence` | `settings` | Providers and Models change nothing until Save; pinned footer and leave guard. |
+| FR-RESUME-02 | implemented | `finalize-ui-and-persistence` | `resume` | Reopen the last project at launch; a run left running or paused shows as interrupted and continues at its first pending segment. |
+| FR-RESUME-03 | implemented | `finalize-ui-and-persistence` | `resume` | Pause and resume of a running job; reopen-last-project switch in Settings › Automation. |
+| FR-RESUME-05 | implemented | `finalize-ui-and-persistence` | `resume` | Stop is terminal; a new run starts at the first pending segment, also after a restart. |

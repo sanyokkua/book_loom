@@ -22,10 +22,10 @@ of their planned slot. It consumed most of the Stage C and Stage D rows below in
 took and what it left), and closed D5, D7, D8, D17 and D19 and part of D18 in `#decision-debt`. The groups of work that
 were not planned up front (15a–15j) are written down in its `additional-work.md`, with their IDs unchanged. The
 translation pipeline is redesigned by a separate proposal, `docs/proposals/2026-10-16-translation-pipeline-redesign.md`,
-the change after `finalize-ui-and-persistence`. **Next:** `finalize-ui-and-persistence`
-(`openspec/changes/finalize-ui-and-persistence/`, proposed 2026-10-20) finishes the UI to the 2026-10-19 mockup, adds the
-Projects screen and the full Settings, and keeps state and settings in SQLite (ADR-0043); `redesign-translation-pipeline`
-follows it.
+the change after `finalize-ui-and-persistence`. **Done:** `finalize-ui-and-persistence`
+(`openspec/changes/finalize-ui-and-persistence/`, proposed 2026-10-20) finished the UI to the 2026-10-19 mockup, added the
+Projects screen and the full Settings, and keeps state and settings in SQLite (ADR-0043); it awaits its final gate, the
+hand run and the owner's checks (tasks 9.2–9.4) before archiving. **Next:** `redesign-translation-pipeline`, after the owner's review.
 
 ## where-this-stands {#where-this-stands}
 
