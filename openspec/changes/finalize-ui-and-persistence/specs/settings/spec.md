@@ -392,6 +392,21 @@ The Automation tab SHALL offer When to stop and ask you, a default quality, and 
 - **WHEN** Reopen the last project is switched off and the application is closed and opened again
 - **THEN** the Automation tab shows Reopen the last project switched off
 
+#### Scenario: An explicit launch value is named on Automation
+
+- **WHEN** BookLoom was launched with `BOOKLOOM_REVIEW_MODE=unattended` and the Automation tab is opened
+- **THEN** a note under When to stop and ask you says `BOOKLOOM_REVIEW_MODE` is set for this launch, so it decides this, and that the choice made here is kept for launches without it
+
+#### Scenario: A new book takes the default quality
+
+- **WHEN** Max quality is chosen as the default quality for new books and a book is opened that has no stored project, or whose stored project has no target language yet (it is created again from the book)
+- **THEN** that project's Book Brief holds Max quality, and a stored project that already has a target language keeps the quality its own Book Brief holds
+
+#### Scenario: The last-check default is unwritten until chosen
+
+- **WHEN** the Automation tab is opened and the last-check default has never been written
+- **THEN** its switch is off with a hint that it is not chosen yet (on for books at Max quality, off otherwise), and once the switch is changed the written value wins and the hint is gone
+
 ### Requirement: Name the review modes with one set of words
 
 The Automation tab's When to stop and ask you SHALL offer exactly these three choices, each standing for one review mode of the run and one launch value:
@@ -402,7 +417,9 @@ The Automation tab's When to stop and ask you SHALL offer exactly these three ch
 | When something needs review | Assisted | `assisted` |
 | After every segment | Manual | `manual` |
 
-**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: the tab, the title bar and the environment variable `BOOKLOOM_REVIEW_MODE` name the same three modes, so a person and a script mean the same thing. The default is Never — translate unattended.
+The long phrases belong to the Automation tab. Every other screen that names the mode (the title bar, the Translating screen) uses the short words Unattended, Assisted and Manual, and `BOOKLOOM_REVIEW_MODE` and `bookloom.review.mode` take the launch values.
+
+**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: the tab, the other screens and the environment variable name the same three modes, so a person and a script mean the same thing: the tab says it in long sentences, the rest of the application in one word, and a script in the launch value. The default is Never — translate unattended.
 
 #### Scenario: The words map to the modes
 
@@ -416,7 +433,7 @@ The Automation tab's When to stop and ask you SHALL offer exactly these three ch
 
 ### Requirement: Show storage and logs on one tab
 
-The Storage & logs tab SHALL show where the projects are saved, how large they are, an Open folder action and Make a backup…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch, Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip.
+The Storage & logs tab SHALL show where the projects are saved, how large they are (the database with its write-ahead file) and how many projects it holds, an Open folder action and Make a backup…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch that applies after BookLoom restarts (a launch value `BOOKLOOM_TRACE_FILE` or `bookloom.trace.file` wins over it and is named), Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip. Make a backup… SHALL write only to a file the person picks, SHALL never replace an existing file, and SHALL NOT carry any key.
 
 **Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can find their saved work and the logs without hunting through the file system, and can make a backup or hand support a bundle. Long paths stay readable, and the whole path is one hover away.
 
@@ -429,6 +446,26 @@ The Storage & logs tab SHALL show where the projects are saved, how large they a
 
 - **WHEN** the Storage & logs tab is opened
 - **THEN** it states that 10 launches are kept
+
+#### Scenario: The detailed log switch applies after a restart
+
+- **WHEN** Detailed diagnostic log is switched on and BookLoom is closed and opened again
+- **THEN** the detailed log is written in the new launch, the tab said before the restart that the switch applies after BookLoom restarts, and the log written in the first launch did not change
+
+#### Scenario: A launch value decides the detailed log
+
+- **WHEN** BookLoom was launched with `BOOKLOOM_TRACE_FILE=0` while Detailed diagnostic log is switched on
+- **THEN** the detailed log is not written, and a note under the switch names `BOOKLOOM_TRACE_FILE` as the value that decides this launch
+
+#### Scenario: Make a backup writes a copy that opens
+
+- **WHEN** Make a backup… is used with a new file name
+- **THEN** the file holds all the projects and settings as they were, contains no key, and the saved work itself is unchanged and still writable
+
+#### Scenario: Make a backup refuses an existing file
+
+- **WHEN** Make a backup… is used with the name of a file that already exists
+- **THEN** the file is left untouched and an error with the code `validation` says a file with that name is already there
 
 ### Requirement: Show all six settings areas, every one enabled
 
@@ -491,7 +528,7 @@ WHEN Keep the computer awake is turned off while the application holds the compu
 
 ### Requirement: Store the speed the inference test measured on the model
 
-WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured.
+WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured. WHEN a translation ends, the stored value SHALL be that run's seconds per drafted segment (the seconds its drafting calls took, pauses left out, divided by the segments drafted); a run that drafted nothing SHALL store nothing.
 
 **Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
 
@@ -504,6 +541,11 @@ WHEN Test inference passes for a model of a stored provider, the application SHA
 
 - **WHEN** a translation of the book with `gemma4:e4b` ends after Test inference had stored a speed
 - **THEN** the stored speed is the translation's and the estimate before Start says it comes from an earlier translation
+
+#### Scenario: A run that drafted nothing stores nothing
+
+- **WHEN** a translation is cancelled or refused before any segment was drafted
+- **THEN** the speed stored on the model is unchanged
 
 
 ## MODIFIED Requirements

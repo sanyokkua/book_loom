@@ -2154,30 +2154,35 @@
 
 /* The sturdy monospaced face the system has (MonoFont, a class on the shell root); "Monospaced" above is the fallback. */
 .mono-menlo .tech-note,
+.mono-menlo .path-short,
 .mono-menlo .activity-log .list-cell,
 .mono-menlo .activity-log .list-cell .label {
     -fx-font-family: "Menlo";
 }
 
 .mono-consolas .tech-note,
+.mono-consolas .path-short,
 .mono-consolas .activity-log .list-cell,
 .mono-consolas .activity-log .list-cell .label {
     -fx-font-family: "Consolas";
 }
 
 .mono-cascadia .tech-note,
+.mono-cascadia .path-short,
 .mono-cascadia .activity-log .list-cell,
 .mono-cascadia .activity-log .list-cell .label {
     -fx-font-family: "Cascadia Mono";
 }
 
 .mono-dejavu .tech-note,
+.mono-dejavu .path-short,
 .mono-dejavu .activity-log .list-cell,
 .mono-dejavu .activity-log .list-cell .label {
     -fx-font-family: "DejaVu Sans Mono";
 }
 
 .mono-liberation .tech-note,
+.mono-liberation .path-short,
 .mono-liberation .activity-log .list-cell,
 .mono-liberation .activity-log .list-cell .label {
     -fx-font-family: "Liberation Mono";
@@ -3085,6 +3090,13 @@
 /* --- Settings › Models: technical names, refused-setting rows, the temperature readout (finalize 7.2) ---------- */
 .tech-note {
     -fx-text-fill: -color-muted;
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 12px;
+}
+
+/* A destination in the Storage tab: the short form is a path, so it reads in the monospaced face. */
+.path-short {
+    -fx-text-fill: -color-text;
     -fx-font-family: "Monospaced";
     -fx-font-size: 12px;
 }

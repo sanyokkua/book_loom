@@ -212,7 +212,7 @@ The system SHALL keep the database in the per-user data folder, and WHILE one Bo
 
 ### Requirement: Make a backup copy on request
 
-WHEN a person chooses Make a backup… and a destination, the system SHALL write a copy of the stored work to that destination and SHALL leave the stored work unchanged.
+WHEN a person chooses Make a backup… and a destination, the system SHALL write a copy of the stored work to that destination, SHALL leave the stored work unchanged and writable, and SHALL NOT replace a file that already exists.
 
 **Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can keep a safe copy before an experiment or a computer change. The copy is made only when they ask, and it contains no key because none is stored.
 
@@ -220,6 +220,11 @@ WHEN a person chooses Make a backup… and a destination, the system SHALL write
 
 - **WHEN** Make a backup… is chosen with the destination `~/Backups/bookloom-2026-10-20.db`
 - **THEN** that file exists and, when the database held 3 projects, opens with exactly those 3 projects
+
+#### Scenario: A backup never overwrites
+
+- **WHEN** Make a backup… is chosen with the destination of a file that already exists, or of a folder that does not exist
+- **THEN** nothing is written, the existing file is untouched, and the error has the code `validation`
 
 #### Scenario: A cancelled backup writes nothing
 

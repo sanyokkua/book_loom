@@ -32,7 +32,7 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 |-------------|--------------------------------------------------------------------------------------------------------------------------|
 | NFR-PRIV-02 | No analytics, usage metrics, or telemetry of any kind are collected or transmitted.                                      |
 | NFR-PRIV-03 | No third-party SDKs that phone home are bundled (dependency license + behavior gate, `05_Dependencies/03_LICENSING.md`). |
-| NFR-PRIV-04 | Logs stay local (per-OS log dir); they are never uploaded. The detailed diagnostic log (`bookloom-trace.log`, on in a development run, `BOOKLOOM_TRACE_FILE=1` in an installed app) holds book text at `TRACE` and stays on the machine; the About dialog says so, and its diagnostic bundle is only written to a file the user picks — the user decides whether to share it. |
+| NFR-PRIV-04 | Logs stay local (per-OS log dir); they are never uploaded. The detailed diagnostic log (`bookloom-trace.log`, on in a development run; in an installed app switched on by Settings › Storage & logs, which writes the marker `detailed-log.on` read at the next launch, or by `BOOKLOOM_TRACE_FILE=1`, which wins over the switch) holds book text at `TRACE` and stays on the machine; the About dialog says so, and its diagnostic bundle is only written to a file the user picks — the user decides whether to share it. Make a backup… in Settings likewise writes only to a new file the user picks and holds no key. |
 
 ## secrets-never-stored {#secrets-never-stored}
 

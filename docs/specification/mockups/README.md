@@ -767,16 +767,20 @@ BookLoom handles a refusal the same way for every optional setting:
   - **Show technical details** (G12).
 - **Automation**:
   - When to stop and ask you (Never — translate unattended · When something needs review · After every segment =
-    `ReviewMode` UNATTENDED / ASSISTED / MANUAL).
-  - Default quality.
+    `ReviewMode` UNATTENDED / ASSISTED / MANUAL). The tab uses the long phrases, every other screen the short words, a
+    script the launch values; it reaches the next run that starts, and `BOOKLOOM_REVIEW_MODE` is named when it decides.
+  - Default quality (new books take it when first stored; Fast · Balanced · Max).
   - Open the review desk when a translation finishes with segments to review.
-  - Run the last check before saving by default.
-  - Keep the computer awake (with the lid note).
+  - Run the last check before saving by default ("Not chosen yet" until the switch is changed once).
+  - Keep the computer awake (with the lid note; off releases a hold at once).
   - Reopen the last project.
   - There is no OS-notification switch.
 - **Storage & logs**:
-  - Your projects: saved in, size, saved as it goes, Open folder, Make a backup….
-  - Logs: folder, kept 10 launches, Detailed diagnostic log, Open log folder, Save a diagnostic bundle….
+  - Your projects: saved in, size and project count, saved as it goes, Open folder, Make a backup… (a new file only; no
+    key in it), and the line that keys are never saved.
+  - Logs: folder, kept 10 launches, Detailed diagnostic log (applies after BookLoom restarts; the launch value
+    `BOOKLOOM_TRACE_FILE` is named when it decides; a development run says it writes the log whatever the switch says),
+    Open log folder, Save a diagnostic bundle….
   - Paths are shown short with the full path as tooltip.
 
 ---

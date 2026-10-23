@@ -240,6 +240,8 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
 | FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Generation: quality table, Thinking, Sampling and the fixed time limits (finalize 7.3). |
 | FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` | Theme and technical details stored; language after a restart (finalize 7.3). |
+| FR-SETTINGS-05 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Automation: when to stop and ask (next run start), default quality for new books, review desk, last-check default, keep awake, reopen last project (finalize 7.4). |
+| FR-SETTINGS-06 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Storage & logs: database folder and size, Open folder, Make a backup…, log folder, detailed-log switch (after a restart), Open log folder, diagnostic bundle (finalize 7.4). |
 | FR-THEME-10 | implemented | `complete-translation-workflow` | `notifications` |  |
 | FR-THEME-4 | implemented | `complete-translation-workflow` | `settings` |  |
 | FR-TRANS-05 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
@@ -247,7 +249,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-UI-03 | implemented | `complete-translation-workflow` | `app-shell` |  |
 | FR-UI-04 | implemented | `complete-translation-workflow` | `app-shell` |  |
 | FR-UI-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
-| NFR-PRIV-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Book text, prompts and replies are logged at TRACE only. Also cited by `app-shell`. |
+| NFR-PRIV-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Book text, prompts and replies are logged at TRACE only. Also cited by `app-shell`. The detailed log is switched on by Settings (marker `detailed-log.on`) or `BOOKLOOM_TRACE_FILE`; a backup is written only to a file the person picks and holds no key (finalize 7.4). |
 | NFR-PRIV-06 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | NFR-PRIV-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 

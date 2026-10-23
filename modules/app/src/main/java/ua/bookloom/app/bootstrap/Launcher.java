@@ -112,7 +112,11 @@ public final class Launcher {
         final AppEnvironment environment = AppEnvironment.resolve(System::getenv, System::getProperty);
         final ResolvedLogLevel logLevel =
                 LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
-        final ResolvedTraceFile trace = TraceFileResolver.resolve(System::getenv, System::getProperty, environment);
+        final ResolvedTraceFile trace = TraceFileResolver.resolve(
+                System::getenv,
+                System::getProperty,
+                environment,
+                paths.dataDir().resolve(AppPaths.DETAILED_LOG_MARKER));
         // The session's class takes a logger, so it is created only once logging is configured; the header the
         // detailed log writes while configuring reads an empty session through the reference until then.
         final AtomicReference<@Nullable SessionInfo> session = new AtomicReference<>();
@@ -126,7 +130,7 @@ public final class Launcher {
         warnIfOnNetworkFilesystem(paths);
         logStartup(paths, environment);
         logReviewMode(reviewMode);
-        return new StartupContext(paths, environment, reviewMode, trace.enabled(), created, restart);
+        return new StartupContext(paths, environment, reviewMode, trace.enabled(), created, restart, trace.source());
     }
 
     private static Map<String, String> factsOf(AtomicReference<@Nullable SessionInfo> session) {

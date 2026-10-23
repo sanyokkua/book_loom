@@ -41,6 +41,8 @@ final class SettingsPreparations {
             case MODELS_DIRTY -> changeTheModel();
             case GENERATION_OPEN -> openATab("settings-tab-generation");
             case APPEARANCE_OPEN -> openATab("settings-tab-appearance");
+            case AUTOMATION_OPEN -> openATab("settings-tab-automation");
+            case STORAGE_OPEN -> openATab("settings-tab-storage");
             default -> throw new IllegalArgumentException("not a settings preparation: " + preparation);
         }
     }

@@ -14,11 +14,12 @@ class SleepHelpTest extends FxTestBase {
 
     private final MemorySettings settings = new MemorySettings();
     private final CurrentProject project = new CurrentProject();
+    private final KeepAwakeGate gate = new KeepAwakeGate();
     private SleepHelp help;
 
     @BeforeEach
     void build() {
-        help = new SleepHelp(settings, Runnable::run, Runnable::run, project);
+        help = new SleepHelp(settings, Runnable::run, Runnable::run, project, gate);
     }
 
     private void open(final String projectId) {
@@ -65,10 +66,33 @@ class SleepHelpTest extends FxTestBase {
         assertThat(onFx(() -> help.shown().get())).isTrue();
     }
 
-    // IF the off variant were not chosen from the setting, THEN the line would promise an awake computer it won't keep.
+    // IF the off variant were not chosen from the person's choice, THEN the line would promise an awake computer it
+    // won't keep.
     @Test
-    void keepAwake_settingOff_isFalse() {
-        settings.put(AppSetting.KEEP_AWAKE, false);
+    void keepAwake_gateTurnedOff_lineSaysComputerMaySleep() {
+        open("p1");
+
+        onFx(() -> {
+            gate.set(false);
+            return null;
+        });
+
+        assertThat(onFx(() -> help.keepAwake().get())).isFalse();
+    }
+
+    @Test
+    void keepAwake_gateSeededOffBeforeBuilding_isFalse() {
+        gate.seed(false);
+        help = new SleepHelp(settings, Runnable::run, Runnable::run, project, gate);
+
+        assertThat(onFx(() -> help.keepAwake().get())).isFalse();
+    }
+
+    // IF the line read the choice only when built, THEN a seed that arrives later (startup reads the store after the
+    // window's objects exist) would leave the line promising an awake computer.
+    @Test
+    void keepAwake_gateSeededOffAfterBuilding_nextProjectLineIsFalse() {
+        gate.seed(false);
 
         open("p1");
 

@@ -16,6 +16,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +58,7 @@ public final class DiagnosticActions {
     private final ExecutorService executor;
     private final Clock clock;
     private final Consumer<String> clipboard;
+    private final StringProperty bundleSaved = new SimpleStringProperty();
 
     /**
      * Creates the actions over the system clipboard and clock.
@@ -123,6 +127,16 @@ public final class DiagnosticActions {
         return diagnosticLog;
     }
 
+    /** {@return the name of the bundle written last, or {@code null} before one is written or after {@link #clearStatus}} */
+    public ReadOnlyStringProperty bundleSavedProperty() {
+        return bundleSaved;
+    }
+
+    /** Forgets the bundle written last, so a screen that showed it stops saying so. FX thread only. */
+    public void clearStatus() {
+        bundleSaved.set(null);
+    }
+
     /** Opens the log folder in the operating system's file manager. FX thread only. */
     public void openFolder() {
         log.info("opening the log folder {}", diagnosticLog.directory());
@@ -138,6 +152,7 @@ public final class DiagnosticActions {
 
     /** Asks where the bundle goes and writes it there in the background; a cancelled dialog does nothing. */
     public void saveBundle() {
+        bundleSaved.set(null);
         final Path initial = Path.of(System.getProperty("user.home", "."))
                 .resolve("bookloom-diagnostics-" + LocalDateTime.now(clock).format(STAMP) + ".zip");
         final Optional<Path> chosen = chooser.choose(initial);
@@ -170,8 +185,9 @@ public final class DiagnosticActions {
             return;
         }
         final Path name = target.getFileName();
-        toasts.feedback(
-                Severity.SUCCESS, MessageKey.ABOUT_BUNDLE_SAVED, name == null ? target.toString() : name.toString());
+        final String saved = name == null ? target.toString() : name.toString();
+        bundleSaved.set(saved);
+        toasts.feedback(Severity.SUCCESS, MessageKey.ABOUT_BUNDLE_SAVED, saved);
     }
 
     private Map<String, String> about() {

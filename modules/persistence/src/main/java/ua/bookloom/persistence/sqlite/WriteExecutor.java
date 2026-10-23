@@ -1,6 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,21 +48,34 @@ final class WriteExecutor implements AutoCloseable {
     }
 
     <T> Result<T> execute(final String operation, final Function<Handle, T> work) {
-        Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(work, "work");
+        return submit(operation, () -> jdbi.inTransaction(work::apply), false);
+    }
+
+    /**
+     * Runs work on the writer thread without a transaction around it, for statements SQLite refuses inside one
+     * ({@code VACUUM INTO}); the single writer still keeps every other write waiting.
+     */
+    <T> Result<T> executeOutsideTransaction(final String operation, final Function<Handle, T> work) {
+        Objects.requireNonNull(work, "work");
+        return submit(operation, () -> jdbi.withHandle(work::apply), true);
+    }
+
+    private <T> Result<T> submit(final String operation, final Callable<T> task, final boolean expectedToFail) {
+        Objects.requireNonNull(operation, "operation");
         if (Thread.currentThread().equals(writerThread.get())) {
             log.debug("Write refused, nested inside another write operation={}", operation);
-            return failure(operation, new IllegalStateException("nested storage write " + operation));
+            return failure(operation, new IllegalStateException("nested storage write " + operation), false);
         }
         log.debug("Write queued operation={}", operation);
         try {
-            final T value = awaitUninterruptibly(executor.submit(() -> jdbi.inTransaction(work::apply)));
+            final T value = awaitUninterruptibly(executor.submit(task));
             log.debug("Write committed operation={}", operation);
             return Result.ok(value);
         } catch (ExecutionException e) {
-            return failure(operation, e.getCause() == null ? e : e.getCause());
+            return failure(operation, e.getCause() == null ? e : e.getCause(), expectedToFail);
         } catch (RuntimeException e) {
-            return failure(operation, e);
+            return failure(operation, e, expectedToFail);
         }
     }
 
@@ -83,10 +97,15 @@ final class WriteExecutor implements AutoCloseable {
         }
     }
 
-    private static <T> Result<T> failure(final String operation, final Throwable cause) {
+    // A copy can fail for a reason outside the program (a full disk): that is a WARN, logged here once.
+    private static <T> Result<T> failure(final String operation, final Throwable cause, final boolean expected) {
         final AppError error = AppError.of(
                 ErrorCode.internal, "Storage failure", "The data could not be saved.", "storage " + operation, cause);
-        log.error("Storage write failed operation={} code={}", operation, error.code(), cause);
+        if (expected) {
+            log.warn("Storage operation failed operation={} code={}", operation, error.code(), cause);
+        } else {
+            log.error("Storage write failed operation={} code={}", operation, error.code(), cause);
+        }
         return Result.err(error);
     }
 

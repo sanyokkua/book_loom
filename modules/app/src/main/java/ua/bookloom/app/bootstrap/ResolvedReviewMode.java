@@ -8,7 +8,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
  * Immutable result of resolving the review mode chosen at launch.
  *
  * @param mode how much a person confirms during a run
- * @param source where the mode came from; {@link Source#DEFAULT} also when a configured value named no mode
+ * @param source where the mode came from; {@link Source#DEFAULT} only when nothing was configured
  * @param rejectedValue the configured value that named no mode, or {@code null} when nothing was rejected
  */
 public record ResolvedReviewMode(

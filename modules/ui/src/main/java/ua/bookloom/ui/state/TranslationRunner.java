@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +32,8 @@ import ua.bookloom.ui.BackgroundExecutor;
 @Singleton
 public final class TranslationRunner {
 
+    private static final double MILLIS_PER_SECOND = 1000.0;
+
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
     private record ActiveRun(TranslationJob job, RunSession session, RunContext context) {}
 
@@ -39,6 +42,7 @@ public final class TranslationRunner {
     private final TickSource ticks;
     private final ReviewDesk desk;
     private final Clock clock;
+    private final RunSpeedSink speeds;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
     /**
@@ -47,11 +51,21 @@ public final class TranslationRunner {
      * @param mirror the mirror every run publishes into
      * @param executor the daemon executor a job runs on, never the FX thread
      * @param desk the review desk the run reads its flagged queue and kept-as-source count from
+     * @param speeds where the speed a run measured on its model is kept when the run ends
      */
     @Inject
     public TranslationRunner(
-            final StateMirror mirror, @BackgroundExecutor final ExecutorService executor, final ReviewDesk desk) {
-        this(mirror, executor, new FixedRateTicks(), desk);
+            final StateMirror mirror,
+            @BackgroundExecutor final ExecutorService executor,
+            final ReviewDesk desk,
+            final ModelSpeedRecorder speeds) {
+        this(
+                mirror,
+                executor,
+                new FixedRateTicks(),
+                desk,
+                Clock.system(ZoneId.systemDefault()),
+                RunSpeedSink.storingIn(speeds));
     }
 
     TranslationRunner(
@@ -66,11 +80,22 @@ public final class TranslationRunner {
             final TickSource ticks,
             final ReviewDesk desk,
             final Clock clock) {
+        this(mirror, executor, ticks, desk, clock, RunSpeedSink.NONE);
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ReviewDesk desk,
+            final Clock clock,
+            final RunSpeedSink speeds) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
         this.desk = Objects.requireNonNull(desk, "desk");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.speeds = Objects.requireNonNull(speeds, "speeds");
     }
 
     /**
@@ -196,8 +221,28 @@ public final class TranslationRunner {
     private void publishTerminal(final ActiveRun run, final Result<JobReport> result) {
         try {
             run.session().finish(result, () -> release(run));
+            keepSpeed(run);
         } finally {
             release(run);
+        }
+    }
+
+    // The mean time of this run's own drafts replaces the stored speed; a run that drafted nothing says nothing.
+    private void keepSpeed(final ActiveRun run) {
+        try {
+            final Double seconds = run.session().draftSecondsPerSegment();
+            if (seconds == null) {
+                log.debug("run ended with no timed draft: the model's stored speed is left as it is");
+                return;
+            }
+            final Duration perSegment = Duration.ofMillis(Math.round(seconds * MILLIS_PER_SECOND));
+            log.info(
+                    "run speed {} s per segment kept for {}",
+                    seconds,
+                    run.context().selection());
+            speeds.measured(run.context().selection(), perSegment);
+        } catch (RuntimeException failure) {
+            log.warn("the run's speed could not be kept; the run end is unaffected", failure);
         }
     }
 

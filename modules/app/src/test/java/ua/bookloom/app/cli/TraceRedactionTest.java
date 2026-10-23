@@ -131,7 +131,7 @@ class TraceRedactionTest {
                 logDir,
                 false,
                 new ResolvedLogLevel(Level.INFO, ResolvedLogLevel.Source.DEFAULT, null),
-                new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null),
+                new ResolvedTraceFile(true, ResolvedTraceFile.Source.ENVIRONMENT, null),
                 () -> "# header");
         final Path source = Files.writeString(tempDir.resolve("Book.md"), BOOK_TEXT + " *old* door.\n");
         final StartupContext startup = new StartupContext(

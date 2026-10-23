@@ -62,21 +62,34 @@ public final class ActivityTracker {
      * @param mirror where the run's state is read; a translating run is registered as {@link ActivityKind#TRANSLATION}
      * @param keepAwake what holds the computer awake while an activity that asks the model is registered
      */
-    @Inject
     public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake) {
-        this(mirror, keepAwake, Clock.systemUTC());
+        this(mirror, keepAwake, new KeepAwakeGate(), Clock.systemUTC());
     }
 
     /**
-     * Creates a tracker on a given clock, so a test can move the time that elapsed time and the ETA are read from.
+     * Creates the tracker the application uses: it keeps the computer awake only while the person's choice is on.
      *
      * @param mirror where the run's state is read
      * @param keepAwake what holds the computer awake while an activity that asks the model is registered
+     * @param gate the person's keep-awake choice
+     */
+    @Inject
+    public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake, final KeepAwakeGate gate) {
+        this(mirror, keepAwake, gate, Clock.systemUTC());
+    }
+
+    /**
+     * Creates a tracker on a given clock and keep-awake choice.
+     *
+     * @param mirror where the run's state is read
+     * @param keepAwake what holds the computer awake while an activity that asks the model is registered
+     * @param gate the person's keep-awake choice
      * @param clock where an activity's start and its elapsed time are read
      */
-    public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake, final Clock clock) {
+    public ActivityTracker(
+            final StateMirror mirror, final KeepAwake keepAwake, final KeepAwakeGate gate, final Clock clock) {
         Objects.requireNonNull(mirror, "mirror");
-        this.awake = new AwakeHolders(keepAwake);
+        this.awake = new AwakeHolders(keepAwake, gate);
         this.clock = Objects.requireNonNull(clock, "clock");
         new RunRegistration(this).follow(mirror);
         log.debug("activity tracker ready");

@@ -79,7 +79,9 @@ final class ConformanceCases {
         MODELS_OPEN,
         MODELS_DIRTY,
         GENERATION_OPEN,
-        APPEARANCE_OPEN
+        APPEARANCE_OPEN,
+        AUTOMATION_OPEN,
+        STORAGE_OPEN
     }
 
     /**

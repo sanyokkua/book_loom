@@ -42,6 +42,8 @@ class ScreenConformanceCoverageTest {
         "SETTINGS_MODELS_DIRTY",
         "SETTINGS_GENERATION",
         "SETTINGS_APPEARANCE",
+        "SETTINGS_AUTOMATION",
+        "SETTINGS_STORAGE",
         "ADD_TERM_DIALOG",
         "RESULTS_DIALOG"
     };

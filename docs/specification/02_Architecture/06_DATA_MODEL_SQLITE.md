@@ -32,6 +32,10 @@ migrations arrives with the first release; until then no statement here about mi
   transaction. WAL + `synchronous=NORMAL` is **process-crash-safe and forced-quit-safe**; on OS crash or power loss at
   most the last in-flight commit may be lost, never earlier accepted work (`05_RELIABILITY_AND_RESUME.md`, DD-20,
   ADR-0009). Durability is never claimed to survive power loss.
+- **Backup:** `StorageInfo.backupTo` runs `VACUUM INTO ?` (the destination is a bound parameter) on the single writer
+  thread, outside a transaction because SQLite refuses `VACUUM` inside one; a call from inside a write is refused. The
+  destination must be a new file in an existing folder (`validation` otherwise, nothing replaced); the copy is a
+  consistent snapshot, opens as a database and holds no key. A write submitted while the copy runs waits on the writer thread and runs after it; a failed copy removes the half-written file.
 - **One document, one writer:** the glossary and the lexicon are one JSON document per project; every change to them is
   a read-modify-write inside one write transaction, so a person's edit and a run's addition never overwrite each other.
 - **Errors:** a storage failure is `ErrorCode.internal` with the safe details `storage <operation>`; no SQL, path or

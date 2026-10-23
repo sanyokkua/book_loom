@@ -34,10 +34,9 @@ import ua.bookloom.ui.state.ProviderTest;
  */
 class SettingsScreenTest extends SettingsScreenTestBase {
 
-    // IF a tab were missing, or one of the unbuilt areas were enabled, THEN the screen would misstate what this
-    // build can do.
+    // IF a tab were missing or disabled, THEN the screen would misstate what this build can do.
     @Test
-    void tabs_settingsScreen_sixPresentTwoDisabled() {
+    void tabs_settingsScreen_sixPresentAllEnabledAndSubtitleExact() {
         openSettings();
 
         assertThat(tabs().getTabs())
@@ -47,8 +46,11 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                         tuple("settings-tab-models", "Models", false),
                         tuple("settings-tab-generation", "Generation", false),
                         tuple("settings-tab-appearance", "Appearance", false),
-                        tuple("settings-tab-automation", "Automation", true),
-                        tuple("settings-tab-storage", "Storage & logs", true));
+                        tuple("settings-tab-automation", "Automation", false),
+                        tuple("settings-tab-storage", "Storage & logs", false));
+        assertThat(label("settings-subtitle").getText())
+                .isEqualTo("Your books stay on this computer. BookLoom sends your text only to the AI model you choose "
+                        + "here.");
     }
 
     // IF Add or Delete were disabled, THEN a person could not manage providers; IF an Edit button were left, THEN there
@@ -165,10 +167,9 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(underline("settings-tab-models")).isEqualTo(Color.TRANSPARENT);
     }
 
-    // IF Appearance or Generation did not open, or Automation opened, THEN the tabs would misstate what this build can
-    // do.
+    // IF a tab did not open when clicked, THEN the tabs would misstate what this build can do.
     @Test
-    void tabs_appearanceAndGenerationActivated_openAndAutomationLeavesGenerationShown() {
+    void tabs_automationAndStorageActivated_open() {
         openSettings();
 
         clickOn("#settings-tab-appearance");
@@ -178,8 +179,10 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(selectedTabId()).isEqualTo("settings-tab-generation");
 
         clickOn("#settings-tab-automation");
+        assertThat(selectedTabId()).isEqualTo("settings-tab-automation");
 
-        assertThat(selectedTabId()).isEqualTo("settings-tab-generation");
+        clickOn("#settings-tab-storage");
+        assertThat(selectedTabId()).isEqualTo("settings-tab-storage");
     }
 
     private String selectedTabId() {

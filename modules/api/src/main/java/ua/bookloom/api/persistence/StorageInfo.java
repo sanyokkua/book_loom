@@ -25,8 +25,8 @@ public interface StorageInfo {
      * Writes a copy of the stored work and leaves the stored work unchanged.
      *
      * @param destination the non-null file to write; it must not already exist
-     * @return the written file, {@code validation} when there is no file to copy or the destination exists, or a
-     *     typed storage failure
+     * @return the written file; {@code validation} when there is no file to copy, the destination exists or its
+     *     folder is missing; {@code internal} when the copy itself fails
      */
     Result<Path> backupTo(Path destination);
 }

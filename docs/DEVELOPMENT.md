@@ -237,8 +237,9 @@ the same folder (on macOS `~/Library/Logs/BookLoom-Dev/bookloom-trace.log` for a
 book text included — one line per event (a line break inside a message is written as ` ⏎ `), with the `job`/`segment`
 MDC on each line, rolled at 20 MB into `bookloom-trace.1.log.gz` … `.4.log.gz` (about 100 MB at most). It is **on by
 default in a development run** and off in an installed app, where `BOOKLOOM_TRACE_FILE=1` (or
-`-Dbookloom.trace.file=true`; `0`/`false` switches a dev run off) turns it on for that launch — nothing is saved yet,
-so the environment variable is the durable way. `bookloom.log`, the console and their level are unchanged; third-party
+`-Dbookloom.trace.file=true`; `0`/`false` switches a dev run off) turns it on for that launch; the durable way is the
+Settings › Storage & logs switch, which writes the marker file `detailed-log.on` in the data folder and applies from the
+next launch (the variable or property still wins over it, and a development run writes the log whatever the switch says). `bookloom.log`, the console and their level are unchanged; third-party
 loggers stay at `WARN` in both files. Each file (and each rotated-in file) starts with a `#` session header: version,
 OS, JVM, JavaFX, locale, log level, detailed-log state, and the session facts known so far — provider, kind, endpoint
 host (never a URL's user part, path or query), model, dial, review mode, the brief's choices, the book's file name,

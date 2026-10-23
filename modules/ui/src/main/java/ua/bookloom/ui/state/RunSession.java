@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
-import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -208,7 +207,7 @@ final class RunSession implements JobListener {
         Objects.requireNonNull(release, "release");
         final RunOutcomes.Outcome outcome = RunOutcomes.outcomeOf(result);
         RunOutcomes.logEnded(outcome, lastSeen.get());
-        publishSourceKept();
+        deskReads.publishSourceKept();
         publishLock.lock();
         try {
             terminal = true;
@@ -221,6 +220,17 @@ final class RunSession implements JobListener {
             flushLocked();
             publishLiveLocked();
             mirror.publishOutcome(outcome.state(), outcome.report(), outcome.error(), release);
+        } finally {
+            publishLock.unlock();
+        }
+    }
+
+    // The seconds per timed draft of this run, or null when no draft was timed.
+    @Nullable
+    Double draftSecondsPerSegment() {
+        publishLock.lock();
+        try {
+            return progress.draftSecondsPerSegment();
         } finally {
             publishLock.unlock();
         }
@@ -382,15 +392,5 @@ final class RunSession implements JobListener {
             shownThroughput = figures;
             mirror.live().publishThroughput(figures);
         }
-    }
-
-    // A run ends off the FX thread; the one exception is a start that failed on the caller's own thread, which has no
-    // decisions to count and must not read the desk there.
-    private void publishSourceKept() {
-        if (Platform.isFxApplicationThread()) {
-            log.debug("kept-as-source count not read: the run ended on the FX thread");
-            return;
-        }
-        deskReads.publishSourceKept();
     }
 }

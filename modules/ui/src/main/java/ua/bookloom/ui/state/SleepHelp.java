@@ -16,8 +16,8 @@ import ua.bookloom.ui.BackgroundExecutor;
 
 /**
  * The help line about sleep and keep-awake on the Translating screen: shown until the person closes it for the open
- * project, and worded by whether keep-awake is on. Both settings are read off the FX thread when a project opens; the
- * closing is written there too. A read that finishes after another project was opened is dropped. FX thread only,
+ * project, and worded by whether keep-awake is on, which it mirrors from {@link KeepAwakeGate}. The closing is read off the FX
+ * thread when a project opens and written there too. A read that finishes after another project was opened is dropped. FX thread only,
  * except the reads and the write.
  */
 @Slf4j
@@ -28,9 +28,9 @@ public final class SleepHelp {
     private final Executor background;
     private final Executor fx;
     private final CurrentProject current;
+    private final KeepAwakeGate gate;
     private final ReadOnlyBooleanWrapper shown = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyBooleanWrapper keepAwake =
-            new ReadOnlyBooleanWrapper(Boolean.TRUE.equals(AppSetting.KEEP_AWAKE.defaultValue()));
+    private final ReadOnlyBooleanWrapper keepAwake = new ReadOnlyBooleanWrapper(true);
 
     /**
      * Follows the open project, reading on the background executor.
@@ -38,13 +38,15 @@ public final class SleepHelp {
      * @param settings the stored settings
      * @param background where the settings are read and written
      * @param current the open project
+     * @param gate the person's keep-awake choice, which words the line
      */
     @Inject
     public SleepHelp(
             final SettingsRepository settings,
             final @BackgroundExecutor ExecutorService background,
-            final CurrentProject current) {
-        this(settings, background, Platform::runLater, current);
+            final CurrentProject current,
+            final KeepAwakeGate gate) {
+        this(settings, background, Platform::runLater, current, gate);
     }
 
     /**
@@ -54,16 +56,21 @@ public final class SleepHelp {
      * @param background where the settings are read and written
      * @param fx where what was read is shown
      * @param current the open project
+     * @param gate the person's keep-awake choice, which words the line
      */
     public SleepHelp(
             final SettingsRepository settings,
             final Executor background,
             final Executor fx,
-            final CurrentProject current) {
+            final CurrentProject current,
+            final KeepAwakeGate gate) {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.background = Objects.requireNonNull(background, "background");
         this.fx = Objects.requireNonNull(fx, "fx");
         this.current = Objects.requireNonNull(current, "current");
+        this.gate = Objects.requireNonNull(gate, "gate");
+        keepAwake.set(gate.isOn());
+        gate.onChange(() -> keepAwake.set(gate.isOn()));
         current.book().addListener((observed, was, now) -> read());
         read();
     }
@@ -107,20 +114,20 @@ public final class SleepHelp {
         final String projectId = book.projectId();
         background.execute(() -> {
             final boolean closed = valueOf(AppSetting.sleepLineClosed(projectId), false);
-            final boolean awake = valueOf(AppSetting.KEEP_AWAKE, true);
-            log.debug("sleep help: project {} closed {}, keep-awake {}", projectId, closed, awake);
-            fx.execute(() -> show(projectId, closed, awake));
+            log.debug("sleep help: project {} closed {}", projectId, closed);
+            fx.execute(() -> show(projectId, closed));
         });
     }
 
-    private void show(final String projectId, final boolean closed, final boolean awake) {
+    private void show(final String projectId, final boolean closed) {
         final OpenedBook book = current.book().get();
         if (book == null || !book.projectId().equals(projectId)) {
             log.debug("sleep help: the read of project {} came after another project opened; dropped", projectId);
             return;
         }
+        // The stored choice is seeded into the gate after this object may have been built, so look again.
+        keepAwake.set(gate.isOn());
         shown.set(!closed);
-        keepAwake.set(awake);
     }
 
     private boolean valueOf(final AppSetting<Boolean> setting, final boolean fallback) {

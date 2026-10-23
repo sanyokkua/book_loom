@@ -10,18 +10,17 @@ This document specifies every setting, its default, and its validation range. Se
 KV store (DD-20, seam F7) and surfaced in the Settings screen's tabs. It realizes `FR-SETTINGS-*`. Every setting is
 validated against its range and invalid input is rejected (FR-SETTINGS-07).
 
-**Status of persistence.** Nothing is saved in this build: the provider list is the two read-only presets and every
-other value is a constant or a launch flag, so everything resets on restart (ADR-0034). Saving the settings below is
-**planned — UI finalization + SQLite**
-(`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). Rows marked *planned* describe that change; rows
-marked *built* describe the code today.
+**Status of persistence.** Built (finalize group 3 and 7): in the window every setting below is kept in SQLite
+(`bookloom.db`, ADR-0043) and survives a restart; the command line keeps nothing (ADR-0034). The detailed-log switch is
+the one exception: logging starts before the database opens, so it is a marker file (`detailed-log.on`) in the data
+folder. Rows marked *built* describe the code today.
 
 ## settings-tabs {#settings-tabs}
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
 (`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
-model you choose here." *Built today:* Providers (form, checks, test dialog), Models, Generation and Appearance;
-the Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
+model you choose here." All six are built: Providers (form, checks, test dialog), Models, Generation, Appearance,
+Automation and Storage & logs.
 
 **How changes are saved (H1, planned).**
 
@@ -158,35 +157,33 @@ deferred**: no spacing/density tokens exist in the token catalogue (`09_THEMING.
 
 ## automation-tab {#automation-tab}
 
-*Planned — UI finalization + SQLite* (these rows apply at once). This is the authoritative Automation list. There is
+*Built (finalize 7.4)* (these rows apply at once, and the review mode reaches the next run that starts). This is the authoritative Automation list. There is
 **no "desktop notification on finish" toggle and no "single instance only" toggle**: there is no OS-notification
 feature (`11_NOTIFICATIONS_AND_ERRORS.md`), and single-instance is **always on** and not user-configurable (the
 single-instance lock in the lifecycle spec).
 
 | Setting                        | Type    | Default    | Validation                                          | Requirement  |
 |--------------------------------|---------|------------|------------------------------------------------------|--------------|
-| When to stop and ask you (default review mode) | enum | Never — translate unattended | Never — translate unattended / When something needs review / After every segment (`ReviewMode` UNATTENDED / ASSISTED / MANUAL). *Built today:* the value comes from `BOOKLOOM_REVIEW_MODE` (or the system property `bookloom.review.mode`), resolved once at launch | FR-REVIEW-01 |
-| Default quality                | enum    | Balanced   | Fast / Balanced / Max                               | FR-BRIEF-08  |
+| When to stop and ask you (default review mode) | enum | Never — translate unattended | Never — translate unattended / When something needs review / After every segment (`ReviewMode` UNATTENDED / ASSISTED / MANUAL); stored as `run.reviewMode` and read when a run starts. `BOOKLOOM_REVIEW_MODE` (or the system property `bookloom.review.mode`, launch values `unattended` / `assisted` / `manual`), when set, decides instead and the tab names it. The long phrases are this tab's; every other screen says Unattended / Assisted / Manual | FR-REVIEW-01 |
+| Default quality                | enum    | Balanced   | Fast / Balanced / Max; a book takes it when it is first stored as a project, then keeps its own in the Book Brief | FR-BRIEF-08  |
 | Open the review desk when a translation finishes with segments to review | boolean | on | on / off          | FR-REVIEW-01 |
-| Run the last check before saving by default (final consistency pass) | boolean | off | on / off     | FR-EXPORT-06 |
-| Keep the computer awake        | boolean | on         | on / off; the lid note: closing a laptop lid still puts it to sleep, and translating goes on by itself after sleep | FR-RESUME-03 |
+| Run the last check before saving by default (final consistency pass) | boolean | not written until chosen: the Export screen follows the book's quality (on at Max); once the value is written the stored value wins | on / off; the tab shows "Not chosen yet" until the switch is changed once | FR-EXPORT-06 |
+| Keep the computer awake        | boolean | on         | on / off, applied at once: off releases the hold of a run already going; the lid note: closing a laptop lid still puts it to sleep, and translating goes on by itself after sleep | FR-RESUME-03 |
 | Reopen the last project (resume on launch) | boolean | on | on / off                                 | FR-RESUME-03 |
-| Foreign-passage policy default | enum    | keep-as-is | keep-as-is / translate / translate+note (3 options) | FR-BRIEF-04  |
 
 ## storage-and-logs-tab {#storage-and-logs-tab}
 
-*Planned — UI finalization + SQLite* (paths are shown short with the full path as a tooltip).
+*Built (finalize 7.4)* (paths are shown short with the full path as a tooltip).
 
 | Setting              | Type                     | Default             | Validation                  | Requirement    |
 |----------------------|--------------------------|---------------------|------------------------------|----------------|
-| Your projects: saved in, size | path and size (read-only display) | per-OS app data dir | must exist and be writable; "saved as it goes" | FR-PERSIST-03 |
-| Open folder / Make a backup… | action            | —                   | backup copies the database   | FR-PERSIST-03  |
+| Your projects: saved in, size | path and size (read-only display) | per-OS app data dir | the size is the database with its write-ahead file, with the project count; "saved as it goes"; "In memory only" when nothing is kept | FR-PERSIST-03 |
+| Open folder / Make a backup… | action            | —                   | the backup is a `VACUUM INTO` copy to a new file the person picks, holds no key, and never replaces an existing file (`validation`) | FR-PERSIST-03  |
 | Logs: folder         | path (read-only display) | per-OS log dir      | must exist and be writable; the last 10 launches are kept | DD-23 |
-| Detailed diagnostic log | boolean               | off in an installed app, on in a development run | on / off (`BOOKLOOM_TRACE_FILE`) | FR-SETTINGS-06 |
+| Detailed diagnostic log | boolean               | off in an installed app, on in a development run | on / off, applies after BookLoom restarts (the marker file `detailed-log.on`); `BOOKLOOM_TRACE_FILE` / `bookloom.trace.file`, when set, decides and the tab names it; a development run writes it whatever the switch says and the tab says so | FR-SETTINGS-06 |
 | Open log folder / Save a diagnostic bundle… | action | —                | —                            | FR-SETTINGS-06 |
 
-*Built today:* the log folder and the files in it exist, but nothing in the UI shows them. The log level is not a
-setting on this tab: `BOOKLOOM_LOG_LEVEL`, or else the system property `bookloom.log.level`, sets it for one run
+The log level is a launch variable, not a setting: it has no row on this tab. `BOOKLOOM_LOG_LEVEL`, or else the system property `bookloom.log.level`, sets it for one run
 (`.claude/rules/logging.md`; default INFO for an installed app, TRACE for a development run). `TRACE` is the only level
 that writes book text, prompts and model replies to the log
 (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#secrets-never-stored`).

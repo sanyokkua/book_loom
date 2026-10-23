@@ -81,7 +81,7 @@ does **not** mean persisted values are readable then. The settings **repository 
 **first scene is built after Phase 2**, and if no `ui.language` row exists yet it falls back to the **OS locale**
 (DD-34, via the injectable `Locale` provider). `Messages` decides its language lazily, on first use, so it may be built
 before Phase 2; `StoredPreferences.load()` runs in `init()` right after Phase 2 (off the FX thread) and seeds the stored
-language and theme before the window's first `get`. A seed that arrives after the decision is logged and applies from the
+language and theme (and the keep-awake choice, into `KeepAwakeGate`) before the window's first `get`. A seed that arrives after the decision is logged and applies from the
 next launch. The resolve-all smoke builds the production stage, which constructs the settings forms and the title-bar chip (and so decides the language from the OS locale) before `init()` can seed; it is a throwaway run. **Restart** is a hand-off through `PendingRestart`: the window exits, `stop()` closes the database, `Launcher` closes the lock, and only then starts the new copy. The gate, executors, and state mirror are ordinary singletons created on
 first use during Phase 1.
 

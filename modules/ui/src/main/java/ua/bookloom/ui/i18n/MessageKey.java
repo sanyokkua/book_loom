@@ -859,6 +859,120 @@ public enum MessageKey {
     SETTINGS_GENERATION_INSTANT("settings.generation.instant"),
     /** Note shown on the Generation tab while a translation is under way. */
     SETTINGS_GENERATION_RUNNING("settings.generation.running"),
+    /** Toast after a backup copy was written; argument 0 is the file's name. */
+    SETTINGS_STORAGE_BACKUP_SAVED("settings.storage.backup.saved"),
+    /** Line under the Automation tab saying when a change takes effect. */
+    SETTINGS_AUTOMATION_INSTANT("settings.automation.instant"),
+    /** Note shown on the Automation tab while a translation is under way. */
+    SETTINGS_AUTOMATION_RUNNING("settings.automation.running"),
+    /** Label of the choice of when a translation stops and asks. */
+    SETTINGS_AUTOMATION_REVIEW("settings.automation.review"),
+    /** Review mode choice: no stops until the end. */
+    SETTINGS_AUTOMATION_REVIEW_UNATTENDED("settings.automation.review.unattended"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_REVIEW_UNATTENDED}. */
+    SETTINGS_AUTOMATION_REVIEW_UNATTENDED_TIP("settings.automation.review.unattended.tip"),
+    /** Review mode choice: stop at each segment that needs a look. */
+    SETTINGS_AUTOMATION_REVIEW_ASSISTED("settings.automation.review.assisted"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_REVIEW_ASSISTED}. */
+    SETTINGS_AUTOMATION_REVIEW_ASSISTED_TIP("settings.automation.review.assisted.tip"),
+    /** Review mode choice: stop after every segment. */
+    SETTINGS_AUTOMATION_REVIEW_MANUAL("settings.automation.review.manual"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_REVIEW_MANUAL}. */
+    SETTINGS_AUTOMATION_REVIEW_MANUAL_TIP("settings.automation.review.manual.tip"),
+    /** Line under the review mode choice. */
+    SETTINGS_AUTOMATION_REVIEW_HINT("settings.automation.review.hint"),
+    /** Note naming the launch variable that decides the review mode; argument 0 is its name. */
+    SETTINGS_AUTOMATION_REVIEW_OVERRIDE("settings.automation.review.override"),
+    /** Label of the default quality choice. */
+    SETTINGS_AUTOMATION_QUALITY("settings.automation.quality"),
+    /** Line under the default quality choice. */
+    SETTINGS_AUTOMATION_QUALITY_HINT("settings.automation.quality.hint"),
+    /** Default quality choice: Fast. */
+    SETTINGS_AUTOMATION_QUALITY_FAST("settings.automation.quality.fast"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_QUALITY_FAST}. */
+    SETTINGS_AUTOMATION_QUALITY_FAST_TIP("settings.automation.quality.fast.tip"),
+    /** Default quality choice: Balanced. */
+    SETTINGS_AUTOMATION_QUALITY_BALANCED("settings.automation.quality.balanced"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_QUALITY_BALANCED}. */
+    SETTINGS_AUTOMATION_QUALITY_BALANCED_TIP("settings.automation.quality.balanced.tip"),
+    /** Default quality choice: Max quality. */
+    SETTINGS_AUTOMATION_QUALITY_MAX("settings.automation.quality.max"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_QUALITY_MAX}. */
+    SETTINGS_AUTOMATION_QUALITY_MAX_TIP("settings.automation.quality.max.tip"),
+    /** Switch: open the review desk by itself at the end of a run. */
+    SETTINGS_AUTOMATION_OPEN_DESK("settings.automation.openDesk"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_OPEN_DESK}. */
+    SETTINGS_AUTOMATION_OPEN_DESK_TIP("settings.automation.openDesk.tip"),
+    /** Switch: the last-check default. */
+    SETTINGS_AUTOMATION_LAST_CHECK("settings.automation.lastCheck"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_LAST_CHECK}. */
+    SETTINGS_AUTOMATION_LAST_CHECK_TIP("settings.automation.lastCheck.tip"),
+    /** Hint shown while the last-check default has not been written. */
+    SETTINGS_AUTOMATION_LAST_CHECK_UNSET("settings.automation.lastCheck.unset"),
+    /** Switch: keep the computer awake while a model works. */
+    SETTINGS_AUTOMATION_KEEP_AWAKE("settings.automation.keepAwake"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_KEEP_AWAKE}. */
+    SETTINGS_AUTOMATION_KEEP_AWAKE_TIP("settings.automation.keepAwake.tip"),
+    /** Line under the keep-awake switch. */
+    SETTINGS_AUTOMATION_KEEP_AWAKE_HINT("settings.automation.keepAwake.hint"),
+    /** Switch: reopen the last project at launch. */
+    SETTINGS_AUTOMATION_REOPEN("settings.automation.reopen"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_REOPEN}. */
+    SETTINGS_AUTOMATION_REOPEN_TIP("settings.automation.reopen.tip"),
+    /** Line under the reopen switch. */
+    SETTINGS_AUTOMATION_REOPEN_HINT("settings.automation.reopen.hint"),
+    /** Line shown when an Automation choice could not be stored. */
+    SETTINGS_AUTOMATION_SAVE_FAILED("settings.automation.saveFailed"),
+    /** Title of the card about the saved projects. */
+    SETTINGS_STORAGE_PROJECTS("settings.storage.projects"),
+    /** Row label: the file the work is saved in. */
+    SETTINGS_STORAGE_SAVED_IN("settings.storage.savedIn"),
+    /** Shown instead of a file when the work is kept in memory only. */
+    SETTINGS_STORAGE_MEMORY_ONLY("settings.storage.memoryOnly"),
+    /** Row label: the size of the saved work. */
+    SETTINGS_STORAGE_SIZE("settings.storage.size"),
+    /** Size and project count; argument 0 is the size, argument 1 the number of projects. */
+    SETTINGS_STORAGE_SIZE_VALUE("settings.storage.sizeValue"),
+    /** Row label: when the work is saved. */
+    SETTINGS_STORAGE_SAVED("settings.storage.saved"),
+    /** Row value: the work is saved as it goes. */
+    SETTINGS_STORAGE_SAVED_VALUE("settings.storage.savedValue"),
+    /** Action that opens the folder of the saved work. */
+    SETTINGS_STORAGE_OPEN_FOLDER("settings.storage.openFolder"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_STORAGE_OPEN_FOLDER}. */
+    SETTINGS_STORAGE_OPEN_FOLDER_TIP("settings.storage.openFolder.tip"),
+    /** Action that writes a copy of the saved work. */
+    SETTINGS_STORAGE_BACKUP("settings.storage.backup"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_STORAGE_BACKUP}. */
+    SETTINGS_STORAGE_BACKUP_TIP("settings.storage.backup.tip"),
+    /** Line saying no key is stored. */
+    SETTINGS_STORAGE_KEYS("settings.storage.keys"),
+    /** Title of the card about the logs. */
+    SETTINGS_STORAGE_LOGS("settings.storage.logs"),
+    /** Row label: the log folder. */
+    SETTINGS_STORAGE_LOG_FOLDER("settings.storage.logFolder"),
+    /** Row label: how many launches' logs are kept. */
+    SETTINGS_STORAGE_KEPT("settings.storage.kept"),
+    /** Row value; argument 0 is the number of launches kept. */
+    SETTINGS_STORAGE_KEPT_VALUE("settings.storage.keptValue"),
+    /** Switch: write the detailed diagnostic log. */
+    SETTINGS_STORAGE_DETAILED("settings.storage.detailed"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_STORAGE_DETAILED}. */
+    SETTINGS_STORAGE_DETAILED_TIP("settings.storage.detailed.tip"),
+    /** Line under the detailed log switch. */
+    SETTINGS_STORAGE_DETAILED_HINT("settings.storage.detailed.hint"),
+    /** Line saying the switch applies at the next launch. */
+    SETTINGS_STORAGE_DETAILED_RESTART("settings.storage.detailed.restart"),
+    /** State line: this launch writes the detailed log. */
+    SETTINGS_STORAGE_DETAILED_ON("settings.storage.detailed.on"),
+    /** State line: this launch does not write the detailed log. */
+    SETTINGS_STORAGE_DETAILED_OFF("settings.storage.detailed.off"),
+    /** Note naming the launch variable that decides the detailed log; argument 0 is its name. */
+    SETTINGS_STORAGE_DETAILED_OVERRIDE("settings.storage.detailed.override"),
+    /** Note for a development run. */
+    SETTINGS_STORAGE_DETAILED_DEV("settings.storage.detailed.dev"),
+    /** Line shown when the detailed log switch could not be written. */
+    SETTINGS_STORAGE_SAVE_FAILED("settings.storage.saveFailed"),
     /** Line shown when a Generation choice could not be stored. */
     SETTINGS_GENERATION_SAVE_FAILED("settings.generation.saveFailed"),
     /** Title of the card that lists what each quality setting does. */

@@ -162,8 +162,9 @@ A dialog of short work whose result needs a decision stays open after its work e
 - **Estimates before Start** come only from a measured speed in seconds per segment
   (`ModelSettings.measuredSecondsPerSegment`, with `measuredFrom`). Two writers set it: the Settings inference test
   (the inference stage's wall-clock seconds, rounded to 0.1 s and not below 0.1, taken as one segment, `measuredFrom` =
-  TEST; only for a stored provider with a model) and the end of every run (the run's draft time divided by its drafted
-  segments, `measuredFrom` = RUN). The last measurement wins, and the estimate names its source. Nothing else estimates.
+  TEST; only for a stored provider with a model) and the end of every run (the run's draft tally: the seconds of its
+  timed draft steps, pauses excluded, divided by their number, one step being one drafted segment, `measuredFrom` = RUN; a run that timed no draft stores
+  nothing, so a refused or early-cancelled run leaves the stored value alone). The last measurement wins, and the estimate names its source. Nothing else estimates.
   The inference test's seconds cover every call the stage made, including the plain-text fallback after a structured
   reply was refused, so a model that refuses the structured probe reads slower than its steady pace.
 - **After a restart** the ledger is rebuilt from the stored segment decisions: decided segments count as done draft
@@ -340,8 +341,8 @@ stays editable while translating. So every change to them, a checkpoint's glossa
 read-modify-write inside one `WriteExecutor` transaction. A person's edit and a run's addition never overwrite each
 other, and a contract case proves it.
 
-**Storage info.** `api.persistence.StorageInfo` (`location`, `sizeBytes`, `backupTo` = `VACUUM INTO` through the write
-executor) serves Settings › Storage & logs. The SQLite adapter's `location` and `sizeBytes` come with the other SQLite
+**Storage info.** `api.persistence.StorageInfo` (`location`, `sizeBytes`, `backupTo` = `VACUUM INTO ?` run on the single writer thread
+outside a transaction, because SQLite refuses `VACUUM` inside one) serves Settings › Storage & logs. A destination that already exists is refused with `validation` and never replaced. The SQLite adapter's `location` and `sizeBytes` come with the other SQLite
 adapters; `backupTo` comes with the Storage tab. `ProjectRepository.recordExport` / `lastExport` keep the `ExportRecord` in `project_docs`.
 
 **The FX-thread check.** `SqliteDatabase` checks the calling thread's name at every read and write entry. On "JavaFX
@@ -418,7 +419,16 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   - `model.current`, `app.lastProject`, `firstLaunch.probed`, `help.sleepLineClosed.<projectId>`;
 - **The detailed-log switch is not a database key.** Logging is configured before the injector and before the database
   opens, so the switch is a marker file `detailed-log.on` in the data folder. `TraceFileResolver` checks it with `java.nio`
-  after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it.
+  after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it. Order: the environment variable, then the
+  `bookloom.trace.file` property, then the marker (which can only switch the log on), then the environment default
+  (a development run is on). A rejected value is kept for the log and resolution falls through. Only `DetailedLogSwitch`
+  creates or deletes the marker.
+- **Automation.** `AutomationSettings` stores the Automation choices at once, in the background; after a review mode is
+  stored it calls `api.settings.ReviewModeChoice.stored(mode)` (implemented by `ReviewModeSource`) so the next run's
+  read sees it, and `launchOverride()` names the variable or property that decided the launch. The keep-awake choice
+  lives in `ui.state.KeepAwakeGate`, which `StoredPreferences.load()` seeds; `AwakeHolders` start the hold only while
+  the gate is on and release it at once when it turns off. The default quality is read by `ProjectServiceImpl` when a
+  new project is first stored.
 - **When writes happen.** Providers and Models write on Save (the pinned footer, `LeaveGuard`'s dirty check). The other
   tabs write at once, through the background runner.
 - **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale. `Messages`

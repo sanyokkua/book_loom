@@ -32,6 +32,11 @@ final class RunLedger {
         }
     }
 
+    @Nullable
+    Double draftSecondsPerSegment() {
+        return ledger.draftSecondsPerSegment();
+    }
+
     /**
      * Reads the ledger once the book's size is known.
      *

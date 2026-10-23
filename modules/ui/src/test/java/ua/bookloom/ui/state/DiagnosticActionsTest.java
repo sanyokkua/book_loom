@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.DiagnosticLog;
+import ua.bookloom.ui.DiagnosticLogs;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
@@ -54,7 +54,7 @@ class DiagnosticActionsTest extends FxTestBase {
         Files.writeString(logs.resolve("bookloom-trace.log"), "trace\n");
         clock.advance(Duration.ofHours(9).plusMinutes(5).plusSeconds(7));
         actions = new DiagnosticActions(
-                new DiagnosticLog(logs, true),
+                DiagnosticLogs.of(logs, true),
                 session,
                 revealer,
                 chooser,
@@ -109,6 +109,7 @@ class DiagnosticActionsTest extends FxTestBase {
         assertThat(toasts.feedback())
                 .containsExactly(new Raised("success", MessageKey.ABOUT_BUNDLE_SAVED, List.of("report.zip")));
         assertThat(toasts.raised()).isEmpty();
+        assertThat(actions.bundleSavedProperty().get()).isEqualTo("report.zip");
         assertThat(errors.presented()).isEmpty();
     }
 

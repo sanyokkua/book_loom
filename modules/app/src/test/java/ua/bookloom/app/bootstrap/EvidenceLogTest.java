@@ -28,7 +28,7 @@ import ua.bookloom.util.paths.AppPaths;
 class EvidenceLogTest {
 
     private static final ResolvedTraceFile TRACE_ON =
-            new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null);
+            new ResolvedTraceFile(true, ResolvedTraceFile.Source.ENVIRONMENT, null);
 
     private static final int FULL_FILES = 4;
     private static final long MIN_EVIDENCE_BYTES = 100L * 1024 * 1024;

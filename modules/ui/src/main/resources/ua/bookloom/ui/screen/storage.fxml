@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import org.controlsfx.control.ToggleSwitch?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.StorageController" id="settings-storage-host" spacing="10">
+    <padding>
+        <Insets top="14"/>
+    </padding>
+    <VBox fx:id="columns" id="storage-columns"/>
+    <fx:define>
+        <VBox fx:id="projectsCard" id="storage-projects-card" styleClass="card" spacing="10">
+            <Label styleClass="card-title" text="%settings.storage.projects"/>
+            <HBox styleClass="kv" spacing="10">
+                <Label styleClass="kv-key" text="%settings.storage.savedIn"/>
+                <Label fx:id="savedIn" id="storage-saved-in-value" styleClass="path-short" wrapText="true"/>
+            </HBox>
+            <HBox styleClass="kv" spacing="10">
+                <Label styleClass="kv-key" text="%settings.storage.size"/>
+                <Label fx:id="size" id="storage-size-value" styleClass="kv-value" wrapText="true"/>
+            </HBox>
+            <HBox styleClass="kv" spacing="10">
+                <Label styleClass="kv-key" text="%settings.storage.saved"/>
+                <Label id="storage-saved-value" styleClass="kv-value" wrapText="true"
+                       text="%settings.storage.savedValue"/>
+            </HBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button fx:id="openFolder" id="storage-open-folder" styleClass="btn-ghost"
+                        text="%settings.storage.openFolder"/>
+                <Button fx:id="backup" id="storage-backup" styleClass="btn-ghost" text="%settings.storage.backup"/>
+            </HBox>
+            <Label fx:id="backupStatus" id="storage-backup-status" styleClass="hint" wrapText="true"/>
+            <Label id="storage-keys-hint" styleClass="hint" wrapText="true" text="%settings.storage.keys"/>
+        </VBox>
+        <VBox fx:id="logsCard" id="storage-logs-card" styleClass="card" spacing="10">
+            <Label styleClass="card-title" text="%settings.storage.logs"/>
+            <HBox styleClass="kv" spacing="10">
+                <Label styleClass="kv-key" text="%settings.storage.logFolder"/>
+                <Label fx:id="logFolder" id="storage-log-folder-value" styleClass="path-short" wrapText="true"/>
+            </HBox>
+            <HBox styleClass="kv" spacing="10">
+                <Label styleClass="kv-key" text="%settings.storage.kept"/>
+                <Label fx:id="kept" id="storage-kept-value" styleClass="kv-value" wrapText="true"/>
+            </HBox>
+            <VBox spacing="5">
+                <ToggleSwitch fx:id="detailed" id="storage-detailed" text="%settings.storage.detailed"/>
+                <Label id="storage-detailed-hint" styleClass="hint" wrapText="true"
+                       text="%settings.storage.detailed.hint"/>
+                <Label id="storage-detailed-restart" styleClass="hint" wrapText="true"
+                       text="%settings.storage.detailed.restart"/>
+                <Label fx:id="detailedNow" id="storage-detailed-now" styleClass="hint" wrapText="true"/>
+                <Label fx:id="detailedOverride" id="storage-detailed-override" styleClass="hint-warn"
+                       wrapText="true"/>
+                <Label fx:id="detailedDev" id="storage-detailed-dev" styleClass="hint" wrapText="true"
+                       text="%settings.storage.detailed.dev"/>
+            </VBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button fx:id="openLogs" id="storage-open-logs" styleClass="btn-ghost"
+                        text="%about.log.openFolder"/>
+                <Button fx:id="bundle" id="storage-bundle" styleClass="btn-ghost" text="%about.log.saveBundle"/>
+            </HBox>
+            <Label fx:id="bundleStatus" id="storage-bundle-status" styleClass="hint" wrapText="true"/>
+            <Label fx:id="saveError" id="storage-save-error" styleClass="hint-warn" wrapText="true"
+                   text="%settings.storage.saveFailed"/>
+        </VBox>
+    </fx:define>
+</VBox>

@@ -33,6 +33,28 @@ class ProgressLedgerTest {
         });
     }
 
+    @Test
+    void draftSecondsPerSegment_threeDraftsSixSeconds_two() {
+        run(StepKind.DRAFT, 3, 2);
+
+        assertThat(ledger.draftSecondsPerSegment()).isEqualTo(2.0);
+    }
+
+    @Test
+    void draftSecondsPerSegment_noDraftTimed_null() {
+        run(StepKind.CHECK, 3, 2);
+
+        assertThat(ledger.draftSecondsPerSegment()).isNull();
+    }
+
+    @Test
+    void draftSecondsPerSegment_checksTimed_notCounted() {
+        run(StepKind.DRAFT, 2, 2);
+        run(StepKind.CHECK, 2, 5);
+
+        assertThat(ledger.draftSecondsPerSegment()).isEqualTo(2.0);
+    }
+
     // IF steps were counted as one list per task, THEN three tasks of three requests would not read as nine steps.
     @Test
     void read_threeTasksOfThreeRequestsFourDone_isNineStepsAt44Percent() {

@@ -1,6 +1,7 @@
 package ua.bookloom.ui;
 
 import com.google.inject.AbstractModule;
+import java.util.function.Supplier;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -15,7 +16,7 @@ final class ReviewPortsModule extends AbstractModule {
     private final LexiconService lexicon;
     private final NamesPass namesPass;
     private final ReviewDesk desk;
-    private final ReviewMode reviewMode;
+    private final Supplier<ReviewMode> reviewMode;
     private final MemorySummaries summaries = new MemorySummaries();
 
     ReviewPortsModule(
@@ -23,7 +24,7 @@ final class ReviewPortsModule extends AbstractModule {
             final LexiconService lexicon,
             final NamesPass namesPass,
             final ReviewDesk desk,
-            final ReviewMode reviewMode) {
+            final Supplier<ReviewMode> reviewMode) {
         this.glossary = glossary;
         this.lexicon = lexicon;
         this.namesPass = namesPass;
@@ -37,7 +38,7 @@ final class ReviewPortsModule extends AbstractModule {
         bind(LexiconService.class).toInstance(lexicon);
         bind(NamesPass.class).toInstance(namesPass);
         bind(ReviewDesk.class).toInstance(desk);
-        bind(ReviewMode.class).toInstance(reviewMode);
+        bind(ReviewMode.class).toProvider(reviewMode::get);
         bind(SummaryRepository.class).toInstance(summaries);
     }
 }

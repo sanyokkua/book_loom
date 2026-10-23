@@ -11,6 +11,7 @@ import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.KeepAwakeGate;
 import ua.bookloom.ui.state.RunState;
 
 /** The help line about sleep and keep-awake: shown while a translation runs, closable once for each project. */
@@ -60,7 +61,7 @@ class TranslatingHelpLineTest extends TranslatingScreenTestBase {
     // IF the line promised an awake computer while keep-awake is off, THEN the person would trust a promise not kept.
     @Test
     void helpLine_keepAwakeOff_saysTheComputerMaySleepAndWhereToTurnItOn() throws Exception {
-        settings().put(AppSetting.KEEP_AWAKE, false);
+        injector.getInstance(KeepAwakeGate.class).seed(false);
         runningWithABookOpen();
 
         awaitFx(() -> isShown(LINE) && textOf(LINE).equals(NOT_AWAKE_TEXT));

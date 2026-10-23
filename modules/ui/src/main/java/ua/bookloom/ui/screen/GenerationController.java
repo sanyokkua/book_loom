@@ -5,8 +5,6 @@ import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
-import javafx.beans.binding.Bindings;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
@@ -24,7 +22,6 @@ import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.GenerationSettings;
-import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TechnicalDetails;
 
@@ -191,32 +188,18 @@ public final class GenerationController {
     }
 
     private void bindNotes() {
-        show(
-                running,
-                Bindings.createBooleanBinding(() -> isUnderWay(mirror.runState().get()), mirror.runState()));
-        show(saveError, settings.saveFailedProperty());
-        show(thinkingTech, technicalDetails.property());
-        overrideNote(thinkingOverride, settings.reasoningOverrideProperty());
-        overrideNote(samplingOverride, settings.samplingOverrideProperty());
-    }
-
-    private static boolean isUnderWay(final RunState state) {
-        return state != RunState.IDLE && !state.hasEnded();
-    }
-
-    private void overrideNote(final Label note, final ObservableValue<String> source) {
-        note.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> {
-                            final String name = source.getValue();
-                            return name == null ? "" : messages.get(MessageKey.SETTINGS_GENERATION_OVERRIDE, name);
-                        },
-                        source));
-        show(note, source.map(name -> name != null));
-    }
-
-    private static void show(final Label label, final ObservableValue<Boolean> shown) {
-        label.visibleProperty().bind(shown);
-        label.managedProperty().bind(label.visibleProperty());
+        SettingsNotes.show(running, SettingsNotes.runUnderWay(mirror));
+        SettingsNotes.show(saveError, settings.saveFailedProperty());
+        SettingsNotes.show(thinkingTech, technicalDetails.property());
+        SettingsNotes.overrideNote(
+                messages,
+                thinkingOverride,
+                settings.reasoningOverrideProperty(),
+                MessageKey.SETTINGS_GENERATION_OVERRIDE);
+        SettingsNotes.overrideNote(
+                messages,
+                samplingOverride,
+                settings.samplingOverrideProperty(),
+                MessageKey.SETTINGS_GENERATION_OVERRIDE);
     }
 }

@@ -58,6 +58,38 @@ class SqliteDatabaseTest {
                 + " values ('p1', 's1', 0, 'u1', 'PENDING', '{}')");
     }
 
+    @Test
+    void exclusive_work_runsOnTheWriterThreadOutsideATransaction() {
+        try (SqliteDatabase db = open()) {
+            final Result<String> ran =
+                    db.exclusive("probe", h -> Thread.currentThread().getName() + " inTx=" + h.isInTransaction());
+
+            assertThat(ran.data()).isEqualTo("bookloom-sqlite-writer inTx=false");
+        }
+    }
+
+    @Test
+    void exclusive_insideWrite_refused() {
+        try (SqliteDatabase db = open()) {
+            final Result<Result<Integer>> outer = db.write("outer", h -> db.exclusive("inner", inner -> 1));
+
+            final Result<Integer> inner = Objects.requireNonNull(outer.data());
+            assertThat(inner.isErr()).isTrue();
+            assertThat(Objects.requireNonNull(inner.error()).details()).isEqualTo("storage inner");
+        }
+    }
+
+    @Test
+    void exclusive_afterClose_refused() {
+        final SqliteDatabase db = open();
+        db.close();
+
+        final Result<Integer> ran = db.exclusive("late", h -> 1);
+
+        assertThat(ran.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(ran.error()).details()).isEqualTo("storage late");
+    }
+
     @BeforeEach
     void rememberGuard() {
         savedGuard = System.getProperty(GUARD);

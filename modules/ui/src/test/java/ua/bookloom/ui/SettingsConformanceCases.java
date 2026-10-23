@@ -106,6 +106,22 @@ final class SettingsConformanceCases {
                     Overlay.NONE,
                     List.of(new Part("#settings-appearance-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
             new Screen(
+                    "SETTINGS_AUTOMATION",
+                    ViewNames.SETTINGS,
+                    Preparation.AUTOMATION_OPEN,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#settings-automation-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#settings-automation-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            new Screen(
+                    "SETTINGS_STORAGE",
+                    ViewNames.SETTINGS,
+                    Preparation.STORAGE_OPEN,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#storage-projects-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#storage-logs-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+            new Screen(
                     "SETTINGS_SWITCH_DIALOG",
                     ViewNames.SETTINGS,
                     Overlay.SWITCH_PROVIDER,

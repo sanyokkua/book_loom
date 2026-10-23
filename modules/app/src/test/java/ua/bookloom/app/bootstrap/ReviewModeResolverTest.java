@@ -13,7 +13,8 @@ import ua.bookloom.api.pipeline.ReviewMode;
 class ReviewModeResolverTest {
 
     // The environment wins over the property, a name is trimmed and read in any case, and a value that names no mode
-    // falls back to Unattended while the resolver keeps the rejected text for the launcher to report.
+    // falls back to Unattended, keeps the input it came from, and the resolver keeps the rejected text for the launcher
+    // to report.
     @ParameterizedTest
     @CsvSource(
             nullValues = "NIL",
@@ -23,8 +24,8 @@ class ReviewModeResolverTest {
                 "NIL, MANUAL, MANUAL, PROPERTY, NIL",
                 "NIL, '  assisted ', ASSISTED, PROPERTY, NIL",
                 "unattended, NIL, UNATTENDED, ENVIRONMENT, NIL",
-                "strict, manual, UNATTENDED, DEFAULT, strict",
-                "NIL, loud, UNATTENDED, DEFAULT, loud",
+                "strict, manual, UNATTENDED, ENVIRONMENT, strict",
+                "NIL, loud, UNATTENDED, PROPERTY, loud",
                 "NIL, NIL, UNATTENDED, DEFAULT, NIL"
             })
     void resolve_environmentAndProperty_chooseTheModeSourceAndRejection(

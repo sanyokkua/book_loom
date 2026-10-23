@@ -47,7 +47,7 @@ public final class ModelSpeedRecorder {
     /**
      * Stores the time one segment took as the model's speed, replacing an earlier measurement of either source; every
      * other setting of the model, the refusals included, stays as the store holds it at that moment. Returns at once;
-     * the store is called off the FX thread and the estimates are told on it. FX thread only.
+     * the store is called off the FX thread and the estimates are told on it. Any thread.
      *
      * @param providerId the stored provider
      * @param modelId the model

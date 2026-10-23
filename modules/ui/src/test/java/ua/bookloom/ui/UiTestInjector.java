@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -24,7 +25,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
-import ua.bookloom.api.pipeline.DialProfiles;
+import ua.bookloom.api.persistence.StorageInfo;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -35,6 +36,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.settings.GenerationOverrides;
+import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
@@ -44,14 +46,11 @@ import ua.bookloom.ui.dialog.SamePairPrompt;
 import ua.bookloom.ui.dialog.SwitchProviderPrompt;
 import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
-import ua.bookloom.ui.i18n.LocaleProvider;
-import ua.bookloom.ui.i18n.SystemLanguage;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.RowOpener;
-import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
 /**
@@ -88,6 +87,7 @@ public final class UiTestInjector {
     public static final class Builder {
 
         private final Locale locale;
+        private final LaunchPorts launch = new LaunchPorts();
         private ProviderConfigs configs = new FakeProviderConfigs();
         private ProviderVerifier verifier = ScriptedProviderVerifier.idle();
         private ModelCatalog catalog = ScriptedModelCatalog.idle();
@@ -100,7 +100,7 @@ public final class UiTestInjector {
         private ScriptedLexiconService lexicon = new ScriptedLexiconService();
         private ScriptedNamesPass namesPass = new ScriptedNamesPass();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
-        private ReviewMode reviewMode = ReviewMode.UNATTENDED;
+        private Supplier<ReviewMode> reviewMode = () -> ReviewMode.UNATTENDED;
         private final ReplacementQuestions replacements = new ReplacementQuestions();
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
@@ -108,13 +108,8 @@ public final class UiTestInjector {
         private FileRevealer revealer = new RecordingFileRevealer();
         private @Nullable ProjectActions projectActions;
         private Set<String> environment = Set.of();
-        private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
         private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
         private ModelCapabilities capabilities = UiTestBindings.UNKNOWN_CONTEXT;
-        private AppRestart restart = new RecordingAppRestart();
-        private GenerationOverrides overrides = ScriptedGenerationOverrides.none();
-        private @Nullable Locale osLocale;
-        private Optional<ThemeBlock> colorScheme = Optional.of(ThemeBlock.LIGHT);
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -194,7 +189,26 @@ public final class UiTestInjector {
 
         /** The review mode the graph was launched with. */
         public Builder reviewMode(final ReviewMode value) {
+            Objects.requireNonNull(value, "reviewMode");
+            reviewMode = () -> value;
+            return this;
+        }
+
+        /** Asks the mode again each time the graph reads it, as the window does at each run start. */
+        public Builder reviewModeProvider(final Supplier<ReviewMode> value) {
             reviewMode = Objects.requireNonNull(value, "reviewMode");
+            return this;
+        }
+
+        /** What the graph's {@link StorageInfo} is. */
+        public Builder storage(final StorageInfo value) {
+            launch.storage(Objects.requireNonNull(value, "storage"));
+            return this;
+        }
+
+        /** What the graph's {@link ReviewModeChoice} is. */
+        public Builder reviewModeChoice(final ReviewModeChoice value) {
+            launch.reviewModeChoice(Objects.requireNonNull(value, "reviewModeChoice"));
             return this;
         }
 
@@ -230,7 +244,7 @@ public final class UiTestInjector {
 
         /** Where the graph says its logs are, and whether the detailed log is on. */
         public Builder diagnosticLog(final DiagnosticLog value) {
-            diagnosticLog = Objects.requireNonNull(value, "diagnosticLog");
+            launch.diagnosticLog(Objects.requireNonNull(value, "diagnosticLog"));
             return this;
         }
 
@@ -318,42 +332,35 @@ public final class UiTestInjector {
 
         /** What the graph's {@link AppRestart} is, so the test can read whether and when a restart was asked. */
         public Builder restart(final AppRestart value) {
-            restart = Objects.requireNonNull(value, "restart");
+            launch.restart(Objects.requireNonNull(value, "restart"));
             return this;
         }
 
         /** What the graph says overrides a Generation setting for this launch. */
         public Builder overrides(final GenerationOverrides value) {
-            overrides = Objects.requireNonNull(value, "overrides");
+            launch.overrides(Objects.requireNonNull(value, "overrides"));
             return this;
         }
 
         /** The operating system's language; by default the display language, so no restart is ever needed. */
         public Builder osLocale(final Locale value) {
-            osLocale = Objects.requireNonNull(value, "osLocale");
+            launch.osLocale(Objects.requireNonNull(value, "osLocale"));
             return this;
         }
 
         /** What the operating system reports as its colour scheme; by default light. */
         public Builder colorScheme(final Optional<ThemeBlock> value) {
-            colorScheme = Objects.requireNonNull(value, "colorScheme");
+            launch.colorScheme(Objects.requireNonNull(value, "colorScheme"));
             return this;
         }
 
-        /**
-         * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
-         * first opening a book and choosing languages; only a test of the gating itself asks for it.
-         */
+        /** Keeps the real step gating; by default every step is open so a screen test needs no book. */
         public Builder gated() {
             gated = true;
             return this;
         }
 
-        /**
-         * Makes the graph.
-         *
-         * @return a fresh injector; never shares singletons with another call
-         */
+        /** Makes the graph: a fresh injector that shares no singleton with another call. */
         public Injector build() {
             final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
@@ -368,14 +375,7 @@ public final class UiTestInjector {
 
             @Override
             protected void configure() {
-                bind(LocaleProvider.class).toInstance(() -> locale);
-                bind(ColorSchemeProvider.class).toInstance(() -> colorScheme);
-                bind(SystemLanguage.class).toInstance(() -> osLocale != null ? osLocale : locale);
-                bind(AppRestart.class).toInstance(restart);
-                bind(GenerationOverrides.class).toInstance(overrides);
-                bind(DialProfiles.class).toInstance(new FixedDialProfiles());
-                bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                bind(DiagnosticLog.class).toInstance(diagnosticLog);
+                install(launch.module(locale));
                 UiTestBindings.bindExecutors(binder(), backgroundExecutor);
                 UiTestBindings.bindStores(binder(), configs, settings, modelSettings, NOW);
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));

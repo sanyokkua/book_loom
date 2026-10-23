@@ -164,6 +164,22 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
+    /**
+     * Runs work on the single writer thread outside any transaction, as for {@code VACUUM INTO}, which SQLite
+     * refuses inside one; asked from inside a write it is refused, like a nested write.
+     */
+    <T> Result<T> exclusive(final String operation, final Function<Handle, T> work) {
+        Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(work, "work");
+        checkThread(operation);
+        use.readLock().lock();
+        try {
+            return closed ? refusedAfterClose(operation) : writer.executeOutsideTransaction(operation, work);
+        } finally {
+            use.readLock().unlock();
+        }
+    }
+
     @Override
     public void close() {
         log.info("Database closing file={}", file.getFileName());

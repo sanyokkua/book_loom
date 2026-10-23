@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.api.settings.ThemeSetting;
 import ua.bookloom.ui.i18n.StoredLanguage;
+import ua.bookloom.ui.state.KeepAwakeGate;
 import ua.bookloom.ui.theme.TestThemes;
 import ua.bookloom.ui.theme.ThemeController;
 import ua.bookloom.ui.theme.ThemeMode;
@@ -24,6 +25,7 @@ class StoredPreferencesTest extends FxTestBase {
     private static final long WAIT_SECONDS = 10;
 
     private final StoredLanguage language = new StoredLanguage();
+    private final KeepAwakeGate gate = new KeepAwakeGate();
 
     @Override
     public void start(final Stage stage) {
@@ -48,7 +50,7 @@ class StoredPreferencesTest extends FxTestBase {
         settings.put(AppSetting.THEME, ThemeSetting.DARK);
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme).load();
+        new StoredPreferences(settings, language, theme, gate).load();
 
         assertThat(language.get()).contains("uk");
         assertThat(language.isSeeded()).isTrue();
@@ -60,7 +62,7 @@ class StoredPreferencesTest extends FxTestBase {
         final MemorySettings settings = new MemorySettings();
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme).load();
+        new StoredPreferences(settings, language, theme, gate).load();
 
         assertThat(language.get()).isEmpty();
         assertThat(language.isSeeded()).isTrue();
@@ -72,16 +74,35 @@ class StoredPreferencesTest extends FxTestBase {
         final MemorySettings settings = new MemorySettings().failGets();
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme).load();
+        new StoredPreferences(settings, language, theme, gate).load();
 
         assertThat(language.get()).isEmpty();
         assertThat(modeAfterAttach(theme)).isEqualTo(ThemeMode.SYSTEM);
     }
 
     @Test
+    void load_keepAwakeOffStored_gateSeededOff() {
+        final MemorySettings settings = new MemorySettings();
+        settings.put(AppSetting.KEEP_AWAKE, false);
+
+        new StoredPreferences(settings, language, theme(settings), gate).load();
+
+        assertThat(gate.isOn()).isFalse();
+    }
+
+    @Test
+    void load_keepAwakeUnreadable_gateStaysOn() {
+        final MemorySettings settings = new MemorySettings().failGets();
+
+        new StoredPreferences(settings, language, theme(settings), gate).load();
+
+        assertThat(gate.isOn()).isTrue();
+    }
+
+    @Test
     void load_onFxThread_throws() {
         final MemorySettings settings = new MemorySettings();
-        final StoredPreferences preferences = new StoredPreferences(settings, language, theme(settings));
+        final StoredPreferences preferences = new StoredPreferences(settings, language, theme(settings), gate);
         final CompletableFuture<Void> ran = new CompletableFuture<>();
 
         Platform.runLater(() -> {

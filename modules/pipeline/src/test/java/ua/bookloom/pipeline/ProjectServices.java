@@ -13,6 +13,7 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
@@ -58,6 +59,18 @@ public final class ProjectServices {
             final ProjectRepository projects,
             final SegmentRepository segments,
             final OpenProjects openProjects) {
+        return service(
+                injector, documents, projects, segments, openProjects, injector.getInstance(SettingsRepository.class));
+    }
+
+    /** The same, reading the new-book defaults from the given settings. */
+    public static ProjectServiceImpl service(
+            final Injector injector,
+            final DocumentPort documents,
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final OpenProjects openProjects,
+            final SettingsRepository settings) {
         return new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
                 documents,
@@ -71,6 +84,7 @@ public final class ProjectServices {
                         injector.getInstance(GlossaryRepository.class),
                         injector.getInstance(LexiconRepository.class),
                         segments,
-                        new UuidIdSource()));
+                        new UuidIdSource()),
+                settings);
     }
 }

@@ -55,7 +55,7 @@ class NamesStyleAutoStepsTest extends FxTestBase {
         lexicon.holds(TABLE);
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
-        tracker = onFx(() -> new ActivityTracker(new StateMirror(), new KeepAwake.Off(), clock));
+        tracker = onFx(() -> new ActivityTracker(new StateMirror(), new KeepAwake.Off(), new KeepAwakeGate(), clock));
         vm = onFx(() -> new NamesStyleViewModel(
                 glossary,
                 lexicon,

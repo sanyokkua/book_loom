@@ -1024,7 +1024,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - `:app` implements `api.AppRestart` (2.6) and binds it in place of the no-op.
   - Edit FR-SETTINGS-03/04, FR-UI-06 and DD-34.
   - **Compare:** both tabs. → :ui, :api, :app, docs
-- [ ] 7.4 Build Automation and Storage & logs, so the review mode, defaults, keep-awake, reopen-last-project and the
+- [x] 7.4 Build Automation and Storage & logs, so the review mode, defaults, keep-awake, reopen-last-project and the
   database and log places are visible and changeable.
   - **Satisfies:** settings "Choose when to stop and ask on Automation"; settings "Name the review modes with one set of
     words"; settings "Show storage and logs on one tab"; settings "Apply the other tabs at once and say when"; settings
@@ -1040,7 +1040,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     last-check default, keep the computer awake, reopen the last project.
   - **Storage & logs:**
     - the database folder and size, Open folder, and Make a backup… (implement `SqliteStorageInfo.backupTo`, stubbed
-      in 3.5: a `VACUUM INTO` through the write executor);
+      in 3.5: a `VACUUM INTO` on the single writer thread outside a transaction (SQLite refuses `VACUUM` inside one));
     - the log folder, 10 launches kept, the detailed-log switch, Open log folder, Save a diagnostic bundle…;
     - short paths with the full path in a tooltip.
   - The end of every run stores the measured seconds per segment on the run's model (design D3).

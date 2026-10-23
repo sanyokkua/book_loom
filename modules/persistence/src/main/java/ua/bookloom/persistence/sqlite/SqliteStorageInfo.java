@@ -13,7 +13,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.StorageInfo;
 
-/** Names and measures the database file for Settings; the backup arrives with task 7.4. */
+/** Names, measures and copies the database file for Settings › Storage &amp; logs. */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteStorageInfo implements StorageInfo {
@@ -36,9 +36,58 @@ public final class SqliteStorageInfo implements StorageInfo {
     @Override
     public Result<Path> backupTo(final Path destination) {
         Objects.requireNonNull(destination, "destination");
-        log.debug("Backup requested before it is available destination={}", destination.getFileName());
-        return Result.err(AppError.of(
-                ErrorCode.internal, "Backup not available", "Saving a copy of the stored work is not available yet."));
+        log.debug("Backup requested destination={}", destination.getFileName());
+        final Optional<AppError> refusal = refusal(destination);
+        if (refusal.isPresent()) {
+            return Result.err(refusal.get());
+        }
+        final Result<Integer> copied = db.exclusive("backup", h -> {
+            h.createUpdate("VACUUM INTO ?").bind(0, destination.toString()).execute();
+            return 0;
+        });
+        if (copied.isErr()) {
+            log.debug("Backup failed destination={}", destination.getFileName());
+            removePartial(destination);
+            return Result.err(AppError.of(
+                    ErrorCode.internal,
+                    "Backup failed",
+                    "The copy could not be written. Check that the folder can be written to and has room.",
+                    "storage backup",
+                    Optional.ofNullable(copied.error()).map(AppError::cause).orElse(null)));
+        }
+        log.info("Backup written file={}", destination.getFileName());
+        return Result.ok(destination);
+    }
+
+    // The destination did not exist before the copy (it would have been refused), so whatever is there is a leftover.
+    private static void removePartial(final Path destination) {
+        try {
+            if (Files.deleteIfExists(destination)) {
+                log.debug("Backup leftover removed file={}", destination.getFileName());
+            }
+        } catch (IOException e) {
+            log.debug("Backup leftover {} could not be removed: {}", destination.getFileName(), e.getMessage());
+        }
+    }
+
+    private static Optional<AppError> refusal(final Path destination) {
+        if (Files.exists(destination)) {
+            log.debug("Backup refused, destination exists file={}", destination.getFileName());
+            return Optional.of(AppError.of(
+                    ErrorCode.validation,
+                    "Backup not written",
+                    "A file named " + destination.getFileName()
+                            + " is already there. BookLoom never overwrites a file; choose a new name."));
+        }
+        final Path folder = destination.toAbsolutePath().getParent();
+        if (folder == null || !Files.isDirectory(folder)) {
+            log.debug("Backup refused, folder missing file={}", destination.getFileName());
+            return Optional.of(AppError.of(
+                    ErrorCode.validation,
+                    "Backup not written",
+                    "The folder for the copy does not exist. Choose a folder that does."));
+        }
+        return Optional.empty();
     }
 
     private static long sizeOf(final Path file) {

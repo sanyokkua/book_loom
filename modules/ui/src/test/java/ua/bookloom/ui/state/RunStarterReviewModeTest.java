@@ -70,4 +70,28 @@ class RunStarterReviewModeTest extends TranslatingViewModelTestBase {
 
         assertThat(onFx(() -> viewModel.reviewMode())).isEqualTo(ReviewMode.ASSISTED);
     }
+
+    // IF Settings changed the mode while a run was going, THEN that run keeps what it began with and only the next
+    // start reads the new one.
+    @Test
+    void start_modeChangedAfterStart_runKeepsFirstNextStartUsesNew() throws Exception {
+        final RecordingJob second = new RecordingJob();
+        engine = ScriptedTranslationEngine.returning(job, second);
+        reviewMode = ReviewMode.UNATTENDED;
+        openBookAndChooseModel();
+        buildViewModel();
+        startAndPrepare();
+
+        reviewMode = ReviewMode.ASSISTED;
+        assertThat(onFx(() -> mirror.runMode().get().reviewMode())).isEqualTo(ReviewMode.UNATTENDED);
+        press(viewModel::stop);
+        job.finish(Result.ok(cancelledReport()));
+        awaitState(RunState.STOPPED);
+        press(viewModel::resume);
+        queued.runAll();
+        second.awaitRunStarted();
+
+        assertThat(onFx(() -> mirror.runMode().get().reviewMode())).isEqualTo(ReviewMode.ASSISTED);
+        assertThat(second.pausePoints()).isEqualTo(Set.of(PausePoint.ON_FLAGGED, PausePoint.ON_ERROR));
+    }
 }

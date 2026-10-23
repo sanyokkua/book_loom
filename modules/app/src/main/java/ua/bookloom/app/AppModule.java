@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.settings.ReviewModeChoice;
+import ua.bookloom.app.bootstrap.ResolvedTraceFile;
 import ua.bookloom.app.bootstrap.ReviewModeSource;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
@@ -61,7 +63,23 @@ public final class AppModule extends AbstractModule {
         bind(SessionInfo.class).toInstance(startup.session());
         bind(EnvironmentVariables.class).toInstance(new SystemEnvironmentVariables());
         bind(AppRestart.class).to(NoOpAppRestart.class).in(Singleton.class);
-        bind(DiagnosticLog.class).toInstance(new DiagnosticLog(startup.paths().logDir(), startup.detailedLog()));
+        bind(DiagnosticLog.class).toInstance(diagnosticLog());
+        bind(ReviewModeChoice.class).to(ReviewModeSource.class);
+    }
+
+    private DiagnosticLog diagnosticLog() {
+        final String decidedBy =
+                switch (startup.detailedLogSource()) {
+                    case ENVIRONMENT -> "BOOKLOOM_TRACE_FILE";
+                    case PROPERTY -> "bookloom.trace.file";
+                    case MARKER, DEFAULT -> null;
+                };
+        return new DiagnosticLog(
+                startup.paths().logDir(),
+                startup.detailedLog(),
+                startup.paths().dataDir().resolve(AppPaths.DETAILED_LOG_MARKER),
+                decidedBy,
+                startup.detailedLog() && startup.detailedLogSource() == ResolvedTraceFile.Source.DEFAULT);
     }
 
     /**

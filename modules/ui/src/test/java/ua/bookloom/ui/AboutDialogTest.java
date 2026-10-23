@@ -261,14 +261,14 @@ class AboutDialogTest extends ShellTestBase {
         ThemeTestSupport.assertSameColour(stroke, border, "about card border under " + mode);
     }
     // IF the card did not say whether the detailed log is written, THEN a person asked for "the log" could not tell
-    // whether there is one, nor how to switch it on in an installed app.
+    // whether there is one, nor where to switch it on in an installed app.
     @Test
-    void about_detailedLogOff_saysSoAndHowToSwitchItOn() {
+    void about_detailedLogOff_saysSoAndPointsAtTheSettingsSwitch() {
         openAbout();
 
         assertThat(((Label) required("about-log-state")).getText())
-                .startsWith("Detailed log: off.")
-                .contains("BOOKLOOM_TRACE_FILE=1");
+                .isEqualTo("Detailed log: off. Switch it on in Settings › Storage & logs; it applies after BookLoom"
+                        + " restarts.");
     }
 
     // IF the card hid what the detailed log holds, THEN a person could share book text without knowing it.

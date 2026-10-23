@@ -186,6 +186,16 @@ final class ProgressLedger {
     }
 
     /**
+     * The measured seconds of one drafted segment in this run, which is what the next estimate of the model needs.
+     *
+     * @return the seconds per timed draft, or {@code null} when no draft was timed
+     */
+    @Nullable
+    Double draftSecondsPerSegment() {
+        return tally(StepKind.DRAFT).secondsPerStep();
+    }
+
+    /**
      * Reads the figures at a moment.
      *
      * @param now the moment; the time left is shaped against the run's clock at it

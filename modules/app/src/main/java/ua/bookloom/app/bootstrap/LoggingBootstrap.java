@@ -91,7 +91,7 @@ public final class LoggingBootstrap {
      * @see #configure(Path, boolean, ResolvedLogLevel, ResolvedTraceFile, Supplier)
      */
     public static boolean configure(Path logDir, boolean devConsole, ResolvedLogLevel resolvedLevel) {
-        final ResolvedTraceFile off = new ResolvedTraceFile(false, ResolvedLogLevel.Source.DEFAULT, null);
+        final ResolvedTraceFile off = new ResolvedTraceFile(false, ResolvedTraceFile.Source.DEFAULT, null);
         return configure(logDir, devConsole, resolvedLevel, off, () -> "");
     }
 

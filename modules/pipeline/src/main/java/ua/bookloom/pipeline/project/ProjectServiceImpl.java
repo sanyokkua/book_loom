@@ -18,11 +18,11 @@ import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.InspectionVerdict;
-import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.BookRelocation;
 import ua.bookloom.api.pipeline.ImportedBook;
@@ -40,7 +40,6 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
-import ua.bookloom.util.lang.LanguageTags;
 
 /**
  * Imports a book once, keeps it open in {@link OpenProjects} and answers every later question from the stored
@@ -59,6 +58,7 @@ public final class ProjectServiceImpl implements ProjectService {
     private final IdSource ids;
     private final RunRepository runs;
     private final ProjectCopies copies;
+    private final SettingsRepository settings;
 
     @Override
     public Result<ImportedBook> create(final Path source) {
@@ -273,7 +273,7 @@ public final class ProjectServiceImpl implements ProjectService {
 
     private Result<ImportedBook> openAndStore(final Path source, final BookInspection inspection) {
         final Path normalized = source.toAbsolutePath().normalize();
-        final BookBrief brief = BookBrief.defaults(preselectSource(inspection.languageEvidence()));
+        final BookBrief brief = NewBookBrief.of(inspection.languageEvidence(), settings);
         return documents
                 .open(source)
                 .flatMap(document -> ProjectOpener.closingUnlessImported(
@@ -341,23 +341,6 @@ public final class ProjectServiceImpl implements ProjectService {
                 index.distinctWords(),
                 index.buildMillis());
         return index;
-    }
-
-    private static @Nullable String preselectSource(final LanguageEvidence evidence) {
-        final String chosen =
-                switch (evidence.verdict()) {
-                    case MISMATCH -> evidence.contentMajority();
-                    case MATCH -> LanguageTags.normalize(evidence.declared()).orElse(null);
-                    case ABSENT -> evidence.contentMajority();
-                    case UNRECOGNIZED -> null;
-                };
-        log.debug(
-                "source preselection verdict={} declared={} contentMajority={} chosen={}",
-                evidence.verdict(),
-                evidence.declared(),
-                evidence.contentMajority(),
-                chosen);
-        return chosen;
     }
 
     private Result<Project> findProject(final String projectId) {

@@ -23,6 +23,7 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
@@ -89,7 +90,8 @@ class ProjectServiceImportFailureTest {
                         injector.getInstance(GlossaryRepository.class),
                         injector.getInstance(LexiconRepository.class),
                         injector.getInstance(SegmentRepository.class),
-                        new UuidIdSource()));
+                        new UuidIdSource()),
+                injector.getInstance(SettingsRepository.class));
     }
 
     private interface Spy {

@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ReviewCounts;
@@ -44,8 +45,13 @@ final class ReviewDeskReads {
         executor.execute(() -> readQueue(ticket));
     }
 
-    /** Reads the counts on the calling thread, which must not be the FX thread, and publishes the kept-as-source. */
+    // A run ends off the FX thread; the one exception is a start that failed on the caller's own thread, which has no
+    // decisions to count and must not read the desk there.
     void publishSourceKept() {
+        if (Platform.isFxApplicationThread()) {
+            log.debug("kept-as-source count not read: the run ended on the FX thread");
+            return;
+        }
         final Result<ReviewCounts> counts = desk.counts(projectId);
         final ReviewCounts data = counts.data();
         if (data == null) {

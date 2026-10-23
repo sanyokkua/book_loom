@@ -10,7 +10,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +36,8 @@ import ua.bookloom.util.paths.AppPaths;
 
 /** The review mode a run starts with: a flag set on purpose, else the stored choice, else Unattended. */
 class ReviewModeSourceTest {
+
+    private static final long FX_WAIT_SECONDS = 10;
 
     @TempDir
     private Path dataDir;
@@ -127,6 +133,62 @@ class ReviewModeSourceTest {
                 .filteredOn(event -> event.getLevel() == Level.DEBUG)
                 .anyMatch(event -> event.getFormattedMessage().contains("ASSISTED")
                         && event.getFormattedMessage().contains("stored"));
+    }
+
+    @Test
+    void launchOverride_envSet_namesBookloomReviewMode() {
+        final ReviewModeSource source = new ReviewModeSource(startup("manual", null), storing(null));
+
+        assertThat(source.launchOverride()).contains("BOOKLOOM_REVIEW_MODE");
+    }
+
+    @Test
+    void launchOverride_rejectedPropertyValue_namesProperty() {
+        final ReviewModeSource source = new ReviewModeSource(startup(null, "strict"), storing(null));
+
+        assertThat(source.launchOverride()).contains("bookloom.review.mode");
+    }
+
+    @Test
+    void launchOverride_nothingSet_empty() {
+        final ReviewModeSource source = new ReviewModeSource(startup(null, null), storing(null));
+
+        assertThat(source.launchOverride()).isEmpty();
+    }
+
+    @Test
+    void current_envUnattendedStoredManual_unattended() {
+        final ReviewModeSource source = new ReviewModeSource(startup("unattended", null), storing(ReviewMode.MANUAL));
+
+        assertThat(source.current()).isEqualTo(ReviewMode.UNATTENDED);
+    }
+
+    @Test
+    void current_nothingStoredNoFlag_unattended() {
+        final ReviewModeSource source = new ReviewModeSource(startup(null, null), storing(null));
+
+        assertThat(source.current()).isEqualTo(ReviewMode.UNATTENDED);
+    }
+
+    @Test
+    void stored_manual_fxReadSeesManual() throws Exception {
+        final ReviewModeSource source = new ReviewModeSource(startup(null, null), storing(null));
+        source.stored(ReviewMode.MANUAL);
+
+        assertThat(readOnFxThread(source)).isEqualTo(ReviewMode.MANUAL);
+    }
+
+    private static ReviewMode readOnFxThread(final ReviewModeSource source) throws Exception {
+        try {
+            final CountDownLatch started = new CountDownLatch(1);
+            Platform.startup(started::countDown);
+            started.await(FX_WAIT_SECONDS, TimeUnit.SECONDS);
+        } catch (IllegalStateException alreadyRunning) {
+            // The toolkit is shared by the test JVM; a running one is what is wanted.
+        }
+        final CompletableFuture<ReviewMode> read = new CompletableFuture<>();
+        Platform.runLater(() -> read.complete(source.current()));
+        return read.get(FX_WAIT_SECONDS, TimeUnit.SECONDS);
     }
 
     private static final class UnreadableSettings implements SettingsRepository {

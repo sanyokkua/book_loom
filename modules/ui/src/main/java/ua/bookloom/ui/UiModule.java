@@ -12,6 +12,7 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.StorageInfo;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.ExportService;
@@ -23,6 +24,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.settings.GenerationOverrides;
+import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ContinuePrompt;
@@ -54,12 +56,14 @@ import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.screen.ReviewDeskLauncher;
 import ua.bookloom.ui.state.AppLanguage;
+import ua.bookloom.ui.state.AutomationSettings;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.ContinueGuard;
 import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.DetailedLogSwitch;
 import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.DirtySource;
 import ua.bookloom.ui.state.ExportAnnouncement;
@@ -70,6 +74,7 @@ import ua.bookloom.ui.state.GenerationSettings;
 import ua.bookloom.ui.state.HiddenResultsAnnouncer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.KeepAwakeGate;
 import ua.bookloom.ui.state.LastOpened;
 import ua.bookloom.ui.state.LastProjectRecorder;
 import ua.bookloom.ui.state.LaunchProject;
@@ -98,6 +103,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepAvailability;
 import ua.bookloom.ui.state.StepLocks;
+import ua.bookloom.ui.state.StorageSettings;
 import ua.bookloom.ui.state.StoredNarratorFollower;
 import ua.bookloom.ui.state.StructuredAnswers;
 import ua.bookloom.ui.state.SystemBookFileChooser;
@@ -175,6 +181,10 @@ public final class UiModule extends AbstractModule {
         bind(StoredPreferences.class);
         bind(AppLanguage.class);
         bind(GenerationSettings.class);
+        bind(KeepAwakeGate.class);
+        bind(AutomationSettings.class);
+        bind(StorageSettings.class);
+        bind(DetailedLogSwitch.class);
     }
 
     private void bindState() {
@@ -271,6 +281,8 @@ public final class UiModule extends AbstractModule {
         requireBinding(ReviewMode.class);
         requireBinding(AppRestart.class);
         requireBinding(GenerationOverrides.class);
+        requireBinding(StorageInfo.class);
+        requireBinding(ReviewModeChoice.class);
         requireBinding(DialProfiles.class);
         requireBinding(SummaryRepository.class);
     }
