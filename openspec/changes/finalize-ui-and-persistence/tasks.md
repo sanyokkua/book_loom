@@ -1004,7 +1004,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     meanwhile is not lost; only Send again removes a row.
   - Tests: Save writes `ModelSettings` with OMIT; Send again removes a `RefusedSetting`.
   - **Compare:** `setSet('models')`. → :ui
-- [ ] 7.3 Build Generation and Appearance with only the knobs the code has, so nothing on them is fictional.
+- [x] 7.3 Build Generation and Appearance with only the knobs the code has, so nothing on them is fictional.
   - **Satisfies:** settings "Show how quality, thinking and sampling are set on Generation"; settings "Choose the theme,
     the language and technical details on Appearance"; settings "Apply the other tabs at once and say when"; settings
     "Apply the app language after a restart and the review mode at the next run start"; localization "Choose the

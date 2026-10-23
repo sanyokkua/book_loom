@@ -421,13 +421,32 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   after the paths are published, and `BOOKLOOM_TRACE_FILE` still overrides it.
 - **When writes happen.** Providers and Models write on Save (the pinned footer, `LeaveGuard`'s dirty check). The other
   tabs write at once, through the background runner.
-- **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale, once
-  the database is open and before the first screen is built.
+- **App language.** `ui.language` applies at the next launch: `OsLocaleProvider` reads it before the OS locale. `Messages`
+  decides its locale lazily on its first use (the eager review-desk launcher builds it before phase two), and
+  `StoredPreferences.load()` runs in `init()` right after phase two, off the FX thread, seeding `StoredLanguage` and
+  `ThemeController` (the stored theme is applied at attach without a write). A seed that arrives after the decision is
+  logged and applies from the next launch. `AppLanguage` holds the Appearance choice, stores it in the background and
+  says whether it differs from the language on screen.
+- **Generation.** `GenerationSettings` reads and stores `run.reasoning` and `run.sampling` in the background; the
+  pipeline's `RequestDefaultsSource` still reads them once per job, so a running run keeps its settings. The environment
+  variable or property that overrides a choice is named through `api.settings.GenerationOverrides` (implemented by
+  `RequestDefaultsSource`). The quality rows come through `api.pipeline.DialProfiles` (implemented over `DialParameters`)
+  and the time limits from `api.llm.CallLimits`, which `RequestTimeouts` and `RetryPolicy` also read, so `:ui` never
+  imports `pipeline.*` and displays what the client enforces.
 - **The current AI model.** `model.current` (a `ModelSelection`) is what a new run and a new project use. The
   first-launch look sets it when it finds one model, the person sets it with "Use this one" (Providers) or the
   title-bar model chip, and a run stores the selection it started with in `RunRecord.model`.
-- **Restart now.** `:ui` calls an `api.AppRestart` port that `:app` implements. It releases the single-instance lock,
-  starts the same command from `ProcessHandle.current().info()`, and exits.
+- **Restart now.** `:ui` calls an `api.AppRestart` port that `:app` implements; it answers `Result<Boolean>` (true:
+  a new copy was started; false: this binding cannot restart, as in the command line). `DesktopAppRestart` builds the
+  command from `ProcessHandle.current().info()` (`RestartCommand`; no command, or `java` without arguments, is an
+  error and nothing else), records it in `PendingRestart` (carried by `StartupContext`) and asks the toolkit to exit.
+  It never starts the child itself: `Launcher.main` starts it, output discarded, only after `Application.launch`
+  returned (so `stop()` closed the database) and the single-instance lock was closed, so the new copy never meets
+  files the old one still holds. The sequence is: build command, exit, shutdown closes the database, lock released,
+  child spawned. A child that cannot start is logged; the window is gone either way. A second ask while one is
+  pending is ignored (and the button is disabled). `CallLimits` is an interface of constants because the
+  `records-first` rule allows only records, interfaces and enums in `:api`. The window asks `ExitGuard.requestClose` first, so work under way meets the quit question, and the
+  choice is stored before the restart is asked.
 - **The review mode is read per run.** `RunStarter` reads `run.reviewMode` at each start; a launch flag or environment
   variable resolved by `ReviewModeResolver` overrides it.
 

@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import org.controlsfx.control.SegmentedButton?>
+<?import org.controlsfx.control.ToggleSwitch?>
 
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
       fx:controller="ua.bookloom.ui.screen.AppearanceController" id="settings-appearance-host">
@@ -14,6 +16,7 @@
         <Insets top="14"/>
     </padding>
     <VBox id="settings-appearance-card" styleClass="card" spacing="16" maxWidth="640">
+        <Label id="appearance-instant" styleClass="hint" wrapText="true" text="%settings.instant"/>
         <VBox spacing="5">
             <Label styleClass="muted" text="%appearance.theme.label"/>
             <SegmentedButton fx:id="themeSelector" id="appearance-theme" maxWidth="-Infinity">
@@ -26,12 +29,20 @@
             <Label styleClass="hint" wrapText="true" text="%appearance.theme.hint"/>
         </VBox>
         <VBox spacing="5">
-            <Label styleClass="muted" text="%appearance.accent.label"/>
-            <HBox id="appearance-accent-row" spacing="8" alignment="CENTER_LEFT">
-                <Region id="appearance-accent-swatch" styleClass="accent-swatch"/>
-                <Label id="appearance-accent-value" text="%appearance.accent.value"/>
-                <Label id="appearance-accent-fixed" styleClass="tag-note" text="%appearance.accent.fixed"/>
+            <Label styleClass="muted" text="%appearance.language"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <ComboBox fx:id="language" id="appearance-language" styleClass="w-name"/>
+                <Button fx:id="restart" id="appearance-restart" styleClass="btn-link" text="%appearance.restart"/>
             </HBox>
+            <Label id="appearance-language-note" styleClass="hint" wrapText="true" text="%appearance.language.note"/>
+            <Label fx:id="restartError" id="appearance-restart-error" styleClass="hint-warn" wrapText="true"
+                   text="%appearance.restart.failed"/>
         </VBox>
+        <VBox spacing="5">
+            <ToggleSwitch fx:id="technical" id="appearance-technical" text="%appearance.technical"/>
+            <Label id="appearance-technical-hint" styleClass="hint" wrapText="true" text="%appearance.technical.hint"/>
+        </VBox>
+        <Label fx:id="saveError" id="appearance-save-error" styleClass="hint-warn" wrapText="true"
+               text="%appearance.saveFailed"/>
     </VBox>
 </VBox>

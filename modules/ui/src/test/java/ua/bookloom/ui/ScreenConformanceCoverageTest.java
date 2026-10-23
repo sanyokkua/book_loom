@@ -40,6 +40,8 @@ class ScreenConformanceCoverageTest {
         "SETTINGS_SWITCH_DIALOG",
         "SETTINGS_MODELS",
         "SETTINGS_MODELS_DIRTY",
+        "SETTINGS_GENERATION",
+        "SETTINGS_APPEARANCE",
         "ADD_TERM_DIALOG",
         "RESULTS_DIALOG"
     };

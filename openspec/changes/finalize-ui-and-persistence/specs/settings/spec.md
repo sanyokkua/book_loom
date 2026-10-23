@@ -340,6 +340,16 @@ The Generation tab SHALL show what each quality choice does as a read-only table
 - **WHEN** Low is chosen for Thinking before answering
 - **THEN** the stored choice is Low and it is read again after a restart
 
+#### Scenario: A running translation keeps its settings until it starts again
+
+- **WHEN** a translation is running, paused or stopping and the Generation tab is opened
+- **THEN** a note says the run keeps the settings it started with and that a change reaches its segments not translated yet when it starts or continues again
+
+#### Scenario: An override is named
+
+- **WHEN** the environment variable `BOOKLOOM_REASONING` is set and the Generation tab is opened
+- **THEN** a note beside Thinking names `BOOKLOOM_REASONING` as deciding this launch and says the choice made here is kept for launches without it
+
 ### Requirement: Choose the theme, the language and technical details on Appearance
 
 The Appearance tab SHALL offer the theme, the language of the app with the note "Applies after BookLoom restarts." and a Restart now action, and a Show technical details switch, and SHALL NOT offer an accent row.

@@ -3,7 +3,9 @@ package ua.bookloom.ui;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.multibindings.Multibinder;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
+import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
@@ -11,6 +13,7 @@ import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.persistence.SummaryRepository;
+import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -19,6 +22,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ContinuePrompt;
@@ -41,12 +45,15 @@ import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
+import ua.bookloom.ui.i18n.StoredLanguage;
+import ua.bookloom.ui.i18n.SystemLanguage;
 import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.screen.ReviewDeskLauncher;
+import ua.bookloom.ui.state.AppLanguage;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.ContinueGuard;
@@ -59,6 +66,7 @@ import ua.bookloom.ui.state.ExportAnnouncement;
 import ua.bookloom.ui.state.ExportAnnouncer;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.GenerationSettings;
 import ua.bookloom.ui.state.HiddenResultsAnnouncer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
@@ -157,6 +165,16 @@ public final class UiModule extends AbstractModule {
         bind(StructuredAnswers.class);
         bind(ModelRoster.class);
         bind(ModelForm.class);
+        bindPreferences();
+    }
+
+    // The language and the theme are read at startup (StoredPreferences), before the window is built.
+    private void bindPreferences() {
+        bind(SystemLanguage.class).toInstance(Locale::getDefault);
+        bind(StoredLanguage.class);
+        bind(StoredPreferences.class);
+        bind(AppLanguage.class);
+        bind(GenerationSettings.class);
     }
 
     private void bindState() {
@@ -251,6 +269,9 @@ public final class UiModule extends AbstractModule {
         requireBinding(ReviewDesk.class);
         requireBinding(ExportService.class);
         requireBinding(ReviewMode.class);
+        requireBinding(AppRestart.class);
+        requireBinding(GenerationOverrides.class);
+        requireBinding(DialProfiles.class);
         requireBinding(SummaryRepository.class);
     }
 }

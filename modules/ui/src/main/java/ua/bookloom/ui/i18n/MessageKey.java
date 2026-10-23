@@ -853,12 +853,112 @@ public enum MessageKey {
     APPEARANCE_THEME_SYSTEM_TIP("appearance.theme.system.tip"),
     /** Hint under the theme selector saying what the options mean. */
     APPEARANCE_THEME_HINT("appearance.theme.hint"),
-    /** Label of the accent row in the appearance tab. */
-    APPEARANCE_ACCENT_LABEL("appearance.accent.label"),
-    /** Name and value of the accent colour, which is the same in both theme blocks. */
-    APPEARANCE_ACCENT_VALUE("appearance.accent.value"),
-    /** Tag saying the accent cannot be changed in this version. */
-    APPEARANCE_ACCENT_FIXED("appearance.accent.fixed"),
+    /** Line under the Appearance tab saying a change takes effect without a Save button. */
+    SETTINGS_INSTANT("settings.instant"),
+    /** Line under the Generation tab saying when a change takes effect. */
+    SETTINGS_GENERATION_INSTANT("settings.generation.instant"),
+    /** Note shown on the Generation tab while a translation is under way. */
+    SETTINGS_GENERATION_RUNNING("settings.generation.running"),
+    /** Line shown when a Generation choice could not be stored. */
+    SETTINGS_GENERATION_SAVE_FAILED("settings.generation.saveFailed"),
+    /** Title of the card that lists what each quality setting does. */
+    SETTINGS_GENERATION_QUALITY_TITLE("settings.generation.quality.title"),
+    /** Where the quality is chosen, shown beside the title of the quality card. */
+    SETTINGS_GENERATION_QUALITY_SUB("settings.generation.quality.sub"),
+    /** Row of the quality table: the most segments in one request. */
+    SETTINGS_GENERATION_QUALITY_BATCH("settings.generation.quality.batch"),
+    /** Cell of the batch row; 0 is the segment cap. */
+    SETTINGS_GENERATION_QUALITY_UP_TO("settings.generation.quality.upTo"),
+    /** Row of the quality table: earlier translated segments sent with a draft. */
+    SETTINGS_GENERATION_QUALITY_PRECEDING("settings.generation.quality.preceding"),
+    /** Row of the quality table: directed-fix rounds. */
+    SETTINGS_GENERATION_QUALITY_REPAIR("settings.generation.quality.repair"),
+    /** Row of the quality table: reviewer passes. */
+    SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
+    /** Row of the quality table: the backward revision. */
+    SETTINGS_GENERATION_QUALITY_BACKWARD("settings.generation.quality.backward"),
+    /** Row of the quality table: the model-written summary. */
+    SETTINGS_GENERATION_QUALITY_SUMMARY("settings.generation.quality.summary"),
+    /** Cell of the quality table for a step that runs. */
+    SETTINGS_GENERATION_QUALITY_YES("settings.generation.quality.yes"),
+    /** Cell of the quality table for a step that does not run. */
+    SETTINGS_GENERATION_QUALITY_NO("settings.generation.quality.no"),
+    /** Label of the thinking-level choice. */
+    SETTINGS_GENERATION_THINKING("settings.generation.thinking"),
+    /** Thinking level: none. */
+    SETTINGS_GENERATION_THINKING_OFF("settings.generation.thinking.off"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_OFF}. */
+    SETTINGS_GENERATION_THINKING_OFF_TIP("settings.generation.thinking.off.tip"),
+    /** Thinking level: brief. */
+    SETTINGS_GENERATION_THINKING_LOW("settings.generation.thinking.low"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_LOW}. */
+    SETTINGS_GENERATION_THINKING_LOW_TIP("settings.generation.thinking.low.tip"),
+    /** Thinking level: full. */
+    SETTINGS_GENERATION_THINKING_ON("settings.generation.thinking.on"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_ON}. */
+    SETTINGS_GENERATION_THINKING_ON_TIP("settings.generation.thinking.on.tip"),
+    /** Explanation under the thinking-level choice. */
+    SETTINGS_GENERATION_THINKING_HINT("settings.generation.thinking.hint"),
+    /** Technical names of the thinking setting, shown with technical details on. */
+    SETTINGS_GENERATION_THINKING_TECH("settings.generation.thinking.tech"),
+    /** Note that a variable or property overrides a choice; 0 is its name. */
+    SETTINGS_GENERATION_OVERRIDE("settings.generation.override"),
+    /** Label of the sampling choice. */
+    SETTINGS_GENERATION_SAMPLING("settings.generation.sampling"),
+    /** Sampling mode: only the temperature is sent. */
+    SETTINGS_GENERATION_SAMPLING_DEFAULTS("settings.generation.sampling.defaults"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_DEFAULTS}. */
+    SETTINGS_GENERATION_SAMPLING_DEFAULTS_TIP("settings.generation.sampling.defaults.tip"),
+    /** Sampling mode: BookLoom sends its own sampling. */
+    SETTINGS_GENERATION_SAMPLING_TUNED("settings.generation.sampling.tuned"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_TUNED}. */
+    SETTINGS_GENERATION_SAMPLING_TUNED_TIP("settings.generation.sampling.tuned.tip"),
+    /** Explanation under the sampling choice. */
+    SETTINGS_GENERATION_SAMPLING_HINT("settings.generation.sampling.hint"),
+    /** Title of the card listing the fixed time limits. */
+    SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
+    /** Tag saying the limits cannot be changed. */
+    SETTINGS_GENERATION_LIMITS_FIXED("settings.generation.limits.fixed"),
+    /** Time-limit row: a reviewer call. */
+    SETTINGS_GENERATION_LIMITS_CHECK("settings.generation.limits.check"),
+    /** Time-limit row: the helper calls. */
+    SETTINGS_GENERATION_LIMITS_HELPER("settings.generation.limits.helper"),
+    /** Time-limit row: drafting calls. */
+    SETTINGS_GENERATION_LIMITS_DRAFT("settings.generation.limits.draft"),
+    /** Time-limit row: attempts per call. */
+    SETTINGS_GENERATION_LIMITS_TRIES("settings.generation.limits.tries"),
+    /** A limit in seconds; 0 is the number of seconds. */
+    SETTINGS_GENERATION_LIMITS_SECONDS("settings.generation.limits.seconds"),
+    /** The drafting limit; 0 is the longest allowed in minutes. */
+    SETTINGS_GENERATION_LIMITS_DRAFT_VALUE("settings.generation.limits.draft.value"),
+    /** The attempts limit; 0 is the most tries. */
+    SETTINGS_GENERATION_LIMITS_TRIES_VALUE("settings.generation.limits.tries.value"),
+    /** Label of the language choice. */
+    APPEARANCE_LANGUAGE("appearance.language"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_LANGUAGE}. */
+    APPEARANCE_LANGUAGE_TIP("appearance.language.tip"),
+    /** Language option that follows the computer; 0 is that language. */
+    APPEARANCE_LANGUAGE_SYSTEM("appearance.language.system"),
+    /** Language option: English, written in English in both catalogues. */
+    APPEARANCE_LANGUAGE_EN("appearance.language.en"),
+    /** Language option: Ukrainian, written in Ukrainian in both catalogues. */
+    APPEARANCE_LANGUAGE_UK("appearance.language.uk"),
+    /** Note that a language choice applies after a restart. */
+    APPEARANCE_LANGUAGE_NOTE("appearance.language.note"),
+    /** Button that restarts BookLoom in the chosen language. */
+    APPEARANCE_RESTART("appearance.restart"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_RESTART}. */
+    APPEARANCE_RESTART_TIP("appearance.restart.tip"),
+    /** Line shown when the restart could not start a new copy. */
+    APPEARANCE_RESTART_FAILED("appearance.restart.failed"),
+    /** Label of the technical-details switch. */
+    APPEARANCE_TECHNICAL("appearance.technical"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_TECHNICAL}. */
+    APPEARANCE_TECHNICAL_TIP("appearance.technical.tip"),
+    /** Explanation under the technical-details switch. */
+    APPEARANCE_TECHNICAL_HINT("appearance.technical.hint"),
+    /** Line shown when an Appearance choice could not be stored. */
+    APPEARANCE_SAVE_FAILED("appearance.saveFailed"),
     /** Heading of the import screen. */
     IMPORT_TITLE("import.title"),
     /** Line under the import heading naming the formats that can be opened. */

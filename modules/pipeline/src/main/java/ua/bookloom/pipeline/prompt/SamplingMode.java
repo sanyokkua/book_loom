@@ -52,6 +52,11 @@ public enum SamplingMode {
      * @return the named mode, or empty when neither is set to a known name
      */
     static Optional<SamplingMode> explicit(final Map<String, String> env, @Nullable final String property) {
+        return explicit(env, property, true);
+    }
+
+    private static Optional<SamplingMode> explicit(
+            final Map<String, String> env, @Nullable final String property, final boolean warn) {
         Objects.requireNonNull(env, "env");
         final String asked = env.getOrDefault(ENV_NAME, property == null ? "" : property)
                 .strip()
@@ -64,8 +69,25 @@ public enum SamplingMode {
                 return Optional.of(mode);
             }
         }
-        log.warn("Unknown sampling mode '{}'; it is ignored", asked);
+        if (warn) {
+            log.warn("Unknown sampling mode '{}'; it is ignored", asked);
+        }
         return Optional.empty();
+    }
+
+    /**
+     * The variable or property that names a known mode, for Settings to say it decides.
+     *
+     * @param env the environment variables; never null
+     * @param property the {@code bookloom.sampling} value, or null when unset
+     * @return {@link #ENV_NAME} when the environment variable is present, else {@link #PROPERTY_NAME}; empty when
+     *     neither names a known mode
+     */
+    static Optional<String> explicitSource(final Map<String, String> env, @Nullable final String property) {
+        if (explicit(env, property, false).isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(env.containsKey(ENV_NAME) ? ENV_NAME : PROPERTY_NAME);
     }
 
     /**

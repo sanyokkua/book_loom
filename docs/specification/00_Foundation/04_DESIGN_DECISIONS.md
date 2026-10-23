@@ -352,8 +352,8 @@ defaulted. **ADR:** ADR-0013 **Requirements:** FR-INFER-09, FR-INFER-10.
 
 **Decision:** This version ships exactly two UI languages — **English (default)** and **Ukrainian** (`uk`) — with all
 user-facing text in `ResourceBundle`s (`messages_en`, `messages_uk`) kept in parity. First start detects the OS locale
-(Ukrainian → `uk`, else English); the choice is stored in the DB (typed KV key `ui.language`) and is user-switchable in
-Settings → Appearance (apply-on-change; restart acceptable). **Why:** Deliver a fully localized product for the two
+(Ukrainian → `uk`, else English); the choice is stored in the DB (typed KV key `ui.language`, read first at the next launch, before the OS locale) and is
+user-switchable in Settings → Appearance; it applies after a restart, which the tab offers as Restart now. **Why:** Deliver a fully localized product for the two
 target audiences without over-scoping i18n. **Consequences:** Two complete bundles are a release gate; a third language
 is future work, not assumed here. **ADR:** — **Requirements:** FR-I18N-1, FR-I18N-2, FR-I18N-4, FR-I18N-7.
 

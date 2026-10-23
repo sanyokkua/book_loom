@@ -3,6 +3,7 @@ package ua.bookloom.ui.i18n;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 
 /** The word for a brief's quality dial, shared by every screen that lists a project beside its model. */
@@ -19,7 +20,17 @@ public final class QualityLabels {
      * @return the entry for Fast, Balanced or Max
      */
     public static MessageKey of(final BookBrief brief) {
-        return switch (Objects.requireNonNull(brief, "brief").dial()) {
+        return of(Objects.requireNonNull(brief, "brief").dial());
+    }
+
+    /**
+     * The catalogue entry naming a dial setting.
+     *
+     * @param dial the setting; never null
+     * @return the entry for Fast, Balanced or Max
+     */
+    public static MessageKey of(final QualityDial dial) {
+        return switch (Objects.requireNonNull(dial, "dial")) {
             case FAST -> MessageKey.BRIEF_QUALITY_FAST;
             case BALANCED -> MessageKey.BRIEF_QUALITY_BALANCED;
             case MAX -> MessageKey.BRIEF_QUALITY_MAX;

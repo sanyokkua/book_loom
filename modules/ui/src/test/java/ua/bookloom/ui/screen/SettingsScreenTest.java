@@ -37,7 +37,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     // IF a tab were missing, or one of the unbuilt areas were enabled, THEN the screen would misstate what this
     // build can do.
     @Test
-    void tabs_settingsScreen_sixPresentFourDisabled() {
+    void tabs_settingsScreen_sixPresentTwoDisabled() {
         openSettings();
 
         assertThat(tabs().getTabs())
@@ -45,7 +45,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 .containsExactly(
                         tuple("settings-tab-providers", "Providers", false),
                         tuple("settings-tab-models", "Models", false),
-                        tuple("settings-tab-generation", "Generation", true),
+                        tuple("settings-tab-generation", "Generation", false),
                         tuple("settings-tab-appearance", "Appearance", false),
                         tuple("settings-tab-automation", "Automation", true),
                         tuple("settings-tab-storage", "Storage & logs", true));
@@ -165,18 +165,21 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(underline("settings-tab-models")).isEqualTo(Color.TRANSPARENT);
     }
 
-    // IF Appearance did not open, or Generation opened, THEN the tabs would misstate what this build can do.
+    // IF Appearance or Generation did not open, or Automation opened, THEN the tabs would misstate what this build can
+    // do.
     @Test
-    void tabs_appearanceActivated_opensItAndGenerationLeavesProvidersShown() {
+    void tabs_appearanceAndGenerationActivated_openAndAutomationLeavesGenerationShown() {
         openSettings();
 
         clickOn("#settings-tab-appearance");
         assertThat(selectedTabId()).isEqualTo("settings-tab-appearance");
 
-        clickOn("#settings-tab-providers");
         clickOn("#settings-tab-generation");
+        assertThat(selectedTabId()).isEqualTo("settings-tab-generation");
 
-        assertThat(selectedTabId()).isEqualTo("settings-tab-providers");
+        clickOn("#settings-tab-automation");
+
+        assertThat(selectedTabId()).isEqualTo("settings-tab-generation");
     }
 
     private String selectedTabId() {

@@ -754,14 +754,16 @@ BookLoom handles a refusal the same way for every optional setting:
 
 ### Generation · Appearance · Automation · Storage & logs
 - **Generation** (applies to segments not translated yet):
-  - What the quality choice does: a read-only grid from `DialParameters`.
+  - What the quality choice does: a read-only grid of labels from `DialParameters` (through `DialProfiles`). A note says a
+    running translation keeps the settings it started with.
   - Thinking before answering: Off / Low / On (`ReasoningPlan`).
-  - Sampling: Program defaults / Tuned by BookLoom (`SamplingMode`).
-  - Time limits: fixed, `RequestTimeouts`.
+  - Sampling: Program defaults / Tuned by BookLoom (`SamplingMode`). A variable that overrides either choice is named
+    beside it.
+  - Time limits: fixed (`CallLimits`).
 - **Appearance**:
-  - Theme.
-  - Language of the app ("Applies after BookLoom restarts." [Restart now]; a live switch would rebuild every view,
-    JX-S1).
+  - Theme (Light · Dark · Match the computer).
+  - Language of the app ("Applies after BookLoom restarts."; [Restart now] shows only while the choice differs from the
+    language on screen, and is disabled while a restart is pending (the new copy starts only after this one has shut down); a live switch would rebuild every view, JX-S1).
   - **Show technical details** (G12).
 - **Automation**:
   - When to stop and ask you (Never — translate unattended · When something needs review · After every segment =

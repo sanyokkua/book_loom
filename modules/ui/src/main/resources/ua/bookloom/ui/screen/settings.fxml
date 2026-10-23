@@ -65,7 +65,9 @@
         <Tab fx:id="modelsTab" id="settings-tab-models" text="%settings.tab.models">
             <fx:include source="models.fxml"/>
         </Tab>
-        <Tab id="settings-tab-generation" disable="true" text="%settings.tab.generation"/>
+        <Tab fx:id="generationTab" id="settings-tab-generation" text="%settings.tab.generation">
+            <fx:include source="generation.fxml"/>
+        </Tab>
         <Tab id="settings-tab-appearance" text="%settings.tab.appearance">
             <fx:include source="appearance.fxml"/>
         </Tab>

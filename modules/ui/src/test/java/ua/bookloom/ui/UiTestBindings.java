@@ -1,6 +1,9 @@
 package ua.bookloom.ui;
 
 import com.google.inject.Binder;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.AccessLevel;
@@ -9,6 +12,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
+import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 
 /** Small helpers {@link UiTestInjector} binds its graph with. */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -35,6 +41,19 @@ final class UiTestBindings {
                 .annotatedWith(BackgroundExecutor.class)
                 .toInstance(background != null ? background : daemonExecutor());
         binder.bind(ExecutorService.class).annotatedWith(IoExecutor.class).toInstance(daemonExecutor());
+    }
+
+    /** Binds the stores a graph reads: providers, settings and per-model settings, and a clock standing at {@code now}. */
+    static void bindStores(
+            final Binder binder,
+            final ProviderConfigs configs,
+            final SettingsRepository settings,
+            final ModelSettingsRepository modelSettings,
+            final Instant now) {
+        binder.bind(ProviderConfigs.class).toInstance(configs);
+        binder.bind(SettingsRepository.class).toInstance(settings);
+        binder.bind(ModelSettingsRepository.class).toInstance(modelSettings);
+        binder.bind(Clock.class).toInstance(Clock.fixed(now, ZoneOffset.UTC));
     }
 
     static ExecutorService daemonExecutor() {

@@ -89,6 +89,22 @@ final class SettingsConformanceCases {
                     Preparation.MODELS_DIRTY,
                     Overlay.NONE,
                     List.of(new Part("#models-form-dirty", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"))),
+            // The quality table is a bordered card on the surface role; its grid is edged by the border role.
+            new Screen(
+                    "SETTINGS_GENERATION",
+                    ViewNames.SETTINGS,
+                    Preparation.GENERATION_OPEN,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#generation-quality-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#generation-quality-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#generation-quality", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            new Screen(
+                    "SETTINGS_APPEARANCE",
+                    ViewNames.SETTINGS,
+                    Preparation.APPEARANCE_OPEN,
+                    Overlay.NONE,
+                    List.of(new Part("#settings-appearance-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
             new Screen(
                     "SETTINGS_SWITCH_DIALOG",
                     ViewNames.SETTINGS,

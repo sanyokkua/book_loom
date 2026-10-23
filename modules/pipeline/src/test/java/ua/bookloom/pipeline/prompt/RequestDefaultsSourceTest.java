@@ -192,4 +192,54 @@ class RequestDefaultsSourceTest {
 
         assertThat(source.current().reasoningFor(PromptName.DRAFT)).isEqualTo(ReasoningLevel.LOW);
     }
+
+    // Settings names the variable or property that decides, so a person knows why their own choice is not in force.
+    @Test
+    void reasoning_envSet_namesEnvVariable() {
+        assertThat(source(Map.of(ReasoningPlan.ENV_NAME, "low"), "on", null).reasoning())
+                .contains("BOOKLOOM_REASONING");
+    }
+
+    @Test
+    void reasoning_propertyOnly_namesProperty() {
+        assertThat(source(Map.of(), "REVIEWER=on", null).reasoning()).contains("bookloom.reasoning");
+    }
+
+    @Test
+    void reasoning_nothingSet_empty() {
+        assertThat(source(Map.of(), " ", null).reasoning()).isEmpty();
+    }
+
+    @Test
+    void sampling_unknownEnvValue_empty() {
+        assertThat(source(Map.of(SamplingMode.ENV_NAME, "bogus")).sampling()).isEmpty();
+    }
+
+    @Test
+    void sampling_envTuned_namesEnvVariable() {
+        assertThat(source(Map.of(SamplingMode.ENV_NAME, "tuned")).sampling()).contains("BOOKLOOM_SAMPLING");
+    }
+
+    @Test
+    void sampling_propertyOnly_namesProperty() {
+        assertThat(source(Map.of(), null, "server").sampling()).contains("bookloom.sampling");
+    }
+
+    // The Generation tab asks for the source each time it opens; naming it must not repeat the run's warning.
+    @Test
+    void sampling_unknownEnvValue_namingTheSourceLogsNoWarning() {
+        final ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(SamplingMode.class);
+        final ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            source(Map.of(SamplingMode.ENV_NAME, "bogus")).sampling();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(appender.list).isEmpty();
+    }
 }

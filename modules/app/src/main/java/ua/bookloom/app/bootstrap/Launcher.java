@@ -12,6 +12,8 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.app.AppVersion;
 import ua.bookloom.app.BookLoomApplication;
+import ua.bookloom.app.PendingRestart;
+import ua.bookloom.app.Processes;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.util.paths.AppEnvironment;
@@ -79,20 +81,34 @@ public final class Launcher {
         // try-with-resources rather than a shutdown hook: `Application.launch` blocks until the last window closes,
         // so the lock is held for exactly the process's useful lifetime and released on the way out. The OS would
         // release it on a crash regardless, which is what keeps a killed process from leaving the app unstartable.
-        final SingleInstanceLock lock = Objects.requireNonNull(acquired.data());
-        try (lock) {
+        final PendingRestart restart = new PendingRestart();
+        runGuarded(Objects.requireNonNull(acquired.data()), restart, Processes.system(), () -> {
             // Step 5. Nothing above this line may take a logger; everything below it may.
-            StartupContext.publish(configureLogging(paths));
+            StartupContext.publish(configureLogging(paths, restart));
             Application.launch(BookLoomApplication.class, args);
-
-            // Reached when the last window closes. The lock is released by the try-with-resources immediately
-            // after, so the line is emitted while it is still held — which is the order a reader would expect.
             LoggerFactory.getLogger(Launcher.class).info("app stopped, releasing the single-instance lock");
+        });
+    }
+
+    /**
+     * Runs the application with the lock held, then, only after the application returned (its {@code stop()} has
+     * closed the database) and the lock was closed, starts the next copy if a restart asked for one.
+     * Try-with-resources rather than a shutdown hook: the OS would release the lock on a crash regardless, which is
+     * what keeps a killed process from leaving the app unstartable.
+     */
+    static void runGuarded(
+            final SingleInstanceLock lock,
+            final PendingRestart restart,
+            final Processes processes,
+            final Runnable application) {
+        try (lock) {
+            application.run();
         }
+        restart.spawnIfAsked(processes);
     }
 
     /** Step 5 and what follows it at once: logging configured, the startup lines written, the context built. */
-    private static StartupContext configureLogging(AppPaths paths) {
+    private static StartupContext configureLogging(AppPaths paths, PendingRestart restart) {
         final AppEnvironment environment = AppEnvironment.resolve(System::getenv, System::getProperty);
         final ResolvedLogLevel logLevel =
                 LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
@@ -110,7 +126,7 @@ public final class Launcher {
         warnIfOnNetworkFilesystem(paths);
         logStartup(paths, environment);
         logReviewMode(reviewMode);
-        return new StartupContext(paths, environment, reviewMode, trace.enabled(), created);
+        return new StartupContext(paths, environment, reviewMode, trace.enabled(), created, restart);
     }
 
     private static Map<String, String> factsOf(AtomicReference<@Nullable SessionInfo> session) {

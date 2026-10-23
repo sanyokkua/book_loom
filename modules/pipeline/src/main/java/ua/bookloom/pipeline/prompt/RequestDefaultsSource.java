@@ -12,16 +12,18 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
+import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.api.settings.ReasoningSetting;
 import ua.bookloom.api.settings.SamplingSetting;
 
 /**
  * Resolves the reasoning level and the sampling mode a run starts with: the environment variable or property when one
- * is set, else the stored Generation setting, else today's default.
+ * is set, else the stored Generation setting, else today's default. It also names which of them is in force, so
+ * Settings can say that a person's own choice is not.
  */
 @Slf4j
 @Singleton
-public final class RequestDefaultsSource {
+public final class RequestDefaultsSource implements GenerationOverrides {
 
     private final Supplier<Map<String, String>> env;
     private final Supplier<@Nullable String> reasoningProperty;
@@ -73,8 +75,8 @@ public final class RequestDefaultsSource {
      *     or property names a value, and an unreadable or empty store gives Off and the server's own sampling
      */
     public RequestDefaults current() {
-        final ReasoningPlan reasoning = reasoning();
-        final SamplingMode sampling = sampling();
+        final ReasoningPlan reasoning = reasoningPlan();
+        final SamplingMode sampling = samplingMode();
         log.debug(
                 "Request defaults reasoning={} sampling={} stored={}",
                 reasoning.token(),
@@ -83,7 +85,24 @@ public final class RequestDefaultsSource {
         return new RequestDefaults(reasoning, sampling);
     }
 
-    private ReasoningPlan reasoning() {
+    @Override
+    public Optional<String> reasoning() {
+        final Map<String, String> environment = env.get();
+        final String property = reasoningProperty.get();
+        if (!ReasoningPlan.isSet(environment, property)) {
+            return Optional.empty();
+        }
+        final boolean fromEnv =
+                !environment.getOrDefault(ReasoningPlan.ENV_NAME, "").isBlank();
+        return Optional.of(fromEnv ? ReasoningPlan.ENV_NAME : ReasoningPlan.PROPERTY_NAME);
+    }
+
+    @Override
+    public Optional<String> sampling() {
+        return SamplingMode.explicitSource(env.get(), samplingProperty.get());
+    }
+
+    private ReasoningPlan reasoningPlan() {
         final Map<String, String> environment = env.get();
         final String property = reasoningProperty.get();
         if (ReasoningPlan.isSet(environment, property)) {
@@ -95,7 +114,7 @@ public final class RequestDefaultsSource {
         return ReasoningPlan.stored(ReasoningLevel.of(stored));
     }
 
-    private SamplingMode sampling() {
+    private SamplingMode samplingMode() {
         final Optional<SamplingMode> explicit = SamplingMode.explicit(env.get(), samplingProperty.get());
         if (explicit.isPresent()) {
             log.debug("Sampling source=env mode={}", explicit.get().token());

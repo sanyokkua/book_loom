@@ -2,13 +2,11 @@ package ua.bookloom.app;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
@@ -25,19 +23,6 @@ import ua.bookloom.ui.KeepAwake;
 @Singleton
 final class OsKeepAwake implements KeepAwake {
 
-    /** Starts a process for a command; a seam, so a test never spawns one. */
-    @FunctionalInterface
-    interface Processes {
-
-        /**
-         * Starts {@code command}.
-         *
-         * @param command the command and its arguments
-         * @return the running process, or empty when it could not be started
-         */
-        Optional<Process> start(List<String> command);
-    }
-
     private final @Nullable List<String> command;
     private final Processes processes;
     private final ExecutorService worker;
@@ -52,7 +37,7 @@ final class OsKeepAwake implements KeepAwake {
                                 ProcessHandle.current().pid(),
                                 OsKeepAwake::isOnPath)
                         .orElse(null),
-                OsKeepAwake::startDiscardingOutput);
+                Processes.system());
         Runtime.getRuntime()
                 .addShutdownHook(
                         Thread.ofPlatform().name("bookloom-keep-awake-exit").unstarted(this::end));
@@ -97,6 +82,8 @@ final class OsKeepAwake implements KeepAwake {
         final Process started = held;
         if (started != null) {
             log.info("keep-awake started: {} pid {}", command.getFirst(), started.pid());
+        } else {
+            log.warn("keep-awake command {} could not be started; the computer may sleep", command.getFirst());
         }
     }
 
@@ -106,18 +93,6 @@ final class OsKeepAwake implements KeepAwake {
         if (running != null) {
             running.destroy();
             log.info("keep-awake stopped: pid {}", running.pid());
-        }
-    }
-
-    private static Optional<Process> startDiscardingOutput(final List<String> command) {
-        try {
-            return Optional.of(new ProcessBuilder(command)
-                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                    .redirectError(ProcessBuilder.Redirect.DISCARD)
-                    .start());
-        } catch (IOException | RuntimeException failure) {
-            log.warn("keep-awake command {} could not be started; the computer may sleep", command.getFirst(), failure);
-            return Optional.empty();
         }
     }
 

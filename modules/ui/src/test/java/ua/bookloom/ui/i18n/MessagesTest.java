@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -144,5 +146,28 @@ class MessagesTest {
             final String language, final String clock, final String expected) {
         assertThat(messagesFor(Locale.forLanguageTag(language)).get(MessageKey.RUN_CHIP_STUCK, clock))
                 .isEqualTo(expected);
+    }
+
+    // The catalogue is built before the stored choice is read at startup, so the choice must be taken at first use.
+    @Test
+    void locale_seededAfterConstructionBeforeFirstUse_isSeededLanguage() {
+        final StoredLanguage stored = new StoredLanguage();
+        final Messages messages = new Messages(new OsLocaleProvider(stored, () -> Locale.ENGLISH));
+
+        stored.seed(Optional.of("uk"));
+
+        assertThat(messages.locale().getLanguage()).isEqualTo("uk");
+    }
+
+    @Test
+    void locale_seededAfterFirstUse_staysTheFirstLanguage() {
+        final StoredLanguage stored = new StoredLanguage();
+        final Messages messages = new Messages(new OsLocaleProvider(stored, () -> Locale.ENGLISH));
+        final Locale first = messages.locale();
+
+        stored.seed(Optional.of("uk"));
+
+        assertThat(messages.locale()).isEqualTo(first);
+        assertThat(messages.locale().getLanguage()).isEqualTo("en");
     }
 }

@@ -62,7 +62,7 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 | FR-MODEL-02 | implemented | `add-ui-translation-workspace` | `llm-provider` | Also cited by `settings`. |
 | FR-MODEL-03 | implemented | `add-ui-translation-workspace` | `settings` | Choose from the list or name a model the list lacks. |
 | FR-MODEL-04 | partial | `add-ui-translation-workspace` | `settings` | The chosen model is not remembered beyond the session. |
-| FR-UI-06 | partial | `add-ui-translation-workspace` | `localization` | The language follows the operating system. The in-app switch and the persisted `ui.language` setting are deferred to local storage. Also cited by `settings`. |
+| FR-UI-06 | implemented | `add-ui-translation-workspace` | `localization` | Settings › Appearance stores `ui.language`; it is read first at the next launch and applies after a restart (Restart now). Also cited by `settings`. |
 | FR-UI-08 | implemented | `add-ui-translation-workspace` | `localization` | Also cited by `translation-pipeline` (activity-log messages). |
 | FR-I18N-1 | implemented | `add-ui-translation-workspace` | `localization` | |
 | FR-I18N-2 | implemented | `add-ui-translation-workspace` | `localization` | |
@@ -107,7 +107,6 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 
 These were left out on purpose and are ordered in `docs/implementation_plan/CHANGE_BACKLOG.md`:
 
-- The in-app language switch and the persisted `ui.language` setting (FR-UI-06 stays partial until then).
 - Source-language detection (the import screen shows the declared language only).
 - Side files: the glossary, the bilingual copy and the quality report (FR-EXPORT-05, FR-EXPORT-06 stay shown-disabled).
 - Adding and editing a provider (the settings screen offers the two built-in local providers only).
@@ -239,7 +238,8 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-REVIEW-X1 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-REVIEW-X2 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
-| FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Generation: quality table, Thinking, Sampling and the fixed time limits (finalize 7.3). |
+| FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` | Theme and technical details stored; language after a restart (finalize 7.3). |
 | FR-THEME-10 | implemented | `complete-translation-workflow` | `notifications` |  |
 | FR-THEME-4 | implemented | `complete-translation-workflow` | `settings` |  |
 | FR-TRANS-05 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |

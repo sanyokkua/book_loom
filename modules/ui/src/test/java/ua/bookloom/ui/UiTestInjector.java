@@ -6,9 +6,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
@@ -25,6 +24,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
@@ -44,6 +45,7 @@ import ua.bookloom.ui.dialog.SwitchProviderPrompt;
 import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.SystemLanguage;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.FileRevealer;
@@ -53,7 +55,7 @@ import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
 /**
- * Builds the real {@link UiModule} graph with only the operating system's language, colour scheme and the build
+ * Builds the real {@link UiModule} graph with only the operating system's language, colour scheme, restart and the build
  * version replaced by fixed values, so a navigation or shell test exercises the production bindings instead of a
  * hand-assembled copy of them and never depends on the machine it runs on.
  */
@@ -99,18 +101,7 @@ public final class UiTestInjector {
         private ScriptedNamesPass namesPass = new ScriptedNamesPass();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
-        private @Nullable OpenAnotherBookPrompt prompt;
-        private @Nullable ContinuePrompt continuePrompt;
-        private @Nullable ModelPickPrompt modelPickPrompt;
-        private @Nullable SwitchProviderPrompt switchProviderPrompt;
-        private @Nullable TextClipboard clipboard;
-        private @Nullable RenamePrompt renamePrompt;
-        private @Nullable SamePairPrompt samePairPrompt;
-        private @Nullable TranslateIntoPrompt translateIntoPrompt;
-        private @Nullable FindBookPrompt findBookPrompt;
-        private @Nullable BookFileChooser bookFileChooser;
-        private @Nullable RowOpener rowOpener;
-        private @Nullable ErrorPresenter errorPresenter;
+        private final ReplacementQuestions replacements = new ReplacementQuestions();
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
         private SettingsRepository settings = new MemorySettings();
@@ -120,6 +111,10 @@ public final class UiTestInjector {
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
         private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
         private ModelCapabilities capabilities = UiTestBindings.UNKNOWN_CONTEXT;
+        private AppRestart restart = new RecordingAppRestart();
+        private GenerationOverrides overrides = ScriptedGenerationOverrides.none();
+        private @Nullable Locale osLocale;
+        private Optional<ThemeBlock> colorScheme = Optional.of(ThemeBlock.LIGHT);
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -241,71 +236,71 @@ public final class UiTestInjector {
 
         /** Replaces the real "Open another book?" card with this question, so the test can read what was asked. */
         public Builder prompt(final OpenAnotherBookPrompt value) {
-            prompt = Objects.requireNonNull(value, "prompt");
+            replacements.prompt = Objects.requireNonNull(value, "prompt");
             return this;
         }
 
         /** Replaces the real continue questions with this fake, so the test can read what was asked and answer it. */
         public Builder continuePrompt(final ContinuePrompt value) {
-            continuePrompt = Objects.requireNonNull(value, "continuePrompt");
+            replacements.continuePrompt = Objects.requireNonNull(value, "continuePrompt");
             return this;
         }
 
         /** Replaces the real "which model" question of the first-launch look with this fake. */
         public Builder modelPickPrompt(final ModelPickPrompt value) {
-            modelPickPrompt = Objects.requireNonNull(value, "modelPickPrompt");
+            replacements.modelPickPrompt = Objects.requireNonNull(value, "modelPickPrompt");
             return this;
         }
 
         public Builder switchProviderPrompt(final SwitchProviderPrompt value) {
-            switchProviderPrompt = Objects.requireNonNull(value, "switchProviderPrompt");
+            replacements.switchProviderPrompt = Objects.requireNonNull(value, "switchProviderPrompt");
             return this;
         }
 
         public Builder clipboard(final TextClipboard value) {
-            clipboard = Objects.requireNonNull(value, "clipboard");
+            replacements.clipboard = Objects.requireNonNull(value, "clipboard");
             return this;
         }
 
         /** Replaces the real Rename card with this fake. */
         public Builder renamePrompt(final RenamePrompt value) {
-            renamePrompt = Objects.requireNonNull(value, "renamePrompt");
+            replacements.renamePrompt = Objects.requireNonNull(value, "renamePrompt");
             return this;
         }
 
         /** Replaces the real Same language pair card with this fake. */
         public Builder samePairPrompt(final SamePairPrompt value) {
-            samePairPrompt = Objects.requireNonNull(value, "samePairPrompt");
+            replacements.samePairPrompt = Objects.requireNonNull(value, "samePairPrompt");
             return this;
         }
 
         /** Replaces the real Translate into another language card with this fake. */
         public Builder translateIntoPrompt(final TranslateIntoPrompt value) {
-            translateIntoPrompt = Objects.requireNonNull(value, "translateIntoPrompt");
+            replacements.translateIntoPrompt = Objects.requireNonNull(value, "translateIntoPrompt");
             return this;
         }
 
         /** Replaces the real Find the book card with this fake. */
         public Builder findBookPrompt(final FindBookPrompt value) {
-            findBookPrompt = Objects.requireNonNull(value, "findBookPrompt");
+            replacements.findBookPrompt = Objects.requireNonNull(value, "findBookPrompt");
             return this;
         }
 
         /** Replaces the system file dialog that finds a moved book with this fake. */
         public Builder bookFileChooser(final BookFileChooser value) {
-            bookFileChooser = Objects.requireNonNull(value, "bookFileChooser");
+            replacements.bookFileChooser = Objects.requireNonNull(value, "bookFileChooser");
             return this;
         }
 
         /** Replaces what opens a row's project after a dialog (the real one navigates) with this fake. */
         public Builder rowOpener(final RowOpener value) {
-            rowOpener = Objects.requireNonNull(value, "rowOpener");
+            replacements.rowOpener = Objects.requireNonNull(value, "rowOpener");
             return this;
         }
 
         /** Replaces the modal error presenter with this fake, so the test can read what was shown. */
         public Builder errorPresenter(final ErrorPresenter value) {
-            errorPresenter = Objects.requireNonNull(value, "errorPresenter");
+            replacements.errorPresenter = Objects.requireNonNull(value, "errorPresenter");
             return this;
         }
 
@@ -318,6 +313,30 @@ public final class UiTestInjector {
         /** What the graph's {@link ModelCapabilities} is, so the test can script what the program says about a model. */
         public Builder capabilities(final ModelCapabilities value) {
             capabilities = Objects.requireNonNull(value, "capabilities");
+            return this;
+        }
+
+        /** What the graph's {@link AppRestart} is, so the test can read whether and when a restart was asked. */
+        public Builder restart(final AppRestart value) {
+            restart = Objects.requireNonNull(value, "restart");
+            return this;
+        }
+
+        /** What the graph says overrides a Generation setting for this launch. */
+        public Builder overrides(final GenerationOverrides value) {
+            overrides = Objects.requireNonNull(value, "overrides");
+            return this;
+        }
+
+        /** The operating system's language; by default the display language, so no restart is ever needed. */
+        public Builder osLocale(final Locale value) {
+            osLocale = Objects.requireNonNull(value, "osLocale");
+            return this;
+        }
+
+        /** What the operating system reports as its colour scheme; by default light. */
+        public Builder colorScheme(final Optional<ThemeBlock> value) {
+            colorScheme = Objects.requireNonNull(value, "colorScheme");
             return this;
         }
 
@@ -341,25 +360,8 @@ public final class UiTestInjector {
                     .with(
                             new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
                             new ScriptedPorts(),
-                            replacementQuestions(),
+                            replacements.module(),
                             open));
-        }
-
-        private Module replacementQuestions() {
-            return binder -> {
-                UiTestBindings.bindIfSet(binder, OpenAnotherBookPrompt.class, prompt);
-                UiTestBindings.bindIfSet(binder, ContinuePrompt.class, continuePrompt);
-                UiTestBindings.bindIfSet(binder, ModelPickPrompt.class, modelPickPrompt);
-                UiTestBindings.bindIfSet(binder, SwitchProviderPrompt.class, switchProviderPrompt);
-                UiTestBindings.bindIfSet(binder, TextClipboard.class, clipboard);
-                UiTestBindings.bindIfSet(binder, RenamePrompt.class, renamePrompt);
-                UiTestBindings.bindIfSet(binder, SamePairPrompt.class, samePairPrompt);
-                UiTestBindings.bindIfSet(binder, TranslateIntoPrompt.class, translateIntoPrompt);
-                UiTestBindings.bindIfSet(binder, FindBookPrompt.class, findBookPrompt);
-                UiTestBindings.bindIfSet(binder, BookFileChooser.class, bookFileChooser);
-                UiTestBindings.bindIfSet(binder, RowOpener.class, rowOpener);
-                UiTestBindings.bindIfSet(binder, ErrorPresenter.class, errorPresenter);
-            };
         }
 
         private final class ScriptedPorts extends AbstractModule {
@@ -367,11 +369,15 @@ public final class UiTestInjector {
             @Override
             protected void configure() {
                 bind(LocaleProvider.class).toInstance(() -> locale);
-                bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                bind(ColorSchemeProvider.class).toInstance(() -> colorScheme);
+                bind(SystemLanguage.class).toInstance(() -> osLocale != null ? osLocale : locale);
+                bind(AppRestart.class).toInstance(restart);
+                bind(GenerationOverrides.class).toInstance(overrides);
+                bind(DialProfiles.class).toInstance(new FixedDialProfiles());
                 bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
                 bind(DiagnosticLog.class).toInstance(diagnosticLog);
                 UiTestBindings.bindExecutors(binder(), backgroundExecutor);
-                bindStores();
+                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, NOW);
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
@@ -385,13 +391,6 @@ public final class UiTestInjector {
                 if (projectActions != null) {
                     bind(ProjectActions.class).toInstance(projectActions);
                 }
-            }
-
-            private void bindStores() {
-                bind(ProviderConfigs.class).toInstance(configs);
-                bind(SettingsRepository.class).toInstance(settings);
-                bind(ModelSettingsRepository.class).toInstance(modelSettings);
-                bind(Clock.class).toInstance(Clock.fixed(NOW, ZoneOffset.UTC));
             }
         }
     }

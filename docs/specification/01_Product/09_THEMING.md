@@ -20,7 +20,7 @@ controls never change, only the resolved values do.
 |------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-THEME-1 | All colours are defined as looked-up colors on `.root`; controls reference tokens only.                                                                                                     |
 | FR-THEME-2 | Light and dark themes share **one set of token roles**; each role has a light and a dark value, and switching theme swaps the value block at `.root` without per-control overrides.         |
-| FR-THEME-3 | JavaFX 25 reads the OS colour scheme (`prefers-color-scheme`); the `system` theme option follows it (FR-SETTINGS-04).                                                                       |
+| FR-THEME-3 | JavaFX 25 reads the OS colour scheme (`prefers-color-scheme`); the `system` theme option ("Match the computer") follows it, and the chosen mode is stored and applied from the first display of the next launch (FR-SETTINGS-04).                                                                       |
 | FR-THEME-4 | The accent token is **fixed to Cognac** in v1; it is not user-selectable (a selectable accent would require the alternate accent values to be enumerated here first, which v1 does not do). |
 | FR-THEME-5 | Theme CSS lives in the `:ui` module resources as a single stylesheet declaring the role set once and the two value blocks applied on `.root`.                                               |
 

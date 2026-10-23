@@ -39,6 +39,8 @@ final class SettingsPreparations {
             case PROVIDER_TESTED -> runTheInferenceTest();
             case MODELS_OPEN -> openTheModelsTab();
             case MODELS_DIRTY -> changeTheModel();
+            case GENERATION_OPEN -> openATab("settings-tab-generation");
+            case APPEARANCE_OPEN -> openATab("settings-tab-appearance");
             default -> throw new IllegalArgumentException("not a settings preparation: " + preparation);
         }
     }
@@ -78,6 +80,21 @@ final class SettingsPreparations {
         openTheModelsTab();
         onFx(() -> {
             injector.getInstance(ModelForm.class).edit(draft -> draft.withChoice(TemperatureChoice.OMIT));
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Selects a settings tab by its id, the way a person clicks it. */
+    void openATab(final String tabId) {
+        onFx(() -> {
+            final TabPane tabs =
+                    (TabPane) injector.getInstance(AppShellView.class).root().lookup("#settings-tabs");
+            tabs.getSelectionModel()
+                    .select(tabs.getTabs().stream()
+                            .filter(tab -> tabId.equals(tab.getId()))
+                            .findFirst()
+                            .orElseThrow());
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

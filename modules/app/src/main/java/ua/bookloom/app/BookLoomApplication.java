@@ -26,6 +26,7 @@ import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.OpenStepsModule;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.StoredPreferences;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.WindowLaunch;
@@ -73,10 +74,23 @@ public final class BookLoomApplication extends Application {
         log.debug(
                 "seeded review mode {}",
                 injector.getInstance(ReviewModeSource.class).current());
+        seedPreferences(injector);
         log.info("injector built and two-phase init complete");
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
         injector.getInstance(SessionInfo.class)
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
+    }
+
+    /**
+     * Reads the stored language and theme once, off the FX thread, before any window is built. {@code Messages}
+     * decides its language at first use, so this must run before {@code start()} and before the first message is
+     * resolved.
+     *
+     * @param injector the built injector, with phase two done
+     */
+    static void seedPreferences(final Injector injector) {
+        injector.getInstance(StoredPreferences.class).load();
+        log.debug("seeded the stored language and theme");
     }
 
     /** The window keeps its work in the database file of the data folder; the command line never does. */
@@ -84,9 +98,14 @@ public final class BookLoomApplication extends Application {
         return new SqlitePersistenceModule(startup.paths().databaseFile(), Clock.system(ZoneId.systemDefault()));
     }
 
+    /** The shared graph with the window's own bindings laid over it: the real keep-awake and the real restart. */
+    static Module windowCore(final StartupContext startup) {
+        return Modules.override(new CoreModules(startup, windowPersistence(startup)))
+                .with(new DesktopModule());
+    }
+
     private static Injector developmentInjector(final StartupContext startup) {
-        return Guice.createInjector(
-                new CoreModules(startup, windowPersistence(startup)), new UiModule(), new DesktopModule());
+        return Guice.createInjector(windowCore(startup), new UiModule());
     }
 
     /**
@@ -116,11 +135,7 @@ public final class BookLoomApplication extends Application {
     private static Injector smokeInjector(final StartupContext startup) {
         log.info("resolve-all smoke: building the injector in the production stage");
         final Module ui = Modules.override(new UiModule()).with(new OpenStepsModule());
-        return Guice.createInjector(
-                com.google.inject.Stage.PRODUCTION,
-                new CoreModules(startup, windowPersistence(startup)),
-                ui,
-                new DesktopModule());
+        return Guice.createInjector(com.google.inject.Stage.PRODUCTION, windowCore(startup), ui);
     }
 
     @Override

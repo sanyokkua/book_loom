@@ -29,6 +29,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.GenerationSettings;
 import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderRow;
@@ -55,6 +56,7 @@ public final class SettingsController {
     private final ActivityTracker activities;
     private final SettingsTabGuard guard;
     private final ModelRoster roster;
+    private final GenerationSettings generation;
     private ProviderRowList rowList;
     private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
     private final ChangeListener<String> onSelection = (observed, was, now) -> rowList.mark();
@@ -70,6 +72,9 @@ public final class SettingsController {
 
     @FXML
     private Tab modelsTab;
+
+    @FXML
+    private Tab generationTab;
 
     @FXML
     private VBox providerList;
@@ -131,6 +136,7 @@ public final class SettingsController {
      * @param activities the model work under way, which keeps the provider in use from being deleted
      * @param guard asks before a move would drop typing
      * @param roster the models the Models tab offers, read on its first visit
+     * @param generation the Generation tab's stored choices, read on every visit
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -144,7 +150,8 @@ public final class SettingsController {
             final ProviderSwitch providerSwitch,
             final ActivityTracker activities,
             final SettingsTabGuard guard,
-            final ModelRoster roster) {
+            final ModelRoster roster,
+            final GenerationSettings generation) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -154,6 +161,7 @@ public final class SettingsController {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.roster = Objects.requireNonNull(roster, "roster");
+        this.generation = Objects.requireNonNull(generation, "generation");
     }
 
     @FXML
@@ -321,11 +329,15 @@ public final class SettingsController {
         entered(tab);
     }
 
-    // The models are read on every entry to the Models tab, so a provider added or deleted meanwhile shows.
+    // The models and the stored generation choices are read on every entry to their tabs, so a change made meanwhile
+    // shows.
     private void entered(final Tab tab) {
         if (modelsTab.equals(tab)) {
             log.debug("models tab opened: reading the models");
             roster.refresh();
+        } else if (generationTab.equals(tab)) {
+            log.debug("generation tab opened: reading the stored choices");
+            generation.load();
         }
     }
 

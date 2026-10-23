@@ -20,8 +20,8 @@ marked *built* describe the code today.
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
 (`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
-model you choose here." *Built today:* Providers (form, checks, test dialog), Models, Appearance (theme);
-the Generation, Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
+model you choose here." *Built today:* Providers (form, checks, test dialog), Models, Generation and Appearance;
+the Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
 
 **How changes are saved (H1, planned).**
 
@@ -88,15 +88,17 @@ These provider + model choices are the **defaults for new projects**; each proje
 
 ## generation-tab {#generation-tab}
 
-*Planned — UI finalization + SQLite.* The tab applies to segments not translated yet and carries only knobs the code
-has: no judge model and no τ override.
+*Built.* The tab says "✓ Changes apply at once, to the segments not translated yet." A run reads the settings once when it
+starts, so while one is running (running, pausing, paused or stopping) a note says it keeps the settings it started with
+and the change reaches its segments not translated yet when it starts or continues again. The tab carries only knobs the
+code has: no judge model and no τ override. Left: the quality grid; right: Thinking, Sampling and Time limits.
 
 | Setting                  | Type          | Default                | Validation / meaning                                                                 | Requirement  |
 |--------------------------|---------------|------------------------|---------------------------------------------------------------------------------------|--------------|
-| What the quality choice does | read-only grid | —                  | the Fast / Balanced / Max rows of `DialParameters` (see below)                        | FR-ALGO-C12  |
-| Thinking before answering | enum         | Off                    | Off / Low / On, read at each run start (`RequestDefaultsSource`); `BOOKLOOM_REASONING`, when set, replaces it              | FR-SETTINGS-03 |
-| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom, read at each run start; `BOOKLOOM_SAMPLING`, when set to a known mode, replaces it          | FR-SETTINGS-03 |
-| Time limits              | read-only     | `RequestTimeouts`      | fixed per call kind                                                                   | FR-SETTINGS-03 |
+| What the quality choice does | read-only grid of labels | —       | the Fast / Balanced / Max rows, read through `DialProfiles` from the pipeline's own `DialParameters` (see below) | FR-ALGO-C12  |
+| Thinking before answering | enum         | Off                    | Off / Low / On, read at each run start (`RequestDefaultsSource`); `BOOKLOOM_REASONING`, when set, replaces it; the tab then names the variable and keeps the choice for launches without it | FR-SETTINGS-03 |
+| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom, read at each run start; `BOOKLOOM_SAMPLING`, when set to a known mode, replaces it; the tab names it the same way | FR-SETTINGS-03 |
+| Time limits              | read-only     | `CallLimits`           | fixed: a check 90 s, names / brief / file name 120 s, translating segments by length up to 10 min, up to 3 tries (a slow answer is asked again once, shorter); the HTTP client reads the same constants | FR-SETTINGS-03 |
 
 **Context window (built).** Every call is sized against a fixed effective context of **16,384 tokens**
 (`TokenBudget.EFFECTIVE_CONTEXT`), sent to Ollama's `num_ctx`; an OpenAI-compatible server receives no context-size
@@ -137,16 +139,18 @@ the per-script **K table** and a **safety margin of `0.15`** are documented cons
 
 | Setting                 | Type    | Default                  | Validation                                                                              | Requirement           | Status |
 |-------------------------|---------|--------------------------|-----------------------------------------------------------------------------------------|-----------------------|--------|
-| Theme                   | enum    | system                   | light / dark / system (JavaFX 26 reads OS `prefers-color-scheme`)                       | FR-SETTINGS-04, DD-22 | built (not saved) |
-| Language of the app (UI) | enum   | OS locale on first start | English / Ukrainian; persisted as `ui.language`; **applies after BookLoom restarts** ("Applies after BookLoom restarts." with a **Restart now** action) | FR-UI-06, DD-34 | planned |
-| Show technical details  | boolean | off                      | on / off; every Simple / Detailed view (live panel, progress dialogs, review desk) opens in Detailed, the Settings folds open, and the technical lines show (rule codes in the review desk, debug lines in the log, the technical line on Import) (`mockups/README.md`, G12) | FR-SETTINGS-04 | planned |
+| Theme                   | enum    | system                   | light / dark / "Match the computer" (JavaFX 26 reads OS `prefers-color-scheme`); stored as `ui.theme` the moment it is chosen, from the tab or the title-bar toggle | FR-SETTINGS-04, DD-22 | built |
+| Language of the app (UI) | enum   | OS locale on first start | Match the computer (naming its language) / English / Ukrainian; persisted as `ui.language`, and choosing "Match the computer" removes it; **applies after BookLoom restarts** ("Applies after BookLoom restarts."). **Restart now** shows only while the choice differs from the language on screen, asks the quit question first when work is under way, and says so when no new copy could start. The new copy starts only after this one has closed its files: command built, window exits, shutdown closes the database, the lock is released, then the child starts | FR-UI-06, DD-34 | built |
+| Show technical details  | boolean | off                      | on / off; every Simple / Detailed view (live panel, progress dialogs, review desk) opens in Detailed, the Settings folds open, and the technical lines show (rule codes in the review desk, debug lines in the log, the technical line on Import) (`mockups/README.md`, G12); stored as `ui.technicalDetails` | FR-SETTINGS-04 | built |
 
 **Theme control is tri-state here** (light / dark / system). The **toolbar theme control is a 2-state light↔dark
 quick-toggle only**; the tri-state selector including `system` lives in this tab
 (`08_UI_SCREENS_AND_STATES.md#shell-and-navigation`).
 
-**The language switch needs a restart** because a live switch would rebuild every view. Until the setting is persisted,
-the interface language follows the operating system's locale (Ukrainian OS → Ukrainian, otherwise English).
+**The language switch needs a restart** because a live switch would rebuild every view. A stored `ui.language` is read
+first; with none stored the interface language follows the operating system's locale (Ukrainian OS → Ukrainian,
+otherwise English). The tab says "✓ Changes apply at once." for the theme and the switch, and the language line says
+when it takes effect.
 
 **There is no Accent row and no Reduce motion row.** The accent is fixed (Cognac only, `09_THEMING.md` FR-THEME-4) and
 is not shown as a setting; reduced motion follows the operating system (or `BOOKLOOM_REDUCE_MOTION`). **Density is

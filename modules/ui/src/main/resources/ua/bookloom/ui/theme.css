@@ -1840,21 +1840,7 @@
     -fx-opacity: 0.45;
 }
 
-/* --- The accent shown in the appearance tab, and the small tag beside it ------------------------------- */
-.accent-swatch {
-    -fx-background-color: -color-brand-cognac;
-    -fx-background-radius: 6px;
-    -fx-border-color: -color-border;
-    -fx-border-width: 1px;
-    -fx-border-radius: 6px;
-    -fx-min-width: 22px;
-    -fx-pref-width: 22px;
-    -fx-max-width: 22px;
-    -fx-min-height: 22px;
-    -fx-pref-height: 22px;
-    -fx-max-height: 22px;
-}
-
+/* --- A small tag beside a title or a value ------------------------------------------------------------- */
 .tag-note {
     -fx-background-color: -color-surface-2;
     -fx-background-radius: 5px;

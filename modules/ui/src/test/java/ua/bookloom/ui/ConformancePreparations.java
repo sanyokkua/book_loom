@@ -92,8 +92,8 @@ final class ConformancePreparations {
             case BRIEF_SUGGESTED -> suggestTheBrief();
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
-            case PROVIDER_FORM_DIRTY, PROVIDER_FOLD_OPEN, PROVIDER_TESTED, MODELS_OPEN, MODELS_DIRTY ->
-                new SettingsPreparations(injector).prepare(preparation);
+            // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
+            default -> new SettingsPreparations(injector).prepare(preparation);
         }
     }
 
