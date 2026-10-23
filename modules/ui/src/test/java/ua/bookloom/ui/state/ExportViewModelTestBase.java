@@ -25,6 +25,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
@@ -105,7 +106,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 new DirectExecutor(),
                 activities,
                 new MemorySettings(),
-                messages);
+                messages,
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()));
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */

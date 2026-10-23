@@ -24,6 +24,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
@@ -112,7 +113,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new DirectExecutor(),
                 activities,
                 new MemorySettings(),
-                EnglishMessages.create());
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()));
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */

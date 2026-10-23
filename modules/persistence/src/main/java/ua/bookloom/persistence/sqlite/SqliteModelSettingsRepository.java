@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
@@ -57,6 +58,32 @@ public final class SqliteModelSettingsRepository implements ModelSettingsReposit
                     settings.modelId(),
                     settings.refused().size());
             return settings;
+        });
+    }
+
+    @Override
+    public Result<ModelSettings> update(
+            final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(change, "change");
+        return db.write("modelSettings update", h -> {
+            final ModelSettings current = h.createQuery(
+                            "SELECT json FROM model_settings WHERE provider_id = :provider AND model_id = :model")
+                    .bind("provider", providerId)
+                    .bind("model", modelId)
+                    .mapTo(String.class)
+                    .findOne()
+                    .map(json -> codec.read(json, ModelSettings.class))
+                    .orElseGet(() -> ModelSettings.defaults(providerId, modelId));
+            final ModelSettings changed = change.apply(current);
+            h.createUpdate(UPSERT)
+                    .bind("provider", providerId)
+                    .bind("model", modelId)
+                    .bind("json", codec.write(changed))
+                    .execute();
+            log.debug("Model settings updated provider={} model={}", providerId, modelId);
+            return changed;
         });
     }
 

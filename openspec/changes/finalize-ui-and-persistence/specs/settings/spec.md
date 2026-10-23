@@ -117,6 +117,11 @@ WHEN the person chooses Use this one on a stored provider, the settings screen S
 - **THEN** the question "Use LM Studio for the rest of this book?" is shown with "Using the same AI model keeps the style even. Segments already done keep their translation."
 - **AND** the current provider changes only when the person confirms
 
+#### Scenario: Keep changes nothing
+
+- **WHEN** the question "Use LM Studio for the rest of this book?" is answered with Keep Ollama
+- **THEN** `Ollama` stays current, the badges are as they were and nothing is stored
+
 ### Requirement: Show a provider's connection details and open them when they matter
 
 The provider detail SHALL hold the connection form in a fold called Connection details, and the fold SHALL open by itself when the provider has a problem, when the provider is new, or when Show technical details is on.
@@ -140,7 +145,7 @@ The provider detail SHALL hold the connection form in a fold called Connection d
 
 ### Requirement: Show a check's details in a test dialog
 
-WHEN the person opens the details of a check, the settings screen SHALL show a dialog with a verdict banner, the request line with Copy as curl (the key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer with Close.
+WHEN the person opens the details of a check, the settings screen SHALL show a dialog with a verdict banner, the request line with Copy as curl (the key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer that switches between the tests that have run and closes; a copy is confirmed in the dialog's footer, never in a toast.
 
 **Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed.
 
@@ -154,6 +159,11 @@ WHEN the person opens the details of a check, the settings screen SHALL show a d
 
 - **WHEN** Copy as curl is used for a provider that signs in with a bearer token from `HOME_API_KEY`
 - **THEN** the copied command carries `Authorization: Bearer ••••` and no key value
+
+#### Scenario: Copying says so in the dialog's footer
+
+- **WHEN** Copy as curl is used in the test dialog
+- **THEN** the footer reads "Copied as curl — the key is hidden." and no toast is shown
 
 #### Scenario: A check result opens the test dialog
 
@@ -440,14 +450,19 @@ WHEN Keep the computer awake is turned off while the application holds the compu
 
 ### Requirement: Store the speed the inference test measured on the model
 
-WHEN Test inference passes for a model, the application SHALL store the measured speed in seconds per segment on that model's settings, and the estimate before Start SHALL name the inference test as its source.
+WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured.
 
 **Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
 
 #### Scenario: The measured speed is stored and named
 
 - **WHEN** Test inference for `gemma4:e4b` passes and measures 3.0 seconds per segment, and the application is restarted
-- **THEN** the settings of `gemma4:e4b` hold 3.0 seconds per segment and the estimate before Start says it comes from the inference test
+- **THEN** the settings of `gemma4:e4b` hold 3.0 seconds per segment, measured by the inference test, and the estimate before Start says it comes from the inference test
+
+#### Scenario: A translation's own speed replaces the test's
+
+- **WHEN** a translation of the book with `gemma4:e4b` ends after Test inference had stored a speed
+- **THEN** the stored speed is the translation's and the estimate before Start says it comes from an earlier translation
 
 
 ## MODIFIED Requirements

@@ -645,8 +645,6 @@ public enum MessageKey {
     SETTINGS_CHECKS_TITLE("settings.checks.title"),
     /** Says the checks use the saved settings and change nothing. */
     SETTINGS_CHECKS_HINT("settings.checks.hint"),
-    /** Why the checks are off while a new provider is not saved. */
-    SETTINGS_CHECKS_UNSAVED("settings.checks.unsaved"),
     /** The mark in the footer while the form holds unsaved changes. */
     SETTINGS_FORM_DIRTY("settings.form.dirty"),
     /** Label of the footer’s Cancel button. */
@@ -685,12 +683,6 @@ public enum MessageKey {
     SETTINGS_TEST_INFERENCE("settings.test.inference"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_INFERENCE}. */
     SETTINGS_TEST_INFERENCE_TIP("settings.test.inference.tip"),
-    /** Measured connection finding; argument 0 is the round-trip time already worded. */
-    SETTINGS_BADGE_REACHABLE("settings.badge.reachable"),
-    /** Measured models finding; argument 0 is the number of models listed. */
-    SETTINGS_BADGE_MODELS("settings.badge.models"),
-    /** Measured inference finding; argument 0 is the duration already worded. */
-    SETTINGS_BADGE_INFERENCE("settings.badge.inference"),
     /** A duration under one second; argument 0 is the whole milliseconds. */
     SETTINGS_DURATION_MS("settings.duration.ms"),
     /** A duration of a second or more; argument 0 is the seconds, one decimal. */
@@ -3185,7 +3177,131 @@ public enum MessageKey {
     /** Accessible name of the previous-segment button. */
     REVIEW_PREV("review.prev"),
     /** Accessible name of the next-segment button. */
-    REVIEW_NEXT("review.next");
+    REVIEW_NEXT("review.next"),
+    /** Under the checks: why they are off while the form holds something the rules refuse. */
+    SETTINGS_CHECKS_BLOCKED("settings.checks.blocked"),
+    /** A check's result before it was run. */
+    SETTINGS_CHECK_NOT_RUN("settings.check.notRun"),
+    /** Link on a check's result that opens the test dialog. */
+    SETTINGS_CHECK_DETAILS("settings.check.details"),
+    /** Connection result; 0 is the provider's name, 1 the round trip as "41 ms". */
+    SETTINGS_CHECK_CONNECTION_OK("settings.check.connection.ok"),
+    /** Connection result when the server did not answer; 0 is the provider's name. */
+    SETTINGS_CHECK_CONNECTION_FAILED("settings.check.connection.failed"),
+    /** Models result when the chosen model is listed; 0 is the count. */
+    SETTINGS_CHECK_MODELS_OK("settings.check.models.ok"),
+    /** Models result for a server that answers but lists no models. */
+    SETTINGS_CHECK_MODELS_SOFT("settings.check.models.soft"),
+    /** Inference result; 0 is the time as "1.2 s". */
+    SETTINGS_CHECK_INFERENCE_OK("settings.check.inference.ok"),
+    /** Result of a check an earlier failure kept from running; 0 is the check's name. */
+    SETTINGS_CHECK_SKIPPED("settings.check.skipped"),
+    /** Line under the test dialog's title. */
+    SETTINGS_TEST_SUBTITLE("settings.test.subtitle"),
+    /** Verdict of a passed connection test; 0 is the provider's name. */
+    SETTINGS_TEST_VERDICT_CONNECTION("settings.test.verdict.connection"),
+    /** Verdict of a passed models test. */
+    SETTINGS_TEST_VERDICT_MODELS("settings.test.verdict.models"),
+    /** Verdict of a models test that connected and read no list. */
+    SETTINGS_TEST_VERDICT_MODELS_SOFT("settings.test.verdict.modelsSoft"),
+    /** Verdict of a passed inference test. */
+    SETTINGS_TEST_VERDICT_INFERENCE("settings.test.verdict.inference"),
+    /** Verdict of a failed test; 0 is the reason. */
+    SETTINGS_TEST_VERDICT_FAILED("settings.test.verdict.failed"),
+    /** Verdict of a test an earlier failure kept from running. */
+    SETTINGS_TEST_VERDICT_SKIPPED("settings.test.verdict.skipped"),
+    /** Verdict of a test that was not run. */
+    SETTINGS_TEST_VERDICT_NOT_RUN("settings.test.verdict.notRun"),
+    /** Verdict while a test is under way. */
+    SETTINGS_TEST_VERDICT_RUNNING("settings.test.verdict.running"),
+    /** Button that copies the request as a curl command. */
+    SETTINGS_TEST_COPY_CURL("settings.test.copyCurl"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_COPY_CURL}. */
+    SETTINGS_TEST_COPY_CURL_TIP("settings.test.copyCurl.tip"),
+    /** Heading of the request body column. */
+    SETTINGS_TEST_BODY("settings.test.body"),
+    /** Heading of the response column. */
+    SETTINGS_TEST_RESPONSE("settings.test.response"),
+    /** Button that copies a column's text. */
+    SETTINGS_TEST_COPY("settings.test.copy"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_COPY}. */
+    SETTINGS_TEST_COPY_TIP("settings.test.copy.tip"),
+    /** Shown where a request or reply had no body. */
+    SETTINGS_TEST_NO_BODY("settings.test.noBody"),
+    /** Button that closes the test dialog. */
+    SETTINGS_TEST_CLOSE("settings.test.close"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_CLOSE}. */
+    SETTINGS_TEST_CLOSE_TIP("settings.test.close.tip"),
+    /** Hover explanation of the Details link and of the result row beside it. */
+    SETTINGS_CHECK_DETAILS_TIP("settings.check.details.tip"),
+    /** Hover explanation of the connection test's switch in the test dialog's footer. */
+    SETTINGS_STAGE_CONNECTION_TIP("settings.stage.connection.tip"),
+    /** Hover explanation of the models test's switch in the test dialog's footer. */
+    SETTINGS_STAGE_MODELS_TIP("settings.stage.models.tip"),
+    /** Hover explanation of the inference test's switch in the test dialog's footer. */
+    SETTINGS_STAGE_INFERENCE_TIP("settings.stage.inference.tip"),
+    /** Label of the status metric. */
+    SETTINGS_TEST_METRIC_STATUS("settings.test.metric.status"),
+    /** Label of the time metric. */
+    SETTINGS_TEST_METRIC_TIME("settings.test.metric.time"),
+    /** Label of the time to the first token. */
+    SETTINGS_TEST_METRIC_FIRST_TOKEN("settings.test.metric.firstToken"),
+    /** Label of the generation speed. */
+    SETTINGS_TEST_METRIC_SPEED("settings.test.metric.speed"),
+    /** Generation speed; 0 is the number of tokens per second. */
+    SETTINGS_TEST_METRIC_SPEED_VALUE("settings.test.metric.speedValue"),
+    /** Label of the token counts. */
+    SETTINGS_TEST_METRIC_TOKENS("settings.test.metric.tokens"),
+    /** Token counts; 0 is the prompt's, 1 the reply's. */
+    SETTINGS_TEST_METRIC_TOKENS_VALUE("settings.test.metric.tokensValue"),
+    /** Label of whether the reply had the structure asked for. */
+    SETTINGS_TEST_METRIC_STRUCTURED("settings.test.metric.structured"),
+    /** Yes. */
+    SETTINGS_TEST_METRIC_YES("settings.test.metric.yes"),
+    /** No. */
+    SETTINGS_TEST_METRIC_NO("settings.test.metric.no"),
+    /** Label of the number of models listed. */
+    SETTINGS_TEST_METRIC_MODELS("settings.test.metric.models"),
+    /** Label of whether the chosen model was listed. */
+    SETTINGS_TEST_METRIC_CHOSEN("settings.test.metric.chosen"),
+    /** The chosen model is in the list. */
+    SETTINGS_TEST_METRIC_LISTED("settings.test.metric.listed"),
+    /** Label of what the server reports about itself. */
+    SETTINGS_TEST_METRIC_SERVER("settings.test.metric.server"),
+    /** A metric the server did not report. */
+    SETTINGS_TEST_METRIC_NONE("settings.test.metric.none"),
+    /** HTTP status of an answered request; 0 is the code. */
+    SETTINGS_TEST_STATUS_OK("settings.test.status.ok"),
+    /** No HTTP status because nothing answered. */
+    SETTINGS_TEST_STATUS_NONE("settings.test.status.none"),
+    /** Feedback in the test dialog's footer after Copy as curl. */
+    SETTINGS_TEST_COPIED_CURL("settings.test.copied.curl"),
+    /** Feedback in the test dialog's footer after Copy. */
+    SETTINGS_TEST_COPIED("settings.test.copied"),
+    /** Button that makes the open provider the current one. */
+    SETTINGS_PROVIDER_USE("settings.provider.use"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_PROVIDER_USE}. */
+    SETTINGS_PROVIDER_USE_TIP("settings.provider.use.tip"),
+    /** Why Use this one is off while the form holds changes. */
+    SETTINGS_PROVIDER_USE_DIRTY("settings.provider.use.dirty"),
+    /** Title of the question asked when the provider changes in an open, started book; 0 is the new provider's name. */
+    DIALOG_SWITCH_PROVIDER_TITLE("dialog.switchProvider.title"),
+    /** Body of that question; 0 is the earlier provider, 1 its model. */
+    DIALOG_SWITCH_PROVIDER_TEXT("dialog.switchProvider.text"),
+    /** Note under that question. */
+    DIALOG_SWITCH_PROVIDER_NOTE("dialog.switchProvider.note"),
+    /** Button that keeps the earlier provider; 0 is its name. */
+    DIALOG_SWITCH_PROVIDER_KEEP("dialog.switchProvider.keep"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_SWITCH_PROVIDER_KEEP}. */
+    DIALOG_SWITCH_PROVIDER_KEEP_TIP("dialog.switchProvider.keep.tip"),
+    /** Button that switches to the new provider; 0 is its name. */
+    DIALOG_SWITCH_PROVIDER_USE("dialog.switchProvider.use"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_SWITCH_PROVIDER_USE}. */
+    DIALOG_SWITCH_PROVIDER_USE_TIP("dialog.switchProvider.use.tip"),
+    /** Before Start: the time of a book from a speed an earlier translation measured; 0 is "about 2 h" or the like. */
+    ESTIMATE_MEASURED_RUN("estimate.measured.run"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_MEASURED_RUN}. */
+    ESTIMATE_MEASURED_RUN_TIP("estimate.measured.run.tip");
 
     private final String key;
 

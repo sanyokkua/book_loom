@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -51,10 +50,6 @@ public final class OllamaClient implements ProviderClient {
 
     /** Lines a streamed reply may add past that, for the final part and the envelope around a short cap. */
     private static final int RUNAWAY_MARGIN_LINES = 64;
-
-    private static final String THINKING_FIELD = "\"thinking\":\"";
-    private static final String EMPTY_THINKING_FIELD = "\"thinking\":\"\"";
-    private static final String EMPTY_CONTENT_FIELD = "\"content\":\"\"";
 
     private final ProviderConfig config;
     private final HttpExchange exchange;
@@ -125,6 +120,29 @@ public final class OllamaClient implements ProviderClient {
             return chatWithParsedFormat(modelId, request);
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
+        }
+    }
+
+    @Override
+    public String requestBody(String modelId, ChatRequest request) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        try {
+            final Result<ParsedFormat> parsed = parseFormat(request.responseFormat(), modelId);
+            if (parsed.isErr()) {
+                return "";
+            }
+            final Result<String> body = serializeRequest(
+                    modelId,
+                    request,
+                    Objects.requireNonNull(parsed.data(), "parsed format").schema());
+            return body.isErr() ? "" : Objects.requireNonNull(body.data(), "body");
+        } catch (RuntimeException failure) {
+            log.warn(
+                    "the request body of model {} could not be written: {}",
+                    modelId,
+                    failure.getClass().getSimpleName());
+            return "";
         }
     }
 
@@ -269,21 +287,6 @@ public final class OllamaClient implements ProviderClient {
         return lines;
     }
 
-    /**
-     * A thinking call streams its reasoning as lines with an empty {@code content}; they are the room the server was
-     * given, not the answer running away, so only the other lines count against the bound.
-     */
-    private static Predicate<String> countedLines(ChatRequest request) {
-        final ReasoningLevel level = request.reasoningEnabled();
-        return level != null && level.isThinking() ? line -> !isThinkingLine(line) : line -> true;
-    }
-
-    private static boolean isThinkingLine(String line) {
-        return line.contains(THINKING_FIELD)
-                && !line.contains(EMPTY_THINKING_FIELD)
-                && line.contains(EMPTY_CONTENT_FIELD);
-    }
-
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
         final Result<HttpReply> response = exchange.postStreamed(
@@ -292,7 +295,7 @@ public final class OllamaClient implements ProviderClient {
                 body,
                 RequestTimeouts.streamIdle(config),
                 maxLines(modelId, request),
-                countedLines(request));
+                ThinkingLines.counted(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }

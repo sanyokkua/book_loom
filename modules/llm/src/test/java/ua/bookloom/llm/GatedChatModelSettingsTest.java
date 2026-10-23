@@ -157,7 +157,7 @@ class GatedChatModelSettingsTest {
             @Nullable final Integer window,
             @Nullable final Integer maxOutput,
             final OutputLengthField field) {
-        return new ModelSettings(PROVIDER, MODEL, choice, temperature, window, maxOutput, field, List.of(), null);
+        return new ModelSettings(PROVIDER, MODEL, choice, temperature, window, maxOutput, field, List.of(), null, null);
     }
 
     private static ChatRequest request(final Double temperature, @Nullable final Integer cap) {

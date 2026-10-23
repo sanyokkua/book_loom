@@ -9,6 +9,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /**
@@ -77,9 +78,11 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
                 executor,
                 activities,
                 new MemorySettings(),
-                EnglishMessages.create()));
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
+        form(viewModel);
         fx(() -> {
             viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);

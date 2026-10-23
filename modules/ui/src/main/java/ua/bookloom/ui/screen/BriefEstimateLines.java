@@ -46,15 +46,15 @@ final class BriefEstimateLines {
 
     private void show(final StartEstimate now) {
         final List<String> texts = now.lines(messages);
-        final boolean measured = now instanceof StartEstimate.Measured;
+        final MessageKey tip = now instanceof StartEstimate.Measured measured ? measured.tip() : null;
         for (int at = 0; at < LINES; at++) {
             final Label line = lines.get(at);
             final boolean shown = at < texts.size();
             line.setText(shown ? texts.get(at) : "");
             line.setVisible(shown);
             line.setManaged(shown);
-            if (measured && shown) {
-                Tips.install(messages, line, MessageKey.ESTIMATE_MEASURED_TIP);
+            if (tip != null && shown) {
+                Tips.install(messages, line, tip);
             } else {
                 line.setTooltip(null);
             }

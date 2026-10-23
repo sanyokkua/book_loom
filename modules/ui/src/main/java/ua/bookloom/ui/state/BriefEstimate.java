@@ -8,6 +8,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
@@ -15,9 +16,10 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 
 /**
- * The time estimate under the quality choice: a time only when the model test on this computer stored a speed for the
+ * The time estimate under the quality choice: a time only when the model test or an earlier translation on this computer stored a speed for the
  * chosen model, scaled by the dial and the book's segments, else the relative costs. Tokens per second are never an
- * input, so they alone give no estimate. It is worked out again when the dial, the model or the book's size changes.
+ * input, so they alone give no estimate. It is worked out again when the dial, the model, the book's size or a stored
+ * speed changes.
  * FX thread only.
  */
 @Slf4j
@@ -38,13 +40,16 @@ public final class BriefEstimate {
      * @param settings the chosen provider and model
      * @param project the open project's segment count
      * @param stored where the measured speed of a model is kept
+     * @param speeds told when a speed was stored, so the estimate is worked out again
      */
     @Inject
     public BriefEstimate(
             final CurrentProject current,
             final SettingsViewModel settings,
             final BriefProject project,
-            final ModelSettingsRepository stored) {
+            final ModelSettingsRepository stored,
+            final ModelSpeeds speeds) {
+        Objects.requireNonNull(speeds, "speeds");
         this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.project = Objects.requireNonNull(project, "project");
@@ -53,6 +58,7 @@ public final class BriefEstimate {
         settings.model().addListener((observed, was, now) -> recompute());
         settings.selectedProviderId().addListener((observed, was, now) -> recompute());
         project.totalSegments().addListener((observed, was, now) -> recompute());
+        speeds.revision().addListener((observed, was, now) -> recompute());
         recompute();
     }
 
@@ -78,10 +84,16 @@ public final class BriefEstimate {
     }
 
     // A keyed read of one stored row, cheap enough to take on the FX thread.
-    private Optional<Double> speedOf(final Optional<ModelSelection> chosen) {
+    private Optional<ModelSpeed> speedOf(final Optional<ModelSelection> chosen) {
         return chosen.flatMap(model -> Optional.ofNullable(
                         stored.find(model.providerId(), model.modelId()).data())
                 .flatMap(found -> found)
-                .map(ModelSettings::measuredSecondsPerSegment));
+                .flatMap(BriefEstimate::speedOf));
+    }
+
+    private static Optional<ModelSpeed> speedOf(final ModelSettings row) {
+        final Double seconds = row.measuredSecondsPerSegment();
+        final MeasuredFrom from = row.measuredFrom();
+        return seconds == null || from == null ? Optional.empty() : Optional.of(new ModelSpeed(seconds, from));
     }
 }

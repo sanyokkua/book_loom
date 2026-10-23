@@ -14,6 +14,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
@@ -44,15 +45,19 @@ final class ProviderFormView {
     private final ChangeListener<ProviderForm.Spot> onFocusRequest = (observed, was, now) -> focus(now);
     private final ChangeListener<String> onProviderChanged = (observed, was, now) -> resetExtras();
 
-    ProviderFormView(final SettingsViewModel viewModel, final ProviderForm form, final Messages messages) {
+    ProviderFormView(
+            final SettingsViewModel viewModel,
+            final ProviderForm form,
+            final Messages messages,
+            final ProviderTestDialog dialog) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(viewModel, "viewModel");
         connection = new ProviderConnectionSection(form, messages);
         extras = new ProviderExtrasSection(form, messages);
         model = new ModelField(viewModel, form, messages);
-        buildFold(new ProviderChecks(viewModel, messages));
-        root.getChildren().addAll(new ProviderSummaryCard(viewModel, form, messages).node(), fold);
+        buildFold(new ProviderChecks(viewModel, messages, dialog));
+        root.getChildren().addAll(new ProviderSummaryCard(viewModel, form, messages, dialog).node(), fold);
         form.draft().addListener(new WeakChangeListener<>(onDraft));
         form.findings().addListener(new WeakChangeListener<>(onFeedback));
         form.errorsShown().addListener(new WeakChangeListener<>(onFeedback));

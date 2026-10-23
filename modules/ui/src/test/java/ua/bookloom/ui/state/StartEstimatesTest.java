@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -37,24 +38,46 @@ class StartEstimatesTest {
     @ParameterizedTest(name = "{0}: {1} s")
     @CsvSource({"FAST, 300", "BALANCED, 450", "MAX, 900"})
     void of_storedSpeedOfThreeSeconds_scalesTheBookByTheDial(final QualityDial dial, final long seconds) {
-        final StartEstimate estimate = StartEstimates.of(() -> Optional.of(3.0), 100, dial);
+        final StartEstimate estimate =
+                StartEstimates.of(() -> Optional.of(new ModelSpeed(3.0, MeasuredFrom.TEST)), 100, dial);
 
-        assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(seconds)));
+        assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(seconds), MeasuredFrom.TEST));
     }
 
     // IF the measured line did not say where it comes from, THEN it would read as a promise.
     @Test
     void lines_measured_marksTheFigureAsAnEstimateFromTheModelTest() {
-        final StartEstimate estimate = new StartEstimate.Measured(Duration.ofSeconds(450));
+        final StartEstimate estimate = new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.TEST);
 
         assertThat(estimate.lines(EN))
                 .isEqualTo(List.of("For this book on this computer: about 8 min (estimate from the model test)"));
     }
 
+    // IF a speed from an earlier translation were worded as the model test's, THEN the person would be told something
+    // that did not happen.
+    @Test
+    void lines_measuredFromARun_saysItIsFromAnEarlierTranslation() {
+        final StartEstimate estimate = new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.RUN);
+
+        assertThat(estimate.lines(EN))
+                .containsExactly("For this book on this computer: about 8 min (estimate from an earlier translation)");
+        assertThat(estimate.lines(UK))
+                .containsExactly("Для цієї книжки на цьому комп’ютері: близько 8 хв (оцінка за попереднім перекладом)");
+    }
+
+    @Test
+    void of_speedFromARun_keepsItsSource() {
+        final StartEstimate estimate =
+                StartEstimates.of(() -> Optional.of(new ModelSpeed(3.0, MeasuredFrom.RUN)), 100, QualityDial.FAST);
+
+        assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofMinutes(5), MeasuredFrom.RUN));
+    }
+
     @ParameterizedTest
     @CsvSource({"0.0, 100", "-1.0, 100", "3.0, 0"})
     void of_unusableSpeedOrEmptyBook_givesTheRelativeCosts(final double speed, final int segments) {
-        assertThat(StartEstimates.of(() -> Optional.of(speed), segments, QualityDial.FAST))
+        assertThat(StartEstimates.of(
+                        () -> Optional.of(new ModelSpeed(speed, MeasuredFrom.TEST)), segments, QualityDial.FAST))
                 .isEqualTo(new StartEstimate.Relative());
     }
 }

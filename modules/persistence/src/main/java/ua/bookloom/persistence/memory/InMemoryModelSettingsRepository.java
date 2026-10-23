@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -45,6 +46,24 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
                     settings.modelId(),
                     settings.refused().size());
             return Result.ok(settings);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<ModelSettings> update(
+            final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(change, "change");
+        try {
+            final ModelSettings kept = byModel.compute(
+                    key(providerId, modelId),
+                    (key, stored) ->
+                            change.apply(stored == null ? ModelSettings.defaults(providerId, modelId) : stored));
+            log.debug("Model settings updated provider={} model={}", providerId, modelId);
+            return Result.ok(kept);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

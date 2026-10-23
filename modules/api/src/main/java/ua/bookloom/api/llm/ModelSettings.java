@@ -15,7 +15,9 @@ import org.jspecify.annotations.Nullable;
  * @param maxOutput the answer-length cap in tokens, or null for the computed one; positive when set
  * @param outputField the field that carries the cap; non-null
  * @param refused the settings the model refused; defensively copied
- * @param measuredSecondsPerSegment the speed the inference test measured, or null when it never ran
+ * @param measuredSecondsPerSegment the measured speed in seconds per segment, or null when never measured; positive
+ *     when set
+ * @param measuredFrom where the speed was measured; null exactly when the speed is null
  */
 public record ModelSettings(
         String providerId,
@@ -26,7 +28,8 @@ public record ModelSettings(
         @Nullable Integer maxOutput,
         OutputLengthField outputField,
         List<RefusedSetting> refused,
-        @Nullable Double measuredSecondsPerSegment) {
+        @Nullable Double measuredSecondsPerSegment,
+        @Nullable MeasuredFrom measuredFrom) {
 
     /** The lowest temperature a person may fix. */
     public static final double MIN_TEMPERATURE = 0.0;
@@ -43,6 +46,7 @@ public record ModelSettings(
         requireTemperatureMatchesChoice(temperatureChoice, temperature);
         requirePositive(contextWindow, "contextWindow");
         requirePositive(maxOutput, "maxOutput");
+        requireSpeedMatchesSource(measuredSecondsPerSegment, measuredFrom);
     }
 
     /**
@@ -62,7 +66,30 @@ public record ModelSettings(
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
+                null,
                 null);
+    }
+
+    /**
+     * Keeps everything but the measured speed.
+     *
+     * @param secondsPerSegment the new speed, positive
+     * @param from where it was measured; non-null
+     * @return a copy holding the new speed and its source
+     */
+    public ModelSettings withMeasuredSpeed(final double secondsPerSegment, final MeasuredFrom from) {
+        Objects.requireNonNull(from, "from");
+        return new ModelSettings(
+                providerId,
+                modelId,
+                temperatureChoice,
+                temperature,
+                contextWindow,
+                maxOutput,
+                outputField,
+                refused,
+                secondsPerSegment,
+                from);
     }
 
     private static void requireTemperatureMatchesChoice(
@@ -73,6 +100,15 @@ public record ModelSettings(
             }
         } else if (temperature != null) {
             throw new IllegalArgumentException("temperature is only set for VALUE, not " + choice);
+        }
+    }
+
+    private static void requireSpeedMatchesSource(final @Nullable Double speed, final @Nullable MeasuredFrom from) {
+        if ((speed == null) != (from == null)) {
+            throw new IllegalArgumentException("measuredFrom is set exactly when the speed is: " + speed + " " + from);
+        }
+        if (speed != null && !(speed > 0.0)) {
+            throw new IllegalArgumentException("measured speed must be positive: " + speed);
         }
     }
 

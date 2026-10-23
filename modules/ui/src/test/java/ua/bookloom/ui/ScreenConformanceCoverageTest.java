@@ -36,6 +36,8 @@ class ScreenConformanceCoverageTest {
         "SETTINGS_FOLD_OPEN",
         "SETTINGS_DELETE_DIALOG",
         "SETTINGS_UNSAVED_DIALOG",
+        "SETTINGS_TEST_DIALOG",
+        "SETTINGS_SWITCH_DIALOG",
         "ADD_TERM_DIALOG",
         "RESULTS_DIALOG"
     };

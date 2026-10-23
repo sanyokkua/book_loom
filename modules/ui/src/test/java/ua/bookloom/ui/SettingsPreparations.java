@@ -7,7 +7,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.dialog.ProviderTestDialog;
+import ua.bookloom.ui.dialog.SwitchProviderDialog;
 import ua.bookloom.ui.state.ProviderForm;
+import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /** What the Providers form conformance cases do to the window before it is read. */
@@ -49,6 +54,42 @@ final class SettingsPreparations {
     void askAboutUnsaved() {
         onFx(() -> {
             injector.getInstance(AppShellView.class).activate(ViewNames.PROJECTS);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Runs the inference test against a verifier that answers, and waits for its three findings. */
+    void runTheInferenceTest() throws TimeoutException {
+        awaitProviders();
+        final SettingsViewModel viewModel = injector.getInstance(SettingsViewModel.class);
+        ((ScriptedProviderVerifier) injector.getInstance(ProviderVerifier.class))
+                .respondWith(ProviderReports.allPassedWithExchanges());
+        onFx(() -> {
+            viewModel.draftModel().set("gemma3:12b");
+            viewModel.tests().run(ProviderTest.INFERENCE);
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> viewModel.tests().stages().size() == 3
+                        && !viewModel.tests().checking().get()));
+    }
+
+    /** Opens the test dialog on the inference test. */
+    void openTheTestDialog() {
+        onFx(() -> {
+            injector.getInstance(ProviderTestDialog.class).open(VerificationStage.INFERENCE);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Shows the question asked before another provider takes over a started book. */
+    void askAboutSwitching() {
+        onFx(() -> {
+            injector.getInstance(SwitchProviderDialog.class).ask("LM Studio", "Ollama", "gemma4:e4b", () -> {});
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

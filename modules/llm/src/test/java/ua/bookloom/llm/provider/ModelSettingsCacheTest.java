@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
@@ -72,6 +73,7 @@ class ModelSettingsCacheTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
+                null,
                 null);
     }
 
@@ -92,6 +94,12 @@ class ModelSettingsCacheTest {
         @Override
         public Result<ModelSettings> save(final ModelSettings settings) {
             return Result.ok(settings);
+        }
+
+        @Override
+        public Result<ModelSettings> update(
+                final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
+            return Result.err(AppError.of(ErrorCode.internal, "Unreadable", "The store cannot be read."));
         }
 
         @Override

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
@@ -22,6 +23,14 @@ public final class FakeModelSettingsRepository implements ModelSettingsRepositor
     public Result<ModelSettings> save(final ModelSettings settings) {
         byModel.put(key(settings.providerId(), settings.modelId()), settings);
         return Result.ok(settings);
+    }
+
+    @Override
+    public Result<ModelSettings> update(
+            final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
+        return Result.ok(byModel.compute(
+                key(providerId, modelId),
+                (key, stored) -> change.apply(stored == null ? ModelSettings.defaults(providerId, modelId) : stored)));
     }
 
     @Override

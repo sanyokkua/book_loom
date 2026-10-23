@@ -28,6 +28,7 @@ class ModelSettingsTest {
                 maxOutput,
                 OutputLengthField.MAX_TOKENS,
                 refused,
+                null,
                 null);
     }
 
@@ -42,6 +43,7 @@ class ModelSettingsTest {
         assertThat(defaults.outputField()).isEqualTo(OutputLengthField.MAX_TOKENS);
         assertThat(defaults.refused()).isEmpty();
         assertThat(defaults.measuredSecondsPerSegment()).isNull();
+        assertThat(defaults.measuredFrom()).isNull();
     }
 
     @ParameterizedTest
@@ -98,6 +100,59 @@ class ModelSettingsTest {
     @SuppressWarnings("NullAway")
     private static String nullString() {
         return null;
+    }
+
+    @Test
+    void constructor_speedWithoutSource_isRejected() {
+        assertThatThrownBy(() -> speed(1.2, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructor_sourceWithoutSpeed_isRejected() {
+        assertThatThrownBy(() -> speed(null, MeasuredFrom.RUN)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {0.0, -1.5})
+    void constructor_nonPositiveSpeed_isRejected(final double value) {
+        assertThatThrownBy(() -> speed(value, MeasuredFrom.TEST)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void withMeasuredSpeed_modelWithRefusals_keepsRefusalsAndSetsSpeedAndSource() {
+        final RefusedSetting refusal = new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out");
+        final ModelSettings base = with(TemperatureChoice.OMIT, null, 8192, 512, List.of(refusal));
+
+        final ModelSettings measured = base.withMeasuredSpeed(1.2, MeasuredFrom.TEST);
+
+        assertThat(measured.measuredSecondsPerSegment()).isEqualTo(1.2);
+        assertThat(measured.measuredFrom()).isEqualTo(MeasuredFrom.TEST);
+        assertThat(measured.refused()).containsExactly(refusal);
+        assertThat(measured.contextWindow()).isEqualTo(8192);
+    }
+
+    @Test
+    void withMeasuredSpeed_secondMeasurement_overwritesSourceToo() {
+        final ModelSettings measured = ModelSettings.defaults("ollama", "gemma")
+                .withMeasuredSpeed(1.2, MeasuredFrom.TEST)
+                .withMeasuredSpeed(0.8, MeasuredFrom.RUN);
+
+        assertThat(measured.measuredSecondsPerSegment()).isEqualTo(0.8);
+        assertThat(measured.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+    }
+
+    private static ModelSettings speed(final @Nullable Double seconds, final @Nullable MeasuredFrom from) {
+        return new ModelSettings(
+                "ollama",
+                "gemma",
+                TemperatureChoice.CHOOSE,
+                null,
+                null,
+                null,
+                OutputLengthField.MAX_TOKENS,
+                List.of(),
+                seconds,
+                from);
     }
 
     @Test

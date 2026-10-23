@@ -19,6 +19,7 @@ import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingModelCatalog;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.dialog.RecordingModelPickPrompt;
 
@@ -76,7 +77,8 @@ abstract class LocalModelProbeTestBase extends FxTestBase {
                 new DirectExecutor(),
                 activities,
                 store,
-                EnglishMessages.create()));
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
         return onFx(() -> new LocalModelProbe(catalog, configs, store, executor, viewModel, pick));
     }
 

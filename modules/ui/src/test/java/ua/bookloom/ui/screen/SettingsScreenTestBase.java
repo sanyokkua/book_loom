@@ -25,6 +25,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.ProviderReports;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ShellTestBase;
@@ -51,12 +52,18 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
 
     @Override
     protected final Injector createInjector(final Locale locale) {
-        return UiTestInjector.builder(locale)
+        final UiTestInjector.Builder builder = UiTestInjector.builder(locale)
                 .verifier(verifier)
                 .catalog(catalog)
                 .configs(configs)
-                .environment(Set.of("OFFICE_KEY"))
-                .build();
+                .environment(Set.of("OFFICE_KEY", "HOME_API_KEY"));
+        customize(builder);
+        return builder.build();
+    }
+
+    /** Lets a test class add its own collaborators (a clipboard, a project service) to the graph. */
+    void customize(final UiTestInjector.Builder builder) {
+        // the plain graph is what most settings tests want
     }
 
     void openSettings() {
@@ -152,12 +159,13 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
         return (TabPane) required("settings-tabs");
     }
 
-    Pane chips() {
-        return (Pane) required("settings-chips");
+    Pane checksGrid() {
+        return (Pane) required("settings-checks-grid");
     }
 
-    Labeled chip(final String stage) {
-        return (Labeled) required("chip-" + stage);
+    /** The sentence a stage's result row reads. */
+    Labeled result(final String stage) {
+        return (Labeled) required("check-result-" + stage);
     }
 
     static AppError discoveryFailed() {
@@ -188,10 +196,12 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
             viewModel().draftModel().set(MODEL);
             viewModel().tests().run(ProviderTest.INFERENCE);
         });
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> ThemeTestSupport.onFx(() -> chips().getChildren().size()) == 3);
-        onFx(() -> {});
+        awaitFx(() -> !viewModel().tests().checking().get()
+                && viewModel().tests().stages().size() == 3);
+    }
+
+    /** A report in which all three stages passed and each kept the request it sent. */
+    static Result<VerificationReport> allPassedWithExchanges() {
+        return ProviderReports.allPassedWithExchanges();
     }
 }

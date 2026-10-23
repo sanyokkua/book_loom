@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.EnglishMessages;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /** The model chosen last time is read when Settings loads, and the first-launch look can adopt another one. */
@@ -25,7 +26,8 @@ class SettingsViewModelCurrentModelTest extends SettingsViewModelTestBase {
                 executor,
                 activities,
                 settings,
-                EnglishMessages.create()));
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
         WaitForAsyncUtils.waitForFxEvents();
         return built;
     }

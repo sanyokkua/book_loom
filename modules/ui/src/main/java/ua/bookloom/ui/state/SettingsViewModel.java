@@ -9,10 +9,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
@@ -56,7 +56,8 @@ public final class SettingsViewModel {
     private final ReadOnlyBooleanWrapper adding = new ReadOnlyBooleanWrapper(false);
     private final StringProperty model = new SimpleStringProperty("");
     private final StringProperty draftModel = new SimpleStringProperty("");
-    private final ReadOnlyObjectWrapper<List<ModelAdvice.Note>> modelNotes = new ReadOnlyObjectWrapper<>(List.of());
+    private final ProviderTestTarget testTarget = new ProviderTestTarget();
+    private final ModelNotesFollower modelNotes;
 
     // Only the first read may make the first row current (a deleted current provider stays deleted); a dirty form
     // holds typing that an adopted model must not replace.
@@ -77,6 +78,7 @@ public final class SettingsViewModel {
      *     overlap
      * @param settingsStore where the model chosen last time is read from, on the background executor
      * @param messages the catalogue a provider without a name of its own is named from
+     * @param speedRecorder where the seconds per segment a passing inference test measured are kept
      */
     @Inject
     public SettingsViewModel(
@@ -87,7 +89,8 @@ public final class SettingsViewModel {
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities,
             final SettingsRepository settingsStore,
-            final Messages messages) {
+            final Messages messages,
+            final ModelSpeedRecorder speedRecorder) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
@@ -96,12 +99,10 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(verifier, "verifier"),
                 Objects.requireNonNull(errors, "errors"),
                 Objects.requireNonNull(executor, "executor"),
-                editedProviderId.getReadOnlyProperty(),
-                draftModel,
-                Objects.requireNonNull(activities, "activities"));
-        editedProviderId.addListener((observed, was, now) -> refreshNotes());
-        draftModel.addListener((observed, was, now) -> refreshNotes());
-        refreshNotes();
+                testTarget.subject(),
+                Objects.requireNonNull(activities, "activities"),
+                Objects.requireNonNull(speedRecorder, "speedRecorder"));
+        this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));
     }
@@ -202,17 +203,6 @@ public final class SettingsViewModel {
         log.info("model adopted: {}/{}", chosen.providerId(), chosen.modelId());
     }
 
-    private void refreshNotes() {
-        final String selected = editedProviderId.get();
-        final List<ModelAdvice.Note> notes = providers.stream()
-                .filter(row -> row.id().equals(selected))
-                .findFirst()
-                .map(row -> ModelAdvice.notesFor(row.kind(), draftModel.get()))
-                .orElse(List.of());
-        log.debug("model notes for provider '{}': {}", selected, notes.size());
-        modelNotes.set(notes);
-    }
-
     /** The three provider tests and the findings of the last one. */
     public ProviderTestRunner tests() {
         return tests;
@@ -248,9 +238,34 @@ public final class SettingsViewModel {
         return draftModel;
     }
 
+    /** What a test would be run against, kept up to date by the form; empty while the form holds something refused. */
+    ObjectProperty<Optional<TestSubject>> testSubject() {
+        return testTarget.subject();
+    }
+
+    /** What a test would be run against now; changes when the form is edited, so a view can follow a rename. */
+    public ReadOnlyObjectProperty<Optional<TestSubject>> testedSubject() {
+        return testTarget.subject();
+    }
+
+    /** The name the tested provider is shown by: the form's name as typed, else the open provider's. */
+    public String testedName() {
+        return testTarget.subject().get().map(TestSubject::name).orElseGet(() -> providerName(editedProviderId.get()));
+    }
+
+    /** Whether the open form holds something the rules refuse, so no test can be run until it is fixed. */
+    public ReadOnlyBooleanProperty testsBlocked() {
+        return testTarget.blocked();
+    }
+
+    /** Takes what the form now offers to test, and whether the draft is what stops a test. */
+    void publishTestSubject(final Optional<TestSubject> subject, final boolean blocked) {
+        testTarget.publish(subject, blocked);
+    }
+
     /** The advice for the selected provider and the chosen model, which follows both. */
     public ReadOnlyObjectProperty<List<ModelAdvice.Note>> modelNotes() {
-        return modelNotes.getReadOnlyProperty();
+        return modelNotes.notes();
     }
 
     /**
@@ -262,20 +277,15 @@ public final class SettingsViewModel {
         return modelListing;
     }
 
-    /**
-     * Asks the provider whose form is open for its models again. FX thread only.
-     */
+    /** Asks the server the open form describes for its models again, with the values as typed. FX thread only. */
     public void refreshModels() {
         log.debug("model list refresh requested for '{}'", editedProviderId.get());
-        modelListing.refresh(editedProviderId.get());
+        testTarget.subject().get().ifPresent(subject -> modelListing.refresh(subject.config()));
     }
 
     /**
-     * Takes the model entry's text as it stands, unstripped and unchecked, so the check becomes available as soon as
-     * something is typed: a disabled button never takes the click that would otherwise commit the entry. FX thread
-     * only.
-     *
-     * @param text what the entry holds now; blank means no model is chosen
+     * Takes the model entry's text as it stands, unstripped and unchecked, so a check is available as soon as something
+     * is typed (a disabled button never takes the click that would commit the entry); blank means none. FX thread only.
      */
     public void setModelText(final String text) {
         Objects.requireNonNull(text, "text");
@@ -347,23 +357,14 @@ public final class SettingsViewModel {
         model.set("");
     }
 
-    /**
-     * Makes a saved model text the current model of the current provider. FX thread only.
-     *
-     * @param text what was saved; surrounding whitespace is dropped, blank means no model
-     */
+    /** Makes a saved model text (stripped; blank means none) the current model of the current provider. FX thread only. */
     public void applySavedCurrentModel(final String text) {
         Objects.requireNonNull(text, "text");
         model.set(text.strip());
         log.debug("current model text now has {} character(s)", model.get().length());
     }
 
-    /**
-     * Names a provider for display: its own name, else the catalogue's, else its id.
-     *
-     * @param id a provider id
-     * @return the name to show
-     */
+    /** Names a provider for display: its own name, else the catalogue's, else its id. */
     public String providerName(final String id) {
         Objects.requireNonNull(id, "id");
         return providers.stream()
@@ -373,12 +374,7 @@ public final class SettingsViewModel {
                 .orElseGet(() -> ProviderNames.displayName(messages, id));
     }
 
-    /**
-     * The stored description of a listed provider, as of the last read.
-     *
-     * @param id a provider id
-     * @return the description, or empty if no row carries the id
-     */
+    /** The stored description of a listed provider as of the last read, or empty if no row carries the id. */
     public Optional<ProviderConfig> configOf(final String id) {
         Objects.requireNonNull(id, "id");
         return Optional.ofNullable(snapshot.get(id));

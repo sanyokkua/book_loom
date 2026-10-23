@@ -42,6 +42,8 @@ import ua.bookloom.ui.dialog.ModelPickPrompt;
 import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
 import ua.bookloom.ui.dialog.RenamePrompt;
 import ua.bookloom.ui.dialog.SamePairPrompt;
+import ua.bookloom.ui.dialog.SwitchProviderPrompt;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -106,6 +108,8 @@ public final class UiTestInjector {
         private @Nullable OpenAnotherBookPrompt prompt;
         private @Nullable ContinuePrompt continuePrompt;
         private @Nullable ModelPickPrompt modelPickPrompt;
+        private @Nullable SwitchProviderPrompt switchProviderPrompt;
+        private @Nullable TextClipboard clipboard;
         private @Nullable RenamePrompt renamePrompt;
         private @Nullable SamePairPrompt samePairPrompt;
         private @Nullable TranslateIntoPrompt translateIntoPrompt;
@@ -258,6 +262,16 @@ public final class UiTestInjector {
             return this;
         }
 
+        public Builder switchProviderPrompt(final SwitchProviderPrompt value) {
+            switchProviderPrompt = Objects.requireNonNull(value, "switchProviderPrompt");
+            return this;
+        }
+
+        public Builder clipboard(final TextClipboard value) {
+            clipboard = Objects.requireNonNull(value, "clipboard");
+            return this;
+        }
+
         /** Replaces the real Rename card with this fake. */
         public Builder renamePrompt(final RenamePrompt value) {
             renamePrompt = Objects.requireNonNull(value, "renamePrompt");
@@ -326,15 +340,17 @@ public final class UiTestInjector {
                     .with(
                             new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
                             new ScriptedPorts(),
-                            replacementPrompt(prompt),
                             replacementQuestions(),
                             open));
         }
 
         private Module replacementQuestions() {
             return binder -> {
+                UiTestBindings.bindIfSet(binder, OpenAnotherBookPrompt.class, prompt);
                 UiTestBindings.bindIfSet(binder, ContinuePrompt.class, continuePrompt);
                 UiTestBindings.bindIfSet(binder, ModelPickPrompt.class, modelPickPrompt);
+                UiTestBindings.bindIfSet(binder, SwitchProviderPrompt.class, switchProviderPrompt);
+                UiTestBindings.bindIfSet(binder, TextClipboard.class, clipboard);
                 UiTestBindings.bindIfSet(binder, RenamePrompt.class, renamePrompt);
                 UiTestBindings.bindIfSet(binder, SamePairPrompt.class, samePairPrompt);
                 UiTestBindings.bindIfSet(binder, TranslateIntoPrompt.class, translateIntoPrompt);
@@ -342,17 +358,6 @@ public final class UiTestInjector {
                 UiTestBindings.bindIfSet(binder, BookFileChooser.class, bookFileChooser);
                 UiTestBindings.bindIfSet(binder, RowOpener.class, rowOpener);
                 UiTestBindings.bindIfSet(binder, ErrorPresenter.class, errorPresenter);
-            };
-        }
-
-        private Module replacementPrompt(final @Nullable OpenAnotherBookPrompt replacement) {
-            return new AbstractModule() {
-                @Override
-                protected void configure() {
-                    if (replacement != null) {
-                        bind(OpenAnotherBookPrompt.class).toInstance(replacement);
-                    }
-                }
             };
         }
 

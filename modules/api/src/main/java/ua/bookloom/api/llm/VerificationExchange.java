@@ -18,6 +18,8 @@ import org.jspecify.annotations.Nullable;
  * @param tokensPerSecond the measured generation speed, or null when not measured
  * @param structured whether the reply was a well-formed structured answer
  * @param requestHeaders the request headers as masked "Name: value" lines, or an empty string
+ * @param promptTokens the tokens of the prompt the server counted, or null when it did not say
+ * @param completionTokens the tokens of the reply the server counted, or null when it did not say
  */
 public record VerificationExchange(
         String method,
@@ -28,7 +30,34 @@ public record VerificationExchange(
         @Nullable Long firstTokenMs,
         @Nullable Double tokensPerSecond,
         boolean structured,
-        String requestHeaders) {
+        String requestHeaders,
+        @Nullable Integer promptTokens,
+        @Nullable Integer completionTokens) {
+
+    /** The form without token counts. */
+    public VerificationExchange(
+            String method,
+            String url,
+            String requestBody,
+            String responseBody,
+            int httpStatus,
+            @Nullable Long firstTokenMs,
+            @Nullable Double tokensPerSecond,
+            boolean structured,
+            String requestHeaders) {
+        this(
+                method,
+                url,
+                requestBody,
+                responseBody,
+                httpStatus,
+                firstTokenMs,
+                tokensPerSecond,
+                structured,
+                requestHeaders,
+                null,
+                null);
+    }
 
     /** The form without request headers. */
     public VerificationExchange(
@@ -40,7 +69,18 @@ public record VerificationExchange(
             @Nullable Long firstTokenMs,
             @Nullable Double tokensPerSecond,
             boolean structured) {
-        this(method, url, requestBody, responseBody, httpStatus, firstTokenMs, tokensPerSecond, structured, "");
+        this(
+                method,
+                url,
+                requestBody,
+                responseBody,
+                httpStatus,
+                firstTokenMs,
+                tokensPerSecond,
+                structured,
+                "",
+                null,
+                null);
     }
 
     /** Rejects a missing or blank method and URL, and absent bodies. */

@@ -35,6 +35,10 @@
                         <Label fx:id="formBadge" id="settings-form-badge" styleClass="chip, chip-ok"
                                text="%settings.provider.current"/>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="formUseReason" id="settings-form-use-reason" styleClass="hint"
+                               text="%settings.provider.use.dirty"/>
+                        <Button fx:id="formUse" id="settings-form-use" styleClass="btn-ghost"
+                                text="%settings.provider.use"/>
                         <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
                                text="%settings.provider.delete.busy"/>
                         <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline"

@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /** The registry is read on the background executor, never in the constructor on the FX thread. */
@@ -35,7 +36,8 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
                 executor,
                 activities,
                 new MemorySettings(),
-                EnglishMessages.create()));
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
         pool.awaitFinished(1);
         WaitForAsyncUtils.waitForFxEvents();
 

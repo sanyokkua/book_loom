@@ -712,7 +712,9 @@ this computer. BookLoom sends your text only to the AI model you choose here."
 - The request line (method and full URL, Copy as curl with the key hidden).
 - Three columns: **Body** (request JSON) \| **Status / Time / First token / Speed / Tokens / Structured** \|
   **Response** (JSON). Each pane scrolls inside its column, so the banner never overlaps.
-- Footer: switch between the three tests · Close.
+- Footer: switch between the three tests · Close. Copy feedback ("Copied as curl — the key is hidden.", "Copied.")
+  stays in the dialog's footer; the earlier toast is superseded. The Server row reads "—" because the probe does not
+  report the server's name.
 
 ### Models (decision 6)
 - **Model** (a list across providers, ↻ Refresh), with "Each model keeps its own settings. All are optional — off

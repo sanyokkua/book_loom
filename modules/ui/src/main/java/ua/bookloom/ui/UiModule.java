@@ -31,6 +31,10 @@ import ua.bookloom.ui.dialog.RenameDialog;
 import ua.bookloom.ui.dialog.RenamePrompt;
 import ua.bookloom.ui.dialog.SamePairDialog;
 import ua.bookloom.ui.dialog.SamePairPrompt;
+import ua.bookloom.ui.dialog.SwitchProviderDialog;
+import ua.bookloom.ui.dialog.SwitchProviderPrompt;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoDialog;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
@@ -63,6 +67,8 @@ import ua.bookloom.ui.state.LaunchProject;
 import ua.bookloom.ui.state.LedgerFigures;
 import ua.bookloom.ui.state.LocalModelProbe;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ModelSpeedRecorder;
+import ua.bookloom.ui.state.ModelSpeeds;
 import ua.bookloom.ui.state.PlatformFileRevealer;
 import ua.bookloom.ui.state.ProgressFigures;
 import ua.bookloom.ui.state.ProjectActions;
@@ -70,6 +76,7 @@ import ua.bookloom.ui.state.ProjectActionsImpl;
 import ua.bookloom.ui.state.ProjectOpener;
 import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.ProviderFormDirtySource;
+import ua.bookloom.ui.state.ProviderSwitch;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.state.RunInterventions;
@@ -133,14 +140,23 @@ public final class UiModule extends AbstractModule {
         bind(SamePairPrompt.class).to(SamePairDialog.class);
         bind(TranslateIntoPrompt.class).to(TranslateIntoDialog.class);
         bind(FindBookPrompt.class).to(FindBookDialog.class);
+        bind(SwitchProviderPrompt.class).to(SwitchProviderDialog.class);
+        bind(TextClipboard.class).to(SystemTextClipboard.class);
+    }
+
+    private void bindProviderState() {
+        bind(ModelListing.class);
+        bind(ModelSpeeds.class);
+        bind(ModelSpeedRecorder.class);
+        bind(ProviderSwitch.class);
+        bind(SettingsViewModel.class);
     }
 
     private void bindState() {
         bind(StateMirror.class);
         bind(TranslationRunner.class);
         bind(RunInterventions.class);
-        bind(ModelListing.class);
-        bind(SettingsViewModel.class);
+        bindProviderState();
         bind(CurrentProject.class);
         bind(ImportViewModel.class);
         bind(ImportGuard.class);

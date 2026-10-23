@@ -125,7 +125,7 @@ class OllamaClientModelSettingsTest {
             @Nullable Integer window,
             @Nullable Integer maxOutput,
             OutputLengthField field) {
-        return new ModelSettings("ollama", MODEL, choice, temperature, window, maxOutput, field, List.of(), null);
+        return new ModelSettings("ollama", MODEL, choice, temperature, window, maxOutput, field, List.of(), null, null);
     }
 
     private static ChatRequest request(double temperature, int cap) {

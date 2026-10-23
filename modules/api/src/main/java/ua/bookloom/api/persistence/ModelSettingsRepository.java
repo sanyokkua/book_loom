@@ -2,6 +2,7 @@ package ua.bookloom.api.persistence;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
 
@@ -27,6 +28,17 @@ public interface ModelSettingsRepository {
      * @return the stored settings
      */
     Result<ModelSettings> save(ModelSettings settings);
+
+    /**
+     * Changes one model's settings as a single step, so two writers (a refusal remembered while a speed is stored)
+     * never overwrite each other's field.
+     *
+     * @param providerId the non-null provider id
+     * @param modelId the non-null model id
+     * @param change receives what is stored, or the defaults when nothing is; returns the record to keep
+     * @return the stored settings
+     */
+    Result<ModelSettings> update(String providerId, String modelId, UnaryOperator<ModelSettings> change);
 
     /**
      * Forgets one model's settings.

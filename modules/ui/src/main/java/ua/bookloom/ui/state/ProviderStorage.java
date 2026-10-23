@@ -50,6 +50,16 @@ final class ProviderStorage {
         return Result.ok(true);
     }
 
+    /** Writes the provider and model as the current ones; a blank model is kept as typed, i.e. none. */
+    Result<Boolean> makeCurrent(final ModelSelection chosen) {
+        final Result<?> written = settings.put(AppSetting.CURRENT_MODEL, chosen);
+        if (written.isErr()) {
+            log.warn("provider '{}' could not be made current", chosen.providerId());
+            return Result.err(Objects.requireNonNull(written.error(), "error"));
+        }
+        return Result.ok(true);
+    }
+
     /** Deletes the provider, its per-model settings and, for the current one, the current model; {@code false} if any step failed. */
     boolean remove(final String id, final boolean current) {
         if (configs.delete(id).isErr()) {

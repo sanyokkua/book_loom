@@ -14,8 +14,10 @@ import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -35,7 +37,11 @@ final class ProviderSummaryCard {
     private final Label line = new Label();
     private final ListChangeListener<StageChip> onStages = change -> markBad();
 
-    ProviderSummaryCard(final SettingsViewModel viewModel, final ProviderForm form, final Messages messages) {
+    ProviderSummaryCard(
+            final SettingsViewModel viewModel,
+            final ProviderForm form,
+            final Messages messages,
+            final ProviderTestDialog dialog) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(form, "form");
@@ -48,7 +54,7 @@ final class ProviderSummaryCard {
         line.getStyleClass().add("muted");
         line.setWrapText(true);
         bindWords();
-        box.getChildren().addAll(title, line, new HBox(8, test(), changeModel(form)));
+        box.getChildren().addAll(title, line, new HBox(8, test(dialog), changeModel(form)));
         box.visibleProperty().bind(viewModel.adding().not());
         box.managedProperty().bind(box.visibleProperty());
         viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
@@ -79,13 +85,17 @@ final class ProviderSummaryCard {
         line.managedProperty().bind(line.visibleProperty());
     }
 
-    private Button test() {
+    private Button test(final ProviderTestDialog dialog) {
         final Button test = new Button(messages.get(MessageKey.SETTINGS_SUMMARY_TEST));
         test.setId("settings-summary-test");
         test.getStyleClass().add("btn-primary");
         Tips.install(messages, test, MessageKey.SETTINGS_SUMMARY_TEST_TIP);
         test.disableProperty().bind(Bindings.not(viewModel.tests().available(ProviderTest.INFERENCE)));
-        test.setOnAction(event -> viewModel.tests().run(ProviderTest.INFERENCE));
+        test.setOnAction(event -> {
+            if (viewModel.tests().run(ProviderTest.INFERENCE)) {
+                dialog.open(VerificationStage.INFERENCE);
+            }
+        });
         return test;
     }
 
@@ -134,7 +144,7 @@ final class ProviderSummaryCard {
                 .filter(chip -> chip.status() == StageStatus.PASSED && chip.elapsed() != null)
                 .ifPresent(chip -> parts.add(messages.get(
                         MessageKey.SETTINGS_SUMMARY_SPEED,
-                        StageChipRows.durationText(messages, Objects.requireNonNull(chip.elapsed())))));
+                        CheckSentences.durationText(messages, Objects.requireNonNull(chip.elapsed())))));
         final int offered = viewModel.modelListing().offered().size();
         if (offered > 0) {
             parts.add(messages.get(MessageKey.SETTINGS_SUMMARY_MODELS, offered));

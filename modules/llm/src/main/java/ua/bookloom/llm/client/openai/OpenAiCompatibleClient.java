@@ -47,7 +47,6 @@ import ua.bookloom.llm.response.ReplySanitizer;
 public final class OpenAiCompatibleClient implements ProviderClient {
     private static final String MODELS_PATH = "/models";
     private static final String CHAT_PATH = "/chat/completions";
-    private static final double NANOS_PER_SECOND = 1_000_000_000.0;
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
@@ -118,6 +117,29 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return chatWithParsedFormat(modelId, request);
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
+        }
+    }
+
+    @Override
+    public String requestBody(String modelId, ChatRequest request) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        try {
+            final Result<ParsedFormat> parsed = requestMapper.parseFormat(request.responseFormat(), modelId);
+            if (parsed.isErr()) {
+                return "";
+            }
+            final Result<String> body = requestMapper.serializeRequest(
+                    modelId,
+                    request,
+                    Objects.requireNonNull(parsed.data(), "parsed format").format());
+            return body.isErr() ? "" : Objects.requireNonNull(body.data(), "body");
+        } catch (RuntimeException failure) {
+            log.warn(
+                    "the request body of model {} could not be written: {}",
+                    modelId,
+                    failure.getClass().getSimpleName());
+            return "";
         }
     }
 
@@ -221,7 +243,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         logModelMismatch(requestedModel, decoded.model());
         final FinishReason finishReason =
                 finishReason(decoded.choices().getFirst().finishReason());
-        final TokenUsage usage = usage(decoded.usage(), decoded.stats(), elapsed);
+        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
         log.debug(
                 "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
                 config.baseUrl().getHost(),
@@ -231,26 +253,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 finishReason,
                 usage);
         return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
-    }
-
-    private static @Nullable TokenUsage usage(
-            OpenAiChatResponse.@Nullable Usage usage, OpenAiChatResponse.@Nullable Stats stats, Duration elapsed) {
-        if (usage == null || (usage.promptTokens() == null && usage.completionTokens() == null)) {
-            return null;
-        }
-        final Double generation = stats == null ? null : stats.generationTime();
-        final Double firstToken = stats == null ? null : stats.timeToFirstToken();
-        final OpenAiChatResponse.PromptTokensDetails details = usage.promptTokensDetails();
-        return new TokenUsage(
-                usage.promptTokens(),
-                usage.completionTokens(),
-                generation == null ? elapsed : seconds(generation),
-                firstToken == null ? null : seconds(firstToken),
-                details == null ? null : details.cachedTokens());
-    }
-
-    private static Duration seconds(double value) {
-        return Duration.ofNanos(Math.round(value * NANOS_PER_SECOND));
     }
 
     private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {

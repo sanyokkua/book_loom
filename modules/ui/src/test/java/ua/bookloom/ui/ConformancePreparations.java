@@ -94,6 +94,7 @@ final class ConformancePreparations {
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
             case PROVIDER_FORM_DIRTY -> new SettingsPreparations(injector).typeIntoTheForm();
             case PROVIDER_FOLD_OPEN -> new SettingsPreparations(injector).openTheFold();
+            case PROVIDER_TESTED -> new SettingsPreparations(injector).runTheInferenceTest();
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -19,6 +20,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.RefusedSetting;
@@ -41,6 +43,17 @@ class RefusalMemoryTest {
 
     // THEN the row gets (temperature, today, omitted) and the person's other choices stay.
     @Test
+    void remember_modelWithMeasuredSpeed_keepsSpeedAndSource() {
+        repository.save(ModelSettings.defaults(PROVIDER, MODEL).withMeasuredSpeed(1.2, MeasuredFrom.RUN));
+
+        memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
+
+        final ModelSettings found = cache.current(PROVIDER, MODEL);
+        assertThat(found.measuredSecondsPerSegment()).isEqualTo(1.2);
+        assertThat(found.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+    }
+
+    @Test
     void remember_temperature_addsRowAndKeepsOtherSettings() {
         repository.save(new ModelSettings(
                 PROVIDER,
@@ -51,6 +64,7 @@ class RefusalMemoryTest {
                 512,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
+                null,
                 null));
 
         final boolean stored = memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
@@ -101,6 +115,7 @@ class RefusalMemoryTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
+                null,
                 null));
         memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
@@ -124,6 +139,7 @@ class RefusalMemoryTest {
                 withRow.maxOutput(),
                 withRow.outputField(),
                 List.of(),
+                null,
                 null));
 
         final ChatRequest kept = memory.withoutRemembered(request(0.2), cache.current(PROVIDER, MODEL));
@@ -142,9 +158,22 @@ class RefusalMemoryTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("frequency_penalty", DAY, "omitted")),
+                null,
                 null));
 
         assertThat(memory.remembered(cache.current(PROVIDER, MODEL))).isEmpty();
+    }
+
+    // IF remembering rewrote the whole record from an earlier read, THEN a speed stored in between would be lost.
+    @Test
+    void remember_speedAlreadyStored_keepsTheSpeed() {
+        repository.update(PROVIDER, MODEL, row -> row.withMeasuredSpeed(1.2, MeasuredFrom.TEST));
+
+        memory.remember(PROVIDER, MODEL, RejectedCapability.SEED);
+
+        final ModelSettings found = cache.current(PROVIDER, MODEL);
+        assertThat(found.measuredSecondsPerSegment()).isEqualTo(1.2);
+        assertThat(found.refused()).hasSize(1);
     }
 
     @Test
@@ -157,6 +186,12 @@ class RefusalMemoryTest {
 
             @Override
             public Result<ModelSettings> save(final ModelSettings settings) {
+                return Result.err(AppError.of(ErrorCode.internal, "Save failed", "The store is closed."));
+            }
+
+            @Override
+            public Result<ModelSettings> update(
+                    final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
                 return Result.err(AppError.of(ErrorCode.internal, "Save failed", "The store is closed."));
             }
 

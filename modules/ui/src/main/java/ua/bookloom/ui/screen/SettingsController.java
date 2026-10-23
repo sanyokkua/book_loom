@@ -25,12 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.LeaveDialog;
+import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderRow;
+import ua.bookloom.ui.state.ProviderSwitch;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
@@ -49,6 +51,8 @@ public final class SettingsController {
     private final Messages messages;
     private final LeaveDialog leaveDialog;
     private final ConfirmDialog confirm;
+    private final ProviderTestDialog testDialog;
+    private final ProviderSwitch providerSwitch;
     private final ActivityTracker activities;
     private ProviderRowList rowList;
     private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
@@ -88,6 +92,12 @@ public final class SettingsController {
     private Button providerDelete;
 
     @FXML
+    private Button formUse;
+
+    @FXML
+    private Label formUseReason;
+
+    @FXML
     private Label deleteReason;
 
     @FXML
@@ -116,6 +126,8 @@ public final class SettingsController {
      * @param messages the catalogue the built rows are worded from
      * @param leaveDialog the question asked before unsaved typing is dropped
      * @param confirm the question asked before a provider is deleted
+     * @param testDialog the card that shows what a test sent and got back
+     * @param providerSwitch what Use this one does
      * @param activities the model work under way, which keeps the provider in use from being deleted
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
@@ -127,24 +139,29 @@ public final class SettingsController {
             final Messages messages,
             final LeaveDialog leaveDialog,
             final ConfirmDialog confirm,
+            final ProviderTestDialog testDialog,
+            final ProviderSwitch providerSwitch,
             final ActivityTracker activities) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.leaveDialog = Objects.requireNonNull(leaveDialog, "leaveDialog");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
+        this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
+        this.providerSwitch = Objects.requireNonNull(providerSwitch, "providerSwitch");
         this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     @FXML
     void initialize() {
         log.debug("building the settings screen");
-        formView = new ProviderFormView(viewModel, form, messages);
+        formView = new ProviderFormView(viewModel, form, messages, testDialog);
         rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
         formBody.getChildren().setAll(formView.node());
         installTips();
         providerAdd.setOnAction(event -> guarded(viewModel::startAdding));
         providerDelete.setOnAction(event -> askDelete());
+        formUse.setOnAction(event -> providerSwitch.use());
         formCancel.setOnAction(event -> form.discard());
         formSave.setOnAction(event -> form.save(() -> log.debug("provider form saved")));
         showProviders();
@@ -163,6 +180,7 @@ public final class SettingsController {
     private void installTips() {
         Tips.install(messages, providerAdd, MessageKey.SETTINGS_PROVIDER_ADD_TIP);
         Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
+        Tips.install(messages, formUse, MessageKey.SETTINGS_PROVIDER_USE_TIP);
         Tips.install(messages, formCancel, MessageKey.SETTINGS_FORM_CANCEL_TIP);
         Tips.install(messages, formSave, MessageKey.SETTINGS_FORM_SAVE_TIP);
     }
@@ -191,7 +209,26 @@ public final class SettingsController {
                         observed));
         formBadge.managedProperty().bind(formBadge.visibleProperty());
         bindDelete();
+        bindUse(observed);
         bindEmptyState();
+    }
+
+    // Offered for a saved provider that is not in use; it is off while the form holds more than a typed model.
+    private void bindUse(final Observable[] observed) {
+        final BooleanBinding offered = Bindings.createBooleanBinding(
+                () -> !viewModel.adding().get()
+                        && !viewModel.editedProviderId().get().isEmpty()
+                        && !viewModel
+                                .editedProviderId()
+                                .get()
+                                .equals(viewModel.selectedProviderId().get()),
+                observed);
+        formUse.visibleProperty().bind(offered);
+        formUse.managedProperty().bind(offered);
+        formUse.disableProperty().bind(form.canUseThis().not().or(form.saving()));
+        final BooleanBinding blockedByChanges = offered.and(form.canUseThis().not());
+        formUseReason.visibleProperty().bind(blockedByChanges);
+        formUseReason.managedProperty().bind(blockedByChanges);
     }
 
     private void bindDelete() {

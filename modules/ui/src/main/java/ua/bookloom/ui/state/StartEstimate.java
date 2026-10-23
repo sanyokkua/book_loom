@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -26,18 +27,30 @@ public sealed interface StartEstimate {
      * A time measured on this computer.
      *
      * @param forBook the time the book is expected to take at the chosen quality, not rounded
+     * @param source where the speed it is worked out from was measured
      */
-    record Measured(Duration forBook) implements StartEstimate {
+    record Measured(Duration forBook, MeasuredFrom source) implements StartEstimate {
 
-        /** Rejects a missing time. */
+        /** Rejects a missing time or source. */
         public Measured {
             Objects.requireNonNull(forBook, "forBook");
+            Objects.requireNonNull(source, "source");
         }
 
         @Override
         public List<String> lines(final Messages messages) {
-            return List.of(messages.get(
-                    MessageKey.ESTIMATE_MEASURED, DurationText.about(messages, TimeLeftShaper.round(forBook))));
+            final MessageKey line =
+                    source == MeasuredFrom.RUN ? MessageKey.ESTIMATE_MEASURED_RUN : MessageKey.ESTIMATE_MEASURED;
+            return List.of(messages.get(line, DurationText.about(messages, TimeLeftShaper.round(forBook))));
+        }
+
+        /**
+         * The hover explanation of the line, which says where the speed was measured.
+         *
+         * @return the key of the explanation
+         */
+        public MessageKey tip() {
+            return source == MeasuredFrom.RUN ? MessageKey.ESTIMATE_MEASURED_RUN_TIP : MessageKey.ESTIMATE_MEASURED_TIP;
         }
     }
 

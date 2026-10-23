@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
@@ -68,6 +69,28 @@ public final class ModelSettingsCache {
             remember(settings.providerId() + '\u0000' + settings.modelId(), settings);
         }
         return saved;
+    }
+
+    /**
+     * Changes a model's settings as one step in the store.
+     *
+     * @param providerId the provider's id; non-null
+     * @param modelId the model's id; non-null
+     * @param change maps what is stored (or the defaults) to what to keep; non-null
+     * @return the repository's answer
+     */
+    Result<ModelSettings> update(
+            final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(change, "change");
+        final Result<ModelSettings> updated = repository.update(providerId, modelId, change);
+        log.debug("Model settings update providerId={} modelId={} ok={}", providerId, modelId, updated.isOk());
+        final ModelSettings kept = updated.data();
+        if (kept != null) {
+            remember(providerId + '\u0000' + modelId, kept);
+        }
+        return updated;
     }
 
     private void remember(final String key, final ModelSettings settings) {

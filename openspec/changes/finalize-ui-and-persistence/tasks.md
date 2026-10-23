@@ -972,7 +972,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     the form; at 960×640 Save is visible without scrolling (README "Settings"); rewrite the existing Settings screen
     tests for the new layout.
   - Edit FR-SETTINGS-01 and the saving rule (new). → :ui, docs
-- [ ] 7.1b Add the provider checks, the test dialog and "Use this one", so a person can test an unsaved provider, see
+- [x] 7.1b Add the provider checks, the test dialog and "Use this one", so a person can test an unsaved provider, see
   what was sent and received, and switch providers safely.
   - **Satisfies:** settings "Check a provider in three stages and report each one"; settings "Show a check's details in
     a test dialog"; settings "Use one provider and ask first while the open project has stored decisions"; settings
@@ -1034,7 +1034,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     before Start only from a measured speed"; review-queue "Open the review desk by itself when a translation finishes";
     export "Run the final consistency pass before writing when it is switched on"; resume "Pause for review as the
     review mode says"; app-shell "Match the reference rendering"; settings "Show all six settings areas, every one
-    enabled"
+    enabled"; settings "Store the speed the inference test measured on the model" (the end-of-run
+    writer, scenario "A translation's own speed replaces the test's")
   - **Automation:** "When to stop and ask you", default quality, open the desk when a translation finishes, the
     last-check default, keep the computer awake, reopen the last project.
   - **Storage & logs:**

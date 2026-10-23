@@ -291,6 +291,7 @@ class GatedChatModelRefusedSettingTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted")),
+                null,
                 null));
         stubSequence(kind, chatPath, ok());
 

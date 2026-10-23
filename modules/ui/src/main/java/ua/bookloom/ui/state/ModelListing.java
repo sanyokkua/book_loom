@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -20,6 +21,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
+import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastOccasion;
@@ -59,7 +61,7 @@ public final class ModelListing {
      */
     private long epoch;
 
-    private @Nullable String inFlightProvider;
+    private @Nullable Object inFlightKey;
     private @Nullable Future<?> inFlight;
     private ActivityTracker.@Nullable Handle handle;
     private final ActivityTracker activities;
@@ -135,16 +137,32 @@ public final class ModelListing {
     public void refresh(final String providerId) {
         Objects.requireNonNull(providerId, "providerId");
         log.debug("model listing requested for provider '{}'", providerId);
-        if (listing.get() && providerId.equals(inFlightProvider)) {
-            log.debug("listing of '{}' already in flight, not asking again", providerId);
+        start(providerId, () -> catalog.listModels(providerId));
+    }
+
+    /**
+     * Asks the server a form describes for its models, saved or not. Behaves as {@link #refresh(String)}, with the
+     * description in place of the id: a request for the same description is not stacked, a different one replaces it.
+     *
+     * @param draft the description to list; nothing is registered or stored
+     */
+    public void refresh(final ProviderConfig draft) {
+        Objects.requireNonNull(draft, "draft");
+        log.debug("model listing requested for the description of '{}'", draft.id());
+        start(draft, () -> catalog.listModels(draft));
+    }
+
+    private void start(final Object key, final Supplier<Result<List<ModelInfo>>> ask) {
+        if (listing.get() && key.equals(inFlightKey)) {
+            log.debug("the same listing is already in flight, not asking again");
             return;
         }
         cancelInFlight();
         epoch++;
-        inFlightProvider = providerId;
+        inFlightKey = key;
         listing.set(true);
         handle = activities.begin(ActivityKind.MODEL_LISTING, this::stop);
-        submit(providerId, epoch);
+        submit(ask, epoch);
     }
 
     /** Stops the listing in flight, as the title bar's Stop asks; the list on show stays. FX thread only. */
@@ -152,7 +170,7 @@ public final class ModelListing {
         log.debug("the model listing in flight is stopped");
         cancelInFlight();
         epoch++;
-        inFlightProvider = null;
+        inFlightKey = null;
         listing.set(false);
     }
 
@@ -164,34 +182,31 @@ public final class ModelListing {
         log.debug("model listing discarded, {} id(s) forgotten", offered.size());
         cancelInFlight();
         epoch++;
-        inFlightProvider = null;
+        inFlightKey = null;
         offered.clear();
         noListObtained.set(false);
         refusal.set("");
         listing.set(false);
     }
 
-    private void submit(final String providerId, final long requested) {
+    private void submit(final Supplier<Result<List<ModelInfo>>> ask, final long requested) {
         try {
-            inFlight = executor.submit(() -> listOffThread(providerId, requested));
+            inFlight = executor.submit(() -> listOffThread(ask, requested));
         } catch (RuntimeException rejected) {
             log.error("the model listing could not be submitted", rejected);
             publish(requested, Result.err(internalError(rejected)));
         }
     }
 
-    private void listOffThread(final String providerId, final long requested) {
-        log.debug(
-                "listing models of '{}' on {}",
-                providerId,
-                Thread.currentThread().getName());
-        final Result<List<ModelInfo>> result = listGuarded(providerId);
+    private void listOffThread(final Supplier<Result<List<ModelInfo>>> ask, final long requested) {
+        log.debug("listing models on {}", Thread.currentThread().getName());
+        final Result<List<ModelInfo>> result = listGuarded(ask);
         Platform.runLater(() -> publish(requested, result));
     }
 
-    private Result<List<ModelInfo>> listGuarded(final String providerId) {
+    private Result<List<ModelInfo>> listGuarded(final Supplier<Result<List<ModelInfo>>> ask) {
         try {
-            return catalog.listModels(providerId);
+            return ask.get();
         } catch (Throwable thrown) {
             log.error("the model catalogue threw instead of returning a result", thrown);
             return Result.err(internalError(thrown));
@@ -213,7 +228,7 @@ public final class ModelListing {
             return;
         }
         listing.set(false);
-        inFlightProvider = null;
+        inFlightKey = null;
         settle();
         final AppError failure = result.error();
         if (failure == null) {

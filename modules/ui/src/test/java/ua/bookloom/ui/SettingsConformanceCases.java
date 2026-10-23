@@ -59,5 +59,24 @@ final class SettingsConformanceCases {
                     Overlay.UNSAVED_PROVIDER,
                     List.of(
                             new Part("#unsaved-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#unsaved-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))));
+                            new Part("#unsaved-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // A passing test is told by the success tint and its figures by the strong text role on divided rows.
+            new Screen(
+                    "SETTINGS_TEST_DIALOG",
+                    ViewNames.SETTINGS,
+                    Preparation.PROVIDER_TESTED,
+                    Overlay.TEST_DIALOG,
+                    List.of(
+                            new Part("#test-verdict", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
+                            new Part("#test-verdict", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
+                            new Part("#test-metric-time", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
+                            new Part("#test-metrics .kv", Kind.BORDER, "divider", "#eae4d8", "#3c4a51"),
+                            new Part("#test-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+            new Screen(
+                    "SETTINGS_SWITCH_DIALOG",
+                    ViewNames.SETTINGS,
+                    Overlay.SWITCH_PROVIDER,
+                    List.of(
+                            new Part("#switch-provider-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#switch-provider-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))));
 }

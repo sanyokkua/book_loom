@@ -160,8 +160,12 @@ A dialog of short work whose result needs a decision stays open after its work e
 - **What it replaces:** the window in `RunClock` and the percentage in `RunFigures`. Segment counts stay in
   `RunFigures` for the text lines ("74 of 142 segments done"). `ThroughputMeter` stays.
 - **Estimates before Start** come only from a measured speed in seconds per segment
-  (`ModelSettings.measuredSecondsPerSegment`). Two writers set it: the Settings inference test (seconds for its one
-  segment) and the end of every run (the run's draft time divided by its drafted segments). Nothing else estimates.
+  (`ModelSettings.measuredSecondsPerSegment`, with `measuredFrom`). Two writers set it: the Settings inference test
+  (the inference stage's wall-clock seconds, rounded to 0.1 s and not below 0.1, taken as one segment, `measuredFrom` =
+  TEST; only for a stored provider with a model) and the end of every run (the run's draft time divided by its drafted
+  segments, `measuredFrom` = RUN). The last measurement wins, and the estimate names its source. Nothing else estimates.
+  The inference test's seconds cover every call the stage made, including the plain-text fallback after a structured
+  reply was refused, so a model that refuses the structured probe reads slower than its steady pace.
 - **After a restart** the ledger is rebuilt from the stored segment decisions: decided segments count as done draft
   steps, the check steps of chunks whose segments are all decided count as done, the rest as planned; time left stays hidden until the new run has measured its own steps. The ledger itself
   is not stored.
@@ -435,11 +439,17 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   the look uses `127.0.0.1`.
 - **Per-model settings.** `api.llm.ModelSettings(providerId, modelId, TemperatureChoice choice, @Nullable Double value,
   @Nullable Integer contextWindow, @Nullable Integer maxOutput, OutputLengthField field, List<RefusedSetting> refused,
-  @Nullable Double measuredSecondsPerSegment)`. `RefusedSetting` is `(name, at, insteadDid)`. "Send again" removes a
+  @Nullable Double measuredSecondsPerSegment, @Nullable MeasuredFrom measuredFrom)` (`measuredFrom` is null exactly when
+  the speed is). `RefusedSetting` is `(name, at, insteadDid)`. `VerificationExchange` also carries the prompt and
+  completion token counts the server reported, which the test dialog's Tokens row shows. "Send again" removes a
   refusal.
 - **The key.** It is never stored: `credentialRef` is a variable name, and a header value that looks like a credential
   must be `${env:NAME}`. The header and key values are resolved in `HttpExchange` just before the request and never
   logged.
+- **What the test dialog's figures mean.** "First token" is the server's prompt-evaluation time (Ollama reports it; an
+  OpenAI-compatible server shows a dash), not a streamed time to first token, because chat is read whole. "Status" is
+  the HTTP status carried in a failed stage's safe details; "No answer" is shown only when nothing came back, and a
+  dash when a failure carries no status.
 
 ### D14 — First-launch look (ADR-0044)
 

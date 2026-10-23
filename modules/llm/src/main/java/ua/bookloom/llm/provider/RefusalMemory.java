@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -28,8 +27,6 @@ public final class RefusalMemory {
 
     private final ModelSettingsCache cache;
     private final Clock clock;
-    // Only the keys serialise writers: a read-modify-write of one model's record runs inside compute() on its key.
-    private final ConcurrentHashMap<String, Boolean> writing = new ConcurrentHashMap<>();
 
     @Inject
     public RefusalMemory(final ModelSettingsCache cache) {
@@ -90,32 +87,7 @@ public final class RefusalMemory {
         Objects.requireNonNull(providerId, "providerId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(setting, "setting");
-        final boolean[] stored = {false};
-        writing.compute(providerId + '\u0000' + modelId, (key, ignored) -> {
-            stored[0] = store(providerId, modelId, setting);
-            return Boolean.TRUE;
-        });
-        return stored[0];
-    }
-
-    private boolean store(final String providerId, final String modelId, final RejectedCapability setting) {
-        final ModelSettings current = cache.current(providerId, modelId);
-        if (remembered(current).contains(setting)) {
-            log.debug("Refusal already remembered providerId={} modelId={} setting={}", providerId, modelId, setting);
-            return true;
-        }
-        final List<RefusedSetting> rows = new ArrayList<>(current.refused());
-        rows.add(new RefusedSetting(setting.settingName(), LocalDate.now(clock), setting.insteadDid()));
-        final Result<ModelSettings> saved = cache.save(new ModelSettings(
-                current.providerId(),
-                current.modelId(),
-                current.temperatureChoice(),
-                current.temperature(),
-                current.contextWindow(),
-                current.maxOutput(),
-                current.outputField(),
-                rows,
-                current.measuredSecondsPerSegment()));
+        final Result<ModelSettings> saved = cache.update(providerId, modelId, current -> withRefusal(current, setting));
         if (saved.isErr()) {
             log.warn(
                     "Refused setting not remembered providerId={} modelId={} setting={} code={}",
@@ -125,6 +97,27 @@ public final class RefusalMemory {
                     errorCode(saved));
         }
         return saved.isOk();
+    }
+
+    // Runs inside the store's single step, so a speed stored at the same moment is not overwritten.
+    private ModelSettings withRefusal(final ModelSettings current, final RejectedCapability setting) {
+        if (remembered(current).contains(setting)) {
+            log.debug("Refusal already remembered providerId={} setting={}", current.providerId(), setting);
+            return current;
+        }
+        final List<RefusedSetting> rows = new ArrayList<>(current.refused());
+        rows.add(new RefusedSetting(setting.settingName(), LocalDate.now(clock), setting.insteadDid()));
+        return new ModelSettings(
+                current.providerId(),
+                current.modelId(),
+                current.temperatureChoice(),
+                current.temperature(),
+                current.contextWindow(),
+                current.maxOutput(),
+                current.outputField(),
+                rows,
+                current.measuredSecondsPerSegment(),
+                current.measuredFrom());
     }
 
     private static @org.jspecify.annotations.Nullable ErrorCode errorCode(final Result<ModelSettings> saved) {

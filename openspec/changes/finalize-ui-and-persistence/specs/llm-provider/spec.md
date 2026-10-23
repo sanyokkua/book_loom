@@ -49,6 +49,11 @@ The system SHALL NOT write a key or a resolved header value to a log line at any
 - **WHEN** the test dialog shows a request to a provider whose Bearer key is `sk-test-123`
 - **THEN** the displayed headers read `Authorization: Bearer ••••` and the log contains no `sk-test-123`
 
+#### Scenario: Copy as curl carries the mask
+
+- **WHEN** Copy as curl is used for that request
+- **THEN** the copied command contains `-H 'Authorization: Bearer ••••'` and no key value
+
 ### Requirement: Look once for a local AI program at first launch
 
 WHERE the application runs in the desktop window, WHEN it starts for the first time or for the first time after a fresh database, the system SHALL ask exactly `http://127.0.0.1:11434` (`/api/tags`) and `http://127.0.0.1:1234/v1` (`/models`) for their model lists with a 1 second connect timeout, SHALL send no other request and no inference, SHALL record that the look happened whatever it found, and SHALL NOT look again by itself.

@@ -132,7 +132,7 @@ class OpenAiCompatibleClientOutputFieldTest {
     private static ModelSettings settings(
             @Nullable Integer window, @Nullable Integer maxOutput, OutputLengthField field) {
         return new ModelSettings(
-                "lmstudio", MODEL, TemperatureChoice.CHOOSE, null, window, maxOutput, field, List.of(), null);
+                "lmstudio", MODEL, TemperatureChoice.CHOOSE, null, window, maxOutput, field, List.of(), null, null);
     }
 
     private static ChatRequest request(@Nullable Integer cap) {

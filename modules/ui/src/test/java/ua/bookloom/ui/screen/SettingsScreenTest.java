@@ -231,8 +231,10 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         verifier.awaitEntered();
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(verifier.connectionCalls()).containsExactly("ollama");
-        assertThat(verifier.selections()).isEmpty();
+        assertThat(verifier.drafts())
+                .extracting(call -> call.config().id(), call -> call.modelId(), call -> call.policy())
+                .containsExactly(tuple("ollama", "", VerificationPolicy.CONNECTION));
+        assertThat(verifier.connectionCalls()).isEmpty();
     }
 
     // IF a control were not wired to the view model, THEN choosing a model would not enable it, and firing it would

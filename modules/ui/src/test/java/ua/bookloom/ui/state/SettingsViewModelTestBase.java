@@ -9,6 +9,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
@@ -24,6 +25,7 @@ import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /**
@@ -43,6 +45,12 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     final FakeProviderConfigs configs = new FakeProviderConfigs();
     final MemorySettings settings = new MemorySettings();
     final ActivityTracker activities = new ActivityTracker(new StateMirror());
+    final ScriptedModelSettings modelSettings = new ScriptedModelSettings();
+    final ModelSpeeds speeds = new ModelSpeeds();
+    final MemorySettings detailSettings = new MemorySettings();
+    final TechnicalDetails technical = new TechnicalDetails(detailSettings, Runnable::run, Runnable::run);
+    private @Nullable SettingsViewModel formOwner;
+    private @Nullable ProviderForm formOfOwner;
 
     @Override
     public final void start(final Stage stage) {
@@ -110,9 +118,29 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
                 executor,
                 activities,
                 settings,
-                EnglishMessages.create()));
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(modelSettings, speeds, executor)));
         awaitProvidersLoaded();
+        form(built);
         return built;
+    }
+
+    /** The one Providers form over a view model; the view model's test subject follows it, as in the window. */
+    ProviderForm form(final SettingsViewModel viewModel) {
+        ProviderForm form = formOfOwner;
+        if (formOwner != viewModel || form == null) {
+            form = onFx(() -> new ProviderForm(
+                    viewModel,
+                    configs,
+                    modelSettings,
+                    settings,
+                    name -> "OFFICE_KEY".equals(name),
+                    technical,
+                    executor));
+            formOwner = viewModel;
+            formOfOwner = form;
+        }
+        return form;
     }
 
     /** The provider read is the first task the pool runs; wait for it so a test counts only its own checks. */

@@ -35,11 +35,13 @@ public final class StartEstimates {
      * @return a measured time for the book when a speed is stored, else the relative costs
      */
     public static StartEstimate of(
-            final Supplier<Optional<Double>> measuredSecondsPerSegment, final int segments, final QualityDial dial) {
+            final Supplier<Optional<ModelSpeed>> measuredSecondsPerSegment,
+            final int segments,
+            final QualityDial dial) {
         Objects.requireNonNull(measuredSecondsPerSegment, "measuredSecondsPerSegment");
         Objects.requireNonNull(dial, "dial");
-        final Optional<Double> speed = measuredSecondsPerSegment.get();
-        if (speed.isEmpty() || speed.get() <= 0 || segments <= 0) {
+        final Optional<ModelSpeed> speed = measuredSecondsPerSegment.get();
+        if (speed.isEmpty() || speed.get().seconds() <= 0 || segments <= 0) {
             log.debug("start estimate: no measured speed or no segments, showing the relative cost");
             return new StartEstimate.Relative();
         }
@@ -49,8 +51,14 @@ public final class StartEstimates {
                     case BALANCED -> BALANCED_FACTOR;
                     case MAX -> MAX_FACTOR;
                 };
-        final Duration book = Duration.ofMillis(Math.round(segments * speed.get() * factor * MILLIS_PER_SECOND));
-        log.debug("start estimate: {} segments at {} s each, {} -> {}", segments, speed.get(), dial, book);
-        return new StartEstimate.Measured(book);
+        final Duration book =
+                Duration.ofMillis(Math.round(segments * speed.get().seconds() * factor * MILLIS_PER_SECOND));
+        log.debug(
+                "start estimate: {} segments at {} s each, {} -> {}",
+                segments,
+                speed.get().seconds(),
+                dial,
+                book);
+        return new StartEstimate.Measured(book, speed.get().from());
     }
 }

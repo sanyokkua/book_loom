@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
@@ -56,6 +57,8 @@ public final class ProviderForm {
             new ReadOnlyObjectWrapper<>(ProviderDraft.CredentialStatus.NONE);
     private final ProviderFoldState fold;
     private final ProviderFormFlags flags = new ProviderFormFlags();
+    private final ProviderFormCurrent current;
+    private final ReadOnlyBooleanWrapper canUseThis = new ReadOnlyBooleanWrapper(false);
     private ProviderDraft baseline = draft.get();
 
     // Set while the form itself changes the view model's model text, so the echo is not taken for typing.
@@ -86,6 +89,7 @@ public final class ProviderForm {
                 Objects.requireNonNull(configs, "configs"),
                 Objects.requireNonNull(modelSettings, "modelSettings"),
                 Objects.requireNonNull(settings, "settings"));
+        this.current = new ProviderFormCurrent(viewModel, storage, executor, flags);
         this.environment = Objects.requireNonNull(environment, "environment");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.fold = new ProviderFoldState(viewModel, Objects.requireNonNull(technical, "technical"));
@@ -213,7 +217,7 @@ public final class ProviderForm {
         }
         final ProviderDraft typed = draft.get();
         final boolean adding = viewModel.adding().get();
-        final String id = idToSave(typed, adding);
+        final String id = ProviderDrafts.idToSave(viewModel, typed, adding);
         final Result<ProviderConfig> built = id.isEmpty() ? null : typed.toConfig(id);
         if (built == null || built.isErr()) {
             flags.errorsShown.set(true);
@@ -229,16 +233,8 @@ public final class ProviderForm {
         executor.execute(() -> {
             final Result<Boolean> stored =
                     storage.persist(config, current ? typed.model().strip() : null);
-            onFx(() -> saved(stored, new Saved(id, adding, current, typed), then));
+            onFx(() -> saved(stored, new ProviderSaved(id, adding, current, typed), then));
         });
-    }
-
-    private String idToSave(final ProviderDraft typed, final boolean adding) {
-        final List<String> taken =
-                viewModel.providers().stream().map(ProviderRow::id).toList();
-        return adding
-                ? ProviderIds.newId(typed.name(), taken)
-                : viewModel.editedProviderId().get();
     }
 
     /** Drops the typing: a new provider is abandoned, an existing one shows what is saved. */
@@ -265,20 +261,45 @@ public final class ProviderForm {
     public void delete(final String id, final Runnable then) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(then, "then");
-        final boolean current = id.equals(viewModel.selectedProviderId().get());
-        log.info("deleting provider '{}', current {}", id, current);
-        flags.saving.set(true);
-        executor.execute(() -> {
-            final boolean removed = storage.remove(id, current);
-            onFx(() -> deleted(removed, current, then));
-        });
+        current.delete(id, then);
     }
 
-    private record Saved(String id, boolean adding, boolean current, ProviderDraft typed) {}
+    /** Whether Use this one may be pressed: a saved provider is open and only its model was typed. */
+    public ReadOnlyBooleanProperty canUseThis() {
+        return canUseThis.getReadOnlyProperty();
+    }
 
-    private void saved(final Result<Boolean> stored, final Saved done, final Runnable then) {
+    /** Makes the open provider and its typed model current; ignored unless {@link #canUseThis()} and not saving. */
+    public void useThis(final Runnable then) {
+        Objects.requireNonNull(then, "then");
+        useThis(viewModel.editedProviderId().get(), draft.get().model().strip(), then);
+    }
+
+    /** Makes a provider chosen earlier current even if another row was opened since. */
+    public void useThis(final String providerId, final String model, final Runnable then) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(then, "then");
+        final boolean stillOpen = providerId.equals(viewModel.editedProviderId().get());
+        if (flags.saving.get() || (stillOpen && !canUseThis.get())) {
+            log.debug("use this one ignored: saving {}, open {}", flags.saving.get(), stillOpen);
+            return;
+        }
+        log.info("making '{}' current", providerId);
+        current.use(new ModelSelection(providerId, model), stillOpen ? () -> keepModel(model) : () -> {}, then);
+    }
+
+    // What was typed for the model is now what is stored, so the form is clean.
+    private void keepModel(final String model) {
+        baseline = baseline.withModel(model);
+        draft.set(draft.get().withModel(model));
+        showModel(model);
+        recompute();
+    }
+
+    private void saved(final Result<Boolean> stored, final ProviderSaved done, final Runnable then) {
         if (stored.isErr()) {
-            failed("provider '" + done.id() + "' was not saved");
+            flags.failed("provider '" + done.id() + "' was not saved");
             return;
         }
         log.info("provider '{}' saved", done.id());
@@ -297,15 +318,9 @@ public final class ProviderForm {
         });
     }
 
-    private void failed(final String what) {
-        log.warn("provider storage failed: {}", what);
-        flags.saving.set(false);
-        flags.saveFailed.set(true);
-    }
-
     // What the registry now holds is the baseline, and the form shows it, so stray spaces typed in a field do not
     // leave the form dirty after a good save.
-    private void showStored(final Saved done) {
+    private void showStored(final ProviderSaved done) {
         final String model =
                 done.current() ? done.typed().model().strip() : done.typed().model();
         final ProviderDraft stored = ProviderDrafts.stored(viewModel, done.id(), model, done.typed());
@@ -313,21 +328,6 @@ public final class ProviderForm {
         draft.set(stored);
         showModel(model);
         recompute();
-    }
-
-    private void deleted(final boolean removed, final boolean current, final Runnable then) {
-        if (!removed) {
-            failed("a provider could not be deleted");
-            viewModel.reloadProviders();
-            return;
-        }
-        if (current) {
-            viewModel.forgetCurrent();
-        }
-        viewModel.reloadProviders(() -> {
-            flags.saving.set(false);
-            then.run();
-        });
     }
 
     private void loadDraft() {
@@ -384,6 +384,8 @@ public final class ProviderForm {
         viewModel.formDirty(dirty.get());
         findings.set(now.findings());
         credentialStatus.set(now.credentialStatus(environment));
+        canUseThis.set(ProviderDrafts.canUse(viewModel, now, baseline));
+        ProviderDrafts.publishSubject(viewModel, draft::get, () -> baseline);
     }
 
     private static void onFx(final Runnable action) {

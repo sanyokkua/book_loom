@@ -44,7 +44,9 @@ final class ConformanceCases {
         RESULTS,
         REVIEW_DESK,
         DELETE_PROVIDER,
-        UNSAVED_PROVIDER
+        UNSAVED_PROVIDER,
+        TEST_DIALOG,
+        SWITCH_PROVIDER
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -72,7 +74,8 @@ final class ConformanceCases {
         PROJECTS_LISTED,
         PROJECTS_EMPTY,
         PROVIDER_FORM_DIRTY,
-        PROVIDER_FOLD_OPEN
+        PROVIDER_FOLD_OPEN,
+        PROVIDER_TESTED
     }
 
     /**
