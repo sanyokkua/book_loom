@@ -16,6 +16,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
@@ -110,7 +111,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 activities,
-                new MemorySettings());
+                new MemorySettings(),
+                EnglishMessages.create());
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */

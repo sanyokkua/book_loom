@@ -50,7 +50,7 @@ class SettingsViewModelAdviceTest extends SettingsViewModelTestBase {
         final SettingsViewModel viewModel = viewModel();
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
 
@@ -61,7 +61,7 @@ class SettingsViewModelAdviceTest extends SettingsViewModelTestBase {
     void modelNotes_lmStudioWithGptOss_hasTheModelNoteThenTheServerNote() {
         final SettingsViewModel viewModel = viewModel();
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
 
@@ -75,13 +75,13 @@ class SettingsViewModelAdviceTest extends SettingsViewModelTestBase {
     void modelNotes_providerChangedBackToOllama_dropsTheServerAndModelNotes() {
         final SettingsViewModel viewModel = viewModel();
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
         choose(viewModel, "google/gemma-4-26b");
 
         onFx(() -> {
-            viewModel.selectProvider("ollama");
+            viewModel.editProvider("ollama");
             return null;
         });
 

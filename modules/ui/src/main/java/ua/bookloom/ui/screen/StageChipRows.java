@@ -77,6 +77,11 @@ final class StageChipRows {
     }
 
     private String durationOf(final Duration elapsed) {
+        return durationText(messages, elapsed);
+    }
+
+    /** A measured time as a person reads it: milliseconds below a second, else seconds with one decimal. */
+    static String durationText(final Messages messages, final Duration elapsed) {
         final long millis = elapsed.toMillis();
         return millis < MILLIS_PER_SECOND
                 ? messages.get(MessageKey.SETTINGS_DURATION_MS, millis)

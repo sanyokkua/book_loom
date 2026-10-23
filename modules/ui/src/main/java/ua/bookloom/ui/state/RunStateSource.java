@@ -217,7 +217,7 @@ public final class RunStateSource {
 
     private ModelChoice modelChoice() {
         final String providerId = settings.selectedProviderId().get();
-        final String provider = providerId.isEmpty() ? "" : ProviderNames.displayName(messages, providerId);
+        final String provider = providerId.isEmpty() ? "" : settings.providerName(providerId);
         return new ModelChoice(
                 provider, settings.model().get().strip(), settings.selection().isPresent());
     }

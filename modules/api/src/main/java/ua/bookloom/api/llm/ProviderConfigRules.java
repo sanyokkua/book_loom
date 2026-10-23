@@ -33,18 +33,54 @@ public interface ProviderConfigRules {
     /** Lower-case fragments that make a header name credential-like. */
     List<String> CREDENTIAL_NAME_PARTS = List.of("authorization", "key", "token", "secret");
 
+    /** Which rule a finding came from, so a screen can word it in the person's language. */
+    enum Rule {
+        /** The base URL is not an absolute HTTP or HTTPS address. */
+        BASE_URL_INVALID,
+        /** A connect or request timeout is zero or negative. */
+        TIMEOUT_NOT_POSITIVE,
+        /** An Ollama provider overrides the chat path. */
+        OLLAMA_CHAT_PATH,
+        /** A credential-like header carries a literal value instead of {@code ${env:NAME}}. */
+        CREDENTIAL_HEADER_LITERAL,
+        /** The sign-in reference is not an environment variable name. */
+        CREDENTIAL_REF_NOT_A_NAME,
+        /** Sign-in is on but no environment variable name is given. */
+        CREDENTIAL_REF_MISSING,
+        /** An API-key sign-in names no header. */
+        API_KEY_HEADER_MISSING,
+        /** An OpenAI-compatible address does not end in {@code /v1} (advice only). */
+        V1_SUFFIX_MISSING
+    }
+
+    /**
+     * One thing a rule found, kept apart from the English text of {@link Check#errors()}.
+     *
+     * @param rule the rule that fired
+     * @param subject the header name the finding is about, or null; never a value
+     */
+    record Finding(Rule rule, @Nullable String subject) {
+
+        /** Rejects a missing rule. */
+        public Finding {
+            Objects.requireNonNull(rule, "rule");
+        }
+    }
+
     /**
      * What the rules found.
      *
      * @param errors the refusals; empty when the description may be saved
      * @param warnings short advice that does not stop a save
+     * @param findings the same refusals and advice as rules, in the order found
      */
-    record Check(List<AppError> errors, List<String> warnings) {
+    record Check(List<AppError> errors, List<String> warnings, List<Finding> findings) {
 
-        /** Copies both lists. */
+        /** Copies the lists. */
         public Check {
             errors = List.copyOf(Objects.requireNonNull(errors, "errors"));
             warnings = List.copyOf(Objects.requireNonNull(warnings, "warnings"));
+            findings = List.copyOf(Objects.requireNonNull(findings, "findings"));
         }
 
         /**
@@ -67,33 +103,41 @@ public interface ProviderConfigRules {
         Objects.requireNonNull(config, "config");
         final List<AppError> errors = new ArrayList<>();
         final List<String> warnings = new ArrayList<>();
-        checkEndpoint(config, errors, warnings);
-        checkTimeouts(config, errors);
-        checkOverrides(config, errors);
-        checkHeaders(config.headers(), errors);
-        checkSignIn(config, errors);
-        return new Check(errors, warnings);
+        final List<Finding> findings = new ArrayList<>();
+        checkEndpoint(config, errors, warnings, findings);
+        checkTimeouts(config, errors, findings);
+        checkOverrides(config, errors, findings);
+        checkHeaders(config.headers(), errors, findings);
+        checkSignIn(config, errors, findings);
+        return new Check(errors, warnings, findings);
     }
 
     private static void checkEndpoint(
-            final ProviderConfig config, final List<AppError> errors, final List<String> warnings) {
+            final ProviderConfig config,
+            final List<AppError> errors,
+            final List<String> warnings,
+            final List<Finding> findings) {
         final URI url = config.baseUrl();
         final String scheme = url.getScheme();
         final boolean http = scheme != null && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"));
         if (!url.isAbsolute() || !http || url.getHost() == null) {
             errors.add(validation("The provider base URL must be an absolute HTTP or HTTPS URL."));
+            findings.add(new Finding(Rule.BASE_URL_INVALID, null));
             return;
         }
         final String path = url.getPath() == null ? "" : url.getPath();
         if (config.kind() == ProviderKind.OPENAI_COMPATIBLE
                 && !V1_SUFFIX.matcher(path).find()) {
             warnings.add("An OpenAI-compatible address usually ends with /v1.");
+            findings.add(new Finding(Rule.V1_SUFFIX_MISSING, null));
         }
     }
 
-    private static void checkTimeouts(final ProviderConfig config, final List<AppError> errors) {
+    private static void checkTimeouts(
+            final ProviderConfig config, final List<AppError> errors, final List<Finding> findings) {
         if (!isPositive(config.connectTimeout()) || !isPositive(config.requestTimeout())) {
             errors.add(validation("Provider connect and request timeouts must both be positive."));
+            findings.add(new Finding(Rule.TIMEOUT_NOT_POSITIVE, null));
         }
     }
 
@@ -101,30 +145,36 @@ public interface ProviderConfigRules {
         return !value.isZero() && !value.isNegative();
     }
 
-    private static void checkOverrides(final ProviderConfig config, final List<AppError> errors) {
+    private static void checkOverrides(
+            final ProviderConfig config, final List<AppError> errors, final List<Finding> findings) {
         if (config.kind() == ProviderKind.OLLAMA && config.chatPath() != null) {
             errors.add(validation("An Ollama provider cannot override the chat path."));
+            findings.add(new Finding(Rule.OLLAMA_CHAT_PATH, null));
         }
     }
 
-    private static void checkHeaders(final Map<String, String> headers, final List<AppError> errors) {
+    private static void checkHeaders(
+            final Map<String, String> headers, final List<AppError> errors, final List<Finding> findings) {
         for (final Map.Entry<String, String> header : headers.entrySet()) {
             final String name = header.getKey().toLowerCase(Locale.ROOT);
             final boolean credentialLike = CREDENTIAL_NAME_PARTS.stream().anyMatch(name::contains);
             if (credentialLike && !ENV_REFERENCE.matcher(header.getValue()).matches()) {
                 errors.add(validation("The header " + header.getKey()
                         + " looks like a credential; give it as ${env:NAME}, the name of an environment variable."));
+                findings.add(new Finding(Rule.CREDENTIAL_HEADER_LITERAL, header.getKey()));
             }
         }
     }
 
-    private static void checkSignIn(final ProviderConfig config, final List<AppError> errors) {
+    private static void checkSignIn(
+            final ProviderConfig config, final List<AppError> errors, final List<Finding> findings) {
         final String reference = config.credentialRef();
         if (reference != null
                 && !reference.isBlank()
                 && !ENV_NAME.matcher(reference).matches()) {
             errors.add(validation("The sign-in reference must be the name of an environment variable (letters, digits"
                     + " and underscores, not starting with a digit), never the key itself."));
+            findings.add(new Finding(Rule.CREDENTIAL_REF_NOT_A_NAME, null));
             return;
         }
         if (config.auth() == ProviderAuth.NONE) {
@@ -132,9 +182,11 @@ public interface ProviderConfigRules {
         }
         if (isBlank(config.credentialRef())) {
             errors.add(missing("Sign-in needs the name of the environment variable that holds the key."));
+            findings.add(new Finding(Rule.CREDENTIAL_REF_MISSING, null));
         }
         if (config.auth() == ProviderAuth.API_KEY && isBlank(config.apiKeyHeader())) {
             errors.add(missing("An API-key sign-in needs the header name that carries the key."));
+            findings.add(new Finding(Rule.API_KEY_HEADER_MISSING, null));
         }
     }
 

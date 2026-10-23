@@ -2880,7 +2880,8 @@
 
 /* --- Import page: the "About this book" fold and the three-pane text browser (ui-mockup.html: .fold, .browser) --- */
 /* Modena paints a titled pane and a split pane from its own greys; every part is reset to roles so both blocks reach it. */
-.import-fold {
+.import-fold,
+.settings-fold {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 9px;
@@ -2890,7 +2891,8 @@
     -fx-padding: 0;
 }
 
-.import-fold > .title {
+.import-fold > .title,
+.settings-fold > .title {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-padding: 8px 12px 8px 12px;
@@ -2899,11 +2901,13 @@
     -fx-graphic-text-gap: 8px;
 }
 
-.import-fold > .title > .arrow-button > .arrow {
+.import-fold > .title > .arrow-button > .arrow,
+.settings-fold > .title > .arrow-button > .arrow {
     -fx-background-color: -color-muted;
 }
 
-.import-fold > .content {
+.import-fold > .content,
+.settings-fold > .content {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-border-color: -color-divider transparent transparent transparent;
@@ -2911,7 +2915,8 @@
     -fx-padding: 10px 14px 12px 14px;
 }
 
-.import-fold:focus-visible {
+.import-fold:focus-visible,
+.settings-fold:focus-visible {
     -fx-border-color: -color-focus, -color-border;
     -fx-border-width: 2px, 1px;
     -fx-border-insets: -3px, 0;
@@ -2931,4 +2936,104 @@
 
 .import-split:vertical > .split-pane-divider {
     -fx-padding: 4px 0 4px 0;
+}
+
+/* --- Settings › Providers: the list, the form card with its pinned footer, the summary card (ui-mockup.html: Settings) --- */
+.settings-list {
+    -fx-pref-width: 240px;
+    -fx-min-width: 240px;
+    -fx-max-width: 240px;
+}
+
+.shell-content:compact .settings-list {
+    -fx-pref-width: 200px;
+    -fx-min-width: 200px;
+    -fx-max-width: 200px;
+}
+
+/* The card scrolls its body only; the footer below the scroll stays where it is. */
+.form-scroll,
+.form-scroll:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.form-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.form-foot {
+    -fx-border-color: -color-divider transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 10px 0 0 0;
+}
+
+.form-foot .dirty {
+    -fx-text-fill: -color-warn-fg;
+    -fx-font-size: 12.5px;
+}
+
+.summary-card {
+    -fx-background-color: -color-ok-bg;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9px;
+    -fx-border-color: -color-ok-bd;
+    -fx-border-width: 1px;
+    -fx-border-radius: 9px;
+    -fx-padding: 12px 14px 12px 14px;
+}
+
+.summary-card-bad {
+    -fx-background-color: -color-err-bg;
+    -fx-border-color: -color-err-bd;
+}
+
+.form-errors {
+    -fx-background-color: -color-err-bg;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-err-bd;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-padding: 8px 12px 8px 12px;
+}
+
+.form-errors .label {
+    -fx-text-fill: -color-err-fg;
+    -fx-font-size: 12.5px;
+}
+
+.hint-warn {
+    -fx-text-fill: -color-warn-fg;
+    -fx-font-size: 12px;
+}
+
+.key-status-set {
+    -fx-text-fill: -color-ok-fg;
+    -fx-font-size: 12px;
+}
+
+.key-status-unset {
+    -fx-text-fill: -color-warn-fg;
+    -fx-font-size: 12px;
+}
+
+.w-num {
+    -fx-pref-width: 120px;
+    -fx-max-width: 120px;
+}
+
+.w-name {
+    -fx-pref-width: 360px;
+    -fx-max-width: 360px;
+}
+
+.w-url {
+    -fx-pref-width: 640px;
+    -fx-max-width: 640px;
+}
+
+.w-model {
+    -fx-pref-width: 480px;
+    -fx-max-width: 480px;
 }

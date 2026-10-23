@@ -12,6 +12,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
@@ -33,7 +34,8 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
                 errors,
                 executor,
                 activities,
-                new MemorySettings()));
+                new MemorySettings(),
+                EnglishMessages.create()));
         pool.awaitFinished(1);
         WaitForAsyncUtils.waitForFxEvents();
 

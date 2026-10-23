@@ -4,6 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.multibindings.Multibinder;
 import java.util.concurrent.ExecutorService;
+import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -68,6 +69,7 @@ import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.ProjectActionsImpl;
 import ua.bookloom.ui.state.ProjectOpener;
 import ua.bookloom.ui.state.ProjectsViewModel;
+import ua.bookloom.ui.state.ProviderFormDirtySource;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.state.RunInterventions;
@@ -112,6 +114,13 @@ public final class UiModule extends AbstractModule {
     /** Installed by the composition root in {@code :app}. */
     public UiModule() {
         // Guice modules are constructed, not injected.
+    }
+
+    // The forms that guard their unsaved changes register here: the Providers form (7.1a) reads the environment to
+    // tell whether a key is set; more forms follow in 7.2.
+    private void bindDirtySources() {
+        requireBinding(EnvironmentVariables.class);
+        Multibinder.newSetBinder(binder(), DirtySource.class).addBinding().to(ProviderFormDirtySource.class);
     }
 
     private void bindDialogs() {
@@ -185,8 +194,7 @@ public final class UiModule extends AbstractModule {
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
         bind(StepLocks.class).to(StepAvailability.class);
-        // No form guards its unsaved changes yet; the Settings forms register here (tasks 7.1a, 7.2).
-        Multibinder.newSetBinder(binder(), DirtySource.class);
+        bindDirtySources();
         bind(ProgressFigures.Factory.class).toInstance(LedgerFigures::new);
         bindDialogs();
         bindShell();

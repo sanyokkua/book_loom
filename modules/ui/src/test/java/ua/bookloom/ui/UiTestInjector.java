@@ -12,10 +12,12 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ContextLength;
@@ -74,27 +76,12 @@ public final class UiTestInjector {
     /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
     public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
 
-    /**
-     * Creates an injector over {@link UiModule} whose display locale is fixed, whose operating system always reports
-     * the light scheme, whose build version is {@value #DEV_VERSION}, whose {@link BackgroundExecutor} is two daemon
-     * threads, and whose every port is the idle test fake.
-     *
-     * @param locale the language every message renders in
-     * @return a fresh injector; never shares singletons with another call
-     */
+    /** A fresh injector over {@link UiModule} in this language, every port an idle test fake. */
     public static Injector create(final Locale locale) {
         return builder(locale).build();
     }
 
-    /**
-     * Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake: the two built-in
-     * provider presets, a verifier nobody is expected to ask, a catalogue that lists no models, a project service that
-     * answers every import with an error, an export service nobody is expected to ask, a model factory that hands out
-     * a model and an engine that refuses every job.
-     *
-     * @param locale the language every message renders in
-     * @return the builder
-     */
+    /** Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake. */
     public static Builder builder(final Locale locale) {
         return new Builder(Objects.requireNonNull(locale, "locale"));
     }
@@ -131,6 +118,7 @@ public final class UiTestInjector {
         private SettingsRepository settings = new MemorySettings();
         private FileRevealer revealer = new RecordingFileRevealer();
         private @Nullable ProjectActions projectActions;
+        private Set<String> environment = Set.of();
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
         private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
 
@@ -237,6 +225,12 @@ public final class UiTestInjector {
         /** The measured speeds the graph's estimate reads. */
         public Builder modelSettings(final ModelSettingsRepository value) {
             modelSettings = Objects.requireNonNull(value, "modelSettings");
+            return this;
+        }
+
+        /** The environment variables that count as set, so a credential's status can be shown without the real environment. */
+        public Builder environment(final Set<String> value) {
+            environment = Set.copyOf(Objects.requireNonNull(value, "environment"));
             return this;
         }
 
@@ -374,6 +368,7 @@ public final class UiTestInjector {
                         .annotatedWith(BackgroundExecutor.class)
                         .toInstance(backgroundExecutor != null ? backgroundExecutor : UiTestBindings.daemonExecutor());
                 bindStores();
+                bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
                 bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);

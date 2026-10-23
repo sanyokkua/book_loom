@@ -11,6 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -100,13 +101,30 @@ public final class LeaveDialog {
      * @param saveAndLeave what saves the changes and then leaves
      */
     public void askUnsaved(final Runnable discardAndLeave, final Runnable saveAndLeave) {
+        askUnsaved(null, discardAndLeave, saveAndLeave);
+    }
+
+    /**
+     * Asks before leaving a form that belongs to something with a name, and says which.
+     *
+     * @param subject the name of the thing being edited, or {@code null} for the general question
+     * @param discardAndLeave what drops the changes and leaves
+     * @param saveAndLeave what saves the changes and then leaves
+     */
+    public void askUnsaved(
+            final @Nullable String subject, final Runnable discardAndLeave, final Runnable saveAndLeave) {
         Objects.requireNonNull(discardAndLeave, "discardAndLeave");
         Objects.requireNonNull(saveAndLeave, "saveAndLeave");
-        log.debug("asking before leaving a form with unsaved changes");
-        final DialogPane card = card(
-                UNSAVED_CARD_ID,
-                messages.get(MessageKey.DIALOG_UNSAVED_TITLE),
-                messages.get(MessageKey.DIALOG_UNSAVED_TEXT));
+        log.debug("asking before leaving a form with unsaved changes, named {}", subject != null);
+        final DialogPane card = subject == null
+                ? card(
+                        UNSAVED_CARD_ID,
+                        messages.get(MessageKey.DIALOG_UNSAVED_TITLE),
+                        messages.get(MessageKey.DIALOG_UNSAVED_TEXT))
+                : card(
+                        UNSAVED_CARD_ID,
+                        messages.get(MessageKey.DIALOG_UNSAVED_PROVIDER_TITLE, subject),
+                        messages.get(MessageKey.DIALOG_UNSAVED_PROVIDER_TEXT));
         final ButtonType keepType =
                 new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_KEEP), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType discardType =

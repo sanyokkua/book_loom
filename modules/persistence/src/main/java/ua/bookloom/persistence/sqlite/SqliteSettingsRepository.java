@@ -56,6 +56,19 @@ public final class SqliteSettingsRepository implements SettingsRepository {
     }
 
     @Override
+    public Result<Boolean> remove(final AppSetting<?> setting) {
+        Objects.requireNonNull(setting, "setting");
+        return db.write("settings remove", h -> {
+            final boolean removed = h.createUpdate("DELETE FROM settings WHERE key = :key")
+                            .bind("key", setting.key())
+                            .execute()
+                    > 0;
+            log.debug("Setting removed key={} existed={}", setting.key(), removed);
+            return removed;
+        });
+    }
+
+    @Override
     public Result<Map<String, String>> all() {
         return db.read("settings all", h -> {
             final Map<String, String> all = h

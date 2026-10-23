@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import ua.bookloom.api.AppRestart;
+import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.app.bootstrap.ReviewModeSource;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -58,6 +59,7 @@ public final class AppModule extends AbstractModule {
         // The same session instance the detailed log's header reads, so what the window records is what a rotated
         // file names; and the log settings the launcher resolved before logging existed, for the About dialog.
         bind(SessionInfo.class).toInstance(startup.session());
+        bind(EnvironmentVariables.class).toInstance(new SystemEnvironmentVariables());
         bind(AppRestart.class).to(NoOpAppRestart.class).in(Singleton.class);
         bind(DiagnosticLog.class).toInstance(new DiagnosticLog(startup.paths().logDir(), startup.detailedLog()));
     }

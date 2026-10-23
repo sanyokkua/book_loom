@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
@@ -39,6 +40,8 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     RecordingToasts toasts;
     RecordingErrorPresenter errors;
     ExecutorService executor;
+    final FakeProviderConfigs configs = new FakeProviderConfigs();
+    final MemorySettings settings = new MemorySettings();
     final ActivityTracker activities = new ActivityTracker(new StateMirror());
 
     @Override
@@ -92,7 +95,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     void startCheck(final SettingsViewModel viewModel) {
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
@@ -100,13 +103,14 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(),
+                configs,
                 verifier,
                 newModelListing(),
                 errors,
                 executor,
                 activities,
-                new MemorySettings()));
+                settings,
+                EnglishMessages.create()));
         awaitProvidersLoaded();
         return built;
     }
@@ -157,7 +161,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     void checkWithModel(final SettingsViewModel viewModel) {
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });

@@ -173,6 +173,85 @@ class ProviderConfigRulesTest {
                 .isTrue();
     }
 
+    @Test
+    void findings_badBaseUrl_isBaseUrlInvalid() {
+        assertThat(ProviderConfigRules.check(config("ftp://host/v1", ProviderKind.OLLAMA))
+                        .findings())
+                .containsExactly(new ProviderConfigRules.Finding(ProviderConfigRules.Rule.BASE_URL_INVALID, null));
+    }
+
+    @Test
+    void findings_nonPositiveTimeout_isTimeoutNotPositive() {
+        final ProviderConfig config = new ProviderConfig(
+                "p", ProviderKind.OLLAMA, URI.create("http://h:1"), Duration.ZERO, Duration.ofSeconds(5));
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.TIMEOUT_NOT_POSITIVE);
+    }
+
+    @Test
+    void findings_ollamaChatOverride_isOllamaChatPath() {
+        final ProviderConfig config =
+                config("http://host:11434", ProviderKind.OLLAMA).withChatPath("/x");
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.OLLAMA_CHAT_PATH);
+    }
+
+    @Test
+    void findings_credentialHeaderLiteral_namesTheHeaderNotTheValue() {
+        final ProviderConfig config =
+                config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE).withHeaders(Map.of("X-Api-Key", "sk-1"));
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .containsExactly(new ProviderConfigRules.Finding(
+                        ProviderConfigRules.Rule.CREDENTIAL_HEADER_LITERAL, "X-Api-Key"));
+    }
+
+    @Test
+    void findings_referenceNotAName_isCredentialRefNotAName() {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.BEARER)
+                .withCredentialRef("sk-test-123");
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .containsExactly(
+                        new ProviderConfigRules.Finding(ProviderConfigRules.Rule.CREDENTIAL_REF_NOT_A_NAME, null));
+    }
+
+    @Test
+    void findings_bearerWithoutReference_isCredentialRefMissing() {
+        final ProviderConfig config =
+                config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE).withAuth(ProviderAuth.BEARER);
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.CREDENTIAL_REF_MISSING);
+    }
+
+    @Test
+    void findings_apiKeyWithoutHeader_isApiKeyHeaderMissing() {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.API_KEY)
+                .withCredentialRef("LMS_KEY");
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.API_KEY_HEADER_MISSING);
+    }
+
+    @Test
+    void findings_openAiWithoutV1_isV1SuffixMissingAndStillValid() {
+        final ProviderConfigRules.Check check =
+                ProviderConfigRules.check(config("http://host:1234", ProviderKind.OPENAI_COMPATIBLE));
+
+        assertThat(check.isValid()).isTrue();
+        assertThat(check.findings())
+                .containsExactly(new ProviderConfigRules.Finding(ProviderConfigRules.Rule.V1_SUFFIX_MISSING, null));
+    }
+
     private static ProviderConfig config(final String url, final ProviderKind kind) {
         return new ProviderConfig(
                 "p",

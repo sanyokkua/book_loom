@@ -9,10 +9,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -20,9 +19,9 @@ import javafx.scene.paint.Paint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -52,15 +51,18 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                         tuple("settings-tab-storage", "Storage & logs", true));
     }
 
-    // IF a provider action were missing or usable, THEN a person could reach an editor this build does not have.
+    // IF Add or Delete were disabled, THEN a person could not manage providers; IF an Edit button were left, THEN there
+    // would be two ways to open the one form.
     @ParameterizedTest
-    @ValueSource(strings = {"add", "edit", "delete"})
-    void providerActions_settingsScreen_addEditDeletePresentAndDisabled(final String action) {
+    @CsvSource({"add, + New provider", "delete, Delete…"})
+    void providerActions_settingsScreen_addAndDeleteEnabledWithTheirWords(final String action, final String words) {
         openSettings();
 
-        assertThat(required("settings-provider-" + action))
-                .isInstanceOfSatisfying(
-                        Button.class, button -> assertThat(button.isDisable()).isTrue());
+        assertThat(required("settings-provider-" + action)).isInstanceOfSatisfying(Button.class, button -> {
+            assertThat(button.isDisable()).isFalse();
+            assertThat(button.getText()).isEqualTo(words);
+        });
+        assertThat(scene.getRoot().lookup("#settings-provider-edit")).isNull();
     }
 
     // IF a third row appeared, or the order changed, THEN the list would not be the two built-in local servers.
@@ -71,6 +73,23 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(((Pane) required("settings-provider-list")).getChildren())
                 .extracting(Node::getId)
                 .containsExactly("provider-row-ollama", "provider-row-lmstudio");
+    }
+
+    // IF an empty registry showed rows or no explanation, THEN a person would face a blank card with nothing to do.
+    @Test
+    void providerList_registryEmpty_saysSoAndKeepsAddUsable() throws TimeoutException {
+        openSettings();
+        assertThat(required("settings-provider-empty").isVisible()).isFalse();
+        configs.delete("ollama");
+        configs.delete("lmstudio");
+
+        onFx(() -> viewModel().reloadProviders());
+        awaitFx(() -> viewModel().providers().isEmpty());
+
+        assertThat(required("settings-provider-empty").isVisible()).isTrue();
+        assertThat(text("settings-provider-empty")).isEqualTo("No AI model program is set up yet.");
+        assertThat(((Pane) required("settings-provider-list")).getChildren()).isEmpty();
+        assertThat(button("settings-provider-add").isDisable()).isFalse();
     }
 
     // IF a row named the wrong server or showed another host, THEN the person would check a server they did not
@@ -97,35 +116,22 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                         Label.class, label -> assertThat(label.getText()).isEqualTo(badge));
     }
 
-    // IF the card showed a listing that was never made, or hid the one that was, THEN the person could not tell what
-    // the server offers.
+    // IF the form showed the wrong provider's kind or address, THEN a check would be aimed at a server the person did
+    // not mean.
     @Test
-    void detailCard_beforeAnyListing_showsKindEndpointAndSaysNoListingWasMade() {
+    void form_lmStudioOpened_showsItsKindAndFullAddress() {
         openSettings();
 
-        assertThat(label("settings-detail-kind").getText()).isEqualTo("Ollama");
-        assertThat(label("settings-detail-endpoint").getText()).isEqualTo("http://localhost:11434");
-        assertThat(label("settings-detail-models").getText()).isEqualTo("No listing has been made yet");
+        onFx(() -> viewModel().editProvider("lmstudio"));
+
+        assertThat(text("settings-form-title")).isEqualTo("LM Studio");
+        assertThat(ThemeTestSupport.onFx(() -> comboKind().getValue())).isEqualTo(ProviderKind.OPENAI_COMPATIBLE);
+        assertThat(field("settings-form-address").getText()).isEqualTo("http://localhost:1234/v1");
     }
 
-    @Test
-    void detailCard_afterAListing_showsTheCountAndTheFirstThreeNames() throws TimeoutException {
-        catalog.respondWith("gemma3:12b", "qwen3:8b", "mistral-small:24b", "phi4:14b");
-
-        openSettingsSettled();
-
-        assertThat(label("settings-detail-models").getText()).isEqualTo("4 · gemma3:12b, qwen3:8b, mistral-small:24b");
-    }
-
-    @Test
-    void detailCard_lmStudioSelected_showsItsKindAndFullEndpoint() {
-        openSettings();
-
-        onFx(() -> viewModel().selectProvider("lmstudio"));
-
-        assertThat(label("settings-detail-kind").getText()).isEqualTo("OpenAI-compatible");
-        assertThat(label("settings-detail-endpoint").getText()).isEqualTo("http://localhost:1234/v1");
-        assertThat(label("settings-detail-models").getText()).isEqualTo("No listing has been made yet");
+    @SuppressWarnings("unchecked")
+    private ComboBox<ProviderKind> comboKind() {
+        return (ComboBox<ProviderKind>) required("settings-form-kind");
     }
 
     // IF the chooser were drawn on another area, THEN two controls would edit one choice.
@@ -133,7 +139,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     void modelChooser_settingsScreen_isOnTheProvidersCardOnly() {
         openSettings();
 
-        assertThat(required("settings-detail-card").lookup("#settings-model")).isNotNull();
+        assertThat(required("settings-form-card").lookup("#settings-model")).isNotNull();
         assertThat(tab("settings-tab-appearance").getContent().lookup("#settings-model"))
                 .isNull();
     }
@@ -143,7 +149,9 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     void subtitle_settingsScreen_statesEverythingIsLocal() {
         openSettings();
 
-        assertThat(label("settings-subtitle").getText()).isEqualTo("Everything is local. Nothing leaves your machine.");
+        assertThat(label("settings-subtitle").getText())
+                .isEqualTo("Your books stay on this computer. BookLoom sends your text only to the AI model you choose "
+                        + "here.");
     }
 
     // IF the selected tab were not marked by an underline of the primary role, or another tab were, THEN the tab
@@ -176,18 +184,20 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 () -> tabs().getSelectionModel().getSelectedItem().getId());
     }
 
-    // IF the selection mark did not follow the model, THEN the list would show a different provider from the one a
-    // check is aimed at.
+    // IF the open mark did not follow the click, THEN the list would show a different provider from the one a check
+    // is aimed at; IF the click moved the current provider, THEN looking would change what translates.
     @Test
-    void providerRow_clicked_selectsIt() {
+    void providerRow_clicked_opensItAndKeepsTheCurrentProvider() {
         openSettings();
         assertThat(required("provider-row-ollama").getStyleClass()).contains("list-item-selected");
         assertThat(required("provider-row-lmstudio").getStyleClass()).doesNotContain("list-item-selected");
 
-        onFx(() -> required("provider-row-lmstudio").fireEvent(click()));
+        onFx(() -> required("provider-row-lmstudio").fireEvent(RowClicks.primary()));
 
-        assertThat(ThemeTestSupport.onFx(() -> viewModel().selectedProviderId().get()))
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().editedProviderId().get()))
                 .isEqualTo("lmstudio");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().selectedProviderId().get()))
+                .isEqualTo("ollama");
         assertThat(required("provider-row-lmstudio").getStyleClass()).contains("list-item-selected");
         assertThat(required("provider-row-ollama").getStyleClass()).doesNotContain("list-item-selected");
     }
@@ -235,7 +245,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     void testControl_modelSet_enabledAndFiringItAsksForItsDepth(final String id, final VerificationPolicy policy)
             throws InterruptedException {
         openSettings();
-        onFx(() -> viewModel().model().set(MODEL));
+        onFx(() -> viewModel().draftModel().set(MODEL));
         final Button button = (Button) required(id);
         assertThat(button.isDisable()).isFalse();
 
@@ -260,7 +270,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         verifier.hold();
 
         onFx(() -> {
-            viewModel().model().set(MODEL);
+            viewModel().draftModel().set(MODEL);
             viewModel().tests().run(ProviderTest.INFERENCE);
         });
         verifier.awaitEntered();
@@ -317,27 +327,5 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 .getStrokes()
                 .get(0)
                 .getBottomStroke());
-    }
-
-    private static MouseEvent click() {
-        return new MouseEvent(
-                MouseEvent.MOUSE_CLICKED,
-                4,
-                4,
-                4,
-                4,
-                MouseButton.PRIMARY,
-                1,
-                false,
-                false,
-                false,
-                false,
-                true,
-                false,
-                false,
-                false,
-                false,
-                true,
-                null);
     }
 }

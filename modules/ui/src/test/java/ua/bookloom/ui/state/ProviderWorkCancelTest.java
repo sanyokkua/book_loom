@@ -6,6 +6,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
@@ -75,16 +76,17 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
                 errors,
                 executor,
                 activities,
-                new MemorySettings()));
+                new MemorySettings(),
+                EnglishMessages.create()));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         fx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
         });
         final List<ActivityKind> during = running();
 
-        fx(() -> viewModel.model().set("qwen3:8b"));
+        fx(() -> viewModel.draftModel().set("qwen3:8b"));
         queued.runAll();
 
         assertThat(during).contains(ActivityKind.PROVIDER_INFERENCE_TEST);

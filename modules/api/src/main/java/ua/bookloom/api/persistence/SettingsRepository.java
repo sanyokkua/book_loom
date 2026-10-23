@@ -37,4 +37,12 @@ public interface SettingsRepository {
      * @return key to stored text for every preference that was ever set; never null, empty if none
      */
     Result<Map<String, String>> all();
+
+    /**
+     * Forgets one preference, so reading it gives the default again.
+     *
+     * @param setting the non-null key
+     * @return {@code true} if a value was stored and is now gone, {@code false} if nothing was stored
+     */
+    Result<Boolean> remove(AppSetting<?> setting);
 }

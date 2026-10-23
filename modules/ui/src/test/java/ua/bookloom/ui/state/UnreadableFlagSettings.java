@@ -30,6 +30,11 @@ final class UnreadableFlagSettings implements SettingsRepository {
     }
 
     @Override
+    public Result<Boolean> remove(final AppSetting<?> setting) {
+        return inner.remove(setting);
+    }
+
+    @Override
     public Result<Map<String, String>> all() {
         return inner.all();
     }

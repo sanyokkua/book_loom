@@ -104,7 +104,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 activities,
-                new MemorySettings());
+                new MemorySettings(),
+                messages);
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */

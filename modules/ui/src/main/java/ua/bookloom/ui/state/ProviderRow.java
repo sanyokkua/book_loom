@@ -11,8 +11,9 @@ import ua.bookloom.api.llm.ProviderKind;
  * @param endpoint the base URL as text, exactly as the registry holds it
  * @param hostPort the endpoint's host and port without scheme or path, e.g. {@code localhost:11434}; the host alone
  *     when the URL names no port
+ * @param displayName the name the person gave the provider; blank when it has none and the catalogue names it
  */
-public record ProviderRow(String id, ProviderKind kind, String endpoint, String hostPort) {
+public record ProviderRow(String id, ProviderKind kind, String endpoint, String hostPort, String displayName) {
 
     /** Rejects a row that names no provider, kind or endpoint. */
     public ProviderRow {
@@ -20,5 +21,6 @@ public record ProviderRow(String id, ProviderKind kind, String endpoint, String 
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(endpoint, "endpoint");
         Objects.requireNonNull(hostPort, "hostPort");
+        Objects.requireNonNull(displayName, "displayName");
     }
 }

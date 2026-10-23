@@ -2,11 +2,10 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
-<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -15,68 +14,47 @@
       fx:controller="ua.bookloom.ui.screen.SettingsController" id="settings-screen" styleClass="fills-viewport, content-capped" spacing="14">
     <Label id="settings-title" styleClass="screen-title" text="%settings.title"/>
     <Label id="settings-subtitle" styleClass="muted, prose" wrapText="true" text="%settings.subtitle"/>
-    <TabPane id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-        <Tab id="settings-tab-providers" text="%settings.tab.providers">
+    <TabPane fx:id="tabs" id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+        <Tab fx:id="providersTab" id="settings-tab-providers" text="%settings.tab.providers">
             <HBox spacing="14" alignment="TOP_LEFT">
                 <padding>
                     <Insets top="14"/>
                 </padding>
-                <VBox id="settings-provider-card" styleClass="card" spacing="10" minWidth="300" prefWidth="300"
-                      maxWidth="300">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label styleClass="card-title" text="%settings.providers.title"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="providerAdd" id="settings-provider-add" styleClass="btn-ghost" disable="true"
-                                text="%settings.provider.add"/>
-                    </HBox>
+                <VBox id="settings-provider-card" styleClass="card, settings-list" spacing="10">
+                    <Label styleClass="card-title" text="%settings.providers.title"/>
+                    <Label fx:id="providerEmpty" id="settings-provider-empty" styleClass="hint" wrapText="true"
+                           text="%settings.providers.empty"/>
                     <VBox fx:id="providerList" id="settings-provider-list" spacing="6"/>
+                    <Button fx:id="providerAdd" id="settings-provider-add" styleClass="btn-ghost"
+                            text="%settings.provider.add"/>
                 </VBox>
-                <VBox id="settings-detail-card" styleClass="card" spacing="10" HBox.hgrow="ALWAYS">
+                <VBox fx:id="formCard" id="settings-form-card" styleClass="card, form-card" spacing="10"
+                      HBox.hgrow="ALWAYS" maxWidth="860">
                     <HBox alignment="CENTER_LEFT" spacing="8">
-                        <Label fx:id="detailName" styleClass="card-title"/>
+                        <Label fx:id="formTitle" id="settings-form-title" styleClass="card-title"/>
+                        <Label fx:id="formBadge" id="settings-form-badge" styleClass="chip, chip-ok"
+                               text="%settings.provider.current"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="providerEdit" id="settings-provider-edit" styleClass="btn-ghost" disable="true"
-                                text="%settings.provider.edit"/>
-                        <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline" disable="true"
+                        <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
+                               text="%settings.provider.delete.busy"/>
+                        <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline"
                                 text="%settings.provider.delete"/>
                     </HBox>
-                    <HBox spacing="8">
-                        <Label styleClass="muted" text="%settings.kind.label"/>
-                        <Label fx:id="detailKind" id="settings-detail-kind"/>
+                    <ScrollPane fx:id="formScroll" id="settings-form-scroll" styleClass="form-scroll" fitToWidth="true"
+                                hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+                        <VBox fx:id="formBody" id="settings-form-body" spacing="14"/>
+                    </ScrollPane>
+                    <HBox styleClass="form-foot" alignment="CENTER_LEFT" spacing="10">
+                        <Label fx:id="formDirty" id="settings-form-dirty" styleClass="dirty"
+                               text="%settings.form.dirty"/>
+                        <Label fx:id="formSaved" id="settings-form-saved" styleClass="hint"
+                               text="%settings.form.saved"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="formCancel" id="settings-form-cancel" styleClass="btn-ghost"
+                                text="%settings.form.cancel"/>
+                        <Button fx:id="formSave" id="settings-form-save" styleClass="btn-primary"
+                                text="%settings.form.save"/>
                     </HBox>
-                    <HBox spacing="8">
-                        <Label styleClass="muted" text="%settings.endpoint.label"/>
-                        <Label fx:id="detailEndpoint" id="settings-detail-endpoint" styleClass="provider-endpoint"/>
-                    </HBox>
-                    <HBox spacing="8">
-                        <Label styleClass="muted" text="%settings.models.label"/>
-                        <Label fx:id="detailModels" id="settings-detail-models" wrapText="true"/>
-                    </HBox>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label styleClass="muted" text="%settings.model.label"/>
-                        <ComboBox fx:id="modelCombo" id="settings-model" editable="true"
-                                  promptText="%settings.model.notChosen" prefWidth="260" HBox.hgrow="ALWAYS"
-                                  maxWidth="Infinity"/>
-                    </HBox>
-                    <Label fx:id="modelNote" id="settings-model-note" styleClass="hint" wrapText="true"/>
-                    <Label fx:id="modelListing" id="settings-model-listing" styleClass="hint"
-                           text="%settings.model.listing"/>
-                    <Label fx:id="modelNoList" id="settings-model-nolist" styleClass="hint" wrapText="true"
-                           text="%settings.model.noList"/>
-                    <Label fx:id="modelRefusal" id="settings-model-refusal" styleClass="hint" wrapText="true"/>
-                    <Label fx:id="checkHint" styleClass="hint" text="%settings.check.needsModel"/>
-                    <Label fx:id="checkRefusal" id="settings-check-refusal" styleClass="hint" wrapText="true"/>
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Button fx:id="testConnection" id="settings-test-connection" styleClass="btn-primary"
-                                text="%settings.test.connection"/>
-                        <Button fx:id="testModels" id="settings-test-models" styleClass="btn-primary"
-                                text="%settings.test.models"/>
-                        <Button fx:id="testInference" id="settings-test-inference" styleClass="btn-primary"
-                                text="%settings.test.inference"/>
-                        <Label fx:id="checkProgress" id="settings-check-progress" styleClass="muted"
-                               text="%settings.check.progress"/>
-                    </HBox>
-                    <FlowPane fx:id="chips" id="settings-chips" hgap="8" vgap="8"/>
                 </VBox>
             </HBox>
         </Tab>

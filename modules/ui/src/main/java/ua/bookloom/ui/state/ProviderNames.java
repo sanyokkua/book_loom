@@ -34,4 +34,16 @@ public final class ProviderNames {
         final MessageKey key = NAMES.get(id);
         return key == null ? id : messages.get(key);
     }
+
+    /**
+     * Names a listed provider for display.
+     *
+     * @param messages the catalogue to name it from
+     * @param row the provider as listed
+     * @return the name the person gave it, else the catalogue name of a built-in one, else its id
+     */
+    public static String displayName(final Messages messages, final ProviderRow row) {
+        Objects.requireNonNull(row, "row");
+        return row.displayName().isBlank() ? displayName(messages, row.id()) : row.displayName();
+    }
 }

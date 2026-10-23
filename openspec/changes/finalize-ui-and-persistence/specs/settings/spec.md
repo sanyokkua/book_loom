@@ -2,14 +2,19 @@
 
 ### Requirement: Add, edit and delete providers
 
-The settings screen SHALL let a person add a provider, edit a stored provider and delete one, and SHALL ask for confirmation with Delete… before a provider is deleted.
+The settings screen SHALL let a person add a provider, open a stored provider for editing by choosing its row (there is no separate Edit button), and delete one after confirmation with Delete…; deleting a provider SHALL also remove its per-model settings, and deleting the current provider SHALL leave no current AI model.
 
-**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person whose AI program is not one of the two usual local ones can describe it themselves, and removing one is never a single accidental click.
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person whose AI program is not one of the two usual local ones can describe it themselves, removing one is never a single accidental click, and a deleted provider leaves nothing behind that could be mistaken for the model in use.
 
 #### Scenario: A provider is added
 
 - **WHEN** the person adds a provider named `Office LM` of kind OpenAI-compatible at `http://10.0.0.5:1234/v1` and saves
 - **THEN** `Office LM` appears in the list with the host `10.0.0.5:1234`
+
+#### Scenario: Choosing a row opens it for editing
+
+- **WHEN** the person chooses the `Office LM` row
+- **THEN** its form opens with the name `Office LM` and the address `http://10.0.0.5:1234/v1`
 
 #### Scenario: Delete asks first
 
@@ -20,6 +25,16 @@ The settings screen SHALL let a person add a provider, edit a stored provider an
 
 - **WHEN** the person chooses Delete… on `Office LM` and confirms
 - **THEN** `Office LM` is no longer listed
+
+#### Scenario: Deleting the current provider
+
+- **WHEN** Ollama is current with the model `gemma4:e4b` and Delete… on Ollama is confirmed
+- **THEN** Ollama is no longer listed, no AI model is current, and the settings of `gemma4:e4b` are gone
+
+#### Scenario: Deleting another provider keeps the current one
+
+- **WHEN** Ollama is current with the model `gemma4:e4b` and Delete… on `Office LM` is confirmed
+- **THEN** `Office LM` is no longer listed, Ollama is still current with `gemma4:e4b`, and the settings of `gemma4:e4b` are kept
 
 ### Requirement: Describe a provider's connection in a form
 
@@ -240,6 +255,12 @@ The Providers and Models tabs SHALL change nothing until saved, SHALL show a pin
 
 - **WHEN** the person opens the Appearance tab with unsaved changes on Providers
 - **THEN** the question offers Keep editing, Discard and Save, and the Appearance tab opens only after Discard or Save
+
+#### Scenario: Switching provider asks naming it
+
+- **WHEN** `Ollama` has unsaved changes and the `LM Studio` row is chosen
+- **THEN** the question "Save the changes to Ollama?" is asked with Keep editing, Discard and Save
+- **AND** `LM Studio` opens only after Discard or Save
 
 #### Scenario: Save stores the change
 
@@ -553,6 +574,16 @@ The Providers area SHALL list each provider as a row showing its name, its endpo
 
 - **WHEN** the LM Studio row, which is not current, is selected
 - **THEN** the card begins `This provider's model:` and names its model
+
+#### Scenario: Save of the current provider's Model makes it the current model
+
+- **WHEN** Ollama is current, its Model field is changed from `gemma4:e4b` to `gemma4:26b-mlx`, and Save is chosen
+- **THEN** the summary card reads `Your AI model: Ollama · gemma4:26b-mlx` and `gemma4:26b-mlx` is the current AI model
+
+#### Scenario: A provider that is not current and has no typed model
+
+- **WHEN** the LM Studio row, which is not current, is selected and no model has been typed for it
+- **THEN** the card reads `This provider's model: LM Studio · no model chosen yet`
 
 ## REMOVED Requirements
 

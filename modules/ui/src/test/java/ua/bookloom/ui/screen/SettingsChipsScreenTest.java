@@ -134,7 +134,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
         verifier.respondWith(Result.err(AppError.of(ErrorCode.validation, "Unknown provider", "No such provider.")));
 
         onFx(() -> {
-            viewModel().model().set(MODEL);
+            viewModel().draftModel().set(MODEL);
             viewModel().tests().run(ProviderTest.INFERENCE);
         });
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(refusal::isVisible));
@@ -142,7 +142,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
         assertThat(refusal.getText()).isEqualTo("No such provider.");
         assertThat(refusal.isManaged()).isTrue();
         assertThat(refusal.getStyleClass()).contains("hint");
-        onFx(() -> viewModel().model().set("another-model"));
+        onFx(() -> viewModel().draftModel().set("another-model"));
         assertThat(refusal.isVisible()).isFalse();
     }
 

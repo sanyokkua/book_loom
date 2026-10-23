@@ -475,10 +475,6 @@ public enum MessageKey {
     SETTINGS_PROVIDER_ADD("settings.provider.add"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_ADD}. */
     SETTINGS_PROVIDER_ADD_TIP("settings.provider.add.tip"),
-    /** Label of the unavailable action that edits the selected provider. */
-    SETTINGS_PROVIDER_EDIT("settings.provider.edit"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_EDIT}. */
-    SETTINGS_PROVIDER_EDIT_TIP("settings.provider.edit.tip"),
     /** Label of the unavailable action that deletes the selected provider. */
     SETTINGS_PROVIDER_DELETE("settings.provider.delete"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_DELETE}. */
@@ -489,8 +485,6 @@ public enum MessageKey {
     SETTINGS_PROVIDER_LMSTUDIO("settings.provider.lmstudio"),
     /** Badge on the provider row that is the selected one. */
     SETTINGS_PROVIDER_CURRENT("settings.provider.current"),
-    /** Label before the selected provider's endpoint. */
-    SETTINGS_ENDPOINT_LABEL("settings.endpoint.label"),
     /** Label before the model chosen for the selected provider. */
     SETTINGS_MODEL_LABEL("settings.model.label"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_MODEL_LABEL}. */
@@ -501,18 +495,184 @@ public enum MessageKey {
     SETTINGS_SUBTITLE("settings.subtitle"),
     /** Badge on every provider row that is not the selected one. */
     SETTINGS_PROVIDER_IDLE("settings.provider.idle"),
+    /** Advice under the address of an OpenAI-compatible provider whose address does not end in /v1. */
+    SETTINGS_FORM_ADDRESS_V1_WARNING("settings.form.address.v1"),
+    /** Error under the name field: a provider needs a name. */
+    SETTINGS_ERROR_NAME("settings.error.name"),
+    /** Error under a timeout field: it must be a whole number of seconds above zero. */
+    SETTINGS_ERROR_NUMBER("settings.error.number"),
+    /** Error under the address field: it must be an http or https address. */
+    SETTINGS_ERROR_ADDRESS("settings.error.address"),
+    /** Error under the chat endpoint: Ollama has its own chat protocol and takes no override. */
+    SETTINGS_ERROR_OLLAMA_CHAT_PATH("settings.error.ollamaChatPath"),
+    /** Error on the headers: argument 0 is the header whose value looks like a key. */
+    SETTINGS_ERROR_HEADER_LITERAL("settings.error.headerLiteral"),
+    /** Error under the key variable: a variable's name is wanted, not a key. */
+    SETTINGS_ERROR_REF_NOT_NAME("settings.error.refNotName"),
+    /** Error under the key variable: the sign-in needs a variable's name. */
+    SETTINGS_ERROR_REF_MISSING("settings.error.refMissing"),
+    /** Error under the key header: an API-key sign-in needs the header's name. */
+    SETTINGS_ERROR_KEY_HEADER_MISSING("settings.error.keyHeaderMissing"),
+    /** Shown in the provider list when the registry holds none. */
+    SETTINGS_PROVIDERS_EMPTY("settings.providers.empty"),
+    /** Heading of the Providers form while a new provider is typed. */
+    SETTINGS_FORM_NEW_TITLE("settings.form.newTitle"),
+    /** First line of the summary card for the provider in use; arguments are its name and model. */
+    SETTINGS_SUMMARY_CURRENT("settings.summary.current"),
+    /** First line of the summary card for a provider not in use; arguments are its name and model. */
+    SETTINGS_SUMMARY_OTHER("settings.summary.other"),
+    /** Stands in for the model on the summary card while none is chosen. */
+    SETTINGS_SUMMARY_NO_MODEL("settings.summary.noModel"),
+    /** Ends the summary line after a check that passed. */
+    SETTINGS_SUMMARY_READY("settings.summary.ready"),
+    /** Ends the summary line after a check that failed. */
+    SETTINGS_SUMMARY_FAILED("settings.summary.failed"),
+    /** The summary card’s speed figure; argument 0 is a measured duration. */
+    SETTINGS_SUMMARY_SPEED("settings.summary.speed"),
+    /** How many models the last listing offered; plural by count. */
+    SETTINGS_SUMMARY_MODELS("settings.summary.models"),
+    /** Label of the summary card’s Test button. */
+    SETTINGS_SUMMARY_TEST("settings.summary.test"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_SUMMARY_TEST}. */
+    SETTINGS_SUMMARY_TEST_TIP("settings.summary.test.tip"),
+    /** Label of the summary card’s Change model button. */
+    SETTINGS_SUMMARY_CHANGE_MODEL("settings.summary.changeModel"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_SUMMARY_CHANGE_MODEL}. */
+    SETTINGS_SUMMARY_CHANGE_MODEL_TIP("settings.summary.changeModel.tip"),
+    /** Title of the fold that holds the provider’s connection fields. */
+    SETTINGS_CONNECTION("settings.connection"),
+    /** Says whom the connection details are for, beside the fold’s title. */
+    SETTINGS_CONNECTION_SUBTITLE("settings.connection.subtitle"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_CONNECTION}. */
+    SETTINGS_CONNECTION_TIP("settings.connection.tip"),
+    /** Label of the provider name field. */
+    SETTINGS_FORM_NAME("settings.form.name"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_NAME}. */
+    SETTINGS_FORM_NAME_TIP("settings.form.name.tip"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_KIND_LABEL}. */
+    SETTINGS_KIND_LABEL_TIP("settings.kind.label.tip"),
+    /** Label of the sign-in choice. */
+    SETTINGS_FORM_AUTH("settings.form.auth"),
+    /** Sign-in choice: no key. */
+    SETTINGS_FORM_AUTH_NONE("settings.form.auth.none"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_AUTH_NONE}. */
+    SETTINGS_FORM_AUTH_NONE_TIP("settings.form.auth.none.tip"),
+    /** Sign-in choice: a bearer token. */
+    SETTINGS_FORM_AUTH_BEARER("settings.form.auth.bearer"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_AUTH_BEARER}. */
+    SETTINGS_FORM_AUTH_BEARER_TIP("settings.form.auth.bearer.tip"),
+    /** Sign-in choice: a key in a named header. */
+    SETTINGS_FORM_AUTH_APIKEY("settings.form.auth.apikey"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_AUTH_APIKEY}. */
+    SETTINGS_FORM_AUTH_APIKEY_TIP("settings.form.auth.apikey.tip"),
+    /** Label of the field naming the header that carries the key. */
+    SETTINGS_FORM_KEY_HEADER("settings.form.keyHeader"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_KEY_HEADER}. */
+    SETTINGS_FORM_KEY_HEADER_TIP("settings.form.keyHeader.tip"),
+    /** Label of the field naming the environment variable that holds the key. */
+    SETTINGS_FORM_KEY_VARIABLE("settings.form.keyVariable"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_KEY_VARIABLE}. */
+    SETTINGS_FORM_KEY_VARIABLE_TIP("settings.form.keyVariable.tip"),
+    /** Says that only the variable’s name is saved. */
+    SETTINGS_FORM_KEY_VARIABLE_HINT("settings.form.keyVariable.hint"),
+    /** Status of a key variable that has a value. */
+    SETTINGS_FORM_KEY_SET("settings.form.key.set"),
+    /** Status of a key variable that has no value. */
+    SETTINGS_FORM_KEY_NOT_SET("settings.form.key.notSet"),
+    /** Label of the base address field. */
+    SETTINGS_FORM_ADDRESS("settings.form.address"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_ADDRESS}. */
+    SETTINGS_FORM_ADDRESS_TIP("settings.form.address.tip"),
+    /** Label of the models endpoint override field. */
+    SETTINGS_FORM_MODELS_PATH("settings.form.modelsPath"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_MODELS_PATH}. */
+    SETTINGS_FORM_MODELS_PATH_TIP("settings.form.modelsPath.tip"),
+    /** Label of the inference endpoint override field. */
+    SETTINGS_FORM_CHAT_PATH("settings.form.chatPath"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_CHAT_PATH}. */
+    SETTINGS_FORM_CHAT_PATH_TIP("settings.form.chatPath.tip"),
+    /** Why the inference endpoint cannot be changed for Ollama. */
+    SETTINGS_FORM_CHAT_PATH_NOTE("settings.form.chatPath.note"),
+    /** Label of the connect timeout field. */
+    SETTINGS_FORM_CONNECT_TIMEOUT("settings.form.connectTimeout"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_CONNECT_TIMEOUT}. */
+    SETTINGS_FORM_CONNECT_TIMEOUT_TIP("settings.form.connectTimeout.tip"),
+    /** Label of the request timeout field. */
+    SETTINGS_FORM_REQUEST_TIMEOUT("settings.form.requestTimeout"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_REQUEST_TIMEOUT}. */
+    SETTINGS_FORM_REQUEST_TIMEOUT_TIP("settings.form.requestTimeout.tip"),
+    /** Label of the button that lists the models again. */
+    SETTINGS_FORM_MODEL_REFRESH("settings.form.model.refresh"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_MODEL_REFRESH}. */
+    SETTINGS_FORM_MODEL_REFRESH_TIP("settings.form.model.refresh.tip"),
+    /** How to fill the Model field. */
+    SETTINGS_FORM_MODEL_HINT("settings.form.model.hint"),
+    /** Label of the switch for custom headers. */
+    SETTINGS_FORM_HEADERS_ON("settings.form.headers.on"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_HEADERS_ON}. */
+    SETTINGS_FORM_HEADERS_ON_TIP("settings.form.headers.on.tip"),
+    /** Prompt of the header name field. */
+    SETTINGS_FORM_HEADERS_NAME("settings.form.headers.name"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_HEADERS_NAME}. */
+    SETTINGS_FORM_HEADERS_NAME_TIP("settings.form.headers.name.tip"),
+    /** Prompt of the header value field. */
+    SETTINGS_FORM_HEADERS_VALUE("settings.form.headers.value"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_HEADERS_VALUE}. */
+    SETTINGS_FORM_HEADERS_VALUE_TIP("settings.form.headers.value.tip"),
+    /** Label of the button that adds a header row. */
+    SETTINGS_FORM_HEADERS_ADD("settings.form.headers.add"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_HEADERS_ADD}. */
+    SETTINGS_FORM_HEADERS_ADD_TIP("settings.form.headers.add.tip"),
+    /** The glyph on the button that removes a header row. */
+    SETTINGS_FORM_HEADERS_REMOVE("settings.form.headers.remove"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_HEADERS_REMOVE}. */
+    SETTINGS_FORM_HEADERS_REMOVE_TIP("settings.form.headers.remove.tip"),
+    /** Says a key in a header must be written as an environment reference. */
+    SETTINGS_FORM_HEADERS_HINT("settings.form.headers.hint"),
+    /** Label of the switch for custom models. */
+    SETTINGS_FORM_MODELS_ON("settings.form.models.on"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_MODELS_ON}. */
+    SETTINGS_FORM_MODELS_ON_TIP("settings.form.models.on.tip"),
+    /** Prompt of the field that adds a model name. */
+    SETTINGS_FORM_MODELS_ADD("settings.form.models.add"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_MODELS_ADD}. */
+    SETTINGS_FORM_MODELS_ADD_TIP("settings.form.models.add.tip"),
+    /** The glyph on a custom model’s chip, which removes it. */
+    SETTINGS_FORM_MODELS_REMOVE("settings.form.models.remove"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_MODELS_REMOVE}; argument 0 is the name. */
+    SETTINGS_FORM_MODELS_REMOVE_TIP("settings.form.models.remove.tip"),
+    /** Heading of the checks block. */
+    SETTINGS_CHECKS_TITLE("settings.checks.title"),
+    /** Says the checks use the saved settings and change nothing. */
+    SETTINGS_CHECKS_HINT("settings.checks.hint"),
+    /** Why the checks are off while a new provider is not saved. */
+    SETTINGS_CHECKS_UNSAVED("settings.checks.unsaved"),
+    /** The mark in the footer while the form holds unsaved changes. */
+    SETTINGS_FORM_DIRTY("settings.form.dirty"),
+    /** Label of the footer’s Cancel button. */
+    SETTINGS_FORM_CANCEL("settings.form.cancel"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_CANCEL}. */
+    SETTINGS_FORM_CANCEL_TIP("settings.form.cancel.tip"),
+    /** Label of the footer’s Save button. */
+    SETTINGS_FORM_SAVE("settings.form.save"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_SAVE}. */
+    SETTINGS_FORM_SAVE_TIP("settings.form.save.tip"),
+    /** The footer’s note after a successful save. */
+    SETTINGS_FORM_SAVED("settings.form.saved"),
+    /** Error on the headers: argument 0 is a header written twice. */
+    SETTINGS_ERROR_HEADER_DUPLICATE("settings.error.headerDuplicate"),
+    /** Error on the headers: a value was typed with no header name. */
+    SETTINGS_ERROR_HEADER_NAME_MISSING("settings.error.headerNameMissing"),
+    /** Why Delete is off while model work runs on the provider in use. */
+    SETTINGS_PROVIDER_DELETE_BUSY("settings.provider.delete.busy"),
+    /** Error shown when the provider could not be saved; the form stays as typed. */
+    SETTINGS_ERROR_SAVE_FAILED("settings.error.saveFailed"),
     /** Label before the selected provider's kind on its detail card. */
     SETTINGS_KIND_LABEL("settings.kind.label"),
     /** Name of the Ollama-native provider kind. */
     SETTINGS_KIND_OLLAMA("settings.kind.ollama"),
     /** Name of the OpenAI-compatible provider kind. */
     SETTINGS_KIND_OPENAI("settings.kind.openai"),
-    /** Label before the models the last listing found. */
-    SETTINGS_MODELS_LABEL("settings.models.label"),
-    /** The models found: argument 0 is their count, argument 1 the first names, joined. */
-    SETTINGS_MODELS_FOUND("settings.models.found"),
-    /** Said in place of the models found while no listing has been made. */
-    SETTINGS_MODELS_NONE("settings.models.none"),
     /** Label of the action that asks whether the provider answers at all. */
     SETTINGS_TEST_CONNECTION("settings.test.connection"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_CONNECTION}. */
@@ -2439,6 +2599,10 @@ public enum MessageKey {
     DIALOG_UNSAVED_SAVE("dialog.unsaved.save"),
     /** Hover explanation of the control labelled by {@link #DIALOG_UNSAVED_SAVE}. */
     DIALOG_UNSAVED_SAVE_TIP("dialog.unsaved.save.tip"),
+    /** Heading of the unsaved-changes question on the Providers form; argument 0 is the provider's name. */
+    DIALOG_UNSAVED_PROVIDER_TITLE("dialog.unsaved.provider.title"),
+    /** Text of the unsaved-changes question on the Providers form. */
+    DIALOG_UNSAVED_PROVIDER_TEXT("dialog.unsaved.provider.text"),
     /** Why a workflow step cannot be opened yet: no project is open. Also the hover text of the locked entry and Continue. */
     NAV_LOCKED_NO_PROJECT("nav.locked.noProject"),
     /** The purpose line under the Projects title. */
@@ -2677,6 +2841,14 @@ public enum MessageKey {
     CONFIRM_REMOVE_PROJECT_YES("confirm.removeProject.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_REMOVE_PROJECT_YES}. */
     CONFIRM_REMOVE_PROJECT_YES_TIP("confirm.removeProject.yes.tip"),
+    /** Heading of the delete-provider question; argument 0 is the provider's name. */
+    CONFIRM_DELETE_PROVIDER_TITLE("confirm.deleteProvider.title"),
+    /** What deleting a provider does; argument 0 is the provider's name. */
+    CONFIRM_DELETE_PROVIDER_TEXT("confirm.deleteProvider.text"),
+    /** The confirming button of the delete-provider question. */
+    CONFIRM_DELETE_PROVIDER_YES("confirm.deleteProvider.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_DELETE_PROVIDER_YES}. */
+    CONFIRM_DELETE_PROVIDER_YES_TIP("confirm.deleteProvider.yes.tip"),
     /** Heading of the Find the book card. */
     DIALOG_FIND_BOOK_TITLE("dialog.findBook.title"),
     /** Text when the stored file is gone; {0} names the project. */

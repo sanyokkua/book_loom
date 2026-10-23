@@ -23,7 +23,6 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.ProviderNames;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
@@ -117,7 +116,7 @@ final class BriefQualityCard {
         model.setText(chosen.map(selection -> messages.get(
                         MessageKey.BRIEF_MODEL_VALUE,
                         selection.modelId(),
-                        ProviderNames.displayName(messages, selection.providerId())))
+                        settings.providerName(selection.providerId())))
                 .orElseGet(() -> messages.get(MessageKey.BRIEF_MODEL_NONE)));
     }
 }

@@ -78,4 +78,20 @@ public abstract class SettingsContractTest {
     void all_whenNothingStored_isEmpty() {
         assertThat(settings().all().data()).isEmpty();
     }
+
+    @Test
+    void remove_aStoredKey_makesGetReturnTheDefaultAndDropsItFromAll() {
+        settings().put(AppSetting.CURRENT_MODEL, new ModelSelection("ollama", "m"));
+        settings().put(AppSetting.LAST_PROJECT, "p-1");
+
+        assertThat(settings().remove(AppSetting.CURRENT_MODEL).data()).isTrue();
+
+        assertThat(settings().get(AppSetting.CURRENT_MODEL).data()).isEmpty();
+        assertThat(settings().all().data()).containsOnly(java.util.Map.entry("app.lastProject", "p-1"));
+    }
+
+    @Test
+    void remove_aKeyNeverStored_isOkAndReportsNothingRemoved() {
+        assertThat(settings().remove(AppSetting.CURRENT_MODEL).data()).isFalse();
+    }
 }

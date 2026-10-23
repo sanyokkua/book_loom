@@ -10,19 +10,22 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.settings.AppSetting;
-import ua.bookloom.ui.FakeProviderConfigs;
-import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 
 /** The model chosen last time is read when Settings loads, and the first-launch look can adopt another one. */
 class SettingsViewModelCurrentModelTest extends SettingsViewModelTestBase {
 
-    private final MemorySettings settings = new MemorySettings();
-    private final FakeProviderConfigs configs = new FakeProviderConfigs();
-
     private SettingsViewModel build() {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                configs, ScriptedProviderVerifier.idle(), newModelListing(), errors, executor, activities, settings));
+                configs,
+                ScriptedProviderVerifier.idle(),
+                newModelListing(),
+                errors,
+                executor,
+                activities,
+                settings,
+                EnglishMessages.create()));
         WaitForAsyncUtils.waitForFxEvents();
         return built;
     }

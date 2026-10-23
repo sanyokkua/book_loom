@@ -11,6 +11,35 @@ import org.junit.jupiter.api.Test;
 /** Whether the conformance cases cover every screen the application ships; a screen added later fails until it does. */
 class ScreenConformanceCoverageTest {
 
+    private static final String[] SHIPPED = {
+        "SHELL",
+        "SHELL_RUN_STATUS",
+        "SETTINGS",
+        "PROJECTS",
+        "PROJECTS_EMPTY",
+        "IMPORT",
+        "BOOK_BRIEF",
+        "IMPORT_DETECTED",
+        "IMPORT_CHECKED",
+        "NAMES_STYLE",
+        "NAMES_STYLE_AUTO",
+        "TRANSLATING",
+        "TRANSLATING_RUNNING",
+        "TRANSLATING_COMPLETED",
+        "EXPORT",
+        "ABOUT_DIALOG",
+        "ERROR_DIALOG",
+        "REPLACE_RUN_DIALOG",
+        "EXPORT_COMPLETE_DIALOG",
+        "SETTINGS_SUMMARY",
+        "SETTINGS_FORM_DIRTY",
+        "SETTINGS_FOLD_OPEN",
+        "SETTINGS_DELETE_DIALOG",
+        "SETTINGS_UNSAVED_DIALOG",
+        "ADD_TERM_DIALOG",
+        "RESULTS_DIALOG"
+    };
+
     // IF a screen were added to the application without a conformance case, THEN it would ship unchecked against the
     // reference rendering; this fails until the case exists.
     @Test
@@ -18,28 +47,7 @@ class ScreenConformanceCoverageTest {
         assertThat(ConformanceCases.SCREENS.stream()
                         .map(ConformanceCases.Screen::name)
                         .distinct())
-                .contains(
-                        "SHELL",
-                        "SHELL_RUN_STATUS",
-                        "SETTINGS",
-                        "PROJECTS",
-                        "PROJECTS_EMPTY",
-                        "IMPORT",
-                        "BOOK_BRIEF",
-                        "IMPORT_DETECTED",
-                        "IMPORT_CHECKED",
-                        "NAMES_STYLE",
-                        "NAMES_STYLE_AUTO",
-                        "TRANSLATING",
-                        "TRANSLATING_RUNNING",
-                        "TRANSLATING_COMPLETED",
-                        "EXPORT",
-                        "ABOUT_DIALOG",
-                        "ERROR_DIALOG",
-                        "REPLACE_RUN_DIALOG",
-                        "EXPORT_COMPLETE_DIALOG",
-                        "ADD_TERM_DIALOG",
-                        "RESULTS_DIALOG");
+                .contains(SHIPPED);
     }
 
     // IF a reachable view had no case here, THEN a screen added later would not be measured against the mockup.

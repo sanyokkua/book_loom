@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderAuth;
+import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
@@ -30,39 +33,116 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> List.copyOf(viewModel.providers())))
                 .containsExactly(
-                        new ProviderRow("ollama", ProviderKind.OLLAMA, "http://localhost:11434", "localhost:11434"),
+                        new ProviderRow("ollama", ProviderKind.OLLAMA, "http://localhost:11434", "localhost:11434", ""),
                         new ProviderRow(
                                 "lmstudio",
                                 ProviderKind.OPENAI_COMPATIBLE,
                                 "http://localhost:1234/v1",
-                                "localhost:1234"));
+                                "localhost:1234",
+                                ""));
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 
-    // IF selecting one provider left the other selected, THEN two rows would both claim to be the current server.
+    // IF opening another provider's form moved the current provider, THEN a person looking at LM Studio would
+    // silently start translating with it.
     @Test
-    void selectProvider_lmStudio_deselectsOllama() {
+    void editProvider_lmStudio_keepsOllamaCurrent() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("lmstudio");
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEqualTo("lmstudio");
+        assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 
-    // IF an id no row carries could be selected, THEN the check would be aimed at a server that is not listed.
+    // IF an id no row carries could be edited, THEN the form would describe a server that is not listed.
     @Test
-    void selectProvider_unknownId_keepsSelection() {
+    void editProvider_unknownId_keepsEditedProvider() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
 
         onFx(() -> {
-            viewModel.selectProvider("nonexistent");
+            viewModel.editProvider("nonexistent");
             return null;
         });
 
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEqualTo("ollama");
+    }
+
+    // IF the first row to open were not the current provider, THEN the form would start on a provider the badge
+    // does not call current.
+    @Test
+    void editedProviderId_afterLoad_isTheCurrentProvider() {
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEqualTo("ollama");
+        assertThat(onFx(() -> viewModel.adding().get())).isFalse();
+    }
+
+    // IF the registry holds no provider, THEN nothing may be edited or current, and the list is empty.
+    @Test
+    void providers_emptyRegistry_hasNoEditedAndNoCurrentProvider() {
+        configs.all().forEach(config -> configs.delete(config.id()));
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+
+        assertThat(onFx(() -> List.copyOf(viewModel.providers()))).isEmpty();
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEmpty();
+        assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEmpty();
+    }
+
+    // IF adding were not a state of its own, THEN a new provider's blank form could not be told from Ollama's.
+    @Test
+    void startAdding_fromOllama_clearsEditedAndKeepsCurrent() {
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+
+        onFx(() -> {
+            viewModel.startAdding();
+            return null;
+        });
+
+        assertThat(onFx(() -> viewModel.adding().get())).isTrue();
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEmpty();
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
+    }
+
+    // IF a cancelled addition left the blank form up, THEN the screen would show no provider while one is current.
+    @Test
+    void cancelAdding_afterStartAdding_editsTheCurrentProviderAgain() {
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+        onFx(() -> {
+            viewModel.startAdding();
+            viewModel.cancelAdding();
+            return null;
+        });
+
+        assertThat(onFx(() -> viewModel.adding().get())).isFalse();
+        assertThat(onFx(() -> viewModel.editedProviderId().get())).isEqualTo("ollama");
+    }
+
+    // IF a provider's own name were not shown, THEN a person's "Office LM" would read as its slug.
+    @Test
+    void providerName_providerWithDisplayName_isThatName() {
+        configs.save(new ProviderConfig(
+                "office-lm",
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create("http://10.0.0.5:1234/v1"),
+                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                ProviderConfig.DEFAULT_REQUEST_TIMEOUT,
+                "Office LM",
+                ProviderAuth.NONE,
+                null,
+                null,
+                null,
+                null,
+                java.util.Map.of(),
+                List.of()));
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+
+        assertThat(onFx(() -> viewModel.providerName("office-lm"))).isEqualTo("Office LM");
+        assertThat(onFx(() -> viewModel.providerName("ollama"))).isEqualTo("Ollama");
+        assertThat(onFx(() -> viewModel.providerName("ghost"))).isEqualTo("ghost");
     }
 
     // IF the check were offered without a model, THEN it would verify a server against nothing.
@@ -81,7 +161,7 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
 
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             return null;
         });
 
@@ -217,38 +297,83 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
         assertThat(toasts.raised()).isEmpty();
     }
 
-    // IF a model chosen for one server stayed when another was selected, THEN the check would ask the new server for
-    // a model it may not have, and show the old server's verdict beside it.
+    // IF a model typed for one server stayed when another was edited, THEN the check would ask the new server for a
+    // model it may not have, and show the old server's verdict beside it.
     @Test
-    void selectProvider_afterModelChosen_clearsModelAndStages() {
+    void editProvider_afterModelTyped_clearsDraftModelAndStages() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.returning(allPassed()));
         checkWithModel(viewModel);
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.model().get())).isEmpty();
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEmpty();
         assertThat(stagesOf(viewModel)).isEmpty();
         assertThat(onFx(() ->
                         viewModel.tests().available(ProviderTest.INFERENCE).get()))
                 .isFalse();
     }
 
-    // IF re-selecting the current provider cleared the model, THEN clicking the already-selected row would silently
-    // discard what the person had typed.
+    // IF re-opening the edited provider cleared the draft, THEN clicking the open row would discard typing.
     @Test
-    void selectProvider_sameProvider_keepsModelAndStages() {
+    void editProvider_sameProvider_keepsDraftModelAndStages() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.returning(allPassed()));
         checkWithModel(viewModel);
 
         onFx(() -> {
-            viewModel.selectProvider("ollama");
+            viewModel.editProvider("ollama");
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo(MODEL);
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo(MODEL);
         assertThat(stagesOf(viewModel)).hasSize(3);
+    }
+
+    // IF coming back to the current provider showed an empty model, THEN its saved model would look lost.
+    @Test
+    void editProvider_backToCurrent_restoresTheCurrentModel() {
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+        onFx(() -> {
+            viewModel.applySavedCurrentModel("qwen3:8b");
+            viewModel.editProvider("lmstudio");
+            viewModel.editProvider("ollama");
+            return null;
+        });
+
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("qwen3:8b");
+        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("qwen3:8b");
+    }
+
+    // IF the check were aimed at the current provider while another is being edited, THEN its verdict would be
+    // shown on the wrong form.
+    @Test
+    void check_otherProviderEdited_asksTheVerifierAboutThatProvider() {
+        final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.returning(allPassed());
+        final SettingsViewModel viewModel = viewModel(verifier);
+        onFx(() -> {
+            viewModel.editProvider("lmstudio");
+            return null;
+        });
+
+        checkWithModel(viewModel);
+
+        assertThat(verifier.selections()).containsExactly(new ModelSelection("lmstudio", MODEL));
+    }
+
+    // IF leaving the current provider forgot nothing, THEN a deleted provider would stay selected.
+    @Test
+    void forgetCurrent_afterLoad_clearsProviderAndModel() {
+        final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
+        onFx(() -> {
+            viewModel.applySavedCurrentModel("qwen3:8b");
+            viewModel.forgetCurrent();
+            return null;
+        });
+
+        assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEmpty();
+        assertThat(onFx(() -> viewModel.model().get())).isEmpty();
+        assertThat(onFx(viewModel::selection)).isEmpty();
     }
 }

@@ -12,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
@@ -74,7 +75,8 @@ abstract class LocalModelProbeTestBase extends FxTestBase {
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 activities,
-                store));
+                store,
+                EnglishMessages.create()));
         return onFx(() -> new LocalModelProbe(catalog, configs, store, executor, viewModel, pick));
     }
 

@@ -2,13 +2,15 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.net.URI;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -26,6 +28,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 
 /**
@@ -46,9 +49,19 @@ public final class SettingsViewModel {
     private final ExecutorService executor;
     private final ObservableList<ProviderRow> loaded = FXCollections.observableArrayList();
     private final ObservableList<ProviderRow> providers = FXCollections.unmodifiableObservableList(loaded);
+    private final Map<String, ProviderConfig> snapshot = new LinkedHashMap<>();
+    private final Messages messages;
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
+    private final ReadOnlyStringWrapper editedProviderId = new ReadOnlyStringWrapper("");
+    private final ReadOnlyBooleanWrapper adding = new ReadOnlyBooleanWrapper(false);
     private final StringProperty model = new SimpleStringProperty("");
+    private final StringProperty draftModel = new SimpleStringProperty("");
     private final ReadOnlyObjectWrapper<List<ModelAdvice.Note>> modelNotes = new ReadOnlyObjectWrapper<>(List.of());
+
+    // Only the first read may make the first row current (a deleted current provider stays deleted); a dirty form
+    // holds typing that an adopted model must not replace.
+    private boolean loadedOnce;
+    private boolean formDirty;
 
     /**
      * Starts reading the registry on the background executor; the list stays empty, and nothing is selected, until the
@@ -63,6 +76,7 @@ public final class SettingsViewModel {
      * @param activities the work under way, which a provider test registers with and the inference test must not
      *     overlap
      * @param settingsStore where the model chosen last time is read from, on the background executor
+     * @param messages the catalogue a provider without a name of its own is named from
      */
     @Inject
     public SettingsViewModel(
@@ -72,7 +86,9 @@ public final class SettingsViewModel {
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities,
-            final SettingsRepository settingsStore) {
+            final SettingsRepository settingsStore,
+            final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
@@ -80,11 +96,11 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(verifier, "verifier"),
                 Objects.requireNonNull(errors, "errors"),
                 Objects.requireNonNull(executor, "executor"),
-                selectedProviderId.getReadOnlyProperty(),
-                model,
+                editedProviderId.getReadOnlyProperty(),
+                draftModel,
                 Objects.requireNonNull(activities, "activities"));
-        selectedProviderId.addListener((observed, was, now) -> refreshNotes());
-        model.addListener((observed, was, now) -> refreshNotes());
+        editedProviderId.addListener((observed, was, now) -> refreshNotes());
+        draftModel.addListener((observed, was, now) -> refreshNotes());
         refreshNotes();
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));
@@ -93,11 +109,11 @@ public final class SettingsViewModel {
     /** Reads the registry off the FX thread: storage is never touched where the window draws. */
     private void loadProviders(final Optional<ModelSelection> stored, final Runnable afterPublished) {
         log.debug("loading the providers on {}", Thread.currentThread().getName());
-        final List<ProviderRow> rows = rowsOf(configs);
+        final List<ProviderConfig> read = ProviderRows.sorted(configs);
         if (Platform.isFxApplicationThread()) {
-            publishProviders(rows, stored, afterPublished);
+            publishProviders(read, stored, afterPublished);
         } else {
-            Platform.runLater(() -> publishProviders(rows, stored, afterPublished));
+            Platform.runLater(() -> publishProviders(read, stored, afterPublished));
         }
     }
 
@@ -113,14 +129,38 @@ public final class SettingsViewModel {
     }
 
     private void publishProviders(
-            final List<ProviderRow> rows, final Optional<ModelSelection> stored, final Runnable afterPublished) {
+            final List<ProviderConfig> read, final Optional<ModelSelection> stored, final Runnable afterPublished) {
+        snapshot.clear();
+        read.forEach(config -> snapshot.put(config.id(), config));
+        final List<ProviderRow> rows = read.stream().map(ProviderRows::rowOf).toList();
         loaded.setAll(rows);
-        if (selectedProviderId.get().isEmpty()) {
+        if (!loadedOnce && selectedProviderId.get().isEmpty()) {
             rows.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
         }
+        loadedOnce = true;
+        repairEdited();
         stored.ifPresent(this::adopt);
         log.info("settings ready: {} provider(s), selected '{}'", rows.size(), selectedProviderId.get());
         afterPublished.run();
+    }
+
+    // The edited provider is always a listed one: a first load starts on the current provider, and a deleted one
+    // gives way to it.
+    private void repairEdited() {
+        final String edited = editedProviderId.get();
+        if (!adding.get() && (edited.isEmpty() || !snapshot.containsKey(edited))) {
+            final String current = selectedProviderId.get();
+            final String target = !current.isEmpty()
+                    ? current
+                    : loaded.isEmpty() ? "" : loaded.getFirst().id();
+            log.debug("edited provider '{}' replaced by '{}'", edited, target);
+            showEdited(target);
+        }
+    }
+
+    private void showEdited(final String id) {
+        draftModel.set(id.equals(selectedProviderId.get()) ? model.get() : "");
+        editedProviderId.set(id);
     }
 
     /**
@@ -151,77 +191,64 @@ public final class SettingsViewModel {
             log.debug("adopt ignored: no provider '{}' is listed", chosen.providerId());
             return;
         }
+        final boolean following =
+                !adding.get() && !formDirty && editedProviderId.get().equals(selectedProviderId.get());
         selectedProviderId.set(chosen.providerId());
         model.set(chosen.modelId());
+        if (following) {
+            draftModel.set(chosen.modelId());
+            editedProviderId.set(chosen.providerId());
+        }
         log.info("model adopted: {}/{}", chosen.providerId(), chosen.modelId());
     }
 
     private void refreshNotes() {
-        final String selected = selectedProviderId.get();
+        final String selected = editedProviderId.get();
         final List<ModelAdvice.Note> notes = providers.stream()
                 .filter(row -> row.id().equals(selected))
                 .findFirst()
-                .map(row -> ModelAdvice.notesFor(row.kind(), model.get()))
+                .map(row -> ModelAdvice.notesFor(row.kind(), draftModel.get()))
                 .orElse(List.of());
         log.debug("model notes for provider '{}': {}", selected, notes.size());
         modelNotes.set(notes);
     }
 
-    private static List<ProviderRow> rowsOf(final ProviderConfigs configs) {
-        return configs.all().stream()
-                .sorted(Comparator.comparing(ProviderConfig::kind).thenComparing(ProviderConfig::id))
-                .map(SettingsViewModel::rowOf)
-                .toList();
-    }
-
-    private static ProviderRow rowOf(final ProviderConfig config) {
-        final URI url = config.baseUrl();
-        final String hostPort = url.getPort() < 0 ? url.getHost() : url.getHost() + ":" + url.getPort();
-        return new ProviderRow(config.id(), config.kind(), url.toString(), hostPort);
-    }
-
-    /**
-     * The three provider tests and the findings of the last one.
-     *
-     * @return the runner over this view model's selected provider and model
-     */
+    /** The three provider tests and the findings of the last one. */
     public ProviderTestRunner tests() {
         return tests;
     }
 
-    /**
-     * The providers on offer, in the order they are listed.
-     *
-     * @return a read-only list, empty until the registry has been read in the background
-     */
+    /** The providers on offer, in the order they are listed. */
     public ObservableList<ProviderRow> providers() {
         return providers;
     }
 
-    /**
-     * The id of the one selected provider.
-     *
-     * @return a read-only property; empty only if the registry held no provider
-     */
+    /** The id of the current provider, the one runs and checks of other screens use. */
     public ReadOnlyStringProperty selectedProviderId() {
         return selectedProviderId.getReadOnlyProperty();
     }
 
-    /**
-     * The model text for the selected provider, exactly as it was typed or picked; a new selection resets it. A check
-     * asks about the text stripped of surrounding whitespace.
-     *
-     * @return a writable property, empty while none is chosen; FX thread only
-     */
+    /** The model of the current provider, as last saved or adopted. Typing in the form changes {@link #draftModel()} only. */
     public StringProperty model() {
         return model;
     }
 
-    /**
-     * The advice for the selected provider and the chosen model, which follows both.
-     *
-     * @return a read-only property holding the notes of {@link ModelAdvice}, empty while there is none
-     */
+    /** The id of the provider whose form is open. */
+    public ReadOnlyStringProperty editedProviderId() {
+        return editedProviderId.getReadOnlyProperty();
+    }
+
+    /** Whether the form is for a provider that is not stored yet. */
+    public ReadOnlyBooleanProperty adding() {
+        return adding.getReadOnlyProperty();
+    }
+
+    /** The model text of the open form, as typed or picked; a different provider resets it. A check asks about the text stripped of surrounding whitespace. */
+    public StringProperty draftModel() {
+        return draftModel;
+    }
+
+    /** The advice for the selected provider and the chosen model, which follows both. */
     public ReadOnlyObjectProperty<List<ModelAdvice.Note>> modelNotes() {
         return modelNotes.getReadOnlyProperty();
     }
@@ -236,11 +263,11 @@ public final class SettingsViewModel {
     }
 
     /**
-     * Asks the selected provider for its models again. FX thread only.
+     * Asks the provider whose form is open for its models again. FX thread only.
      */
     public void refreshModels() {
-        log.debug("model list refresh requested for '{}'", selectedProviderId.get());
-        modelListing.refresh(selectedProviderId.get());
+        log.debug("model list refresh requested for '{}'", editedProviderId.get());
+        modelListing.refresh(editedProviderId.get());
     }
 
     /**
@@ -252,12 +279,12 @@ public final class SettingsViewModel {
      */
     public void setModelText(final String text) {
         Objects.requireNonNull(text, "text");
-        model.set(text);
+        draftModel.set(text);
     }
 
     /** Notes that the person settled on the entry (Enter, or a pick from the list); the text itself already counts. */
     public void commitModel() {
-        final String chosen = model.get().strip();
+        final String chosen = draftModel.get().strip();
         if (chosen.isEmpty()) {
             log.debug("model entry committed while blank");
         } else {
@@ -266,25 +293,95 @@ public final class SettingsViewModel {
     }
 
     /**
-     * Selects a provider; a different one also discards the model, the offered models and the last findings, which
-     * meant something only for the server they came from, then asks the new provider for its models. FX thread only.
+     * Opens a provider's form; a different one also discards the typed model, the offered models and the last
+     * findings, which meant something only for the server they came from, then asks the new provider for its models.
+     * The current provider does not change. FX thread only.
      *
      * @param id a provider id; an id no row carries is ignored
      */
-    public void selectProvider(final String id) {
+    public void editProvider(final String id) {
         Objects.requireNonNull(id, "id");
-        log.debug("select provider '{}' requested", id);
-        if (providers.stream().noneMatch(row -> row.id().equals(id))) {
-            log.debug("selection ignored: no provider '{}' is listed", id);
-        } else if (id.equals(selectedProviderId.get())) {
-            log.debug("selection ignored: '{}' is already selected", id);
+        log.debug("edit provider '{}' requested", id);
+        if (!snapshot.containsKey(id)) {
+            log.debug("edit ignored: no provider '{}' is listed", id);
+        } else if (!adding.get() && id.equals(editedProviderId.get())) {
+            log.debug("edit ignored: '{}' is already open", id);
         } else {
-            selectedProviderId.set(id);
-            model.set("");
+            adding.set(false);
+            showEdited(id);
             modelListing.discard();
             modelListing.refresh(id);
-            log.info("provider selected: {}", id);
+            log.info("provider opened for editing: {}", id);
         }
+    }
+
+    /** Opens a blank form for a new provider; nothing is stored until it is saved. FX thread only. */
+    public void startAdding() {
+        log.info("adding a provider");
+        adding.set(true);
+        draftModel.set("");
+        editedProviderId.set("");
+        modelListing.discard();
+    }
+
+    /** Leaves the blank form and opens the current provider again. FX thread only. */
+    public void cancelAdding() {
+        log.debug("adding cancelled");
+        final String current = selectedProviderId.get();
+        if (current.isEmpty()) {
+            adding.set(false);
+        } else {
+            editProvider(current);
+        }
+    }
+
+    /** Says whether the open form holds typing, which an adopted model leaves alone. */
+    void formDirty(final boolean dirty) {
+        formDirty = dirty;
+    }
+
+    /** Forgets the current provider and model, after the current provider was deleted. FX thread only. */
+    public void forgetCurrent() {
+        log.info("the current provider and model are forgotten");
+        selectedProviderId.set("");
+        model.set("");
+    }
+
+    /**
+     * Makes a saved model text the current model of the current provider. FX thread only.
+     *
+     * @param text what was saved; surrounding whitespace is dropped, blank means no model
+     */
+    public void applySavedCurrentModel(final String text) {
+        Objects.requireNonNull(text, "text");
+        model.set(text.strip());
+        log.debug("current model text now has {} character(s)", model.get().length());
+    }
+
+    /**
+     * Names a provider for display: its own name, else the catalogue's, else its id.
+     *
+     * @param id a provider id
+     * @return the name to show
+     */
+    public String providerName(final String id) {
+        Objects.requireNonNull(id, "id");
+        return providers.stream()
+                .filter(row -> row.id().equals(id))
+                .findFirst()
+                .map(row -> ProviderNames.displayName(messages, row))
+                .orElseGet(() -> ProviderNames.displayName(messages, id));
+    }
+
+    /**
+     * The stored description of a listed provider, as of the last read.
+     *
+     * @param id a provider id
+     * @return the description, or empty if no row carries the id
+     */
+    public Optional<ProviderConfig> configOf(final String id) {
+        Objects.requireNonNull(id, "id");
+        return Optional.ofNullable(snapshot.get(id));
     }
 
     /**

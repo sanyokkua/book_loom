@@ -76,7 +76,7 @@ class SettingsModelNoteScreenTest extends SettingsScreenTestBase {
         openSettingsSettled();
         typeIntoModelEntry("gemma4:26b-mlx");
 
-        onFx(() -> viewModel().selectProvider("lmstudio"));
+        onFx(() -> viewModel().editProvider("lmstudio"));
 
         assertThat(noteLabel().isVisible()).isTrue();
         assertThat(noteLabel().getText())

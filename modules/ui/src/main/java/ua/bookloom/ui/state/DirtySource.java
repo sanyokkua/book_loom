@@ -1,11 +1,11 @@
 package ua.bookloom.ui.state;
 
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ViewNames;
 
 /**
  * A form whose edits are kept only once saved, so leaving its screen while it holds changes asks first (Keep editing,
- * Discard or Save). A screen registers one through the UI module's set binding; none is registered until the Settings
- * forms (tasks 7.1a and 7.2) need one.
+ * Discard or Save). A screen registers one through the UI module's set binding; the Providers form is the first.
  */
 public interface DirtySource {
 
@@ -22,6 +22,15 @@ public interface DirtySource {
      * @return {@code true} if leaving now would lose changes, {@code false} otherwise
      */
     boolean isDirty();
+
+    /**
+     * What the changes belong to, so the question can name it.
+     *
+     * @return the name of the thing being edited, or {@code null} when the question needs none
+     */
+    default @Nullable String subject() {
+        return null;
+    }
 
     /** Drops the unsaved changes, so the form shows what is saved. FX thread only. */
     void discard();

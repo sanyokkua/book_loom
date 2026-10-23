@@ -42,7 +42,9 @@ final class ConformanceCases {
         EXPORT_COMPLETE,
         ADD_TERM,
         RESULTS,
-        REVIEW_DESK
+        REVIEW_DESK,
+        DELETE_PROVIDER,
+        UNSAVED_PROVIDER
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -68,7 +70,9 @@ final class ConformanceCases {
         BOOK_WITHOUT_LANGUAGE,
         BRIEF_SUGGESTED,
         PROJECTS_LISTED,
-        PROJECTS_EMPTY
+        PROJECTS_EMPTY,
+        PROVIDER_FORM_DIRTY,
+        PROVIDER_FOLD_OPEN
     }
 
     /**
@@ -270,6 +274,7 @@ final class ConformanceCases {
                     NamesStyleConformanceCases.SCREENS.stream(),
                     ProjectsConformanceCases.SCREENS.stream(),
                     ExportConformanceCases.SCREENS.stream(),
+                    SettingsConformanceCases.SCREENS.stream(),
                     TranslatingConformanceCases.SCREENS.stream())
             .flatMap(cases -> cases)
             .toList();

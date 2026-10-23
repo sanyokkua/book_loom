@@ -122,6 +122,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case RESULTS -> onFx(this::showSampleResults);
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
+            case DELETE_PROVIDER -> new SettingsPreparations(injector).askToDelete();
+            case UNSAVED_PROVIDER -> new SettingsPreparations(injector).askAboutUnsaved();
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
                         .ask("Earth Gravity · EN → UK", "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));

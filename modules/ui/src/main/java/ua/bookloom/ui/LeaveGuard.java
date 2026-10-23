@@ -97,15 +97,23 @@ public final class LeaveGuard {
             return false;
         }
         log.debug("leaving {} with unsaved changes: asking first", source);
+        // Once the changes are dropped or saved the question about running work still has to be asked, so the
+        // answer runs the whole check again; the form is clean by then, so it cannot ask twice.
+        final Runnable again = () -> {
+            if (admits(source, proceed)) {
+                proceed.run();
+            }
+        };
         dialog.askUnsaved(
+                dirty.subject(),
                 () -> {
                     log.info("leaving {}: unsaved changes discarded", source);
                     dirty.discard();
-                    proceed.run();
+                    again.run();
                 },
                 () -> {
                     log.info("leaving {}: saving the changes first", source);
-                    dirty.save(proceed);
+                    dirty.save(again);
                 });
         return true;
     }

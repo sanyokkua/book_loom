@@ -142,6 +142,11 @@ class ReviewModeSourceTest {
         }
 
         @Override
+        public Result<Boolean> remove(AppSetting<?> setting) {
+            return Result.err(AppError.of(ErrorCode.internal, "Settings", "unreadable"));
+        }
+
+        @Override
         public Result<Map<String, String>> all() {
             return Result.err(AppError.of(ErrorCode.internal, "Settings", "unreadable"));
         }

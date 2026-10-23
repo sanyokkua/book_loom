@@ -168,13 +168,14 @@ area-specific spec documents cross-referenced above; those documents cite these 
 
 | ID             | Requirement                                                                                                                            | Priority | Notes           |
 |----------------|------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| FR-SETTINGS-01 | The application shall persist all settings in a typed KV store.                                                                        | Must     | DD-20, seam F7  |
+| FR-SETTINGS-01 | The application shall persist settings in a typed KV store, and providers and per-model settings in their own stores; API keys are never stored, only the names of the environment variables that hold them. | Must     | DD-20, seam F7, ADR-0043 |
 | FR-SETTINGS-02 | The application shall provide a Providers tab and a Models tab.                                                                        | Must     |                 |
 | FR-SETTINGS-03 | The application shall provide a Generation tab for num_ctx, temperature, chunk budget, and preceding-blocks with validated ranges.     | Must     | See 07_SETTINGS |
 | FR-SETTINGS-04 | The application shall provide an Appearance tab for theme and language; the accent is fixed to Cognac and there is no density setting. | Must     | DD-22, DD-48    |
 | FR-SETTINGS-05 | The application shall provide an Automation tab for review-mode and quality-dial defaults.                                             | Must     |                 |
 | FR-SETTINGS-06 | The application shall provide a Storage & logs tab exposing data/log locations and log level.                                          | Must     | DD-23           |
 | FR-SETTINGS-07 | The application shall validate every setting against its allowed range and reject invalid input.                                       | Must     |                 |
+| FR-SETTINGS-08 | The Providers and Models tabs shall change nothing until Save, shown in a pinned footer "● Unsaved changes · Cancel · Save"; leaving with changes (another tab, another provider or another screen) shall ask Keep editing · Discard · Save, naming the provider ("Save the changes to Ollama?"); the other tabs shall apply at once and say when the change takes effect. | Must     | Mockups: Settings |
 
 ## fr-ui {#fr-ui}
 

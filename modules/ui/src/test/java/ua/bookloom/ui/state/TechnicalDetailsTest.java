@@ -105,6 +105,11 @@ class TechnicalDetailsTest {
         }
 
         @Override
+        public Result<Boolean> remove(final AppSetting<?> setting) {
+            return Result.err(ERROR);
+        }
+
+        @Override
         public Result<Map<String, String>> all() {
             return Result.err(ERROR);
         }

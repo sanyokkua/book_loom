@@ -949,7 +949,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 7. Settings
 
-- [ ] 7.1a Build Settings › Providers' list, form and saving: the list | form split, the summary card, the Connection
+- [x] 7.1a Build Settings › Providers' list, form and saving: the list | form split, the summary card, the Connection
   details fold around the full form, Delete, and the pinned save footer with the leave guard. A person can then add and
   keep a provider without leaving the window.
   - **Satisfies:** settings "Add, edit and delete providers"; settings "Describe a provider's connection in a form";

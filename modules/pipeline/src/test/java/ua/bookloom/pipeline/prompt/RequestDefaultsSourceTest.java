@@ -165,6 +165,11 @@ class RequestDefaultsSourceTest {
             }
 
             @Override
+            public Result<Boolean> remove(final AppSetting<?> setting) {
+                return Result.ok(false);
+            }
+
+            @Override
             public Result<Map<String, String>> all() {
                 return Result.ok(Map.of());
             }

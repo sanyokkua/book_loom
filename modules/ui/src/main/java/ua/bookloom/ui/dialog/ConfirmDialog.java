@@ -107,6 +107,13 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_REMOVE_PROJECT_YES,
                 MessageKey.CONFIRM_REMOVE_PROJECT_YES_TIP);
 
+        /** Deleting a provider and its per-model settings; the title and the text name the provider. */
+        public static final Question DELETE_PROVIDER = new Question(
+                MessageKey.CONFIRM_DELETE_PROVIDER_TITLE,
+                MessageKey.CONFIRM_DELETE_PROVIDER_TEXT,
+                MessageKey.CONFIRM_DELETE_PROVIDER_YES,
+                MessageKey.CONFIRM_DELETE_PROVIDER_YES_TIP);
+
         /**
          * A question whose safe answer is Cancel.
          *

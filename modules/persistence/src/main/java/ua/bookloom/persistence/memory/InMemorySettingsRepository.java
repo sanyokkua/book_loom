@@ -47,6 +47,18 @@ public final class InMemorySettingsRepository implements SettingsRepository {
     }
 
     @Override
+    public Result<Boolean> remove(final AppSetting<?> setting) {
+        Objects.requireNonNull(setting, "setting");
+        try {
+            final boolean removed = values.remove(setting.key()) != null;
+            log.debug("Setting removed key={} existed={}", setting.key(), removed);
+            return Result.ok(removed);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
     public Result<Map<String, String>> all() {
         try {
             log.debug("Settings listed count={}", values.size());

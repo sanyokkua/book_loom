@@ -3,6 +3,8 @@ package ua.bookloom.ui;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import javafx.application.Platform;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
@@ -11,16 +13,36 @@ import ua.bookloom.api.settings.AppSetting;
 public final class MemorySettings implements SettingsRepository {
 
     private final Map<String, String> values = new ConcurrentHashMap<>();
+    private final AtomicInteger fxThreadCalls = new AtomicInteger();
+
+    /** How many calls came from the FX Application Thread, which storage must never see. */
+    public int fxThreadCalls() {
+        return fxThreadCalls.get();
+    }
+
+    private void watch() {
+        if (Platform.isFxApplicationThread()) {
+            fxThreadCalls.incrementAndGet();
+        }
+    }
 
     @Override
     public <T> Result<Optional<T>> get(final AppSetting<T> setting) {
+        watch();
         return Result.ok(Optional.ofNullable(setting.parse(values.get(setting.key()))));
     }
 
     @Override
     public <T> Result<T> put(final AppSetting<T> setting, final T value) {
+        watch();
         values.put(setting.key(), setting.formatter().apply(value));
         return Result.ok(value);
+    }
+
+    @Override
+    public Result<Boolean> remove(final AppSetting<?> setting) {
+        watch();
+        return Result.ok(values.remove(setting.key()) != null);
     }
 
     @Override
