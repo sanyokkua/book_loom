@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.RunRecord;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -77,6 +78,8 @@ final class ProjectRowView {
         final ProjectSummary summary = row.summary();
         final Label name = new Label(summary.project().name());
         name.getStyleClass().add("provider-name");
+        name.setMinWidth(0);
+        Overrun.install(name);
         final HBox heading = new HBox(CHIP_SPACING, name);
         heading.setAlignment(Pos.CENTER_LEFT);
         if (summary.project().nameOrigin() == NameOrigin.USER) {
@@ -87,13 +90,17 @@ final class ProjectRowView {
         }
         final Label meta = new Label(metaOf(row));
         meta.getStyleClass().add("muted");
-        return new VBox(INFO_SPACING, heading, meta);
+        Overrun.install(meta);
+        final VBox info = new VBox(INFO_SPACING, heading, meta);
+        info.setMinWidth(0);
+        return info;
     }
 
     private Label chip(final String id, final MessageKey word) {
         final Label chip = new Label(messages.get(word));
         chip.setId(id);
         chip.getStyleClass().addAll("chip", "chip-neutral");
+        chip.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, chip, tipOf(word));
         return chip;
     }

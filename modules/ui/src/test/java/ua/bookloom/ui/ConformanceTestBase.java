@@ -55,6 +55,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
     private record Showing(
             Class<?> owner,
             Screen screen,
+            Locale locale,
             Injector injector,
             AppShellView shell,
             Navigator navigator,
@@ -89,8 +90,17 @@ abstract class ConformanceTestBase extends ShellTestBase {
     }
 
     protected final void show(final Screen screen) throws TimeoutException {
+        show(screen, Locale.ENGLISH);
+    }
+
+    /** Shows the screen in another display language; the shell the previous case left is reused only for the same one. */
+    protected final void show(final Screen screen, final Locale locale) throws TimeoutException {
         final Showing previous = lastShown;
-        if (adopted && previous != null && previous.screen().equals(screen) && screen.overlay() == Overlay.NONE) {
+        if (adopted
+                && previous != null
+                && previous.screen().equals(screen)
+                && previous.locale().equals(locale)
+                && screen.overlay() == Overlay.NONE) {
             return;
         }
         if (adopted) {
@@ -98,8 +108,11 @@ abstract class ConformanceTestBase extends ShellTestBase {
             interact(() -> super.start(primary));
         }
         lastShown = null;
+        if (!Locale.ENGLISH.equals(locale)) {
+            useLocale(locale);
+        }
         prepare(screen);
-        lastShown = new Showing(getClass(), screen, injector, shell, navigator, themeController, scene);
+        lastShown = new Showing(getClass(), screen, locale, injector, shell, navigator, themeController, scene);
     }
 
     private void prepare(final Screen screen) throws TimeoutException {

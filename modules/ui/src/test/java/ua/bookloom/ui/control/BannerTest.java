@@ -27,7 +27,7 @@ class BannerTest extends FxTestBase {
                 Banner.Role.WARN,
                 "⚠",
                 "",
-                "5 flagged segments have no translation and were written in the source language: ch5 · p12, ch8 · p04,"
+                "5 segments to review have no translation and were written in the source language: ch5 · p12, ch8 · p04,"
                         + " ch8 · p05, ch8 · p06, ch10 · p03");
         final VBox column = new VBox(banner);
         column.setMaxWidth(NARROW);

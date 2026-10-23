@@ -102,7 +102,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
     void reviewWithModel_noModelChosen_saysSoAndAsksNothing() {
         run(() -> vm.recurring().review());
 
-        assertThat(notice()).isEqualTo("Choose a model in the provider settings to scan or review recurring terms.");
+        assertThat(notice()).isEqualTo("Choose a model in the AI model settings to scan or review recurring terms.");
         assertThat(lexicon.calls()).doesNotContain("review(p1)");
     }
 
@@ -158,7 +158,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
                 .extracting(ChangeRow::term, ChangeRow::origin)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("imp", ChangeOrigin.TEXT));
         assertThat(notice())
-                .isEqualTo("Found in the text. The model step was skipped: choose a model in the provider settings"
+                .isEqualTo("Found in the text. The model step was skipped: choose a model in the AI model settings"
                         + " to run it.");
         assertThat(onFx(() -> vm.busy().get())).isFalse();
     }

@@ -13,6 +13,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
@@ -108,6 +109,7 @@ final class ModelField {
         final Button refresh = new Button(messages.get(MessageKey.SETTINGS_FORM_MODEL_REFRESH));
         refresh.setId("settings-model-refresh");
         refresh.getStyleClass().add("btn-ghost");
+        refresh.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, refresh, MessageKey.SETTINGS_FORM_MODEL_REFRESH_TIP);
         refresh.setOnAction(event -> viewModel.refreshModels());
         HBox.setHgrow(combo, Priority.SOMETIMES);

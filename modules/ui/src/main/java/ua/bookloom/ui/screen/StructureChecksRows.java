@@ -16,6 +16,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StatusRole;
@@ -58,6 +59,7 @@ final class StructureChecksRows extends VBox {
         log.debug("building the run-total line over {} segment(s) of book text", bookText);
         final Label line = new Label();
         line.setId("structure-run-total");
+        Tips.install(messages, line, MessageKey.TRANSLATING_STRIP_DONE_TIP);
         line.getStyleClass().add("muted");
         line.setWrapText(true);
         line.setMinHeight(Region.USE_PREF_SIZE);

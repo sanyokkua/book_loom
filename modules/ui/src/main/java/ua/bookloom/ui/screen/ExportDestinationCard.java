@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
@@ -53,9 +54,12 @@ final class ExportDestinationCard {
         Tips.installLive(path, viewModel.destination());
         HBox.setHgrow(path, Priority.ALWAYS);
         path.setMaxWidth(Double.MAX_VALUE);
+        // The folders give way first; the home note and the buttons keep their words whole.
+        path.setMinWidth(0);
         final Label inHome = new Label(messages.get(MessageKey.EXPORT_SAVE_TO_HOME));
         inHome.setId("export-save-to-home");
         inHome.getStyleClass().add("hint");
+        inHome.setMinWidth(Region.USE_PREF_SIZE);
         BriefCards.shownWhile(
                 inHome, Bindings.createBooleanBinding(() -> shortPath().inHome(), viewModel.destination()));
         final HBox row = new HBox(ROW_SPACING, path, inHome, changeButton());
@@ -86,6 +90,7 @@ final class ExportDestinationCard {
         change.setId("export-browse");
         Tips.install(messages, change, MessageKey.EXPORT_BROWSE_TIP);
         change.getStyleClass().add("btn-secondary");
+        change.setMinWidth(Region.USE_PREF_SIZE);
         change.setOnAction(event -> change());
         return change;
     }
@@ -95,6 +100,7 @@ final class ExportDestinationCard {
         suggest.setId("export-suggest-name");
         Tips.install(messages, suggest, MessageKey.EXPORT_SUGGEST_NAME_TIP);
         suggest.getStyleClass().add("btn-secondary");
+        suggest.setMinWidth(Region.USE_PREF_SIZE);
         suggest.disableProperty().bind(viewModel.nameSuggestion.suggesting());
         suggest.setOnAction(event -> viewModel.nameSuggestion.ask());
         return suggest;

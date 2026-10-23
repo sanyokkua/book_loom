@@ -168,7 +168,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
         final Label line = (Label) scene.getRoot().lookup("#export-complete-no-target-text");
         assertThat(line.getText())
-                .isEqualTo("2 flagged segments have no translation and were written in the source language:"
+                .isEqualTo("2 segments to review have no translation and were written in the source language:"
                         + " ch12 · p02, ch12 · p06");
         assertThat(scene.getRoot().lookup("#export-complete-source-fallbacks-text"))
                 .isNull();

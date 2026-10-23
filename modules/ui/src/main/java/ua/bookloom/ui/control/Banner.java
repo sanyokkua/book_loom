@@ -172,6 +172,7 @@ public final class Banner extends HBox {
         final Button button = new Button(Objects.requireNonNull(label, "label"));
         button.setId(Objects.requireNonNull(id, "id"));
         button.getStyleClass().add("btn-secondary");
+        button.setMinWidth(Region.USE_PREF_SIZE);
         button.setOnAction(event -> action.run());
         HBox.setHgrow(column, Priority.ALWAYS);
         getChildren().add(button);

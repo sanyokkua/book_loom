@@ -88,7 +88,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma4:26b"));
 
         assertThat(shownWithout).isTrue();
-        assertThat(words).isEqualTo("No model is chosen yet. Choose a provider and a model in Settings, then start.");
+        assertThat(words).isEqualTo("No model is chosen yet. Choose an AI model in Settings, then start.");
         assertThat(isShown("translating-ready-model-hint")).isFalse();
     }
 

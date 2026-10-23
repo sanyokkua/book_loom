@@ -22,8 +22,8 @@
             <Button fx:id="refresh" id="models-refresh" styleClass="btn-ghost" text="%settings.models.refresh"/>
             <Label fx:id="listing" id="models-listing" styleClass="hint" text="%settings.models.listing"/>
         </HBox>
-        <Label fx:id="explain" id="models-explain" styleClass="hint" wrapText="true" text="%settings.models.explain"/>
-        <Label fx:id="empty" id="models-empty" styleClass="hint" wrapText="true" text="%settings.models.empty"/>
+        <Label fx:id="explain" id="models-explain" styleClass="hint" wrapText="true" minHeight="-Infinity" text="%settings.models.explain"/>
+        <Label fx:id="empty" id="models-empty" styleClass="hint" wrapText="true" minHeight="-Infinity" text="%settings.models.empty"/>
         <ScrollPane fx:id="scroll" id="models-scroll" styleClass="form-scroll" fitToWidth="true"
                     hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
             <VBox fx:id="body" id="models-body" spacing="14"/>

@@ -167,6 +167,10 @@ final class ProjectsListView {
         final Label meta = new Label(messages.get(
                 MessageKey.PROJECTS_BOOK_META, group.fileName(), group.format().name(), group.totalSegments()));
         meta.getStyleClass().add("muted");
+        meta.setId("projects-book-meta-"
+                + group.contentHash()
+                        .substring(0, Math.min(HASH_PREFIX, group.contentHash().length())));
+        Tips.install(messages, meta, MessageKey.TRANSLATING_STRIP_DONE_TIP);
         final Label count = new Label(
                 messages.get(MessageKey.PROJECTS_BOOK_TRANSLATIONS, group.rows().size()));
         count.getStyleClass().add("count-pill");

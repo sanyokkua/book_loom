@@ -172,11 +172,11 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
         assertThat(shown("models-refused-why-temperature"))
                 .startsWith("Refused on Oct 2.")
                 .contains("stopped sending it");
-        assertThat(shown("models-refused-send-temperature")).isEqualTo("Send again");
+        assertThat(shown("models-refused-send-temperature")).isEqualTo("Try again now");
         assertThat(visible("models-refused-none")).isFalse();
     }
 
-    // IF Send again waited for Save, THEN the next request would still leave the setting out.
+    // IF Try again now waited for Save, THEN the next request would still leave the setting out.
     @Test
     void sendAgain_pressed_rowGoesAndTheStoreForgotIt() throws TimeoutException {
         modelSettings.put(refusedTemperature());

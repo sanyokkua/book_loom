@@ -218,7 +218,7 @@ class ImportBookFactsTest extends ImportBookTestBase {
         openCheckedFactsBook(FAITHFUL, new BookPlan(Map.of("unit-0", 3), List.of("s-2")));
 
         assertThat(labelText("structure-chunk-warning-text"))
-                .isEqualTo("1 segment exceeds the chunk budget — it will be split by sentence and re-joined.");
+                .isEqualTo("1 segment exceeds the group budget — it will be split by sentence and re-joined.");
         assertThat(isInside("structure-chunk-warning", "import-facts-card")).isTrue();
     }
 

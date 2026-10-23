@@ -67,7 +67,8 @@ class ReviewDeskPolishTest extends ReviewDeskTestBase {
     void findings_flaggedWithNone_sayWhyItIsListed() throws Exception {
         openDeskWith(List.of(sourceOnly()), List.of());
 
-        assertThat(labelText("review-findings-none")).isEqualTo("Flagged by the run — no detail recorded.");
+        assertThat(labelText("review-findings-none"))
+                .isEqualTo("Marked for review during translation — no detail recorded.");
     }
 
     // IF Review (n) opened the empty flagged list when only doubted segments exist, THEN the number on the control

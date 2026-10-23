@@ -212,7 +212,7 @@ class NamesStyleViewModelTest extends FxTestBase {
 
         run(vm::modelScan);
 
-        assertThat(noticeText()).isEqualTo("Choose a model in the provider settings to run the model scan.");
+        assertThat(noticeText()).isEqualTo("Choose a model in the AI model settings to run the model scan.");
         assertThat(glossary.calls()).containsExactly("entries(p1)");
     }
 

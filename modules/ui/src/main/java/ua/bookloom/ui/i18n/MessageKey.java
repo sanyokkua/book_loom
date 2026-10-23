@@ -3262,7 +3262,7 @@ public enum MessageKey {
     TRANSLATING_STRIP_FINISHED_IN("translating.strip.finishedIn"),
     /** Translating strip: the segments decided of all. */
     TRANSLATING_STRIP_DONE("translating.strip.done"),
-    /** Hover explanation of the count labelled by {@link #TRANSLATING_STRIP_DONE}. */
+    /** Hover explanation of what a segment is, put on every count of segments (strip, Projects, Import, Export). */
     TRANSLATING_STRIP_DONE_TIP("translating.strip.done.tip"),
     /** Translating strip: segments translated with no repair. */
     TRANSLATING_STRIP_TRANSLATED("translating.strip.translated"),

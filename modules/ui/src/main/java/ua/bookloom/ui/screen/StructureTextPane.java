@@ -5,6 +5,7 @@ import java.util.Objects;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.SegmentPreview;
@@ -31,6 +32,7 @@ final class StructureTextPane extends VBox {
         meta.setId("structure-preview-meta");
         meta.getStyleClass().add("muted");
         meta.setWrapText(true);
+        meta.setMinHeight(Region.USE_PREF_SIZE);
         text.getStyleClass().add("structure-preview-flow");
         final ScrollPane scroll = new ScrollPane(text);
         scroll.setId("structure-preview");

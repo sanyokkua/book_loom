@@ -42,6 +42,16 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
         assertThat(isPresent("projects-row-" + TIDE_ID)).isTrue();
     }
 
+    // IF the segment count on a book's header carried no explanation, THEN "1,240 segments" would be a riddle.
+    @Test
+    void list_bookHeader_segmentCountExplainsWhatASegmentIs() throws Exception {
+        showListing(ukrainianRunning());
+
+        assertThat(ThemeTestSupport.onFx(() -> ua.bookloom.ui.TooltipProbe.tipText(
+                        node("projects-book-meta-" + hash8(ua.bookloom.ui.ProjectFixtures.BOOK_HASH)))))
+                .isEqualTo("A segment is a paragraph, heading or caption — one piece of the book's text.");
+    }
+
     // IF a row hid its pair, model, quality or progress, THEN two translations of a book could not be told apart.
     @Test
     void list_runningRow_showsPairModelQualityProgressWhenAndTheTranslatingChip() throws Exception {

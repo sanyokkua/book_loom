@@ -133,7 +133,7 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
                         List.of("ch1 · p02", "Paragraph", LONG_TEXT, "1/2"),
                         List.of("ch1 · p03", "Paragraph", "2", "2/2"),
                         List.of("ch1 · p04", "Paragraph", "Bold words here", "2/2"));
-        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 chunks (planned)");
+        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 groups (planned)");
     }
 
     // IF picking another chapter kept the old rows, THEN the list would not follow the tree.
@@ -157,7 +157,7 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> plainOf("structure-preview-text")))
                 .isEqualTo(LONG_TEXT);
-        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · chunk 1 of 2");
+        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · group 1 of 2");
     }
 
     // IF a placeholder token were shown raw, THEN the preview would show markup instead of the book's words.

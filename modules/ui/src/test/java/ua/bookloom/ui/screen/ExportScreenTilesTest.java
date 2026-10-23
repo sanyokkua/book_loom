@@ -7,7 +7,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.ExportRecord;
+import ua.bookloom.ui.TooltipProbe;
 
 /**
  * The four tiles are never blank: before any export they come from the project's counts, and after an export from the
@@ -15,6 +18,8 @@ import ua.bookloom.api.project.ExportRecord;
  */
 class ExportScreenTilesTest extends ExportScreenTestBase {
 
+    private static final String SEGMENT_TIP =
+            "A segment is a paragraph, heading or caption — one piece of the book's text.";
     private static final Path EPUB = Path.of("Frankenstein.epub");
 
     // IF the tiles stayed blank until an export, THEN the screen would look empty and say nothing of the book.
@@ -30,6 +35,17 @@ class ExportScreenTilesTest extends ExportScreenTestBase {
         assertThat(labelText("export-reviewed-value")).isEqualTo("6");
         assertThat(labelText("export-valid-value")).isEqualTo("—");
         assertThat(textOf("export-valid")).contains("checked when written");
+    }
+
+    // IF a segment count carried no explanation, THEN "segments done" would leave a person guessing what is counted.
+    @ParameterizedTest
+    @ValueSource(strings = {"export-written", "export-auto", "export-reviewed"})
+    void tiles_eachSegmentCount_explainsWhatASegmentIs(final String tileId) throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
+        openAndShowExport(EPUB);
+        awaitFx(() -> "74 of 142".equals(labelText("export-written-value")));
+
+        assertThat(TooltipProbe.tipText(required(tileId))).isEqualTo(SEGMENT_TIP);
     }
 
     // IF checks and result actions showed before an export, THEN they would vouch for a file that does not exist.

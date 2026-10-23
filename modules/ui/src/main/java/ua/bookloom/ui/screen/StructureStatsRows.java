@@ -9,6 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.BookStats.Formatting;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureStatistics;
@@ -63,6 +64,10 @@ final class StructureStatsRows {
         shown.setId("structure-stat-" + name);
         shown.setWrapText(true);
         shown.getStyleClass().add(valueClass);
+        if (caption == MessageKey.STRUCTURE_STAT_SEGMENTS) {
+            Tips.install(messages, label, MessageKey.TRANSLATING_STRIP_DONE_TIP);
+            Tips.install(messages, shown, MessageKey.TRANSLATING_STRIP_DONE_TIP);
+        }
         grid.add(label, 0, row);
         grid.add(shown, 1, row);
         row++;

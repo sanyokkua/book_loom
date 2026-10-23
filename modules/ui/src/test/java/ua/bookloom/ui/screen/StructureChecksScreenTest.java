@@ -160,7 +160,7 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         showChecked(FAITHFUL, plan("s-42"));
 
         assertThat(labelText("structure-chunk-warning-text"))
-                .isEqualTo("1 segment exceeds the chunk budget — it will be split by sentence and re-joined.");
+                .isEqualTo("1 segment exceeds the group budget — it will be split by sentence and re-joined.");
     }
 
     // IF a warning appeared with nothing oversized, THEN the person would worry about a book that is fine.

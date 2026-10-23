@@ -1057,7 +1057,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
 
 ## 8. Words, in English and Ukrainian
 
-- [ ] 8.1 Apply the README Words table to both bundles, so the main screens say "segment", "to review", "Try again
+- [x] 8.1 Apply the README Words table to both bundles, so the main screens say "segment", "to review", "Try again
   now", "Skip these 4 segments" and "AI model", and keep chunk, call, tokens and attempts for Detailed views.
   - **Satisfies:** app-shell "Use the words of the vocabulary on the main screens"; app-shell "Hide technical words
     unless Show technical details is on"
@@ -1067,7 +1067,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Test: the bundle parity and ICU validity tests stay green; a grep test asserts no `flagged`, `Retry now` or
     `chunk` remains in a main-screen key's EN value.
   - Edit `10_I18N_AND_ACCESSIBILITY.md` only if a line now disagrees. → :ui
-- [ ] 8.2 Run every fit check in Ukrainian across the screens and dialogs, so the longer labels fit at 960×640.
+- [x] 8.2 Run every fit check in Ukrainian across the screens and dialogs, so the longer labels fit at 960×640.
   - **Satisfies:** app-shell "Keep every part of the window reachable at its smallest size"; app-shell "Fit the layout
     to the width of the content area"; app-shell "Let title-bar items give way by priority"
   - `LayoutFitTest` covers every screen and every dialog size × `uk`.

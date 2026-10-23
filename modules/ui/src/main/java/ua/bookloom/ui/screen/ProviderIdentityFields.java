@@ -6,6 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import org.controlsfx.control.SegmentedButton;
@@ -129,6 +130,7 @@ final class ProviderIdentityFields {
 
     private void label(final ToggleButton button, final String id, final MessageKey text, final MessageKey tip) {
         button.setId(id);
+        button.setMinWidth(Region.USE_PREF_SIZE);
         button.setText(messages.get(text));
         Tips.install(messages, button, tip);
     }

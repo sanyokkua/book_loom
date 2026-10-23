@@ -127,7 +127,7 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
         suggest();
 
         assertThat(onFx(() -> exports.nameSuggestion.notice().get()))
-                .isEqualTo("Choose a provider and model in Settings first.");
+                .isEqualTo("Choose an AI model in Settings first.");
         assertThat(onFx(() -> exports.destination().get())).isEqualTo(before);
     }
 

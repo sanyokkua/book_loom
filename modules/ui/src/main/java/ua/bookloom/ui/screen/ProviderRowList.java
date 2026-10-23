@@ -15,6 +15,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -65,9 +66,15 @@ final class ProviderRowList {
         endpoint.getStyleClass().add("provider-endpoint");
         final Label badge = new Label();
         badge.getStyleClass().add("chip");
+        // The chip keeps its word whole; the name and the address give way, with the rest in a tooltip.
+        badge.setMinWidth(Region.USE_PREF_SIZE);
+        Overrun.install(name);
+        Overrun.install(endpoint);
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox row = new HBox(new VBox(name, endpoint), spacer, badge);
+        final VBox text = new VBox(name, endpoint);
+        text.setMinWidth(0);
+        final HBox row = new HBox(text, spacer, badge);
         row.setId("provider-row-" + provider.id());
         Tips.install(messages, row, MessageKey.SETTINGS_PROVIDERS_TITLE_TIP);
         row.getStyleClass().add("list-item");

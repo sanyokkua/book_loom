@@ -32,7 +32,17 @@ class ImportStructureScreenTest extends ImportBookTestBase {
                         List.of("ch1 · p02", "Paragraph", LONG_TEXT, "1/2"),
                         List.of("ch1 · p03", "Paragraph", "Second paragraph.", "2/2"),
                         List.of("ch1 · p04", "Paragraph", "Third paragraph.", "2/2"));
-        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 chunks (planned)");
+        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 groups (planned)");
+    }
+
+    // IF the segment list's count carried no explanation, THEN "4 segments" would not say what a segment is.
+    @Test
+    void segments_header_explainsWhatASegmentIs() throws TimeoutException {
+        openFactsBook();
+        awaitFx(() -> segmentRows().size() == 4);
+
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("structure-segments-header")))
+                .isEqualTo("A segment is a paragraph, heading or caption — one piece of the book's text.");
     }
 
     // IF picking another part kept the old rows, THEN the list would not follow the tree.
@@ -58,7 +68,7 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         pickSegment(1);
 
         assertThat(previewText()).isEqualTo(LONG_TEXT);
-        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · chunk 1 of 2");
+        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · group 1 of 2");
         assertThat(isInside("structure-preview", "structure-text-card")).isTrue();
         assertThat(isInside("structure-preview", "structure-segments-card")).isFalse();
     }

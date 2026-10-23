@@ -93,9 +93,18 @@ final class ExportResult {
     Node tiles() {
         final HBox row = new HBox(
                 TILE_SPACING,
-                new StatTile("export-written", written, writtenCaption),
-                tile("export-auto", auto, MessageKey.EXPORT_TILE_AUTO),
-                tile("export-reviewed", reviewed, MessageKey.EXPORT_TILE_REVIEWED),
+                Tips.install(
+                        messages,
+                        new StatTile("export-written", written, writtenCaption),
+                        MessageKey.TRANSLATING_STRIP_DONE_TIP),
+                Tips.install(
+                        messages,
+                        tile("export-auto", auto, MessageKey.EXPORT_TILE_AUTO),
+                        MessageKey.TRANSLATING_STRIP_DONE_TIP),
+                Tips.install(
+                        messages,
+                        tile("export-reviewed", reviewed, MessageKey.EXPORT_TILE_REVIEWED),
+                        MessageKey.TRANSLATING_STRIP_DONE_TIP),
                 new StatTile("export-valid", valid, validCaption));
         row.setPadding(new Insets(0));
         return row;

@@ -151,7 +151,7 @@ class NamesStyleModelActionsTest extends FxTestBase {
         run(vm::translate);
 
         assertThat(onFx(() -> vm.notice().get().text()))
-                .isEqualTo("Choose a model in the provider settings to translate the names.");
+                .isEqualTo("Choose a model in the AI model settings to translate the names.");
         assertThat(glossary.calls()).containsExactly("entries(p1)");
     }
 
@@ -163,7 +163,7 @@ class NamesStyleModelActionsTest extends FxTestBase {
         run(vm::review);
 
         assertThat(onFx(() -> vm.notice().get().text()))
-                .isEqualTo("Choose a model in the provider settings to review the names.");
+                .isEqualTo("Choose a model in the AI model settings to review the names.");
         assertThat(glossary.calls()).containsExactly("entries(p1)");
     }
 

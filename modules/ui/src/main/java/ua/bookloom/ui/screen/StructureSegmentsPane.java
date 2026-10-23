@@ -18,6 +18,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
@@ -84,6 +85,7 @@ final class StructureSegmentsPane extends VBox {
         Tips.install(messages, search, MessageKey.STRUCTURE_SEARCH_HINT);
         HBox.setHgrow(search, Priority.ALWAYS);
         kinds.setId("structure-segments-kind");
+        kinds.setMinWidth(Region.USE_PREF_SIZE);
         kinds.setConverter(new StringConverter<>() {
             @Override
             public String toString(final @Nullable SegmentKind kind) {
@@ -156,6 +158,7 @@ final class StructureSegmentsPane extends VBox {
         kinds.setValue(present.contains(chosen) ? chosen : null);
         header.setText(
                 messages.get(MessageKey.STRUCTURE_SEGMENTS_HEADER, loaded.rows().size(), loaded.chunks()));
+        Tips.install(messages, header, MessageKey.TRANSLATING_STRIP_DONE_TIP);
         search.setDisable(false);
         kinds.setDisable(false);
         refilter();
