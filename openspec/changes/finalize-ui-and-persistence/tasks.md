@@ -1088,7 +1088,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     FR-SETTINGS, FR-RESUME and FR-UI-06 lines this change builds.
   - `docs/specification/00_Foundation/05_SPEC_INDEX.md`: the new anchors.
   - Verify: every link resolves (`grep` the cited anchors). → docs
-- [ ] 9.2 Run the whole gate from clean, so the change is proven across every module with no exemption.
+- [x] 9.2 Run the whole gate from clean, so the change is proven across every module with no exemption.
   - `./gradlew clean build check spotlessCheck` green; paste its tail.
   - `./gradlew -PstrictLocks verifyLocks`.
   - The packaged-image launch smoke shows `resolve-all passed`. → all

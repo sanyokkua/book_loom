@@ -42,6 +42,8 @@ module ua.bookloom.app {
 
     opens ua.bookloom.app to
             com.google.guice;
+    opens ua.bookloom.app.bootstrap to
+            com.google.guice;
     opens ua.bookloom.app.cli to
             com.google.guice;
 }
