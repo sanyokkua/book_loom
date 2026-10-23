@@ -20,14 +20,17 @@ public record ReviewMainAction(MessageKey key, boolean enabled) {
     /**
      * The button for the editor and the actions as they stand. Logs nothing: it is worked out on every keystroke.
      *
-     * @param savable whether the editor holds something Save my edit keeps
+     * @param changed whether the editor holds something Save my edit keeps
+     * @param complete whether every formatting mark is in place once
      * @param actions whether the actions on the selected segment are offered
      * @param accept whether Accept is offered
-     * @return Save my edit, enabled while the actions are, when there is something to save; else Accept
+     * @return Save my edit when there is something to save, enabled only while the actions are offered and no mark is
+     *     missing or doubled, so an unfinished edit never falls back to Accept; else Accept
      */
-    static ReviewMainAction of(final boolean savable, final boolean actions, final boolean accept) {
-        return savable
-                ? new ReviewMainAction(MessageKey.REVIEW_MAIN_SAVE, actions)
+    static ReviewMainAction of(
+            final boolean changed, final boolean complete, final boolean actions, final boolean accept) {
+        return changed
+                ? new ReviewMainAction(MessageKey.REVIEW_MAIN_SAVE, actions && complete)
                 : new ReviewMainAction(MessageKey.REVIEW_MAIN_ACCEPT, accept);
     }
 

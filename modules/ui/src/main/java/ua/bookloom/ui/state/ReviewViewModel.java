@@ -92,10 +92,7 @@ public final class ReviewViewModel {
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
         this.refusals = new ReviewRefusals(
-                Objects.requireNonNull(toasts, "toasts"),
-                Objects.requireNonNull(errors, "errors"),
-                problem::set,
-                editor::saveRefused);
+                Objects.requireNonNull(toasts, "toasts"), Objects.requireNonNull(errors, "errors"), problem::set);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {
@@ -278,7 +275,7 @@ public final class ReviewViewModel {
 
     /** Saves the editor's text as the person's edit, if there is one to save and actions are offered. FX thread only. */
     public void saveEdit() {
-        final String text = editor.text().get();
+        final String text = editor.storedText();
         if (editor.savable().get()) {
             act("saveEdit", (projectId, segmentId) -> desk.saveEdit(projectId, segmentId, text));
         } else {
@@ -391,7 +388,8 @@ public final class ReviewViewModel {
     private void refreshAvailability() {
         availability.refresh(selected.get(), editor.dirty().get());
         mainAction.set(ReviewMainAction.of(
-                editor.savable().get(),
+                editor.changed().getValue(),
+                editor.marks().getValue().isComplete(),
                 availability.actions().get(),
                 availability.accept().get()));
     }

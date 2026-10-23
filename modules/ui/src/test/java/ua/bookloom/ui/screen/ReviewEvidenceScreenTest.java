@@ -56,8 +56,8 @@ class ReviewEvidenceScreenTest extends ReviewDeskTestBase {
     void readableView_targetAndSourceWithTokens_showEachTokenAsAChipNotAsRawText() throws Exception {
         openPanelWith(ReviewFixtures.withEvidence());
 
-        assertThat(textsOf("review-target-preview", "placeholder-chip")).containsExactly("g0", "g1");
-        assertThat(textsOf("review-source-preview", "placeholder-chip")).containsExactly("g0", "g1");
+        assertThat(textsOf("review-target-preview", "placeholder-chip")).containsExactly("0", "1");
+        assertThat(textsOf("review-source-preview", "placeholder-chip")).containsExactly("0", "1");
         assertThat(String.join("", plainTexts("review-target-preview"))).doesNotContain("⟦");
         assertThat(String.join("", plainTexts("review-source-preview"))).doesNotContain("⟦");
     }

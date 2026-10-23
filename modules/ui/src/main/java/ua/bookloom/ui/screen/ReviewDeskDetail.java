@@ -17,10 +17,12 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.ComparePanes;
+import ua.bookloom.ui.control.ProtectedMarks;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.FindingBadge;
+import ua.bookloom.ui.state.MarkStatus;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.VisibleText;
 
@@ -64,6 +66,7 @@ final class ReviewDeskDetail extends VBox {
         readable = new ReadableView(messages);
         tabs = new ReviewDeskTabs(viewModel, messages);
         shareHeight();
+        panes.targetFooter(new ReviewMarkStrip(viewModel.editor(), messages));
         bindTarget();
         getStyleClass().add("review-desk-detail");
         getChildren()
@@ -72,7 +75,6 @@ final class ReviewDeskDetail extends VBox {
                         banner("review-target-note", viewModel.editor().targetNote()),
                         panes,
                         readable,
-                        new ReviewTokenBanner(viewModel.editor(), panes.target(), messages),
                         inline.note(),
                         note("review-problem", viewModel.problem()),
                         banner("review-accept-note", viewModel.acceptNote()),
@@ -96,6 +98,7 @@ final class ReviewDeskDetail extends VBox {
 
     private void bindTarget() {
         Tips.install(messages, panes.target(), MessageKey.REVIEW_EDITABLE_TIP);
+        ProtectedMarks.install(panes.target(), viewModel.editor().sourceDisplay());
         panes.target().textProperty().bindBidirectional(viewModel.editorText());
         // Read-only while the actions are not offered, so typing never meets a button that silently stays off.
         panes.target().editableProperty().bind(viewModel.actionsAvailable());
@@ -145,8 +148,7 @@ final class ReviewDeskDetail extends VBox {
         if (view == null) {
             readable.setVisible(false);
         } else {
-            readable.show(
-                    view, Objects.requireNonNullElse(viewModel.editorText().get(), ""));
+            readable.show(view, viewModel.editor().storedText());
         }
     }
 
@@ -170,11 +172,12 @@ final class ReviewDeskDetail extends VBox {
 
     // A source with nothing visible in it still says so, rather than standing as an empty box.
     private void showSource(final SegmentView view) {
+        final String shown = MarkStatus.show(view.maskedSource());
         final boolean blank = VisibleText.isBlank(view.maskedSource());
         if (blank) {
             log.debug("segment {} has no visible source text", view.segmentId());
         }
-        panes.source().setText(blank ? messages.get(MessageKey.LIVE_EMPTY_SOURCE) : view.maskedSource());
+        panes.source().setText(blank ? messages.get(MessageKey.LIVE_EMPTY_SOURCE) : shown);
         panes.source().pseudoClassStateChanged(EMPTY_SOURCE, blank);
     }
 }

@@ -55,7 +55,7 @@ class ReviewViewModelMoveOnTest extends ReviewViewModelTestBase {
     void saveEdit_edited_confirmsTheSaveAndMovesOn() {
         listedAndSelected("ch05.xhtml:11");
         onFx(() -> {
-            review.editorText().set("Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері!");
+            review.editorText().set("Гейл відчинив ⟦0⟧старі⟦1⟧ двері!");
             return null;
         });
 

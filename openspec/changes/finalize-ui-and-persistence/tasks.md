@@ -886,7 +886,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     segment reviewed (Leave for later writes nothing: it is a mark of this application run); "Worth a second
     look" lists the accepted segments the final audit doubts and explains itself on hover (EN and UK keys).
   - **Compare:** `openDialog('review')` at 960 and 1920. → :ui, docs
-- [ ] 6.6b Protect the formatting marks in the review editor, so the person can never save an edit that breaks a mark.
+- [x] 6.6b Protect the formatting marks in the review editor, so the person can never save an edit that breaks a mark.
   - **Satisfies:** review-queue "Keep formatting marks whole in the translation editor"; review-queue "Show stored
     formatting marks in the editor by their number"; review-queue "Refuse a saved edit whose formatting marks are
     missing or doubled"; review-queue "Name the formatting marks the editor lacks and hold the main button";

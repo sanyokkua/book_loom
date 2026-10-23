@@ -2053,14 +2053,14 @@ public enum MessageKey {
     REVIEW_TARGET_REJECTED("review.target.rejected"),
     /** Note above the target of a segment that kept no translation at all, so its source is shown. */
     REVIEW_TARGET_SOURCE("review.target.source"),
-    /** Banner text after a refused save naming the formatting tokens the edit lacks. */
-    REVIEW_TOKENS_NEEDED("review.tokens.needed"),
-    /** Banner text after a refused save naming formatting tokens the edit holds too often or that the source lacks. */
-    REVIEW_TOKENS_EXTRA("review.tokens.extra"),
-    /** Accessible name of a token chip; argument 0 is the token it inserts at the cursor. */
-    REVIEW_TOKEN_INSERT("review.token.insert"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_TOKEN_INSERT}; argument 0 is the token. */
-    REVIEW_TOKEN_INSERT_TIP("review.token.insert.tip"),
+    /** Strip under the editor for a segment whose source holds no formatting marks. */
+    REVIEW_MARKS_NONE("review.marks.none"),
+    /** Strip under the editor while every mark is in place; argument 0 is the marks, space-separated. */
+    REVIEW_MARKS_OK("review.marks.ok"),
+    /** Strip text naming marks the edit lost; argument 0 is the marks, space-separated. */
+    REVIEW_MARKS_MISSING("review.marks.missing"),
+    /** Strip text naming marks the edit holds twice; argument 0 is the marks, space-separated. */
+    REVIEW_MARKS_DOUBLED("review.marks.doubled"),
     /** Mark on a row of the All segments list whose record was kept as source by choice. */
     REVIEW_KEPT_AS_SOURCE("review.keptAsSource"),
     /** Badge of a flagged segment whose main finding concerns a name. */

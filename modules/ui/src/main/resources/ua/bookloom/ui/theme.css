@@ -2748,6 +2748,14 @@
     -fx-text-fill: -color-text;
 }
 
+.mark-strip {
+    -fx-text-fill: -color-muted;
+}
+
+.mark-strip-problem {
+    -fx-text-fill: -color-err-fg;
+}
+
 /* The readable view of a segment: formatting tokens as chips, a finding's quoted words marked. Tokens only. */
 .flow-text {
     -fx-fill: -color-text;

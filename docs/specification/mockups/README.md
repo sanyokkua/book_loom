@@ -638,9 +638,9 @@ language more than once, for example with another model, quality or thinking set
     `ModalHost` shows one card at a time, so a card would replace the desk.
   - Feedback is a footer line (G2).
 - **Code.**
-  - Built (6.6a): `ReviewDeskCard`, an xl `ModalCard` opened by `ReviewDeskLauncher`, holds `ReviewListPane`,
+  - Built (6.6a, 6.6b): `ReviewDeskCard`, an xl `ModalCard` opened by `ReviewDeskLauncher`, holds `ReviewListPane`,
     `ReviewDeskDetail`, `ReviewDeskTabs`, `FindingRows`, `ReadableView` and `ContextSection`; the protected marks are
-    6.6b.
+    `ProtectedMarks` (the filter), `MarkStatus` (missing and doubled marks, the two spellings) and `ReviewMarkStrip`.
   - Accept (FLAGGED → ACCEPTED with the machine text) and Save edit (REVISED) keep their `SegmentActions` behaviour.
   - The protected editor is a `TextFormatter` that adjusts changes to whole marks and lets whole-text loads through.
     Undo and redo skip the filter, which is safe because every change it recorded covered whole marks.

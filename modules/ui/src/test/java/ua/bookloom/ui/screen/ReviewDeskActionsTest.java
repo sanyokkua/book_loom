@@ -15,7 +15,9 @@ import ua.bookloom.ui.ReviewFixtures;
 class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
     private static final String LOW_SCORE_ID = "ch05.xhtml:11";
-    private static final String TYPED = "Він пішов геть.";
+    private static final String TYPED = "Він пішов ⟦0⟧геть⟦1⟧.";
+    private static final String TYPED_STORED = "Він пішов ⟦g0⟧геть⟦g1⟧.";
+    private static final String DISPLAYED_TARGET = "Гейл відчинив ⟦0⟧старі⟦1⟧ двері.";
 
     private void selectRow(final int index, final String locator) throws Exception {
         onFx(() -> rowList().getSelectionModel().select(index));
@@ -32,7 +34,7 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         type(TYPED);
         assertThat(main().getText()).isEqualTo("✓ Save my edit & next");
-        type(ReviewFixtures.MASKED_TARGET);
+        type(DISPLAYED_TARGET);
 
         assertThat(main().getText()).isEqualTo("✓ Accept & next");
     }
@@ -57,7 +59,8 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         key(target(), KeyCode.ENTER, false, false, true);
 
-        awaitFx(() -> desk.calls().contains("saveEdit(" + projectId() + ", " + LOW_SCORE_ID + ", " + TYPED + ")"));
+        awaitFx(() ->
+                desk.calls().contains("saveEdit(" + projectId() + ", " + LOW_SCORE_ID + ", " + TYPED_STORED + ")"));
     }
 
     // IF a plain Enter on a focused row accepted a segment, THEN one stray key would decide it unread.

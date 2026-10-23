@@ -2,6 +2,7 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
@@ -15,8 +16,8 @@ import ua.bookloom.ui.i18n.Messages;
 /**
  * The review panel's two panes side by side: the source, which cannot be changed, and the target, which can.
  *
- * <p>Both show the masked text the desk returns, with the book's {@code ⟦gN⟧} tokens as typed characters, so an edit
- * keeps the bold and the links where they were. No masking or restoring happens here; the caller sets the texts and
+ * <p>Both show the segment's formatting marks as typed {@code ⟦N⟧} characters, so an edit keeps the bold and the links
+ * where they were. No masking or restoring happens here; the caller sets the texts and
  * reads the target back as the person left it.
  */
 public final class ComparePanes extends HBox {
@@ -27,6 +28,7 @@ public final class ComparePanes extends HBox {
 
     private final TextArea source = area("review-source", false);
     private final TextArea target = area("review-target", true);
+    private final VBox targetPane;
 
     /**
      * Builds the two panes.
@@ -49,10 +51,8 @@ public final class ComparePanes extends HBox {
         // The mark follows whether the target can be typed into, so it never promises an edit a run is locking out.
         target.editableProperty().addListener((observed, was, now) -> showMark(mark, now, messages));
         showMark(mark, target.isEditable(), messages);
-        getChildren()
-                .addAll(
-                        pane("review-source-head", sourceName, null, source),
-                        pane("review-target-head", targetName, mark, target));
+        targetPane = pane("review-target-head", targetName, mark, target);
+        getChildren().addAll(pane("review-source-head", sourceName, null, source), targetPane);
     }
 
     /**
@@ -71,6 +71,15 @@ public final class ComparePanes extends HBox {
      */
     public TextArea target() {
         return target;
+    }
+
+    /**
+     * Puts a node directly under the target pane, so it reads as the editor's own footer.
+     *
+     * @param footer the non-null node to show under the editor
+     */
+    public void targetFooter(final Node footer) {
+        targetPane.getChildren().add(Objects.requireNonNull(footer, "footer"));
     }
 
     private static void showMark(final Label mark, final boolean editable, final Messages messages) {

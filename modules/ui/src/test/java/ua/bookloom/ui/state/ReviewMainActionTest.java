@@ -37,12 +37,52 @@ class ReviewMainActionTest extends ReviewViewModelTestBase {
         paused();
 
         onFx(() -> {
-            review.editorText().set("Він пішов геть.");
+            review.editorText().set("Він пішов ⟦0⟧геть⟦1⟧.");
             return null;
         });
 
         assertThat(main().key()).isEqualTo(MessageKey.REVIEW_MAIN_SAVE);
         assertThat(main().enabled()).isTrue();
+    }
+
+    // IF an edit with a missing mark fell back to Accept, THEN pressing it would keep the machine text unseen; it stays
+    // Save my edit and is off until every mark is back.
+    @ParameterizedTest
+    @CsvSource({
+        "false,true,true,true,REVIEW_MAIN_ACCEPT,true",
+        "false,true,true,false,REVIEW_MAIN_ACCEPT,false",
+        "false,true,false,true,REVIEW_MAIN_ACCEPT,true",
+        "false,false,true,true,REVIEW_MAIN_ACCEPT,true",
+        "true,true,true,true,REVIEW_MAIN_SAVE,true",
+        "true,true,false,true,REVIEW_MAIN_SAVE,false",
+        "true,false,true,true,REVIEW_MAIN_SAVE,false",
+        "true,false,false,true,REVIEW_MAIN_SAVE,false"
+    })
+    void of_changedCompleteActionsAccept_picksTheWordAndWhetherItIsOn(
+            final boolean changed,
+            final boolean complete,
+            final boolean actions,
+            final boolean accept,
+            final MessageKey key,
+            final boolean enabled) {
+        final ReviewMainAction action = ReviewMainAction.of(changed, complete, actions, accept);
+
+        assertThat(action.key()).isEqualTo(key);
+        assertThat(action.enabled()).isEqualTo(enabled);
+    }
+
+    // IF the mark were deleted and the button stayed on, THEN a broken edit would be sent to the desk.
+    @Test
+    void mainAction_aMarkDeletedFromTheEditor_isSaveMyEditAndDisabled() {
+        paused();
+
+        onFx(() -> {
+            review.editorText().set("Він пішов геть.");
+            return null;
+        });
+
+        assertThat(main().key()).isEqualTo(MessageKey.REVIEW_MAIN_SAVE);
+        assertThat(main().enabled()).isFalse();
     }
 
     // IF the button stayed live while the model translated or a retry ran, THEN it would race for the same segment.

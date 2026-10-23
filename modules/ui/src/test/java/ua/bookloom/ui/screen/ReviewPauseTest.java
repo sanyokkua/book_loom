@@ -24,7 +24,8 @@ import ua.bookloom.ui.state.RunState;
 class ReviewPauseTest extends ReviewDeskTestBase {
 
     private static final String ACCEPT = "review-main";
-    private static final String EDIT = "Чудовисько стріло мене опівночі.";
+    private static final String EDIT = "Чудовисько стріло ⟦0⟧мене⟦1⟧ опівночі.";
+    private static final String EDIT_STORED = "Чудовисько стріло ⟦g0⟧мене⟦g1⟧ опівночі.";
 
     private static SegmentView acceptedFirst() {
         return ReviewFixtures.view("ch01.xhtml:2", "ch1 · p03", SegmentStatus.ACCEPTED, List.of(), null, null);
@@ -102,7 +103,8 @@ class ReviewPauseTest extends ReviewDeskTestBase {
         onFx(() -> button(ACCEPT).fire());
         awaitFx(() -> job.calls().contains("resume"));
 
-        assertThat(desk.calls()).anyMatch(call -> call.startsWith("saveEdit(") && call.endsWith(", " + EDIT + ")"));
+        assertThat(desk.calls())
+                .anyMatch(call -> call.startsWith("saveEdit(") && call.endsWith(", " + EDIT_STORED + ")"));
     }
 
     // IF a refused save resumed the run, THEN the run would go on over an edit that was never stored.

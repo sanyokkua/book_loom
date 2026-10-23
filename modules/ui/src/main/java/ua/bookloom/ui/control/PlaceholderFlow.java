@@ -45,7 +45,8 @@ public final class PlaceholderFlow extends TextFlow {
     private static javafx.scene.Node node(final ReadableText.Piece piece) {
         return switch (piece.kind()) {
             case PLAIN -> plain(piece.text());
-            case TOKEN -> label(piece.text(), "placeholder-chip");
+            // The chip shows the mark by its number, as the editor does, never the stored "g" name.
+            case TOKEN -> label(piece.text().substring(1), "placeholder-chip");
             case EVIDENCE -> label(piece.text(), "evidence-mark");
         };
     }
