@@ -74,21 +74,17 @@ final class TranslatingConformanceCases {
                             new Part("#translating-live-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part(BANNER, Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
                             new Part(BANNER, Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
-            // The review panel open beside a paused run: its card on the surface role, the judge badge on surface-2.
+            // The review desk open over a paused run: its card on the surface role with its border, the editor on
+            // surface.
             new Screen(
                     "TRANSLATING_REVIEW",
                     ViewNames.TRANSLATING,
                     Preparation.REVIEW_SELECTED,
-                    Overlay.REVIEW_PANEL,
+                    Overlay.REVIEW_DESK,
                     List.of(
-                            new Part("#review-panel", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#review-panel", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#review-judge", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
-                            new Part("#review-target", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            // A finding's kind is strong text and its note body text, readable on the card in both
-                            // blocks.
-                            new Part(".finding-kind", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
-                            new Part(".finding-note", Kind.TEXT, "text", "#2c3941", "#e6ebed"))),
+                            new Part("#review-desk", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#review-desk", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#review-target", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
             // A pause on a provider error is the run's own state: the banner takes the err role, light and dark, and
             // so does the strip's bar.
             new Screen(

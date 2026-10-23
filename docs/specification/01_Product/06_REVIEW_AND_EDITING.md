@@ -12,11 +12,9 @@ side-by-side compare), the segment actions, and the export-any-time guarantee. I
 opt-in; the pipeline is automatic-first (DD-15).
 
 **Status of the review UI.** The review desk is a **large in-window dialog** (decision 5, F1; `mockups/README.md`,
-"Dialog · Review"). That dialog, its row markers, the protected-mark editor, the single main button, the More menu, the
-inline note panel, the shortcuts and the stored-context tab are **planned — UI finalization + SQLite**. What is built
-today is the same behaviour in a review *panel* on the Translating screen (`ReviewViewModel`, `ReviewPanel`): the list
-with its filter chips, the editor, Accept, Save edit, Revert, Skip, Retry (with a note), apply a proposal, and the
-read-only state while a run translates. The status machine and the actions below (`SegmentActions`) are built and do
+"Dialog · Review"). The dialog, its row markers, the single main button, the More menu, the inline note panel, the
+shortcuts and the batch's sent sections under "What the model saw" are built (`ReviewDeskCard`, `ReviewViewModel`);
+the protected-mark editor is planned (6.6b). The status machine and the actions below (`SegmentActions`) are built and do
 not change.
 
 ## segment-status-state-machine {#segment-status-state-machine}
@@ -52,12 +50,12 @@ The flagged queue is the review desk's left pane (planned dialog; today the pane
 
 | ID           | Requirement                                                                                                                                                           |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-REVIEW-Q1 | The list shows the FLAGGED segments with locator (e.g. `ch5 · p12`), a **state marker** (to review · accepted · your edit · later) and a one-line "why · text" taken from the QA findings that caused the flag. A filter offers To review (n), Worth a second look (n) and All segments (built today: all flagged, and All segments after an Unattended run has completed — `ReviewFilter`); ‹ › move between rows. |
+| FR-REVIEW-Q1 | The list shows the FLAGGED segments with locator (e.g. `ch5 · p12`), a **state marker** (to review · accepted · your edit · later) and a one-line "why · text" taken from the QA findings that caused the flag. A filter offers To review (n), Worth a second look (n) and All segments, all three always (All segments lists only decided segments and those kept as source, so it is safe in every review mode); ‹ › move between rows. |
 | FR-REVIEW-Q2 | The queue reflects the segments the pipeline could not clear automatically (aspirationally a small residual, ~1% of **segments** — a non-normative goal, not a gate). |
 | FR-REVIEW-Q3 | Selecting a row opens it in the side-by-side compare.                                                                                                                 |
 | FR-REVIEW-Q4 | An empty list shows "Nothing needs your review".                                                                                                                      |
-| FR-REVIEW-Q5 | The desk opens from "Review (n)" or the strip's "n to review", and **opens by itself** when a translation finishes with segments to review (it waits for a free slot; `mockups/README.md`, G1). Planned — UI finalization + SQLite. |
-| FR-REVIEW-Q6 | The header says how many are left ("4 of 6 left — if a segment reads well, press Accept. You can export now and come back later."). While a run translates the desk is **read-only**: the header says "read-only while translating" and a banner says "Pause the translation to edit, accept or try again." with a Pause button. |
+| FR-REVIEW-Q5 | The desk opens from "Review (n)" or the strip's "n to review", and **opens by itself** when a translation finishes with segments to review (it waits for a free slot; `mockups/README.md`, G1): only when a translating run reaches Completed, `automation.openReviewDesk` is on and segments are left to review — never for a project reopened already completed. |
+| FR-REVIEW-Q6 | The header says how many are left ("4 of 6 left — if a segment reads well, press Accept. You can export now and come back later."). While a run translates the desk is **read-only**: the header says "read-only while translating" and a banner says "Pause the translation to edit, accept or try again." with a Pause button. While a retry is in flight on a run that is not translating the desk is read-only too, and the banner says "Trying again… the desk is available when the model answers." with no Pause. |
 
 ## side-by-side-compare {#side-by-side-compare}
 
@@ -73,15 +71,15 @@ The flagged queue is the review desk's left pane (planned dialog; today the pane
 
 ## segment-actions {#segment-actions}
 
-The footer has **one main button** and a **More ▾** menu (planned dialog; the built panel offers the same actions as
-separate buttons).
+The footer has **Close**, a **More ▾** menu and **one main button**.
 
 - The main button reads **✓ Accept & next** and turns into **✓ Save my edit & next** once the text is edited (T7). It
   accepts or saves, then moves to the next segment.
 - **More ▾** lists, each with what it does: Leave for later · Try again · Try again with a note… · Undo my edit.
-- **Try again with a note** opens an inline panel inside the desk, not a second dialog.
-- Shortcuts: Ctrl/⌘+Enter runs the main button; Ctrl+Alt+↓/↑ moves between segments (Alt+↑/↓ belongs to the editor on
-  macOS).
+- **Try again with a note** opens an inline panel inside the desk, not a second dialog; so do the questions of Undo my
+  edit and of typing that is not saved (`ModalHost` shows one card at a time).
+- Shortcuts: Ctrl/⌘+Enter runs the main button (plain Enter does nothing in the desk); Ctrl+Alt+↓/↑ moves between
+  segments (Alt+↑/↓ belongs to the editor on macOS).
 - Feedback is a footer line (`mockups/README.md`, G2).
 - Every action is unavailable while the project's run is RUNNING (the desk is read-only) or a retry is in flight.
 
@@ -92,7 +90,7 @@ separate buttons).
 | Undo my edit (Revert) | Clear the saved edit and restore the stored machine target. Acts only on a REVISED segment that has a machine target; withdraws a waiting proposal.                  | ACCEPTED                                        |
 | Try again (Retry) | Re-run the segment through the pipeline, **reconstructing the original chunk context** (same brief, glossary, preceding-target window, and TM the segment first saw); allowed whenever no run of the project is running, refused with `ErrorCode.busy` while one is. | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Try again with a note | Re-run as above, reconstructing the original chunk context and injecting the user's free-text note into the draft/directed-fix `{{userNote}}` slot.                | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
-| Leave for later (Skip) | Leave the segment unchanged and move to the next FLAGGED one (document order, wrapping; the segment's own id when no other is FLAGGED).                           | FLAGGED (unchanged)                             |
+| Leave for later | Writes nothing: the row is marked "later" for this application run only and the desk moves to the next segment of the filter shown. The segment stays to review. | unchanged                                       |
 | Apply a proposal | Take the backward-revision proposal waiting on an edited segment as the person's own edit. Acts only on a REVISED segment with a proposal waiting.                      | REVISED                                         |
 
 A refused action changes nothing and answers `validation` (`SegmentActions`); the desk shows the reason in place.
@@ -101,7 +99,7 @@ A refused action changes nothing and answers `validation` (`SegmentActions`); th
 |--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-REVIEW-A1 | Retry and retry-with-note route through the same InferenceGate and QA gate as the automatic pipeline, reconstructing the segment's original chunk context (single-segment call).                                                 |
 | FR-REVIEW-A2 | Retry-with-note captures a free-text instruction injected into the `{{userNote}}` slot of the draft/directed-fix templates (see `08_UI_SCREENS_AND_STATES.md`, `12_PROMPT_CATALOG.md#draft-translation`). The note is entered in an inline panel of the review desk. |
-| FR-REVIEW-A3 | Every action persists atomically for the rest of the session so review progress survives navigation; nothing survives closing the application until the SQLite change (planned — UI finalization + SQLite). |
+| FR-REVIEW-A3 | Every action persists atomically for the rest of the session so review progress survives navigation; actions are stored in SQLite, so they also survive closing the application; the "later" marks are not stored. |
 
 ## export-any-time {#export-any-time}
 

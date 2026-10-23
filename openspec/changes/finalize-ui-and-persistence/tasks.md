@@ -842,7 +842,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     current call; after 60 s with no answer the live line says the model is taking longer than usual with one clock;
     Start with no target language or no model is refused and names the missing item.
   - **Compare:** every run state from the Run states page, in Simple and Detailed. → :ui
-- [ ] 6.6a Move review into the extra-large dialog that opens by itself, with row markers, one main button, the More
+- [x] 6.6a Move review into the extra-large dialog that opens by itself, with row markers, one main button, the More
   menu and an inline "Try again with a note", so the person reviews with room and no dialog replaces another.
   - **Satisfies:** review-queue "Open the review desk as a large dialog"; review-queue "Open the review desk by itself
     when a translation finishes"; review-queue "Filter the desk by what needs attention"; review-queue "Mark every desk
@@ -882,7 +882,8 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     while a run translates; a review pause opens the desk on the segment it names; "All segments" lists every
     segment after an Unattended run; a backward-revision proposal applies only on acceptance; the to-review count is
     re-read when the run state changes; an action on a segment in the wrong status is refused with
-    `ErrorCode.validation`; only Accept, Save my edit and Leave for later mark a segment reviewed; "Worth a second
+    `ErrorCode.validation`; only Accept, Save my edit, Undo my edit, a passing Try again and an accepted proposal mark a
+    segment reviewed (Leave for later writes nothing: it is a mark of this application run); "Worth a second
     look" lists the accepted segments the final audit doubts and explains itself on hover (EN and UK keys).
   - **Compare:** `openDialog('review')` at 960 and 1920. → :ui, docs
 - [ ] 6.6b Protect the formatting marks in the review editor, so the person can never save an edit that breaks a mark.

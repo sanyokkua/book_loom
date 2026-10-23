@@ -48,13 +48,6 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_STOP_YES,
                 MessageKey.CONFIRM_STOP_YES_TIP);
 
-        /** Throwing away the person's own edit of a segment. */
-        public static final Question REVERT_EDIT = new Question(
-                MessageKey.CONFIRM_REVERT_TITLE,
-                MessageKey.CONFIRM_REVERT_TEXT,
-                MessageKey.CONFIRM_REVERT_YES,
-                MessageKey.CONFIRM_REVERT_YES_TIP);
-
         /** Cancelling an import whose project already holds work. */
         public static final Question DISCARD_PROJECT = new Question(
                 MessageKey.CONFIRM_IMPORT_TITLE,

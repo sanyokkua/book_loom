@@ -5,9 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import javafx.geometry.Bounds;
-import javafx.scene.Node;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import org.junit.jupiter.api.Test;
@@ -33,36 +30,21 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
     private static final String PROMPT = "translating-live-call-prompt";
 
-    private Bounds sceneBounds(final String id) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node node = required(id);
-            return node.localToScene(node.getLayoutBounds());
-        });
-    }
-
-    // IF Review flagged (0) opened its panel below the live card, THEN pressing it would seem to do
-    // nothing; the panel opens under the run controls, inside the viewport, and says nothing is flagged.
+    // IF Review (0) did nothing visible, THEN pressing it would seem broken; the desk opens over the run and says
+    // nothing needs review.
     @ParameterizedTest
     @EnumSource(
             value = RunState.class,
             names = {"RUNNING", "PAUSED"})
-    void reviewFlagged_nothingFlagged_opensTheEmptyPanelInViewUnderTheControls(final RunState state) {
+    void reviewFlagged_nothingFlagged_opensTheEmptyDeskOverTheRun(final RunState state) {
         showTranslating();
         publish(state);
         publishProgress(10, 0, 20);
-        final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
-        onFx(() -> pane.setVvalue(0));
 
         onFx(() -> button("translating-review-flagged").fire());
 
-        assertThat(isShown("review-panel")).isTrue();
-        assertThat(labelText("review-empty-text")).isEqualTo("Nothing flagged — every segment passed the checks");
-        final Bounds viewport = ThemeTestSupport.onFx(() -> pane.localToScene(pane.getLayoutBounds()));
-        assertThat(sceneBounds("review-panel").getMinY())
-                .isGreaterThanOrEqualTo(sceneBounds("translating-head").getMaxY())
-                .isLessThan(viewport.getMaxY());
-        assertThat(sceneBounds("review-panel").getMaxY())
-                .isLessThanOrEqualTo(sceneBounds("translating-strip").getMinY());
+        assertThat(isShown("review-desk")).isTrue();
+        assertThat(labelText("review-empty-text")).isEqualTo("Nothing needs your review");
     }
 
     // The row of segment 1 records call 1, so the Detailed detail shows that call's prompt section.

@@ -19,7 +19,8 @@ import ua.bookloom.ui.dialog.ModalCard;
 
 /**
  * Enter, Escape and Tab the same way on every card, whichever layer shows it: Enter runs the card's enabled default
- * button (Ctrl or Command with Enter inside a text area, where plain Enter adds a line), Escape runs the card's own
+ * button (Ctrl or Command with Enter inside a text area, where plain Enter adds a line, and everywhere on a card that
+ * asks for it, {@link ModalCard#setEnterNeedsShortcut}), Escape runs the card's own
  * escape action or else the layer's, and Tab walks the card's controls and wraps. FX thread only.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -54,8 +55,15 @@ final class CardKeys {
 
     private static void enter(final Node card, final KeyEvent event) {
         final boolean inTextArea = event.getTarget() instanceof TextArea;
-        if (inTextArea && !(event.isControlDown() || event.isMetaDown())) {
+        final boolean shortcut = event.isControlDown() || event.isMetaDown();
+        if (inTextArea && !shortcut) {
             log.debug("Enter left to the text area: it adds a line");
+            return;
+        }
+        if (!shortcut && card instanceof ModalCard modal && modal.isEnterNeedsShortcut()) {
+            // Consumed, so the default button's own Enter accelerator does not run it either.
+            event.consume();
+            log.debug("plain Enter ignored on card {}: its default button needs Ctrl or Command", card.getId());
             return;
         }
         final Button main = defaultButton(card);

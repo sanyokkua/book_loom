@@ -145,14 +145,14 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
 
     // IF the strip's button did nothing, THEN "n to review" would be a label that looks like a control.
     @Test
-    void reviewButton_pressed_opensTheReviewPanel() {
+    void reviewButton_pressed_opensTheReviewDesk() {
         running(RUNNING);
         completeWithFlagged(6, 3);
 
         onFx(() -> button("translating-strip-review").fire());
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(isShown("review-panel")).isTrue();
+        assertThat(isShown("review-desk")).isTrue();
     }
 
     // IF the way the counts are made were left out, THEN "translated" against "fixed automatically" could not be read.

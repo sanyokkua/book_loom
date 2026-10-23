@@ -16,6 +16,18 @@ import ua.bookloom.api.pipeline.SegmentView;
 @Slf4j
 final class ReviewQueries {
 
+    /**
+     * What the desk opens on: the list it shows, the segment selected in it, and the filter that list belongs to.
+     *
+     * @param filter the filter listed, {@link ReviewFilter#ALL_SEGMENTS} when the named segment is only listed there
+     * @param views the list, in document order
+     * @param segment the segment to select, or {@code null} when the list is empty
+     */
+    record Opened(
+            ReviewFilter filter,
+            List<SegmentView> views,
+            @Nullable SegmentView segment) {}
+
     private final ReviewDesk desk;
 
     ReviewQueries(final ReviewDesk desk) {
@@ -59,5 +71,37 @@ final class ReviewQueries {
             log.debug("segment {} could not be read: the selection is left as it was", segmentId);
         }
         return view;
+    }
+
+    /**
+     * Reads the list the desk opens on and the segment to select: the named one when the list holds it, else the first.
+     * A segment the filter does not list (a pause after an accepted segment) is looked for under All segments, which
+     * then becomes the filter, when {@code widen} allows it.
+     *
+     * @return what to open on, or {@code null} when the list could not be read
+     */
+    @Nullable
+    Opened opened(
+            final String projectId, final ReviewFilter filter, final @Nullable String segmentId, final boolean widen) {
+        final List<SegmentView> views = list(projectId, filter);
+        if (views == null) {
+            return null;
+        }
+        if (widen && segmentId != null && !holds(views, segmentId) && filter != ReviewFilter.ALL_SEGMENTS) {
+            final List<SegmentView> all = list(projectId, ReviewFilter.ALL_SEGMENTS);
+            if (all != null && holds(all, segmentId)) {
+                log.debug("segment {} is not listed under {}: opening All segments", segmentId, filter);
+                return new Opened(ReviewFilter.ALL_SEGMENTS, all, segment(projectId, segmentId));
+            }
+        }
+        final String chosen = segmentId != null && holds(views, segmentId)
+                ? segmentId
+                : views.isEmpty() ? null : views.getFirst().segmentId();
+        log.debug("the desk opens on {} of {} listed under {}", chosen, views.size(), filter);
+        return new Opened(filter, views, chosen == null ? null : segment(projectId, chosen));
+    }
+
+    private static boolean holds(final List<SegmentView> views, final String segmentId) {
+        return views.stream().anyMatch(view -> view.segmentId().equals(segmentId));
     }
 }

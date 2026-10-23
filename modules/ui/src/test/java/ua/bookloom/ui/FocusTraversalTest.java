@@ -53,7 +53,7 @@ class FocusTraversalTest extends ConformanceTestBase {
     @MethodSource("workflowScreens")
     void tab_repeatedly_reachesEveryOperableControlAndComesBackRound(final Screen screen) throws TimeoutException {
         show(screen);
-        final List<Node> operable = ThemeTestSupport.onFx(() -> operable(scene.getRoot()));
+        final List<Node> operable = ThemeTestSupport.onFx(() -> operable(walkedRoot()));
         final Node start = ThemeTestSupport.onFx(() -> {
             operable.get(0).requestFocus();
             return scene.getFocusOwner();
@@ -79,6 +79,16 @@ class FocusTraversalTest extends ConformanceTestBase {
                 .as("Tab comes back to the first control within %d presses", MAX_PRESSES)
                 .isTrue();
         assertThat(missed).as("controls Tab never reaches on %s", screen.name()).isEmpty();
+    }
+
+    // A shown dialog card keeps Tab inside itself (the review desk is one), so its controls are the ones to reach.
+    private Node walkedRoot() {
+        final Node host = scene.getRoot().lookup("#" + ModalHost.HOST_ID);
+        if (host instanceof javafx.scene.Parent parent && host.isVisible()) {
+            final List<Node> layers = parent.getChildrenUnmodifiable();
+            return layers.get(layers.size() - 1);
+        }
+        return scene.getRoot();
     }
 
     private Node pressTab() {

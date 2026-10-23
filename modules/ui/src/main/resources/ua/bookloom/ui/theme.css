@@ -2695,35 +2695,48 @@
     -fx-font-weight: bold;
 }
 
-/* --- Review panel: the filter chips and the list of flagged segments beside the compare ---------------- */
-.review-chip {
-    -fx-background-color: -color-surface;
-    -fx-background-insets: 0;
-    -fx-background-radius: 10px;
-    -fx-border-color: -color-border;
-    -fx-border-width: 1px;
-    -fx-border-radius: 10px;
-    -fx-text-fill: -color-muted;
-    -fx-font-size: 12px;
-    -fx-padding: 2px 9px 2px 9px;
-    -fx-cursor: hand;
+/* --- Review desk: an extra-large dialog with the list beside the selected segment; tokens only ------------------- */
+.review-desk-body {
+    -fx-padding: 0;
 }
 
-.review-chip:selected {
-    -fx-background-color: -color-primary-soft;
-    -fx-border-color: -color-primary;
+.review-detail-scroll,
+.review-tab-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.review-detail-scroll > .viewport,
+.review-tab-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.review-row-line {
+    -fx-text-fill: -color-text;
+    -fx-text-overrun: ellipsis;
+}
+
+.review-more-word {
     -fx-text-fill: -color-text-strong;
 }
 
-.review-chip:focus-visible {
-    -fx-border-color: -color-focus, -color-border;
-    -fx-border-width: 2px, 1px;
-    -fx-border-insets: -3px, 0;
-    -fx-border-radius: 13px, 10px;
+.review-more-sub {
+    -fx-font-size: 12px;
 }
 
-.review-chip:selected:focus-visible {
-    -fx-border-color: -color-focus, -color-primary;
+/* A question or a note asked inside the desk, so no other card replaces it. */
+.inline-panel {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 10px 12px 10px 12px;
+}
+
+.inline-panel .label {
+    -fx-text-fill: -color-text;
 }
 
 .finding-kind {
@@ -2784,9 +2797,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
-    /* A fixed row height spares measuring rows while scrolling: 6px + 6px padding, 1px divider and a locator with its
-       badge chip (33px measured), rounded up so no font clips it. */
-    -fx-fixed-cell-size: 34px;
+    /* A fixed row height spares measuring rows while scrolling: 6px + 6px padding, 1px divider, a locator row with its
+       marker chip (about 23px) and one line of text (about 17px), rounded up so no font clips it. */
+    -fx-fixed-cell-size: 56px;
 }
 
 .review-list .list-cell {

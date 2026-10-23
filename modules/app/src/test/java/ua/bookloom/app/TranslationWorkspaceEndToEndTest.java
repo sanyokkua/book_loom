@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,16 +113,26 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
     }
 
     /** Every pause is on-flagged, in Manual too: a flagged segment wins over after-segment. */
-    private void assertPauseLog(final ReviewMode mode) {
+    private void assertPauseLog(final ReviewMode mode) throws Exception {
         final List<String> messages = pauseMessages();
         assertThat(messages).hasSize(mode == ReviewMode.UNATTENDED ? 0 : SEGMENT_COUNT);
         assertThat(messages).allSatisfy(message -> assertThat(message).contains("reason=ON_FLAGGED"));
-        // pausedSegment proves the panel opened on each pause; once the last paused segment is accepted nothing is
-        // left flagged, so the panel moves on to its empty state, and an unattended run never opened it at all.
-        assertThat(onFx(() ->
-                        injector.getInstance(ReviewViewModel.class).selected().get()))
-                .as("the panel opens only on a pause and moves on once its segment is decided")
-                .isNull();
+        // pausedSegment proves the desk opened on each pause; once the last paused segment is accepted nothing is left
+        // flagged, so the desk moves on to its empty state. An unattended run never pauses, and the desk opens by
+        // itself
+        // once, when the run completes with segments to review, on the first of them.
+        if (mode == ReviewMode.UNATTENDED) {
+            waitUntil(
+                    () -> injector.getInstance(ReviewViewModel.class).selected().get() != null);
+        }
+        assertThat(onFx(() -> Optional.ofNullable(injector.getInstance(ReviewViewModel.class)
+                                .selected()
+                                .get())
+                        .map(SegmentView::locator)
+                        .orElse(null)))
+                .as(
+                        "the desk opens on each pause, and by itself on the first segment to review after an unattended run")
+                .isEqualTo(mode == ReviewMode.UNATTENDED ? LOCATORS.getFirst() : null);
     }
 
     private void assertRecords(final ReviewMode mode) {

@@ -271,14 +271,6 @@ public enum MessageKey {
     CONFIRM_STOP_YES("confirm.stop.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_STOP_YES}. */
     CONFIRM_STOP_YES_TIP("confirm.stop.yes.tip"),
-    /** Title of the question asked before the person's edit is discarded. */
-    CONFIRM_REVERT_TITLE("confirm.revert.title"),
-    /** Body of the discard-your-edit question. */
-    CONFIRM_REVERT_TEXT("confirm.revert.text"),
-    /** Confirming button of the discard-your-edit question. */
-    CONFIRM_REVERT_YES("confirm.revert.yes"),
-    /** Hover explanation of the control labelled by {@link #CONFIRM_REVERT_YES}. */
-    CONFIRM_REVERT_YES_TIP("confirm.revert.yes.tip"),
     /** Title of the question asked before a project with progress is discarded. */
     CONFIRM_IMPORT_TITLE("confirm.import.title"),
     /** Body of the discard-this-project question. */
@@ -2053,8 +2045,6 @@ public enum MessageKey {
     REVIEW_SAVED("review.saved"),
     /** Warning toast when a review action is refused because a run is translating. */
     REVIEW_BUSY("review.busy"),
-    /** Hint shown while the editor holds unsaved changes and Accept is off. */
-    REVIEW_EDITING_HINT("review.editingHint"),
     /** Note beside the review actions while a run translates and the segment can only be read. */
     REVIEW_LOCKED_RUNNING("review.locked.running"),
     /** Note beside the review actions while a retry of a segment is in flight. */
@@ -2081,16 +2071,6 @@ public enum MessageKey {
     REVIEW_BADGE_OMISSION("review.badge.omission"),
     /** Badge of a flagged segment whose main finding is any other kind or only a low judge score. */
     REVIEW_BADGE_LOW_SCORE("review.badge.lowScore"),
-    /** Filter chip listing every flagged segment. */
-    REVIEW_CHIP_ALL("review.chip.all"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_ALL}. */
-    REVIEW_CHIP_ALL_TIP("review.chip.all.tip"),
-    /** Heading of the review panel. */
-    REVIEW_TITLE("review.title"),
-    /** Button that closes the review panel and returns to the run's progress. */
-    REVIEW_BACK("review.back"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_BACK}. */
-    REVIEW_BACK_TIP("review.back.tip"),
     /** Empty state of the review panel when no segment is listed. */
     REVIEW_EMPTY("review.empty"),
     /** Text in the review pane while the list holds segments and none is picked. */
@@ -2105,18 +2085,10 @@ public enum MessageKey {
     REVIEW_ACCEPT_NEEDS_TARGET("review.accept.needsTarget"),
     /** Note shown when Accept is off for a segment whose editor holds the model's refused reply: Save edit keeps it. */
     REVIEW_ACCEPT_NEEDS_SAVE("review.accept.needsSave"),
-    /** Caption of the line that names what the model knew when it drafted the segment. */
-    REVIEW_CONTEXT("review.context"),
-    /** Caption of the list of a segment's findings. */
-    REVIEW_FINDINGS("review.findings"),
     /** Caption of the readable view under the two panes: formatting tokens as chips, quoted words marked. */
     REVIEW_READABLE("review.readable"),
     /** Shown under the findings heading of a flagged segment whose record holds no finding. */
     REVIEW_FINDINGS_NONE("review.findings.none"),
-    /** Kind and severity of one finding; argument 0 is the kind, argument 1 the severity in lower case. */
-    REVIEW_FINDING_KIND("review.finding.kind"),
-    /** Muted label naming the check or the reviewer that raised a finding; argument 0 is its name. */
-    REVIEW_RAISED_BY("review.raisedBy"),
     /** Heading of an edit the reviewer made and the app verified; argument 0 is the criterion's name. */
     REVIEW_EDIT_APPLIED("review.edit.applied"),
     /** The name of an edit criterion; argument 0 is its token with underscores for hyphens, such as {@code gender} or {@code invented_word}, because an ICU selector holds no hyphen. */
@@ -2125,78 +2097,10 @@ public enum MessageKey {
     REVIEW_EDIT_DELETED("review.edit.deleted"),
     /** Hover explanation of the diff of an applied edit: red is what the reviewer removed, green what it put there. */
     REVIEW_EDIT_TIP("review.edit.applied.tip"),
-    /** Button that accepts the selected segment as it stands. */
-    REVIEW_ACCEPT("review.accept"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_ACCEPT}. */
-    REVIEW_ACCEPT_TIP("review.accept.tip"),
-    /** Manual mode's Accept while the run waits on the segment: confirms it and lets the run go on. */
-    REVIEW_ACCEPT_CONTINUE("review.acceptContinue"),
-    /** Button that saves the person's edit of the target. */
-    REVIEW_SAVE("review.save"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_SAVE}. */
-    REVIEW_SAVE_TIP("review.save.tip"),
-    /** Button that restores the machine target. */
-    REVIEW_REVERT("review.revert"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_REVERT}. */
-    REVIEW_REVERT_TIP("review.revert.tip"),
-    /** Button that leaves the selected segment flagged and moves on to the next one. */
-    REVIEW_SKIP("review.skip"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_SKIP}. */
-    REVIEW_SKIP_TIP("review.skip.tip"),
-    /** Filter chip listing flagged segments about names. */
-    REVIEW_CHIP_NAMES("review.chip.names"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_NAMES}. */
-    REVIEW_CHIP_NAMES_TIP("review.chip.names.tip"),
-    /** Filter chip listing flagged segments with omissions. */
-    REVIEW_CHIP_OMISSIONS("review.chip.omissions"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_OMISSIONS}. */
-    REVIEW_CHIP_OMISSIONS_TIP("review.chip.omissions.tip"),
-    /** Filter chip listing flagged segments with a foreign passage kept. */
-    REVIEW_CHIP_FOREIGN_KEPT("review.chip.foreignKept"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_FOREIGN_KEPT}. */
-    REVIEW_CHIP_FOREIGN_KEPT_TIP("review.chip.foreignKept.tip"),
-    /** Filter chip listing accepted segments the final audit doubts. */
-    REVIEW_CHIP_SUSPICIOUS("review.chip.suspicious"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_SUSPICIOUS}. */
-    REVIEW_CHIP_SUSPICIOUS_TIP("review.chip.suspicious.tip"),
-    /** Browse chip listing every segment, offered after an Unattended run. */
-    REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_ALL_SEGMENTS}. */
-    REVIEW_CHIP_ALL_SEGMENTS_TIP("review.chip.allSegments.tip"),
     /** Button that retries the selected segment's translation as it is. */
     REVIEW_RETRY("review.retry"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_RETRY}. */
-    REVIEW_RETRY_TIP("review.retry.tip"),
-    /** Button that opens the card asking for a note and a lower temperature before a retry. */
-    REVIEW_RETRY_NOTE("review.retryNote"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_RETRY_NOTE}. */
-    REVIEW_RETRY_NOTE_TIP("review.retryNote.tip"),
-    /** Caption of a backward-revision proposal shown beside the person's text. */
-    REVIEW_PROPOSAL("review.proposal"),
-    /** Button that applies the shown proposal as the person's own edit. */
-    REVIEW_ACCEPT_PROPOSAL("review.acceptProposal"),
-    /** Hover explanation of the control labelled by {@link #REVIEW_ACCEPT_PROPOSAL}. */
-    REVIEW_ACCEPT_PROPOSAL_TIP("review.acceptProposal.tip"),
     /** Shown in place when a retry is asked for and no model is chosen. */
     REVIEW_RETRY_NO_MODEL("review.retryNoModel"),
-    /** Heading of the retry-with-note card. */
-    DIALOG_RETRY_TITLE("dialog.retry.title"),
-    /** Caption of the note field of the retry card. */
-    DIALOG_RETRY_NOTE("dialog.retry.note"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_NOTE}. */
-    DIALOG_RETRY_NOTE_TIP("dialog.retry.note.tip"),
-    /** Check box of the retry card that lowers the sampling temperature. */
-    DIALOG_RETRY_LOWER("dialog.retry.lower"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_LOWER}. */
-    DIALOG_RETRY_LOWER_TIP("dialog.retry.lower.tip"),
-    /** Button that closes the retry card without retrying. */
-    DIALOG_RETRY_CANCEL("dialog.retry.cancel"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_CANCEL}. */
-    DIALOG_RETRY_CANCEL_TIP("dialog.retry.cancel.tip"),
-    /** Button that retries the segment with the note and the temperature chosen. */
-    DIALOG_RETRY_CONFIRM("dialog.retry.confirm"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_CONFIRM}. */
-    DIALOG_RETRY_CONFIRM_TIP("dialog.retry.confirm.tip"),
     /** Heading of the results dialog: the operation's name. */
     RESULTS_TITLE("results.title"),
     /** Name of the glossary's name scan in the results dialog. */
@@ -2851,7 +2755,163 @@ public enum MessageKey {
     /** Live card: the scene summary line before there is one. */
     LIVE_SUMMARY_NONE("live.summary.none"),
     /** Live card: how the scene summary is kept; its argument is the refresh interval. */
-    LIVE_SUMMARY_SOURCE("live.summary.source");
+    LIVE_SUMMARY_SOURCE("live.summary.source"),
+    /** Title of the review desk dialog. */
+    REVIEW_DESK_TITLE("review.desk.title"),
+    /** The desk's header line; argument 0 is how many are left to review, argument 1 how many there were when the desk opened. */
+    REVIEW_DESK_LEFT("review.desk.left"),
+    /** The desk's header line while a run translates; arguments as {@link #REVIEW_DESK_LEFT}. */
+    REVIEW_DESK_LEFT_READ_ONLY("review.desk.leftReadOnly"),
+    /** Button in the read-only banner that pauses the run. */
+    REVIEW_DESK_PAUSE("review.desk.pause"),
+    /** Hover explanation of {@link #REVIEW_DESK_PAUSE}. */
+    REVIEW_DESK_PAUSE_TIP("review.desk.pause.tip"),
+    /** Footer button that closes the review desk. */
+    REVIEW_CLOSE("review.close"),
+    /** Hover explanation of {@link #REVIEW_CLOSE}. */
+    REVIEW_CLOSE_TIP("review.close.tip"),
+    /** Hover explanation of the desk's filter box. */
+    REVIEW_FILTER_TIP("review.filter.tip"),
+    /** Filter item; argument 0 is the count. */
+    REVIEW_FILTER_TO_REVIEW("review.filter.toReview"),
+    /** Hover explanation of {@link #REVIEW_FILTER_TO_REVIEW}. */
+    REVIEW_FILTER_TO_REVIEW_TIP("review.filter.toReview.tip"),
+    /** Filter item; argument 0 is the count. */
+    REVIEW_FILTER_SECOND_LOOK("review.filter.secondLook"),
+    /** Hover explanation of {@link #REVIEW_FILTER_SECOND_LOOK}. */
+    REVIEW_FILTER_SECOND_LOOK_TIP("review.filter.secondLook.tip"),
+    /** Filter item listing every segment. */
+    REVIEW_FILTER_ALL("review.filter.all"),
+    /** Hover explanation of {@link #REVIEW_FILTER_ALL}. */
+    REVIEW_FILTER_ALL_TIP("review.filter.all.tip"),
+    /** Hover explanation of the previous-segment button; argument 0 is its shortcut. */
+    REVIEW_PREV_TIP("review.prev.tip"),
+    /** Hover explanation of the next-segment button; argument 0 is its shortcut. */
+    REVIEW_NEXT_TIP("review.next.tip"),
+    /** The muted line under the list; arguments are the two shortcuts. */
+    REVIEW_SHORTCUTS("review.shortcuts"),
+    /** Row marker of a segment still to review. */
+    REVIEW_MARKER_TO_REVIEW("review.marker.toReview"),
+    /** Row marker of an accepted segment. */
+    REVIEW_MARKER_ACCEPTED("review.marker.accepted"),
+    /** Row marker of a segment holding the person's edit. */
+    REVIEW_MARKER_YOUR_EDIT("review.marker.yourEdit"),
+    /** Row marker of a segment left for later. */
+    REVIEW_MARKER_LATER("review.marker.later"),
+    /** A row's line; argument 0 is why it is listed, argument 1 its text. */
+    REVIEW_ROW_LINE("review.row.line"),
+    /** The main button on a stored translation. */
+    REVIEW_MAIN_ACCEPT("review.main.accept"),
+    /** The main button once the text was edited. */
+    REVIEW_MAIN_SAVE("review.main.save"),
+    /** The main button when accepting resumes a paused run. */
+    REVIEW_MAIN_ACCEPT_CONTINUE("review.main.acceptContinue"),
+    /** The main button when saving resumes a paused run. */
+    REVIEW_MAIN_SAVE_CONTINUE("review.main.saveContinue"),
+    /** Footer button that opens the less common actions. */
+    REVIEW_MORE("review.more"),
+    /** Hover explanation of {@link #REVIEW_MORE}. */
+    REVIEW_MORE_TIP("review.more.tip"),
+    /** More menu item. */
+    REVIEW_MORE_LATER("review.more.later"),
+    /** The line under {@link #REVIEW_MORE_LATER}. */
+    REVIEW_MORE_LATER_SUB("review.more.later.sub"),
+    /** More menu item. */
+    REVIEW_MORE_RETRY("review.more.retry"),
+    /** The line under {@link #REVIEW_MORE_RETRY}. */
+    REVIEW_MORE_RETRY_SUB("review.more.retry.sub"),
+    /** More menu item. */
+    REVIEW_MORE_RETRY_NOTE("review.more.retryNote"),
+    /** The line under {@link #REVIEW_MORE_RETRY_NOTE}. */
+    REVIEW_MORE_RETRY_NOTE_SUB("review.more.retryNote.sub"),
+    /** More menu item, and the button that confirms it. */
+    REVIEW_MORE_UNDO("review.more.undo"),
+    /** The line under {@link #REVIEW_MORE_UNDO}. */
+    REVIEW_MORE_UNDO_SUB("review.more.undo.sub"),
+    /** The line under {@link #REVIEW_MORE_UNDO} when there is no edit. */
+    REVIEW_MORE_UNDO_NONE("review.more.undo.none"),
+    /** Heading of the inline note panel. */
+    REVIEW_NOTE_LABEL("review.note.label"),
+    /** Placeholder of the note field. */
+    REVIEW_NOTE_PROMPT("review.note.prompt"),
+    /** Check box in the note panel. */
+    REVIEW_NOTE_LOWER("review.note.lower"),
+    /** Hover explanation of {@link #REVIEW_NOTE_LOWER}. */
+    REVIEW_NOTE_LOWER_TIP("review.note.lower.tip"),
+    /** Button that closes the note panel. */
+    REVIEW_NOTE_CANCEL("review.note.cancel"),
+    /** Hover explanation of {@link #REVIEW_NOTE_CANCEL}. */
+    REVIEW_NOTE_CANCEL_TIP("review.note.cancel.tip"),
+    /** Button that retries with the note. */
+    REVIEW_NOTE_CONFIRM("review.note.confirm"),
+    /** Hover explanation of {@link #REVIEW_NOTE_CONFIRM}. */
+    REVIEW_NOTE_CONFIRM_TIP("review.note.confirm.tip"),
+    /** Inline question before an edit is undone; argument 0 is the locator. */
+    REVIEW_UNDO_QUESTION("review.undo.question"),
+    /** Button that keeps the edit. */
+    REVIEW_UNDO_KEEP("review.undo.keep"),
+    /** Hover explanation of {@link #REVIEW_UNDO_KEEP}. */
+    REVIEW_UNDO_KEEP_TIP("review.undo.keep.tip"),
+    /** Inline question when typing is not saved; argument 0 is the locator. */
+    REVIEW_UNSAVED_QUESTION("review.unsaved.question"),
+    /** Button that keeps the typing. */
+    REVIEW_UNSAVED_KEEP("review.unsaved.keep"),
+    /** Hover explanation of {@link #REVIEW_UNSAVED_KEEP}. */
+    REVIEW_UNSAVED_KEEP_TIP("review.unsaved.keep.tip"),
+    /** Button that drops the typing. */
+    REVIEW_UNSAVED_DISCARD("review.unsaved.discard"),
+    /** Hover explanation of {@link #REVIEW_UNSAVED_DISCARD}. */
+    REVIEW_UNSAVED_DISCARD_TIP("review.unsaved.discard.tip"),
+    /** Detail tab. */
+    REVIEW_TAB_WHY("review.tab.why"),
+    /** Detail tab. */
+    REVIEW_TAB_CONTEXT("review.tab.context"),
+    /** Detail tab; argument 0 is the number of suggestions. */
+    REVIEW_TAB_SUGGESTION("review.tab.suggestion"),
+    /** Line over the context of a segment drafted alone. */
+    REVIEW_CONTEXT_INTRO("review.context.intro"),
+    /** Line over the context of a segment drafted in a batch. */
+    REVIEW_CONTEXT_BATCH("review.context.batch"),
+    /** What may be wrong with a name finding. */
+    REVIEW_WHY_NAME("review.why.name"),
+    /** What may be wrong with a language finding. */
+    REVIEW_WHY_WRONG_LANGUAGE("review.why.wrongLanguage"),
+    /** What may be wrong with an omission finding. */
+    REVIEW_WHY_OMISSION("review.why.omission"),
+    /** What may be wrong with any other finding. */
+    REVIEW_WHY_LOW_SCORE("review.why.lowScore"),
+    /** A finding's plain line; argument 0 is what may be wrong. */
+    REVIEW_WHY_LINE("review.why.line"),
+    /** A finding's one label; arguments are its kind word, severity and who raised it. */
+    REVIEW_FINDING_LABEL("review.finding.label"),
+    /** Who raised a finding, from its machine code. */
+    REVIEW_RAISER("review.raiser"),
+    /** Switch that shows rule codes and figures. */
+    REVIEW_TECHNICAL("review.technical"),
+    /** Hover explanation of {@link #REVIEW_TECHNICAL}. */
+    REVIEW_TECHNICAL_TIP("review.technical.tip"),
+    /** Heading of the current text on the Suggestion tab. */
+    REVIEW_SUGGESTION_NOW("review.suggestion.now"),
+    /** Heading of the proposed text on the Suggestion tab. */
+    REVIEW_SUGGESTION_PROPOSED("review.suggestion.proposed"),
+    /** Button that applies the suggestion. */
+    REVIEW_SUGGESTION_USE("review.suggestion.use"),
+    /** Hover explanation of {@link #REVIEW_SUGGESTION_USE}. */
+    REVIEW_SUGGESTION_USE_TIP("review.suggestion.use.tip"),
+    /** The Suggestion tab with nothing in it. */
+    REVIEW_SUGGESTION_NONE("review.suggestion.none"),
+    /** Hover explanation of the main button; argument 0 is its shortcut. */
+    REVIEW_MAIN_ACCEPT_TIP("review.main.accept.tip"),
+    /** Hover explanation of the note field. */
+    REVIEW_NOTE_PROMPT_TIP("review.note.prompt.tip"),
+    /** Hover explanation of the button that undoes the edit. */
+    REVIEW_MORE_UNDO_TIP("review.more.undo.tip"),
+    /** Accessible name of the desk's filter box. */
+    REVIEW_FILTER("review.filter"),
+    /** Accessible name of the previous-segment button. */
+    REVIEW_PREV("review.prev"),
+    /** Accessible name of the next-segment button. */
+    REVIEW_NEXT("review.next");
 
     private final String key;
 

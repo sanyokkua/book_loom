@@ -110,6 +110,8 @@ public final class ModalHost {
                 dialog.getId(),
                 dismissOnOutsideClick,
                 dismissOnEscape);
+        // Asked for now: a copy of it waiting for a free window would show it again after it is closed.
+        waiting.remove(dialog);
         if (card != null) {
             release();
         }

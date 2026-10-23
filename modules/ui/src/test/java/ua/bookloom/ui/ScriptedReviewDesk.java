@@ -36,6 +36,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
     private final Map<String, SegmentView> views = new ConcurrentHashMap<>();
     private volatile @Nullable Result<List<SegmentView>> queueView;
+    private final Map<ReviewFilter, List<SegmentView>> queuesByFilter = new ConcurrentHashMap<>();
     private volatile @Nullable Result<ReviewCounts> countsView;
     private volatile @Nullable OriginalTitle originalTitleView;
     private volatile @Nullable CountDownLatch acceptGate;
@@ -51,6 +52,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     /** Makes every {@code queue} call answer these views, whatever else was queued; the queue is not consumed. */
     public void willAnswerQueue(final List<SegmentView> views) {
         queueView = Result.ok(List.copyOf(views));
+    }
+
+    /** Makes every {@code queue} call for this filter answer these views; it wins over the all-filters answer. */
+    public void willAnswerQueue(final ReviewFilter filter, final List<SegmentView> views) {
+        queuesByFilter.put(filter, List.copyOf(views));
     }
 
     /**
@@ -161,7 +167,8 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
-        final Result<List<SegmentView>> view = queueView;
+        final List<SegmentView> forFilter = queuesByFilter.get(filter);
+        final Result<List<SegmentView>> view = forFilter != null ? Result.ok(forFilter) : queueView;
         if (view != null) {
             calls.add("queue(" + projectId + ", " + filter + ")");
             return view;

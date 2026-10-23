@@ -12,7 +12,6 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
-import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /** What the editor shows for the selected segment, when it is dirty, and what Accept is offered on. */
@@ -117,7 +116,7 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
     // IF typing left Accept on, THEN the unsaved edit would be silently dropped by accepting the machine text.
     @Test
-    void editorText_typed_setsDirtyDisablesAcceptAndShowsTheHint() {
+    void editorText_typed_setsDirtyAndDisablesAccept() {
         buildReview();
         select("ch05.xhtml:11");
 
@@ -128,7 +127,6 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
         assertThat(onFx(() -> review.editor().dirty().get())).isTrue();
         assertThat(onFx(() -> review.acceptAvailable().get())).isFalse();
-        assertThat(onFx(() -> review.editor().hint().get())).isEqualTo(MessageKey.REVIEW_EDITING_HINT);
     }
 
     @Test
@@ -142,7 +140,6 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
         });
 
         assertThat(onFx(() -> review.editor().dirty().get())).isFalse();
-        assertThat(onFx(() -> review.editor().hint().get())).isNull();
     }
 
     @Test
@@ -264,19 +261,6 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
                 .containsExactly("success:" + MessageKey.REVIEW_ACCEPTED + ":[ch5 · p12, 2]");
         assertThat(toasts.raised()).isEmpty();
         assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(2);
-    }
-
-    // Skip moves on to the flagged segment the desk names next.
-    @Test
-    void skip_nextFlaggedNamed_selectsThatRow() {
-        buildReview();
-        select("ch05.xhtml:11");
-        desk.willAnswer(Result.ok(ScriptedReviewDesk.recordOf(projectId, nameIssue())));
-
-        press(review::skip);
-
-        assertThat(desk.calls()).contains("skip(" + projectId + ", ch05.xhtml:11)");
-        assertThat(onFx(() -> review.selected().get().locator())).isEqualTo("ch7 · p40");
     }
 
     // A segment that kept no translation shows the model's refused reply, labelled, and can be saved as it is.

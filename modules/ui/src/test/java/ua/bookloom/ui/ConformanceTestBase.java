@@ -19,7 +19,6 @@ import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
 import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.ChangeKind;
@@ -118,11 +117,9 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 onFx(() -> injector.getInstance(ErrorPresenter.class)
                         .present(AppError.of(
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
-            case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
+            case REVIEW_DESK -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
             case RESULTS -> onFx(this::showSampleResults);
-            case RETRY ->
-                onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
             case REPLACE_RUN ->

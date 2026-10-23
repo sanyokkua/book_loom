@@ -51,7 +51,7 @@ verdict, an "Open another book?" question whenever a project is open, the book's
 title bar, numbers five workflow steps (Import holds the book's structure since 15i.U3) with a provider footer, and its Book Brief, Structure, Names & style, Translating
 and Export screens are live: the glossary table with scans, model review, suggested targets by the name policy and
 CSV; the Translating screen as a summary strip (time left, bar, segments done, counts, "n to review") over a full-height live card (finalize 6.5: the chunk's rows with their markers beside the selected row's detail, Simple and Detailed with the row's call, prompt and reply, follow the newest translation, the scene summary, All calls… over the last 50 calls, the sleep help line, and an Activity log tab with seven kinds and Problems only), the provider-error and stuck-call banners with
-Skip segment and Retry now, and the review panel with retry and proposals; the Export screen writes the book (Save to,
+Skip segment and Retry now, and the review desk — an extra-large dialog that also opens by itself when a translating run completes with segments to review, with row markers, one main button that turns into Save my edit, More ▾ (Leave for later, Try again, an inline Try again with a note, Undo my edit) and the batch's sent sections under "What the model saw"; the Export screen writes the book (Save to,
 side files, consistency pass, result tiles and checks, a neutral line for the file just written, the export-complete
 dialog), and the Settings Providers tab tests a provider three ways with measured values. The theme is token-only in
 both light and dark, every operable control explains itself on hover, wheel scrolling glides, the long lists have fixed

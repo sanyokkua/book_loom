@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -36,7 +35,6 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BlockedWords;
 import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
@@ -69,20 +67,17 @@ final class TranslatingView {
     private static final double CARD_SPACING = 8;
 
     private static final Set<RunState> RUNNING = Set.of(RunState.RUNNING, RunState.PAUSING);
-    private static final Set<RunState> REVIEWABLE =
-            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPED, RunState.COMPLETED);
     private static final Set<RunState> WATCHED = EnumSet.complementOf(EnumSet.of(RunState.IDLE));
 
     /**
-     * What the screen's own buttons do that the view model does not: leave for another step, open the review panel,
-     * whose view model counts the flagged segments and whose retry asks its note in a card, and read the run-state
-     * row; and the session's memory of which sections the person left open, which outlives the rebuilt screen.
+     * What the screen's own buttons do that the view model does not: leave for another step, count the segments to
+     * review, open the review desk, and read the run-state row; and the session's memory of which sections the person left open, which outlives the rebuilt screen.
      */
     record Exits(
             Navigator navigator,
             ReviewViewModel review,
             TranslatingDialogs dialogs,
-            ReviewPauseFollower pauses,
+            ReviewDeskLauncher desk,
             SectionMemory sections,
             RunStateSource runs) {}
 
@@ -123,11 +118,10 @@ final class TranslatingView {
                 languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
         final ObservableValue<String> targetName =
                 languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
-        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, mirror.runState());
-        final VBox screen = new VBox(SCREEN_SPACING, head(viewModel, mirror, reads.sleep(), messages), review);
+        final VBox screen = new VBox(SCREEN_SPACING, head(viewModel, mirror, reads.sleep(), messages));
         screen.getChildren()
                 .addAll(
-                        TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads, review), messages),
+                        TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads), messages),
                         StateVisibility.shownIn(
                                 TranslatingReadyCard.build(
                                         viewModel, mirror, current, exits.runs().view(), messages),
@@ -137,12 +131,12 @@ final class TranslatingView {
                                 liveCard(mirror, List.of(sourceName, targetName), messages, exits, reads),
                                 mirror.runState(),
                                 WATCHED),
-                        footer(viewModel, mirror, review, messages, exits));
+                        footer(viewModel, mirror, messages, exits));
         return screen;
     }
 
     private static TranslatingSummaryStrip.Inputs stripInputs(
-            final StateMirror mirror, final Exits exits, final Reads reads, final ReviewPanel review) {
+            final StateMirror mirror, final Exits exits, final Reads reads) {
         return new TranslatingSummaryStrip.Inputs(
                 exits.runs().view(),
                 reads.estimate().estimate(),
@@ -153,7 +147,7 @@ final class TranslatingView {
                                 mirror.live().flaggedQueue().size()),
                         exits.review().flaggedCount(),
                         mirror.live().flaggedQueue()),
-                () -> openReview(mirror, exits.review(), review));
+                () -> exits.desk().open(ReviewFilter.ALL_FLAGGED));
     }
 
     // Why start or resume waits, and the help line about sleep while a translation runs. The banner is not part of the
@@ -228,7 +222,8 @@ final class TranslatingView {
         return new LiveCallPanel(sources, columnNames, exits.sections(), exits.dialogs()::showCalls, messages);
     }
 
-    private static ObservableValue<String> languageName(
+    /** The name of one of the open book's languages, in the display language, or the fallback while none is set. */
+    static ObservableValue<String> languageName(
             final CurrentProject current,
             final Function<BookBrief, @Nullable String> tagOf,
             final MessageKey fallback,
@@ -241,26 +236,6 @@ final class TranslatingView {
                     return tag == null ? messages.get(fallback) : names.nameOf(tag, messages.locale());
                 },
                 current.brief());
-    }
-
-    // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
-    // button. It opens right under the run controls, where Review flagged is, so pressing it always shows something —
-    // with nothing flagged, the empty state that says so.
-    private static ReviewPanel reviewPanel(
-            final Exits exits,
-            final ObservableValue<String> sourceName,
-            final ObservableValue<String> targetName,
-            final Messages messages,
-            final ReadOnlyObjectProperty<RunState> state) {
-        final ReviewPanel panel =
-                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.dialogs(), exits.pauses());
-        panel.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),
-                        panel.openProperty(),
-                        state));
-        panel.managedProperty().bind(panel.visibleProperty());
-        return panel;
     }
 
     // Says why start or resume is off while other model work (a scan, an export, a provider test, a retry) runs.
@@ -285,7 +260,6 @@ final class TranslatingView {
     private static Node footer(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
-            final ReviewPanel panel,
             final Messages messages,
             final Exits exits) {
         final StepFooter footer = StepFooter.of(
@@ -312,19 +286,18 @@ final class TranslatingView {
                 RunStateView.STOP,
                 () -> dialogs.askToStop(viewModel, exits.runs().stopFigures()),
                 RunStateView.REVIEW,
-                () -> openReview(mirror, exits.review(), panel));
+                () -> openReview(mirror, exits));
         final TranslatingRunActions actions =
                 new TranslatingRunActions(exits.runs(), messages, commands, footer.forwardButton());
         return footer.withRunGroup(actions.buttons());
     }
 
     // The suspicious segments are accepted ones the audit doubts: with nothing flagged, Review opens on them, so the
-    // count a person sees on the button is what the panel shows.
-    private static void openReview(final StateMirror mirror, final ReviewViewModel review, final ReviewPanel panel) {
-        final int flagged = review.flaggedCount().get();
+    // count a person sees on the button is what the desk shows.
+    private static void openReview(final StateMirror mirror, final Exits exits) {
+        final int flagged = exits.review().flaggedCount().get();
         final int suspicious = mirror.live().suspicious().get();
-        log.debug("review pressed with {} flagged and {} suspicious segments: opening the panel", flagged, suspicious);
-        review.selectFilter(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
-        panel.setOpen(true);
+        log.debug("review pressed with {} flagged and {} suspicious segments: opening the desk", flagged, suspicious);
+        exits.desk().open(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
     }
 }

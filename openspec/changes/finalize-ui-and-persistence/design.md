@@ -100,7 +100,9 @@ the window) wide with a **fixed** min(820, 90 %) height, so its footer never mov
 footer and a `ScrollPane` body.
 
 **Keys, in `ModalHost`'s key filter:**
-- Enter runs the card's default button. Inside a `TextArea`, Ctrl/⌘+Enter does.
+- Enter runs the card's default button. Inside a `TextArea`, Ctrl/⌘+Enter does. A card that sets
+  `ModalCard.setEnterNeedsShortcut(true)` (the review desk) runs it on Ctrl/⌘+Enter only; plain Enter is consumed and
+  does nothing, so a stray Enter on a focused row never decides a segment.
 - Esc runs the card's escape action. It closes a question card, hides long work (the names pass and the export's last
   check), and cancels short work. Only the export dialog's Cancel button asks "Cancel the export? No file is written."
   (owner, 2026-10-20).
@@ -109,8 +111,9 @@ footer and a `ScrollPane` body.
 **Unrequested dialogs.** `showWhenFree(card)` queues a dialog the person did not ask for, such as the review desk at
 the end of a run, until neither layer shows anything.
 
-**Removed:** `ModelCallsWindow` and `#busy-show-calls`. "Retry with a note" becomes an inline panel in the desk, so no
-dialog replaces another.
+**Removed:** `ModelCallsWindow` and `#busy-show-calls`. "Retry with a note" becomes an inline panel in the desk, and
+the desk's other questions (Undo my edit, typing that is not saved) are inline bars too, because `ModalHost` shows one
+card at a time and a second card would replace the desk.
 
 **Alternative rejected:** a separate OS window for call logs, which the UX research suggested. The owner overrode it
 with decision 1.

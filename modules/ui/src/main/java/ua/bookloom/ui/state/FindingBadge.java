@@ -17,13 +17,13 @@ import ua.bookloom.ui.i18n.MessageKey;
  */
 public enum FindingBadge {
     /** A locked or glossary name was not honoured. */
-    NAME(MessageKey.REVIEW_BADGE_NAME, 3),
+    NAME(MessageKey.REVIEW_BADGE_NAME, 3, "name", MessageKey.REVIEW_WHY_NAME),
     /** The target reads as the wrong language. */
-    WRONG_LANGUAGE(MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2),
+    WRONG_LANGUAGE(MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2, "language", MessageKey.REVIEW_WHY_WRONG_LANGUAGE),
     /** Part of the source is missing from the target. */
-    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1),
+    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1, "omission", MessageKey.REVIEW_WHY_OMISSION),
     /** Any other kind of finding, or only a score. */
-    LOW_SCORE(MessageKey.REVIEW_BADGE_LOW_SCORE, 0);
+    LOW_SCORE(MessageKey.REVIEW_BADGE_LOW_SCORE, 0, "score", MessageKey.REVIEW_WHY_LOW_SCORE);
 
     private static final String GLOSSARY = "glossary";
     private static final String TERMINOLOGY = "terminology";
@@ -32,10 +32,32 @@ public enum FindingBadge {
 
     private final MessageKey label;
     private final int rank;
+    private final String code;
+    private final MessageKey why;
 
-    FindingBadge(final MessageKey label, final int rank) {
+    FindingBadge(final MessageKey label, final int rank, final String code, final MessageKey why) {
         this.label = label;
         this.rank = rank;
+        this.code = code;
+        this.why = why;
+    }
+
+    /**
+     * The badge's language-neutral code word, which a desk row's plain line starts with.
+     *
+     * @return the code; never null
+     */
+    public String code() {
+        return code;
+    }
+
+    /**
+     * The catalogue entry saying in plain words what may be wrong with a segment of this badge.
+     *
+     * @return the key; never null
+     */
+    public MessageKey why() {
+        return why;
     }
 
     /**

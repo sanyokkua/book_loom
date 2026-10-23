@@ -6,6 +6,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntConsumer;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -21,6 +23,8 @@ final class FlaggedCount {
     private final ReviewQueries queries;
     private final ExecutorService executor;
     private final AtomicLong ticket = new AtomicLong();
+    private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
 
     FlaggedCount(final ReviewQueries queries, final ExecutorService executor) {
         this.queries = Objects.requireNonNull(queries, "queries");
@@ -85,5 +89,32 @@ final class FlaggedCount {
             // A run can end while the application shuts its executor down: there is no one left to show the count to.
             log.debug("the flagged count was not read: the executor is shut down", closing);
         }
+    }
+
+    /** The count last published, zero until read. FX thread only. */
+    ReadOnlyIntegerProperty flagged() {
+        return flagged.getReadOnlyProperty();
+    }
+
+    /** The highest count published since {@link #restartTotal()}: the "y" of the desk's "x of y left". FX only. */
+    ReadOnlyIntegerProperty total() {
+        return total.getReadOnlyProperty();
+    }
+
+    /** Starts the desk's total afresh, as the desk opens. FX thread only. */
+    void restartTotal() {
+        total.set(0);
+    }
+
+    /**
+     * Publishes a count the desk answered: the count, the desk's total, and the run's tiles once the run is settled.
+     *
+     * @param mirror the run's state, whose flagged figure is replaced
+     * @param count the segments the desk counts as flagged
+     */
+    void publish(final StateMirror mirror, final int count) {
+        flagged.set(count);
+        total.set(Math.max(total.get(), count));
+        show(mirror, count);
     }
 }

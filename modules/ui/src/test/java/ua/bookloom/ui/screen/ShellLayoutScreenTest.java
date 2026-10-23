@@ -18,7 +18,6 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
-import ua.bookloom.ui.state.RunState;
 
 /**
  * The tall screens inside the shell at the smallest content area and at a roomy window: a screen is never squeezed
@@ -31,7 +30,6 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
 
     private static final double TABLE_MIN = 400;
     private static final double LIVE_CARD_MIN = 460;
-    private static final double REVIEW_ROWS_MIN = 10 * 34;
     private static final String TEXT = "She had lost her mother, and the poor girl wept as she followed the coffin. ";
 
     // The headless screen is 1000 pixels square and draws nothing outside it, so the window starts at its corner.
@@ -121,22 +119,8 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
         assertThat(shellScrolls()).isEqualTo(scrolls);
     }
 
-    // IF the review list took only what was left of the window, THEN it would show a handful of rows; it shows at
-    // least ten at either size.
-    @ParameterizedTest
-    @CsvSource({CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT, "1000, 900"})
-    void review_panelOpen_showsAtLeastTenRows(final double width, final double height) {
-        publish(RunState.PAUSED);
-        showTranslating();
-        onFx(() -> button("translating-review-flagged").fire());
-
-        sizeTo(width, height);
-
-        assertThat(heightOf("review-list")).isGreaterThanOrEqualTo(REVIEW_ROWS_MIN);
-    }
-
     // IF the shell lost its place whenever the screen briefly grew shorter (a live row hidden between two segments),
-    // THEN the page would jump while the person reads the review panel; the run's updates leave the place unchanged.
+    // THEN the page would jump while the person reads the live card; the run's updates leave the place unchanged.
     @Test
     void translating_scrolledDown_runUpdatesLeaveThePlaceUnchanged() {
         running();

@@ -263,8 +263,8 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 - **Translating** — states: `idle`, `running`, `paused`, `stopped` (resumable — it re-enters at the first pending
   segment), `provider error` (auto-paused), `completed`, `failed`. The dashboard (`#jobprogress`) shows the progress
   line, time left, tokens per second, the four count tiles, the two-block live call panel (current and previous call), and the tagged activity log. The
-  review panel lives inside this screen today (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`); **planned:** it
-  becomes the review desk, an `xl` dialog on `ModalHost` (`ReviewPanel` and its parts move into an `xl` `ModalCard`).
+  review desk is an `xl` dialog on `ModalHost` opened from this screen (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`;
+  `ReviewDeskCard`, opened by the eager `ReviewDeskLauncher`).
   The run-state table in `mockups/README.md` (Run states) is the mapping the conformance test should check.
 - **Export** — chooses the destination and exports: save path with overwrite, format, the three side-file boxes, the
   final consistency-pass switch, the carried-over checks, the accepted/flagged/pending/kept-as-source counts, and

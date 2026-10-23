@@ -56,7 +56,7 @@ The application SHALL size each dialog as a confirmation (480 pixels wide), a fo
 
 ### Requirement: Answer Enter, Escape and Tab the same way in every dialog
 
-WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the footer's main button on Enter (Ctrl or Command with Enter inside a text area), and SHALL close it on Escape. On a progress dialog Escape SHALL hide long work, the export's last check included, and cancel short work; only the export dialog's Cancel button SHALL ask "Cancel the export?". Only About SHALL close on a click outside it.
+WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the footer's main button on Enter (Ctrl or Command with Enter inside a text area, and everywhere in the review desk, whose main button decides a segment and so runs only on Ctrl or Command with Enter), and SHALL close it on Escape. On a progress dialog Escape SHALL hide long work, the export's last check included, and cancel short work; only the export dialog's Cancel button SHALL ask "Cancel the export?". Only About SHALL close on a click outside it.
 
 **Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`, owner answer of 2026-10-20 recorded in `openspec/changes/finalize-ui-and-persistence/design.md` "D1". In plain words: a person at the keyboard should be able to answer any dialog without finding the mouse, and Escape never loses long work: it only puts it out of the way.
 
@@ -64,6 +64,11 @@ WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the 
 
 - **WHEN** `Stop translating?` is shown and Enter is pressed
 - **THEN** the main button of its footer is activated
+
+#### Scenario: Plain Enter in the review desk decides nothing
+
+- **WHEN** the review desk is open on `ch5 · p12` with a row of its list focused and Enter is pressed
+- **THEN** no segment is accepted, and Ctrl+Enter (Command+Enter on macOS) runs the desk's main button
 
 #### Scenario: Enter in a text area adds a line
 

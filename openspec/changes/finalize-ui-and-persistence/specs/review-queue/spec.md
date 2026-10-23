@@ -371,7 +371,7 @@ IF the review desk opens with no segment to review, THEN it SHALL show "Nothing 
 
 ### Requirement: Make the target read-only while a run translates
 
-WHILE the run state is Translating, Stuck call, Pausing or Stopping, or a retry is in flight, the desk SHALL be read-only, its header SHALL read "read-only while translating", and a banner SHALL say "Pause the translation to edit, accept or try again." with a Pause button.
+WHILE the run state is Translating, Stuck call, Pausing or Stopping, or a retry is in flight, the desk SHALL be read-only. WHILE the run state is Translating, Stuck call, Pausing or Stopping, its header SHALL read "read-only while translating", and a banner SHALL say "Pause the translation to edit, accept or try again." with a Pause button; WHILE a retry is in flight on a run that is not translating, the banner SHALL say "Trying again… the desk is available when the model answers." with no Pause button.
 
 **Source**: FR-REVIEW-05, FR-REVIEW-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`, docs/specification/mockups/README.md#run-states-a, docs/specification/mockups/README.md#dialog--review-decision-5-f1--t6t12. In plain words: an edit made while the run decides the same segment would race it, so the desk waits for the pause and says so, with the button that gets there.
 
@@ -384,6 +384,11 @@ WHILE the run state is Translating, Stuck call, Pausing or Stopping, or a retry 
 
 - **WHEN** the person presses Pause in that banner and the run reaches Paused
 - **THEN** the banner disappears and the editor accepts typing
+
+#### Scenario: A retry on a paused run is waited for without Pause
+
+- **WHEN** the run is Paused and a Try again on `ch5 · p12` is in flight
+- **THEN** the editor is read-only, the banner reads "Trying again… the desk is available when the model answers.", no Pause button is shown, and the header does not say "read-only while translating"
 
 ### Requirement: Open the segment a review pause names
 

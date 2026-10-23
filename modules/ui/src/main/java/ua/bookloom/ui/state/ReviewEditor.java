@@ -18,7 +18,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * The review panel's editor text and whether it has been changed: what the person is typing against the text the
+ * The review desk's editor text and whether it has been changed: what the person is typing against the text the
  * segment was opened with, what that text is when the segment kept no translation, and the formatting tokens a refused
  * save still needs. Kept apart from {@link ReviewViewModel} so that class stays a readable size. FX thread only.
  */
@@ -28,7 +28,6 @@ public final class ReviewEditor {
     private final StringProperty text = new SimpleStringProperty("");
     private final ReadOnlyBooleanWrapper dirty = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper savable = new ReadOnlyBooleanWrapper();
-    private final ReadOnlyObjectWrapper<@Nullable MessageKey> hint = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> targetNote = new ReadOnlyObjectWrapper<>();
     private final ObservableList<String> neededTokens = FXCollections.observableArrayList();
     private final ObservableList<String> readOnlyNeeded = FXCollections.unmodifiableObservableList(neededTokens);
@@ -56,15 +55,6 @@ public final class ReviewEditor {
      */
     public ReadOnlyBooleanProperty dirty() {
         return dirty.getReadOnlyProperty();
-    }
-
-    /**
-     * The hint that editing has switched Accept off.
-     *
-     * @return a read-only property holding {@code null} while the editor is clean; FX thread only
-     */
-    public ReadOnlyObjectProperty<@Nullable MessageKey> hint() {
-        return hint.getReadOnlyProperty();
     }
 
     /**
@@ -119,6 +109,12 @@ public final class ReviewEditor {
         refresh();
     }
 
+    /** Drops what the person typed: the editor goes back to the text the segment was opened with. FX thread only. */
+    public void discard() {
+        log.debug("typing in segment {} discarded", loadedId);
+        text.set(baseline);
+    }
+
     /**
      * Whether re-reading {@code view} would throw away what the person typed into it: the same segment, changed.
      *
@@ -153,7 +149,6 @@ public final class ReviewEditor {
         dirty.set(!text.get().equals(baseline));
         // A segment with no translation saved as its own source would read as reviewed by the person: never offered.
         savable.set((dirty.get() || fromRejected) && !(noTarget && text.get().equals(source)));
-        hint.set(dirty.get() ? MessageKey.REVIEW_EDITING_HINT : null);
         if (!neededTokens.isEmpty() || !extraTokens.get().isEmpty()) {
             neededTokens.setAll(ReviewTokens.missing(source, text.get()));
             extraTokens.set(String.join(" ", ReviewTokens.missing(text.get(), source)));

@@ -601,14 +601,17 @@ language more than once, for example with another model, quality or thinking set
 
 ### Dialog · Review (decision 5, F1) — T6–T12
 - **Opens** from "Review (n)" or the strip's "n to review", and **by itself** when a translation finishes with segments
-  to review (it waits for a free slot, G1). With nothing to review it says "Nothing needs your review".
+  to review (it waits for a free slot, G1). With nothing to review it says "Nothing needs your review" inside the XL
+  desk, and All segments stays available (the reference draws a small card with Close; the spec wins).
 - **Header.** "4 of 6 left — if a segment reads well, press Accept. You can export now and come back later."
   - While translating: "read-only while translating" plus the banner "Pause the translation to edit, accept or try
-    again." [Pause].
+    again." [Pause]. While a retry is in flight on a run that is not translating: "Trying again… the desk is available
+    when the model answers." with no Pause.
 - **Left pane.**
-  - A filter (To review (n) · Worth a second look (n) · All segments) and ‹ › to move.
+  - A filter (To review (n) · Worth a second look (n) · All segments, all three always) and ‹ › to move; a muted line
+    under the list names the shortcuts.
   - Rows: location, a **state marker** (to review · accepted · your edit · later) and a one-line "why · text". "Later" is the desk's own
-    mark for this session: Leave for later writes nothing, so the segment stays FLAGGED and still counts as to review.
+    mark for this application run: Leave for later writes nothing, so the segment stays FLAGGED and still counts as to review.
 - **Editors.** Original (read-only, chips) \| Translation (the editor).
   - The editor is a `TextArea` where formatting marks are **protected text marks `⟦1⟧`** (decision 12). Deleting
     removes a whole mark, never half; cut and paste can move one; a paste keeps only marks missing from the editor.
@@ -624,15 +627,20 @@ language more than once, for example with another model, quality or thinking set
     sent context (a small pipeline change).
   - **Suggestion**: Now \| Suggested by the check, with "Use the suggestion".
 - **Footer.**
+  - **Close** (a ghost button; the reference's header ✕ is not drawn, as no app card has one).
   - **More ▾**: Leave for later · Try again · Try again with a note… · Undo my edit, each with what it does.
   - The **one main button**: **✓ Accept & next** turns into **✓ Save my edit & next** once the text is edited (**T7**).
   - Shortcuts: Ctrl/⌘+Enter runs the main button and Ctrl+Alt+↓/↑ moves between segments. Alt+↑/↓ belongs to the
-    editor on macOS.
-  - **Try again with a note** opens an inline panel inside the desk, not a second dialog.
+    editor on macOS. Plain Enter does nothing in the desk, so a stray Enter on a focused row never decides a segment.
+  - **Try again with a note** opens an inline panel inside the desk, not a second dialog; it holds the note and
+    "Lower temperature for this retry" (the spec's checkbox, which the reference leaves out).
+  - Undo my edit and typing that is not saved ask in an inline bar inside the desk, not in a confirmation card:
+    `ModalHost` shows one card at a time, so a card would replace the desk.
   - Feedback is a footer line (G2).
 - **Code.**
-  - `ReviewPanel`, `ReviewListPane`, `ReviewComparePane`, `FindingRows`, `ReadableView` and `ContextSection` move into
-    an xl `ModalCard`.
+  - Built (6.6a): `ReviewDeskCard`, an xl `ModalCard` opened by `ReviewDeskLauncher`, holds `ReviewListPane`,
+    `ReviewDeskDetail`, `ReviewDeskTabs`, `FindingRows`, `ReadableView` and `ContextSection`; the protected marks are
+    6.6b.
   - Accept (FLAGGED → ACCEPTED with the machine text) and Save edit (REVISED) keep their `SegmentActions` behaviour.
   - The protected editor is a `TextFormatter` that adjusts changes to whole marks and lets whole-text loads through.
     Undo and redo skip the filter, which is safe because every change it recorded covered whole marks.

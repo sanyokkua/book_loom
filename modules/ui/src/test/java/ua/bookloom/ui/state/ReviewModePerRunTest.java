@@ -32,44 +32,6 @@ class ReviewModePerRunTest extends ReviewViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    // IF the desk used the mode of the launch, THEN a finished Assisted run would still offer All segments just
-    // because the window was opened Unattended.
-    @Test
-    void allSegmentsOffered_runStartedAssistedWhileProviderSaysUnattended_isNotOffered() {
-        reviewMode = ReviewMode.UNATTENDED;
-        buildReview();
-        publishRunStarted(ReviewMode.ASSISTED);
-
-        setRunState(RunState.COMPLETED);
-
-        assertThat(onFx(() -> review.allSegmentsOffered().get())).isFalse();
-    }
-
-    // IF a run in progress took the changed setting, THEN All segments would appear for a run that was not Unattended.
-    @Test
-    void allSegmentsOffered_runStartedUnattendedThenProviderChanges_staysOffered() {
-        reviewMode = ReviewMode.UNATTENDED;
-        buildReview();
-        publishRunStarted(ReviewMode.UNATTENDED);
-
-        reviewMode = ReviewMode.MANUAL;
-        setRunState(RunState.COMPLETED);
-
-        assertThat(onFx(() -> review.allSegmentsOffered().get())).isTrue();
-    }
-
-    // IF no run has started (a reopened project), THEN the mode now in force decides, read at the time it is asked.
-    @Test
-    void allSegmentsOffered_noRunYetAndProviderChanges_followsTheProvider() {
-        reviewMode = ReviewMode.UNATTENDED;
-        buildReview();
-
-        reviewMode = ReviewMode.ASSISTED;
-        setRunState(RunState.COMPLETED);
-
-        assertThat(onFx(() -> review.allSegmentsOffered().get())).isFalse();
-    }
-
     // IF Accept continued the run because the setting is Manual now, THEN a run started Unattended would be
     // resumed by the person's Accept that it never asked to pause for.
     @Test

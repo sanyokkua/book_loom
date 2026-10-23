@@ -40,6 +40,7 @@ import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.ui.screen.ReviewDeskLauncher;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.ContinueGuard;
@@ -155,6 +156,8 @@ public final class UiModule extends AbstractModule {
         bind(StoredNarratorFollower.class).asEagerSingleton();
         // Eager, so a names pass that ends in the background is announced while any screen shows.
         bind(HiddenResultsAnnouncer.class).asEagerSingleton();
+        // Eager, so the review desk opens by itself when a run completes, whichever screen is shown.
+        bind(ReviewDeskLauncher.class).asEagerSingleton();
     }
 
     private void bindShell() {

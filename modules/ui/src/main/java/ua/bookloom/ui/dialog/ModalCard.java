@@ -63,6 +63,7 @@ public class ModalCard extends DialogPane implements FooterFeedback {
     private final Size size;
     private final Label feedback = new Label();
     private @Nullable Runnable onEscape;
+    private boolean enterNeedsShortcut;
     private boolean wrapping;
 
     /**
@@ -106,6 +107,25 @@ public class ModalCard extends DialogPane implements FooterFeedback {
      */
     public @Nullable Runnable onEscape() {
         return onEscape;
+    }
+
+    /**
+     * Makes Enter run the default button only with Ctrl or Command, wherever the focus is, for a card whose main button
+     * decides something a stray Enter on a focused row must not (the review desk).
+     *
+     * @param value {@code true} to need Ctrl or Command with Enter; plain Enter then does nothing on the card
+     */
+    public void setEnterNeedsShortcut(final boolean value) {
+        this.enterNeedsShortcut = value;
+    }
+
+    /**
+     * Whether Enter needs Ctrl or Command to run the default button on this card.
+     *
+     * @return {@code true} if it does, {@code false} for the usual Enter
+     */
+    public boolean isEnterNeedsShortcut() {
+        return enterNeedsShortcut;
     }
 
     /**

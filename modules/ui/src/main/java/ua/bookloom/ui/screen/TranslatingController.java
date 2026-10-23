@@ -11,13 +11,11 @@ import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
@@ -46,7 +44,7 @@ public final class TranslatingController {
     private final LanguageNames names;
     private final ReviewViewModel review;
     private final TranslatingDialogs dialogs;
-    private final ReviewPauseFollower pauses;
+    private final ReviewDeskLauncher desk;
     private final SectionMemory sections;
     private final Navigator navigator;
     private final RunStateSource runs;
@@ -70,9 +68,8 @@ public final class TranslatingController {
      * @param navigator where Back and Continue to Export lead
      * @param current the open book, whose languages head the live panel's panes
      * @param names the names of those languages
-     * @param review the review panel's view model, which counts the flagged segments
-     * @param retryDialog the card a retry with a note is asked in
-     * @param pauses what opens the review panel on a review pause and continues the run after the person's decision
+     * @param review the review desk's view model, which counts the segments to review
+     * @param desk what opens the review desk from Review (n) and the strip
      * @param sections the session's memory of which sections the person left open
      * @param narratorDialog the question asked before a start when the book is told in the first person
      * @param confirm the question asked before the run is stopped
@@ -91,8 +88,7 @@ public final class TranslatingController {
             final CurrentProject current,
             final LanguageNames names,
             final ReviewViewModel review,
-            final RetryWithNoteDialog retryDialog,
-            final ReviewPauseFollower pauses,
+            final ReviewDeskLauncher desk,
             final SectionMemory sections,
             final NarratorDialog narratorDialog,
             final ConfirmDialog confirm,
@@ -106,13 +102,12 @@ public final class TranslatingController {
         this.names = Objects.requireNonNull(names, "names");
         this.review = Objects.requireNonNull(review, "review");
         this.dialogs = new TranslatingDialogs(
-                Objects.requireNonNull(retryDialog, "retryDialog"),
                 Objects.requireNonNull(narratorDialog, "narratorDialog"),
                 Objects.requireNonNull(confirm, "confirm"),
                 parts.modals(),
                 messages,
                 parts.activities());
-        this.pauses = Objects.requireNonNull(pauses, "pauses");
+        this.desk = Objects.requireNonNull(desk, "desk");
         this.sections = Objects.requireNonNull(sections, "sections");
         this.runs = Objects.requireNonNull(runs, "runs");
         this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
@@ -153,8 +148,7 @@ public final class TranslatingController {
     void initialize() {
         log.debug(
                 "building the translating screen in state {}", mirror.runState().get());
-        final TranslatingView.Exits exits =
-                new TranslatingView.Exits(navigator, review, dialogs, pauses, sections, runs);
+        final TranslatingView.Exits exits = new TranslatingView.Exits(navigator, review, dialogs, desk, sections, runs);
         // Once a run has started the live card needs the height, as the mockup's running page has no heading either.
         final BooleanBinding beforeRun = mirror.runState().isEqualTo(RunState.IDLE);
         for (final Label heading : new Label[] {title, subtitle}) {

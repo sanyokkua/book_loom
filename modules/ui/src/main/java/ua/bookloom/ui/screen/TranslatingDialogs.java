@@ -7,7 +7,6 @@ import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CallHistory;
@@ -15,10 +14,9 @@ import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The cards the Translating screen asks in or opens: a retry's note, who narrates before a start, whether to stop the
- * run, and the run's kept calls.
+ * The cards the Translating screen asks in or opens: who narrates before a start, whether to stop the run, and the
+ * run's kept calls.
  *
- * @param retry the retry-with-a-note card
  * @param narrator the question asked before a start when the book is told in the first person
  * @param confirm the yes/no question asked before the run is stopped
  * @param modals where "All calls…" opens
@@ -27,7 +25,6 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  */
 @Slf4j
 record TranslatingDialogs(
-        RetryWithNoteDialog retry,
         NarratorDialog narrator,
         ConfirmDialog confirm,
         ModalHost modals,

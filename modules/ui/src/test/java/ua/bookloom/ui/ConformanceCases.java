@@ -39,11 +39,10 @@ final class ConformanceCases {
         ABOUT,
         ERROR_DIALOG,
         REPLACE_RUN,
-        RETRY,
         EXPORT_COMPLETE,
         ADD_TERM,
         RESULTS,
-        REVIEW_PANEL
+        REVIEW_DESK
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -134,13 +133,6 @@ final class ConformanceCases {
                     List.of(
                             new Part("#open-another-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#open-another-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
-            new Screen(
-                    "RETRY_DIALOG",
-                    null,
-                    Overlay.RETRY,
-                    List.of(
-                            new Part("#retry-note-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#retry-note-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             new Screen(
                     "EXPORT_COMPLETE_DIALOG",
                     null,

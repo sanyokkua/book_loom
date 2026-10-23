@@ -139,7 +139,7 @@ uppercase heading. The **APPLICATION** group (also an uppercase heading) lists S
 also lists **Projects** above the steps (the mockup README, Window chrome), and Projects gets a screen
 (`#screen-projects`). **Built today:** Projects is an inert entry — it is listed but has no screen yet, so "Continue"
 skips it. Every workflow step — Import, Book Brief, Names & style, Translating, Export — has a live screen; Review is
-not a step (G7): **built today** it is a panel inside Translating, **Planned** it is a dialog (`#screen-review`). The
+not a step (G7): it is a dialog, the review desk (`#screen-review`). The
 navigation footer is described in `#navigation-footer`.
 
 **Step gating.** A step opens only when what it needs exists. Import and Settings are always open. Book Brief,
@@ -172,7 +172,7 @@ The mockup README is the target; until the next change ships, the build differs 
 when the Planned clause ships), and differs on purpose in the rest:
 
 - **Built today, closed by the change:** Projects has no screen; the work layer shows a small busy card with a separate
-  Model calls window; review is a panel inside Translating (not a dialog); run controls also sit in the title bar and the
+  Model calls window; review was a panel inside Translating (now the review desk dialog, 6.6a); run controls also sit in the title bar and the
   Translating screen; nothing is saved (no project store, no remembered settings);
   the Settings tabs hold a subset of the mockup's contents (`#screen-settings`).
 - **The Structure step** — the mockup's older draft drew the book's structure as a step of its own; since 15i.U3 the
@@ -577,7 +577,7 @@ is saved, so the subtitle changes with the project store.)
 | Control               | JavaFX control            | Behaviour                                                                                                                                       |
 |-------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | Help line               | `HBox` banner (info)         | While a translation runs, once per project and closable (`SleepHelp`, `help.sleepLineClosed.<project>`): the keep-awake sentence, or the keep-awake-off one |
-| Summary strip           | `TranslatingSummaryStrip`    | Every state: the big line (about … left, Finished in …, the measured estimate before a start, else the run's title), the bar over all steps, "791 of 1,240 segments done · Chapter 7 of 11 · 1h 21m elapsed", the counts (translated / fixed automatically / to review / kept as is — kept-verbatim plus kept-as-source — and worth a second look), "n to review" (opens the review panel until 6.6a) and the closed "How progress is counted" |
+| Summary strip           | `TranslatingSummaryStrip`    | Every state: the big line (about … left, Finished in …, the measured estimate before a start, else the run's title), the bar over all steps, "791 of 1,240 segments done · Chapter 7 of 11 · 1h 21m elapsed", the counts (translated / fixed automatically / to review / kept as is — kept-verbatim plus kept-as-source — and worth a second look), "n to review" (opens the review desk) and the closed "How progress is counted" |
 | Ready card              | card                         | IDLE only: book, model, review mode, quality, segments to translate and the run-state row's line ("Nothing translated yet.") |
 | Live card               | `LiveCallPanel` (≥ 460 px, fills the height) | Every other state. Tabs Live · Activity log. Live: Simple / Detailed (Detailed at first with technical details on; the choice and the follow switch are kept for the session), Show each segment when translated, Follow again, All calls…; the call line (`#translating-live-line`, the run-state row's line, "Waiting for the model… m:ss" from 10 s, the call itself in Detailed) with a stuck call's one clock (`#translating-live-clock`); the chunk's rows (`LiveRowList`, markers by `RowMarker`) beside the selected row's detail (`LiveRowDetail`: Source \| Translation, what the model works on now; Detailed adds the row's call, its prompt and reply), and the scene summary line under the detail |
 | Activity log            | `ListView` (monospace)       | The live card's second tab: All · Problems only, Jump to latest. Tagged entries — `ok`, `fix`, `mem`, `sum`, `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); technical `info` lines (answered calls, repair rounds) only with Show technical details; bounded to the last 500 |
@@ -662,59 +662,51 @@ verb.)
 | Activity log tab | All · Problems only. Plain lines ("Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review"); debug lines only with technical details | `control/TaggedLog`, `ActivityLogFeed` |
 | All calls… | The progress dialog listing the translation's calls, newest first (last 50 kept); Simple shows each reply matched to its segments, Detailed the full call (replaces `ModelCallsWindow`) | `ProgressDialog` |
 
-The **review panel** lives inside this screen today (`#screen-review`); planned, it is a dialog opened from here.
+The **review desk** is a dialog opened from this screen (`#screen-review`).
 
-### Review panel (built today) / Review dialog (planned) {#screen-review}
+### Review desk {#screen-review}
 
-Purpose: review flagged segments (and, on request, every segment) without leaving the Translating screen.
+Purpose: review the segments that need the person (and, on request, those worth a second look and every segment)
+without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDeskCard`, opened by `ReviewDeskLauncher`;
+`ReviewListPane`, `ReviewDeskDetail`, `ReviewDeskTabs`, `FindingRows`, `ReadableView`, `ContextSection`, `PromptView`):
 
-**Built today** — a panel inside Translating, no navigation entry of its own:
-
-| Control            | JavaFX control              | Behaviour                                                                                                                        |
-|-----------------------|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Filter chips           | `ToggleGroup` of chips          | `all`, `names`, `omissions`, `foreign · kept`, and `All segments` — the one list that also shows segments kept as source, each marked `kept as source` |
-| Flagged list           | `ListView`/`TableView`          | Items by locator (e.g. `ch5 · p12`) with a main-finding badge: the highest-severity finding, ties broken `name` > `wrong lang?` > `omission` > `low score` |
-| Compare panes          | two `TextArea`                  | Source (read-only) and target (editable)                                                                                          |
-| Readable view          | two `TextFlow`s (`#review-source-preview`, `#review-target-preview`) | Under the panes: each `⟦gN⟧` token as a chip (`g0`), and the words a finding quotes marked in the target; shown only when the text holds a token or a found quote; the target follows the editor |
-| Findings / context     | `Label`s/chips                  | The segment's QA findings, each with a kind badge (`name`, `wrong lang?`, `omission`) when its kind maps to one, and a line of surrounding context |
-| Actions                | `Button`s                       | Save edit / Accept / Revert to machine target / Retry / Retry with note / Skip                                                    |
-
-**Planned — Review dialog (decision 5, F1; T6–T12).** The panel moves into an `.xl` `ModalCard` (`ReviewPanel`,
-`ReviewListPane`, `ReviewComparePane`, `FindingRows`, `ReadableView`, `ContextSection`):
-
-- **Opens** from "Review (n)" or the summary strip's "n to review", and **by itself** when a translation finishes with
-  segments to review (it waits for a free slot, G1; the desk does not open when nothing needs review, and says "Nothing
-  needs your review").
+- **Opens** from "Review (n)", the summary strip's "n to review" and a finished run's banner, on the segment a review
+  pause names, and **by itself** when a translating run reaches Completed with segments to review and
+  `automation.openReviewDesk` is on (it waits for a free slot, G1; never for a project reopened already completed).
+  With nothing to review it says "Nothing needs your review", and All segments stays available.
 - **Header:** "4 of 6 left — if a segment reads well, press Accept. You can export now and come back later." While
   translating the desk is read-only ("read-only while translating") with the banner "Pause the translation to edit,
-  accept or try again." [Pause].
-- **Left pane:** a filter (To review (n) · Worth a second look (n) · All segments) and ‹ › to move; rows show the
-  location, a **state marker** (to review · accepted · your edit · later) and a one-line "why · text".
-- **Editors:** Original (read-only, chips) \| Translation (the editor), sharing the height with the tabs through a
-  draggable vertical `SplitPane`. In the editor formatting marks are **protected text marks `⟦1⟧`** (decision 12; a
-  `TextFormatter` adjusts changes to whole marks): deleting removes a whole mark, never half; cut and paste can move
-  one; a paste keeps only marks missing from the editor. A strip says "Formatting marks ⟦0⟧ ⟦1⟧ keep bold, links and
-  similar…", or "⟦1⟧ is missing — paste it back where the formatting ends." The main button stays off while a mark is
-  missing or doubled. RichTextFX is not added.
-- **Tabs:** **What may be wrong** (the plain reason plus "If it reads well, press Accept."; the rule code and ratio
-  only with Show technical details); **What the model saw** (the stored snapshot, parsed, T8; for a batch-drafted
-  segment the batch's sent context); **Suggestion** (Now \| Suggested by the check, with "Use the suggestion").
-- **Footer:** **More ▾** (Leave for later · Try again · Try again with a note… · Undo my edit, each with what it does);
-  the **one main button** **✓ Accept & next**, which turns into **✓ Save my edit & next** once the text is edited (T7).
-  Ctrl/⌘+Enter runs the main button; Ctrl+Alt+↓/↑ moves between segments. **Try again with a note** opens an inline
-  panel inside the desk, not a second dialog. Feedback is a footer line (G2).
+  accept or try again." [Pause]; while a retry is in flight on a run that is not translating the banner says "Trying
+  again… the desk is available when the model answers." with no Pause.
+- **Left pane:** a filter box (To review (n) · Worth a second look (n) · All segments, all three always; Worth a second
+  look explains itself on hover) and ‹ › to move; rows show the location, a **state marker** (to review · accepted · your
+  edit · later · kept as source) and a one-line "why · text" with no formatting tokens; a muted line under the list
+  names the shortcuts.
+- **Detail:** the locator, the worst finding's badge and the Technical details switch (the shared one); Original
+  (read-only) \| Translation (the editor); the readable view under them. **Planned (6.6b):** protected formatting marks
+  `⟦1⟧` in the editor and the strip naming them; until then the editor shows the `⟦gN⟧` tokens and a refused save
+  names the tokens it lacks.
+- **Tabs:** **What may be wrong** (one label per finding — kind · severity · who raised it — and the plain reason plus
+  "if it reads well, press Accept"; the rule's kind and own words only with Technical details); **What the model saw**
+  (for a batch-drafted segment the sections that batch request really sent, else the segment's stored context);
+  **Suggestion** (Now \| Suggested by the check, applied only by "Use the suggestion").
+- **Footer:** **Close**; **More ▾** (Leave for later · Try again · Try again with a note… · Undo my edit, each with what
+  it does; Undo is off with no edit to undo); the **one main button** **✓ Accept & next**, which turns into **✓ Save my
+  edit & next** once the text is edited (T7), and "& continue" when a review pause resumes after it. Ctrl/⌘+Enter runs
+  the main button and plain Enter does nothing; Ctrl+Alt+↓/↑ moves between segments. **Try again with a note** opens an
+  inline panel inside the desk, and Undo and unsaved typing ask in an inline bar, so no second card replaces the desk.
+  Escape and Close ask first when typing is not saved. Feedback is a footer line (G2).
 
 **Target editor.** The editable pane shows, in order of preference: the saved human edit, else the machine target,
-else the source (when the segment has neither) — all in **masked** form: `⟦gN⟧` tokens stay visible and a locked
+else the model's refused reply, else the source — all in **masked** form: `⟦gN⟧` tokens stay visible and a locked
 name shows as its locked rendering. Saving an edit that deletes or reorders a token is refused, naming the reason; a
 revised segment can be edited again.
 
-**Edit vs accept.** Built today, typing in the target pane disables **Accept** until the edit is either **Save**d or
-**Revert**ed, so Accept never silently discards an unsaved edit. **Planned:** the one main button is Save my edit & next
-once the text is edited, so the same guarantee holds with a single button. Accept (`SegmentActions`) moves a `FLAGGED`
-segment to `ACCEPTED` and confirms an already-`ACCEPTED` segment; it is refused on `PENDING` or `REVISED`, and on a
-segment with no machine target (`There is no machine translation to accept — edit it or retry.`). Save edit (REVISED)
-keeps its behaviour.
+**Edit vs accept.** The one main button is Save my edit once the text is edited, so Accept never silently discards an
+unsaved edit, and a re-read of the list never replaces what the person is typing. Accept (`SegmentActions`) moves a
+`FLAGGED` segment to `ACCEPTED` and confirms an already-`ACCEPTED` segment; it is refused on `PENDING` or `REVISED`, and
+on a segment with no machine target (`There is no machine translation to accept — edit it or retry.`). Save my edit
+(REVISED) keeps its behaviour.
 
 **Retry.** Retry (with or without a note) is allowed whenever no run of the project is currently running; it is
 refused as busy while one is. While a retry is in flight, Resume and the other review actions are disabled.
@@ -881,17 +873,16 @@ FR-GLOSS-04. P6 reference: Add glossary term.
 
 ### dialog-retry-with-note {#dialog-retry-with-note}
 
-**Ships in this build** as a dialog: retry a flagged segment with a free-text instruction, plus a checkbox offering
-**lower temperature for this retry**. Control: `Dialog` with a `TextArea` note field. **Planned:** "Try again with a
-note…" is an **inline panel inside the review desk**, not a second dialog (F1, `#screen-review`). FR-REVIEW-A2. P6
+**Built** as an **inline panel inside the review desk**, not a second dialog (F1, `#screen-review`): "Try again with a
+note…" opens a `TextArea` note field and a checkbox offering **lower temperature for this retry**, with Cancel and "Try
+again with this note" (Ctrl/⌘+Enter while the panel is open). FR-REVIEW-A2. P6
 reference: Retry with note.
 
 ### dialog-confirm-irreversible {#dialog-confirm-irreversible}
 
 **Ships in this build.** A yes/no card (`#confirm-card`) asked before something that cannot be undone, in the modal host:
 **Stop the run** (from the Translating screen's Stop and the banner's Stop; decided segments are kept; **Planned**
-title **Stop translating?**, buttons Keep translating · Stop, text in `#run-states`), **Discard your
-edit** (the review panel's Revert, only when the segment holds the person's own edit), **Discard this project** (Import's
+title **Stop translating?**, buttons Keep translating · Stop, text in `#run-states`), **Discard this project** (Import's
 Cancel, only when the project holds work: a run began or a later step is done) and **Quit BookLoom** (closing the
 window while a run or any activity is under way; confirming stops the work and closes). The safe answer is
 the default: **Cancel** (`#confirm-cancel`) is the default button and takes the focus, Escape and a click outside do
@@ -969,8 +960,7 @@ wording is the Banner column of `#run-states`.
 ## empty-states {#empty-states}
 
 Every list screen has an empty state (FR-NOTIF-05): Projects (first launch, `#screen-projects`; "No project matches
-'xyz'." for a search with no hits), the review desk ("Nothing needs your review"; built today the Translating screen's
-review panel says "Nothing flagged"), Providers (no providers configured), the Import text browser ("Nothing matches
+'xyz'." for a search with no hits), the review desk ("Nothing needs your review"), Providers (no providers configured), the Import text browser ("Nothing matches
 'xyz'."), and the Names & style glossary and Recurring terms tables ("No names yet. Scan the book for them, or add one."
 and "No recurring terms yet. They are found when you prepare names, or while translating."; "No name matches the search"
 while a search hides every row). P6 reference: each empty state in the mockup.
