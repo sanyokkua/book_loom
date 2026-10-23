@@ -19,32 +19,37 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.SegmentPath;
 
 /**
- * The rows of the live card: every segment of the chunk being translated, in reading order, each with how far it has
- * got. The first segment of another chunk clears them, so a directed fix or a review call of one segment never
- * replaces the chunk; only a draft call adds a segment the run did not announce.
+ * The rows of the live card: every segment the run has started, in the order it started them, each with how far it has
+ * got. The chunk being translated is last and earlier chunks stay above it as history, so a reviewed chunk whose check
+ * decides all its drafts at once never empties the card. A directed fix or a review call of one segment never adds a
+ * row; only a draft call adds a segment the run did not announce. The history is the run's own: a new run session
+ * starts with an empty one.
  *
  * <p>Not thread-safe: {@link LiveCallState} calls it under the run session's publish lock.
  */
 @Slf4j
 final class ChunkRows {
 
-    /** A chunk holds a handful of segments; a long section's announcements are cut to this many. */
-    static final int MAX_ROWS = 64;
+    /** How many rows the card keeps; the oldest goes first, so a whole book is never held or drawn at once. */
+    static final int MAX_ROWS = 500;
 
     private final Map<String, LiveRow> rows = new LinkedHashMap<>();
-    private @Nullable ChunkPosition chunk;
     private @Nullable List<LiveRow> shown;
 
     void started(final SegmentStarted event) {
         final ChunkPosition at = event.position();
-        if (!sameChunk(at)) {
-            log.debug(
-                    "live rows: chunk {} of section {} starts, {} rows cleared", at.chunk(), at.section(), rows.size());
-            rows.clear();
-            chunk = at;
+        final LiveRow known = rows.get(event.segmentId());
+        if (known != null && !known.stage().isDecided()) {
+            log.debug("live rows: segment {} started again in chunk {}, kept in place", event.segmentId(), at.chunk());
+            return;
         }
-        log.debug("live rows: segment {} queued", event.segmentId());
-        rows.putIfAbsent(
+        if (known != null) {
+            log.debug("live rows: decided segment {} started again, moved to the end", event.segmentId());
+            rows.remove(event.segmentId());
+        }
+        log.debug(
+                "live rows: segment {} queued in chunk {} of section {}", event.segmentId(), at.chunk(), at.section());
+        rows.put(
                 event.segmentId(),
                 new LiveRow(
                         event.segmentId(),
@@ -57,11 +62,6 @@ final class ChunkRows {
                         null));
         bound();
         shown = null;
-    }
-
-    private boolean sameChunk(final ChunkPosition at) {
-        final ChunkPosition now = chunk;
-        return now != null && now.section() == at.section() && now.chunk() == at.chunk();
     }
 
     void call(final CallSnapshot call) {
@@ -163,6 +163,10 @@ final class ChunkRows {
     }
 
     private void bound() {
+        final int over = rows.size() - MAX_ROWS;
+        if (over > 0) {
+            log.debug("live rows: {} oldest rows dropped to keep {}", over, MAX_ROWS);
+        }
         while (rows.size() > MAX_ROWS) {
             rows.remove(rows.keySet().iterator().next());
         }

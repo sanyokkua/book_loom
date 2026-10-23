@@ -5,7 +5,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One row of the live card: a segment of the chunk being translated, with what the run knows of it so far. Its marker
+ * One row of the live card: a segment the run has started, with what the run knows of it so far. Its marker
  * is worked out from it and the run's state ({@link RowMarker#of}), so a pause changes the markers without a new row.
  *
  * @param segmentId the segment's id
@@ -28,7 +28,7 @@ public record LiveRow(
         List<String> findingKinds,
         @Nullable Long callId) {
 
-    /** How far a segment of the chunk has got. */
+    /** How far a segment has got. */
     public enum Stage {
         /** Announced, not sent to the model yet. */
         QUEUED,

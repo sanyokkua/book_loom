@@ -84,7 +84,7 @@ class TranslatingScreenSoakTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> logList().getItems().size())).isLessThanOrEqualTo(500);
         assertThat(ThemeTestSupport.onFx(() -> mirror().accepted().get())).isEqualTo(SEGMENTS - SEGMENTS / 10);
         assertThat(ThemeTestSupport.onFx(() -> mirror().live().calls().get().rows()))
-                .hasSizeLessThanOrEqualTo(64);
+                .hasSizeLessThanOrEqualTo(500);
         assertThat(ThemeTestSupport.onFx(() -> mirror().live().calls().get().recent()))
                 .hasSizeLessThanOrEqualTo(50);
         assertThat(growth).isLessThan(MAX_GROWTH_MIB);

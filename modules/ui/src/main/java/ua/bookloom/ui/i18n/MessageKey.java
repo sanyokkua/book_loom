@@ -3320,6 +3320,8 @@ public enum MessageKey {
     LIVE_MARKER_WAITING("live.marker.waiting"),
     /** Live row marker: in a call the model works on. */
     LIVE_MARKER_TRANSLATING("live.marker.translating"),
+    /** Live row marker: drafted, waiting for the checks that decide it. */
+    LIVE_MARKER_DRAFTED("live.marker.drafted"),
     /** Live row marker: accepted. */
     LIVE_MARKER_TRANSLATED("live.marker.translated"),
     /** Live row marker: flagged for review. */

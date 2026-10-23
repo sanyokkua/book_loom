@@ -15,6 +15,8 @@ public enum RowMarker {
     WAITING(StateMarker.Meaning.WAITING, MessageKey.LIVE_MARKER_WAITING),
     /** In a call the model works on. */
     TRANSLATING(StateMarker.Meaning.WORKING, MessageKey.LIVE_MARKER_TRANSLATING),
+    /** Drafted while the run works, not decided yet: a reviewed chunk's checks decide all its drafts together. */
+    DRAFTED(StateMarker.Meaning.WORKING, MessageKey.LIVE_MARKER_DRAFTED),
     /** Accepted. */
     TRANSLATED(StateMarker.Meaning.DONE, MessageKey.LIVE_MARKER_TRANSLATED),
     /** Flagged for the person's review. */
@@ -60,10 +62,14 @@ public enum RowMarker {
             case FLAGGED -> TO_REVIEW;
             case KEPT -> KEPT;
             case ACCEPTED -> row.fallbackCode() == null ? TRANSLATED : ALONE;
-            case DRAFTED -> row.fallbackCode() != null ? ALONE : inFlight(run);
+            case DRAFTED -> row.fallbackCode() != null ? ALONE : drafted(run);
             case IN_CALL -> inFlight(run);
             case QUEUED -> WAITING;
         };
+    }
+
+    private static RowMarker drafted(final RunRow run) {
+        return WORKING.contains(run) ? DRAFTED : WAITING;
     }
 
     private static RowMarker inFlight(final RunRow run) {

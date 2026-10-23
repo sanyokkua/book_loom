@@ -8,7 +8,6 @@ import java.util.stream.IntStream;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.LiveRow.Stage;
@@ -99,16 +98,48 @@ class LiveRowFollowTest extends LiveCardTestBase {
         assertThat(selectedId()).isEqualTo("s-1");
     }
 
-    // IF a picked row that left the list kept the pick, THEN the next chunk would open on an empty detail.
+    // IF the next chunk took the pick away, THEN a person reading an earlier segment would lose it every few seconds.
     @Test
-    void nextChunk_afterAPick_returnsToFollowingTheNewRows() {
+    void nextChunk_afterAPick_keepsThePickedEarlierRow() {
         showRows(chunk(2));
         pick(0);
 
-        publishRows(List.of(LiveRowFixtures.row(5, Stage.IN_CALL, null), LiveRowFixtures.row(6, Stage.IN_CALL, null)));
+        publishRows(concat(chunk(4), List.of(row(5, Stage.ACCEPTED, "Переклад 5"), row(6, Stage.IN_CALL, null))));
+
+        assertThat(selectedId()).isEqualTo("s-1");
+        assertThat(isShown(AGAIN)).isTrue();
+    }
+
+    // IF the earlier chunks' rows confused the following, THEN it would stay on an old row while new ones are
+    // translated.
+    @Test
+    void nextChunk_following_selectsTheNewTranslationBelowTheHistory() {
+        showRows(chunk(4));
+        assertThat(selectedId()).isEqualTo("s-4");
+
+        publishRows(concat(chunk(4), List.of(row(5, Stage.ACCEPTED, "Переклад 5"), row(6, Stage.IN_CALL, null))));
 
         assertThat(selectedId()).isEqualTo("s-5");
-        assertThat(isShown(AGAIN)).isFalse();
+    }
+
+    // IF every publication scrolled to the selected row, THEN a person could not scroll back through the history.
+    @Test
+    void publication_withNothingNewlyTranslated_leavesTheScrollWhereThePersonPutIt() {
+        final List<LiveRow> history = IntStream.rangeClosed(1, 40)
+                .mapToObj(n -> row(n, Stage.ACCEPTED, "Переклад " + n))
+                .toList();
+        showRows(history);
+        onFx(() -> rowList().scrollTo(0));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        publishRows(concat(history, List.of(row(41, Stage.IN_CALL, null))));
+
+        assertThat(cells().getFirst().getIndex()).isZero();
+        assertThat(selectedId()).isEqualTo("s-40");
+    }
+
+    private static List<LiveRow> concat(final List<LiveRow> first, final List<LiveRow> second) {
+        return java.util.stream.Stream.concat(first.stream(), second.stream()).toList();
     }
 
     // IF the rows were drawn in a taller cell than the fixed one, THEN a long chunk would lay out slowly.

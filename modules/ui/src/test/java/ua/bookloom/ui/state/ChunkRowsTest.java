@@ -18,7 +18,7 @@ import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.state.LiveRow.Stage;
 
-/** The rows of the live card: the chunk being translated, each with its own marker, worked out from the run's events. */
+/** The rows of the live card: the run's segments so far, each with its own marker, worked out from the run's events. */
 class ChunkRowsTest {
 
     private final LiveCallState state = new LiveCallState();
@@ -104,25 +104,50 @@ class ChunkRowsTest {
         assertThat(markers()).containsExactly(RowMarker.TRANSLATING, RowMarker.TRANSLATING);
     }
 
-    // IF the next chunk's first segment did not clear the rows, THEN the card would list two chunks as one.
+    // IF the next chunk's first segment cleared the rows, THEN what was translated a minute ago would vanish.
     @Test
-    void startOfTheNextChunk_clearsTheRows() {
+    void startOfTheNextChunk_keepsTheEarlierRowsAboveTheNewOne() {
         state.started(started(1, CHUNK_ONE));
         state.started(started(2, CHUNK_ONE));
-        assertThat(rows()).extracting(LiveRow::stage).containsExactly(Stage.QUEUED, Stage.QUEUED);
+        state.decided(accepted(1, SegmentPath.DRAFT));
 
         state.started(started(3, CHUNK_TWO));
 
-        assertThat(rows()).extracting(LiveRow::segmentId).containsExactly(id(3));
-        assertThat(rows().get(0).displaySource()).isEqualTo("Source text 3");
+        assertThat(rows()).extracting(LiveRow::segmentId).containsExactly(id(1), id(2), id(3));
+        assertThat(rows()).extracting(LiveRow::stage).containsExactly(Stage.ACCEPTED, Stage.QUEUED, Stage.QUEUED);
     }
 
-    // IF the rows grew without a bound, THEN a long section would hold every segment of the book in memory.
+    // IF a reviewed chunk's drafts still read "translating…", THEN all its rows would turn translated at once.
     @Test
-    void rows_moreThanSixtyFour_keepTheNewestSixtyFour() {
-        IntStream.rangeClosed(1, 70).forEach(n -> state.started(started(n, CHUNK_ONE)));
+    void draftedSegment_readsDraftedUntilItIsDecided() {
+        state.snapshot(draft(1, CallKind.DRAFT, 1, 2));
 
-        assertThat(rows()).hasSize(64);
-        assertThat(rows().get(0).segmentId()).isEqualTo(id(7));
+        state.drafted(new SegmentDrafted(id(1), "Чернетка 1", 0.9));
+        assertThat(markers()).containsExactly(RowMarker.DRAFTED, RowMarker.TRANSLATING);
+
+        state.decided(accepted(1, SegmentPath.DRAFT));
+        assertThat(markers()).containsExactly(RowMarker.TRANSLATED, RowMarker.TRANSLATING);
+    }
+
+    // IF a segment that starts again after its decision stayed where it was, THEN its new work would hide in history.
+    @Test
+    void decidedSegmentStartedAgain_movesToTheEndAsQueued() {
+        state.started(started(1, CHUNK_ONE));
+        state.started(started(2, CHUNK_ONE));
+        state.decided(accepted(1, SegmentPath.DRAFT));
+
+        state.started(started(1, CHUNK_TWO));
+
+        assertThat(rows()).extracting(LiveRow::segmentId).containsExactly(id(2), id(1));
+        assertThat(rows().get(1).stage()).isEqualTo(Stage.QUEUED);
+    }
+
+    // IF the rows grew without a bound, THEN a whole book would be held in memory and drawn in one list.
+    @Test
+    void rows_moreThanFiveHundred_keepTheNewestFiveHundred() {
+        IntStream.rangeClosed(1, 505).forEach(n -> state.started(started(n, CHUNK_ONE)));
+
+        assertThat(rows()).hasSize(500);
+        assertThat(rows().get(0).segmentId()).isEqualTo(id(6));
     }
 }

@@ -29,13 +29,15 @@ import ua.bookloom.ui.state.RowMarker;
 import ua.bookloom.ui.state.RunRow;
 
 /**
- * The list of the live card: one fixed-height row per segment of the chunk, each with its marker, its locator and one
- * line of its text, the whole text on hover.
+ * The list of the live card: one fixed-height row per segment the run has started, the chunk being translated last and
+ * earlier chunks above it, each with its marker, its locator and one line of its text, the whole text on hover.
  *
  * <p>It follows the newly translated segment: when rows arrive, the first one that has just become translated (or to
  * review, or translated again alone) is selected, and with none decided yet the first one being translated. A person's
- * pick (a click, an arrow key) stops the following until {@link #followAgain()}; a pick that leaves the list with the
- * next chunk returns to following. The cells log nothing: they are redrawn on every scroll.
+ * pick (a click, an arrow key) stops the following until {@link #followAgain()}; a pick that leaves the list (its row
+ * dropped as the oldest) returns to following. New rows are applied in place — changed rows replaced, new ones added at
+ * the end, dropped ones removed from the top — and the list scrolls only when the selection moves, so a person can
+ * scroll back through the history. The cells log nothing: they are redrawn on every scroll.
  */
 @Slf4j
 public final class LiveRowList extends ListView<LiveRow> {
@@ -46,6 +48,7 @@ public final class LiveRowList extends ListView<LiveRow> {
     private static final double PART_SPACING = 8;
     private static final Pattern MARK = Pattern.compile("⟦[^⟧]*⟧");
     private static final Set<RowMarker> DECIDED = Set.of(RowMarker.TRANSLATED, RowMarker.ALONE, RowMarker.TO_REVIEW);
+    private static final Set<RowMarker> IN_FLIGHT = Set.of(RowMarker.TRANSLATING, RowMarker.DRAFTED);
 
     private final ObservableList<LiveRow> rows = FXCollections.observableArrayList();
     private final ReadOnlyBooleanWrapper following = new ReadOnlyBooleanWrapper(true);
@@ -111,8 +114,8 @@ public final class LiveRowList extends ListView<LiveRow> {
         shownMarkers = markersOf(next);
         selectingByCode = true;
         try {
-            rows.setAll(next);
-            select(chooseRow(next, before, picked));
+            update(next);
+            select(chooseRow(next, before, picked), picked);
         } finally {
             selectingByCode = false;
         }
@@ -125,7 +128,7 @@ public final class LiveRowList extends ListView<LiveRow> {
         selectingByCode = true;
         try {
             final int newest = newestDecided(rows);
-            select(newest >= 0 ? newest : firstInFlight(rows));
+            select(newest >= 0 ? newest : firstInFlight(rows), null);
         } finally {
             selectingByCode = false;
         }
@@ -166,6 +169,37 @@ public final class LiveRowList extends ListView<LiveRow> {
         return kept >= 0 ? kept : firstInFlight(next);
     }
 
+    // The run only adds rows at the end, changes them in place and drops the oldest, so most updates are that diff;
+    // anything else (a decided row started again moves to the end) is applied whole.
+    private void update(final List<LiveRow> next) {
+        final int start = next.isEmpty() ? -1 : indexOf(rows, next.getFirst().segmentId());
+        if (start < 0 || !sameIdsFrom(start, next)) {
+            rows.setAll(next);
+            return;
+        }
+        if (start > 0) {
+            rows.remove(0, start);
+        }
+        for (int index = 0; index < rows.size(); index++) {
+            if (!rows.get(index).equals(next.get(index))) {
+                rows.set(index, next.get(index));
+            }
+        }
+        rows.addAll(next.subList(rows.size(), next.size()));
+    }
+
+    private boolean sameIdsFrom(final int start, final List<LiveRow> next) {
+        if (rows.size() - start > next.size()) {
+            return false;
+        }
+        for (int index = start; index < rows.size(); index++) {
+            if (!rows.get(index).segmentId().equals(next.get(index - start).segmentId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private int firstNewlyDecided(final List<LiveRow> next, final Map<String, RowMarker> before) {
         for (int index = 0; index < next.size(); index++) {
             final LiveRow row = next.get(index);
@@ -177,13 +211,19 @@ public final class LiveRowList extends ListView<LiveRow> {
         return -1;
     }
 
+    // With the history above it, the row to show when nothing is in flight is the first undecided one, else the newest.
     private int firstInFlight(final List<LiveRow> next) {
+        int undecided = -1;
         for (int index = 0; index < next.size(); index++) {
-            if (RowMarker.of(next.get(index), run) == RowMarker.TRANSLATING) {
+            final LiveRow row = next.get(index);
+            if (IN_FLIGHT.contains(RowMarker.of(row, run))) {
                 return index;
             }
+            if (undecided < 0 && !row.stage().isDecided()) {
+                undecided = index;
+            }
         }
-        return next.isEmpty() ? -1 : 0;
+        return undecided >= 0 ? undecided : next.size() - 1;
     }
 
     private int newestDecided(final List<LiveRow> next) {
@@ -207,13 +247,16 @@ public final class LiveRowList extends ListView<LiveRow> {
         return -1;
     }
 
-    private void select(final int index) {
+    // Scrolls only when the selected row changes, so an update that keeps it leaves the person's scroll alone.
+    private void select(final int index, final @Nullable String before) {
         if (index < 0) {
             getSelectionModel().clearSelection();
             return;
         }
         getSelectionModel().select(index);
-        scrollTo(Math.max(0, index - 1));
+        if (!rows.get(index).segmentId().equals(before)) {
+            scrollTo(Math.max(0, index - 1));
+        }
     }
 
     private @Nullable String selectedId() {

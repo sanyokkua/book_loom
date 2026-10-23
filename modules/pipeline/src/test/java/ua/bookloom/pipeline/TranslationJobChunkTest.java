@@ -55,6 +55,8 @@ import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
@@ -133,6 +135,49 @@ class TranslationJobChunkTest {
         assertThat(formats(model)).containsExactly(DRAFT, FIX, DRAFT, DRAFT);
         assertThat(userMessage(model.requests().get(2))).contains(preceding(T1));
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 3, 0, 0, 0));
+    }
+
+    // The live card shows a reviewed chunk's drafts one by one and its decisions together: the reviewer reads the
+    // whole chunk, so every draft is announced before the first decision.
+    @Test
+    void run_balancedChunk_announcesEveryDraftBeforeTheFirstDecision() {
+        final ScriptedChatModel model = replies(T0, T1, T2, T3).answerTo(REVIEW, reviewed());
+        final TranslationJobImpl translation = job(balanced(ChunkRunFixtures.fourParagraphs(tempDir)), model);
+        final List<String> events = draftsAndDecisions(translation);
+
+        report(translation.run());
+
+        assertThat(events)
+                .containsExactly(
+                        "SegmentDrafted",
+                        "SegmentDrafted",
+                        "SegmentDrafted",
+                        "SegmentDrafted",
+                        "SegmentDecided",
+                        "SegmentDecided",
+                        "SegmentDecided",
+                        "SegmentDecided");
+    }
+
+    // With no reviewer, each segment is decided before the next one is drafted, so the card moves row by row.
+    @Test
+    void run_fastChunk_announcesEachDecisionBeforeTheNextDraft() {
+        final TranslationJobImpl translation =
+                job(project(ChunkRunFixtures.fourParagraphs(tempDir), brief("en", "uk")), replies(T0, T1, T2, T3));
+        final List<String> events = draftsAndDecisions(translation);
+
+        report(translation.run());
+
+        assertThat(events)
+                .containsExactly(
+                        "SegmentDrafted",
+                        "SegmentDecided",
+                        "SegmentDrafted",
+                        "SegmentDecided",
+                        "SegmentDrafted",
+                        "SegmentDecided",
+                        "SegmentDrafted",
+                        "SegmentDecided");
     }
 
     @Test
@@ -322,6 +367,16 @@ class TranslationJobChunkTest {
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 2);
+    }
+
+    private static List<String> draftsAndDecisions(final TranslationJobImpl translation) {
+        final List<String> names = new java.util.concurrent.CopyOnWriteArrayList<>();
+        translation.subscribe(event -> {
+            if (event instanceof SegmentDrafted || event instanceof SegmentDecided) {
+                names.add(event.getClass().getSimpleName());
+            }
+        });
+        return names;
     }
 
     private static TestProject balanced(final Path book) {

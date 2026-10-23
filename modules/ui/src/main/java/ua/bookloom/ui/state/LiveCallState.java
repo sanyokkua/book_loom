@@ -21,8 +21,8 @@ import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 
 /**
- * The two calls of the live panel, worked out from the call snapshots, the targets of their segments, the rows of the
- * chunk being translated, the last {@value #MAX_RECENT} calls and the rolling summary's version.
+ * The two calls of the live panel, worked out from the call snapshots, the targets of their segments, the run's rows
+ * (the chunk being translated last, earlier chunks above it), the last {@value #MAX_RECENT} calls and the rolling summary's version.
  *
  * <p>One call arrives many times under one id: waiting, then answered or failed, then once more for each outcome noted
  * on it. An update of either held call replaces it in place; a call newer than both pushes the current one back and

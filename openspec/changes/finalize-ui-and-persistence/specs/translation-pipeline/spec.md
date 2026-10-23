@@ -97,6 +97,11 @@ WHILE "Show each segment when translated" is on, the live card SHALL select the 
 - **WHEN** the person clicks the row of `ch7 · p41` while "Show each segment when translated" is on
 - **THEN** the selection stays there as later segments are translated, and "Follow again" is offered
 
+#### Scenario: A picked earlier row stays picked when the next chunk starts
+
+- **WHEN** the person picks the row of `ch7 · p41` and the next chunk's segments `ch7 · p45`–`p48` start and are translated
+- **THEN** `ch7 · p41` stays selected and in view, and "Follow again" is still offered
+
 ### Requirement: Show a stuck call with one clock
 
 WHILE an attempt of a model call has had no answer for 60 seconds or more, the screen SHALL show the amber chip "No answer for m:ss", the banner "The model is taking longer than usual (m:ss). BookLoom tries again by itself at m:ss. You do not need to do anything.", and ONE clock reading the time waited of the attempt's time limit.
@@ -278,9 +283,9 @@ WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dia
 
 ### Requirement: Show the segment just decided and the one in progress in the live panel
 
-WHILE a run translates, the live card SHALL list the segments of the chunk being translated in reading order (the call in flight among them), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, translated, to review, translated again alone, or kept as is.
+WHILE a run translates, the live card SHALL list the run's segments in reading order, the chunk being translated last and earlier chunks above it (the latest 500 rows), one line each with formatting marks left out and the full text in the tooltip, each with a marker: waiting, translating…, drafted, checking…, translated, to review, translated again alone, or kept as is.
 
-**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows.
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`, `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`, `docs/specification/mockups/README.md#step-4--translating--t1t12-a-c1` (Live card), `docs/specification/mockups/README.md#g11--state-markers-and-one-colour-map`, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (T1–T4). In plain words: a book takes hours, and watching sentences go by is how a person judges the model before the run ends; the card shows every segment of the call with its state instead of two rows, keeps what was translated earlier in the run to scroll back to, and shows a draft as soon as it arrives, so a chunk whose check decides all its segments at once does not look as if nothing happened until then.
 
 #### Scenario: The decided segment above the one in progress
 
@@ -290,7 +295,7 @@ WHILE a run translates, the live card SHALL list the segments of the chunk being
 #### Scenario: A draft waits for the reviewer
 
 - **WHEN** on a Balanced run the draft of `ch7 · p42` has arrived and its chunk's check has not finished
-- **THEN** its row still reads translating…, because the segment is not decided yet
+- **THEN** its row reads "drafted, checking…" and its detail shows the draft, and it reads translated only when the check decides it
 
 #### Scenario: A decision moves the segment up
 
@@ -305,7 +310,22 @@ WHILE a run translates, the live card SHALL list the segments of the chunk being
 #### Scenario: The second row is empty between segments
 
 - **WHEN** the last segment of a call is decided and the next call has not started
-- **THEN** the rows of the chunk stay, the decided ones marked translated, until the next chunk's segments arrive
+- **THEN** the rows of the chunk stay, the decided ones marked translated
+
+#### Scenario: Earlier chunks stay as history
+
+- **WHEN** the chunk `ch7 · p41`–`p44` is decided and `ch7 · p45` of the next chunk starts
+- **THEN** the rows `ch7 · p41` to `ch7 · p44` stay above `ch7 · p45` with their markers, and the person can scroll back and pick one
+
+#### Scenario: The history keeps the latest 500 rows
+
+- **WHEN** a run has started its 501st segment
+- **THEN** the list holds 500 rows, the first segment's row dropped
+
+#### Scenario: A new run starts with an empty card
+
+- **WHEN** a translation is started again after the app was closed, or after the previous run ended
+- **THEN** the live card lists no rows until the run's first segment starts; the history is not stored
 
 #### Scenario: A directed fix keeps the chunk's rows
 

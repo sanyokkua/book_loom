@@ -33,7 +33,9 @@ class RowMarkerTest {
         "PAUSING, IN_CALL, TRANSLATING",
         "STOPPING, IN_CALL, TRANSLATING",
         "STUCK, IN_CALL, TRANSLATING",
-        "TRANSLATING, DRAFTED, TRANSLATING",
+        "TRANSLATING, DRAFTED, DRAFTED",
+        "PAUSING, DRAFTED, DRAFTED",
+        "PAUSED, DRAFTED, WAITING",
         "TRANSLATING, QUEUED, WAITING",
         "STUCK, QUEUED, WAITING"
     })
@@ -71,7 +73,14 @@ class RowMarkerTest {
 
     // IF a marker took another colour than the rest of the app gives its meaning, THEN a person would read it wrongly.
     @ParameterizedTest
-    @CsvSource({"WAITING, WAITING", "TRANSLATING, WORKING", "TRANSLATED, DONE", "TO_REVIEW, ATTENTION", "KEPT, KEPT"})
+    @CsvSource({
+        "WAITING, WAITING",
+        "TRANSLATING, WORKING",
+        "DRAFTED, WORKING",
+        "TRANSLATED, DONE",
+        "TO_REVIEW, ATTENTION",
+        "KEPT, KEPT"
+    })
     void meaning_eachMarker_isTheStateColourItIsKnownBy(final RowMarker marker, final StateMarker.Meaning expected) {
         assertThat(marker.meaning()).isEqualTo(expected);
     }
