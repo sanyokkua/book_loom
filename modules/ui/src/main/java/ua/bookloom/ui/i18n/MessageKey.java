@@ -501,6 +501,122 @@ public enum MessageKey {
     SETTINGS_ERROR_NAME("settings.error.name"),
     /** Error under a timeout field: it must be a whole number of seconds above zero. */
     SETTINGS_ERROR_NUMBER("settings.error.number"),
+    /** Error under a Models number field: it must be a whole number of tokens above zero. */
+    SETTINGS_MODELS_ERROR_NUMBER("settings.models.error.number"),
+    /** Models tab: the Save button. */
+    SETTINGS_MODELS_SAVE("settings.models.save"),
+    /** Models tab: hover text of Save. */
+    SETTINGS_MODELS_SAVE_TIP("settings.models.save.tip"),
+    /** Models tab: Model */
+    SETTINGS_MODELS_MODEL("settings.models.model"),
+    /** Models tab: The model whose settings are shown; each model keeps its own. */
+    SETTINGS_MODELS_MODEL_TIP("settings.models.model.tip"),
+    /** Models tab: &#123;0&#125; · &#123;1&#125; */
+    SETTINGS_MODELS_ENTRY("settings.models.entry"),
+    /** Models tab: ↻ Refresh */
+    SETTINGS_MODELS_REFRESH("settings.models.refresh"),
+    /** Models tab: Reads the models of every provider again. */
+    SETTINGS_MODELS_REFRESH_TIP("settings.models.refresh.tip"),
+    /** Models tab: Each model keeps its own settings. All are optional — off means BookLoom picks the value per task. */
+    SETTINGS_MODELS_EXPLAIN("settings.models.explain"),
+    /** Models tab: Reading the models… */
+    SETTINGS_MODELS_LISTING("settings.models.listing"),
+    /** Models tab: No models yet. Add a provider on the Providers tab. */
+    SETTINGS_MODELS_EMPTY("settings.models.empty"),
+    /** Models tab: Found out from the program: &#123;0&#125; · structured answers: &#123;1&#125;. */
+    SETTINGS_MODELS_FOUND("settings.models.found"),
+    /** Models tab: it can read &#123;0, plural, one &#123;# token&#125; other &#123;# tokens&#125;&#125; at once */
+    SETTINGS_MODELS_FOUND_READ("settings.models.found.read"),
+    /** Models tab: &#123;0&#125; (&#123;1, number, integer&#125; loaded now) */
+    SETTINGS_MODELS_FOUND_LOADED("settings.models.found.loaded"),
+    /** Models tab: it did not say how much it can read at once */
+    SETTINGS_MODELS_FOUND_UNKNOWN("settings.models.found.unknown"),
+    /** Models tab: yes */
+    SETTINGS_MODELS_FOUND_YES("settings.models.found.yes"),
+    /** Models tab: no */
+    SETTINGS_MODELS_FOUND_NO("settings.models.found.no"),
+    /** Models tab: not checked yet — Test inference on the Providers tab checks it */
+    SETTINGS_MODELS_FOUND_UNCHECKED("settings.models.found.unchecked"),
+    /** Models tab: Asking the program about this model… */
+    SETTINGS_MODELS_FOUND_LOADING("settings.models.found.loading"),
+    /** Models tab: Temperature */
+    SETTINGS_MODELS_TEMPERATURE("settings.models.temperature"),
+    /** Models tab: — how varied the wording is */
+    SETTINGS_MODELS_TEMPERATURE_SUB("settings.models.temperature.sub"),
+    /** Models tab: Let BookLoom choose */
+    SETTINGS_MODELS_TEMPERATURE_CHOOSE("settings.models.temperature.choose"),
+    /** Models tab: Each task uses its own tuned value. */
+    SETTINGS_MODELS_TEMPERATURE_CHOOSE_TIP("settings.models.temperature.choose.tip"),
+    /** Models tab: My value */
+    SETTINGS_MODELS_TEMPERATURE_VALUE("settings.models.temperature.value"),
+    /** Models tab: One value for every request to this model. */
+    SETTINGS_MODELS_TEMPERATURE_VALUE_TIP("settings.models.temperature.value.tip"),
+    /** Models tab: Don't send */
+    SETTINGS_MODELS_TEMPERATURE_OMIT("settings.models.temperature.omit"),
+    /** Models tab: The temperature is left out of every request to this model. */
+    SETTINGS_MODELS_TEMPERATURE_OMIT_TIP("settings.models.temperature.omit.tip"),
+    /** Models tab: the slider's name. */
+    SETTINGS_MODELS_TEMPERATURE_SLIDER("settings.models.temperature.slider"),
+    /** Models tab: Drag to set one temperature, 0.00 to 2.00. */
+    SETTINGS_MODELS_TEMPERATURE_SLIDER_TIP("settings.models.temperature.slider.tip"),
+    /** Models tab: Each task uses its own tuned value: 0.0 for checks, 0.1–0.2 for translating. */
+    SETTINGS_MODELS_TEMPERATURE_HINT_CHOOSE("settings.models.temperature.hint.choose"),
+    /** Models tab: Every request uses this value. */
+    SETTINGS_MODELS_TEMPERATURE_HINT_VALUE("settings.models.temperature.hint.value"),
+    /** Models tab: Not sent at all — for models that refuse it, such as some newer OpenAI and Anthropic models. The model uses its own setting. */
+    SETTINGS_MODELS_TEMPERATURE_HINT_OMIT("settings.models.temperature.hint.omit"),
+    /** Models tab: Settings this model refused */
+    SETTINGS_MODELS_REFUSED("settings.models.refused"),
+    /** Models tab: — learned automatically */
+    SETTINGS_MODELS_REFUSED_SUB("settings.models.refused.sub"),
+    /** Models tab: Nothing refused */
+    SETTINGS_MODELS_REFUSED_NONE("settings.models.refused.none"),
+    /** Models tab: When a model refuses a setting, BookLoom stops sending it, repeats the request once without it, and lists it here. */
+    SETTINGS_MODELS_REFUSED_NONE_HINT("settings.models.refused.noneHint"),
+    /** Models tab: Refused on &#123;0, date, ::MMMd&#125;. BookLoom stopped sending it and repeated the request without it. */
+    SETTINGS_MODELS_REFUSED_OMITTED("settings.models.refused.omitted"),
+    /** Models tab: Refused on &#123;0, date, ::MMMd&#125;. BookLoom now sends &#123;1&#125; instead. */
+    SETTINGS_MODELS_REFUSED_INSTEAD("settings.models.refused.instead"),
+    /** Models tab: Send again */
+    SETTINGS_MODELS_REFUSED_SEND("settings.models.refused.send"),
+    /** Models tab: Forgets the refusal at once: the next request to this model carries the setting again. */
+    SETTINGS_MODELS_REFUSED_SEND_TIP("settings.models.refused.send.tip"),
+    /** Models tab: The refusal could not be forgotten. Try again. */
+    SETTINGS_MODELS_REFUSED_SEND_FAILED("settings.models.refused.sendFailed"),
+    /** Models tab: Use context window */
+    SETTINGS_MODELS_CONTEXT("settings.models.context"),
+    /** Models tab: Sets how many tokens one request may hold for this model. */
+    SETTINGS_MODELS_CONTEXT_TIP("settings.models.context.tip"),
+    /** Models tab: How much text one request may hold. Filled in from what the program loaded; larger is slower and uses more memory. */
+    SETTINGS_MODELS_CONTEXT_HINT("settings.models.context.hint"),
+    /** Models tab: num_ctx (Ollama) */
+    SETTINGS_MODELS_CONTEXT_TECH("settings.models.context.tech"),
+    /** Models tab: Used to size requests; this server is not sent a window. */
+    SETTINGS_MODELS_CONTEXT_OPENAI("settings.models.context.openai"),
+    /** Models tab: Limit answer length */
+    SETTINGS_MODELS_LIMIT("settings.models.limit"),
+    /** Models tab: Caps how many tokens one answer may have. */
+    SETTINGS_MODELS_LIMIT_TIP("settings.models.limit.tip"),
+    /** Models tab: Off (recommended): each request is limited by its expected length. */
+    SETTINGS_MODELS_LIMIT_HINT("settings.models.limit.hint"),
+    /** Models tab: max output tokens */
+    SETTINGS_MODELS_LIMIT_TECH("settings.models.limit.tech"),
+    /** Models tab: Advanced */
+    SETTINGS_MODELS_ADVANCED("settings.models.advanced"),
+    /** Models tab: Rarely needed options for this model. */
+    SETTINGS_MODELS_ADVANCED_TIP("settings.models.advanced.tip"),
+    /** Models tab: Field that carries the answer length */
+    SETTINGS_MODELS_FIELD("settings.models.field"),
+    /** Models tab: max_completion_tokens (standard) */
+    SETTINGS_MODELS_FIELD_COMPLETION("settings.models.field.completion"),
+    /** Models tab: The current standard field; newer models require it. */
+    SETTINGS_MODELS_FIELD_COMPLETION_TIP("settings.models.field.completion.tip"),
+    /** Models tab: max_tokens (older servers) */
+    SETTINGS_MODELS_FIELD_TOKENS("settings.models.field.tokens"),
+    /** Models tab: The classic field; older servers only know this one. */
+    SETTINGS_MODELS_FIELD_TOKENS_TIP("settings.models.field.tokens.tip"),
+    /** Models tab: Not used for Ollama, which has its own option. */
+    SETTINGS_MODELS_FIELD_OLLAMA("settings.models.field.ollama"),
     /** Error under the address field: it must be an http or https address. */
     SETTINGS_ERROR_ADDRESS("settings.error.address"),
     /** Error under the chat endpoint: Ollama has its own chat protocol and takes no override. */
@@ -2595,6 +2711,10 @@ public enum MessageKey {
     DIALOG_UNSAVED_PROVIDER_TITLE("dialog.unsaved.provider.title"),
     /** Text of the unsaved-changes question on the Providers form. */
     DIALOG_UNSAVED_PROVIDER_TEXT("dialog.unsaved.provider.text"),
+    /** Heading of the unsaved-changes question on the Models tab; argument 0 is the model and its provider. */
+    DIALOG_UNSAVED_MODEL_TITLE("dialog.unsaved.model.title"),
+    /** Text of the unsaved-changes question on the Models tab. */
+    DIALOG_UNSAVED_MODEL_TEXT("dialog.unsaved.model.text"),
     /** Why a workflow step cannot be opened yet: no project is open. Also the hover text of the locked entry and Continue. */
     NAV_LOCKED_NO_PROJECT("nav.locked.noProject"),
     /** The purpose line under the Projects title. */

@@ -72,6 +72,23 @@ final class SettingsConformanceCases {
                             new Part("#test-metric-time", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
                             new Part("#test-metrics .kv", Kind.BORDER, "divider", "#eae4d8", "#3c4a51"),
                             new Part("#test-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+            // The Models card is a surface, the program's findings sit in the information tint.
+            new Screen(
+                    "SETTINGS_MODELS",
+                    ViewNames.SETTINGS,
+                    Preparation.MODELS_OPEN,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#models-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#models-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#models-found", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#models-model", Kind.BORDER, "input-border", "#988462", "#7d949e"))),
+            new Screen(
+                    "SETTINGS_MODELS_DIRTY",
+                    ViewNames.SETTINGS,
+                    Preparation.MODELS_DIRTY,
+                    Overlay.NONE,
+                    List.of(new Part("#models-form-dirty", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"))),
             new Screen(
                     "SETTINGS_SWITCH_DIALOG",
                     ViewNames.SETTINGS,

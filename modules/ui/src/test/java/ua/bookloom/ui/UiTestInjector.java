@@ -18,9 +18,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.EnvironmentVariables;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -64,10 +62,6 @@ import ua.bookloom.ui.theme.ThemeBlock;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UiTestInjector {
-
-    /** A provider that never says what window its model has, so a run sizes against its default. */
-    private static final ModelCapabilities UNKNOWN_CONTEXT =
-            (providerId, modelId) -> Result.ok(ContextLength.unknown());
 
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
@@ -125,6 +119,7 @@ public final class UiTestInjector {
         private Set<String> environment = Set.of();
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
         private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
+        private ModelCapabilities capabilities = UiTestBindings.UNKNOWN_CONTEXT;
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -320,6 +315,12 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link ModelCapabilities} is, so the test can script what the program says about a model. */
+        public Builder capabilities(final ModelCapabilities value) {
+            capabilities = Objects.requireNonNull(value, "capabilities");
+            return this;
+        }
+
         /**
          * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
          * first opening a book and choosing languages; only a test of the gating itself asks for it.
@@ -369,14 +370,12 @@ public final class UiTestInjector {
                 bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
                 bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
                 bind(DiagnosticLog.class).toInstance(diagnosticLog);
-                bind(ExecutorService.class)
-                        .annotatedWith(BackgroundExecutor.class)
-                        .toInstance(backgroundExecutor != null ? backgroundExecutor : UiTestBindings.daemonExecutor());
+                UiTestBindings.bindExecutors(binder(), backgroundExecutor);
                 bindStores();
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);
-                bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
+                bind(ModelCapabilities.class).toInstance(capabilities);
                 bind(ChatModelFactory.class).toInstance(models);
                 bind(TranslationEngine.class).toInstance(engine);
                 bind(ProjectService.class).toInstance(projects);

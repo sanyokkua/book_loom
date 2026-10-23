@@ -27,7 +27,8 @@ class SettingsViewModelCurrentModelTest extends SettingsViewModelTestBase {
                 activities,
                 settings,
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                new StructuredAnswers()));
         WaitForAsyncUtils.waitForFxEvents();
         return built;
     }

@@ -19,6 +19,7 @@ import ua.bookloom.llm.http.HttpReply;
 public final class ContextLengthProbe {
 
     private static final String OLLAMA_SHOW_PATH = "/api/show";
+    private static final String OLLAMA_PS_PATH = "/api/ps";
     private static final String LM_STUDIO_MODELS_PATH = "/api/v0/models/";
     private static final int HTTP_OK = 200;
 
@@ -45,6 +46,23 @@ public final class ContextLengthProbe {
                 "Ollama context length probe host={} model={}", config.baseUrl().getHost(), modelId);
         final String body = mapper.createObjectNode().put("model", modelId).toString();
         return read(exchange.post(config, OLLAMA_SHOW_PATH, body), ContextLengthReader::fromOllamaShow);
+    }
+
+    /**
+     * Asks Ollama's {@code /api/ps} for the context the model is loaded with right now.
+     *
+     * @param config the Ollama provider; never null
+     * @param modelId the model name; never null
+     * @return the loaded context length, or empty when the model is not loaded or the provider could not say
+     */
+    public Optional<Integer> ollamaLoaded(final ProviderConfig config, final String modelId) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(modelId, "modelId");
+        log.debug(
+                "Ollama loaded context probe host={} model={}", config.baseUrl().getHost(), modelId);
+        return read(
+                exchange.get(config, OLLAMA_PS_PATH),
+                (body, json) -> ContextLengthReader.fromOllamaPs(body, modelId, json));
     }
 
     /**

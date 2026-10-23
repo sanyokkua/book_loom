@@ -1,5 +1,6 @@
 package ua.bookloom.api.llm;
 
+import java.util.Objects;
 import java.util.Optional;
 import ua.bookloom.api.Result;
 
@@ -22,6 +23,22 @@ public interface ModelCapabilities {
      *     unregistered provider id (no request is sent)
      */
     Result<ContextLength> contextLength(String providerId, String modelId);
+
+    /**
+     * What the provider says about a model, for display; never fails the caller beyond an unknown provider.
+     *
+     * @param providerId the id of a registered provider; never {@code null}
+     * @param modelId the provider's model id; never {@code null}
+     * @return the report, or {@link ua.bookloom.api.ErrorCode#validation} for an unregistered provider id
+     */
+    default Result<ModelReport> report(final String providerId, final String modelId) {
+        final Result<ContextLength> length = contextLength(providerId, modelId);
+        final ContextLength data = length.data();
+        if (length.isErr() || data == null) {
+            return Result.err(Objects.requireNonNull(length.error(), "error"));
+        }
+        return Result.ok(new ModelReport(data.tokens(), null));
+    }
 
     /**
      * The context length a run should size against, with any failure degraded to "unknown": a run never stops because

@@ -63,6 +63,11 @@ WHEN a setting is refused and dropped, the system SHALL remember the refusal for
 - **WHEN** `gpt-oss:20b` refused `temperature` and a request goes to `gemma4:e4b` on the same provider
 - **THEN** the request to `gemma4:e4b` still carries its temperature
 
+#### Scenario: A save on the Models tab keeps a refusal recorded meanwhile
+
+- **WHEN** the Models tab is open on `gpt-oss:20b`, the chat layer records a refusal of `temperature` and the person then saves a changed context window
+- **THEN** the stored settings hold the new context window and still hold the refusal of `temperature`
+
 ### Requirement: Say a refusal once, quietly
 
 WHEN a setting is refused and dropped, the system SHALL write one warning line to the activity log naming the setting and what was done instead, and SHALL NOT raise a toast while a run is in progress.

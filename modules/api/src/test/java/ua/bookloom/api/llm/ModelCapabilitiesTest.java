@@ -32,4 +32,13 @@ class ModelCapabilitiesTest {
 
         assertThat(capabilities.detectedTokens(SELECTION)).isEmpty();
     }
+
+    @Test
+    void report_default_carriesContextLengthAndNoLoaded() {
+        final ModelCapabilities capabilities = (provider, model) -> Result.ok(new ContextLength(4096));
+
+        final Result<ModelReport> report = capabilities.report("ollama", "gemma");
+
+        assertThat(report.data()).isEqualTo(new ModelReport(4096, null));
+    }
 }

@@ -3,6 +3,7 @@ package ua.bookloom.llm;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.http.HttpClients;
@@ -124,6 +126,71 @@ class ModelCapabilityServiceTest {
     @Test
     void contextLength_unregisteredProvider_returnsValidationErrorWithoutRequest() {
         final Result<ContextLength> result = capabilities.contextLength("nobody", "m");
+
+        assertThat(result.error()).isNotNull();
+        assertThat(result.error().code()).isEqualTo(ErrorCode.validation);
+        assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    private static final String SHOW_131072 =
+            "{\"model_info\":{\"general.architecture\":\"gemma3\",\"gemma3.context_length\":131072}}";
+
+    @Test
+    void report_ollamaShowAndPs_returns131072And16384() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+        server.stubFor(get(urlEqualTo("/api/ps"))
+                .willReturn(okJson("{\"models\":[{\"name\":\"gemma3:12b\",\"context_length\":16384}]}")));
+
+        final Result<ModelReport> result = capabilities.report("ollama", "gemma3:12b");
+
+        assertThat(result.data()).isEqualTo(new ModelReport(131072, 16384));
+    }
+
+    @Test
+    void report_ollamaModelNotInPs_loadedAbsent() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+        server.stubFor(get(urlEqualTo("/api/ps"))
+                .willReturn(okJson("{\"models\":[{\"name\":\"other\",\"context_length\":4096}]}")));
+
+        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+    }
+
+    @Test
+    void report_ollamaPsWithoutContextLength_loadedAbsent() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[{\"name\":\"gemma3:12b\"}]}")));
+
+        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+    }
+
+    @Test
+    void report_ollamaPsServerError_keepsContextLength() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(aResponse().withStatus(500)));
+
+        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+    }
+
+    @Test
+    void report_openAiCompatible_sendsNoPsRequestAndLoadedAbsent() {
+        register("lmstudio", ProviderKind.OPENAI_COMPATIBLE, server.baseUrl() + "/v1");
+        server.stubFor(get(urlEqualTo("/api/v0/models/qwen"))
+                .willReturn(okJson("{\"id\":\"qwen\",\"max_context_length\":32768}")));
+
+        final Result<ModelReport> result = capabilities.report("lmstudio", "qwen");
+
+        assertThat(result.data()).isEqualTo(new ModelReport(32768, null));
+        server.verify(0, getRequestedFor(urlEqualTo("/api/ps")));
+        server.verify(0, getRequestedFor(urlEqualTo("/v1/api/ps")));
+    }
+
+    @Test
+    void report_unregistered_validationWithoutRequest() {
+        final Result<ModelReport> result = capabilities.report("nobody", "m");
 
         assertThat(result.error()).isNotNull();
         assertThat(result.error().code()).isEqualTo(ErrorCode.validation);

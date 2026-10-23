@@ -989,7 +989,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: the test dialog fills from `VerificationExchange` with the key shown as `••••`; a passing inference test
     stores `measuredSecondsPerSegment`; Use this one asks only when decisions exist.
   - **Compare:** each Providers state and the test dialog. → :ui
-- [ ] 7.2 Build Settings › Models, so each model keeps its own temperature, context window, answer length and output
+- [x] 7.2 Build Settings › Models, so each model keeps its own temperature, context window, answer length and output
   field, and shows the settings it refused, with Send again.
   - **Satisfies:** settings "Describe each model on the Models tab and keep its own settings"; settings "Report what the
     program says about a model"; settings "Choose how the temperature is sent for a model"; settings "Set a model's
@@ -998,7 +998,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     setting for the provider and model"; app-shell "Match the reference rendering"
   - The model list across providers; "Found out from the program" from `ModelCapabilities`; the three-way temperature
     with a slider for My value; Use context window (with `num_ctx` in grey under technical details); Limit answer
-    length; the Advanced output field (disabled for Ollama); "Settings this model refused" with Send again or "Nothing
+    length; the Advanced output field (not offered for Ollama, with a hint saying why); "Settings this model refused" with Send again or "Nothing
     refused"; the pinned footer.
   - A save carries `refused` through untouched (re-read the record just before saving), so a refusal recorded by a run
     meanwhile is not lost; only Send again removes a row.

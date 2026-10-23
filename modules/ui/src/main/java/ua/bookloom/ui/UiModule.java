@@ -6,6 +6,7 @@ import com.google.inject.multibindings.Multibinder;
 import java.util.concurrent.ExecutorService;
 import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
@@ -66,7 +67,9 @@ import ua.bookloom.ui.state.LastProjectRecorder;
 import ua.bookloom.ui.state.LaunchProject;
 import ua.bookloom.ui.state.LedgerFigures;
 import ua.bookloom.ui.state.LocalModelProbe;
+import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.ModelSpeedRecorder;
 import ua.bookloom.ui.state.ModelSpeeds;
 import ua.bookloom.ui.state.PlatformFileRevealer;
@@ -75,7 +78,6 @@ import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.ProjectActionsImpl;
 import ua.bookloom.ui.state.ProjectOpener;
 import ua.bookloom.ui.state.ProjectsViewModel;
-import ua.bookloom.ui.state.ProviderFormDirtySource;
 import ua.bookloom.ui.state.ProviderSwitch;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RowOpener;
@@ -83,11 +85,13 @@ import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStarter;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SessionReporter;
+import ua.bookloom.ui.state.SettingsDirtySource;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepAvailability;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.StoredNarratorFollower;
+import ua.bookloom.ui.state.StructuredAnswers;
 import ua.bookloom.ui.state.SystemBookFileChooser;
 import ua.bookloom.ui.state.SystemCsvFileChooser;
 import ua.bookloom.ui.state.SystemDestinationChooser;
@@ -124,10 +128,10 @@ public final class UiModule extends AbstractModule {
     }
 
     // The forms that guard their unsaved changes register here: the Providers form (7.1a) reads the environment to
-    // tell whether a key is set; more forms follow in 7.2.
+    // tell whether a key is set, and the Models form (7.2) shares its source.
     private void bindDirtySources() {
         requireBinding(EnvironmentVariables.class);
-        Multibinder.newSetBinder(binder(), DirtySource.class).addBinding().to(ProviderFormDirtySource.class);
+        Multibinder.newSetBinder(binder(), DirtySource.class).addBinding().to(SettingsDirtySource.class);
     }
 
     private void bindDialogs() {
@@ -150,6 +154,9 @@ public final class UiModule extends AbstractModule {
         bind(ModelSpeedRecorder.class);
         bind(ProviderSwitch.class);
         bind(SettingsViewModel.class);
+        bind(StructuredAnswers.class);
+        bind(ModelRoster.class);
+        bind(ModelForm.class);
     }
 
     private void bindState() {
@@ -225,11 +232,17 @@ public final class UiModule extends AbstractModule {
         requireBinding(ChatModelFactory.class);
         requireBinding(Key.get(String.class, BuildVersion.class));
         requireBinding(DiagnosticLog.class);
-        requireBinding(Key.get(ExecutorService.class, BackgroundExecutor.class));
+        requireExecutors();
         requirePipelineBindings();
     }
 
+    private void requireExecutors() {
+        requireBinding(Key.get(ExecutorService.class, BackgroundExecutor.class));
+        requireBinding(Key.get(ExecutorService.class, IoExecutor.class));
+    }
+
     private void requirePipelineBindings() {
+        requireBinding(ModelCapabilities.class);
         requireBinding(TranslationEngine.class);
         requireBinding(ProjectService.class);
         requireBinding(GlossaryService.class);

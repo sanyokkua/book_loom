@@ -19,9 +19,11 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DirtySource;
+import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.ProviderForm;
-import ua.bookloom.ui.state.ProviderFormDirtySource;
+import ua.bookloom.ui.state.SettingsDirtySource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.UnsavedSubject;
 
 /**
  * Leaving a screen whose form holds unsaved changes asks first (task 5.8, "LeaveGuard gains a dirty-form check"): a
@@ -36,7 +38,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         private final List<String> calls = new ArrayList<>();
         private boolean dirty;
         private boolean saveSucceeds = true;
-        private @Nullable String subject;
+        private @Nullable UnsavedSubject subject;
 
         @Override
         public ViewNames home() {
@@ -49,7 +51,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         }
 
         @Override
-        public @Nullable String subject() {
+        public @Nullable UnsavedSubject subject() {
             return subject;
         }
 
@@ -121,7 +123,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
     @Test
     void admits_formWithSubject_namesTheProviderInTheQuestion() {
         form.dirty = true;
-        form.subject = "Office LM";
+        form.subject = UnsavedSubject.provider("Office LM");
 
         leaveSettings();
 
@@ -158,6 +160,19 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         assertThat(form.dirty).isTrue();
     }
 
+    // IF the question did not name the model and its provider, THEN a person could not tell which settings they
+    // changed.
+    @Test
+    void admits_modelDirty_asksNamingModel() {
+        form.dirty = true;
+        form.subject = UnsavedSubject.model("gemma4:e4b \u00b7 Ollama");
+
+        leaveSettings();
+
+        assertThat(((Label) scene.getRoot().lookup("#unsaved-card .dialog-title")).getText())
+                .isEqualTo("Save the settings of gemma4:e4b \u00b7 Ollama?");
+    }
+
     // IF Discard left the real Providers form dirty with no provider to return to, THEN the guard would ask forever.
     @Test
     void answer_discardOnTheRealFormWithNoProviders_leavesAndAsksOnlyOnce() {
@@ -172,7 +187,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
                 injector.getInstance(ActivityTracker.class),
                 injector.getInstance(LeaveDialog.class),
                 injector.getInstance(Messages.class),
-                Set.of(new ProviderFormDirtySource(real)));
+                Set.of(new SettingsDirtySource(real, injector.getInstance(ModelForm.class))));
         onFx(() -> {
             guard.admits(ViewNames.SETTINGS, () -> proceeded.add("left"));
         });

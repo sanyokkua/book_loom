@@ -7,8 +7,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
 
 /**
- * Keeps the settings of each model per provider and model. "Send again" on a refusal is a {@link #save} of the
- * record without it.
+ * Keeps the settings of each model per provider and model. "Send again" on a refusal is an {@link #update} that
+ * drops the refusal ({@code ModelSettings#withoutRefusal}), so it never overwrites a field another writer changed.
  */
 public interface ModelSettingsRepository {
 

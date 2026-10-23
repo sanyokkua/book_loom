@@ -131,6 +131,33 @@ public abstract class ModelSettingsContractTest {
                 .hasValue(sample("ollama", "gemma").withMeasuredSpeed(0.8, MeasuredFrom.RUN));
     }
 
+    // IF Send again dropped more than the named row, THEN the other refusals and the settings would be lost with it.
+    @Test
+    void update_withoutRefusal_removesRowKeepsOthers() {
+        final RefusedSetting topP = new RefusedSetting("top_p", LocalDate.of(2026, 10, 21), "omitted");
+        final ModelSettings base = sample("ollama", "gemma");
+        repository()
+                .save(new ModelSettings(
+                        "ollama",
+                        "gemma",
+                        base.temperatureChoice(),
+                        base.temperature(),
+                        base.contextWindow(),
+                        base.maxOutput(),
+                        base.outputField(),
+                        List.of(base.refused().get(0), topP),
+                        base.measuredSecondsPerSegment(),
+                        base.measuredFrom()));
+
+        repository().update("ollama", "gemma", stored -> stored.withoutRefusal("temperature"));
+
+        assertThat(repository().find("ollama", "gemma").data()).hasValueSatisfying(found -> {
+            assertThat(found.refused()).containsExactly(topP);
+            assertThat(found.contextWindow()).isEqualTo(8192);
+            assertThat(found.measuredSecondsPerSegment()).isEqualTo(2.5);
+        });
+    }
+
     // IF two writers each read, changed and saved, THEN one change would be lost; update must apply both.
     @Test
     void update_twoWritersAtOnce_neitherChangeIsLost() throws Exception {

@@ -15,7 +15,7 @@
     <Label id="settings-title" styleClass="screen-title" text="%settings.title"/>
     <Label id="settings-subtitle" styleClass="muted, prose" wrapText="true" text="%settings.subtitle"/>
     <TabPane fx:id="tabs" id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-        <Tab fx:id="providersTab" id="settings-tab-providers" text="%settings.tab.providers">
+        <Tab id="settings-tab-providers" text="%settings.tab.providers">
             <HBox spacing="14" alignment="TOP_LEFT">
                 <padding>
                     <Insets top="14"/>
@@ -62,7 +62,9 @@
                 </VBox>
             </HBox>
         </Tab>
-        <Tab id="settings-tab-models" disable="true" text="%settings.tab.models"/>
+        <Tab fx:id="modelsTab" id="settings-tab-models" text="%settings.tab.models">
+            <fx:include source="models.fxml"/>
+        </Tab>
         <Tab id="settings-tab-generation" disable="true" text="%settings.tab.generation"/>
         <Tab id="settings-tab-appearance" text="%settings.tab.appearance">
             <fx:include source="appearance.fxml"/>

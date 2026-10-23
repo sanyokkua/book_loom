@@ -720,16 +720,17 @@ this computer. BookLoom sends your text only to the AI model you choose here."
 - **Model** (a list across providers, ↻ Refresh), with "Each model keeps its own settings. All are optional — off
   means BookLoom picks the value per task."
 - **Found out from the program**: how much it can read at once (and how much is loaded now), and whether it gives
-  structured answers.
+  structured answers. The loaded figure is read from Ollama only; structured answers are what this session's last
+  inference test found, else "not checked yet".
 - **Temperature** (S6): **Let BookLoom choose** (default; each task's tuned value from `ChatRequests`: 0.0 checks,
   0.1–0.2 translating) · **My value** (a slider; one value for every request) · **Don't send** (the parameter is
   left out entirely, for models that refuse it, such as some newer OpenAI and Anthropic models). The request DTOs already
   omit a null temperature, so "Don't send" maps to null.
 - **Settings this model refused** (S6): a list learned automatically: the setting, when it was refused and what
-  BookLoom did instead. Each row has **Send again** (or **Reset**). With nothing refused it says so.
-- **Use context window** (number; filled in from what is loaded; `num_ctx` for Ollama in grey).
+  BookLoom did instead. Each row has **Send again** (it acts at once and leaves unsaved typing alone; there is no Reset). With nothing refused it says "Nothing refused" and why a refusal can happen.
+- **Use context window** (number; while the switch is off the field shows what is loaded as a suggestion; `num_ctx` for Ollama in grey).
 - **Limit answer length** (off = `OutputLimit` per request).
-- **Advanced**: the field that carries the answer length (`max_completion_tokens` / `max_tokens`; not used for Ollama).
+- **Advanced**: the field that carries the answer length (`max_completion_tokens` / `max_tokens`; for Ollama the choice is not offered, only a hint).
 - Pinned footer (H1).
 
 ### Refused settings (S6)

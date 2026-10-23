@@ -6,11 +6,16 @@ import com.google.inject.Injector;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
+import javafx.scene.control.TabPane;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.dialog.SwitchProviderDialog;
+import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -26,11 +31,53 @@ final class SettingsPreparations {
         this.injector = injector;
     }
 
+    /** Does what the settings case {@code preparation} asks of the window. */
+    void prepare(final ConformanceCases.Preparation preparation) throws TimeoutException {
+        switch (preparation) {
+            case PROVIDER_FORM_DIRTY -> typeIntoTheForm();
+            case PROVIDER_FOLD_OPEN -> openTheFold();
+            case PROVIDER_TESTED -> runTheInferenceTest();
+            case MODELS_OPEN -> openTheModelsTab();
+            case MODELS_DIRTY -> changeTheModel();
+            default -> throw new IllegalArgumentException("not a settings preparation: " + preparation);
+        }
+    }
+
     /** Types into the request timeout, so the footer shows its unsaved mark. */
     void typeIntoTheForm() throws TimeoutException {
         awaitProviders();
         onFx(() -> {
             injector.getInstance(ProviderForm.class).edit(draft -> draft.withRequestSeconds("240"));
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Selects the Models tab over one stored model and waits until the model is read. */
+    void openTheModelsTab() throws TimeoutException {
+        awaitProviders();
+        ((ScriptedModelSettings) injector.getInstance(ModelSettingsRepository.class))
+                .put(ModelSettings.defaults("ollama", "gemma4:e4b"));
+        final ModelForm form = injector.getInstance(ModelForm.class);
+        onFx(() -> {
+            final TabPane tabs =
+                    (TabPane) injector.getInstance(AppShellView.class).root().lookup("#settings-tabs");
+            tabs.getSelectionModel().select(1);
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() ->
+                        form.selected().get() != null && !form.facts().get().loading()));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Opens the Models tab and changes the temperature, so its footer shows the unsaved mark. */
+    void changeTheModel() throws TimeoutException {
+        openTheModelsTab();
+        onFx(() -> {
+            injector.getInstance(ModelForm.class).edit(draft -> draft.withChoice(TemperatureChoice.OMIT));
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

@@ -21,6 +21,8 @@ public final class ContextLengthReader {
 
     private static final String OLLAMA_MODEL_INFO = "model_info";
     private static final String OLLAMA_SUFFIX = ".context_length";
+    private static final String OLLAMA_PS_MODELS = "models";
+    private static final String OLLAMA_PS_CONTEXT = "context_length";
     private static final String LM_STUDIO_LOADED = "loaded_context_length";
     private static final String LM_STUDIO_MAX = "max_context_length";
 
@@ -72,6 +74,35 @@ public final class ContextLengthReader {
             }
         }
         log.debug("LM Studio model reply names no context length");
+        return Optional.empty();
+    }
+
+    /**
+     * Reads Ollama's {@code /api/ps} reply: the {@code context_length} of the loaded model whose {@code name} or
+     * {@code model} equals the id.
+     *
+     * @param body the reply body; never null
+     * @param modelId the model id to find; never null
+     * @param mapper the shared tolerant mapper; never null
+     * @return the loaded context length, or empty when the model is not loaded or the reply names none
+     */
+    public static Optional<Integer> fromOllamaPs(final String body, final String modelId, final ObjectMapper mapper) {
+        Objects.requireNonNull(modelId, "modelId");
+        final Optional<JsonNode> root = parse(body, mapper);
+        if (root.isEmpty()) {
+            return Optional.empty();
+        }
+        for (final JsonNode entry : root.get().path(OLLAMA_PS_MODELS)) {
+            if (modelId.equals(entry.path("name").asText())
+                    || modelId.equals(entry.path("model").asText())) {
+                final JsonNode length = entry.path(OLLAMA_PS_CONTEXT);
+                if (positive(length)) {
+                    log.debug("Ollama loaded context model={} tokens={}", modelId, length.intValue());
+                    return Optional.of(length.intValue());
+                }
+            }
+        }
+        log.debug("Ollama ps reply names no loaded context for model={}", modelId);
         return Optional.empty();
     }
 

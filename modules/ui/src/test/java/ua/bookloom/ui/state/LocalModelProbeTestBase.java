@@ -78,7 +78,8 @@ abstract class LocalModelProbeTestBase extends FxTestBase {
                 activities,
                 store,
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                new StructuredAnswers()));
         return onFx(() -> new LocalModelProbe(catalog, configs, store, executor, viewModel, pick));
     }
 

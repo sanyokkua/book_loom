@@ -110,6 +110,10 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     }
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
+        return viewModel(verifier, new StructuredAnswers());
+    }
+
+    SettingsViewModel viewModel(final ScriptedProviderVerifier verifier, final StructuredAnswers structured) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
                 configs,
                 verifier,
@@ -119,7 +123,8 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
                 activities,
                 settings,
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(modelSettings, speeds, executor)));
+                new ModelSpeedRecorder(modelSettings, speeds, executor),
+                structured));
         awaitProvidersLoaded();
         form(built);
         return built;

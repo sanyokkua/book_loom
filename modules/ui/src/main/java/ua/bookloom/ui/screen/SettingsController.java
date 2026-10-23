@@ -24,12 +24,12 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ConfirmDialog;
-import ua.bookloom.ui.dialog.LeaveDialog;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderRow;
 import ua.bookloom.ui.state.ProviderSwitch;
@@ -40,7 +40,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
  *
  * <p>The rows are built here from the view model's list because their number depends on data; the form is drawn by
  * {@link ProviderFormView}. Every way of leaving a form that holds unsaved typing (another row, New provider, another
- * tab) goes through {@link #guarded}, which asks first. The view model outlives this controller, so it is observed
+ * tab) goes through {@link SettingsTabGuard}, which asks first. The view model outlives this controller, so it is observed
  * through weak listeners held by the fields below, which live exactly as long as the nodes that use them.
  */
 @Slf4j
@@ -49,11 +49,12 @@ public final class SettingsController {
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
     private final Messages messages;
-    private final LeaveDialog leaveDialog;
     private final ConfirmDialog confirm;
     private final ProviderTestDialog testDialog;
     private final ProviderSwitch providerSwitch;
     private final ActivityTracker activities;
+    private final SettingsTabGuard guard;
+    private final ModelRoster roster;
     private ProviderRowList rowList;
     private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
     private final ChangeListener<String> onSelection = (observed, was, now) -> rowList.mark();
@@ -68,7 +69,7 @@ public final class SettingsController {
     private TabPane tabs;
 
     @FXML
-    private Tab providersTab;
+    private Tab modelsTab;
 
     @FXML
     private VBox providerList;
@@ -124,11 +125,12 @@ public final class SettingsController {
      * @param viewModel the state this screen shows
      * @param form what the open provider's form holds, saves and deletes
      * @param messages the catalogue the built rows are worded from
-     * @param leaveDialog the question asked before unsaved typing is dropped
      * @param confirm the question asked before a provider is deleted
      * @param testDialog the card that shows what a test sent and got back
      * @param providerSwitch what Use this one does
      * @param activities the model work under way, which keeps the provider in use from being deleted
+     * @param guard asks before a move would drop typing
+     * @param roster the models the Models tab offers, read on its first visit
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -137,19 +139,21 @@ public final class SettingsController {
             final SettingsViewModel viewModel,
             final ProviderForm form,
             final Messages messages,
-            final LeaveDialog leaveDialog,
             final ConfirmDialog confirm,
             final ProviderTestDialog testDialog,
             final ProviderSwitch providerSwitch,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final SettingsTabGuard guard,
+            final ModelRoster roster) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.leaveDialog = Objects.requireNonNull(leaveDialog, "leaveDialog");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
         this.providerSwitch = Objects.requireNonNull(providerSwitch, "providerSwitch");
         this.activities = Objects.requireNonNull(activities, "activities");
+        this.guard = Objects.requireNonNull(guard, "guard");
+        this.roster = Objects.requireNonNull(roster, "roster");
     }
 
     @FXML
@@ -159,7 +163,7 @@ public final class SettingsController {
         rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
         formBody.getChildren().setAll(formView.node());
         installTips();
-        providerAdd.setOnAction(event -> guarded(viewModel::startAdding));
+        providerAdd.setOnAction(event -> guard.guardProvider(viewModel::startAdding));
         providerDelete.setOnAction(event -> askDelete());
         formUse.setOnAction(event -> providerSwitch.use());
         formCancel.setOnAction(event -> form.discard());
@@ -299,33 +303,30 @@ public final class SettingsController {
         rowList.show();
     }
 
-    /** Runs {@code proceed} now, or after the person has said what to do with the typing it would drop. */
-    private void guarded(final Runnable proceed) {
-        if (!form.dirty().get()) {
-            proceed.run();
+    private void onTabChanged(final Tab was, final Tab now) {
+        if (movingTab || now == null) {
             return;
         }
-        final String subject = form.subject();
-        log.debug("unsaved typing in the provider form: asking before leaving it");
-        leaveDialog.askUnsaved(
-                subject.isEmpty() ? null : subject,
-                () -> {
-                    form.discard();
-                    proceed.run();
-                },
-                () -> form.save(proceed));
+        if (was != null && guard.holdsChanges(was)) {
+            log.debug("tab change vetoed: the form of {} holds unsaved changes", was.getId());
+            select(was);
+            guard.guardTab(was, () -> moveTo(now));
+            return;
+        }
+        entered(now);
     }
 
-    private void onTabChanged(final Tab was, final Tab now) {
-        if (movingTab
-                || !providersTab.equals(was)
-                || now == null
-                || !form.dirty().get()) {
-            return;
+    private void moveTo(final Tab tab) {
+        select(tab);
+        entered(tab);
+    }
+
+    // The models are read on every entry to the Models tab, so a provider added or deleted meanwhile shows.
+    private void entered(final Tab tab) {
+        if (modelsTab.equals(tab)) {
+            log.debug("models tab opened: reading the models");
+            roster.refresh();
         }
-        log.debug("tab change vetoed: the provider form holds unsaved typing");
-        select(was);
-        guarded(() -> select(now));
     }
 
     private void select(final Tab tab) {
@@ -369,6 +370,6 @@ public final class SettingsController {
             log.debug("provider '{}' is already open", id);
             return;
         }
-        guarded(() -> viewModel.editProvider(id));
+        guard.guardProvider(() -> viewModel.editProvider(id));
     }
 }

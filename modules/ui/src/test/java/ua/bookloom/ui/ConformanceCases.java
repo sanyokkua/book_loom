@@ -75,7 +75,9 @@ final class ConformanceCases {
         PROJECTS_EMPTY,
         PROVIDER_FORM_DIRTY,
         PROVIDER_FOLD_OPEN,
-        PROVIDER_TESTED
+        PROVIDER_TESTED,
+        MODELS_OPEN,
+        MODELS_DIRTY
     }
 
     /**

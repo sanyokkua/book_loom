@@ -92,6 +92,56 @@ public record ModelSettings(
                 from);
     }
 
+    /**
+     * Replaces what the person edits and keeps everything else.
+     *
+     * @param choice how the temperature is sent; non-null
+     * @param value the fixed temperature, required exactly for {@code VALUE}
+     * @param context the context window, or null; positive when set
+     * @param output the answer-length cap, or null; positive when set
+     * @param field the field that carries the cap; non-null
+     * @return a copy with the new choices and the same ids, refusals and measured speed
+     */
+    public ModelSettings withChoices(
+            final TemperatureChoice choice,
+            final @Nullable Double value,
+            final @Nullable Integer context,
+            final @Nullable Integer output,
+            final OutputLengthField field) {
+        return new ModelSettings(
+                providerId,
+                modelId,
+                choice,
+                value,
+                context,
+                output,
+                field,
+                refused,
+                measuredSecondsPerSegment,
+                measuredFrom);
+    }
+
+    /**
+     * Forgets one refusal.
+     *
+     * @param name the refused setting's name; non-null
+     * @return a copy without it, or an equal record when it was not listed
+     */
+    public ModelSettings withoutRefusal(final String name) {
+        Objects.requireNonNull(name, "name");
+        return new ModelSettings(
+                providerId,
+                modelId,
+                temperatureChoice,
+                temperature,
+                contextWindow,
+                maxOutput,
+                outputField,
+                refused.stream().filter(r -> !r.name().equals(name)).toList(),
+                measuredSecondsPerSegment,
+                measuredFrom);
+    }
+
     private static void requireTemperatureMatchesChoice(
             final TemperatureChoice choice, final @Nullable Double temperature) {
         if (choice == TemperatureChoice.VALUE) {

@@ -79,6 +79,7 @@ public final class SettingsViewModel {
      * @param settingsStore where the model chosen last time is read from, on the background executor
      * @param messages the catalogue a provider without a name of its own is named from
      * @param speedRecorder where the seconds per segment a passing inference test measured are kept
+     * @param structuredAnswers where whether the model answered in the structured form is kept for the session
      */
     @Inject
     public SettingsViewModel(
@@ -90,7 +91,8 @@ public final class SettingsViewModel {
             final ActivityTracker activities,
             final SettingsRepository settingsStore,
             final Messages messages,
-            final ModelSpeedRecorder speedRecorder) {
+            final ModelSpeedRecorder speedRecorder,
+            final StructuredAnswers structuredAnswers) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
@@ -101,7 +103,8 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(executor, "executor"),
                 testTarget.subject(),
                 Objects.requireNonNull(activities, "activities"),
-                Objects.requireNonNull(speedRecorder, "speedRecorder"));
+                Objects.requireNonNull(speedRecorder, "speedRecorder"),
+                Objects.requireNonNull(structuredAnswers, "structuredAnswers"));
         this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));

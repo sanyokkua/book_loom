@@ -5,7 +5,7 @@ import ua.bookloom.ui.ViewNames;
 
 /**
  * A form whose edits are kept only once saved, so leaving its screen while it holds changes asks first (Keep editing,
- * Discard or Save). A screen registers one through the UI module's set binding; the Providers form is the first.
+ * Discard or Save). A screen registers one through the UI module's set binding; the Providers form and the Models form register one together.
  */
 public interface DirtySource {
 
@@ -26,9 +26,9 @@ public interface DirtySource {
     /**
      * What the changes belong to, so the question can name it.
      *
-     * @return the name of the thing being edited, or {@code null} when the question needs none
+     * @return the words and the name of the thing being edited, or {@code null} when the question needs none
      */
-    default @Nullable String subject() {
+    default @Nullable UnsavedSubject subject() {
         return null;
     }
 

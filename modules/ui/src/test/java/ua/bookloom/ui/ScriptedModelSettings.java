@@ -22,6 +22,9 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
     private final AtomicInteger fxThreadCalls = new AtomicInteger();
     private final List<ModelSettings> saves = new CopyOnWriteArrayList<>();
     private volatile boolean failListing;
+    private volatile boolean throwOnListing;
+    private volatile boolean failUpdates;
+    private final AtomicInteger updateCalls = new AtomicInteger();
     private volatile Runnable duringFind = () -> {};
 
     /** Runs {@code action} at the start of every later {@code find}, the way another writer would in between. */
@@ -37,6 +40,31 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
     /** How many calls came from the FX Application Thread, which storage must never see. */
     public int fxThreadCalls() {
         return fxThreadCalls.get();
+    }
+
+    /** Puts a full record in the store without counting as a save, the way an earlier session left it. */
+    public void put(final ModelSettings settings) {
+        stored.put(settings.providerId() + "/" + settings.modelId(), settings);
+    }
+
+    /** What is stored for one model now, or empty when nothing is. */
+    public Optional<ModelSettings> stored(final String providerId, final String modelId) {
+        return Optional.ofNullable(stored.get(providerId + "/" + modelId));
+    }
+
+    /** Makes every later update fail, as a broken disk would; what is stored stays as it was. */
+    public void failUpdate() {
+        failUpdates = true;
+    }
+
+    /** How many times {@code update} was called, failed ones included. */
+    public int updateCount() {
+        return updateCalls.get();
+    }
+
+    /** Makes every later listing of what is stored throw, the way a defective adapter would. */
+    public void throwOnListing() {
+        throwOnListing = true;
     }
 
     /** Makes every later listing of what is stored fail, as a broken disk would. */
@@ -91,7 +119,11 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
     public Result<ModelSettings> update(
             final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
         watch();
+        updateCalls.incrementAndGet();
         duringFind.run();
+        if (failUpdates) {
+            return Result.err(AppError.of(ErrorCode.internal, "Not saved", "The store refused."));
+        }
         final ModelSettings kept = stored.compute(
                 providerId + "/" + modelId,
                 (key, row) -> change.apply(row == null ? ModelSettings.defaults(providerId, modelId) : row));
@@ -108,6 +140,9 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
     @Override
     public Result<List<ModelSettings>> all() {
         watch();
+        if (throwOnListing) {
+            throw new IllegalStateException("the store broke");
+        }
         if (failListing) {
             return Result.err(AppError.of(ErrorCode.internal, "Not read", "The store refused."));
         }

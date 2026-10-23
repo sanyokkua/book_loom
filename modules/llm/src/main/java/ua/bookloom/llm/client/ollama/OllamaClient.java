@@ -20,7 +20,6 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.dto.OllamaChatRequest;
@@ -35,7 +34,6 @@ import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Speaks Ollama's native chat dialect so request fields and provider errors retain their intended meaning. */
 @Slf4j
@@ -152,6 +150,11 @@ public final class OllamaClient implements ProviderClient {
     }
 
     @Override
+    public Optional<Integer> loadedContextLength(String modelId) {
+        return new ContextLengthProbe(exchange, mapper).ollamaLoaded(config, modelId);
+    }
+
+    @Override
     public ProviderKind kind() {
         return ProviderKind.OLLAMA;
     }
@@ -217,7 +220,7 @@ public final class OllamaClient implements ProviderClient {
         final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
                 request.temperature(),
                 request.contextWindow(),
-                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
+                OllamaReasoning.withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
                 request.seed(),
                 request.samplingOrNone().topP(),
                 request.samplingOrNone().topK(),
@@ -225,36 +228,16 @@ public final class OllamaClient implements ProviderClient {
                 request.samplingOrNone().repeatPenalty());
         try {
             final OllamaChatRequest payload = new OllamaChatRequest(
-                    modelId, messages, true, options, schema, thinkControl(modelId, request.reasoningEnabled()));
+                    modelId,
+                    messages,
+                    true,
+                    options,
+                    schema,
+                    OllamaReasoning.thinkControl(modelId, request.reasoningEnabled()));
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(unexpectedError("serialize chat request", modelId, failure));
         }
-    }
-
-    /**
-     * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
-     * reasoning, so "reasoning off" is asked of it as its lowest level.
-     */
-    static @Nullable Object thinkControl(final String modelId, final @Nullable ReasoningLevel reasoningEnabled) {
-        if (reasoningEnabled == null) {
-            return null;
-        }
-        return switch (reasoningEnabled) {
-            case ON -> true;
-            case LOW -> "low";
-            case OFF -> modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? "low" : false;
-        };
-    }
-
-    /**
-     * The cap the server is given: a call that thinks needs room for it on any model, and a gpt-oss model reasons even
-     * at its lowest level, so it gets the room whether or not thinking was asked for (once, never twice).
-     */
-    static @Nullable Integer withReasoningHeadroom(
-            final String modelId, final @Nullable Integer cap, final @Nullable ReasoningLevel reasoningEnabled) {
-        final boolean thinks = reasoningEnabled != null && reasoningEnabled.isThinking();
-        return thinks || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? ReasoningHeadroom.raise(cap) : cap;
     }
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
@@ -275,7 +258,7 @@ public final class OllamaClient implements ProviderClient {
      */
     static long maxLines(String modelId, ChatRequest request) {
         final @Nullable Integer cap =
-                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
+                OllamaReasoning.withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
         final @Nullable Integer bound = cap != null ? cap : request.contextWindow();
         final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;
         log.debug(

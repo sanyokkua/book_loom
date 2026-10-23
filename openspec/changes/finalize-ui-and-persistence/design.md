@@ -451,6 +451,30 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
   the HTTP status carried in a failed stage's safe details; "No answer" is shown only when nothing came back, and a
   dash when a failure carries no status.
 
+- **What the Models tab asks the program (task 7.2).** `ModelCapabilities.report(providerId, modelId)` returns
+  `ModelReport(@Nullable contextLength, @Nullable loadedContext)`. `ModelCapabilityService` fills the first from
+  `client.contextLength` and the second from `ProviderClient.loadedContextLength`, which only the Ollama-native client
+  overrides: it reads `GET /api/ps` and takes the `context_length` of the entry whose `name` or `model` is the id. Any
+  failure or an absent entry is "unknown", never an error; an OpenAI-compatible server is sent no `/api/ps`, and the
+  run path (`contextLength`) is unchanged. Known caveat: an LM Studio "can read" figure may in fact be the loaded
+  figure, because that server reports one number; the tab words it as what the program said.
+- **Structured answers are per session.** `state/StructuredAnswers` (a singleton confined to the FX thread) keeps, per
+  provider and model, whether the last inference test of this session got a structured answer;
+  `ProviderTestRunner` writes it only for an inference test of a stored provider with a model whose inference stage
+  passed with an exchange. It is not stored: a model not tested since launch reads "not checked yet".
+- **Save and Send again are updates.** `ModelForm` saves with `ModelSettingsRepository.update(provider, model, cur ->
+  draft.apply(cur))` (`ModelSettings.withChoices` keeps the ids, the refusals and the measured speed), so a refusal the
+  chat layer records while the tab is open is never overwritten; Send again is `update(..., s ->
+  s.withoutRefusal(name))`, acts at once and leaves the draft, the baseline and the dirty mark alone.
+- **The window's unsaved question.** `DirtySource.subject()` returns an `UnsavedSubject(title, text, name)` so each form
+  asks in its own words ("Save the changes to Ollama?", "Save the settings of gemma4:e4b · Ollama?").
+  `SettingsDirtySource` replaces `ProviderFormDirtySource`: dirty when either form is, discards each dirty form, saves
+  the provider form and then the model form, and stops at the first failure. `screen/SettingsTabGuard` asks for a tab
+  change (the form of the tab being left decides) and for a change of model, once for each move.
+- **The roster.** `state/ModelRoster` lists the models of every provider (listed ids, then the provider's extra
+  models, then models with stored settings), one listing per provider on the I/O executor, on the first visit to the
+  tab and on Refresh; a reading that is no longer the latest is dropped.
+
 ### D14 — First-launch look (ADR-0044)
 
 `state/LocalModelProbe`, on a background thread after the window shows:

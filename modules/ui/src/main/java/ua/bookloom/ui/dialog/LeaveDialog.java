@@ -16,6 +16,7 @@ import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.UnsavedSubject;
 
 /**
  * The questions asked before leaving a screen whose model work would otherwise be left behind: for short work, stop it
@@ -107,12 +108,12 @@ public final class LeaveDialog {
     /**
      * Asks before leaving a form that belongs to something with a name, and says which.
      *
-     * @param subject the name of the thing being edited, or {@code null} for the general question
+     * @param subject what the changes belong to, with the words for it, or {@code null} for the general question
      * @param discardAndLeave what drops the changes and leaves
      * @param saveAndLeave what saves the changes and then leaves
      */
     public void askUnsaved(
-            final @Nullable String subject, final Runnable discardAndLeave, final Runnable saveAndLeave) {
+            final @Nullable UnsavedSubject subject, final Runnable discardAndLeave, final Runnable saveAndLeave) {
         Objects.requireNonNull(discardAndLeave, "discardAndLeave");
         Objects.requireNonNull(saveAndLeave, "saveAndLeave");
         log.debug("asking before leaving a form with unsaved changes, named {}", subject != null);
@@ -121,10 +122,7 @@ public final class LeaveDialog {
                         UNSAVED_CARD_ID,
                         messages.get(MessageKey.DIALOG_UNSAVED_TITLE),
                         messages.get(MessageKey.DIALOG_UNSAVED_TEXT))
-                : card(
-                        UNSAVED_CARD_ID,
-                        messages.get(MessageKey.DIALOG_UNSAVED_PROVIDER_TITLE, subject),
-                        messages.get(MessageKey.DIALOG_UNSAVED_PROVIDER_TEXT));
+                : card(UNSAVED_CARD_ID, messages.get(subject.title(), subject.name()), messages.get(subject.text()));
         final ButtonType keepType =
                 new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_KEEP), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType discardType =

@@ -92,9 +92,8 @@ final class ConformancePreparations {
             case BRIEF_SUGGESTED -> suggestTheBrief();
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
-            case PROVIDER_FORM_DIRTY -> new SettingsPreparations(injector).typeIntoTheForm();
-            case PROVIDER_FOLD_OPEN -> new SettingsPreparations(injector).openTheFold();
-            case PROVIDER_TESTED -> new SettingsPreparations(injector).runTheInferenceTest();
+            case PROVIDER_FORM_DIRTY, PROVIDER_FOLD_OPEN, PROVIDER_TESTED, MODELS_OPEN, MODELS_DIRTY ->
+                new SettingsPreparations(injector).prepare(preparation);
         }
     }
 

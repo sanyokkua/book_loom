@@ -29,6 +29,7 @@ import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -55,6 +56,7 @@ public final class ProviderTestRunner {
     private final ExecutorService executor;
     private final ReadOnlyObjectProperty<Optional<TestSubject>> subject;
     private final ModelSpeedRecorder speeds;
+    private final StructuredAnswers structured;
     private final ReadOnlyBooleanWrapper checking = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper checkRefusal = new ReadOnlyStringWrapper("");
     private final ReadOnlyObjectWrapper<@Nullable ProviderTest> running = new ReadOnlyObjectWrapper<>();
@@ -83,6 +85,7 @@ public final class ProviderTestRunner {
      *     for it; empty while the form holds something the rules refuse. Observed for changes
      * @param activities the work under way, which decides whether the inference test may start
      * @param speeds where a speed measured by a passing inference test of a saved provider is kept
+     * @param structured where whether the model answered in the structured form is kept for the session
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
@@ -90,13 +93,15 @@ public final class ProviderTestRunner {
             final ExecutorService executor,
             final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
             final ActivityTracker activities,
-            final ModelSpeedRecorder speeds) {
+            final ModelSpeedRecorder speeds,
+            final StructuredAnswers structured) {
         this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.subject = Objects.requireNonNull(subject, "subject");
         this.activities = Objects.requireNonNull(activities, "activities");
         this.speeds = Objects.requireNonNull(speeds, "speeds");
+        this.structured = Objects.requireNonNull(structured, "structured");
         this.inferenceBlocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
         for (final ProviderTest test : ProviderTest.values()) {
             availability.put(
@@ -372,6 +377,10 @@ public final class ProviderTestRunner {
                 inference.isPresent());
         if (keep && inference.isPresent() && inference.get().elapsed() != null) {
             speeds.record(target.config().id(), model, inference.get().elapsed(), MeasuredFrom.TEST);
+        }
+        final VerificationExchange exchange = inference.map(StageChip::exchange).orElse(null);
+        if (keep && exchange != null) {
+            structured.record(target.config().id(), model, exchange.structured());
         }
     }
 }

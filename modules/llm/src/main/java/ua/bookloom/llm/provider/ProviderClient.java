@@ -53,6 +53,16 @@ public interface ProviderClient {
         return Optional.empty();
     }
 
+    /**
+     * Asks the provider for the context a model is loaded with right now; never fails the caller.
+     *
+     * @param modelId the model to ask about; never null
+     * @return the loaded context length in tokens, or empty when unknown, not loaded, or this dialect cannot say
+     */
+    default Optional<Integer> loadedContextLength(String modelId) {
+        return Optional.empty();
+    }
+
     /** Identifies the wire dialect implemented by this client. */
     ProviderKind kind();
 }

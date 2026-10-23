@@ -104,8 +104,7 @@ public final class GatedChatModel implements ChatModel {
                 };
         final Integer requestCap = request.maxOutputTokens();
         final Integer maxOutput = stored.maxOutput();
-        final Integer cap =
-                requestCap != null && maxOutput != null ? Integer.valueOf(Math.min(requestCap, maxOutput)) : requestCap;
+        final Integer cap = capped(requestCap, maxOutput);
         final OutputLengthField field = outputField(request, stored);
         if (refusals != null) {
             downgraded.addAll(refusals.remembered(stored));
@@ -121,6 +120,16 @@ public final class GatedChatModel implements ChatModel {
                 field,
                 downgraded);
         return SettingDrops.stripAll(request.withModelSettings(temperature, cap, field), downgraded);
+    }
+
+    // The person's limit caps a call that states none; where both exist the smaller wins.
+    private static @org.jspecify.annotations.Nullable Integer capped(
+            @org.jspecify.annotations.Nullable Integer requestCap,
+            @org.jspecify.annotations.Nullable Integer maxOutput) {
+        if (requestCap == null) {
+            return maxOutput;
+        }
+        return maxOutput == null ? requestCap : Integer.valueOf(Math.min(requestCap, maxOutput));
     }
 
     private static @org.jspecify.annotations.Nullable OutputLengthField outputField(

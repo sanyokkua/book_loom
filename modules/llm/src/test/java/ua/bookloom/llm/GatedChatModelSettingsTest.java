@@ -79,16 +79,16 @@ class GatedChatModelSettingsTest {
                 .satisfies(sent -> assertThat(sent.maxOutputTokens()).isEqualTo(400));
     }
 
-    // A call that states no cap is left as unbounded as before (spec: "WHEN it carries none, neither field").
+    // The person's limit applies to a call that states no cap of its own.
     @Test
-    void chat_maxOutputAndNoRequestCap_sendsNoCap() {
+    void chat_maxOutputAndNoRequestCap_sendsTheStoredLimit() {
         repository.save(settings(TemperatureChoice.CHOOSE, null, null, 128, OutputLengthField.MAX_TOKENS));
 
         model().chat(request(0.2, null));
 
         assertThat(client.sent)
                 .singleElement()
-                .satisfies(sent -> assertThat(sent.maxOutputTokens()).isNull());
+                .satisfies(sent -> assertThat(sent.maxOutputTokens()).isEqualTo(128));
     }
 
     @Test

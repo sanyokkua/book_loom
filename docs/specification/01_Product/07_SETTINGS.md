@@ -20,8 +20,8 @@ marked *built* describe the code today.
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
 (`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
-model you choose here." *Built today:* Providers (read-only presets with the three tests), Appearance (theme);
-the Models, Generation, Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
+model you choose here." *Built today:* Providers (form, checks, test dialog), Models, Appearance (theme);
+the Generation, Automation and Storage & logs tabs are *planned — UI finalization + SQLite*.
 
 **How changes are saved (H1, planned).**
 
@@ -63,16 +63,20 @@ The effective context is **not** a provider setting: it is resolved per model (s
 
 ## models-tab {#models-tab}
 
-*Planned — UI finalization + SQLite* (mockups/README.md, decision 6). The Models tab is a **list of models across
+*Built (finalize 7.2)* (mockups/README.md, decision 6). The Models tab is a **list of models across
 providers** (with ↻ Refresh) and a form for the picked one. **Each model keeps its own settings, all optional — off
 means BookLoom picks the value per task.** The tab also shows what was found out from the program: how much the model
-can read at once (and how much is loaded now) and whether it gives structured answers.
+can read at once (and, for Ollama only, how much is loaded now — read from `/api/ps`) and whether it gave a structured
+answer in this session's last inference test (else "not checked yet"). While Use context window is off, the field shows the
+loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint. Save is
+an update that keeps a refusal recorded meanwhile; **Send again** acts at once and leaves unsaved typing alone; changing
+model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollama?".
 
 | Setting                       | Type    | Default          | Validation                                                                                            | Requirement                           |
 |-------------------------------|---------|------------------|-------------------------------------------------------------------------------------------------------|---------------------------------------|
 | Model (per provider)          | string  | first discovered | non-empty; from live discovery or manual model-ID entry                                               | FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 |
 | Manual model-ID entry         | string  | —                | always available; the only source when the provider has no discovery (`supportsModelDiscovery`=false) | FR-MODEL-02, DD-38                    |
-| Temperature                   | choice + decimal | Let BookLoom choose (per-task defaults of `ChatRequests`) | Let BookLoom choose · My value (0.0 – 2.0, one value for every request) · Don't send (omitted from the request, for models that refuse it); planned — mockups/README.md S6 | FR-SETTINGS-03, DD-36                 |
+| Temperature                   | choice + decimal | Let BookLoom choose (per-task defaults of `ChatRequests`) | Let BookLoom choose · My value (0.0 – 2.0, one value for every request) · Don't send (omitted from the request, for models that refuse it); mockups/README.md S6 | FR-SETTINGS-03, DD-36                 |
 | Use context window            | integer (tokens) | off; filled in from what is loaded (`ModelCapabilities.contextLength`), shown as "detected" | positive; sent as `num_ctx` on Ollama | FR-SETTINGS-03, FR-INFER-02 |
 | Limit answer length           | integer (tokens) | off (computed per request by `OutputLimit`) | positive when on                                                         | FR-SETTINGS-03                        |
 | Answer-length field (advanced) | enum   | `max_tokens`     | `max_tokens` / `max_completion_tokens`; disabled for Ollama                                           | FR-SETTINGS-03                        |
@@ -97,11 +101,11 @@ has: no judge model and no τ override.
 **Context window (built).** Every call is sized against a fixed effective context of **16,384 tokens**
 (`TokenBudget.EFFECTIVE_CONTEXT`), sent to Ollama's `num_ctx`; an OpenAI-compatible server receives no context-size
 field (FR-MODEL-07, DD-44). The detected window is used only for budgeting. A per-model override that replaces it is the
-Models tab's **Use context window** (planned).
+Models tab's **Use context window**.
 
 **Temperature** is a constant per call kind today (`ChatRequests`), low for fidelity: draft ~0.2, QA ~0.0–0.2, repair
 slightly higher (`05_TRANSLATION_ALGORITHM.md#generation-parameters`, `12_PROMPT_CATALOG.md`). The Models tab's **Use
-temperature** choice (planned, S6) keeps those defaults (Let BookLoom choose), replaces them with one value (My value), or leaves the parameter out entirely (Don't send) for models that refuse it — some newer OpenAI and Anthropic models do; a model that refuses any optional setting is handled by the refused-settings rule (mockups/README.md, "Refused settings (S6)"), which drops it, repeats the request once and remembers it per provider + model; the retry dialog also offers a one-off "lower
+temperature** choice (S6) keeps those defaults (Let BookLoom choose), replaces them with one value (My value), or leaves the parameter out entirely (Don't send) for models that refuse it — some newer OpenAI and Anthropic models do; a model that refuses any optional setting is handled by the refused-settings rule (mockups/README.md, "Refused settings (S6)"), which drops it, repeats the request once and remembers it per provider + model; the retry dialog also offers a one-off "lower
 temperature for this retry" (DD-36).
 
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not

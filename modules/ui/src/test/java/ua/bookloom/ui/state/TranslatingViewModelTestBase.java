@@ -114,7 +114,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 activities,
                 new MemorySettings(),
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()));
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                new StructuredAnswers());
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */

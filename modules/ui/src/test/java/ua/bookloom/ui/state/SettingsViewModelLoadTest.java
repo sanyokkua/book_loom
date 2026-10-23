@@ -37,7 +37,8 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
                 activities,
                 new MemorySettings(),
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor())));
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                new StructuredAnswers()));
         pool.awaitFinished(1);
         WaitForAsyncUtils.waitForFxEvents();
 

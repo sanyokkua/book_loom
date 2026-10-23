@@ -160,4 +160,54 @@ class ModelSettingsTest {
         assertThat(OutputLengthField.MAX_TOKENS.wireName()).isEqualTo("max_tokens");
         assertThat(OutputLengthField.MAX_COMPLETION_TOKENS.wireName()).isEqualTo("max_completion_tokens");
     }
+
+    @Test
+    void withChoices_storedRefusalAndSpeed_keepsBoth() {
+        final RefusedSetting refusal = new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted");
+        final ModelSettings base = with(TemperatureChoice.CHOOSE, null, null, null, List.of(refusal))
+                .withMeasuredSpeed(1.5, MeasuredFrom.RUN);
+
+        final ModelSettings changed =
+                base.withChoices(TemperatureChoice.VALUE, 0.5, 16384, 256, OutputLengthField.MAX_COMPLETION_TOKENS);
+
+        assertThat(changed.temperatureChoice()).isEqualTo(TemperatureChoice.VALUE);
+        assertThat(changed.temperature()).isEqualTo(0.5);
+        assertThat(changed.contextWindow()).isEqualTo(16384);
+        assertThat(changed.maxOutput()).isEqualTo(256);
+        assertThat(changed.outputField()).isEqualTo(OutputLengthField.MAX_COMPLETION_TOKENS);
+        assertThat(changed.refused()).containsExactly(refusal);
+        assertThat(changed.measuredSecondsPerSegment()).isEqualTo(1.5);
+        assertThat(changed.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(changed.providerId()).isEqualTo("ollama");
+        assertThat(changed.modelId()).isEqualTo("gemma");
+    }
+
+    @Test
+    void withChoices_valueWithoutTemperature_throws() {
+        final ModelSettings base = ModelSettings.defaults("ollama", "gemma");
+
+        assertThatThrownBy(
+                        () -> base.withChoices(TemperatureChoice.VALUE, null, null, null, OutputLengthField.MAX_TOKENS))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void withoutRefusal_temperatureRow_removesOnlyIt() {
+        final RefusedSetting temperature = new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted");
+        final RefusedSetting other = new RefusedSetting("top_p", LocalDate.of(2026, 10, 21), "omitted");
+        final ModelSettings base = with(TemperatureChoice.OMIT, null, 8192, null, List.of(temperature, other));
+
+        final ModelSettings changed = base.withoutRefusal("temperature");
+
+        assertThat(changed.refused()).containsExactly(other);
+        assertThat(changed.temperatureChoice()).isEqualTo(TemperatureChoice.OMIT);
+        assertThat(changed.contextWindow()).isEqualTo(8192);
+    }
+
+    @Test
+    void withoutRefusal_unknownName_returnsEqual() {
+        final ModelSettings base = ModelSettings.defaults("ollama", "gemma");
+
+        assertThat(base.withoutRefusal("temperature")).isEqualTo(base);
+    }
 }

@@ -34,7 +34,7 @@ import ua.bookloom.ui.state.ProviderTest;
  */
 class SettingsScreenTest extends SettingsScreenTestBase {
 
-    // IF a tab were missing, or one of the four unbuilt areas were enabled, THEN the screen would misstate what this
+    // IF a tab were missing, or one of the unbuilt areas were enabled, THEN the screen would misstate what this
     // build can do.
     @Test
     void tabs_settingsScreen_sixPresentFourDisabled() {
@@ -44,7 +44,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 .extracting(Tab::getId, Tab::getText, Tab::isDisable)
                 .containsExactly(
                         tuple("settings-tab-providers", "Providers", false),
-                        tuple("settings-tab-models", "Models", true),
+                        tuple("settings-tab-models", "Models", false),
                         tuple("settings-tab-generation", "Generation", true),
                         tuple("settings-tab-appearance", "Appearance", false),
                         tuple("settings-tab-automation", "Automation", true),

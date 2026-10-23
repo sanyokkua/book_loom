@@ -192,6 +192,16 @@ The Models tab SHALL show, as found out from the program, how much the model can
 - **WHEN** `gemma4:e4b` reports a context length of 131072 and 16384 loaded
 - **THEN** the Models tab shows both figures under "Found out from the program"
 
+#### Scenario: The loaded figure is read from Ollama only
+
+- **WHEN** the model belongs to an OpenAI-compatible provider
+- **THEN** the Models tab shows only how much it can read at once and no loaded figure, and no `/api/ps` request is sent
+
+#### Scenario: Structured answers come from this session's last inference test
+
+- **WHEN** no inference test of `gemma4:e4b` has run since the application started
+- **THEN** the Models tab reads "structured answers: not checked yet" and names the Providers tab test that checks it
+
 ### Requirement: Choose how the temperature is sent for a model
 
 The Models tab SHALL offer for each model Let BookLoom choose (the default), My value (one value for every request) and Don't send (the temperature is left out entirely).
@@ -229,6 +239,11 @@ The Models tab SHALL offer for each model a Use context window number (filled in
 - **WHEN** the model belongs to an OpenAI-compatible provider
 - **THEN** Advanced offers `max_completion_tokens` and `max_tokens`
 
+#### Scenario: The loaded figure is a suggestion while the window is off
+
+- **WHEN** nothing is stored for `gpt-oss:20b`, 16384 tokens are loaded and Use context window is off
+- **THEN** the number field shows `16384` disabled, the draft is unchanged and the footer shows no unsaved mark
+
 ### Requirement: List the settings a model refused and let the person send them again
 
 The Models tab SHALL list under "Settings this model refused" each setting the model refused, when it was refused and what BookLoom did instead, with Send again on each row, and SHALL say "Nothing refused" when the list is empty.
@@ -249,6 +264,11 @@ The Models tab SHALL list under "Settings this model refused" each setting the m
 
 - **WHEN** a model has refused nothing
 - **THEN** the section reads "Nothing refused"
+
+#### Scenario: Send again acts at once and leaves unsaved typing
+
+- **WHEN** the temperature choice of `gpt-oss:20b` is changed to My value and Send again is chosen on its `temperature` row
+- **THEN** the stored refusal is removed at once and the unsaved temperature choice stays in the form
 
 ### Requirement: Save Providers and Models through a pinned footer and guard leaving
 
@@ -271,6 +291,17 @@ The Providers and Models tabs SHALL change nothing until saved, SHALL show a pin
 - **WHEN** `Ollama` has unsaved changes and the `LM Studio` row is chosen
 - **THEN** the question "Save the changes to Ollama?" is asked with Keep editing, Discard and Save
 - **AND** `LM Studio` opens only after Discard or Save
+
+#### Scenario: Switching model asks naming it
+
+- **WHEN** `gemma4:e4b` of `Ollama` has unsaved changes and `gpt-oss:20b` is chosen in the model list
+- **THEN** the question "Save the settings of gemma4:e4b · Ollama?" is asked once with Keep editing, Discard and Save
+- **AND** `gpt-oss:20b` opens only after Discard or Save
+
+#### Scenario: Leaving Models asks
+
+- **WHEN** the Models tab holds unsaved changes and the Providers tab is opened
+- **THEN** the question is asked and the Providers tab opens only after Discard or Save
 
 #### Scenario: Save stores the change
 

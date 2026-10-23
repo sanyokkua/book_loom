@@ -38,6 +38,8 @@ class ScreenConformanceCoverageTest {
         "SETTINGS_UNSAVED_DIALOG",
         "SETTINGS_TEST_DIALOG",
         "SETTINGS_SWITCH_DIALOG",
+        "SETTINGS_MODELS",
+        "SETTINGS_MODELS_DIRTY",
         "ADD_TERM_DIALOG",
         "RESULTS_DIALOG"
     };

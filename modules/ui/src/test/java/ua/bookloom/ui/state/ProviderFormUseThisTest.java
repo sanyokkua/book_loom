@@ -125,7 +125,8 @@ class ProviderFormUseThisTest extends ProviderFormTestBase {
                 activities,
                 refusing,
                 EnglishMessages.create(),
-                new ModelSpeedRecorder(modelSettings, speeds, executor)));
+                new ModelSpeedRecorder(modelSettings, speeds, executor),
+                new StructuredAnswers()));
         WaitForAsyncUtils.waitForFxEvents();
         final ProviderForm form = onFx(() ->
                 new ProviderForm(viewModel, configs, modelSettings, refusing, name -> false, technical, executor));

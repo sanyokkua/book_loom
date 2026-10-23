@@ -48,7 +48,8 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                 executor,
                 subject,
                 activities,
-                new ModelSpeedRecorder(modelSettings, speeds, executor)));
+                new ModelSpeedRecorder(modelSettings, speeds, executor),
+                new StructuredAnswers()));
     }
 
     private void setModel(final String text) {
