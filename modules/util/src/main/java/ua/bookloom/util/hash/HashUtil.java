@@ -1,6 +1,11 @@
 package ua.bookloom.util.hash;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
@@ -24,6 +29,7 @@ import lombok.NoArgsConstructor;
 public final class HashUtil {
 
     private static final String ALGORITHM = "SHA-256";
+    private static final int BUFFER_BYTES = 64 * 1024;
 
     /**
      * Hashes raw bytes — the shape {@code Document.contentHash} uses, computed once over the whole imported file.
@@ -34,6 +40,30 @@ public final class HashUtil {
     public static String sha256Hex(byte[] bytes) {
         Objects.requireNonNull(bytes, "bytes");
         return HexFormat.of().formatHex(digest(bytes));
+    }
+
+    /**
+     * Hashes a file's bytes as {@link #sha256Hex(byte[])} does, reading it in small pieces so a file of any size is
+     * hashed without holding it in memory.
+     *
+     * @param file the file to hash
+     * @return the lowercase hex-encoded SHA-256 digest of the file's bytes
+     * @throws UncheckedIOException when the file cannot be read; the cause is the original {@link IOException}
+     */
+    public static String sha256HexOfFile(final Path file) {
+        Objects.requireNonNull(file, "file");
+        final MessageDigest digest = newDigest();
+        final byte[] buffer = new byte[BUFFER_BYTES];
+        try (InputStream in = Files.newInputStream(file)) {
+            int read = in.read(buffer);
+            while (read >= 0) {
+                digest.update(buffer, 0, read);
+                read = in.read(buffer);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("the file could not be read for hashing", e);
+        }
+        return HexFormat.of().formatHex(digest.digest());
     }
 
     /**
@@ -52,8 +82,12 @@ public final class HashUtil {
     }
 
     private static byte[] digest(byte[] bytes) {
+        return newDigest().digest(bytes);
+    }
+
+    private static MessageDigest newDigest() {
         try {
-            return MessageDigest.getInstance(ALGORITHM).digest(bytes);
+            return MessageDigest.getInstance(ALGORITHM);
         } catch (NoSuchAlgorithmException e) {
             // SHA-256 is a mandatory algorithm every JDK's MessageDigest implementation must provide (see its
             // class javadoc), so this branch is unreachable on any conforming JVM — wrapping unchecked here

@@ -142,7 +142,7 @@ class ImportGuardRunStateTest extends ImportGuardTestBase {
         awaitOpened();
 
         assertThat(projects.removedProjects()).containsExactly("p1");
-        assertThat(projects.events()).containsSubsequence("remove p1", "import Dracula.epub");
+        assertThat(projects.events()).containsSubsequence("import Dracula.epub", "remove p1");
         assertThat(prompt.dismissals()).isEqualTo(1);
         assertThat(state()).isEqualTo(RunState.IDLE);
     }

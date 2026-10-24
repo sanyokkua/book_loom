@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -8,6 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * A file whose content is already stored as projects is named, never imported again: importing would reset the stored
@@ -72,6 +75,24 @@ class ImportGuardAlreadyTest extends ImportGuardTestBase {
         assertThat(projects.imports()).containsExactly(DRACULA);
     }
 
+    // IF an Error from the check escaped, THEN the guard would stay busy and silently drop every later import.
+    @Test
+    void requestImport_checkThrowsAnError_opensTellsThePersonAndTakesTheNextFile() throws IOException {
+        final Path file = fileWithKnownContent("huge.epub");
+        projects.on(file, Result.ok(BookFixtures.frankensteinImport()));
+        projects.throwOnList(new OutOfMemoryError("Java heap space"));
+
+        requestImport(file);
+        onFx(() -> {
+            imports.cancel();
+            return null;
+        });
+        requestImport(DRACULA);
+
+        assertThat(projects.imports()).containsExactly(file, DRACULA);
+        assertThat(toasts.raised()).extracting(RecordingToasts.Raised::key).contains(MessageKey.TOAST_IMPORT_UNCHECKED);
+    }
+
     // The question comes first; only after "Open as a new project" is the file read and found to be a known book.
     @Test
     void openNew_openProjectAndTheSameBookDropped_asksFirstThenShowsAlreadyInProjects() throws IOException {
@@ -106,9 +127,10 @@ class ImportGuardAlreadyTest extends ImportGuardTestBase {
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN);
     }
 
-    // The project being replaced is no duplicate of itself: replacing it with the same book still goes ahead.
+    // The project being replaced is no duplicate of itself: replacing it with the same book still goes ahead, and the
+    // import resets that same project, so removing it afterwards would delete the new import.
     @Test
-    void replace_fileIsOnlyTheOpenProjectsOwnBook_removesItThenImports() throws IOException {
+    void replace_fileIsOnlyTheOpenProjectsOwnBook_importsItIntoTheSameProject() throws IOException {
         openFirstBook();
         final Path file = fileWithKnownContent("earth.epub");
         projects.on(file, Result.ok(BookFixtures.frankensteinImport()));
@@ -117,7 +139,7 @@ class ImportGuardAlreadyTest extends ImportGuardTestBase {
         requestImport(file);
         replace();
 
-        assertThat(projects.removedProjects()).containsExactly("p1");
+        assertThat(projects.removedProjects()).isEmpty();
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN, file);
     }
 }

@@ -109,11 +109,12 @@ public final class ImportViewModel {
     }
 
     /**
-     * Removes a stored project, then imports a book: the one destructive path, taken only when the person chose
-     * "Replace and delete this translation". Returns at once. FX thread only.
+     * Imports a book, then removes a stored project: the one destructive path, taken only when the person chose
+     * "Replace and delete this translation". The project is removed only once the new book is stored, so a book that
+     * cannot be opened leaves it among the stored projects. Returns at once. FX thread only.
      *
      * @param source the file to import
-     * @param projectId the stored project to delete first; it is no longer the open book when this returns
+     * @param projectId the stored project the new book replaces; it is no longer the open book when this returns
      */
     public void openReplacing(final Path source, final String projectId) {
         Objects.requireNonNull(source, "source");
@@ -201,12 +202,16 @@ public final class ImportViewModel {
         Platform.runLater(() -> deliver(fileName, answer, serial, before));
     }
 
+    // The replaced project goes only once the new book is stored, so a book that cannot be opened leaves it in place.
     private Result<ImportAnswers.Answer> importGuarded(final Path source, final @Nullable String replacedId) {
         try {
+            final Result<ImportedBook> created = projects.create(source);
+            final ImportedBook book = created.data();
+            final String createdId = book == null ? null : book.projectId();
             if (replacedId != null) {
-                disposal.remove(replacedId);
+                disposal.removeReplaced(replacedId, createdId);
             }
-            return ImportAnswers.answerOf(source, projects.create(source));
+            return ImportAnswers.answerOf(source, created);
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(ImportAnswers.internalError(thrown));

@@ -2,8 +2,6 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -19,6 +17,8 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
+import ua.bookloom.ui.notify.ToastOccasion;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.util.hash.HashUtil;
 
 /**
@@ -43,6 +43,7 @@ public final class ImportGuard {
     private final OpenAnotherBookPrompt prompt;
     private final ProjectService projects;
     private final ExecutorService executor;
+    private final Toasts toasts;
     private boolean checking;
 
     /**
@@ -55,6 +56,7 @@ public final class ImportGuard {
      * @param prompt the question put to the person
      * @param projects what is asked for the stored projects, to name the open one and to find a book already stored
      * @param executor the daemon executor those lookups run on, never the FX thread
+     * @param toasts where a file that could not be checked is announced
      */
     @Inject
     public ImportGuard(
@@ -64,7 +66,8 @@ public final class ImportGuard {
             final CurrentProject current,
             final OpenAnotherBookPrompt prompt,
             final ProjectService projects,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final Toasts toasts) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.imports = Objects.requireNonNull(imports, "imports");
@@ -72,6 +75,7 @@ public final class ImportGuard {
         this.prompt = Objects.requireNonNull(prompt, "prompt");
         this.projects = Objects.requireNonNull(projects, "projects");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
     }
 
     /**
@@ -196,41 +200,59 @@ public final class ImportGuard {
         }
     }
 
+    // Whatever the check meets, even an Error, the answer goes back to the FX thread, which clears the busy flag: a
+    // check that never answered would drop every later import.
     private void lookUp(final Path source, final @Nullable String replacedId, final Runnable clearRun) {
         log.debug(
                 "looking up {} on {}",
                 fileNameOf(source),
                 Thread.currentThread().getName());
-        final List<ProjectSummary> found = matchesOf(source).stream()
-                .filter(summary -> !summary.project().id().equals(replacedId))
-                .toList();
-        Platform.runLater(() -> checked(source, replacedId, found, clearRun));
+        @Nullable List<ProjectSummary> found = null;
+        try {
+            found = matchesOf(source);
+        } catch (Throwable failed) {
+            log.warn("{} could not be checked against the stored projects: opening it anyway", fileNameOf(source));
+            log.debug("the check failed", failed);
+        } finally {
+            final @Nullable List<ProjectSummary> answered = found;
+            Platform.runLater(() -> checked(source, replacedId, answered, clearRun));
+        }
     }
 
-    // A failed read, hash or listing never stops a book from opening: it counts as no duplicate.
-    private List<ProjectSummary> matchesOf(final Path source) {
+    // The stored copies of the file other than the one being replaced; null when the file could not be checked, which
+    // never stops a book from opening.
+    private @Nullable List<ProjectSummary> matchesOf(final Path source) {
         try {
-            final String hash = HashUtil.sha256Hex(Files.readAllBytes(source));
+            final String hash = HashUtil.sha256HexOfFile(source);
             final Result<List<ProjectSummary>> listed = projects.list();
             final List<ProjectSummary> all = listed.data();
             if (all == null) {
                 log.warn("the stored projects could not be listed for {}: {}", fileNameOf(source), listed.error());
-                return List.of();
+                return null;
             }
             return EarlierProjects.matching(all, hash);
-        } catch (IOException | RuntimeException failed) {
+        } catch (RuntimeException failed) {
             log.warn("{} could not be checked against the stored projects: opening it anyway", fileNameOf(source));
             log.debug("the check failed", failed);
-            return List.of();
+            return null;
         }
     }
 
     private void checked(
             final Path source,
             final @Nullable String replacedId,
-            final List<ProjectSummary> found,
+            final @Nullable List<ProjectSummary> matches,
             final Runnable clearRun) {
         checking = false;
+        if (matches == null) {
+            log.debug("{} was not checked: the person is told and it is opened", fileNameOf(source));
+            toasts.raise(ToastOccasion.IMPORT_UNCHECKED, fileNameOf(source));
+        }
+        final List<ProjectSummary> found = matches == null
+                ? List.of()
+                : matches.stream()
+                        .filter(summary -> !summary.project().id().equals(replacedId))
+                        .toList();
         if (found.isEmpty()) {
             log.debug("{} matches no stored project: opening it", fileNameOf(source));
             clearRun.run();

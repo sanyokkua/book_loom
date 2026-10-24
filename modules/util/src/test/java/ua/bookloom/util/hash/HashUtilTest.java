@@ -2,9 +2,15 @@ package ua.bookloom.util.hash;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * {@code HashUtil}'s two hash functions.
@@ -17,6 +23,31 @@ class HashUtilTest {
         final String hex = HashUtil.sha256Hex("abc".getBytes(StandardCharsets.UTF_8));
 
         assertThat(hex).isEqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }
+
+    // A file is hashed in pieces, so a book larger than the heap never has to be read whole.
+    @Test
+    void sha256HexOfFile_fileLargerThanOneBuffer_matchesTheDigestOfItsBytes(@TempDir final Path dir)
+            throws IOException {
+        final Path file = Files.write(dir.resolve("big.bin"), new byte[200_000]);
+
+        assertThat(HashUtil.sha256HexOfFile(file))
+                .isEqualTo("4cbbd9be0cba685835755f827758705db5a413c5494c34262cd25946a73e7582");
+    }
+
+    @Test
+    void sha256HexOfFile_knownFile_matchesKnownDigest(@TempDir final Path dir) throws IOException {
+        final Path file = Files.write(dir.resolve("abc.txt"), "abc".getBytes(StandardCharsets.UTF_8));
+
+        assertThat(HashUtil.sha256HexOfFile(file))
+                .isEqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }
+
+    @Test
+    void sha256HexOfFile_missingFile_throwsUncheckedIoWithTheCause(@TempDir final Path dir) {
+        assertThatThrownBy(() -> HashUtil.sha256HexOfFile(dir.resolve("missing.epub")))
+                .isInstanceOf(UncheckedIOException.class)
+                .hasCauseInstanceOf(IOException.class);
     }
 
     @Test

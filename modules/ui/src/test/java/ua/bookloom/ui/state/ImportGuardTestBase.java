@@ -41,6 +41,7 @@ abstract class ImportGuardTestBase extends RunnerTestBase {
     RecordingOpenAnotherBookPrompt prompt;
     ImportViewModel imports;
     ImportGuard guard;
+    RecordingToasts toasts;
 
     @BeforeEach
     void setUpGuard() {
@@ -51,14 +52,15 @@ abstract class ImportGuardTestBase extends RunnerTestBase {
         projects.willList(List.of(summary("p1", OPEN_NAME, "other-hash")));
         prompt = new RecordingOpenAnotherBookPrompt();
         final CurrentProject current = new CurrentProject();
+        toasts = new RecordingToasts();
         imports = onFx(() -> new ImportViewModel(
                 projects,
                 current,
-                new RecordingToasts(),
+                toasts,
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
                 new ActivityTracker(new StateMirror())));
-        guard = new ImportGuard(mirror, runner, imports, current, prompt, projects, new DirectExecutor());
+        guard = new ImportGuard(mirror, runner, imports, current, prompt, projects, new DirectExecutor(), toasts);
     }
 
     /** A stored project of {@code name} whose book content has {@code hash}. */

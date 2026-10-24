@@ -52,13 +52,13 @@ class ImportGuardTest extends ImportGuardTestBase {
     }
 
     @Test
-    void replace_answered_removesTheOpenProjectThenOpensTheBook() {
+    void replace_answered_opensTheBookThenRemovesTheOpenProject() {
         requestImport(DRACULA);
 
         replace();
 
         assertThat(projects.removedProjects()).containsExactly("p1");
-        assertThat(projects.events()).containsSubsequence("remove p1", "import Dracula.epub");
+        assertThat(projects.events()).containsSubsequence("import Dracula.epub", "remove p1");
         assertThat(shown())
                 .isInstanceOfSatisfying(
                         ImportState.Detected.class,

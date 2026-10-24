@@ -41,6 +41,7 @@ public final class ScriptedProjectService implements ProjectService {
     private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
     private final ScriptedSegments segments = new ScriptedSegments();
     private final ScriptedListing listing = new ScriptedListing();
+    private final ScriptedRoundTrips roundTrips = new ScriptedRoundTrips();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
     private final List<Path> opens = new CopyOnWriteArrayList<>();
     private final Map<Path, Result<ProjectOpening>> openings = new ConcurrentHashMap<>();
@@ -51,16 +52,10 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<String> closed = new CopyOnWriteArrayList<>();
     private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> events = new CopyOnWriteArrayList<>();
-    private final List<String> roundTrips = new CopyOnWriteArrayList<>();
-    private final List<Boolean> roundTripsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> plans = new CopyOnWriteArrayList<>();
     private final List<Boolean> plansOnFxThread = new CopyOnWriteArrayList<>();
     private final CountDownLatch entered = new CountDownLatch(1);
-    private final CountDownLatch roundTripEntered = new CountDownLatch(1);
-    private volatile Result<RoundTripReport> roundTripAnswer = notScripted();
     private volatile Result<BookPlan> planAnswer = notScripted();
-    private volatile @Nullable CountDownLatch roundTripGate;
-    private volatile @Nullable RuntimeException roundTripFailure;
     private volatile Result<ImportedBook> fallback =
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
     private volatile @Nullable RuntimeException failure;
@@ -116,7 +111,7 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** From now on answers every round-trip check with {@code answer}. */
     public void onRoundTrip(final Result<RoundTripReport> answer) {
-        roundTripAnswer = Objects.requireNonNull(answer, "answer");
+        roundTrips.answer(answer);
     }
 
     /** From now on answers every plan with {@code answer}. */
@@ -126,25 +121,22 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** From now on throws {@code thrown} from every round-trip check, the way a defective adapter would. */
     public void throwingOnRoundTrip(final RuntimeException thrown) {
-        roundTripFailure = thrown;
+        roundTrips.throwing(thrown);
     }
 
     /** From now on blocks each round-trip check until {@link #releaseRoundTrip()}. */
     public void holdRoundTrip() {
-        roundTripGate = new CountDownLatch(1);
+        roundTrips.hold();
     }
 
     /** Lets the held round-trip checks answer. */
     public void releaseRoundTrip() {
-        final CountDownLatch held = roundTripGate;
-        if (held != null) {
-            held.countDown();
-        }
+        roundTrips.release();
     }
 
     /** Blocks until a round-trip check has been entered, so a test knows the call is truly in flight. */
     public void awaitRoundTripEntered() throws InterruptedException {
-        awaitLatch(roundTripEntered, "the service was never asked for a round-trip check");
+        roundTrips.awaitEntered();
     }
 
     /** Blocks until an import has been entered, so a test knows the call is truly in flight. */
@@ -235,6 +227,11 @@ public final class ScriptedProjectService implements ProjectService {
         return projectOf(ID_PREFIX + source, source);
     }
 
+    /** From now on {@link #list} throws {@code error}, as a JVM out of memory would. */
+    public void throwOnList(final Error error) {
+        listing.throwOnList(error);
+    }
+
     /** From now on {@link #list} answers exactly these summaries, whatever else was scripted. */
     public void willList(final List<ProjectSummary> summaries) {
         listing.willList(summaries);
@@ -323,16 +320,7 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<RoundTripReport> roundTrip(final String projectId) {
-        final CountDownLatch held = roundTripGate;
-        roundTrips.add(Objects.requireNonNull(projectId, "projectId"));
-        roundTripsOnFxThread.add(Platform.isFxApplicationThread());
-        roundTripEntered.countDown();
-        awaitGate(held);
-        final RuntimeException thrown = roundTripFailure;
-        if (thrown != null) {
-            throw thrown;
-        }
-        return roundTripAnswer;
+        return roundTrips.check(projectId);
     }
 
     @Override
@@ -370,12 +358,12 @@ public final class ScriptedProjectService implements ProjectService {
 
     /** The id of every project a round-trip check was asked for, in call order. */
     public List<String> roundTripProjects() {
-        return List.copyOf(roundTrips);
+        return roundTrips.projects();
     }
 
     /** For each round-trip check, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> roundTripCallsOnFxThread() {
-        return List.copyOf(roundTripsOnFxThread);
+        return roundTrips.onFxThread();
     }
 
     /** The id of every project a plan was asked for, in call order. */

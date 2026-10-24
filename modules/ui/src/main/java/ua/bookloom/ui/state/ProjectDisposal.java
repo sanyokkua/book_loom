@@ -50,7 +50,8 @@ final class ProjectDisposal {
             return all == null
                     ? null
                     : all.stream().map(summary -> summary.project().id()).collect(Collectors.toSet());
-        } catch (RuntimeException thrown) {
+        } catch (Throwable thrown) {
+            // Even an Error: the import that follows must still answer, or no later book could be opened.
             log.warn("the stored projects could not be listed before an import", thrown);
             return null;
         }
@@ -62,6 +63,24 @@ final class ProjectDisposal {
             executor.execute(() -> remove(projectId));
         } catch (RuntimeException rejected) {
             log.warn("removing project {} could not be submitted", projectId, rejected);
+        }
+    }
+
+    /**
+     * Removes the project a replacing import replaces, once the import stored the new book; a book that was not stored
+     * keeps it, and an import that reset the same project keeps it too. Background thread.
+     *
+     * @param replacedId the project the person chose to replace
+     * @param createdId the project the import stored, or {@code null} when it stored none
+     */
+    void removeReplaced(final String replacedId, final @Nullable String createdId) {
+        if (createdId == null) {
+            log.warn("the new book was not stored: project {} is kept", replacedId);
+        } else if (createdId.equals(replacedId)) {
+            log.debug("the import reused project {}: nothing is removed", replacedId);
+        } else {
+            log.debug("project {} was created: project {} is removed", createdId, replacedId);
+            remove(replacedId);
         }
     }
 
