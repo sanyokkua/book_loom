@@ -27,6 +27,15 @@ public interface ProviderConfigRules {
      */
     Pattern ENV_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
+    /**
+     * The characters an HTTP header name may hold (RFC 7230's {@code token}); a space, a colon or a control character
+     * would pass a save and then fail every request as a transport error.
+     */
+    Pattern HEADER_NAME = Pattern.compile("[!#$%&'*+\\-.^_`|~0-9A-Za-z]+");
+
+    /** The longest connect or request timeout: an hour, longer than any single model call is worth waiting for. */
+    Duration MAX_TIMEOUT = Duration.ofHours(1);
+
     /** A path ending in the {@code v1} segment. */
     Pattern V1_SUFFIX = Pattern.compile("(^|/)v1/?$");
 
@@ -39,6 +48,12 @@ public interface ProviderConfigRules {
         BASE_URL_INVALID,
         /** A connect or request timeout is zero or negative. */
         TIMEOUT_NOT_POSITIVE,
+        /** A connect or request timeout is longer than {@link #MAX_TIMEOUT}. */
+        TIMEOUT_TOO_LONG,
+        /** A custom header's name holds a character a header name may not. */
+        HEADER_NAME_INVALID,
+        /** The API-key header's name holds a character a header name may not. */
+        API_KEY_HEADER_INVALID,
         /** An Ollama provider overrides the chat path. */
         OLLAMA_CHAT_PATH,
         /** A credential-like header carries a literal value instead of {@code ${env:NAME}}. */
@@ -138,6 +153,10 @@ public interface ProviderConfigRules {
         if (!isPositive(config.connectTimeout()) || !isPositive(config.requestTimeout())) {
             errors.add(validation("Provider connect and request timeouts must both be positive."));
             findings.add(new Finding(Rule.TIMEOUT_NOT_POSITIVE, null));
+        } else if (config.connectTimeout().compareTo(MAX_TIMEOUT) > 0
+                || config.requestTimeout().compareTo(MAX_TIMEOUT) > 0) {
+            errors.add(validation("Provider connect and request timeouts must be at most one hour."));
+            findings.add(new Finding(Rule.TIMEOUT_TOO_LONG, null));
         }
     }
 
@@ -156,6 +175,12 @@ public interface ProviderConfigRules {
     private static void checkHeaders(
             final Map<String, String> headers, final List<AppError> errors, final List<Finding> findings) {
         for (final Map.Entry<String, String> header : headers.entrySet()) {
+            if (!HEADER_NAME.matcher(header.getKey()).matches()) {
+                errors.add(validation("The header name " + header.getKey().strip()
+                        + " holds a space, a colon or another character a header name may not."));
+                findings.add(new Finding(Rule.HEADER_NAME_INVALID, header.getKey()));
+                continue;
+            }
             final String name = header.getKey().toLowerCase(Locale.ROOT);
             final boolean credentialLike = CREDENTIAL_NAME_PARTS.stream().anyMatch(name::contains);
             if (credentialLike && !ENV_REFERENCE.matcher(header.getValue()).matches()) {
@@ -184,9 +209,16 @@ public interface ProviderConfigRules {
             errors.add(missing("Sign-in needs the name of the environment variable that holds the key."));
             findings.add(new Finding(Rule.CREDENTIAL_REF_MISSING, null));
         }
-        if (config.auth() == ProviderAuth.API_KEY && isBlank(config.apiKeyHeader())) {
+        final String keyHeader = config.apiKeyHeader();
+        if (config.auth() == ProviderAuth.API_KEY && isBlank(keyHeader)) {
             errors.add(missing("An API-key sign-in needs the header name that carries the key."));
             findings.add(new Finding(Rule.API_KEY_HEADER_MISSING, null));
+        } else if (config.auth() == ProviderAuth.API_KEY
+                && keyHeader != null
+                && !HEADER_NAME.matcher(keyHeader).matches()) {
+            errors.add(validation("The key header name " + keyHeader.strip()
+                    + " holds a space, a colon or another character a header name may not."));
+            findings.add(new Finding(Rule.API_KEY_HEADER_INVALID, keyHeader));
         }
     }
 

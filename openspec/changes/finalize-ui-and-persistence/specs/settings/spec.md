@@ -100,6 +100,22 @@ The provider form SHALL let the person add custom headers as name and value rows
 - **WHEN** the custom model `acme-translate-1` is added
 - **THEN** it appears as a chip and is offered among the models of that provider
 
+### Requirement: Refuse a header name or a timeout a request could not use
+
+IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, or a connect or request timeout is longer than 3600 seconds, THEN the provider form SHALL hold Save with a finding on that field, and a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent.
+
+**Source**: `docs/specification/mockups/README.md#providers`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
+
+#### Scenario: A header name with a space
+
+- **WHEN** the header `X Team` is added with the value `blue`
+- **THEN** Save is held and the form says the header name `X Team` can hold only Latin letters, digits and `- _ . ~`
+
+#### Scenario: A timeout longer than an hour
+
+- **WHEN** the connect timeout is `3601`
+- **THEN** Save is held and the form asks for at most 3600 seconds
+
 ### Requirement: Use one provider and ask first while the open project has stored decisions
 
 WHEN the person chooses Use this one on a stored provider, the settings screen SHALL make it the current provider; and WHILE the open project has stored segment decisions, SHALL first ask "Use LM Studio for the rest of this book?" (naming the chosen provider) and change nothing unless the person confirms.
@@ -220,9 +236,19 @@ The Models tab SHALL offer for each model Let BookLoom choose (the default), My 
 
 ### Requirement: Set a model's context window and answer length
 
-The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded), a Limit answer length switch, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
+The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded) from 512 to 1,048,576 tokens, a Limit answer length switch no larger than the window, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
 
 **Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it.
+
+#### Scenario: A context window outside its range
+
+- **WHEN** Use context window is on with `256`, or with `2000000`
+- **THEN** Save is held and the tab asks for a context window from 512 to 1,048,576 tokens
+
+#### Scenario: An answer cap larger than the window
+
+- **WHEN** Use context window is `8192` and Limit answer length is `8193`
+- **THEN** Save is held and the tab says the answer length limit cannot be larger than the context window
 
 #### Scenario: The context window is filled in from the program
 

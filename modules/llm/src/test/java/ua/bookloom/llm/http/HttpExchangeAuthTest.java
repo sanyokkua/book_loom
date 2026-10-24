@@ -213,6 +213,27 @@ class HttpExchangeAuthTest {
         assertThat(server.getAllServeEvents()).isEmpty();
     }
 
+    // IF a stored header name held a space or a colon, THEN the call would fail as a transport error, not as a setting.
+    @ParameterizedTest
+    @ValueSource(strings = {"X Team", "X-Team:", "X-Te\u0001am"})
+    void get_customHeaderNameNotAToken_isValidationAndSendsNothing(String name) {
+        final Result<HttpReply> result =
+                exchange(Map.of()).get(config(ProviderAuth.NONE, null, null, Map.of(name, "acme")), "/models");
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    @Test
+    void get_apiKeyHeaderNameWithASpace_isValidationAndSendsNothing() {
+        final Result<HttpReply> result = exchange(Map.of(KEY_VARIABLE, KEY_VALUE))
+                .get(config(ProviderAuth.API_KEY, "X Api Key", KEY_VARIABLE, Map.of()), "/models");
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(describe(error(result))).doesNotContain(KEY_VALUE);
+        assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
     // IF the key itself holds a line break, THEN the call is a validation error and the key is not echoed.
     @Test
     void get_credentialValueWithLineBreak_isValidationWithoutEchoingValue() {

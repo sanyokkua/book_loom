@@ -505,8 +505,14 @@ public enum MessageKey {
     SETTINGS_ERROR_NAME("settings.error.name"),
     /** Error under a timeout field: it must be a whole number of seconds above zero. */
     SETTINGS_ERROR_NUMBER("settings.error.number"),
+    /** Error under a timeout field: it must be at most an hour. */
+    SETTINGS_ERROR_TIMEOUT_TOO_LONG("settings.error.timeoutTooLong"),
     /** Error under a Models number field: it must be a whole number of tokens above zero. */
     SETTINGS_MODELS_ERROR_NUMBER("settings.models.error.number"),
+    /** Models tab finding: the context window is outside the range a translation call can use. */
+    SETTINGS_MODELS_ERROR_CONTEXT_RANGE("settings.models.error.contextRange"),
+    /** Models tab finding: the answer cap is larger than the context window it has to fit in. */
+    SETTINGS_MODELS_ERROR_LIMIT_OVER_WINDOW("settings.models.error.limitOverWindow"),
     /** Models tab: the Save button. */
     SETTINGS_MODELS_SAVE("settings.models.save"),
     /** Models tab: hover text of Save. */
@@ -627,6 +633,8 @@ public enum MessageKey {
     SETTINGS_ERROR_OLLAMA_CHAT_PATH("settings.error.ollamaChatPath"),
     /** Error on the headers: argument 0 is the header whose value looks like a key. */
     SETTINGS_ERROR_HEADER_LITERAL("settings.error.headerLiteral"),
+    /** Error under a header name: it holds a space, a colon or another character a header name may not; argument 0 is the name. */
+    SETTINGS_ERROR_HEADER_NAME_INVALID("settings.error.headerNameInvalid"),
     /** Error under the key variable: a variable's name is wanted, not a key. */
     SETTINGS_ERROR_REF_NOT_NAME("settings.error.refNotName"),
     /** Error under the key variable: the sign-in needs a variable's name. */

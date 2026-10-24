@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,6 +39,12 @@ public record ModelDraft(
 
     /** The temperature shown before the person has chosen one. */
     public static final double DEFAULT_TEMPERATURE = 0.2;
+
+    /** The smallest context window a translation call can work in: below it no chunk and its prompt would fit. */
+    public static final int MIN_CONTEXT = 512;
+
+    /** The largest context window any local or hosted model offers today, 2^20 tokens. */
+    public static final int MAX_CONTEXT = 1_048_576;
 
     private static final double HUNDRED = 100.0;
 
@@ -126,12 +133,24 @@ public record ModelDraft(
     /**
      * What stops a save.
      *
-     * @return the messages for every switched-on number that is not a whole number above zero; empty when fine
+     * @return the messages for a switched-on number that is not a whole number above zero, a window outside
+     *     {@link #MIN_CONTEXT} to {@link #MAX_CONTEXT}, or a cap larger than the window; empty when fine
      */
     public List<MessageKey> findings() {
-        final boolean contextBad = contextOn && parse(contextText).isEmpty();
-        final boolean limitBad = limitOn && parse(limitText).isEmpty();
-        return contextBad || limitBad ? List.of(MessageKey.SETTINGS_MODELS_ERROR_NUMBER) : List.of();
+        final Optional<Integer> context = parse(contextText);
+        final Optional<Integer> limit = parse(limitText);
+        if ((contextOn && context.isEmpty()) || (limitOn && limit.isEmpty())) {
+            return List.of(MessageKey.SETTINGS_MODELS_ERROR_NUMBER);
+        }
+        final List<MessageKey> found = new ArrayList<>();
+        if (contextOn && (context.orElseThrow() < MIN_CONTEXT || context.orElseThrow() > MAX_CONTEXT)) {
+            found.add(MessageKey.SETTINGS_MODELS_ERROR_CONTEXT_RANGE);
+        }
+        final int window = contextOn ? context.orElseThrow() : MAX_CONTEXT;
+        if (limitOn && limit.orElseThrow() > window) {
+            found.add(MessageKey.SETTINGS_MODELS_ERROR_LIMIT_OVER_WINDOW);
+        }
+        return List.copyOf(found);
     }
 
     /**
@@ -144,7 +163,9 @@ public record ModelDraft(
         Objects.requireNonNull(current, "current");
         if (!findings().isEmpty()) {
             return Result.err(AppError.of(
-                    ErrorCode.validation, "Not a number", "A switched-on figure is not a whole number above zero."));
+                    ErrorCode.validation,
+                    "Not a usable figure",
+                    "A switched-on figure is not a whole number above zero, or is out of its range."));
         }
         return Result.ok(current.withChoices(
                 choice,

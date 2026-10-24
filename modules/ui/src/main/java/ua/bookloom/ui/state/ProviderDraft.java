@@ -263,8 +263,11 @@ public record ProviderDraft(
                     "Invalid provider",
                     "The provider settings are not valid yet: " + blocking.get().field()));
         }
-        return Result.ok(
-                build(id, parseSeconds(connectSeconds), parseSeconds(requestSeconds), URI.create(address.strip())));
+        return Result.ok(build(
+                id,
+                ProviderFindings.parseSeconds(connectSeconds),
+                ProviderFindings.parseSeconds(requestSeconds),
+                URI.create(address.strip())));
     }
 
     /**
@@ -275,27 +278,23 @@ public record ProviderDraft(
     public List<FormFinding> findings() {
         final List<FormFinding> found = new ArrayList<>();
         if (name.isBlank()) {
-            found.add(blocking(MessageKey.SETTINGS_ERROR_NAME, Field.NAME));
+            found.add(ProviderFindings.blocking(MessageKey.SETTINGS_ERROR_NAME, Field.NAME));
         }
-        final boolean connectOk = parseSeconds(connectSeconds) > 0;
-        final boolean requestOk = parseSeconds(requestSeconds) > 0;
-        if (!connectOk) {
-            found.add(blocking(MessageKey.SETTINGS_ERROR_NUMBER, Field.CONNECT_TIMEOUT));
-        }
-        if (!requestOk) {
-            found.add(blocking(MessageKey.SETTINGS_ERROR_NUMBER, Field.REQUEST_TIMEOUT));
-        }
+        final boolean connectOk = ProviderFindings.isUsableSeconds(connectSeconds);
+        final boolean requestOk = ProviderFindings.isUsableSeconds(requestSeconds);
+        ProviderFindings.timeout(connectSeconds, Field.CONNECT_TIMEOUT).ifPresent(found::add);
+        ProviderFindings.timeout(requestSeconds, Field.REQUEST_TIMEOUT).ifPresent(found::add);
         final @Nullable URI uri = parseAddress();
         if (uri == null) {
-            found.add(blocking(MessageKey.SETTINGS_ERROR_ADDRESS, Field.ADDRESS));
+            found.add(ProviderFindings.blocking(MessageKey.SETTINGS_ERROR_ADDRESS, Field.ADDRESS));
         }
-        final long connect = connectOk ? parseSeconds(connectSeconds) : 1;
-        final long request = requestOk ? parseSeconds(requestSeconds) : 1;
+        final long connect = connectOk ? ProviderFindings.parseSeconds(connectSeconds) : 1;
+        final long request = requestOk ? ProviderFindings.parseSeconds(requestSeconds) : 1;
         // The other rules are judged even when the address cannot be read, against a stand-in whose findings are
         // dropped.
         final URI judged = uri != null ? uri : URI.create(STAND_IN_ADDRESS);
         ProviderConfigRules.check(build("draft", connect, request, judged)).findings().stream()
-                .map(ProviderDraft::mapped)
+                .map(ProviderFindings::mapped)
                 .filter(finding -> uri != null || finding.field() != Field.ADDRESS)
                 .forEach(found::add);
         found.addAll(headerFindings());
@@ -308,7 +307,7 @@ public record ProviderDraft(
         for (final HeaderRow row : headers) {
             final String header = row.name().strip().toLowerCase(Locale.ROOT);
             if (header.isEmpty() && !row.value().isBlank()) {
-                found.add(blocking(MessageKey.SETTINGS_ERROR_HEADER_NAME_MISSING, Field.HEADERS));
+                found.add(ProviderFindings.blocking(MessageKey.SETTINGS_ERROR_HEADER_NAME_MISSING, Field.HEADERS));
             } else if (!header.isEmpty() && !seen.add(header)) {
                 found.add(new FormFinding(
                         MessageKey.SETTINGS_ERROR_HEADER_DUPLICATE, List.of(header), Field.HEADERS, true));
@@ -345,27 +344,6 @@ public record ProviderDraft(
                         .toList());
     }
 
-    private static FormFinding mapped(final ProviderConfigRules.Finding finding) {
-        final String subject = finding.subject();
-        final List<String> args = subject == null ? List.of() : List.of(subject);
-        return switch (finding.rule()) {
-            case BASE_URL_INVALID -> blocking(MessageKey.SETTINGS_ERROR_ADDRESS, Field.ADDRESS);
-            case TIMEOUT_NOT_POSITIVE -> blocking(MessageKey.SETTINGS_ERROR_NUMBER, Field.REQUEST_TIMEOUT);
-            case OLLAMA_CHAT_PATH -> blocking(MessageKey.SETTINGS_ERROR_OLLAMA_CHAT_PATH, Field.CHAT_PATH);
-            case CREDENTIAL_HEADER_LITERAL ->
-                new FormFinding(MessageKey.SETTINGS_ERROR_HEADER_LITERAL, args, Field.HEADERS, true);
-            case CREDENTIAL_REF_NOT_A_NAME -> blocking(MessageKey.SETTINGS_ERROR_REF_NOT_NAME, Field.KEY_VARIABLE);
-            case CREDENTIAL_REF_MISSING -> blocking(MessageKey.SETTINGS_ERROR_REF_MISSING, Field.KEY_VARIABLE);
-            case API_KEY_HEADER_MISSING -> blocking(MessageKey.SETTINGS_ERROR_KEY_HEADER_MISSING, Field.KEY_HEADER);
-            case V1_SUFFIX_MISSING ->
-                new FormFinding(MessageKey.SETTINGS_FORM_ADDRESS_V1_WARNING, List.of(), Field.ADDRESS, false);
-        };
-    }
-
-    private static FormFinding blocking(final MessageKey key, final Field field) {
-        return new FormFinding(key, List.of(), field, true);
-    }
-
     private @Nullable URI parseAddress() {
         final String text = address.strip();
         if (text.isEmpty()) {
@@ -375,14 +353,6 @@ public record ProviderDraft(
             return new URI(text);
         } catch (URISyntaxException ignored) {
             return null;
-        }
-    }
-
-    private static long parseSeconds(final String text) {
-        try {
-            return Long.parseLong(text.strip());
-        } catch (NumberFormatException ignored) {
-            return -1;
         }
     }
 

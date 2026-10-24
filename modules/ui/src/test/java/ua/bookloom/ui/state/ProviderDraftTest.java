@@ -164,6 +164,54 @@ class ProviderDraftTest {
         assertThat(draft.toConfig("p").isErr()).isTrue();
     }
 
+    // IF a timeout of years could be saved, THEN the request's timeout would overflow when the call is made.
+    @ParameterizedTest
+    @ValueSource(strings = {"3601", "99999999999"})
+    void findings_timeoutOverAnHour_blocksOnTheTimeoutField(final String text) {
+        final ProviderDraft draft = officeLm().withConnectSeconds(text);
+
+        assertThat(draft.findings())
+                .containsExactly(new ProviderDraft.FormFinding(
+                        MessageKey.SETTINGS_ERROR_TIMEOUT_TOO_LONG,
+                        List.of(),
+                        ProviderDraft.Field.CONNECT_TIMEOUT,
+                        true));
+    }
+
+    @Test
+    void findings_timeoutOfExactlyAnHour_isAccepted() {
+        assertThat(officeLm().withRequestSeconds("3600").findings()).isEmpty();
+    }
+
+    // IF a header name with a space or a colon could be saved, THEN every request would fail as a transport error.
+    @ParameterizedTest
+    @ValueSource(strings = {"X Team", "X-Team:"})
+    void findings_headerNameNotAToken_blocksNamingIt(final String name) {
+        final ProviderDraft draft = officeLm().withHeaders(List.of(new ProviderDraft.HeaderRow(name, "blue")));
+
+        assertThat(draft.findings())
+                .containsExactly(new ProviderDraft.FormFinding(
+                        MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID,
+                        List.of(name),
+                        ProviderDraft.Field.HEADERS,
+                        true));
+    }
+
+    @Test
+    void findings_keyHeaderNameWithASpace_blocksOnTheKeyHeaderField() {
+        final ProviderDraft draft = officeLm()
+                .withAuth(ProviderAuth.API_KEY)
+                .withCredentialRef("LMS_KEY")
+                .withApiKeyHeader("X Api Key");
+
+        assertThat(draft.findings())
+                .containsExactly(new ProviderDraft.FormFinding(
+                        MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID,
+                        List.of("X Api Key"),
+                        ProviderDraft.Field.KEY_HEADER,
+                        true));
+    }
+
     @Test
     void findings_blankName_blocksOnTheNameField() {
         assertThat(officeLm().withName("  ").findings())

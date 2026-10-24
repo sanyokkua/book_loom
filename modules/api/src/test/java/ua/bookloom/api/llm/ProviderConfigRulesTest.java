@@ -92,6 +92,61 @@ class ProviderConfigRulesTest {
         assertThat(ProviderConfigRules.check(config).isValid()).isEqualTo(accepted);
     }
 
+    // IF a header name with a space or a colon could be saved, THEN every request would fail as a transport error.
+    @ParameterizedTest
+    @ValueSource(strings = {"X Trace", "X-Trace:", "X-Tr\u0001ace", "Tráce"})
+    void findings_customHeaderNameNotAToken_isHeaderNameInvalid(final String name) {
+        final ProviderConfig config =
+                config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE).withHeaders(Map.of(name, "abc"));
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.HEADER_NAME_INVALID);
+    }
+
+    @Test
+    void check_customHeaderNameOfTokenCharacters_isValid() {
+        final ProviderConfig config =
+                config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE).withHeaders(Map.of("X-Trace_2.v~", "abc"));
+
+        assertThat(ProviderConfigRules.check(config).isValid()).isTrue();
+    }
+
+    @Test
+    void findings_apiKeyHeaderWithASpace_isApiKeyHeaderInvalid() {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.API_KEY)
+                .withCredentialRef("LMS_KEY")
+                .withApiKeyHeader("X Api Key");
+
+        assertThat(ProviderConfigRules.check(config).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.API_KEY_HEADER_INVALID);
+    }
+
+    // IF a timeout of years could be saved, THEN the request's timeout would overflow when the call is made.
+    @ParameterizedTest
+    @CsvSource({"3601,10", "10,3601", "10,9223372036"})
+    void findings_timeoutOverAnHour_isTimeoutTooLong(final long connect, final long request) {
+        assertThat(ProviderConfigRules.check(timed(connect, request)).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(ProviderConfigRules.Rule.TIMEOUT_TOO_LONG);
+    }
+
+    @Test
+    void check_timeoutsOfExactlyAnHour_areValid() {
+        assertThat(ProviderConfigRules.check(timed(3600, 3600)).isValid()).isTrue();
+    }
+
+    private static ProviderConfig timed(final long connect, final long request) {
+        return new ProviderConfig(
+                "p",
+                ProviderKind.OLLAMA,
+                URI.create("http://localhost:11434"),
+                Duration.ofSeconds(connect),
+                Duration.ofSeconds(request));
+    }
+
     @Test
     void check_refusedHeader_doesNotEchoTheValue() {
         final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)

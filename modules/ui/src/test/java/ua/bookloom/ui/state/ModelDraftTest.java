@@ -129,6 +129,39 @@ class ModelDraftTest {
         assertThat(draft.findings()).containsExactly(MessageKey.SETTINGS_MODELS_ERROR_NUMBER);
     }
 
+    // IF a window of a few tokens or of billions could be saved, THEN every call would overflow or ask the server for
+    // memory it does not have.
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "511", "1048577", "2000000000"})
+    void findings_contextOutsideItsRange_isContextRange(final String text) {
+        final ModelDraft draft = ModelDraft.of(DEFAULTS).withContext(true, text, null);
+
+        assertThat(draft.findings()).containsExactly(MessageKey.SETTINGS_MODELS_ERROR_CONTEXT_RANGE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"512", "1048576"})
+    void findings_contextAtTheEdgesOfItsRange_none(final String text) {
+        assertThat(ModelDraft.of(DEFAULTS).withContext(true, text, null).findings())
+                .isEmpty();
+    }
+
+    // IF the answer cap could exceed the window, THEN the server would refuse or cut every call.
+    @Test
+    void findings_limitLargerThanTheWindow_isLimitOverWindow() {
+        final ModelDraft draft =
+                ModelDraft.of(DEFAULTS).withContext(true, "8192", null).withLimit(true, "8193");
+
+        assertThat(draft.findings()).containsExactly(MessageKey.SETTINGS_MODELS_ERROR_LIMIT_OVER_WINDOW);
+    }
+
+    @Test
+    void findings_limitLargerThanTheLargestWindowWithTheWindowOff_isLimitOverWindow() {
+        final ModelDraft draft = ModelDraft.of(DEFAULTS).withLimit(true, "1048577");
+
+        assertThat(draft.findings()).containsExactly(MessageKey.SETTINGS_MODELS_ERROR_LIMIT_OVER_WINDOW);
+    }
+
     @Test
     void findings_wholePositiveNumbersWithSpaces_none() {
         final ModelDraft draft =

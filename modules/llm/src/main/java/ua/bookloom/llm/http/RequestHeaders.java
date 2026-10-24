@@ -45,7 +45,8 @@ public final class RequestHeaders {
      * @param config the provider description
      * @param env looks up an environment variable; a null or blank answer counts as unset
      * @return the headers in send order, or {@code missingCredential} naming the unset variable, or
-     *     {@code validation} naming a header whose name is restricted or whose value holds a control character
+     *     {@code validation} naming a header whose name is restricted or not a valid header name, or whose value holds
+     *     a control character
      */
     public static Result<Map<String, String>> resolve(ProviderConfig config, Function<String, @Nullable String> env) {
         Objects.requireNonNull(config, "config");
@@ -101,6 +102,9 @@ public final class RequestHeaders {
             return Result.err(Objects.requireNonNull(key.error(), "error"));
         }
         final String name = config.auth() == ProviderAuth.BEARER ? AUTHORIZATION : headerName(config);
+        if (!isHeaderName(name)) {
+            return Result.err(validation("The key header name " + name.strip() + " is not a valid header name."));
+        }
         final String value = config.auth() == ProviderAuth.BEARER ? "Bearer " + key.data() : key.data();
         final Result<String> checked = checkedValue(name, Objects.requireNonNull(value, "value"));
         if (checked.isErr()) {
@@ -115,6 +119,9 @@ public final class RequestHeaders {
     }
 
     private static Result<String> customValue(String name, String template, Function<String, @Nullable String> env) {
+        if (!isHeaderName(name)) {
+            return Result.err(validation("The header name " + name.strip() + " is not a valid header name."));
+        }
         if (RESTRICTED.contains(name.toLowerCase(Locale.ROOT))) {
             log.warn("Request header refused because its name is restricted header={}", name);
             return Result.err(validation("The header " + name + " is set by the client and cannot be overridden."));
@@ -130,6 +137,15 @@ public final class RequestHeaders {
         }
         matcher.appendTail(resolved);
         return checkedValue(name, resolved.toString());
+    }
+
+    // A name with a space, a colon or a control character would make the HTTP client throw at send time.
+    private static boolean isHeaderName(String name) {
+        final boolean valid = ProviderConfigRules.HEADER_NAME.matcher(name).matches();
+        if (!valid) {
+            log.warn("Request header refused because its name is not a valid header name header={}", name.strip());
+        }
+        return valid;
     }
 
     private static Result<String> lookup(String variable, Function<String, @Nullable String> env) {
