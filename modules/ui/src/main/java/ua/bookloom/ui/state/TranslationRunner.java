@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -129,6 +130,18 @@ public final class TranslationRunner {
         } catch (Throwable cause) {
             return abandon(run, cause);
         }
+    }
+
+    /**
+     * The provider the active run translates with, running or paused.
+     *
+     * @return the provider's id if a run is active, or empty if none is
+     */
+    public Optional<String> activeProviderId() {
+        final ActiveRun run = active.get();
+        return run == null
+                ? Optional.empty()
+                : Optional.of(run.context().selection().providerId());
     }
 
     /** Publishes that a pause is pending, then asks the job to pause; the paused state waits for the engine. */

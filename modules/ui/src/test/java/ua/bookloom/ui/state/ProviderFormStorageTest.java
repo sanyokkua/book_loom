@@ -88,6 +88,21 @@ class ProviderFormStorageTest extends ProviderFormTestBase {
         assertThat(ran).isEmpty();
     }
 
+    // IF the provider went first, THEN a reported failure would hide that it was in fact deleted.
+    @Test
+    void delete_modelSettingsCannotBeRead_keepsTheProviderStored() {
+        modelSettings.failListing();
+        final ProviderForm form = form(viewModel());
+
+        onFx(() -> {
+            form.delete("lmstudio", () -> {});
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(configs.find("lmstudio")).isPresent();
+    }
+
     // IF a store failure dropped the typing, THEN the person would have to type it all again.
     @Test
     void save_storeFails_keepsTheDraftFlagsTheFailureAndDoesNotRunThen() {

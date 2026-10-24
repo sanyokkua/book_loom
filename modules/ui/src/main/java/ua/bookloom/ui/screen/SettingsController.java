@@ -30,6 +30,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.ProviderForm;
+import ua.bookloom.ui.state.ProviderInUse;
 import ua.bookloom.ui.state.ProviderRow;
 import ua.bookloom.ui.state.ProviderSwitch;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -54,6 +55,7 @@ public final class SettingsController {
     private final ActivityTracker activities;
     private final SettingsTabGuard guard;
     private final SettingsTabEntries tabEntries;
+    private final ProviderInUse inUse;
     private ProviderRowList rowList;
     private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
     private final ChangeListener<String> onSelection = (observed, was, now) -> rowList.mark();
@@ -127,6 +129,7 @@ public final class SettingsController {
      * @param activities the model work under way, which keeps the provider in use from being deleted
      * @param guard asks before a move would drop typing
      * @param tabEntries what entering a tab reads again
+     * @param inUse whether the open provider is the one the translation run uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -140,7 +143,8 @@ public final class SettingsController {
             final ProviderSwitch providerSwitch,
             final ActivityTracker activities,
             final SettingsTabGuard guard,
-            final SettingsTabEntries tabEntries) {
+            final SettingsTabEntries tabEntries,
+            final ProviderInUse inUse) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -150,6 +154,7 @@ public final class SettingsController {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.tabEntries = Objects.requireNonNull(tabEntries, "tabEntries");
+        this.inUse = Objects.requireNonNull(inUse, "inUse");
     }
 
     @FXML
@@ -249,20 +254,24 @@ public final class SettingsController {
         deleteReason.managedProperty().bind(busy);
     }
 
-    // Model work is under way and the open provider is the one it uses.
+    // Model work is under way and the open provider is the one it uses, or a run, even a paused one, uses it.
     private BooleanBinding busyOnCurrent() {
         final ObjectBinding<ActivityKind> blocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
+        final BooleanBinding usedByRun = inUse.byRun(viewModel.editedProviderId());
         return Bindings.createBooleanBinding(
-                () -> blocker.get() != null
-                        && !viewModel.adding().get()
-                        && viewModel
-                                .editedProviderId()
-                                .get()
-                                .equals(viewModel.selectedProviderId().get()),
+                () -> !viewModel.adding().get() && (usedByRun.get() || (blocker.get() != null && isEditingCurrent())),
                 blocker,
+                usedByRun,
                 viewModel.adding(),
                 viewModel.editedProviderId(),
                 viewModel.selectedProviderId());
+    }
+
+    private boolean isEditingCurrent() {
+        return viewModel
+                .editedProviderId()
+                .get()
+                .equals(viewModel.selectedProviderId().get());
     }
 
     private void bindEmptyState() {

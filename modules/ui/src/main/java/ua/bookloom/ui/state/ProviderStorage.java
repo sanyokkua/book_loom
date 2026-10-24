@@ -60,16 +60,16 @@ final class ProviderStorage {
         return Result.ok(true);
     }
 
-    /** Deletes the provider, its per-model settings and, for the current one, the current model; {@code false} if any step failed. */
+    /**
+     * Deletes the provider's per-model settings, then the provider, then, for the current one, the current model. The
+     * provider goes last, so {@code false} always means it is still stored; a current model left behind after the
+     * provider is gone points at nothing and is only logged.
+     */
     boolean remove(final String id, final boolean current) {
-        if (configs.delete(id).isErr()) {
-            log.warn("provider '{}' could not be deleted", id);
-            return false;
-        }
         final Result<List<ModelSettings>> all = modelSettings.all();
         final List<ModelSettings> rows = all.data();
         if (all.isErr() || rows == null) {
-            log.warn("the per-model settings of provider '{}' could not be read", id);
+            log.warn("the per-model settings of provider '{}' could not be read: it is kept", id);
             return false;
         }
         final long failed = rows.stream()
@@ -78,13 +78,17 @@ final class ProviderStorage {
                         modelSettings.delete(row.providerId(), row.modelId()).isErr())
                 .count();
         if (failed > 0) {
-            log.warn("{} per-model setting(s) of provider '{}' could not be deleted", failed, id);
+            log.warn("{} per-model setting(s) of provider '{}' could not be deleted: it is kept", failed, id);
+            return false;
+        }
+        if (configs.delete(id).isErr()) {
+            log.warn("provider '{}' could not be deleted", id);
             return false;
         }
         if (current && settings.remove(AppSetting.CURRENT_MODEL).isErr()) {
-            log.warn("the current model of deleted provider '{}' could not be removed", id);
-            return false;
+            log.warn("the current model of deleted provider '{}' could not be removed; it points at nothing", id);
         }
+        log.debug("provider '{}' deleted, current {}", id, current);
         return true;
     }
 }
