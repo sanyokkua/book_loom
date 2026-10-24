@@ -146,15 +146,22 @@ final class ProjectsEmptyView {
     }
 
     private void showNone() {
-        log.debug("model line: no model found");
-        final Label help = new Label(messages.get(MessageKey.PROJECTS_MODEL_NONE_HELP));
+        final boolean declined = probe.outcome().get() instanceof ProbeOutcome.Declined;
+        log.debug("model line: no model chosen, a program answered {}", declined);
+        final Label help = new Label(
+                messages.get(declined ? MessageKey.PROJECTS_MODEL_DECLINED_HELP : MessageKey.PROJECTS_MODEL_NONE_HELP));
         help.setWrapText(true);
         help.getStyleClass().add("banner-text");
         final Button other = settingsButton(
                 MessageKey.PROJECTS_MODEL_OTHER_PROGRAM, MessageKey.PROJECTS_MODEL_OTHER_PROGRAM_TIP, "btn-ghost");
         other.setId("projects-empty-other");
         other.setMaxWidth(Region.USE_PREF_SIZE);
-        final VBox words = new VBox(NONE_SPACING, title(messages.get(MessageKey.NAV_FOOTER_NO_MODEL)), help, other);
+        final VBox words = new VBox(
+                NONE_SPACING,
+                title(messages.get(
+                        declined ? MessageKey.PROJECTS_MODEL_DECLINED_TITLE : MessageKey.NAV_FOOTER_NO_MODEL)),
+                help,
+                other);
         words.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(words, Priority.ALWAYS);
         modelLine.getChildren().addAll(words, tryAgain(false));

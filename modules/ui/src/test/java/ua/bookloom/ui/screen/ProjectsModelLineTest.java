@@ -146,9 +146,10 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 .isEqualTo(ViewNames.SETTINGS);
     }
 
-    // IF dismissing the question left the card on "Looking…", THEN the person could neither retry nor go on.
+    // IF dismissing the question left the card on "Looking…", THEN the person could neither retry nor go on; IF it said
+    // the program was closed, THEN it would contradict the models the program just listed.
     @Test
-    void emptyCard_severalModelsAndNotNow_showsTheNotFoundLineAndTryAgainAsksAgain() throws Exception {
+    void emptyCard_severalModelsAndNotNow_saysAProgramAnsweredAndTryAgainAsksAgain() throws Exception {
         catalog.answering(OLLAMA, "gemma4:e4b", "qwen3:8b");
         showEmptyListing();
         onFx(() -> probe().runFirstLaunch());
@@ -156,7 +157,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
 
         onFx(pick::notNow);
 
-        awaitCardContains("No AI model found");
+        awaitCardContains("No AI model chosen yet");
+        assertThat(textOf(CARD)).contains("An AI program answered").doesNotContain("is not open");
         press("projects-empty-tryagain");
         ImportScreenTestBase.awaitFx(() -> pick.asked().size() == 2);
         assertThat(pick.asked().get(1).modelIds()).containsExactly("gemma4:e4b", "qwen3:8b");

@@ -196,6 +196,22 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
         assertThat(scene.getRoot().lookup("#provider-row-lmstudio")).isNotNull();
     }
 
+    // IF the heading kept its placeholder, THEN the question would not say which provider is about to go.
+    @Test
+    void delete_question_headingAndTextNameTheProvider() {
+        openSettings();
+        onFx(() -> viewModel().editProvider("lmstudio"));
+
+        onFx(() -> button("settings-provider-delete").fire());
+
+        assertThat(scene.getRoot().lookup("#confirm-card .dialog-title"))
+                .isInstanceOfSatisfying(
+                        javafx.scene.control.Label.class,
+                        title -> assertThat(title.getText())
+                                .doesNotContain("{0}")
+                                .contains("LM Studio"));
+    }
+
     @Test
     void delete_questionConfirmed_removesTheProviderAndItsRow() throws TimeoutException {
         openSettings();

@@ -351,7 +351,7 @@ tense for "you".
 | Suggest with model | "✦ Fill in from the book" | — |
 | Foreign-language passages | "Text in other languages" | — |
 | passages (brief samples) | "samples" ("3 of 4 samples agree") | — |
-| Transliterate | "Spell in Ukrainian letters" (by target language) | — |
+| Transliterate | "Spell in the target alphabet" | — |
 | Image alt-text, navigation labels, front matter | "Picture descriptions", "Table of contents and chapter titles", "Copyright and edition notes" | — |
 | consistency pass, canonical-equal, round trip | "Last check before saving", "checked: opens, nothing missing" | technical line on Import |
 | BOOKLOOM_* and wire names in hints | the plain label first; the wire name in grey (`num_ctx`) only in Advanced | — |
@@ -518,7 +518,7 @@ language more than once, for example with another model, quality or thinking set
 | While translating | Read-only, with the banner "Pause the translation to change the brief." [Pause] (I) | new |
 | Languages | **Translate from** (Find out from the text (the model reads a sample) · a language · Other) with "The book's details say English. “Find out from the text” lets the model name it while filling in the brief." — the language comes from the file's marks or from the model (ADR-0042), never from a local detector · **Translate into** · **Project name** line ("automatic — follows the languages", Rename…). A used pair opens Same language pair. Locked once translating has started | `BriefLanguagesCard` |
 | Tone & style | Genre and Who reads it (each with "Suggested from the book · why ›", which opens the brief dialog), Register, Voice and period notes, Who tells the story (Unknown · “I” · “He / she”, short so a `SegmentedButton` fits in `uk`), Narrator's gender (asked at Start for a first-person story); **✦ Fill in from the book** | `BriefToneCard`, `BriefEvidenceRow`, `NarratorNotice`, `StyleSuggestion` |
-| How to translate | Names of people and places (Translate · Spell in Ukrainian letters · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
+| How to translate | Names of people and places (Translate · Spell in the target alphabet · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
 | Also translate | Table of contents and chapter titles · Picture descriptions · The book's title and author · Copyright and edition notes (off) | `BriefAlsoCard` |
 | Quality and speed | Fast · Balanced · Max quality; one line on what the choice does and its relative cost; "For this book on this computer: about 2 h 30 min (estimate from the model test)" **only when measured** (G10.5); the AI-model line with "change" | `BriefQualityCard` |
 

@@ -87,12 +87,26 @@ class VocabularyTest {
                 "review.retry|en|↻ Try again",
                 "error.retry|en|Try again",
                 "settings.models.refused.send|en|Try again now",
-                "brief.option.transliterate|en|Spell in Ukrainian letters",
+                "brief.option.transliterate|en|Spell in the target alphabet",
                 "brief.suggest|en|✦ Fill in from the book",
                 "brief.policy.foreign|en|Text in other languages",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);
+    }
+
+    // IF the quit questions still said nothing survives a restart, THEN they would contradict Continue after restart.
+    @ParameterizedTest
+    @CsvSource({
+        "en, confirm.quit.text, restart yet",
+        "en, confirm.quitUnexported.text, restart yet",
+        "en, confirm.quitUnexported.yes.tip, is lost",
+        "uk, confirm.quit.text, поки що нічого не зберігається",
+        "uk, confirm.quitUnexported.text, поки що нічого не зберігається",
+        "uk, confirm.quitUnexported.yes.tip, буде втрачено",
+    })
+    void quitQuestions_progressIsSaved_noStaleLossClaim(final String language, final String key, final String stale) {
+        assertThat(Catalogues.load(language).get(key)).doesNotContain(stale);
     }
 
     @ParameterizedTest

@@ -33,7 +33,7 @@ class LocalModelProbePickTest extends LocalModelProbeTestBase {
     }
 
     @Test
-    void pick_notNow_leavesTheCurrentModelUnsetAndSaysNotFound() {
+    void pick_notNow_leavesTheCurrentModelUnsetAndSaysDeclined() {
         catalog.answering(OLLAMA, "gemma4:e4b", "qwen3:8b");
         final LocalModelProbe probe = probe();
         firstLaunch(probe);
@@ -46,7 +46,7 @@ class LocalModelProbePickTest extends LocalModelProbeTestBase {
 
         assertThat(storedModel()).isEmpty();
         assertThat(onFx(() -> viewModel.selection())).isEmpty();
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.Declined());
     }
 
     // IF the look ignored an unreadable flag and looked anyway, THEN a damaged store would make it repeat each launch.

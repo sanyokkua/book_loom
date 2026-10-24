@@ -334,7 +334,8 @@ public final class SettingsController {
         final String id = viewModel.editedProviderId().get();
         final String name = viewModel.providerName(id);
         log.debug("delete of provider '{}' asked", id);
-        confirm.ask(ConfirmDialog.Question.DELETE_PROVIDER, List.of(name), () -> form.delete(id, () -> {}));
+        confirm.ask(
+                ConfirmDialog.Question.DELETE_PROVIDER, List.of(name), List.of(name), () -> form.delete(id, () -> {}));
     }
 
     private void onFocusRequested(final ProviderForm.Spot spot) {

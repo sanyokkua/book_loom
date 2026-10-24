@@ -239,7 +239,7 @@ public final class LocalModelProbe {
                 modelId -> executor.execute(() -> pickedModel(new ModelSelection(providerId, modelId), atFirstLaunch)),
                 () -> {
                     log.info("model pick declined: no current model is set");
-                    outcome.set(new ProbeOutcome.NotFound());
+                    outcome.set(new ProbeOutcome.Declined());
                 });
     }
 

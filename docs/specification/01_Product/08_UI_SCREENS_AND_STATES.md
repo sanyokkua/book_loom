@@ -299,7 +299,7 @@ caption — one piece of the book's text." Main screens use the right-hand words
 review" for flagged (buttons "Review (6)"), "worth a second look" for suspicious, "translated / fixed automatically /
 left" for auto-accepted / repaired & accepted / remaining, "translated again alone" for fell back, "translation /
 translating" for run, **"Try again now"** for Retry / Send again / Retry now, "Skip these 4 segments" (always the count),
-"✦ Fill in from the book" for Suggest with model, "Text in other languages", "samples", "Spell in Ukrainian letters"
+"✦ Fill in from the book" for Suggest with model, "Text in other languages", "samples", "Spell in the target alphabet"
 (by target language), "Picture descriptions", "Table of contents and chapter titles", "Copyright and edition notes",
 "Last check before saving". The **Glossary**, **Recurring terms**, **Scan · Review · Translate** and **Locked** keep the
 owner's names (15i.U5). Ukrainian follows the same rules: one idea per sentence, ICU plurals for every count, no
@@ -466,7 +466,7 @@ Import) instead of the form.
 | While translating | Read-only, with the banner "Pause the translation to change the brief. Changes apply to segments not translated yet." [Pause] (the engine rereads the brief's switches only at resume, and tone and style are not proven to be rederived) | `BriefView` |
 | Languages | **Translate from** (Find out from the text · a language · Other) with "The book says English" · **Translate into** · **Project name** line ("automatic — follows the languages", Rename…). A used pair opens Same language pair (`#project-names`). **Locked once translating has started** ("To translate into another language, use Translate into another language on Projects") | `BriefLanguagesCard` |
 | Tone & style | Genre and Who reads it (each with "Suggested from the book · why ›", which opens the brief dialog), Register, Voice and period notes, Who tells the story, Narrator's gender (asked at Start for a first-person story); **✦ Fill in from the book** | `BriefToneCard`, `BriefEvidenceRow`, `NarratorNotice`, `StyleSuggestion` |
-| How to translate | Names of people and places (Translate · Spell in Ukrainian letters · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
+| How to translate | Names of people and places (Translate · Spell in the target alphabet · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
 | Also translate | Table of contents and chapter titles · Picture descriptions · The book's title and author · Copyright and edition notes (off) | `BriefAlsoCard` |
 | Quality and speed | Fast · Balanced · Max quality; one line on what the choice does and its relative cost; "For this book on this computer: about 2 h 30 min (estimate from the model test)" **only when measured** (G10); the AI-model line with "change" | `BriefQualityCard` |
 

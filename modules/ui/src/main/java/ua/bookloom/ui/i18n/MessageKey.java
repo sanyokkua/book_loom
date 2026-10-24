@@ -3043,6 +3043,10 @@ public enum MessageKey {
     PROJECTS_MODEL_READY_FOUND("projects.model.readyFound"),
     /** Help under the model line when no AI program answered. */
     PROJECTS_MODEL_NONE_HELP("projects.model.noneHelp"),
+    /** Heading of the model line when a program answered and the person chose no model yet. */
+    PROJECTS_MODEL_DECLINED_TITLE("projects.model.declinedTitle"),
+    /** Help under that heading: a program answered, no model is chosen. */
+    PROJECTS_MODEL_DECLINED_HELP("projects.model.declinedHelp"),
     /** Button that looks again for a local AI program. */
     PROJECTS_MODEL_TRY_AGAIN("projects.model.tryAgain"),
     /** Hover explanation of the control labelled by {@link #PROJECTS_MODEL_TRY_AGAIN}. */

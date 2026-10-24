@@ -30,6 +30,9 @@ public sealed interface ProbeOutcome {
     /** Several models were found and the person is being asked which to use. */
     record Asking() implements ProbeOutcome {}
 
-    /** Nothing usable answered, or the person declined to pick. */
+    /** A program answered with several models and the person chose none of them for now. */
+    record Declined() implements ProbeOutcome {}
+
+    /** Nothing usable answered. */
     record NotFound() implements ProbeOutcome {}
 }
