@@ -389,7 +389,7 @@ public final class ReviewViewModel {
         availability.refresh(selected.get(), editor.dirty().get());
         mainAction.set(ReviewMainAction.of(
                 editor.changed().getValue(),
-                editor.marks().getValue().isComplete(),
+                editor.marks().getValue().isComplete() && !editor.blank().getValue(),
                 availability.actions().get(),
                 availability.accept().get()));
     }

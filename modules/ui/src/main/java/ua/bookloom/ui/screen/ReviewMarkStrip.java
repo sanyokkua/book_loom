@@ -11,7 +11,7 @@ import ua.bookloom.ui.state.ReviewEditor;
 
 /**
  * The line under the translation editor that says what the formatting marks are for and, while one is missing or
- * doubled, which one and what to do. It follows the editor's status and holds no state of its own; nothing is logged
+ * doubled, which one and what to do; while the text is blank it says Save waits for words. It follows the editor's status and holds no state of its own; nothing is logged
  * because it is rewritten on every keystroke.
  */
 final class ReviewMarkStrip extends Label {
@@ -32,16 +32,24 @@ final class ReviewMarkStrip extends Label {
         setMaxWidth(Double.MAX_VALUE);
         textProperty()
                 .bind(Bindings.createStringBinding(
-                        () -> wording(
-                                editor.sourceMarks().getValue(), editor.marks().getValue()),
+                        () -> editor.blank().getValue()
+                                ? messages.get(MessageKey.REVIEW_EDIT_BLANK)
+                                : wording(
+                                        editor.sourceMarks().getValue(),
+                                        editor.marks().getValue()),
                         editor.sourceMarks(),
-                        editor.marks()));
-        editor.marks().addListener((observed, was, now) -> showProblem(now));
-        showProblem(editor.marks().getValue());
+                        editor.marks(),
+                        editor.blank()));
+        editor.marks()
+                .addListener(
+                        (observed, was, now) -> showProblem(now, editor.blank().getValue()));
+        editor.blank()
+                .addListener((observed, was, now) -> showProblem(editor.marks().getValue(), now));
+        showProblem(editor.marks().getValue(), editor.blank().getValue());
     }
 
-    private void showProblem(final MarkStatus status) {
-        if (status.isComplete()) {
+    private void showProblem(final MarkStatus status, final boolean isBlank) {
+        if (status.isComplete() && !isBlank) {
             getStyleClass().remove(PROBLEM);
         } else if (!getStyleClass().contains(PROBLEM)) {
             getStyleClass().add(PROBLEM);

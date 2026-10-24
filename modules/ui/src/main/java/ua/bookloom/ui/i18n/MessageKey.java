@@ -2641,6 +2641,8 @@ public enum MessageKey {
     REVIEW_TARGET_REJECTED("review.target.rejected"),
     /** Note above the target of a segment that kept no translation at all, so its source is shown. */
     REVIEW_TARGET_SOURCE("review.target.source"),
+    /** The review editor's line while the edit is blank: Save waits for the translation's words. */
+    REVIEW_EDIT_BLANK("review.edit.blank"),
     /** Strip under the editor for a segment whose source holds no formatting marks. */
     REVIEW_MARKS_NONE("review.marks.none"),
     /** Strip under the editor while every mark is in place; argument 0 is the marks, space-separated. */

@@ -21,7 +21,7 @@ public record ReviewMainAction(MessageKey key, boolean enabled) {
      * The button for the editor and the actions as they stand. Logs nothing: it is worked out on every keystroke.
      *
      * @param changed whether the editor holds something Save my edit keeps
-     * @param complete whether every formatting mark is in place once
+     * @param complete whether the text can be stored: every formatting mark in place once, and not blank
      * @param actions whether the actions on the selected segment are offered
      * @param accept whether Accept is offered
      * @return Save my edit when there is something to save, enabled only while the actions are offered and no mark is

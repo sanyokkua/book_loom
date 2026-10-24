@@ -28,6 +28,7 @@ public final class ReviewEditor {
     private final ReadOnlyBooleanWrapper savable = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> targetNote = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper changed = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyBooleanWrapper blank = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<MarkStatus> marks =
             new ReadOnlyObjectWrapper<>(new MarkStatus(List.of(), List.of()));
     private final ReadOnlyObjectWrapper<List<String>> sourceMarks = new ReadOnlyObjectWrapper<>(List.of());
@@ -57,8 +58,8 @@ public final class ReviewEditor {
     }
 
     /**
-     * Whether Save my edit has something to save and can: a change or the model's refused reply, with every mark in
-     * place.
+     * Whether Save my edit has something to save and can: a change or the model's refused reply, not blank, with every
+     * mark in place.
      *
      * @return a read-only property; FX thread only
      */
@@ -82,6 +83,15 @@ public final class ReviewEditor {
      */
     public ObservableValue<Boolean> changed() {
         return changed.getReadOnlyProperty();
+    }
+
+    /**
+     * Whether the text is empty or only spaces, which Save never stores: it would export an empty paragraph.
+     *
+     * @return a read-only observable; FX thread only
+     */
+    public ObservableValue<Boolean> blank() {
+        return blank.getReadOnlyProperty();
     }
 
     /**
@@ -173,7 +183,9 @@ public final class ReviewEditor {
         // A segment with no translation saved as its own source would read as reviewed by the person: never offered.
         changed.set(dirty.get() || fromRejected);
         marks.set(MarkStatus.of(source, text.get()));
+        blank.set(text.get().isBlank());
         savable.set(changed.get()
+                && !blank.get()
                 && marks.get().isComplete()
                 && !(noTarget && text.get().equals(source)));
         onChange.run();

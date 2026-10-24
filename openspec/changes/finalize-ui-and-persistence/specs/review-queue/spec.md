@@ -237,6 +237,22 @@ IF a saved edit reaches the placeholder check with a formatting mark missing or 
 - **WHEN** REVISED `ch2 · p07` holds `Вона ⟦g0⟧пішла⟦g1⟧.` and a save of `Вона ⟦g0⟧пішла⟦g1⟧⟦g1⟧.` reaches the placeholder check
 - **THEN** it is refused with `ErrorCode.validation`, and `ch2 · p07` stays REVISED with `Вона ⟦g0⟧пішла⟦g1⟧.`
 
+### Requirement: Refuse and hold a blank edit
+
+IF the editor's text is empty or only spaces, THEN the desk SHALL keep the main button disabled and show under the editor "The edit is empty. Type the translation to save it, or choose Leave for later.", and a blank save that reaches the review desk by any path SHALL be refused with `ErrorCode.validation` with nothing stored.
+
+**Source**: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`. In plain words: a blank edit would export an empty paragraph where the book had text; leaving the segment for later is the way to put it off.
+
+#### Scenario: The editor is cleared
+
+- **WHEN** FLAGGED `ch5 · p12` holds `Гейл відчинив двері.` with no formatting marks and the person deletes all of it
+- **THEN** the main button is disabled and the line under the editor reads `The edit is empty. Type the translation to save it, or choose Leave for later.`
+
+#### Scenario: A blank save is refused
+
+- **WHEN** a save of `   ` for ACCEPTED `ch2 · p03` reaches the review desk
+- **THEN** it is refused with `ErrorCode.validation` and `ch2 · p03` keeps its stored translation
+
 ### Requirement: Name the formatting marks the editor lacks and hold the main button
 
 WHILE the editor lacks a formatting mark of the source or holds one twice, the desk SHALL show under it a line naming each such mark and what to do — "⟦0⟧ is missing — paste it back where the formatting ends." — and SHALL keep the main button disabled until every mark is present exactly once.

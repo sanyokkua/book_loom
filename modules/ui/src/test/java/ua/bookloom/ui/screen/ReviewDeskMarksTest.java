@@ -84,29 +84,25 @@ class ReviewDeskMarksTest extends ReviewDeskTestBase {
 
     @Test
     void strip_segmentWithoutMarks_saysSo() throws Exception {
-        final SegmentView base = ReviewDeskFixtures.firstToReview();
-        final SegmentView plain = new SegmentView(
-                base.segmentId(),
-                base.locator(),
-                base.kind(),
-                base.status(),
-                "Gale opened the door.",
-                "Gale opened the door.",
-                "Гейл відчинив двері.",
-                null,
-                null,
-                base.findings(),
-                base.judgeScore(),
-                base.path(),
-                base.reviewed(),
-                null,
-                null);
+        final SegmentView plain = plainSegment();
         useLocale(Locale.ENGLISH);
 
         openDeskWith(List.of(plain), List.of());
 
         assertThat(strip()).isEqualTo("No formatting marks in this segment.");
         assertThat(main().isDisabled()).isFalse();
+    }
+
+    // IF a blank edit could be saved, THEN the exported book would hold an empty paragraph where the text was.
+    @Test
+    void strip_plainEditCleared_saysItIsEmptyAndHoldsTheMainButton() throws Exception {
+        useLocale(Locale.ENGLISH);
+        openDeskWith(List.of(plainSegment()), List.of());
+
+        edit(0, "Гейл відчинив двері.".length(), "  ");
+
+        assertThat(strip()).isEqualTo("The edit is empty. Type the translation to save it, or choose Leave for later.");
+        assertThat(main().isDisabled()).isTrue();
     }
 
     // IF the Ukrainian wording were missing, THEN the strip would show a key name.
@@ -128,5 +124,25 @@ class ReviewDeskMarksTest extends ReviewDeskTestBase {
 
         assertThat(fx(() -> target().getScene().getRoot().lookup("#review-token-banner")))
                 .isNull();
+    }
+
+    private static SegmentView plainSegment() {
+        final SegmentView base = ReviewDeskFixtures.firstToReview();
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                "Gale opened the door.",
+                "Gale opened the door.",
+                "Гейл відчинив двері.",
+                null,
+                null,
+                base.findings(),
+                base.judgeScore(),
+                base.path(),
+                base.reviewed(),
+                null,
+                null);
     }
 }

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -138,6 +139,21 @@ class SegmentActionsTest {
         assertThat(record.machineTarget()).isEqualTo(MONSTER_TARGET);
         assertThat(record.path()).isEqualTo(SegmentPath.USER);
         assertThat(record.reviewed()).isTrue();
+    }
+
+    // IF a blank edit were saved, THEN the book would be exported with an empty paragraph where the text was.
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "\n\t "})
+    void saveEdit_blankText_isValidationAndChangesNothing(final String edit) {
+        final Desk desk = ReviewFixtures.epub(tempDir);
+        accept(desk, "ch02.xhtml:3", "Дощ ущух лише надвечір.");
+        final SegmentRecord before = stored(desk, "ch02.xhtml:3");
+
+        final Result<SegmentRecord> result = desk.actions().saveEdit(desk.projectId(), "ch02.xhtml:3", edit);
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(error(result).title()).isEqualTo("Cannot save the edit");
+        assertThat(stored(desk, "ch02.xhtml:3")).isEqualTo(before);
     }
 
     @Test
