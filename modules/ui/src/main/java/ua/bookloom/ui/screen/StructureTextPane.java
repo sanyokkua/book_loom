@@ -2,6 +2,9 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
@@ -15,7 +18,10 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureSegmentRow;
 
-/** The reading pane of the text browser: the picked segment in full, with a line saying what and where it is. */
+/**
+ * The reading pane of the text browser: the picked segment in full, with a line saying what and where it is; its
+ * token count and group only with Show technical details on.
+ */
 final class StructureTextPane extends VBox {
 
     private static final double SPACING = 8;
@@ -25,10 +31,15 @@ final class StructureTextPane extends VBox {
     private final Messages messages;
     private final Label meta = new Label();
     private final PlaceholderFlow text = new PlaceholderFlow("structure-preview-text");
+    private final ReadOnlyBooleanProperty technical;
+    private @Nullable StructureSegmentRow shownRow;
+    private final ChangeListener<Boolean> onTechnical = (observed, was, now) -> show(shownRow);
 
-    StructureTextPane(final Messages messages) {
+    StructureTextPane(final Messages messages, final ReadOnlyBooleanProperty technical) {
         super(SPACING);
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.technical = Objects.requireNonNull(technical, "technical");
+        technical.addListener(new WeakChangeListener<>(onTechnical));
         meta.setId("structure-preview-meta");
         meta.getStyleClass().add("muted");
         meta.setWrapText(true);
@@ -48,21 +59,24 @@ final class StructureTextPane extends VBox {
 
     /** Shows a segment in full, or the invitation to pick one when {@code row} is {@code null}. */
     void show(final @Nullable StructureSegmentRow row) {
+        shownRow = row;
         if (row == null) {
             meta.setText(messages.get(MessageKey.STRUCTURE_PREVIEW_EMPTY));
             text.show("", List.of());
             return;
         }
         final SegmentPreview preview = row.preview();
+        final String kind = messages.get(StructureKindLabels.of(preview.kind()));
+        if (!technical.get()) {
+            meta.setText(messages.get(MessageKey.STRUCTURE_PREVIEW_META_PLAIN, preview.locator(), kind));
+            text.show(preview.maskedSource(), List.of());
+            return;
+        }
         final String chunk = preview.chunkIndex() > 0
                 ? messages.get(MessageKey.STRUCTURE_PREVIEW_CHUNK, preview.chunkIndex(), preview.chunkCount())
                 : messages.get(MessageKey.STRUCTURE_PREVIEW_UNCHUNKED);
         final String caption = messages.get(
-                MessageKey.STRUCTURE_PREVIEW_META,
-                preview.locator(),
-                messages.get(StructureKindLabels.of(preview.kind())),
-                preview.tokenEstimate(),
-                chunk);
+                MessageKey.STRUCTURE_PREVIEW_META, preview.locator(), kind, preview.tokenEstimate(), chunk);
         meta.setText(
                 preview.oversized() ? caption + " · " + messages.get(MessageKey.STRUCTURE_PREVIEW_OVERSIZED) : caption);
         text.show(preview.maskedSource(), List.of());

@@ -146,6 +146,7 @@ final class ConformancePreparations {
         projects.onRoundTrip(Result.ok(new RoundTripReport(true, true, List.of(), 9, 9)));
         projects.onPlan(Result.ok(new BookPlan(Map.of("unit-0", 3), List.of("s-4"))));
         scriptSegments();
+        new ImportPreparations(injector, projects).showTechnicalLines();
         openABook();
         final StructureChecksViewModel checks = injector.getInstance(StructureChecksViewModel.class);
         WaitForAsyncUtils.waitFor(

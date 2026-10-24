@@ -44,6 +44,7 @@ import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
+import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
@@ -112,6 +113,7 @@ public final class ImportController {
      * @param brief the brief, whose finished save makes the segment listing stale
      * @param errors where a damaged file's Details shows the typed reason
      * @param projectsView the Projects list, searched for the book that is already stored
+     * @param technical the switch that shows the checks' technical lines, the token counts and the groups
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -130,7 +132,8 @@ public final class ImportController {
             final StructureSegmentsViewModel segments,
             final BookBriefViewModel brief,
             final ErrorPresenter errors,
-            final ProjectsViewModel projectsView) {
+            final ProjectsViewModel projectsView,
+            final TechnicalDetails technical) {
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -139,7 +142,8 @@ public final class ImportController {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.project = Objects.requireNonNull(project, "project");
-        this.bookView = new ImportBookView(messages, Objects.requireNonNull(names, "names"), checks, segments, brief);
+        this.bookView = new ImportBookView(
+                messages, Objects.requireNonNull(names, "names"), checks, segments, brief, technical.property());
         this.errors = Objects.requireNonNull(errors, "errors");
         this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
         this.verdictView = new ImportVerdictView(

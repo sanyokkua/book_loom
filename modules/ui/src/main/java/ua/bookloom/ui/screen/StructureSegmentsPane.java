@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
@@ -61,13 +62,20 @@ final class StructureSegmentsPane extends VBox {
     private final ComboBox<SegmentKind> kinds = new ComboBox<>();
     private final StructureTextPane reading;
     private final ChangeListener<StructureSegments> onState = (observed, was, now) -> show(now);
+    private final ReadOnlyBooleanProperty technical;
+    // The rows read the switch as they fill, so a change redraws them.
+    private final ChangeListener<Boolean> onTechnical = (observed, was, now) -> list.refresh();
     private boolean isLoaded;
     private boolean isRelisting;
     private @Nullable String pickedId;
 
     StructureSegmentsPane(
-            final StructureSegmentsViewModel model, final Messages messages, final StructureTextPane reading) {
+            final StructureSegmentsViewModel model,
+            final Messages messages,
+            final StructureTextPane reading,
+            final ReadOnlyBooleanProperty technical) {
         super(SPACING);
+        this.technical = Objects.requireNonNull(technical, "technical");
         Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.reading = Objects.requireNonNull(reading, "reading");
@@ -78,6 +86,7 @@ final class StructureSegmentsPane extends VBox {
         VBox.setVgrow(stack, Priority.ALWAYS);
         getChildren().addAll(header, filters(), stack);
         model.state().addListener(new WeakChangeListener<>(onState));
+        technical.addListener(new WeakChangeListener<>(onTechnical));
         show(model.state().get());
     }
 
@@ -114,7 +123,7 @@ final class StructureSegmentsPane extends VBox {
     private StackPane listStack() {
         list.setId("structure-segments");
         list.getStyleClass().add("structure-segments");
-        list.setCellFactory(view -> new StructureSegmentCell(messages, numbers));
+        list.setCellFactory(view -> new StructureSegmentCell(messages, numbers, technical));
         list.setMinHeight(MIN_ROWS * ROW_HEIGHT + FRAME);
         list.setPrefHeight(PREFERRED_ROWS * ROW_HEIGHT + FRAME);
         Tips.install(messages, list, MessageKey.STRUCTURE_SEGMENTS_HINT);

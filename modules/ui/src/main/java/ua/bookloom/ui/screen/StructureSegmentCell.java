@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.text.NumberFormat;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -17,7 +18,7 @@ import ua.bookloom.ui.state.StructureSegmentRow;
 
 /**
  * One row of the structure screen's segment list: locator, kind chip, the text on one ellipsised line, the kept chips,
- * the token estimate and the planned-chunk badge. Its nodes are made once per cell and only refilled as the cell is
+ * and, with Show technical details on, the token estimate and the planned-chunk badge. Its nodes are made once per cell and only refilled as the cell is
  * reused, and it logs nothing, because it is refreshed on every scroll.
  *
  * <p>The row has the list's one fixed height, so the text never wraps; the whole text is in the reading pane.
@@ -34,6 +35,7 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
 
     private final Messages messages;
     private final NumberFormat numbers;
+    private final ReadOnlyBooleanProperty technical;
     private final Label locator = new Label();
     private final Label kind = chip("structure-seg-kind", "chip-neutral");
     private final Label text = new Label();
@@ -43,9 +45,10 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
     private final Label chunk = chip("structure-seg-chunk", CHUNK_A);
     private final HBox line = new HBox(GAP, locator, kind, text, verbatim, source, tokens, chunk);
 
-    StructureSegmentCell(final Messages messages, final NumberFormat numbers) {
+    StructureSegmentCell(final Messages messages, final NumberFormat numbers, final ReadOnlyBooleanProperty technical) {
         this.messages = messages;
         this.numbers = numbers;
+        this.technical = technical;
         locator.getStyleClass().addAll("review-locator", "structure-seg-locator");
         locator.setMinWidth(LOCATOR_WIDTH);
         locator.setPrefWidth(LOCATOR_WIDTH);
@@ -88,6 +91,7 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
         kind.setText(messages.get(StructureKindLabels.of(preview.kind())));
         text.setText(preview.displaySource());
         tokens.setText(numbers.format(preview.tokenEstimate()));
+        shown(tokens, technical.get());
         shown(verbatim, preview.keptVerbatim());
         shown(source, preview.keptAsSource());
         showChunk(preview);
@@ -98,7 +102,7 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
     }
 
     private void showChunk(final SegmentPreview preview) {
-        final boolean chunked = preview.chunkIndex() > 0;
+        final boolean chunked = technical.get() && preview.chunkIndex() > 0;
         shown(chunk, chunked);
         if (!chunked) {
             return;

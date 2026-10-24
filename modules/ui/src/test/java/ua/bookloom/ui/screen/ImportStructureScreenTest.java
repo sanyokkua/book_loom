@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
@@ -13,6 +14,12 @@ import ua.bookloom.ui.state.StructureSegmentsViewModel;
  * replaced: picking a part in the tree lists its segments, picking a segment shows its text below the list.
  */
 class ImportStructureScreenTest extends ImportBookTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     // IF the tree were missing or out of order on Import, THEN the book's structure could not be checked there.
     @Test

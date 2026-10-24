@@ -1565,6 +1565,8 @@ public enum MessageKey {
     STRUCTURE_PREVIEW_HINT("structure.preview.hint"),
     /** The reading pane's caption; arguments: 0 locator, 1 kind, 2 token count (an Integer), 3 the chunk phrase. */
     STRUCTURE_PREVIEW_META("structure.preview.meta"),
+    /** The reading pane's line without the technical figures: 0 is the locator, 1 the kind. */
+    STRUCTURE_PREVIEW_META_PLAIN("structure.preview.metaPlain"),
     /** The chunk phrase of the reading pane's caption; arguments: 0 the chunk, 1 the chunk count, each an Integer. */
     STRUCTURE_PREVIEW_CHUNK("structure.preview.chunk"),
     /** The chunk phrase for a segment no chunk holds. */
@@ -1635,6 +1637,8 @@ public enum MessageKey {
     STRUCTURE_FORMAT_OTHER("structure.format.other"),
     /** The round-trip check has been asked for and has not answered. */
     STRUCTURE_CHECK_RUNNING("structure.check.running"),
+    /** The facts card's one plain line for a book whose round trip and identifiers both passed. */
+    STRUCTURE_CHECK_PLAIN("structure.check.plain"),
     /** The round-trip check found the structure and text preserved. */
     STRUCTURE_CHECK_PASSED("structure.check.passed"),
     /** The round-trip check found the structure changed. */

@@ -3,6 +3,7 @@ package ua.bookloom.ui.screen;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Priority;
@@ -44,18 +45,21 @@ final class ImportBookView {
     private final BookBriefViewModel brief;
     private final StructureBrowser browser;
     private final NumberFormat numbers;
+    private final ReadOnlyBooleanProperty technical;
 
     ImportBookView(
             final Messages messages,
             final LanguageNames names,
             final StructureChecksViewModel checks,
             final StructureSegmentsViewModel segments,
-            final BookBriefViewModel brief) {
+            final BookBriefViewModel brief,
+            final ReadOnlyBooleanProperty technical) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.names = Objects.requireNonNull(names, "names");
         this.checks = Objects.requireNonNull(checks, "checks");
         this.brief = Objects.requireNonNull(brief, "brief");
-        this.browser = new StructureBrowser(messages, segments, brief);
+        this.technical = Objects.requireNonNull(technical, "technical");
+        this.browser = new StructureBrowser(messages, segments, brief, technical);
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
     }
 
@@ -97,7 +101,7 @@ final class ImportBookView {
         final Label title = new Label(messages.get(MessageKey.IMPORT_FACTS_TITLE));
         title.setId("import-facts-title");
         title.getStyleClass().add("card-title");
-        final StructureChecksRows checkRows = new StructureChecksRows(checks, messages, numbers);
+        final StructureChecksRows checkRows = new StructureChecksRows(checks, messages, numbers, technical);
         final VBox section = new VBox(
                 SECTION_SPACING,
                 title,

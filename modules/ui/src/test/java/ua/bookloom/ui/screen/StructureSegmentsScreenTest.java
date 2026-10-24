@@ -14,6 +14,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Region;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
@@ -31,6 +32,12 @@ import ua.bookloom.ui.state.StructureSegmentRow;
  * chunk badges, picking a row shows its whole text, the filters narrow the list, and the rows have one fixed height.
  */
 class StructureSegmentsScreenTest extends StructureScreenTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final double ROW_HEIGHT = 34;
     private static final String LONG_TEXT =

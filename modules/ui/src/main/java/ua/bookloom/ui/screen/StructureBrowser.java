@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
@@ -50,14 +51,19 @@ final class StructureBrowser {
     private final NumberFormat numbers;
     private final StructureTextPane reading;
     private final ChangeListener<Boolean> onBriefSaved;
+    private final ReadOnlyBooleanProperty technical;
 
     StructureBrowser(
-            final Messages messages, final StructureSegmentsViewModel segments, final BookBriefViewModel brief) {
+            final Messages messages,
+            final StructureSegmentsViewModel segments,
+            final BookBriefViewModel brief,
+            final ReadOnlyBooleanProperty technical) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.segments = Objects.requireNonNull(segments, "segments");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
-        this.reading = new StructureTextPane(messages);
+        this.technical = Objects.requireNonNull(technical, "technical");
+        this.reading = new StructureTextPane(messages, technical);
         this.onBriefSaved = (observed, was, now) -> {
             if (was && !now) {
                 segments.refresh();
@@ -110,7 +116,8 @@ final class StructureBrowser {
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_SEGMENTS_TITLE));
         heading.getStyleClass().add("card-title");
         Tips.install(messages, heading, MessageKey.STRUCTURE_SEGMENTS_TITLE_TIP);
-        final VBox card = new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages, reading));
+        final VBox card =
+                new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages, reading, technical));
         card.setId("structure-segments-card");
         card.getStyleClass().add("card");
         card.setMinWidth(SEGMENTS_MIN_WIDTH);

@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Label;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -24,6 +25,12 @@ import ua.bookloom.ui.ThemeTestSupport;
  * owns every count the translation depends on and the checks, in one card. Each figure is shown by exactly one of them.
  */
 class ImportBookFactsTest extends ImportBookTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final List<String> DETAILS_ROWS =
             List.of("file", "format", "titleAuthor", "declaredLang", "chapters", "drm");

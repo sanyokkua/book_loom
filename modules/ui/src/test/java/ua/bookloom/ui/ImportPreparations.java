@@ -16,6 +16,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.TechnicalDetails;
 
 /** The import page's two states that need more than an answered import: a held read and a book already stored. */
 final class ImportPreparations {
@@ -28,6 +29,14 @@ final class ImportPreparations {
     ImportPreparations(final Injector injector, final ScriptedProjectService projects) {
         this.injector = injector;
         this.projects = projects;
+    }
+
+    /** Turns Show technical details on, which the group warning and the round-trip lines need to be shown. */
+    void showTechnicalLines() {
+        onFx(() -> {
+            injector.getInstance(TechnicalDetails.class).property().set(true);
+            return null;
+        });
     }
 
     // The service is held, so the page stays on "Reading…" with its bar and Cancel.

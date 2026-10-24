@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -30,6 +31,12 @@ import ua.bookloom.ui.ViewNames;
  * check ever holds back Continue.
  */
 class StructureChecksScreenTest extends StructureScreenTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final RoundTripReport FAITHFUL = new RoundTripReport(true, true, List.of(), 1240, 1240);
 

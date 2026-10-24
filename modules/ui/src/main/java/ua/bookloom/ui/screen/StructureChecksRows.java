@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Pos;
@@ -24,9 +25,10 @@ import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 
 /**
- * The rows that report the background checks: the round trip, the identifiers and, when a segment is larger than one
- * chunk, the warning that it will be split. A card of its own holds them on the structure screen; the facts card holds
- * them among the counts on the import screen.
+ * The rows that report the background checks among the counts of the import screen's facts card. By default a passed
+ * check is one plain line ("read and written back with nothing lost"); with Show technical details on, the round trip
+ * and the identifiers are each a line and a segment larger than one group adds the warning that it will be split. A
+ * failed or unavailable check is told in full in either case.
  *
  * <p>The rows redraw whenever the view model publishes, and hold the listener themselves, so that the weak
  * registration on the long-lived view model lets both go when the screen does. They never touch Continue: a check
@@ -42,14 +44,22 @@ final class StructureChecksRows extends VBox {
     private final StructureChecksViewModel checks;
     private final Messages messages;
     private final NumberFormat numbers;
+    private final ReadOnlyBooleanProperty technical;
     private final ChangeListener<StructureChecks> onChecks = (observed, was, now) -> render(now);
+    private final ChangeListener<Boolean> onTechnical = (observed, was, now) -> rerender();
 
-    StructureChecksRows(final StructureChecksViewModel checks, final Messages messages, final NumberFormat numbers) {
+    StructureChecksRows(
+            final StructureChecksViewModel checks,
+            final Messages messages,
+            final NumberFormat numbers,
+            final ReadOnlyBooleanProperty technical) {
         super(ROW_SPACING);
+        this.technical = Objects.requireNonNull(technical, "technical");
         this.checks = Objects.requireNonNull(checks, "checks");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.numbers = Objects.requireNonNull(numbers, "numbers");
         checks.state().addListener(new WeakChangeListener<>(onChecks));
+        technical.addListener(new WeakChangeListener<>(onTechnical));
         render(checks.state().get());
     }
 
@@ -79,8 +89,15 @@ final class StructureChecksRows extends VBox {
         return line;
     }
 
+    private void rerender() {
+        render(checks.state().get());
+    }
+
     private void render(final StructureChecks state) {
-        log.debug("rendering the structure checks: {}", state.getClass().getSimpleName());
+        log.debug(
+                "rendering the structure checks: {}, technical lines {}",
+                state.getClass().getSimpleName(),
+                technical.get() ? "shown" : "hidden");
         final List<Node> rows = new ArrayList<>();
         switch (state) {
             case StructureChecks.Running _ ->
@@ -92,15 +109,26 @@ final class StructureChecksRows extends VBox {
 
     private void addFinished(final List<Node> rows, final StructureChecks.Finished finished) {
         if (finished.hasReport()) {
-            final RoundTripReport report = finished.requiredReport();
-            rows.add(roundTripRow(report));
-            rows.add(idsRow(report));
+            addReport(rows, finished.requiredReport());
         } else {
             rows.add(row("structure-check-roundtrip", "!", StatusRole.WARNING, MessageKey.STRUCTURE_CHECK_UNAVAILABLE));
         }
-        if (finished.oversizedSegments() > 0) {
+        if (technical.get() && finished.oversizedSegments() > 0) {
             rows.add(warning(finished.oversizedSegments()));
         }
+    }
+
+    // A clean check is one plain line unless the technical lines are asked for; a failure is always told in full.
+    private void addReport(final List<Node> rows, final RoundTripReport report) {
+        final boolean clean = report.structurePreserved()
+                && report.idsPreserved()
+                && report.missingIds().isEmpty();
+        if (clean && !technical.get()) {
+            rows.add(row("structure-check-roundtrip", "✓", StatusRole.SUCCESS, MessageKey.STRUCTURE_CHECK_PLAIN));
+            return;
+        }
+        rows.add(roundTripRow(report));
+        rows.add(idsRow(report));
     }
 
     private Node roundTripRow(final RoundTripReport report) {
