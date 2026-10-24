@@ -156,6 +156,24 @@ class PersistenceModuleTest {
         assertThatThrownBy(() -> broken.getInstance(SqliteDatabase.class)).isInstanceOf(ProvisionException.class);
     }
 
+    // IF the typed failure were lost in Guice's wrapping, THEN the window could only crash instead of telling the
+    // person.
+    @Test
+    void sqlite_unopenableFolder_carriesTheTypedFailureForTheStartupMessage() {
+        final Injector broken = Guice.createInjector(
+                new SqlitePersistenceModule(dir.resolve("missing").resolve("bookloom.db"), Clock.systemUTC()));
+
+        assertThatThrownBy(() -> broken.getInstance(SqliteDatabase.class))
+                .satisfies(thrown -> assertThat(StorageOpenException.errorIn(thrown))
+                        .hasValueSatisfying(error -> assertThat(error.title()).isEqualTo("Storage not writable")));
+    }
+
+    @Test
+    void errorIn_unrelatedFailure_isEmpty() {
+        assertThat(StorageOpenException.errorIn(new IllegalStateException("other")))
+                .isEmpty();
+    }
+
     private Injector sqliteInjector() {
         return Guice.createInjector(new SqlitePersistenceModule(dir.resolve("bookloom.db"), Clock.systemUTC()));
     }

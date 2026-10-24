@@ -49,7 +49,7 @@ WHILE a dialog is open or model work is visible, the application SHALL show feed
 
 ### Requirement: Raise a transient message only on the occasions the application names
 
-The application SHALL raise a transient message only when a book is opened, a translation starts or finishes, a project's automatic name changes, a retry is refused, a model list cannot be read outside a dialog, a chosen book cannot be compared with the stored projects, hidden work finishes, or other model work is refused while work is hidden. Each occasion has its severity and wording in the scenarios.
+The application SHALL raise a transient message only when a book is opened, a translation starts or finishes, a project's automatic name changes, a retry is refused, a model list cannot be read outside a dialog, a chosen book cannot be compared with the stored projects, the stored work was set aside at launch, hidden work finishes, or other model work is refused while work is hidden. Each occasion has its severity and wording in the scenarios.
 
 **Source**: FR-NOTIF-01 (`docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md#toasts`), `docs/specification/mockups/README.md#g2--toasts-in-the-bottom-right-corner`, `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn`. In plain words: a message with no named caller is built, tested for its colour, and then raised from wherever a screen felt like. The list is closed. A provider test reports in its own dialog ("Report a dialog's own feedback in its footer"), so it raises no message. The old start message told a person to keep the application open because progress was lost on closing; progress is now saved as it goes, so it says so instead.
 
@@ -89,6 +89,11 @@ The application SHALL raise a transient message only when a book is opened, a tr
 
 - **WHEN** `earth-gravity.epub` is chosen and its content cannot be read to compare it with the stored projects
 - **THEN** one warning message `Could not check whether earth-gravity.epub is already stored` is raised and the book is opened anyway
+
+#### Scenario: Stored work set aside at launch
+
+- **WHEN** the application starts and has renamed an unreadable `bookloom.db` to `bookloom.db.old-20261020-091502`
+- **THEN** one warning message `Saved work could not be read` is raised naming `bookloom.db.old-20261020-091502`
 
 #### Scenario: A finished translation names how many need review
 

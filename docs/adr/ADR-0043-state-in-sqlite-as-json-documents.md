@@ -34,7 +34,8 @@ The owner asked for "the simplest schema, key/value, not overengineered" (2026-1
 - **No migrations before the first release.**
   - One schema file creates every table with `IF NOT EXISTS`, and `PRAGMA user_version` holds its number.
   - A database with another number, or one that cannot be opened, is renamed `bookloom.db.old-<yyyyMMdd-HHmmss>` and a fresh one
-    is created. That produces one WARN line, no dialog, and no data carried over.
+    is created. That produces one WARN line, no dialog, one warning message naming the renamed file, and no data
+    carried over. A file that is locked or cannot be written is never renamed: the start stops with a message.
   - The schema file is edited in place until release. Flyway, with additive migrations as ADR-0009 describes, arrives
     with the first release.
 - **One writer.**

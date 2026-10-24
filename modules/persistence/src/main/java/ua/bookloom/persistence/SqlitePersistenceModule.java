@@ -85,7 +85,7 @@ public final class SqlitePersistenceModule extends AbstractModule {
         final Result<SqliteDatabase> opened = SqliteDatabase.open(file, clock);
         if (opened.isErr()) {
             final AppError error = Objects.requireNonNull(opened.error());
-            throw new IllegalStateException("The database could not be opened: " + error.message(), error.cause());
+            throw new StorageOpenException(error);
         }
         return Objects.requireNonNull(opened.data());
     }

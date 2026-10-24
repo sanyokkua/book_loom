@@ -54,6 +54,16 @@ class SqliteStorageInfoTest {
     }
 
     @Test
+    void setAsideAtOpen_unreadableFileReplaced_namesTheFileItWasMovedTo() throws Exception {
+        db.close();
+        Files.writeString(dir.resolve("bookloom.db"), "not a database ".repeat(40));
+        db = Objects.requireNonNull(
+                SqliteDatabase.open(dir.resolve("bookloom.db"), CLOCK).data());
+
+        assertThat(new SqliteStorageInfo(db).setAsideAtOpen()).contains(dir.resolve("bookloom.db.old-20261020-101530"));
+    }
+
+    @Test
     void sizeBytes_isTheMainFilePlusTheWalFile() throws Exception {
         final Path main = dir.resolve("bookloom.db");
         final Path wal = dir.resolve("bookloom.db-wal");

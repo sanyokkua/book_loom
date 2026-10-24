@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
@@ -20,6 +22,8 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -225,6 +229,61 @@ class SqliteDatabaseTest {
         try (SqliteDatabase second = open()) {
             assertThat(dir.resolve("bookloom.db.old-20261020-101530")).exists();
             assertThat(second.read("tables", SqliteDatabaseTest::tables).data()).contains("segments");
+        }
+    }
+
+    // IF a newer build's file were set aside without a word, THEN the person would find an empty BookLoom and no
+    // reason.
+    @Test
+    void open_newerSchemaVersion_setsItAsideAndNamesTheFileItWasMovedTo() {
+        try (SqliteDatabase first = open()) {
+            first.write("mark", h -> h.execute("pragma user_version = " + (SqliteDatabase.SCHEMA_VERSION + 1)));
+        }
+        try (SqliteDatabase second = open()) {
+            assertThat(second.setAside()).hasValue(dir.resolve("bookloom.db.old-20261020-101530"));
+        }
+    }
+
+    @Test
+    void open_fittingFile_setsNothingAside() {
+        open().close();
+        try (SqliteDatabase second = open()) {
+            assertThat(second.setAside()).isEmpty();
+        }
+    }
+
+    // IF a file that cannot be written were set aside, THEN a permission problem would cost the person every project.
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void open_readOnlyFile_failsWithAStorageErrorAndKeepsTheFile() throws IOException {
+        open().close();
+        final Path file = dir.resolve("bookloom.db");
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("r--r--r--"));
+
+        final Result<SqliteDatabase> opened = SqliteDatabase.open(file, CLOCK);
+
+        assertThat(opened.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(opened.error()).message()).contains("cannot be written");
+        assertThat(dir.resolve("bookloom.db.old-20261020-101530")).doesNotExist();
+        assertThat(file).exists();
+    }
+
+    // IF a file another program holds locked were set aside, THEN the other program's open file would be moved away.
+    @Test
+    void open_fileLockedByAnotherConnection_failsAndKeepsTheFile() throws SQLException {
+        open().close();
+        final Path file = dir.resolve("bookloom.db");
+        try (Connection holder = DriverManager.getConnection("jdbc:sqlite:" + file);
+                var s = holder.createStatement()) {
+            s.execute("pragma locking_mode = exclusive");
+            s.execute("pragma journal_mode = delete");
+            s.execute("begin exclusive");
+
+            final Result<SqliteDatabase> opened = SqliteDatabase.open(file, CLOCK);
+
+            assertThat(opened.isErr()).isTrue();
+            assertThat(Objects.requireNonNull(opened.error()).message()).contains("in use");
+            assertThat(dir.resolve("bookloom.db.old-20261020-101530")).doesNotExist();
         }
     }
 

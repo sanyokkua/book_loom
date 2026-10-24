@@ -39,7 +39,7 @@ import ua.bookloom.api.AppError;
  * is genuinely hostile to booting a toolkit; the other two have a working home directory and show the dialog
  * normally.
  */
-final class StartupFailureDialog {
+public final class StartupFailureDialog {
 
     /** How long to wait for the user to dismiss the dialog before giving up and exiting anyway. */
     private static final long MAX_WAIT_SECONDS = 300L;
@@ -72,6 +72,23 @@ final class StartupFailureDialog {
     }
 
     /**
+     * Shows a failure found while the application starts, once the toolkit already runs (the database could not be
+     * opened in {@code init()}), and terminates the process. The same plain stage as before logging exists; only the
+     * way onto the FX thread differs, since {@link Platform#startup} refuses a running toolkit.
+     *
+     * @param error the failure to report; its title and message are user-facing, its details and cause are not
+     * @param exitCode the process's exit status, non-zero for a real failure
+     */
+    public static void showOnRunningToolkitAndExit(AppError error, int exitCode) {
+        Objects.requireNonNull(error, "error");
+        final CountDownLatch dismissed = new CountDownLatch(1);
+        Platform.runLater(() -> show(error, dismissed));
+        awaitDismissal(dismissed);
+        Platform.exit();
+        terminate(exitCode);
+    }
+
+    /**
      * Shows the failure in a plain {@link Stage}, and waits for the user to dismiss it.
      *
      * <p><strong>Not an {@code Alert}, and this was learned the hard way.</strong> {@code Alert} and {@code Dialog}
@@ -85,19 +102,21 @@ final class StartupFailureDialog {
      */
     private static void showBlocking(AppError error) {
         final CountDownLatch dismissed = new CountDownLatch(1);
-        Platform.startup(() -> {
-            final Stage stage = new Stage();
-            stage.setTitle(error.title());
-            stage.setScene(new Scene(content(error, stage)));
-            stage.setResizable(false);
-            // Dismissing via the window's close button must count as dismissal too, or a user who closes it that
-            // way leaves the process waiting out the full timeout for a window that is no longer there.
-            stage.setOnHidden(event -> dismissed.countDown());
-            stage.show();
-            stage.toFront();
-        });
+        Platform.startup(() -> show(error, dismissed));
         awaitDismissal(dismissed);
         Platform.exit();
+    }
+
+    private static void show(AppError error, CountDownLatch dismissed) {
+        final Stage stage = new Stage();
+        stage.setTitle(error.title());
+        stage.setScene(new Scene(content(error, stage)));
+        stage.setResizable(false);
+        // Dismissing via the window's close button must count as dismissal too, or a user who closes it that
+        // way leaves the process waiting out the full timeout for a window that is no longer there.
+        stage.setOnHidden(event -> dismissed.countDown());
+        stage.show();
+        stage.toFront();
     }
 
     /**

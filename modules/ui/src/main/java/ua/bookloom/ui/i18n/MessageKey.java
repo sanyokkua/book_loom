@@ -445,6 +445,8 @@ public enum MessageKey {
     TOAST_RUN_STARTED("toast.runStarted"),
     /** Transient message raised when a chosen file could not be compared with the stored projects; argument 0 is its name. */
     TOAST_IMPORT_UNCHECKED("toast.importUnchecked"),
+    /** Transient message raised when the stored work was moved aside at launch; argument 0 is the new file name. */
+    TOAST_STORAGE_SET_ASIDE("toast.storageSetAside"),
     /** Transient message raised when a provider's model list could not be read outside a dialog. */
     TOAST_MODEL_LIST_UNREADABLE("toast.modelListUnreadable"),
     /** Transient message raised when a project's automatic name changed; argument 0 is the new name. */

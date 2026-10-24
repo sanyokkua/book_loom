@@ -3,6 +3,7 @@ package ua.bookloom.app;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.ProvisionException;
 import com.google.inject.util.Modules;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -19,8 +20,11 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.app.bootstrap.ReviewModeSource;
+import ua.bookloom.app.bootstrap.StartupFailureDialog;
 import ua.bookloom.persistence.SqlitePersistenceModule;
+import ua.bookloom.persistence.StorageOpenException;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
@@ -50,6 +54,7 @@ public final class BookLoomApplication extends Application {
     private static final double INITIAL_WIDTH = 1024;
     private static final double INITIAL_HEIGHT = 700;
     private static final String JAVAFX_VERSION_PROPERTY = "javafx.runtime.version";
+    private static final int EXIT_STORAGE_FAILED = 1;
 
     private final AppLifecycle lifecycle = new AppLifecycle();
 
@@ -69,7 +74,7 @@ public final class BookLoomApplication extends Application {
                 : developmentInjector(startup);
 
         lifecycle.phaseOne(injector);
-        lifecycle.phaseTwo(injector);
+        openResources(injector);
         // init() is not the FX thread: this read seeds the stored review mode the FX-thread readers (ready card) see.
         log.debug(
                 "seeded review mode {}",
@@ -79,6 +84,18 @@ public final class BookLoomApplication extends Application {
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
         injector.getInstance(SessionInfo.class)
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
+    }
+
+    // A database that cannot be opened stops the start with its own message; any other failure stays a crash.
+    private void openResources(final Injector built) {
+        try {
+            lifecycle.phaseTwo(built);
+        } catch (ProvisionException e) {
+            final AppError storage = StorageOpenException.errorIn(e).orElseThrow(() -> e);
+            log.error("startup stopped: the database could not be opened, title={}", storage.title());
+            StartupFailureDialog.showOnRunningToolkitAndExit(storage, EXIT_STORAGE_FAILED);
+            throw e;
+        }
     }
 
     /**
@@ -172,6 +189,7 @@ public final class BookLoomApplication extends Application {
             ResolveAll.run(injector(), injector().getInstance(Navigator.class), initial.get());
         } else {
             final WindowLaunch launch = injector().getInstance(WindowLaunch.class);
+            launch.announceStorageSetAside();
             launch.openLastProject();
             launch.lookForLocalModel();
         }

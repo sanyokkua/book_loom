@@ -15,6 +15,16 @@ public interface StorageInfo {
     Optional<Path> location();
 
     /**
+     * Names the file this launch moved the stored work to because it could not be read by this version, so the
+     * person is told once that they start with empty storage and where the old work is.
+     *
+     * @return the file the old work was moved to, or empty when nothing was moved (always empty in memory)
+     */
+    default Optional<Path> setAsideAtOpen() {
+        return Optional.empty();
+    }
+
+    /**
      * Measures the stored work.
      *
      * @return the size of the stored file in bytes; zero when there is no file

@@ -48,7 +48,7 @@ WHEN a chunk is decided, the system SHALL write its segment decisions, translati
 
 ### Requirement: Set aside a database that cannot be used and start a fresh one
 
-IF the stored database was made by another schema version, or cannot be read, THEN the system SHALL rename it to `bookloom.db.old-<yyyyMMdd-HHmmss>` beside the original, create a fresh database, write one warning line to the log, and show no dialog.
+IF the stored database was made by another schema version, or cannot be read, THEN the system SHALL rename it to `bookloom.db.old-<yyyyMMdd-HHmmss>` beside the original, create a fresh database, write one warning line to the log, show no dialog, and raise one warning message, once, that names the renamed file.
 
 **Source**: ADR-0043, `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#corruption-and-recovery`. In plain words: before the first release the stored layout changes freely and no migrations are written. An old or damaged file is kept aside for diagnosis rather than deleted, and the application starts clean instead of failing on every launch. A fresh database counts as a first launch, so the first-launch look runs once more (the `llm-provider` capability).
 
@@ -56,12 +56,28 @@ IF the stored database was made by another schema version, or cannot be read, TH
 
 - **WHEN** the application starts at 2026-10-20 09:15:02 and `bookloom.db` carries schema version 3 while this build uses version 4
 - **THEN** the file is renamed `bookloom.db.old-20261020-091502`, a fresh `bookloom.db` is created, and the log gets one warning line
-- **AND** no dialog is shown and the Projects screen is empty
+- **AND** no dialog is shown, the Projects screen is empty, and one warning message reads `Saved work could not be read` and names `bookloom.db.old-20261020-091502`
 
 #### Scenario: A file that is not a database is put aside
 
 - **WHEN** `bookloom.db` holds 2 kilobytes of text that is not a database
 - **THEN** it is renamed `bookloom.db.old-<yyyyMMdd-HHmmss>` with the time of that launch and a fresh database is created
+
+### Requirement: Keep a database that is in use or cannot be written and refuse to start
+
+IF the stored database is held locked by another program, or the file or its folder cannot be written, THEN the system SHALL leave the file where it is, untouched, and SHALL stop at startup with a message that says which of the two it is.
+
+**Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#corruption-and-recovery`. In plain words: a lock or a permission problem says nothing about whether the file is readable. Setting it aside would hide every project behind a fixable problem, so the person is told what to fix instead.
+
+#### Scenario: A read-only database
+
+- **WHEN** the application starts and `bookloom.db` is a valid database whose permissions are read-only
+- **THEN** no `bookloom.db.old-…` file is created, `bookloom.db` is unchanged, and the startup message `Storage not writable` is shown
+
+#### Scenario: A database locked by another program
+
+- **WHEN** the application starts while another program holds `bookloom.db` in an exclusive lock
+- **THEN** no `bookloom.db.old-…` file is created and the startup message `Storage in use` is shown
 
 ### Requirement: Store a credential never, only the name of an environment variable
 

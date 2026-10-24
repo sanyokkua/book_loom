@@ -16,6 +16,7 @@ public final class ScriptedStorageInfo implements StorageInfo {
     private final long size;
     private final List<Path> backups = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError backupFailure;
+    private volatile @Nullable Path setAside;
 
     /** Storage kept in {@code location}, {@code size} bytes large. */
     public ScriptedStorageInfo(final @Nullable Path location, final long size) {
@@ -31,6 +32,16 @@ public final class ScriptedStorageInfo implements StorageInfo {
     /** Makes every later backup fail with {@code failure}. */
     public void failBackupWith(final AppError failure) {
         backupFailure = failure;
+    }
+
+    /** From now on reports that this launch moved the stored work to {@code aside}. */
+    public void setAsideAs(final Path aside) {
+        setAside = aside;
+    }
+
+    @Override
+    public Optional<Path> setAsideAtOpen() {
+        return Optional.ofNullable(setAside);
     }
 
     /** The destinations backups were asked for, in order. */

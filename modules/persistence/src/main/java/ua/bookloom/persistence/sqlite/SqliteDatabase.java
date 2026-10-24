@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -22,6 +23,7 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
+import org.jspecify.annotations.Nullable;
 import org.sqlite.SQLiteConfig;
 import org.sqlite.SQLiteDataSource;
 import ua.bookloom.api.AppError;
@@ -46,8 +48,18 @@ public final class SqliteDatabase implements AutoCloseable {
     private static final DateTimeFormatter ASIDE_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final List<String> SIDECARS = List.of("-wal", "-shm");
     private static final String SHAPES_KEY = "record_shapes";
+    // SQLite's primary result codes (the low byte of the extended code): a file that fails with one of these is no
+    // BookLoom database of this build and is set aside; any other failure (busy, locked, read-only, permission, I/O)
+    // says nothing about the file's content and must never cost the person their projects.
+    private static final int PRIMARY_CODE_MASK = 0xff;
+    private static final int SQLITE_ERROR = 1;
+    private static final int SQLITE_BUSY = 5;
+    private static final int SQLITE_LOCKED = 6;
+    private static final int SQLITE_CORRUPT = 11;
+    private static final int SQLITE_NOTADB = 26;
 
     private final Path file;
+    private final @Nullable Path setAside;
     private final SQLiteDataSource dataSource;
     private final Jdbi jdbi;
     private final WriteExecutor writer;
@@ -57,8 +69,9 @@ public final class SqliteDatabase implements AutoCloseable {
     private final ReentrantReadWriteLock use = new ReentrantReadWriteLock();
     private boolean closed;
 
-    private SqliteDatabase(final Path file, final SQLiteDataSource dataSource) {
+    private SqliteDatabase(final Path file, final @Nullable Path setAside, final SQLiteDataSource dataSource) {
         this.file = file;
+        this.setAside = setAside;
         this.dataSource = dataSource;
         this.jdbi = Jdbi.create(dataSource);
         this.writer = new WriteExecutor(jdbi);
@@ -76,23 +89,65 @@ public final class SqliteDatabase implements AutoCloseable {
         Objects.requireNonNull(clock, "clock");
         log.debug("Opening database file={}", file.getFileName());
         try {
-            if (!isUsable(file)) {
-                setAside(file, clock);
-            }
+            final Path aside = isUsable(file) ? null : setAside(file, clock);
             final SQLiteDataSource source = newDataSource(file);
             applySchema(source);
             log.info(
-                    "Database open file={} schemaVersion={} recordShapes={}",
+                    "Database open file={} schemaVersion={} recordShapes={} setAside={}",
                     file.getFileName(),
                     SCHEMA_VERSION,
-                    StoredShapes.current());
-            return Result.ok(new SqliteDatabase(file, source));
-        } catch (IOException | RuntimeException e) {
-            final AppError error = AppError.of(
-                    ErrorCode.internal, "Storage failure", "The database could not be opened.", "storage open", e);
-            log.error("Database open failed code={}", error.code(), e);
+                    StoredShapes.current(),
+                    aside == null ? null : aside.getFileName());
+            return Result.ok(new SqliteDatabase(file, aside, source));
+        } catch (SQLException | IOException | RuntimeException e) {
+            final AppError error = openFailure(e);
+            log.error("Database open failed code={} title={}", error.code(), error.title(), e);
             return Result.err(error);
         }
+    }
+
+    // What the person is told when the file cannot be opened; the cause stays for the log.
+    private static AppError openFailure(final Throwable e) {
+        final int code = sqliteCode(e);
+        log.debug("Database open failure classified sqliteCode={}", code);
+        if (code == SQLITE_BUSY || code == SQLITE_LOCKED) {
+            return AppError.of(
+                    ErrorCode.internal,
+                    "Storage in use",
+                    "The database file is in use by another program. Close it and start BookLoom again.",
+                    "storage open locked",
+                    e);
+        }
+        if (code > 0 || e instanceof IOException) {
+            return AppError.of(
+                    ErrorCode.internal,
+                    "Storage not writable",
+                    "The database file cannot be written. Check the permissions of the data folder and start"
+                            + " BookLoom again.",
+                    "storage open sqlite " + code,
+                    e);
+        }
+        return AppError.of(
+                ErrorCode.internal, "Storage failure", "The database could not be opened.", "storage open", e);
+    }
+
+    // The primary SQLite result code of the first SQLException in the chain, or -1 when there is none.
+    private static int sqliteCode(final Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof SQLException sql && sql.getErrorCode() > 0) {
+                return sql.getErrorCode() & PRIMARY_CODE_MASK;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * The file this launch moved the stored work to because it did not fit this build, so the person can be told once.
+     *
+     * @return the set-aside file, or empty when the stored file fitted or none existed
+     */
+    public Optional<Path> setAside() {
+        return Optional.ofNullable(setAside);
     }
 
     /** The database file, for the storage facts of Settings. */
@@ -225,7 +280,9 @@ public final class SqliteDatabase implements AutoCloseable {
         return source;
     }
 
-    private static boolean isUsable(final Path file) throws IOException {
+    // False when the file is no database of this build (corrupt, not a database, another schema or record shapes);
+    // a failure that says nothing about its content (busy, locked, read-only, permission, I/O) is thrown instead.
+    private static boolean isUsable(final Path file) throws IOException, SQLException {
         if (!Files.exists(file) || Files.size(file) == 0) {
             log.debug("Database file absent or empty, creating fresh");
             return true;
@@ -242,8 +299,13 @@ public final class SqliteDatabase implements AutoCloseable {
             log.debug("Database record shapes stored={} expected={}", shapes, StoredShapes.current());
             return StoredShapes.current().equals(shapes);
         } catch (SQLException e) {
-            log.debug("Database cannot be opened: {}", e.getMessage());
-            return false;
+            final int code = e.getErrorCode() & PRIMARY_CODE_MASK;
+            if (code == SQLITE_CORRUPT || code == SQLITE_NOTADB || code == SQLITE_ERROR) {
+                log.debug("Database does not fit sqliteCode={}: {}", code, e.getMessage());
+                return false;
+            }
+            log.warn("Database cannot be checked sqliteCode={}: the file is kept", code);
+            throw e;
         }
     }
 
@@ -254,7 +316,7 @@ public final class SqliteDatabase implements AutoCloseable {
     }
 
     /** Renames the file, and the WAL and shared-memory files beside it, to the stamped {@code .old-} name. */
-    static void setAside(final Path file, final Clock clock) throws IOException {
+    static Path setAside(final Path file, final Clock clock) throws IOException {
         final String suffix = ".old-" + ASIDE_STAMP.format(LocalDateTime.now(clock));
         final Path aside = file.resolveSibling(file.getFileName() + suffix);
         log.warn("Database does not fit, set aside file={} aside={}", file.getFileName(), aside.getFileName());
@@ -267,6 +329,7 @@ public final class SqliteDatabase implements AutoCloseable {
                 Files.move(held, moved, StandardCopyOption.REPLACE_EXISTING);
             }
         }
+        return aside;
     }
 
     private static void applySchema(final DataSource source) throws IOException {

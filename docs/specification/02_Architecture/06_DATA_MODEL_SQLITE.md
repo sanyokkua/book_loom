@@ -122,8 +122,11 @@ The database is opened defensively at startup:
 - **Set aside and start fresh.** A file that fails any check is **renamed** `bookloom.db.old-<yyyyMMdd-HHmmss>` (time
   from an injectable `Clock`; the `-wal` and `-shm` files of the old database are moved with it, as
   `bookloom.db.old-<stamp>-wal` and `-shm`, so they cannot corrupt the new one and the old file stays readable) and a
-  fresh database is created. One WARN line names the old file; no dialog is shown and no data is carried
-  over (ADR-0043). The renamed file stays for diagnosis.
+  fresh database is created. One WARN line names the old file; no dialog is shown, one warning message in the
+  window names the renamed file once, and no data is carried over (ADR-0043). The renamed file stays for diagnosis.
+  A file that is held locked by another program, or cannot be written (permissions, a read-only folder), fails no
+  check: it is kept untouched and the start stops with a typed `internal` error shown as the startup message
+  (`Storage in use` / `Storage not writable`).
 - **After the first release.** Flyway migrations are forward-only and transactional; a failed one rolls back
   completely, and an older app opening a newer schema refuses to run with a clear typed error.
 

@@ -26,6 +26,11 @@ public final class SqliteStorageInfo implements StorageInfo {
     }
 
     @Override
+    public Optional<Path> setAsideAtOpen() {
+        return db.setAside();
+    }
+
+    @Override
     public long sizeBytes() {
         final Path main = db.file();
         final long total = sizeOf(main) + sizeOf(main.resolveSibling(main.getFileName() + "-wal"));
