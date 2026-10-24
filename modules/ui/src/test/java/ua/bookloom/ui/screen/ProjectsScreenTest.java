@@ -12,6 +12,10 @@ import org.controlsfx.control.SegmentedButton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.ProjectSummary;
+import ua.bookloom.api.project.Project;
+import ua.bookloom.ui.ProjectFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -66,6 +70,37 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .contains("Paused")
                 .doesNotContain("Translating");
         assertThat(continueButton(EARTH_ID).getText()).isEqualTo("Continue");
+    }
+
+    // IF a long book title were cut with no tooltip, THEN two books with one opening could not be told apart.
+    @Test
+    void list_longBookTitle_isCutWithTheWholeTitleInItsTooltip() throws Exception {
+        final ProjectSummary base = ukrainianRunning();
+        final Project stored = base.project();
+        final String title =
+                "A Very Long Name That Goes On And On Through Every Word A Title Could Hold Until No Line Can Fit It At All";
+        showListing(ProjectFixtures.summary(
+                new Project(
+                        stored.id(),
+                        stored.source(),
+                        stored.format(),
+                        stored.contentHash(),
+                        stored.brief(),
+                        stored.name(),
+                        stored.nameOrigin(),
+                        title,
+                        stored.createdAt(),
+                        stored.lastOpenedAt()),
+                base.decidedSegments(),
+                base.latestRun(),
+                null));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(ThemeTestSupport.onFx(() -> ua.bookloom.ui.FitProbe.cutParts(scene.getRoot())))
+                .doesNotContain(title);
+        assertThat(ThemeTestSupport.onFx(() -> ua.bookloom.ui.TooltipProbe.tipText(
+                        node("projects-book-title-" + hash8(ua.bookloom.ui.ProjectFixtures.BOOK_HASH)))))
+                .isEqualTo(title);
     }
 
     // IF the ⋯ menu offered another set, THEN the row actions of the specification would not all be reachable.

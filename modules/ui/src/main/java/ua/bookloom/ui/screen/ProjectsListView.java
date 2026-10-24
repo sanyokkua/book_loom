@@ -22,6 +22,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -162,8 +163,13 @@ final class ProjectsListView {
     }
 
     private Node head(final BookGroup group) {
+        final String hash8 = group.contentHash()
+                .substring(0, Math.min(HASH_PREFIX, group.contentHash().length()));
         final Label title = new Label(group.title());
+        title.setId("projects-book-title-" + hash8);
         title.getStyleClass().add("card-title");
+        title.setMinWidth(0);
+        Overrun.install(title);
         final Label meta = new Label(messages.get(
                 MessageKey.PROJECTS_BOOK_META, group.fileName(), group.format().name(), group.totalSegments()));
         meta.getStyleClass().add("muted");

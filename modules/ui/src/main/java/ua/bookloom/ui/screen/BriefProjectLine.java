@@ -9,6 +9,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -35,6 +36,8 @@ final class BriefProjectLine {
         name.setId("brief-project-name");
         name.getStyleClass().add("brief-project-name");
         name.textProperty().bind(project.name());
+        name.setMinWidth(0);
+        Overrun.install(name);
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final Button rename = new Button(messages.get(MessageKey.BRIEF_PROJECT_NAME_RENAME));

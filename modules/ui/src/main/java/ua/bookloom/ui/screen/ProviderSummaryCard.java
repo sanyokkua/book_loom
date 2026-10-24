@@ -17,6 +17,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
@@ -35,6 +36,7 @@ final class ProviderSummaryCard {
     private final VBox box = new VBox(8);
     private final Label title = new Label();
     private final Label line = new Label();
+    private final Label reason = new Label();
     private final ListChangeListener<StageChip> onStages = change -> markBad();
 
     ProviderSummaryCard(
@@ -54,7 +56,7 @@ final class ProviderSummaryCard {
         line.getStyleClass().add("muted");
         line.setWrapText(true);
         bindWords();
-        box.getChildren().addAll(title, line, new HBox(8, test(dialog), changeModel(form)));
+        box.getChildren().addAll(title, line, new HBox(8, test(dialog), changeModel(form)), reason);
         box.visibleProperty().bind(viewModel.adding().not());
         box.managedProperty().bind(box.visibleProperty());
         viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
@@ -83,6 +85,26 @@ final class ProviderSummaryCard {
         line.visibleProperty()
                 .bind(Bindings.createBooleanBinding(() -> !line.getText().isEmpty(), line.textProperty()));
         line.managedProperty().bind(line.visibleProperty());
+        bindReason();
+    }
+
+    // A disabled button shows no tooltip, so the other model work that holds Test is named in a visible line.
+    private void bindReason() {
+        reason.setId("settings-summary-reason");
+        reason.getStyleClass().add("hint");
+        reason.setWrapText(true);
+        reason.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> {
+                            final ActivityKind blocker =
+                                    viewModel.tests().blockedBy().get();
+                            return blocker == null
+                                    ? ""
+                                    : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
+                        },
+                        viewModel.tests().blockedBy()));
+        reason.visibleProperty().bind(reason.textProperty().isNotEmpty());
+        reason.managedProperty().bind(reason.visibleProperty());
     }
 
     private Button test(final ProviderTestDialog dialog) {

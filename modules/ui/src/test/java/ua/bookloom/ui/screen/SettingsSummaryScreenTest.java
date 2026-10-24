@@ -27,6 +27,22 @@ class SettingsSummaryScreenTest extends SettingsScreenTestBase {
                         VerificationStage.INFERENCE, StageStatus.PASSED, null, null, Duration.ofMillis(1200), null))));
     }
 
+    // IF the reason Test is off were only in its tooltip, THEN the disabled button would never say why.
+    @Test
+    void summaryTest_otherModelWorkRuns_isOffAndSaysWhyInAVisibleLine() {
+        openSettings();
+        onFx(() -> viewModel().model().set("gemma3:12b"));
+        assertThat(scene.getRoot().lookup("#settings-summary-reason").isVisible())
+                .isFalse();
+
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.ActivityTracker.class)
+                .begin(ua.bookloom.ui.state.ActivityKind.TRANSLATION, () -> {}));
+
+        assertThat(button("settings-summary-test").isDisable()).isTrue();
+        assertThat(text("settings-summary-reason"))
+                .isEqualTo("Unavailable while “Translation” is running. Wait for it to finish or stop it.");
+    }
+
     // IF the card did not say whose model it names, THEN a person could not tell which program a translation uses.
     @Test
     void summary_currentProviderWithAModel_namesTheProviderAndTheModel() {

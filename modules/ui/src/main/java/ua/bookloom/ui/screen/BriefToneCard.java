@@ -212,7 +212,20 @@ final class BriefToneCard {
                         () -> outcomeText(viewModel.styleSuggestion().outcome().get(), messages),
                         viewModel.styleSuggestion().outcome()));
         BriefCards.shownWhile(outcome, outcome.textProperty().isNotEmpty());
-        return new VBox(FIELD_SPACING, suggest, outcome);
+        return new VBox(FIELD_SPACING, suggest, blockedReason(atWork, messages), outcome);
+    }
+
+    // A disabled button shows no tooltip, so the reason it is off is a visible line under it.
+    private static Label blockedReason(final BooleanBinding atWork, final Messages messages) {
+        final Label reason = new Label();
+        reason.setId("brief-suggest-reason");
+        reason.getStyleClass().add("hint");
+        reason.setWrapText(true);
+        reason.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> atWork.get() ? messages.get(MessageKey.MODEL_BLOCKED_PAUSE_FIRST) : "", atWork));
+        BriefCards.shownWhile(reason, atWork);
+        return reason;
     }
 
     private static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {

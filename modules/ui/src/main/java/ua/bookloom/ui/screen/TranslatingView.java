@@ -265,20 +265,28 @@ final class TranslatingView {
             final Messages messages,
             final Exits exits) {
         final StepFooter footer = StepFooter.of(
-                new StepFooter.Action(
-                        "translating-back",
-                        messages.get(MessageKey.TRANSLATING_BACK),
-                        messages.get(MessageKey.TRANSLATING_BACK_TIP),
-                        "btn-ghost",
-                        () -> exits.navigator().navigate(ViewNames.NAMES_STYLE)),
-                new StepFooter.Action(
-                        RunStateView.TO_EXPORT,
-                        messages.get(MessageKey.TRANSLATING_CONTINUE),
-                        messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
-                        "btn-primary",
-                        () -> exits.navigator().navigate(ViewNames.EXPORT)));
+                        new StepFooter.Action(
+                                "translating-back",
+                                messages.get(MessageKey.TRANSLATING_BACK),
+                                messages.get(MessageKey.TRANSLATING_BACK_TIP),
+                                "btn-ghost",
+                                () -> exits.navigator().navigate(ViewNames.NAMES_STYLE)),
+                        new StepFooter.Action(
+                                RunStateView.TO_EXPORT,
+                                messages.get(MessageKey.TRANSLATING_CONTINUE),
+                                messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
+                                "btn-primary",
+                                () -> exits.navigator().navigate(ViewNames.EXPORT)))
+                .withCompactBack(messages.get(MessageKey.COMMON_BACK_COMPACT));
+        final TranslatingRunActions actions = new TranslatingRunActions(
+                exits.runs(), messages, runCommands(viewModel, mirror, exits), footer.forwardButton());
+        return footer.withRunGroup(actions.buttons());
+    }
+
+    private static Map<String, Runnable> runCommands(
+            final TranslatingViewModel viewModel, final StateMirror mirror, final Exits exits) {
         final TranslatingDialogs dialogs = exits.dialogs();
-        final Map<String, Runnable> commands = Map.of(
+        return Map.of(
                 RunStateView.START,
                 () -> dialogs.narrator().startAfterAsking(viewModel::start),
                 RunStateView.RESUME,
@@ -289,9 +297,6 @@ final class TranslatingView {
                 () -> dialogs.askToStop(viewModel, exits.runs().stopFigures()),
                 RunStateView.REVIEW,
                 () -> openReview(mirror, exits));
-        final TranslatingRunActions actions =
-                new TranslatingRunActions(exits.runs(), messages, commands, footer.forwardButton());
-        return footer.withRunGroup(actions.buttons());
     }
 
     // The suspicious segments are accepted ones the audit doubts: with nothing flagged, Review opens on them, so the

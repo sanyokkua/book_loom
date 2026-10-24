@@ -173,18 +173,19 @@ final class NamesStyleView {
 
     private Node footer() {
         final StepFooter footer = StepFooter.of(
-                new StepFooter.Action(
-                        "names-style-back",
-                        messages.get(MessageKey.NAMES_STYLE_BACK),
-                        messages.get(MessageKey.NAMES_STYLE_BACK_TIP),
-                        "btn-ghost",
-                        () -> navigator.navigate(ViewNames.BOOK_BRIEF)),
-                new StepFooter.Action(
-                        "names-style-start",
-                        messages.get(MessageKey.NAMES_STYLE_START),
-                        messages.get(MessageKey.NAMES_STYLE_START_TIP),
-                        "btn-primary",
-                        this::onForward));
+                        new StepFooter.Action(
+                                "names-style-back",
+                                messages.get(MessageKey.NAMES_STYLE_BACK),
+                                messages.get(MessageKey.NAMES_STYLE_BACK_TIP),
+                                "btn-ghost",
+                                () -> navigator.navigate(ViewNames.BOOK_BRIEF)),
+                        new StepFooter.Action(
+                                "names-style-start",
+                                messages.get(MessageKey.NAMES_STYLE_START),
+                                messages.get(MessageKey.NAMES_STYLE_START_TIP),
+                                "btn-primary",
+                                this::onForward))
+                .withCompactBack(messages.get(MessageKey.COMMON_BACK_COMPACT));
         followTheRun(footer);
         return footer;
     }

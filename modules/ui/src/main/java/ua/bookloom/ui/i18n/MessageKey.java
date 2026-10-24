@@ -397,6 +397,8 @@ public enum MessageKey {
     COMMON_CLOSE("common.close"),
     /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
     COMMON_CLOSE_TIP("common.close.tip"),
+    /** The short label of a step's Back in a compact content area; the full label becomes its tooltip. */
+    COMMON_BACK_COMPACT("common.backCompact"),
     /** Label of a dialog button that abandons the question and changes nothing. */
     COMMON_CANCEL("common.cancel"),
     /** Hover explanation of the control labelled by {@link #COMMON_CANCEL}. */

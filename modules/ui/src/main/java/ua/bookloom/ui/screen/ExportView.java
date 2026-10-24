@@ -141,23 +141,19 @@ final class ExportView {
     // Back leads to Translating; the forward action is ⬇ Export book, which asks before replacing a file.
     private Node footer() {
         final StepFooter built = StepFooter.of(
-                new StepFooter.Action(
-                        "export-back",
-                        messages.get(MessageKey.EXPORT_BACK),
-                        messages.get(MessageKey.EXPORT_BACK_TIP),
-                        "btn-ghost",
-                        () -> navigator.navigate(ViewNames.TRANSLATING)),
-                new StepFooter.Action(
-                        "export-run",
-                        messages.get(MessageKey.EXPORT_ACTION),
-                        messages.get(MessageKey.EXPORT_ACTION_TIP),
-                        "btn-primary",
-                        () -> {
-                            log.debug(
-                                    "export book pressed, available {}",
-                                    viewModel.exportAvailable().get());
-                            viewModel.export();
-                        }));
+                        new StepFooter.Action(
+                                "export-back",
+                                messages.get(MessageKey.EXPORT_BACK),
+                                messages.get(MessageKey.EXPORT_BACK_TIP),
+                                "btn-ghost",
+                                () -> navigator.navigate(ViewNames.TRANSLATING)),
+                        new StepFooter.Action(
+                                "export-run",
+                                messages.get(MessageKey.EXPORT_ACTION),
+                                messages.get(MessageKey.EXPORT_ACTION_TIP),
+                                "btn-primary",
+                                this::exportPressed))
+                .withCompactBack(messages.get(MessageKey.COMMON_BACK_COMPACT));
         built.forwardButton()
                 .disableProperty()
                 .bind(viewModel
@@ -168,6 +164,12 @@ final class ExportView {
         footer = built;
         explain();
         return built;
+    }
+
+    private void exportPressed() {
+        log.debug(
+                "export book pressed, available {}", viewModel.exportAvailable().get());
+        viewModel.export();
     }
 
     private void explain() {

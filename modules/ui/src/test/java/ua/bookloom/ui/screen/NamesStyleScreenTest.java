@@ -20,6 +20,9 @@ import ua.bookloom.ui.ViewNames;
 /** Start translation on the names and style screen: it begins a run only when Translating would offer a start. */
 class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
+    // Wide enough that the content area, the window less the navigation column, is regular, not compact.
+    private static final double WIDE_SCENE = 1600;
+
     private void showNamesStyle() {
         glossary.willAnswer(Result.ok(List.of()));
         glossary.willAnswer(Result.ok(List.of()));
@@ -53,8 +56,31 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("names-style-purpose"))
                 .isEqualTo("Decide how names and repeated words are translated. Optional — skip it and BookLoom"
                         + " builds both while it translates.");
-        assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
         assertThat(button("names-style-start").getText()).isEqualTo("Start translation");
+    }
+
+    // IF Back kept its long label in a compact content area, THEN the toolbar would push the run actions out of sight.
+    @Test
+    void backControl_compactContentArea_readsShortBackWithTheFullLabelAsTooltip() throws Exception {
+        openBookOnly();
+        showNamesStyle();
+
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+
+        assertThat(button("names-style-back").getText()).isEqualTo("‹ Back");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(button("names-style-back")))
+                .isEqualTo("Back to Book Brief");
+    }
+
+    // IF Back stayed short in a wide window, THEN the step it leads to would be named only on hover.
+    @Test
+    void backControl_wideContentArea_readsTheFullLabel() throws Exception {
+        openBookOnly();
+        showNamesStyle();
+
+        resizeScene(WIDE_SCENE, CONTENT_AT_MINIMUM_HEIGHT);
+
+        assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
     }
 
     // IF Back did not lead to the Book Brief, THEN the step could not be left backwards.

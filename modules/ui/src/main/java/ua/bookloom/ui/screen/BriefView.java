@@ -130,18 +130,19 @@ final class BriefView {
 
     private StepFooter footer() {
         return StepFooter.of(
-                new StepFooter.Action(
-                        "brief-back",
-                        messages.get(MessageKey.BRIEF_BACK),
-                        messages.get(MessageKey.BRIEF_BACK_TIP),
-                        "btn-ghost",
-                        () -> navigator.navigate(ViewNames.IMPORT)),
-                new StepFooter.Action(
-                        "brief-continue",
-                        messages.get(MessageKey.BRIEF_CONTINUE),
-                        messages.get(MessageKey.BRIEF_CONTINUE_TIP),
-                        "btn-primary",
-                        this::onContinue));
+                        new StepFooter.Action(
+                                "brief-back",
+                                messages.get(MessageKey.BRIEF_BACK),
+                                messages.get(MessageKey.BRIEF_BACK_TIP),
+                                "btn-ghost",
+                                () -> navigator.navigate(ViewNames.IMPORT)),
+                        new StepFooter.Action(
+                                "brief-continue",
+                                messages.get(MessageKey.BRIEF_CONTINUE),
+                                messages.get(MessageKey.BRIEF_CONTINUE_TIP),
+                                "btn-primary",
+                                this::onContinue))
+                .withCompactBack(messages.get(MessageKey.COMMON_BACK_COMPACT));
     }
 
     private void show(final @Nullable BookBrief brief) {

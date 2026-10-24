@@ -20,6 +20,9 @@ import ua.bookloom.ui.state.RunStateSource;
  */
 class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
 
+    private static final String LONG_NAME =
+            "A Very Long Name That Goes On And On Through Every Word A Title Could Hold Until No Line Can Fit It At All";
+
     // IF the line showed a name derived on the screen, THEN it could differ from the name the project is stored under.
     @Test
     void nameLine_automaticName_showsTheStoredNameAndSaysItFollowsTheLanguages() throws Exception {
@@ -46,6 +49,20 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
 
         assertThat(textOfLabel("brief-project-name")).isEqualTo("Земне тяжіння");
         assertThat(textOfLabel("brief-project-origin")).isEqualTo("named by you");
+    }
+
+    // IF a long name were cut with no tooltip, THEN the person could not read the name the project is stored by.
+    @Test
+    void nameLine_longName_isCutWithTheWholeNameInItsTooltip() throws Exception {
+        projects.willList(List.of(stored("uk", NameOrigin.USER, LONG_NAME)));
+        readyToStart();
+        showBrief();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(read(() -> ua.bookloom.ui.FitProbe.cutParts(scene.getRoot())))
+                .doesNotContain(LONG_NAME);
+        assertThat(read(() -> ua.bookloom.ui.TooltipProbe.tipText(required("brief-project-name"))))
+                .isEqualTo(LONG_NAME);
     }
 
     // IF the title bar derived its own name, THEN it would show a different name from the one the project is stored by.

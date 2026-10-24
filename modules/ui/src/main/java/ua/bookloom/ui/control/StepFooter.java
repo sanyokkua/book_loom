@@ -3,6 +3,9 @@ package ua.bookloom.ui.control;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javafx.collections.SetChangeListener;
+import javafx.collections.WeakSetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -51,9 +54,15 @@ public final class StepFooter extends HBox {
     }
 
     private static final String HOST_ID = "#shell-actions";
+    private static final String CONTENT_ID = "#shell-content";
 
     private final Button forward;
     private final @Nullable Button back;
+    private final @Nullable Action backAction;
+    private final SetChangeListener<PseudoClass> onWidthClass = change -> showBack();
+    private @Nullable String compactBack;
+    private @Nullable Region content;
+    private boolean backShort;
     private final Region spacer = new Region();
     private final Label hint = new Label();
     private final List<Node> runGroup = new ArrayList<>();
@@ -65,6 +74,7 @@ public final class StepFooter extends HBox {
         Objects.requireNonNull(forward, "forward");
         setAlignment(Pos.CENTER_LEFT);
         getStyleClass().add("step-footer");
+        this.backAction = backAction;
         this.back = backAction == null ? null : button(backAction);
         HBox.setHgrow(spacer, Priority.ALWAYS);
         this.forward = button(forward);
@@ -89,6 +99,11 @@ public final class StepFooter extends HBox {
             return;
         }
         host = slot;
+        if (scene.getRoot().lookup(CONTENT_ID) instanceof Region area) {
+            content = area;
+            area.getPseudoClassStates().addListener(new WeakSetChangeListener<>(onWidthClass));
+            showBack();
+        }
         getChildren().clear();
         slot.getChildren().addAll(hostedNodes());
         setVisible(false);
@@ -102,6 +117,8 @@ public final class StepFooter extends HBox {
             return;
         }
         host = null;
+        content = null;
+        showBack();
         slot.getChildren().removeAll(hostedNodes());
         restoreInPlace();
         setVisible(true);
@@ -154,6 +171,38 @@ public final class StepFooter extends HBox {
         }
         nodes.addAll(forwardNodes());
         return nodes;
+    }
+
+    /**
+     * Gives Back a short label for a compact content area (README L2), where the full label becomes its tooltip.
+     *
+     * @param label the already translated short label, such as "‹ Back"
+     * @return this footer
+     */
+    public StepFooter withCompactBack(final String label) {
+        compactBack = Objects.requireNonNull(label, "label");
+        showBack();
+        return this;
+    }
+
+    // The content area's width class lives on its pseudo-classes (LayoutClass); a footer outside the shell stays full.
+    private void showBack() {
+        final Button button = back;
+        final Action action = backAction;
+        final String shortLabel = compactBack;
+        if (button == null || action == null || shortLabel == null) {
+            return;
+        }
+        final Region area = content;
+        final boolean compact =
+                area != null && area.getPseudoClassStates().contains(LayoutClass.Width.COMPACT.pseudoClass());
+        if (compact == backShort) {
+            return;
+        }
+        backShort = compact;
+        log.debug("footer back {} reads {}", action.id(), compact ? "short" : "in full");
+        button.setText(compact ? shortLabel : action.label());
+        Tips.install(button, compact ? action.label() : action.tip());
     }
 
     /**

@@ -125,6 +125,18 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
         assertThat(Tips.explanationOf(button("brief-suggest-style"))).contains(PAUSE_FIRST);
     }
 
+    // IF the reason were only in the tooltip, THEN a disabled button, which shows none, would never say why it is off.
+    @Test
+    void fillInFromTheBook_translationAtWork_saysWhyInAVisibleLine() throws Exception {
+        runIn(RunState.RUNNING);
+
+        onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
+
+        final javafx.scene.control.Label reason = (javafx.scene.control.Label) required("brief-suggest-reason");
+        assertThat(reason.isVisible()).isTrue();
+        assertThat(reason.getText()).contains(PAUSE_FIRST);
+    }
+
     // IF a paused or ended run still held the model actions, THEN the person could not fix the glossary while it waits.
     @ParameterizedTest
     @EnumSource(
@@ -153,6 +165,7 @@ class ModelActionLockScreenTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
 
         assertThat(button("brief-suggest-style").isDisabled()).isFalse();
+        assertThat(required("brief-suggest-reason").isVisible()).isFalse();
     }
 
     // IF Start began a run beside the hidden names pass, THEN both would race for the model; Start waits and says so.
