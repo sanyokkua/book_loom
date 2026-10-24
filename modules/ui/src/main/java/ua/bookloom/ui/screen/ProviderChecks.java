@@ -14,6 +14,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.VerificationStage;
@@ -66,6 +67,8 @@ final class ProviderChecks {
         grid.getStyleClass().add("checks-grid");
         final ColumnConstraints wide = new ColumnConstraints();
         wide.setHgrow(Priority.ALWAYS);
+        // The sentence beside the button wraps and gives way; the button and the link keep their own width.
+        wide.setMinWidth(0);
         grid.getColumnConstraints().addAll(new ColumnConstraints(), wide, new ColumnConstraints());
         addRow(0, ProviderTest.CONNECTION, "settings-test-connection", MessageKey.SETTINGS_TEST_CONNECTION);
         addRow(1, ProviderTest.MODELS, "settings-test-models", MessageKey.SETTINGS_TEST_MODELS);
@@ -178,6 +181,9 @@ final class ProviderChecks {
         final Button button = new Button(messages.get(text));
         button.setId(id);
         button.getStyleClass().add("btn-primary");
+        // A button's computed minimum is its ellipsis, so a long result sentence beside it would squeeze it to "Test
+        // co…".
+        button.setMinWidth(Region.USE_PREF_SIZE);
         button.setMaxWidth(Double.MAX_VALUE);
         Tips.install(messages, button, tipOf(test));
         button.disableProperty().bind(Bindings.not(viewModel.tests().available(test)));

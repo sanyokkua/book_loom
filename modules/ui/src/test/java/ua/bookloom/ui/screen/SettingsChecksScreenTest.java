@@ -6,7 +6,13 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /** The three-row grid of checks: one button, one result sentence and one Details link for each stage. */
@@ -51,6 +57,26 @@ class SettingsChecksScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> result("MODELS").getText())).isEqualTo("– Models: not attempted");
         assertThat(ThemeTestSupport.onFx(() -> result("INFERENCE").getText())).isEqualTo("– Inference: not attempted");
+    }
+
+    // IF a long result sentence squeezed the button, THEN "Test connection" would read "Test co…" and hide its action.
+    @Test
+    void results_longSentence_keepTheTestButtonAtItsPreferredWidth() throws TimeoutException {
+        openSettings();
+        final AppError missingKey = AppError.of(
+                ErrorCode.auth,
+                "Key missing",
+                "The environment variable BOOKLOOM_SOMETHING_VERY_LONG_API_KEY_NAME is not set or is empty, so no"
+                        + " request could be signed and the server was never asked anything at all today.");
+        final StageOutcome failed =
+                new StageOutcome(VerificationStage.CONNECTION, StageStatus.FAILED, missingKey, null);
+
+        checkWithReport(Result.ok(new VerificationReport(List.of(failed))));
+
+        assertThat(ThemeTestSupport.onFx(
+                        () -> button("settings-test-connection").getWidth()))
+                .isGreaterThanOrEqualTo(ThemeTestSupport.onFx(
+                        () -> button("settings-test-connection").prefWidth(-1)));
     }
 
     // IF a provider that was only being typed could not be tested, THEN the form would force a Save before a check.

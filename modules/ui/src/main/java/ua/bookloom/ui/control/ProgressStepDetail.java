@@ -156,8 +156,8 @@ final class ProgressStepDetail extends VBox {
         say.setText(step == null ? "" : StepWords.sentence(messages, step));
         show(grid, step != null && grid.show(step.text(), step.isRunning()));
         input.setText(orNothing(step == null ? null : inputOf(step, made)));
-        output.setText(orNothing(step == null ? null : outputOf(step, made)));
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
+        output.setText(orNothing(step == null ? null : outputOf(step, made, technical)));
         showCall(technical, made);
         show(notKept, technical && step != null && model.isPromptDropped(step));
         if (technical && made != null) {
@@ -227,7 +227,8 @@ final class ProgressStepDetail extends VBox {
                 : made.segments().stream().map(CallSegment::displaySource).collect(Collectors.joining(PARAGRAPHS));
     }
 
-    private @Nullable String outputOf(final StepEntry step, final @Nullable CallSnapshot made) {
+    private @Nullable String outputOf(
+            final StepEntry step, final @Nullable CallSnapshot made, final boolean technical) {
         final StepEntry.StepText text = step.text();
         if (text != null && text.after() != null) {
             return text.after();
@@ -243,7 +244,29 @@ final class ProgressStepDetail extends VBox {
                 .map(CallItem::target)
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining(PARAGRAPHS));
-        return targets.isEmpty() ? made.reply() : targets;
+        return plainOutput(technical, targets, made.reply(), decidedValues());
+    }
+
+    /**
+     * What a call "says" when it gave no targets: the raw reply is for the Detailed view only; the Simple one tells the
+     * values the brief decided, in words.
+     */
+    static @Nullable String plainOutput(
+            final boolean technical, final String targets, final @Nullable String reply, final String decided) {
+        if (!targets.isEmpty()) {
+            return targets;
+        }
+        if (technical) {
+            return reply;
+        }
+        return decided.isEmpty() ? null : decided;
+    }
+
+    private String decidedValues() {
+        return model.activity().get().outcome().decisions().stream()
+                .filter(row -> !row.value().isBlank())
+                .map(row -> DecisionWords.nameOf(messages, row.group()) + ": " + DecisionWords.value(messages, row))
+                .collect(Collectors.joining("\n"));
     }
 
     // A brief sample's answer: each field it answered, with its value and the quote that makes the value count.
