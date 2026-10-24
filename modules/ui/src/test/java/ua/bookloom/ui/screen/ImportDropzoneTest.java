@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,12 +11,14 @@ import java.util.concurrent.TimeoutException;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.ImportState;
 
 /**
  * The drop zone of the import screen, read from the real scene: the full box while no book is open, and one line with
@@ -118,5 +122,21 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         assertThat(isShown("import-verdict")).isTrue();
         assertThat(isCompact()).isFalse();
+    }
+
+    // IF a dropped folder were handed to the reader, THEN the person would wait for a refusal that does not say why.
+    @Test
+    void openDropped_aFolder_saysSoAtOnceAndOpensNothing() throws IOException {
+        final Path folder = Files.createDirectory(dir.resolve("Books"));
+        openImport();
+
+        onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(folder)));
+
+        assertThat(projects.imports()).isEmpty();
+        assertThat(state()).isEqualTo(new ImportState.Idle());
+        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll(".toast-text").stream()
+                        .map(text -> ((Label) text).getText())
+                        .toList()))
+                .contains("Drop one book file: EPUB, FB2, Markdown or TXT.");
     }
 }

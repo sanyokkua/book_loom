@@ -15,6 +15,8 @@ public enum ToastOccasion {
     BOOK_OPENED(Severity.SUCCESS, MessageKey.TOAST_BOOK_OPENED),
     /** A chosen file could not be compared with the stored projects and is opened anyway; the argument is its name. */
     IMPORT_UNCHECKED(Severity.WARNING, MessageKey.TOAST_IMPORT_UNCHECKED),
+    /** A folder was dropped on the import screen instead of a book file. */
+    IMPORT_FOLDER(Severity.WARNING, MessageKey.TOAST_IMPORT_FOLDER),
     /** The stored work could not be read by this version and was moved aside; the argument is the new file name. */
     STORAGE_SET_ASIDE(Severity.WARNING, MessageKey.TOAST_STORAGE_SET_ASIDE),
     /** A translation started; progress is saved as it goes. */

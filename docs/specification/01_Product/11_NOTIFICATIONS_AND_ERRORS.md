@@ -47,7 +47,7 @@ Placement and behaviour (`mockups/README.md`, G2):
   when no dialog is open.
 - **The list of occasions is closed** (`ToastOccasion`): a book opens; a translation starts ("Translation started" /
   "Progress is saved as you go.") or finishes ("Translation finished", warning "3 segments need your review" when some
-  do); a project's automatic name changes; a retry is refused; a model list cannot be read outside a dialog; a chosen book cannot be compared with the stored projects (it opens anyway); the stored work was set aside at launch (naming the renamed file); hidden
+  do); a project's automatic name changes; a retry is refused; a model list cannot be read outside a dialog; a chosen book cannot be compared with the stored projects (it opens anyway); a folder is dropped on the import screen instead of a book file ("That is a folder"); the stored work was set aside at launch (naming the renamed file); hidden
   work finishes ("Review the results"); other model work is refused while work is hidden ("Show progress"). A provider
   test, a locked step, an accepted review segment, a copied log path and a saved diagnostic bundle report in their own
   place and raise none.

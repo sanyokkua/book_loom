@@ -15,14 +15,15 @@ import ua.bookloom.ui.i18n.MessageKey;
  */
 class ToastOccasionsTest extends ToastsTestBase {
 
-    // IF a twelfth occasion crept in, THEN a message with no named caller would be raised from wherever a screen
+    // IF a thirteenth occasion crept in, THEN a message with no named caller would be raised from wherever a screen
     // likes.
     @Test
-    void occasions_listed_areExactlyTheElevenTheSpecNames() {
+    void occasions_listed_areExactlyTheTwelveTheSpecNames() {
         assertThat(ToastOccasion.values())
                 .containsExactlyInAnyOrder(
                         ToastOccasion.BOOK_OPENED,
                         ToastOccasion.IMPORT_UNCHECKED,
+                        ToastOccasion.IMPORT_FOLDER,
                         ToastOccasion.STORAGE_SET_ASIDE,
                         ToastOccasion.RUN_STARTED,
                         ToastOccasion.RUN_FINISHED,

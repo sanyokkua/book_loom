@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +33,8 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportGuard;
@@ -63,6 +66,7 @@ public final class ImportController {
     private static final double DROPZONE_COLUMN_GAP = 12;
     private static final double DROPZONE_ROW_GAP = 8;
 
+    private final Toasts toasts;
     private final ImportViewModel viewModel;
     private final ImportGuard guard;
     private final Messages messages;
@@ -114,6 +118,7 @@ public final class ImportController {
      * @param errors where a damaged file's Details shows the typed reason
      * @param projectsView the Projects list, searched for the book that is already stored
      * @param technical the switch that shows the checks' technical lines, the token counts and the groups
+     * @param toasts where a dropped folder is refused at once
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -133,7 +138,9 @@ public final class ImportController {
             final BookBriefViewModel brief,
             final ErrorPresenter errors,
             final ProjectsViewModel projectsView,
-            final TechnicalDetails technical) {
+            final TechnicalDetails technical,
+            final Toasts toasts) {
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -167,7 +174,14 @@ public final class ImportController {
         if (paths.size() > 1) {
             log.debug("drop carried {} files; opening the first and ignoring the rest", paths.size());
         }
-        guard.requestImport(paths.get(0));
+        final Path first = paths.get(0);
+        // A folder is no book: said at once, before the open-another question or a refusal from deep in the reader.
+        if (Files.isDirectory(first)) {
+            log.debug("drop refused: {} is a folder", first.getFileName());
+            toasts.raise(ToastOccasion.IMPORT_FOLDER);
+            return;
+        }
+        guard.requestImport(first);
     }
 
     @FXML
