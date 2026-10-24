@@ -55,7 +55,7 @@ The application SHALL raise a transient message only when a book is opened, a tr
 
 #### Scenario: The automatic name changes
 
-- **WHEN** the target language of the project `Earth Gravity · EN → …` is set to Ukrainian and the name was automatic
+- **WHEN** the target language of the project `Earth Gravity · EN` is set to Ukrainian and the name was automatic
 - **THEN** one information message reads `Project name changed to Earth Gravity · EN → UK`
 
 #### Scenario: Hidden work finishes

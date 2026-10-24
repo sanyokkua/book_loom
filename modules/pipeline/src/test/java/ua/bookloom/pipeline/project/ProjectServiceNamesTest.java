@@ -63,7 +63,7 @@ class ProjectServiceNamesTest {
     void create_bookWithAColonTitle_namesTheProjectFromTheTitleBeforeTheColon() {
         final String id = createOk(titled("earth-gravity.epub", TITLE));
 
-        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN");
         assertThat(stored(id).nameOrigin()).isEqualTo(NameOrigin.AUTO);
         assertThat(stored(id).title()).isEqualTo("Earth Gravity");
     }
@@ -73,7 +73,7 @@ class ProjectServiceNamesTest {
     void create_bookWithoutATitle_namesTheProjectFromTheFileName() {
         final String id = createOk(titled("earth-gravity.epub", ""));
 
-        assertThat(stored(id).name()).isEqualTo("earth-gravity · EN → …");
+        assertThat(stored(id).name()).isEqualTo("earth-gravity · EN");
         assertThat(stored(id).title()).isEqualTo("earth-gravity");
     }
 
@@ -84,8 +84,8 @@ class ProjectServiceNamesTest {
                 tempDir.resolve("two.epub"), List.of(List.of("Another text altogether.")), TITLE));
 
         assertThat(second).isNotEqualTo(first);
-        assertThat(stored(first).name()).isEqualTo("Earth Gravity · EN → …");
-        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(first).name()).isEqualTo("Earth Gravity · EN");
+        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN");
     }
 
     // IF nothing has been translated into a target yet, THEN importing the book again does not add a second project.
@@ -117,7 +117,7 @@ class ProjectServiceNamesTest {
         assertThat(records(first).get(0).status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(records(second)).allSatisfy(r -> assertThat(r.status()).isEqualTo(SegmentStatus.PENDING));
         assertThat(stored(first).name()).isEqualTo("Earth Gravity · EN → UK");
-        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN");
     }
 
     @Test
@@ -157,7 +157,7 @@ class ProjectServiceNamesTest {
         assertThat(change).isInstanceOf(ProjectChange.PairInUse.class);
         assertThat(((ProjectChange.PairInUse) change).existing().id()).isEqualTo(first);
         assertThat(stored(second).brief().targetLanguage()).isNull();
-        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN");
     }
 
     @Test
@@ -225,7 +225,7 @@ class ProjectServiceNamesTest {
 
         assertThat(change).isInstanceOf(ProjectChange.NameInUse.class);
         assertThat(((ProjectChange.NameInUse) change).holder().id()).isEqualTo(first);
-        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(second).name()).isEqualTo("Earth Gravity · EN");
     }
 
     @Test
@@ -247,7 +247,7 @@ class ProjectServiceNamesTest {
         final Result<ProjectChange> blank = service.rename(id, "   ");
 
         assertThat(Objects.requireNonNull(blank.error()).code()).isEqualTo(ErrorCode.validation);
-        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN");
     }
 
     // IF any typed text were stored, THEN a name could be too long to show or hold a character no file name accepts.
@@ -259,7 +259,7 @@ class ProjectServiceNamesTest {
         final Result<ProjectChange> refused = service.rename(id, typed);
 
         assertThat(Objects.requireNonNull(refused.error()).code()).isEqualTo(ErrorCode.validation);
-        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN");
     }
 
     @Test
@@ -269,7 +269,7 @@ class ProjectServiceNamesTest {
         final Result<ProjectChange> refused = service.rename(id, "x".repeat(Project.MAX_NAME_LENGTH + 1));
 
         assertThat(Objects.requireNonNull(refused.error()).message()).contains("120");
-        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN");
     }
 
     @Test

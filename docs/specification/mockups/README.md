@@ -461,7 +461,7 @@ language more than once, for example with another model, quality or thinking set
 1. **Automatic name** `<book title> · <SRC> → <TGT>`, for example `Frankenstein · EN → UK`.
    - The title is the metadata title before ":", or the file name.
    - Under "Find out from the text", the detected language is used; until there is one, the source code is left out.
-   - It ends in `→ …` before a target is chosen.
+   - Before a target is chosen it has no arrow: `Title · EN`, or only the title while the source is not known either.
 2. **It follows the languages** while it is automatic (`nameOrigin` AUTO); a toast says when it changes. A typed name
    (USER) never changes.
 3. **A language pair is unique per book** (same `Project.contentHash`) **unless the project is named.**

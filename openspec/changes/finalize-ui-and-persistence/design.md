@@ -375,7 +375,8 @@ on a `@TempDir` file with the schema applied, and no Testcontainers.
     a file only when its hash matches.
 - **`ProjectNames`.**
   - It builds `<title> · SRC → TGT`. The title is the metadata title before ":", or the file name. Under Auto the
-    source code is left out until known, and the name ends in `→ …` before a target is chosen.
+    source code is left out until known, and before a target is chosen the name has no arrow
+    (`Title · EN`, or only the title while no source is known).
   - It follows the languages while the name is AUTO.
   - It reports a used pair (same book, same languages) or a duplicate name as typed results, never as an exception.
   - A named project returns to its automatic name only when no other project of the book has the pair.

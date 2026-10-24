@@ -49,13 +49,13 @@ WHILE a project has started translating — it holds at least one decided segmen
 
 ### Requirement: Show the project name on the brief and let the person rename it
 
-The Book Brief's languages card SHALL show a Project name line reading "automatic — follows the languages" while the name is automatic, with a Rename… action, and an automatic name SHALL follow the chosen languages as `<title> · <SRC> → <TGT>`, ending in `→ …` until a target is chosen.
+The Book Brief's languages card SHALL show a Project name line reading "automatic — follows the languages" while the name is automatic, with a Rename… action, and an automatic name SHALL follow the chosen languages as `<title> · <SRC> → <TGT>`, with no arrow until a target is chosen (`<title> · <SRC>`, or only the title while no source is known).
 
 **Source**: docs/specification/mockups/README.md#project-names--one-book-several-translations-pn, docs/specification/mockups/README.md#step-2--book-brief--b1b3-i, docs/proposals/2026-10-19-ui-finalization-and-persistence.md (PN1). In plain words: the person sees what the project is called and why, and a name they typed is never overwritten by a language change.
 
 #### Scenario: The automatic name follows a language change
 
-- **WHEN** the project `Earth Gravity · EN → …` has the target changed to Ukrainian
+- **WHEN** the project `Earth Gravity · EN` has the target changed to Ukrainian
 - **THEN** the Project name line reads "automatic — follows the languages" and the project is named `Earth Gravity · EN → UK`
 - **AND** a toast says that the name changed
 

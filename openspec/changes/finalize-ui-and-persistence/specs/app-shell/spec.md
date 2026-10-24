@@ -617,7 +617,7 @@ WHEN "+ New translation" is used, the application SHALL open Import with its emp
 
 ### Requirement: Name every project automatically from its book and languages
 
-The application SHALL name a project `<book title> · <SRC> → <TGT>` (for example `Earth Gravity · EN → UK`), taking the title from the book's metadata before a colon or else the file name. Before a target is chosen it SHALL end in `→ …`, and the source code SHALL be left out until a language is known.
+The application SHALL name a project `<book title> · <SRC> → <TGT>` (for example `Earth Gravity · EN → UK`), taking the title from the book's metadata before a colon or else the file name. Before a target is chosen it SHALL carry no arrow — `<book title> · <SRC>` — and the source code SHALL be left out until a language is known, so a book with neither reads as its title alone.
 
 **Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 1). In plain words: a person never has to invent a name, and the name says what the project is.
 
@@ -629,12 +629,12 @@ The application SHALL name a project `<book title> · <SRC> → <TGT>` (for exam
 #### Scenario: Before a target
 
 - **WHEN** the source is English and no target is chosen
-- **THEN** the name is `Earth Gravity · EN → …`
+- **THEN** the name is `Earth Gravity · EN`
 
 #### Scenario: Under Find out from the text
 
 - **WHEN** the source language is "Find out from the text" and none is found yet
-- **THEN** the name is `Earth Gravity · → …`, with the source code left out
+- **THEN** the name is `Earth Gravity`, with no source code and no arrow
 
 #### Scenario: No title in the metadata
 

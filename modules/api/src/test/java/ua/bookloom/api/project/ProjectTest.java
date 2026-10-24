@@ -49,13 +49,15 @@ class ProjectTest {
         assertThat(changed.lastOpenedAt()).isEqualTo(OPENED);
     }
 
-    // IF a language is absent or carries a region, THEN the name shows only the primary subtag in capitals.
+    // IF a language is absent or carries a region, THEN the name shows only the primary subtag in capitals; IF no
+    // target is chosen, THEN the name has no arrow at all, never an arrow to an ellipsis.
     @ParameterizedTest
     @CsvSource(
             value = {
                 "Earth Gravity,en,uk,Earth Gravity · EN → UK",
                 "Earth Gravity,,uk,Earth Gravity · → UK",
-                "Earth Gravity,en,,Earth Gravity · EN → …",
+                "Earth Gravity,en,,Earth Gravity · EN",
+                "Earth Gravity,,,Earth Gravity",
                 "Earth Gravity,en-US,uk-UA,Earth Gravity · EN → UK",
                 "Земля,uk,de,Земля · UK → DE"
             })

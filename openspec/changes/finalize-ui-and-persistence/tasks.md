@@ -443,7 +443,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - Tests: extend `ProjectService*Test`s; add `ProjectNamesTest`, parameterised:
     - `Earth Gravity` en→uk → `Earth Gravity · EN → UK`;
     - Auto source → `Earth Gravity · → UK`;
-    - no target → `Earth Gravity · EN → …`;
+    - no target → `Earth Gravity · EN` (no arrow; only the title when no source is known either, finalize 9 final review);
     - a used pair in the same book → `PairInUse`;
     - `Earth Gravity · 26b` twice in one book → `NameInUse`;
     - the same automatic name in two books → both accepted;
