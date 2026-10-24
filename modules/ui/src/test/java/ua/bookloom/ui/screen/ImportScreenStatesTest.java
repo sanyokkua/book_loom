@@ -51,7 +51,8 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         openBook(source);
         onFx(() -> button("import-verdict-details").fire());
 
-        assertThat(textOf("import-verdict-text")).isEqualTo("secret.epub could not be read. Try downloading it again.");
+        assertThat(textOf("import-verdict-text"))
+                .isEqualTo("secret.epub could not be read as an EPUB. The file may be damaged.");
         assertThat(errors.presented()).containsExactly(refusal);
         assertThat(optional("import-continue")).isNull();
         assertThat(optional("import-about")).isNull();

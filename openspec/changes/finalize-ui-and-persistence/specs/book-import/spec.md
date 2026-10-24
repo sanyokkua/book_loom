@@ -210,10 +210,25 @@ The import screen SHALL accept a book from the file picker or dropped onto its f
 - **WHEN** `notes.pdf` is dropped onto the screen
 - **THEN** the verdict is Unsupported and says "It reads EPUB, FB2, Markdown and plain text", and offers Choose another file…
 
+#### Scenario: A file of an unknown type is never named "Unknown"
+
+- **WHEN** `notes.xyz`, whose bytes match no known type, is dropped onto the screen
+- **THEN** the verdict reads `notes.xyz is not a format BookLoom reads. It reads EPUB, FB2, Markdown and plain text.` and never prints `Unknown`
+
 #### Scenario: A damaged book of a supported format is refused with its reason
 
 - **WHEN** `broken.epub`, whose ZIP container is truncated, is opened
-- **THEN** the verdict is Damaged with "Try downloading it again" and a Details control, and offers Choose another file…
+- **THEN** the verdict reads `broken.epub could not be read as an EPUB. The file may be damaged.` with a Details control, and offers Choose another file…
+
+#### Scenario: A file whose content is not the format its name promises is damaged, not unsupported
+
+- **WHEN** `corrupt.epub`, which holds plain text instead of a ZIP archive, or `odd.fb2`, which has no FictionBook root, is opened
+- **THEN** the inspection answers the `DAMAGED` verdict with the format the name promises, and the verdict reads `corrupt.epub could not be read as an EPUB. The file may be damaged.` (`odd.fb2 could not be read as an FB2 book. …`), never `is Unknown`
+
+#### Scenario: A book with no text is refused
+
+- **WHEN** a 0-byte or whitespace-only `empty.txt`, an empty Markdown file, an FB2 with no paragraph or an EPUB whose body is empty is opened
+- **THEN** the import answers the `NO_TEXT` verdict and stores no project, and the verdict reads `This book has no text to translate.` (Ukrainian `У цій книзі немає тексту для перекладу.`) with Choose another file… and no Continue
 
 #### Scenario: Opening a second book replaces the first
 

@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -37,7 +38,8 @@ import ua.bookloom.document.txt.TxtInspection;
 
 /**
  * The one public {@link BookInspector} implementation (task 4.2): dispatches to the four per-format inspections by
- * resolved format, and answers {@code UNSUPPORTED} — named from the file's leading bytes — for anything else.
+ * resolved format, answers {@code DAMAGED} for a file whose name promises one of the four formats its content is not,
+ * and {@code UNSUPPORTED} — named from the file's leading bytes — for anything else.
  *
  * <p>{@link #profile(Document)} is not implemented here: assembling a book's title, author, cover, structure tree
  * and statistics is task 4.5's job, once tasks 4.3 and 4.4 exist to feed it. It answers a failed {@code Result}
@@ -56,7 +58,6 @@ public final class BookInspectorService implements BookInspector {
     private static final String PDF_TYPE = "PDF";
     private static final String DOCX_TYPE = "DOCX";
     private static final String MOBI_TYPE = "MOBI";
-    private static final String UNKNOWN_TYPE = "Unknown";
 
     private final EpubInspection epubInspection;
     private final Fb2Inspection fb2Inspection;
@@ -70,7 +71,7 @@ public final class BookInspectorService implements BookInspector {
         try {
             final BookInspection inspection = FormatResolver.probe(source)
                     .map(format -> inspectAs(format, source))
-                    .orElseGet(() -> unsupported(source));
+                    .orElseGet(() -> refused(source));
             logOutcome(source, inspection);
             return Result.ok(inspection);
         } catch (Throwable t) {
@@ -162,7 +163,20 @@ public final class BookInspectorService implements BookInspector {
                 inspection.encryptionScheme() != null);
     }
 
-    private BookInspection unsupported(Path source) {
+    private BookInspection refused(Path source) {
+        final Optional<BookFormat> promised = Files.isRegularFile(source)
+                ? BookFormat.ofFileName(String.valueOf(source.getFileName()))
+                : Optional.empty();
+        if (promised.isPresent()) {
+            log.debug("Damaged file source={} promisedFormat={}", source, promised.get());
+            return new BookInspection(
+                    InspectionVerdict.DAMAGED,
+                    promised.get(),
+                    null,
+                    promised.get().name(),
+                    null,
+                    LanguageEvidenceReader.evaluate(null, List.of()));
+        }
         final byte[] head = readHead(source);
         final String detectedType = detectedTypeOf(source, head);
         log.debug("Unsupported file source={} detectedType={}", source, detectedType);
@@ -185,7 +199,7 @@ public final class BookInspectorService implements BookInspector {
         if (startsWith(head, ZIP_MAGIC, 0) && looksLikeDocx(source)) {
             return DOCX_TYPE;
         }
-        return UNKNOWN_TYPE;
+        return BookInspection.UNKNOWN_TYPE;
     }
 
     private static boolean looksLikeDocx(Path source) {

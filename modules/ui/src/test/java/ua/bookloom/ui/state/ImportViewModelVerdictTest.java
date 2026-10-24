@@ -52,7 +52,7 @@ class ImportViewModelVerdictTest extends ImportViewModelTestBase {
 
     // IF an unsupported type were reported like a protected book, THEN the person would be told the wrong reason.
     @ParameterizedTest(name = "{0}")
-    @CsvSource({"book.pdf, PDF", "report.docx, DOCX", "mystery.bin, Unknown"})
+    @CsvSource({"book.pdf, PDF", "report.docx, DOCX"})
     void open_unsupportedAnswerWithoutAProjectId_isUnsupportedNamingTheDetectedType(
             final String fileName, final String type) {
         final Path source = dir.resolve(fileName);

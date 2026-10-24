@@ -26,6 +26,8 @@ public record ImportVerdict(Kind kind, String text) {
         UNSUPPORTED,
         /** A readable format could not be read. */
         DAMAGED,
+        /** The book opened, but holds no text to translate. */
+        NO_TEXT,
         /** The same book is already stored as one or more projects. */
         ALREADY
     }

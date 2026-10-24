@@ -121,12 +121,35 @@ class ImportVerdictScreenTest extends ImportScreenTestBase {
         assertThat(optional("import-verdict-choose")).isNotNull();
     }
 
+    // IF an empty book offered Continue, THEN a project of nothing would be set up and translated.
+    @Test
+    void verdict_bookWithNoText_saysSoOffersChooseAnotherAndNoContinue() throws TimeoutException {
+        open("empty.txt", Result.ok(BookFixtures.refused(InspectionVerdict.NO_TEXT, "TXT")));
+
+        assertThat(textOf("import-verdict-text")).isEqualTo("This book has no text to translate.");
+        assertThat(optional("import-verdict-choose")).isNotNull();
+        assertThat(optional("import-continue")).isNull();
+        assertThat(viewModel().state().get()).isEqualTo(new ImportState.NoText("empty.txt"));
+    }
+
+    // IF a file the inspection found damaged were worded as an unknown type, THEN "Unknown" would read as a format.
+    @Test
+    void verdict_damagedByInspection_namesTheFormatItCouldNotBeReadAs() throws TimeoutException {
+        open("corrupt.epub", Result.ok(BookFixtures.refused(InspectionVerdict.DAMAGED, "EPUB")));
+
+        assertThat(textOf("import-verdict-text"))
+                .isEqualTo("corrupt.epub could not be read as an EPUB. The file may be damaged.")
+                .doesNotContain("Unknown");
+        assertThat(optional("import-continue")).isNull();
+    }
+
     // IF the damaged verdict hid the typed reason, THEN a person could not report what went wrong.
     @Test
     void verdict_damagedBook_saysTryAgainAndKeepsTheReasonBehindDetails() throws TimeoutException {
         open("broken.epub", Result.err(AppError.of(ErrorCode.validation, "This file could not be opened", "Damaged.")));
 
-        assertThat(textOf("import-verdict-text")).isEqualTo("broken.epub could not be read. Try downloading it again.");
+        assertThat(textOf("import-verdict-text"))
+                .isEqualTo("broken.epub could not be read as an EPUB. The file may be damaged.");
         assertThat(button("import-verdict-details").getText()).isEqualTo("Details");
         assertThat(optional("import-verdict-choose")).isNotNull();
         assertThat(optional("import-continue")).isNull();

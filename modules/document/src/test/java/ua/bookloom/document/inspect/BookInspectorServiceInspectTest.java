@@ -9,8 +9,11 @@ import java.util.Arrays;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.InspectionVerdict;
@@ -253,7 +256,23 @@ class BookInspectorServiceInspectTest {
         final BookInspection inspection = inspectionOf(bin);
 
         assertThat(inspection.verdict()).isEqualTo(InspectionVerdict.UNSUPPORTED);
-        assertThat(inspection.detectedType()).isEqualTo("Unknown");
+        assertThat(inspection.detectedType()).isEqualTo("Unknown").isEqualTo(BookInspection.UNKNOWN_TYPE);
+    }
+
+    // IF a file whose name promises a supported format held something else, THEN it is damaged, not "Unknown": the
+    // verdict keeps the format the name promised so the refusal can say what it could not be read as.
+    @ParameterizedTest
+    @CsvSource({"corrupt.epub,EPUB", "odd.fb2,FB2", "odd.fb2.zip,FB2"})
+    void inspect_supportedNameWithOtherContent_damagedAsTheNamedFormat(final String name, final BookFormat format)
+            throws Exception {
+        final Path file = tempDir.resolve(name);
+        Files.write(file, "this is not the book its name promises".getBytes(StandardCharsets.UTF_8));
+
+        final BookInspection inspection = inspectionOf(file);
+
+        assertThat(inspection.verdict()).isEqualTo(InspectionVerdict.DAMAGED);
+        assertThat(inspection.format()).isEqualTo(format);
+        assertThat(inspection.detectedType()).isEqualTo(format.name());
     }
 
     // an EPUB truncated to half its length cannot even be inflated, so inspection answers

@@ -40,7 +40,6 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 
@@ -230,35 +229,6 @@ class TranslationJobEventsTest {
         shutdown(workers);
     }
 
-    // Treating an empty book as having no section would reject this zero-count progress.
-    @Test
-    void progress_emptyBook_usesSectionZero() {
-        final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "");
-        final ScriptedChatModel model = replies();
-        final TranslationJobImpl translation = job(source, model);
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(events::add);
-
-        final JobReport result = report(translation.run());
-
-        assertThat(result)
-                .extracting(JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged)
-                .containsExactly(JobState.COMPLETED, 0, 0, 0);
-        assertThat(events)
-                .filteredOn(StageStarted.class::isInstance)
-                .extracting(
-                        event -> ((StageStarted) event).stage(),
-                        event -> ((StageStarted) event).progress().section(),
-                        event -> ((StageStarted) event).progress().sections(),
-                        event -> ((StageStarted) event).progress().accepted(),
-                        event -> ((StageStarted) event).progress().flagged(),
-                        event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.PREP, 0, 1, 0, 0, 0), tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0));
-        assertThat(events).noneMatch(SegmentDecided.class::isInstance);
-        assertThat(model.requests()).isEmpty();
-    }
-
-    // Replacing the atomic claim with a state check would let both callers return successful reports.
     @Test
     void run_concurrentCallers_onlyOneClaimsExecution() {
         final ScriptedChatModel scripted = replies("ONE.");

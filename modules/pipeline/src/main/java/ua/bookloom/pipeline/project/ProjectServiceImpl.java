@@ -277,11 +277,22 @@ public final class ProjectServiceImpl implements ProjectService {
         return documents
                 .open(source)
                 .flatMap(document -> ProjectOpener.closingUnlessImported(
-                        documents, document, () -> storeUnderId(normalized, inspection, document, brief)));
+                        documents,
+                        document,
+                        () -> inspector
+                                .profile(document)
+                                .flatMap(profile -> NoTextRefusal.of(normalized, inspection, profile)
+                                        .map(Result::ok)
+                                        .orElseGet(() ->
+                                                storeUnderId(normalized, inspection, document, brief, profile)))));
     }
 
     private Result<ImportedBook> storeUnderId(
-            final Path source, final BookInspection inspection, final Document document, final BookBrief brief) {
+            final Path source,
+            final BookInspection inspection,
+            final Document document,
+            final BookBrief brief,
+            final BookProfile profile) {
         final String id =
                 reusableProject(document.contentHash(), brief).map(Project::id).orElseGet(ids::newId);
         log.debug("create uses project={}", id);
@@ -290,23 +301,22 @@ public final class ProjectServiceImpl implements ProjectService {
             log.debug("import replaces the open book of project={}", id);
             documents.close(previous);
         }
-        return profileAndStore(id, source, inspection, document, brief);
+        return store(id, source, inspection, document, brief, profile);
     }
 
-    private Result<ImportedBook> profileAndStore(
+    private Result<ImportedBook> store(
             final String id,
             final Path source,
             final BookInspection inspection,
             final Document document,
-            final BookBrief brief) {
-        return inspector.profile(document).flatMap(profile -> {
-            final String title = ProjectNames.titleOf(profile.title(), source);
-            final Project project = StoredBooks.newProject(id, source, document, brief, title, clock.instant());
-            final List<SegmentRecord> records = StoredBooks.pendingRecords(id, document);
-            return projects.save(project)
-                    .flatMap(saved -> segments.saveAll(id, records))
-                    .map(count -> imported(id, source, inspection, profile, brief, document, count));
-        });
+            final BookBrief brief,
+            final BookProfile profile) {
+        final String title = ProjectNames.titleOf(profile.title(), source);
+        final Project project = StoredBooks.newProject(id, source, document, brief, title, clock.instant());
+        final List<SegmentRecord> records = StoredBooks.pendingRecords(id, document);
+        return projects.save(project)
+                .flatMap(saved -> segments.saveAll(id, records))
+                .map(count -> imported(id, source, inspection, profile, brief, document, count));
     }
 
     private ImportedBook imported(

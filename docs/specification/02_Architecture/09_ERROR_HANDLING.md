@@ -76,7 +76,9 @@ public enum ErrorCode {
   (`06_DATA_MODEL_SQLITE.md#resume-support`, `05_RELIABILITY_AND_RESUME.md`, DD-31); it is not silently substituted.
 - **A DRM-protected or otherwise unsupported import is an inspection verdict carried as data, not a distinct
   `ErrorCode`.** Inspecting a book (`ADR-0039`) answers with a `BookInspection` whose `verdict` names the refusal
-  reason (for example `DRM_PROTECTED`, naming the scheme) as ordinary data — a refusing verdict is a normal, successful
+  reason (for example `DRM_PROTECTED`, naming the scheme; `DAMAGED` for a file whose content is not the format its
+  name promises; `UNSUPPORTED` for any other type) as ordinary data; the import adds `NO_TEXT`, after opening, for a
+  book whose body holds no word, and stores no project for it — a refusing verdict is a normal, successful
   answer from the inspector, never a thrown failure. The `ErrorCode` enum stays at its **fifteen constants** (`ADR-0022`):
   actually **opening** a book whose inspection refused it still fails with `validation`, the same code any other
   invalid input uses; inspection only moves *how the reason is discovered and displayed* earlier and off the exception

@@ -1202,6 +1202,15 @@ public enum MessageKey {
     IMPORT_VERDICT_DAMAGED_DETAILS_TIP("import.verdict.damaged.details.tip"),
     /** Verdict line of a file that is not a supported format; argument 0 is the file name, argument 1 what it is. */
     IMPORT_VERDICT_UNSUPPORTED("import.verdict.unsupported"),
+    /** Verdict line of a file whose type is not known; argument 0 is the file name. */
+    IMPORT_VERDICT_UNSUPPORTED_UNKNOWN("import.verdict.unsupported.unknown"),
+    /**
+     * Verdict line of a file whose content is not the format its name promises; argument 0 is the file name, argument
+     * 1 selects the format: {@code epub}, {@code fb2}, {@code markdown} or {@code txt}.
+     */
+    IMPORT_VERDICT_DAMAGED_AS("import.verdict.damaged.as"),
+    /** Verdict line of a book whose body holds no word to translate. */
+    IMPORT_VERDICT_NO_TEXT("import.verdict.noText"),
     /** Heading of the closed fold holding the book's details. */
     IMPORT_ABOUT_TITLE("import.about"),
     /** Hover explanation of the fold labelled by {@link #IMPORT_ABOUT_TITLE}. */

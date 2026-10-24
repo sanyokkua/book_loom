@@ -60,14 +60,27 @@ public sealed interface ImportState {
      * The file is not one of the four formats the application reads.
      *
      * @param fileName the name of the refused file
-     * @param detectedType what the file actually is, such as {@code PDF} or {@code Unknown}
+     * @param detectedType what the file actually is, such as {@code PDF}, or {@code null} when its type is not known,
+     *     which the line words without naming one
      */
-    record Unsupported(String fileName, String detectedType) implements ImportState {
+    record Unsupported(String fileName, @Nullable String detectedType) implements ImportState {
 
-        /** Rejects a missing file name or type. */
+        /** Rejects a missing file name. */
         public Unsupported {
             Objects.requireNonNull(fileName, "fileName");
-            Objects.requireNonNull(detectedType, "detectedType");
+        }
+    }
+
+    /**
+     * The book opened, but its body holds no word to translate, so no project was made for it.
+     *
+     * @param fileName the name of the refused file
+     */
+    record NoText(String fileName) implements ImportState {
+
+        /** Rejects a missing file name. */
+        public NoText {
+            Objects.requireNonNull(fileName, "fileName");
         }
     }
 

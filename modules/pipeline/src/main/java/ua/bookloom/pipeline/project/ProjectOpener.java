@@ -139,7 +139,10 @@ final class ProjectOpener {
         boolean kept = false;
         try {
             final Result<T> done = Objects.requireNonNull(finish.get(), "result");
-            kept = done.isOk() && !(done.data() instanceof ProjectOpening.BookFileChanged);
+            // A refusal answered as data (the book file changed, or a book with no text) keeps nothing open.
+            kept = done.isOk()
+                    && !(done.data() instanceof ProjectOpening.BookFileChanged)
+                    && !(done.data() instanceof ImportedBook book && book.projectId() == null);
             return done;
         } finally {
             if (!kept) {

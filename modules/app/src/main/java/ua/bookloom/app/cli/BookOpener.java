@@ -124,6 +124,17 @@ final class BookOpener {
                         "This book is protected",
                         "This book is protected and cannot be translated. Its content is encrypted, so there is"
                                 + " nothing to translate.");
+            case NO_TEXT ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This book has no text to translate",
+                        "This book has no text to translate. Its body holds no words.");
+            case DAMAGED ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This file could not be opened",
+                        "This file could not be read as a book — its content is not the format its name"
+                                + " promises, so the file may be damaged.");
             case UNSUPPORTED, READABLE ->
                 AppError.of(
                         ErrorCode.validation,

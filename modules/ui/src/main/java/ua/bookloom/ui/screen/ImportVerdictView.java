@@ -70,7 +70,7 @@ final class ImportVerdictView {
         switch (verdict.kind()) {
             case READING -> reading(controls);
             case ALREADY -> controls.getChildren().add(showThem());
-            case DRM, UNSUPPORTED -> controls.getChildren().add(chooseAnother());
+            case DRM, UNSUPPORTED, NO_TEXT -> controls.getChildren().add(chooseAnother());
             case DAMAGED -> controls.getChildren().addAll(chooseAnother(), details());
             case READY, TWO_MARKS, UNRECOGNIZED -> {}
         }
@@ -84,7 +84,7 @@ final class ImportVerdictView {
         return switch (kind) {
             case READY -> Banner.Role.OK;
             case TWO_MARKS, UNRECOGNIZED -> Banner.Role.WARN;
-            case DRM, UNSUPPORTED, DAMAGED -> Banner.Role.ERR;
+            case DRM, UNSUPPORTED, DAMAGED, NO_TEXT -> Banner.Role.ERR;
             case READING, ALREADY -> Banner.Role.INFO;
         };
     }
@@ -93,7 +93,7 @@ final class ImportVerdictView {
         return switch (kind) {
             case READY -> OK_GLYPH;
             case TWO_MARKS, UNRECOGNIZED -> ImportViews.WARNING_GLYPH;
-            case DRM, UNSUPPORTED, DAMAGED -> ERROR_GLYPH;
+            case DRM, UNSUPPORTED, DAMAGED, NO_TEXT -> ERROR_GLYPH;
             case READING, ALREADY -> INFO_GLYPH;
         };
     }

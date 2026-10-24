@@ -72,7 +72,7 @@ class ImportVerdictsTest {
                                 "broken.epub",
                                 AppError.of(ErrorCode.validation, "This file could not be opened", "Damaged.")),
                         Kind.DAMAGED,
-                        "broken.epub could not be read. Try downloading it again."),
+                        "broken.epub could not be read as an EPUB. The file may be damaged."),
                 Arguments.of(
                         new ImportState.AlreadyInProjects(
                                 "earth.epub",
@@ -83,14 +83,65 @@ class ImportVerdictsTest {
                         "Already in projects: Earth Gravity · EN → UK, Earth Gravity · EN → PL."));
     }
 
+    // A damaged file names the format its name promised; an unknown type and an empty book are never named "Unknown".
+    static Stream<Arguments> damagedAndEmptyStates() {
+        return Stream.of(
+                Arguments.of(
+                        new ImportState.Refused(
+                                "odd.fb2",
+                                AppError.of(ErrorCode.validation, "This file could not be opened", "Damaged.")),
+                        Kind.DAMAGED,
+                        "odd.fb2 could not be read as an FB2 book. The file may be damaged."),
+                Arguments.of(
+                        new ImportState.Refused(
+                                "notes.md", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
+                        Kind.DAMAGED,
+                        "notes.md could not be read as a Markdown file. The file may be damaged."),
+                Arguments.of(
+                        new ImportState.Refused(
+                                "notes.txt", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
+                        Kind.DAMAGED,
+                        "notes.txt could not be read as a plain text file. The file may be damaged."),
+                Arguments.of(
+                        new ImportState.Refused("book", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
+                        Kind.DAMAGED,
+                        "book could not be read. Try downloading it again."),
+                Arguments.of(
+                        new ImportState.Unsupported("notes.xyz", null),
+                        Kind.UNSUPPORTED,
+                        "notes.xyz is not a format BookLoom reads. It reads EPUB, FB2, Markdown and plain text."),
+                Arguments.of(new ImportState.NoText("empty.txt"), Kind.NO_TEXT, "This book has no text to translate."));
+    }
+
     // IF a state said two lines, or the wrong one, THEN the person would not know in one glance what to do next.
     @ParameterizedTest
-    @MethodSource({"detectedStates", "refusedStates"})
+    @MethodSource({"detectedStates", "refusedStates", "damagedAndEmptyStates"})
     void of_eachState_isOneLineOfTheRightKindAndWords(final ImportState state, final Kind kind, final String text) {
         assertThat(ImportVerdicts.of(ENGLISH, state)).hasValueSatisfying(verdict -> {
             assertThat(verdict.kind()).isEqualTo(kind);
             assertThat(verdict.text()).isEqualTo(text);
         });
+    }
+
+    static Stream<Arguments> ukrainianStates() {
+        return Stream.of(
+                Arguments.of(
+                        new ImportState.Refused(
+                                "corrupt.epub", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
+                        "Не вдалося прочитати corrupt.epub як EPUB. Можливо, файл пошкоджено."),
+                Arguments.of(
+                        new ImportState.Unsupported("notes.xyz", null),
+                        "Формат notes.xyz не підтримується. Програма читає EPUB, FB2, Markdown і простий текст."),
+                Arguments.of(new ImportState.NoText("empty.txt"), "У цій книзі немає тексту для перекладу."));
+    }
+
+    // IF the Ukrainian words were missing or fell back to English, THEN a Ukrainian window would mix languages.
+    @ParameterizedTest
+    @MethodSource("ukrainianStates")
+    void of_refusalsUnderUkrainian_areWordedInUkrainian(final ImportState state, final String text) {
+        final Messages ukrainian = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
+        assertThat(ImportVerdicts.of(ukrainian, state))
+                .hasValueSatisfying(verdict -> assertThat(verdict.text()).isEqualTo(text));
     }
 
     @Test

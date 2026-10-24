@@ -1,10 +1,12 @@
 package ua.bookloom.ui.state;
 
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -39,14 +41,10 @@ public final class ImportVerdicts {
                     case ImportState.Detected detected -> detected(messages, detected);
                     case ImportState.DrmBlocked blocked -> line(Kind.DRM, drm(messages, blocked));
                     case ImportState.Unsupported unsupported ->
-                        line(
-                                Kind.UNSUPPORTED,
-                                messages.get(
-                                        MessageKey.IMPORT_VERDICT_UNSUPPORTED,
-                                        unsupported.fileName(),
-                                        unsupported.detectedType()));
-                    case ImportState.Refused refused ->
-                        line(Kind.DAMAGED, messages.get(MessageKey.IMPORT_VERDICT_DAMAGED, refused.fileName()));
+                        line(Kind.UNSUPPORTED, unsupported(messages, unsupported));
+                    case ImportState.Refused refused -> line(Kind.DAMAGED, damaged(messages, refused.fileName()));
+                    case ImportState.NoText empty ->
+                        line(Kind.NO_TEXT, messages.get(MessageKey.IMPORT_VERDICT_NO_TEXT));
                     case ImportState.AlreadyInProjects already ->
                         line(
                                 Kind.ALREADY,
@@ -80,6 +78,25 @@ public final class ImportVerdicts {
         return line(
                 Kind.READY,
                 messages.get(MessageKey.IMPORT_VERDICT_READY, card.chapters(), WordCount.text(messages, card.words())));
+    }
+
+    private static String unsupported(final Messages messages, final ImportState.Unsupported unsupported) {
+        final String type = unsupported.detectedType();
+        log.debug("unsupported line names the file's type: {}", type != null);
+        return type == null
+                ? messages.get(MessageKey.IMPORT_VERDICT_UNSUPPORTED_UNKNOWN, unsupported.fileName())
+                : messages.get(MessageKey.IMPORT_VERDICT_UNSUPPORTED, unsupported.fileName(), type);
+    }
+
+    // The name promised a format the content is not, so the line says which format it could not be read as.
+    private static String damaged(final Messages messages, final String fileName) {
+        final Optional<BookFormat> promised = BookFormat.ofFileName(fileName);
+        log.debug("damaged line names the promised format: {}", promised.orElse(null));
+        return promised.map(format -> messages.get(
+                        MessageKey.IMPORT_VERDICT_DAMAGED_AS,
+                        fileName,
+                        format.name().toLowerCase(Locale.ROOT)))
+                .orElseGet(() -> messages.get(MessageKey.IMPORT_VERDICT_DAMAGED, fileName));
     }
 
     private static String drm(final Messages messages, final ImportState.DrmBlocked blocked) {

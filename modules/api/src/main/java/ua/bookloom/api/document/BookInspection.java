@@ -8,7 +8,8 @@ import org.jspecify.annotations.Nullable;
  * is refused — enough detail for the import screen to name why (ADR-0039).
  *
  * @param verdict whether the file can be opened, or the reason it is refused
- * @param format the detected format, or {@code null} when {@code verdict} is {@link InspectionVerdict#UNSUPPORTED}
+ * @param format the detected format — for {@link InspectionVerdict#DAMAGED}, the format the file's name promises —
+ *     or {@code null} when {@code verdict} is {@link InspectionVerdict#UNSUPPORTED}
  * @param formatVersion the detected format's version string when one is meaningful (an EPUB's package version, for
  *     example), or {@code null} when not applicable or not determined
  * @param detectedType a human-readable name for what the file actually is (for example {@code "PDF"} or
@@ -24,6 +25,12 @@ public record BookInspection(
         String detectedType,
         @Nullable String encryptionScheme,
         LanguageEvidence languageEvidence) {
+
+    /**
+     * The {@code detectedType} of a file whose bytes match no type the inspection knows. A display never shows it: it
+     * says the file is not a supported format instead of naming it "Unknown".
+     */
+    public static final String UNKNOWN_TYPE = "Unknown";
 
     /**
      * Validates the non-nullable components a caller is entitled to assume.
