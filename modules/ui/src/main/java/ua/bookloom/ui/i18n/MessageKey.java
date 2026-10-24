@@ -47,6 +47,10 @@ public enum MessageKey {
     NAV_FOOTER_SELECTION("nav.footer.selection"),
     /** The navigation footer while no model is chosen. */
     NAV_FOOTER_NO_MODEL("nav.footer.noModel"),
+    /** The navigation footer while the local AI programs are looked at, or their model question is open. */
+    NAV_FOOTER_LOOKING("nav.footer.looking"),
+    /** The navigation footer after a program answered with models and the person chose none. */
+    NAV_FOOTER_NOT_CHOSEN("nav.footer.notChosen"),
     /** The product name in the title bar; the same in every language. */
     SHELL_TITLE("shell.title"),
     /** Title-bar control label offered while the light block is in force. */

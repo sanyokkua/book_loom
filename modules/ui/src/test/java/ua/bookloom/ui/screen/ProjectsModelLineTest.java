@@ -48,6 +48,10 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 () -> String.join(" ", textsUnder(node(CARD))).contains(text));
     }
 
+    private String footerText() {
+        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((javafx.scene.control.Label) node("nav-footer")).getText());
+    }
+
     private void press(final String id) {
         onFx(() -> ((Button) node(id)).fire());
     }
@@ -162,6 +166,48 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         press("projects-empty-tryagain");
         ImportScreenTestBase.awaitFx(() -> pick.asked().size() == 2);
         assertThat(pick.asked().get(1).modelIds()).containsExactly("gemma4:e4b", "qwen3:8b");
+    }
+
+    // IF the card and the footer said the program was closed while its models were being offered, THEN the window
+    // would contradict the question in front of the person.
+    @Test
+    void emptyCard_severalModelsWhileTheQuestionIsOpen_saysLookingAndNeverNotOpen() throws Exception {
+        catalog.answering(OLLAMA, "gemma4:e4b", "qwen3:8b");
+        showEmptyListing();
+        onFx(() -> probe().runFirstLaunch());
+        ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
+
+        awaitCardContains("Looking for an AI program on this computer…");
+        assertThat(textOf(CARD)).doesNotContain("is not open").doesNotContain("No AI model found");
+        assertThat(footerText()).isEqualTo("Looking for an AI model…");
+        assertThat(node("nav-footer").getStyleClass()).doesNotContain("state-failed");
+    }
+
+    // IF the footer said no model was found after the person declined a list of models, THEN it would contradict the
+    // card above it.
+    @Test
+    void footer_severalModelsAndNotNow_saysNoModelChosen() throws Exception {
+        catalog.answering(OLLAMA, "gemma4:e4b", "qwen3:8b");
+        showEmptyListing();
+        onFx(() -> probe().runFirstLaunch());
+        ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
+
+        onFx(pick::notNow);
+
+        awaitCardContains("No AI model chosen yet");
+        assertThat(footerText()).isEqualTo("No AI model chosen");
+    }
+
+    // IF the Ukrainian footer kept the English words while the question is open, THEN the bundles would differ.
+    @Test
+    void footer_whileTheQuestionIsOpenUnderUkrainian_saysLookingInUkrainian() throws Exception {
+        useLocale(Locale.forLanguageTag("uk"));
+        catalog.answering(OLLAMA, "gemma4:e4b", "qwen3:8b");
+        showEmptyListing();
+        onFx(() -> probe().runFirstLaunch());
+        ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
+
+        ImportScreenTestBase.awaitFx(() -> footerText().equals("Шукаємо модель ШІ…"));
     }
 
     @Test

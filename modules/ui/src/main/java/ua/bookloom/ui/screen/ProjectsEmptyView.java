@@ -113,8 +113,9 @@ final class ProjectsEmptyView {
         final ProbeOutcome outcome = probe.outcome().get();
         modelLine.getChildren().clear();
         modelLine.getStyleClass().removeAll("banner-ok", "banner-err");
-        if (outcome instanceof ProbeOutcome.Looking) {
-            log.debug("model line: looking");
+        // While the person is asked which of several models to use, nothing is missing yet: the line still looks.
+        if (outcome instanceof ProbeOutcome.Looking || outcome instanceof ProbeOutcome.Asking) {
+            log.debug("model line: looking, the model question open {}", outcome instanceof ProbeOutcome.Asking);
             modelLine.getChildren().addAll(title(messages.get(MessageKey.PROJECTS_MODEL_LOOKING)), tryAgain(true));
         } else if (choice.chosen()) {
             modelLine.getStyleClass().add("banner-ok");

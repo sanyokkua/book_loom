@@ -40,6 +40,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DiagnosticActions;
+import ua.bookloom.ui.state.LocalModelProbe;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StepLocks;
@@ -122,6 +123,7 @@ public final class AppShellView {
      * @param banners the run's banners, pinned between the toolbar and the content
      * @param runBanner the run's own banner, built with the shell; it pins itself in {@code banners}
      * @param version the build version the About dialog reports
+     * @param probe the look at the local AI programs, whose open model question the navigation footer waits for
      */
     @Inject
     AppShellView(
@@ -140,7 +142,8 @@ public final class AppShellView {
             final DiagnosticActions diagnostics,
             final ShellBanners banners,
             final RunBanner runBanner,
-            final @BuildVersion String version) {
+            final @BuildVersion String version,
+            final LocalModelProbe probe) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
@@ -154,7 +157,7 @@ public final class AppShellView {
         this.banners = Objects.requireNonNull(banners, "banners");
         Objects.requireNonNull(runBanner, "runBanner");
         this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate, progress, runs, locks);
+        this.navColumn = new NavColumn(messages, this::activate, progress, runs, locks, probe);
     }
 
     /**
