@@ -26,6 +26,10 @@ public record ProjectNameRules(
         EMPTY,
         /** Another project of the book has this name, ignoring case and outer spaces. */
         USED,
+        /** The typed name is longer than {@link Project#MAX_NAME_LENGTH}. */
+        TOO_LONG,
+        /** The name holds a path separator or a control character ({@link Project#hasForbiddenCharacter}). */
+        FORBIDDEN_CHARACTER,
         /** The name may be used. */
         OK
     }
@@ -39,12 +43,21 @@ public record ProjectNameRules(
      * Judges a typed name.
      *
      * @param typed the text in the field
-     * @return {@link Check#EMPTY} for blank text, {@link Check#USED} when another project of the book has the name
+     * @return {@link Check#EMPTY} for blank text, {@link Check#TOO_LONG} or {@link Check#FORBIDDEN_CHARACTER} for a
+     *     typed name that is not the automatic one and breaks those rules, {@link Check#USED} when another project of
+     *     the book has the name, else {@link Check#OK}
      */
     public Check check(final String typed) {
         Objects.requireNonNull(typed, "typed");
         if (typed.isBlank()) {
             return Check.EMPTY;
+        }
+        final String name = typed.strip();
+        if (!name.equals(automaticName) && name.length() > Project.MAX_NAME_LENGTH) {
+            return Check.TOO_LONG;
+        }
+        if (Project.hasForbiddenCharacter(name)) {
+            return Check.FORBIDDEN_CHARACTER;
         }
         return usedKeys.contains(Project.keyOf(typed)) ? Check.USED : Check.OK;
     }

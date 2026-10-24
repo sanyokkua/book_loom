@@ -11,6 +11,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
@@ -246,6 +248,37 @@ class ProjectServiceNamesTest {
 
         assertThat(Objects.requireNonNull(blank.error()).code()).isEqualTo(ErrorCode.validation);
         assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+    }
+
+    // IF any typed text were stored, THEN a name could be too long to show or hold a character no file name accepts.
+    @ParameterizedTest
+    @ValueSource(strings = {"Earth/Gravity", "Earth\\Gravity", "Earth\tGravity", "Earth\u0007Gravity"})
+    void rename_nameWithASeparatorOrAControlCharacter_answersValidationAndKeepsTheName(final String typed) {
+        final String id = createOk(titled("earth-gravity.epub", TITLE));
+
+        final Result<ProjectChange> refused = service.rename(id, typed);
+
+        assertThat(Objects.requireNonNull(refused.error()).code()).isEqualTo(ErrorCode.validation);
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+    }
+
+    @Test
+    void rename_nameLongerThanTheLimit_answersValidationAndKeepsTheName() {
+        final String id = createOk(titled("earth-gravity.epub", TITLE));
+
+        final Result<ProjectChange> refused = service.rename(id, "x".repeat(Project.MAX_NAME_LENGTH + 1));
+
+        assertThat(Objects.requireNonNull(refused.error()).message()).contains("120");
+        assertThat(stored(id).name()).isEqualTo("Earth Gravity · EN → …");
+    }
+
+    @Test
+    void rename_nameAtTheLimit_isStored() {
+        final String id = createOk(titled("earth-gravity.epub", TITLE));
+
+        final Project renamed = saved(service.rename(id, "x".repeat(Project.MAX_NAME_LENGTH)));
+
+        assertThat(renamed.name()).hasSize(120);
     }
 
     @Test

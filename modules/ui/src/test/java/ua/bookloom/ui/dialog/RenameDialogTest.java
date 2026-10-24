@@ -146,6 +146,18 @@ class RenameDialogTest extends ShellTestBase {
         assertThat(button("rename-confirm").isDisable()).isTrue();
     }
 
+    // IF a slash were accepted, THEN a name meant for a list could not become part of a file name.
+    @Test
+    void field_nameWithASlash_showsWhyAndDisablesRename() {
+        ask();
+
+        type("Earth/Gravity");
+
+        assertThat(((Label) required("rename-error")).getText())
+                .isEqualTo("A name cannot hold / or \\ or invisible control characters");
+        assertThat(button("rename-confirm").isDisable()).isTrue();
+    }
+
     // IF a name used only in another book were refused, THEN two books could never share a project name.
     @Test
     void field_nameNotUsedInThisBook_enablesRenameAndSendsTheText() {

@@ -10,6 +10,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -138,8 +139,15 @@ final class NameField {
      * @param check the rules' verdict on the typed text
      */
     void refresh(final ProjectNameRules.Check check) {
-        if (touched && check == ProjectNameRules.Check.USED) {
-            showError(messages.get(MessageKey.DIALOG_PROJECT_NAME_ERROR_USED));
+        final @Nullable MessageKey refusal =
+                switch (check) {
+                    case USED -> MessageKey.DIALOG_PROJECT_NAME_ERROR_USED;
+                    case TOO_LONG -> MessageKey.DIALOG_PROJECT_NAME_ERROR_TOO_LONG;
+                    case FORBIDDEN_CHARACTER -> MessageKey.DIALOG_PROJECT_NAME_ERROR_CHARACTERS;
+                    case EMPTY, OK -> null;
+                };
+        if (touched && refusal != null) {
+            showError(messages.get(refusal, Project.MAX_NAME_LENGTH));
         } else if (!(serviceError && !touched)) {
             hideError();
         }

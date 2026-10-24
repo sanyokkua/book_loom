@@ -33,6 +33,9 @@ public record Project(
         Instant createdAt,
         Instant lastOpenedAt) {
 
+    /** Longest name a person may type, in characters; an automatic name, built from the title, may be longer. */
+    public static final int MAX_NAME_LENGTH = 120;
+
     private static final String NAME_SEPARATOR = " · ";
     private static final String ARROW = "→ ";
     private static final String NO_TARGET = "…";
@@ -70,6 +73,19 @@ public record Project(
      */
     public static String keyOf(final String name) {
         return Objects.requireNonNull(name, "name").strip().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Tells whether a typed name holds a character a name may not: a control character, which no one can see, or a
+     * path separator, since a name may become part of a file name.
+     *
+     * @param name the non-null name
+     * @return {@code true} if the name holds {@code /}, {@code \} or a control character, {@code false} otherwise
+     */
+    public static boolean hasForbiddenCharacter(final String name) {
+        return Objects.requireNonNull(name, "name")
+                .chars()
+                .anyMatch(character -> character == '/' || character == '\\' || Character.isISOControl(character));
     }
 
     /**

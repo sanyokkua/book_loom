@@ -77,6 +77,23 @@ class ProviderFormTest extends ProviderFormTestBase {
         });
     }
 
+    // IF two providers could share a name, THEN the list and the title bar could not tell them apart.
+    @Test
+    void save_nameAnotherProviderHasInOtherCase_isRefusedWithAFindingOnTheName() {
+        final SettingsViewModel viewModel = viewModel();
+        final ProviderForm form = form(viewModel);
+        addOfficeLm(viewModel, form);
+        edit(form, draft -> draft.withName(" OLLAMA "));
+
+        final boolean ran = save(form);
+
+        assertThat(ran).isFalse();
+        assertThat(configs.saves()).isZero();
+        assertThat(onFx(() -> form.findings().get()))
+                .extracting(ProviderDraft.FormFinding::key)
+                .contains(MessageKey.SETTINGS_ERROR_NAME_USED);
+    }
+
     // IF an environment reference were rewritten on the way, THEN the key would never be found at call time.
     @Test
     void save_environmentReferenceHeader_isStoredVerbatim() {

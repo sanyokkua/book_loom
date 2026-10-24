@@ -362,8 +362,8 @@ into the same language more than once (another model, quality or thinking settin
 Dialogs: **Translate into another language** (Translate into, with a used language marked "already in n projects";
 From, the book's source; project name; **Start from**: the brief · Glossary and Recurring terms with translations
 emptied · optionally the latest project's AI model; "Create and open the brief"; nothing is imported again — the book
-is reused by `contentHash`); **Same language pair**; **Rename…** (chips, uniqueness error, "Use the automatic name
-again"); **Remove project…** (deletes this project's saved work only — never the book, the exported files or the
+is reused by `contentHash`); **Same language pair**; **Rename…** (chips, uniqueness error, a typed name of at most 120
+characters with no `/`, `\` or control character — each refused in its own line — "Use the automatic name again"); **Remove project…** (deletes this project's saved work only — never the book, the exported files or the
 book's other projects). `Project` gains `name` and `nameOrigin`; a `ProjectNames` service in `:pipeline` builds the name
 and reports a conflict as a typed result.
 
@@ -786,7 +786,8 @@ restarts".
   px; its footer pinned). Detail header: the provider's name, "current" or **Use this one**, **Delete…** (confirm).
   **Summary card:** "Your AI model: Ollama · gemma4:e4b — ready ✓ · Answers in about 1 second · 7 models available" ·
   Test · Change model. **Connection details** (fold; opens by itself when there is a problem, for a new provider, or
-  with Show technical details): the GoText form — Name · Kind (Ollama / OpenAI-compatible) · Sign-in (None · Bearer
+  with Show technical details): the GoText form — Name (a name another provider shows, ignoring case, is a finding
+  that refuses Save) · Kind (Ollama / OpenAI-compatible) · Sign-in (None · Bearer
   token · API-key header + header name; key from environment variable, "set" / "not set") · Address · **Models
   endpoint** and **Inference endpoint** overrides (the inference one disabled for Ollama, with the reason) · Connect and
   request timeouts · Model (list + ↻, or typed) · Use custom headers (values may be `${env:NAME}`) · Use custom models

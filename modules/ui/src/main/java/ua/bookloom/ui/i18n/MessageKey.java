@@ -522,6 +522,8 @@ public enum MessageKey {
     SETTINGS_FORM_ADDRESS_V1_WARNING("settings.form.address.v1"),
     /** Error under the name field: a provider needs a name. */
     SETTINGS_ERROR_NAME("settings.error.name"),
+    /** Finding on the provider's name when another provider already shows the same name, ignoring case. */
+    SETTINGS_ERROR_NAME_USED("settings.error.name.used"),
     /** Error under a timeout field: it must be a whole number of seconds above zero. */
     SETTINGS_ERROR_NUMBER("settings.error.number"),
     /** Error under a timeout field: it must be at most an hour. */
@@ -3100,6 +3102,10 @@ public enum MessageKey {
     DIALOG_PROJECT_NAME_FIELD_TIP("dialog.projectName.field.tip"),
     /** The line shown when a project name is already used by another project of the same book. */
     DIALOG_PROJECT_NAME_ERROR_USED("dialog.projectName.error.used"),
+    /** The line shown when a typed project name is too long; argument 0 is the longest length allowed. */
+    DIALOG_PROJECT_NAME_ERROR_TOO_LONG("dialog.projectName.error.tooLong"),
+    /** The line shown when a typed project name holds a slash, a backslash or a control character. */
+    DIALOG_PROJECT_NAME_ERROR_CHARACTERS("dialog.projectName.error.characters"),
     /** Caption before the name chips. */
     DIALOG_PROJECT_NAME_CHIPS("dialog.projectName.chips"),
     /** Name chip that appends the model size. */

@@ -45,6 +45,10 @@ final class ProjectRenames {
                     "The name is empty",
                     "A project needs a name; type one or use the automatic."));
         }
+        final Optional<AppError> unfit = name == null ? Optional.empty() : unfitName(project, name);
+        if (unfit.isPresent()) {
+            return Result.err(unfit.get());
+        }
         final Project candidate = name == null
                 ? project.withName(automaticName(project), NameOrigin.AUTO)
                 : project.withName(name.strip(), NameOrigin.USER);
@@ -61,12 +65,45 @@ final class ProjectRenames {
             return Result.err(AppError.of(
                     ErrorCode.validation, "The name is empty", "A second translation needs a name of its own."));
         }
+        final Optional<AppError> unfit = unfitName(project, name);
+        if (unfit.isPresent()) {
+            return Result.err(unfit.get());
+        }
         final Result<ProjectChange> result =
                 saveUnlessClash(project.withBrief(brief).withName(name.strip(), NameOrigin.USER));
         if (result.data() instanceof ProjectChange.Saved) {
             log.info("second translation stored project={}", project.id());
         }
         return result;
+    }
+
+    // A typed name is shown in lists and may become part of a file name, so it is held to a length and to characters
+    // a person can see and a file system accepts.
+    private static Optional<AppError> unfitName(final Project project, final String name) {
+        final String typed = name.strip();
+        final boolean tooLong = typed.length() > Project.MAX_NAME_LENGTH;
+        final boolean forbidden = Project.hasForbiddenCharacter(typed);
+        log.debug(
+                "name check project={} length={} tooLong={} forbidden={}",
+                project.id(),
+                typed.length(),
+                tooLong,
+                forbidden);
+        if (tooLong) {
+            log.warn("name refused project={}: {} characters", project.id(), typed.length());
+            return Optional.of(AppError.of(
+                    ErrorCode.validation,
+                    "The name is too long",
+                    "A name can be at most " + Project.MAX_NAME_LENGTH + " characters long."));
+        }
+        if (forbidden) {
+            log.warn("name refused project={}: a slash, a backslash or a control character", project.id());
+            return Optional.of(AppError.of(
+                    ErrorCode.validation,
+                    "The name holds a character it cannot",
+                    "A name cannot hold / or \\ or an invisible control character."));
+        }
+        return Optional.empty();
     }
 
     private Result<ProjectChange> saveUnlessClash(final Project candidate) {

@@ -219,7 +219,7 @@ public final class ProviderForm {
         final boolean adding = viewModel.adding().get();
         final String id = ProviderDrafts.idToSave(viewModel, typed, adding);
         final Result<ProviderConfig> built = id.isEmpty() ? null : typed.toConfig(id);
-        if (built == null || built.isErr()) {
+        if (built == null || built.isErr() || findings.get().stream().anyMatch(ProviderDraft.FormFinding::blocking)) {
             flags.errorsShown.set(true);
             log.debug("save of '{}' refused: {} finding(s)", id, findings.get().size());
             return;
@@ -382,7 +382,7 @@ public final class ProviderForm {
         final ProviderDraft now = draft.get();
         dirty.set(!now.equals(baseline));
         viewModel.formDirty(dirty.get());
-        findings.set(now.findings());
+        findings.set(ProviderDrafts.findings(viewModel, now));
         credentialStatus.set(now.credentialStatus(environment));
         canUseThis.set(ProviderDrafts.canUse(viewModel, now, baseline));
         ProviderDrafts.publishSubject(viewModel, draft::get, () -> baseline);

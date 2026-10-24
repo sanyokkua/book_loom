@@ -1,16 +1,20 @@
 package ua.bookloom.ui.state;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 import javafx.application.Platform;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /** Builds the drafts the Providers form starts from, out of what the view model holds. */
 // Checkstyle parses source text before Lombok runs, so it cannot see the private constructor (ADR-0024).
+@Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ProviderDrafts {
@@ -46,6 +50,27 @@ final class ProviderDrafts {
     private static boolean matchesSaved(final ProviderDraft draft, final ProviderDraft baseline) {
         // A name is only a label: renaming must neither stop the speed being kept nor clear the results.
         return draft.withModel(baseline.model()).withName(baseline.name()).equals(baseline);
+    }
+
+    /**
+     * What the form finds in the draft, and also whether another provider already shows the typed name, ignoring case
+     * and outer spaces — two providers of one name could not be told apart in the list or the title bar.
+     */
+    static List<ProviderDraft.FormFinding> findings(final SettingsViewModel viewModel, final ProviderDraft draft) {
+        final String typed = draft.name().strip();
+        final String own =
+                viewModel.adding().get() ? "" : viewModel.editedProviderId().get();
+        final boolean used = !typed.isEmpty()
+                && viewModel.providers().stream()
+                        .filter(row -> !row.id().equals(own))
+                        .map(row -> row.displayName().isBlank() ? row.id() : row.displayName())
+                        .anyMatch(name -> name.strip().equalsIgnoreCase(typed));
+        log.debug("provider name '{}' used by another provider: {}", typed, used);
+        final List<ProviderDraft.FormFinding> found = new ArrayList<>(draft.findings());
+        if (used) {
+            found.add(0, ProviderFindings.blocking(MessageKey.SETTINGS_ERROR_NAME_USED, ProviderDraft.Field.NAME));
+        }
+        return List.copyOf(found);
     }
 
     /** The id a save writes: a new provider gets one made from its name, an open one keeps its own. */
