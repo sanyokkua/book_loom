@@ -128,7 +128,9 @@ book and reports the paragraphs it never reached as `ConsistencyChecks.notReread
 
 - A failed `Result` reaching `:ui` produces: (1) a **toast** (`err`) with `title`, and (2) for actionable/hard failures
   an **error dialog** with `message` and an **expandable technical details** panel bound to `AppError.details` (never
-  `cause` raw).
+  `cause` raw). `title` and `message` are written in English where the failure is recognised; a display language other
+  than English shows the catalogue's words for the `ErrorCode` instead (`ua.bookloom.ui.i18n.ErrorWords`), and
+  `details` stay as given.
 - `retryable` errors offer a Retry action; `cancelled` is shown as an info state, not an error; `busy` is shown as a
   soft "model in use, try again" toast. A review-desk retry answers `busy` whenever the project's own run record
   (`06_DATA_MODEL_SQLITE.md`) reads `RUNNING` — read once, compared, and refused with no model call; the gate that

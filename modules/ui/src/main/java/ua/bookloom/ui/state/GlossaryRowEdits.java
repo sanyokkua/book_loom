@@ -14,6 +14,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -67,7 +68,7 @@ record GlossaryRowEdits(
         final AppError failure = answer.error();
         if (failure != null) {
             log.warn("the glossary load failed with {}", failure.code());
-            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
             return;
         }
         rows.setAll(Objects.requireNonNull(answer.data(), "data"));
@@ -85,7 +86,7 @@ record GlossaryRowEdits(
         final AppError failure = answer.error();
         if (failure != null) {
             log.warn("the glossary remove failed with {}", failure.code());
-            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
             return;
         }
         rows.removeIf(row -> row.id().equals(entryId));
@@ -116,6 +117,6 @@ record GlossaryRowEdits(
             return;
         }
         log.warn("the glossary update failed with {}", failure.code());
-        notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+        notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
     }
 }

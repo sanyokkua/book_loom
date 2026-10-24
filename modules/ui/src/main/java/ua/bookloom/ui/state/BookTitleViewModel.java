@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -223,7 +224,8 @@ public final class BookTitleViewModel {
         final AppError error = saved.error();
         if (error != null) {
             log.warn("the edited {} was not saved: code {}", part, error.code());
-            final String said = messages.get(MessageKey.EXPORT_BOOK_TITLE_NOT_SAVED, error.message());
+            final String said =
+                    messages.get(MessageKey.EXPORT_BOOK_TITLE_NOT_SAVED, ErrorWords.message(messages, error));
             Platform.runLater(() -> refusal.set(said));
         }
         readBoth(projectId, saved.isOk());

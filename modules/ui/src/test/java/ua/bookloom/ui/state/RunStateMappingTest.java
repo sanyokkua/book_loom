@@ -266,6 +266,20 @@ class RunStateMappingTest {
         assertThat(view.banner().text().in(ENGLISH)).isEqualTo("The brief has no target.");
     }
 
+    // IF the banner showed the failure's message as built, THEN a Ukrainian display would show an English line.
+    @Test
+    void banner_providerErrorUnderUkrainian_isWordedFromTheCatalogue() {
+        final Messages ukrainian = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
+        final RunStateView view = RunInputs.in(RunState.IDLE)
+                .notice(new RunNotice.ProviderError(AppError.of(ErrorCode.auth, "Rejected", "The key was refused.")))
+                .view();
+
+        assertThat(view.banner()).isNotNull();
+        assertThat(view.banner().text()).isNotNull();
+        assertThat(view.banner().text().in(ukrainian))
+                .isEqualTo("Ключ не прийнято. Перевірте його в Налаштуваннях › Постачальники.");
+    }
+
     // IF Start waited silently for the names pass, THEN the person would not know what holds it.
     @Test
     void start_namesPassRunning_isOffWithWaitUntilTheNamesPassEnds() {

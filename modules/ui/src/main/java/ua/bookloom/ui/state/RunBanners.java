@@ -137,13 +137,10 @@ final class RunBanners {
                         Banner.Role.WARN,
                         "⚠",
                         Text.of(MessageKey.TRANSLATING_REFUSED_TITLE),
-                        Text.of(MessageKey.RUN_BANNER_PLAIN, refused.error().message()),
+                        Text.of(MessageKey.RUN_BANNER_PLAIN, refused.error()),
                         List.of());
             case RunNotice.ProviderError provider ->
-                cannotStartBanner(
-                        OTHER,
-                        Text.of(MessageKey.RUN_BANNER_PLAIN, provider.error().message()),
-                        List.of(settings));
+                cannotStartBanner(OTHER, Text.of(MessageKey.RUN_BANNER_PLAIN, provider.error()), List.of(settings));
             case RunNotice.MissingInput missing -> {
                 final String token = missing.which().token();
                 yield cannotStartBanner(

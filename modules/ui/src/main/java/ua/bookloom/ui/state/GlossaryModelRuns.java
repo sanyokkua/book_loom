@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -326,7 +327,7 @@ final class GlossaryModelRuns {
         }
         if (failure != null) {
             log.warn("the model {} failed with {}", what, failure.code());
-            line(GlossaryNotice.Level.ERROR, failure.message());
+            line(GlossaryNotice.Level.ERROR, ErrorWords.message(screen.messages(), failure));
             answers.reloadTerms(operation, termsBefore, false);
             return;
         }

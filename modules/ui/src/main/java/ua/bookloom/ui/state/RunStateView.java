@@ -5,9 +5,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.StateMarker;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -158,10 +160,18 @@ public record RunStateView(
          */
         public String in(final Messages messages) {
             Objects.requireNonNull(messages, "messages");
-            final Object[] worded = args.stream()
-                    .map(arg -> arg instanceof MessageKey nested ? messages.get(nested) : arg)
-                    .toArray();
+            final Object[] worded =
+                    args.stream().map(arg -> worded(messages, arg)).toArray();
             return messages.get(key, worded);
+        }
+
+        // A failure argument is worded in the display language (ErrorWords): its own words are English.
+        private static Object worded(final Messages messages, final Object arg) {
+            return switch (arg) {
+                case MessageKey nested -> messages.get(nested);
+                case AppError failure -> ErrorWords.message(messages, failure);
+                default -> arg;
+            };
         }
     }
 

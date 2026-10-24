@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -165,7 +166,7 @@ public final class NameSuggestion {
         }
         if (failure != null) {
             log.warn("the file name suggestion failed with {}", failure.code());
-            notice.set(failure.message());
+            notice.set(ErrorWords.message(messages, failure));
             return Optional.empty();
         }
         if (!Objects.equals(askedFor, destination.destination().get())) {

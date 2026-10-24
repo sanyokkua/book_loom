@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.TechnicalDetails;
@@ -24,6 +25,7 @@ public final class ModalErrorPresenter implements ErrorPresenter {
     private final ModalHost modalHost;
     private final Messages messages;
     private final TechnicalDetails technical;
+    private final TextClipboard clipboard;
 
     /**
      * Creates the presenter.
@@ -31,12 +33,18 @@ public final class ModalErrorPresenter implements ErrorPresenter {
      * @param modalHost the shared overlay the card is shown in
      * @param messages the catalogue every word of the card comes from
      * @param technical the switch that opens a failure's details without being asked
+     * @param clipboard where Copy details puts a failure's safe details
      */
     @Inject
-    public ModalErrorPresenter(final ModalHost modalHost, final Messages messages, final TechnicalDetails technical) {
+    public ModalErrorPresenter(
+            final ModalHost modalHost,
+            final Messages messages,
+            final TechnicalDetails technical,
+            final TextClipboard clipboard) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.technical = Objects.requireNonNull(technical, "technical");
+        this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
     }
 
     @Override
@@ -70,7 +78,8 @@ public final class ModalErrorPresenter implements ErrorPresenter {
                 ErrorDialog.hasDetails(error),
                 onRetry != null);
         final Runnable retry = onRetry == null ? null : () -> retry(onRetry);
-        final ErrorDialog dialog = new ErrorDialog(messages, error, retry, this::dismiss, note, technical.isOn());
+        final ErrorDialog dialog =
+                new ErrorDialog(messages, error, retry, this::dismiss, note, technical.isOn(), clipboard);
         modalHost.show(dialog.card(), false);
     }
 

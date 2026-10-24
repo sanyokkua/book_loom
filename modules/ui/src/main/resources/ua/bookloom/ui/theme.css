@@ -1020,6 +1020,11 @@
     -fx-spacing: 10px;
 }
 
+.error-details-actions {
+    -fx-spacing: 8px;
+    -fx-alignment: center-left;
+}
+
 .dialog-icon-err {
     -fx-icon-color: -color-err;
     -fx-icon-size: 20;

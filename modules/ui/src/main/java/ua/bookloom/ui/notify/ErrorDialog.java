@@ -21,6 +21,8 @@ import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
+import ua.bookloom.ui.dialog.TextClipboard;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -41,6 +43,7 @@ final class ErrorDialog {
     static final String TOGGLE_ID = "error-details-toggle";
     static final String NOTE_ID = "error-note";
     static final String DETAILS_ID = "error-details";
+    static final String COPY_ID = "error-details-copy";
     static final String RETRY_ID = "error-retry";
     static final String DISMISS_ID = "error-dismiss";
 
@@ -52,6 +55,7 @@ final class ErrorDialog {
     private final Runnable onDismiss;
     private final @Nullable MessageKey note;
     private final boolean detailsOpen;
+    private final TextClipboard clipboard;
 
     /**
      * Prepares the card's content.
@@ -63,6 +67,7 @@ final class ErrorDialog {
      * @param onDismiss what Dismiss does
      * @param note a line shown beneath the message, or {@code null} for none
      * @param detailsOpen whether the details start expanded ("Show technical details" is on)
+     * @param clipboard where Copy details puts the failure's safe details
      */
     ErrorDialog(
             final Messages messages,
@@ -70,13 +75,15 @@ final class ErrorDialog {
             final @Nullable Runnable onRetry,
             final Runnable onDismiss,
             final @Nullable MessageKey note,
-            final boolean detailsOpen) {
+            final boolean detailsOpen,
+            final TextClipboard clipboard) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.error = Objects.requireNonNull(error, "error");
         this.onRetry = onRetry;
         this.onDismiss = Objects.requireNonNull(onDismiss, "onDismiss");
         this.note = note;
         this.detailsOpen = detailsOpen;
+        this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
     }
 
     /**
@@ -111,7 +118,7 @@ final class ErrorDialog {
     private Node header() {
         final FontIcon icon = new FontIcon(Feather.ALERT_OCTAGON);
         icon.getStyleClass().add("dialog-icon-err");
-        final Label title = new Label(error.title());
+        final Label title = new Label(ErrorWords.title(messages, error));
         title.setId(TITLE_ID);
         title.setWrapText(true);
         title.getStyleClass().add("dialog-title");
@@ -121,7 +128,7 @@ final class ErrorDialog {
     }
 
     private Node body() {
-        final Label message = new Label(error.message());
+        final Label message = new Label(ErrorWords.message(messages, error));
         message.setId(MESSAGE_ID);
         message.setWrapText(true);
         message.getStyleClass().add("dialog-text");
@@ -135,9 +142,28 @@ final class ErrorDialog {
             body.getChildren().add(line);
         }
         if (hasDetails(error)) {
-            body.getChildren().add(detailsToggle(body));
+            body.getChildren().add(detailsControls(body));
         }
         return body;
+    }
+
+    private Node detailsControls(final VBox body) {
+        final HBox row = new HBox(detailsToggle(body), copyButton());
+        row.getStyleClass().add("error-details-actions");
+        return row;
+    }
+
+    // Copies the details field alone: it holds only the allowlisted values, never the cause or a secret.
+    private Node copyButton() {
+        final Button copy = new Button(messages.get(MessageKey.ERROR_DETAILS_COPY));
+        copy.setId(COPY_ID);
+        Tips.install(messages, copy, MessageKey.ERROR_DETAILS_COPY_TIP);
+        copy.getStyleClass().add("btn-secondary");
+        copy.setOnAction(event -> {
+            log.debug("error details copied: code={}", error.code());
+            clipboard.copy(Objects.requireNonNull(error.details(), "details"));
+        });
+        return copy;
     }
 
     private Node detailsToggle(final VBox body) {

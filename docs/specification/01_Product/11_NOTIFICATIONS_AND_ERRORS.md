@@ -141,8 +141,12 @@ first, details on request" rule (G12): the message is in plain words, and the te
 | FR-NOTIF-3b | The expandable section ("Details for support") shows only safe details from the `AppError` allowlist — never secrets or raw internal traces beyond the allowlist. The `cause` is never read. |
 | FR-NOTIF-3c | The dialog offers actionable choices where possible (Try again now for a retryable error, open settings, dismiss) and a **Copy details** button for support. |
 
-Status: the error card (`notify/ErrorDialog`) is built with a message, a details toggle, Retry and Dismiss. **Planned:**
-the plain-message wording, the "Details for support" label, **Copy details**, and the "Try again now" verb. The dialog
+Status: the error card (`notify/ErrorDialog`) is built with a message, a details toggle, **Copy details** (copies the
+`AppError.details` field alone — the allowlist, never the cause), Retry and Dismiss. Every `AppError` is built in
+English below the interface, so in a display language other than English the card's title and message — and any banner
+or in-place line that shows a failure — are the catalogue's words for its `ErrorCode` (`error.code.title`,
+`error.code.message`; `i18n/ErrorWords`); in English the failure's own, more specific words are kept. **Planned:** the
+"Details for support" label and the "Try again now" verb. The dialog
 is one of the "Other dialogs" in `mockups/README.md` ("Error with details").
 
 P6 reference: `08_UI_SCREENS_AND_STATES.md#dialog-error-with-details` (unreadable file and other hard failures).

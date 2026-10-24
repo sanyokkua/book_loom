@@ -435,6 +435,14 @@ public enum MessageKey {
     ERROR_DETAILS_HIDE("error.details.hide"),
     /** Line under a run failure's message: decided segments survive, but only until the application closes. */
     ERROR_RUN_FAILURE_NOTE("error.runFailureNote"),
+    /** A failure's title in the display language, selected on its lower-cased {@code ErrorCode} (argument 0). */
+    ERROR_CODE_TITLE("error.code.title"),
+    /** A failure's one-sentence message in the display language, selected like {@link #ERROR_CODE_TITLE}. */
+    ERROR_CODE_MESSAGE("error.code.message"),
+    /** Label of the error dialog's control that copies the failure's safe details for support. */
+    ERROR_DETAILS_COPY("error.details.copy"),
+    /** Hover explanation of the control labelled by {@link #ERROR_DETAILS_COPY}. */
+    ERROR_DETAILS_COPY_TIP("error.details.copy.tip"),
     /** Transient message raised when a book was opened; argument 0 is the file name, passed as a String. */
     TOAST_BOOK_OPENED("toast.bookOpened"),
     /** Transient message raised when a run finished with nothing flagged; argument 0 is the number translated. */

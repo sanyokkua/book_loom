@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -171,7 +172,7 @@ record ChangeReverts(
             final AppError failure = answer.error();
             if (failure != null) {
                 log.warn("{} failed with {}", what, failure.code());
-                notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+                notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
                 done.accept(false);
                 return;
             }
