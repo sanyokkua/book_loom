@@ -54,7 +54,13 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     @BeforeEach
     void setUp() {
         glossary = new ScriptedGlossaryService();
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
+        useViewModelIn(Locale.ENGLISH);
+        glossary.willAnswer(Result.ok(List.of(ANNE, BORIS, CARL, DORA, RIVER)));
+        run(() -> vm.show(PROJECT));
+    }
+
+    private void useViewModelIn(final Locale locale) {
+        final Injector injector = UiTestInjector.create(locale);
         vm = onFx(() -> new NamesStyleViewModel(
                 glossary,
                 new ScriptedLexiconService(),
@@ -65,13 +71,25 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),
                 () -> "new"));
-        glossary.willAnswer(Result.ok(List.of(ANNE, BORIS, CARL, DORA, RIVER)));
-        run(() -> vm.show(PROJECT));
     }
 
     private void run(final Runnable action) {
         interact(action);
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF a refused confirmation kept the service's English words, THEN a Ukrainian screen would report it in English.
+    @Test
+    void confirmGenders_refusedInUkrainian_reportsTheFailureInUkrainian() {
+        useViewModelIn(Locale.forLanguageTag("uk"));
+        glossary.willAnswer(Result.ok(List.of(ANNE, BORIS, CARL, DORA, RIVER)));
+        run(() -> vm.show(PROJECT));
+        glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Refused", "Not stored.")));
+
+        run(vm::confirmGenders);
+
+        assertThat(onFx(() -> vm.notice().get().text()))
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     @Test

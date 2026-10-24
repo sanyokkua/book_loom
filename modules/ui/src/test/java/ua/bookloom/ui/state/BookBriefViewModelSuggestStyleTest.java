@@ -173,13 +173,14 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
     @Test
     void suggestStyle_modelFails_showsItsMessageAndChangesNothing() {
         chooseModel();
-        assistant.answersBrief(Result.err(AppError.of(ErrorCode.validation, "Unreadable", "It could not be read.")));
+        final AppError unreadable = AppError.of(ErrorCode.validation, "Unreadable", "It could not be read.");
+        assistant.answersBrief(Result.err(unreadable));
         final BookBrief before = stored();
 
         suggest();
 
         assertThat(onFx(() -> brief.styleSuggestion().outcome().get()))
-                .isEqualTo(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, "It could not be read."));
+                .isEqualTo(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, unreadable));
         assertThat(stored()).isEqualTo(before);
     }
 

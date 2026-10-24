@@ -25,6 +25,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
 
@@ -71,6 +72,7 @@ public final class ReviewViewModel {
      * @param errors where a failure that is neither busy nor validation is shown
      * @param retry the model, the desk call and the hold on the run for a retry
      * @param executor the daemon executor desk calls run on, never the FX thread
+     * @param messages the catalogue a refusal shown in place is worded from
      */
     @Inject
     public ReviewViewModel(
@@ -81,18 +83,17 @@ public final class ReviewViewModel {
             final Toasts toasts,
             final ErrorPresenter errors,
             final ReviewRetry retry,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final Messages messages) {
         this.desk = Objects.requireNonNull(desk, "desk");
         Objects.requireNonNull(reviewMode, "reviewMode");
         this.queries = new ReviewQueries(desk);
-        Objects.requireNonNull(executor, "executor");
         this.reads = new ReviewReads(queries, executor);
         this.counts = new FlaggedCount(queries, executor);
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
-        this.refusals = new ReviewRefusals(
-                Objects.requireNonNull(toasts, "toasts"), Objects.requireNonNull(errors, "errors"), problem::set);
+        this.refusals = new ReviewRefusals(toasts, errors, problem::set, messages);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {

@@ -23,6 +23,8 @@ import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.i18n.ErrorWords;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
@@ -48,6 +50,7 @@ public final class ModelListing {
     private final ModelCatalog catalog;
     private final Toasts toasts;
     private final ErrorPresenter errors;
+    private final Messages messages;
     private final ExecutorService executor;
     private final ObservableList<String> offered = FXCollections.observableArrayList();
     private final ObservableList<String> offeredView = FXCollections.unmodifiableObservableList(offered);
@@ -74,6 +77,7 @@ public final class ModelListing {
      * @param errors where an unexpected refusal is shown
      * @param executor the daemon executor the catalogue is asked on, never the FX thread
      * @param activities where a listing in flight is registered
+     * @param messages the catalogue a refusal shown in place is worded from
      */
     @Inject
     public ModelListing(
@@ -81,7 +85,9 @@ public final class ModelListing {
             final Toasts toasts,
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
@@ -276,7 +282,7 @@ public final class ModelListing {
             case internal, busy -> errors.present(failure);
             case validation -> {
                 noListObtained.set(false);
-                refusal.set(failure.message());
+                refusal.set(ErrorWords.message(messages, failure));
             }
             default -> {
                 noListObtained.set(true);

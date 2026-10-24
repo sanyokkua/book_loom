@@ -7,6 +7,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -27,6 +28,7 @@ import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.i18n.Messages;
 
 /** The three provider tests: what each asks, when each is available, and the findings each report becomes. */
 class ProviderTestRunnerTest extends SettingsViewModelTestBase {
@@ -49,7 +51,8 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                 subject,
                 activities,
                 new ModelSpeedRecorder(modelSettings, speeds, executor),
-                new StructuredAnswers()));
+                new StructuredAnswers(),
+                new Messages(() -> Locale.ENGLISH)));
     }
 
     private void setModel(final String text) {

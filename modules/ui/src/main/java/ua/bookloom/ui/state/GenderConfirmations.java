@@ -20,6 +20,8 @@ import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.i18n.ErrorWords;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * "Confirm suggested genders": every character whose gender is only a suggestion becomes the person's, in one action
@@ -35,6 +37,7 @@ final class GenderConfirmations {
     private final ObjectProperty<@Nullable GlossaryNotice> notice;
     private final ChangeLog changes;
     private final Supplier<String> project;
+    private final Messages messages;
     private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
 
     GenderConfirmations(
@@ -43,8 +46,10 @@ final class GenderConfirmations {
             final ObservableList<GlossaryEntry> rows,
             final ObjectProperty<@Nullable GlossaryNotice> notice,
             final ChangeLog changes,
-            final Supplier<String> project) {
+            final Supplier<String> project,
+            final Messages messages) {
         this.glossary = glossary;
+        this.messages = messages;
         this.calls = calls;
         this.rows = rows;
         this.notice = notice;
@@ -129,7 +134,7 @@ final class GenderConfirmations {
     private void published(final String shown, final Result<Outcome> answer) {
         final AppError failure = answer.error();
         if (failure != null) {
-            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
             return;
         }
         final Outcome outcome = Objects.requireNonNull(answer.data(), "data");
@@ -151,7 +156,7 @@ final class GenderConfirmations {
             log.warn(
                     "confirming genders stopped early after {} changed rows",
                     done.changed().size());
-            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, stopped.message()));
+            notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, stopped)));
         }
     }
 }

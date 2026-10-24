@@ -206,7 +206,7 @@ public final class StyleSuggestion {
         }
         if (failure != null) {
             log.warn("the style suggestion failed with {}", failure.code());
-            outcome.set(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, failure.message()));
+            outcome.set(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, failure));
             return Optional.empty();
         }
         final BriefSuggestion suggestion = Objects.requireNonNull(answer.data(), "data");

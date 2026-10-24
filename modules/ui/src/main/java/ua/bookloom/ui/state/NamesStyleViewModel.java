@@ -158,10 +158,11 @@ public final class NamesStyleViewModel {
                 new RecurringTerms.ModelActions(
                         modelRuns::scanTerms, modelRuns::reviewTerms, modelRuns::translateTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
-        this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
+        this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages), messages);
         this.additions = new GlossaryAdditions(
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
-        this.genderConfirmations = new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId);
+        this.genderConfirmations =
+                new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
         rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
                 (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
     }

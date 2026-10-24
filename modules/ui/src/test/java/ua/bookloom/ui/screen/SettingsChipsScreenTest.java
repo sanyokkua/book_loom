@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
@@ -110,6 +111,36 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
         assertThat(detail.isVisible()).isTrue();
         assertThat(result("CONNECTION").getParent())
                 .isSameAs(detail("CONNECTION").getParent());
+    }
+
+    // IF the failure's own English words were shown, THEN a Ukrainian screen would explain a failed stage in English.
+    @Test
+    void chipDetail_failedStageInUkrainian_namesTheFailureInUkrainian() throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        openSettings();
+
+        checkWithReport(firstStageOnly(StageStatus.FAILED));
+
+        assertThat(detail("CONNECTION").getText())
+                .isEqualTo("За адресою моделі ШІ ніщо не відповідає. Перевірте, чи відкрито її програму.");
+    }
+
+    // IF the refusal kept its English words, THEN a Ukrainian screen would refuse a check in English.
+    @Test
+    void checkRefusal_validationRefusalInUkrainian_isWordedInUkrainian() throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        openSettings();
+        final Label refusal = (Label) required("settings-check-refusal");
+        verifier.respondWith(Result.err(AppError.of(ErrorCode.validation, "Unknown provider", "No such provider.")));
+
+        onFx(() -> {
+            viewModel().draftModel().set(MODEL);
+            viewModel().tests().run(ProviderTest.INFERENCE);
+        });
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(refusal::isVisible));
+
+        assertThat(refusal.getText())
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     // IF a soft pass showed the discovery error's message instead of the note, THEN the real verifier's report, which

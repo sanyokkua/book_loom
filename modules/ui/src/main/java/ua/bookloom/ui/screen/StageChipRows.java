@@ -6,6 +6,7 @@ import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CheckSentences;
@@ -72,9 +73,9 @@ final class StageChipRows {
     }
 
     /** What a person needs to read under a chip: the failure for a failed stage, the qualifier for a soft pass. */
-    private static @Nullable String reasonOf(final StageChip stage) {
+    private @Nullable String reasonOf(final StageChip stage) {
         final AppError error = stage.error();
-        final String errorMessage = error == null ? null : error.message();
+        final String errorMessage = error == null ? null : ErrorWords.message(messages, error);
         return switch (stage.status()) {
             case FAILED -> errorMessage != null ? errorMessage : stage.note();
             case SOFT_PASS -> stage.note() != null ? stage.note() : errorMessage;

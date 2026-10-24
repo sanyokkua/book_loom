@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -13,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 
 /** What the editor shows for the selected segment, when it is dirty, and what Accept is offered on. */
 class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
@@ -157,6 +159,24 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
         assertThat(desk.calls())
                 .contains("saveEdit(" + projectId + ", ch05.xhtml:11, Чудовисько стріло ⟦g0⟧мене⟦g1⟧ опівночі.)");
+    }
+
+    // IF the desk's English reason were shown as it is, THEN a Ukrainian desk would refuse a save in English.
+    @Test
+    void saveEdit_deskRefusesInUkrainian_showsTheReasonInUkrainian() {
+        messages = new Messages(() -> Locale.forLanguageTag("uk"));
+        buildReview();
+        select("ch05.xhtml:11");
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Edit refused", "The marks are out of order.")));
+        onFx(() -> {
+            review.editorText().set("Він відчинив ⟦1⟧старі⟦0⟧ двері.");
+            return null;
+        });
+
+        press(review::saveEdit);
+
+        assertThat(onFx(() -> review.problem().get()))
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     // IF the reason for a refused save were dropped, THEN the person would not know why nothing was stored (here the

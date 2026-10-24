@@ -5,7 +5,9 @@ import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Severity;
 import ua.bookloom.ui.notify.ToastOccasion;
@@ -22,8 +24,11 @@ final class ReviewRefusals {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final Consumer<String> inPlace;
+    private final Messages messages;
 
-    ReviewRefusals(final Toasts toasts, final ErrorPresenter errors, final Consumer<String> inPlace) {
+    ReviewRefusals(
+            final Toasts toasts, final ErrorPresenter errors, final Consumer<String> inPlace, final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.inPlace = Objects.requireNonNull(inPlace, "inPlace");
@@ -57,7 +62,7 @@ final class ReviewRefusals {
             }
             case IN_PLACE -> {
                 log.warn("review {} of segment {} refused: {}", action, segmentId, error.code());
-                inPlace.accept(error.message());
+                inPlace.accept(ErrorWords.message(messages, error));
             }
             case DIALOG, PROVIDER_ERROR, FLAGGED_SEGMENT -> errors.present(error);
             case STOPPED, SETTINGS_ONLY -> log.debug("review {} answered {}: nothing to show", action, error.code());

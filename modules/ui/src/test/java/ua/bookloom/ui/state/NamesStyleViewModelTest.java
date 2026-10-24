@@ -48,7 +48,11 @@ class NamesStyleViewModelTest extends FxTestBase {
     void setUpViewModel() {
         glossary = new ScriptedGlossaryService();
         models = ScriptedChatModelFactory.ok();
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
+        useViewModelIn(Locale.ENGLISH);
+    }
+
+    private void useViewModelIn(final Locale locale) {
+        final Injector injector = UiTestInjector.create(locale);
         settings = injector.getInstance(SettingsViewModel.class);
         final Messages messages = injector.getInstance(Messages.class);
         final AtomicInteger next = new AtomicInteger();
@@ -214,6 +218,18 @@ class NamesStyleViewModelTest extends FxTestBase {
 
         assertThat(noticeText()).isEqualTo("Choose a model in the AI model settings to run the model scan.");
         assertThat(glossary.calls()).containsExactly("entries(p1)");
+    }
+
+    // IF the failure kept the service's English words, THEN a Ukrainian screen would report a failed import in English.
+    @Test
+    void importCsv_failsInUkrainian_reportsTheFailureInUkrainian() {
+        useViewModelIn(Locale.forLanguageTag("uk"));
+        showWith(hale());
+        glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Glossary file unreadable", "Unreadable.")));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     // IF a bad line dropped the good ones, or went unreported, THEN an import would lose names silently.

@@ -27,6 +27,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * What the settings view model tests share: the hand-written fakes for the registry, the verifier, the toasts and the
@@ -167,7 +168,12 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     /** A listing over whatever {@link #catalog} the test scripted before calling this. */
     ModelListing newModelListing() {
-        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities));
+        return newModelListing(EnglishMessages.create());
+    }
+
+    /** As {@link #newModelListing()}, worded from {@code messages}. */
+    ModelListing newModelListing(final Messages messages) {
+        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities, messages));
     }
 
     /** A view model over the idle verifier and whatever {@link #catalog} the test scripted before calling this. */

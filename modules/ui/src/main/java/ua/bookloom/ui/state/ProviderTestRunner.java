@@ -32,6 +32,8 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.i18n.ErrorWords;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 
 /**
@@ -53,6 +55,7 @@ public final class ProviderTestRunner {
 
     private final ProviderVerifier verifier;
     private final ErrorPresenter errors;
+    private final Messages messages;
     private final ExecutorService executor;
     private final ReadOnlyObjectProperty<Optional<TestSubject>> subject;
     private final ModelSpeedRecorder speeds;
@@ -86,6 +89,7 @@ public final class ProviderTestRunner {
      * @param activities the work under way, which decides whether the inference test may start
      * @param speeds where a speed measured by a passing inference test of a saved provider is kept
      * @param structured where whether the model answered in the structured form is kept for the session
+     * @param messages the catalogue a refusal shown in place is worded from
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
@@ -94,7 +98,9 @@ public final class ProviderTestRunner {
             final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
             final ActivityTracker activities,
             final ModelSpeedRecorder speeds,
-            final StructuredAnswers structured) {
+            final StructuredAnswers structured,
+            final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -336,7 +342,7 @@ public final class ProviderTestRunner {
     private void refuse(final AppError refusal) {
         log.debug("the test was refused as a whole with {}", refusal.code());
         if (refusal.code() == ErrorCode.validation) {
-            checkRefusal.set(refusal.message());
+            checkRefusal.set(ErrorWords.message(messages, refusal));
         } else {
             errors.present(refusal);
         }

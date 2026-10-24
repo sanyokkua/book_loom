@@ -146,6 +146,19 @@ class TestDetailsTest {
         assertThat(detail.requestLine()).isEmpty();
     }
 
+    // IF the failure's own English words were shown, THEN a Ukrainian verdict would end in English.
+    @Test
+    void of_failedInUkrainian_namesTheFailureByItsCodeInUkrainian() {
+        final AppError unreachable = AppError.of(ErrorCode.unreachable, "Unreachable", "The server did not answer.");
+        final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, unreachable, null);
+
+        final TestDetail detail = TestDetails.of(UK, VerificationStage.CONNECTION, List.of(failed), false, "Ollama");
+
+        assertThat(detail.verdict())
+                .isEqualTo("Перевірка не пройшла: За адресою моделі ШІ ніщо не відповідає. Перевірте, чи відкрито її"
+                        + " програму.");
+    }
+
     // IF a test the server never reached read as failed, THEN the person would blame the wrong stage.
     @Test
     void of_skipped_isAWarningThatSaysAnEarlierTestDidNotPass() {

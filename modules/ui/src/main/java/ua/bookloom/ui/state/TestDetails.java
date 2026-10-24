@@ -12,6 +12,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.TestDetail.Metric;
@@ -90,7 +91,7 @@ public final class TestDetails {
 
     private static String verdictOf(final Messages messages, final StageChip chip, final String providerName) {
         if (chip.status() == StageStatus.FAILED) {
-            return messages.get(MessageKey.SETTINGS_TEST_VERDICT_FAILED, reasonOf(chip));
+            return messages.get(MessageKey.SETTINGS_TEST_VERDICT_FAILED, reasonOf(messages, chip));
         }
         if (chip.status() == StageStatus.SOFT_PASS) {
             return messages.get(MessageKey.SETTINGS_TEST_VERDICT_MODELS_SOFT);
@@ -102,10 +103,10 @@ public final class TestDetails {
         };
     }
 
-    private static String reasonOf(final StageChip chip) {
+    private static String reasonOf(final Messages messages, final StageChip chip) {
         final @Nullable AppError error = chip.error();
         if (error != null) {
-            return error.message();
+            return ErrorWords.message(messages, error);
         }
         final @Nullable String note = chip.note();
         return note == null ? "" : note;

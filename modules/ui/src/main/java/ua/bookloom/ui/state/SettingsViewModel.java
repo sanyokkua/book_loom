@@ -104,7 +104,8 @@ public final class SettingsViewModel {
                 testTarget.subject(),
                 Objects.requireNonNull(activities, "activities"),
                 Objects.requireNonNull(speedRecorder, "speedRecorder"),
-                Objects.requireNonNull(structuredAnswers, "structuredAnswers"));
+                Objects.requireNonNull(structuredAnswers, "structuredAnswers"),
+                Objects.requireNonNull(messages, "messages"));
         this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));

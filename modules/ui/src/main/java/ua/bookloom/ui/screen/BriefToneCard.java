@@ -19,6 +19,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
@@ -28,6 +29,7 @@ import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
@@ -228,14 +230,17 @@ final class BriefToneCard {
         return reason;
     }
 
-    private static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {
+    static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {
         return switch (outcome.kind()) {
             case NONE -> "";
             case DONE -> messages.get(MessageKey.BRIEF_SUGGEST_DONE);
             case STOPPED -> messages.get(MessageKey.BRIEF_SUGGEST_STOPPED);
             case NO_MODEL -> messages.get(MessageKey.BRIEF_SUGGEST_NO_MODEL);
             case BUSY -> messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_STYLE.label()));
-            case FAILED -> outcome.message();
+            case FAILED -> {
+                final AppError failure = Objects.requireNonNull(outcome.failure(), "failure");
+                yield ErrorWords.message(messages, failure);
+            }
         };
     }
 

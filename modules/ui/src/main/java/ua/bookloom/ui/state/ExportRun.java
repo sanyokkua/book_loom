@@ -32,6 +32,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -336,6 +337,6 @@ final class ExportRun {
         }
         final AppError refused = Objects.requireNonNull(error, "an error when nothing was written");
         log.warn("export refused with code {}", refused.code());
-        failure.set(refused.message());
+        failure.set(ErrorWords.message(messages, refused));
     }
 }

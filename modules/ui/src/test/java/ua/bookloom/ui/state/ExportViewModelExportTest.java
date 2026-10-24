@@ -5,6 +5,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,6 +24,7 @@ import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.Messages;
 
 /** What pressing Export book does: the request it builds, the work it moves off the FX thread and the outcome it keeps. */
 class ExportViewModelExportTest extends ExportViewModelTestBase {
@@ -141,6 +143,19 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         assertThat(onFx(() -> exports.failure().get())).contains("/books/Frankenstein.epub");
         assertThat(onFx(() -> exports.outcome().get())).isNull();
         assertThat(onFx(() -> progress.done())).doesNotContain(ViewNames.EXPORT);
+    }
+
+    // IF the refusal kept the service's English words, THEN a Ukrainian Export screen would refuse in English.
+    @Test
+    void export_validationFailureInUkrainian_isShownInUkrainian() {
+        messages = new Messages(() -> Locale.forLanguageTag("uk"));
+        exports = onFx(() -> newExports(new DirectExecutor()));
+        exportService.failWith(AppError.of(ErrorCode.validation, "Export refused", "Choose another file."));
+
+        export();
+
+        assertThat(onFx(() -> exports.failure().get()))
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     @Test
