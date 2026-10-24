@@ -1,7 +1,9 @@
 package ua.bookloom.ui.screen;
 
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -33,6 +35,9 @@ import ua.bookloom.ui.state.ProjectsViewModel;
 /** One translation's row on the Projects screen: what it is, how far it got and what can be done with it. */
 final class ProjectRowView {
 
+    // The statuses whose row offers Continue: a translation that began and did not finish.
+    private static final Set<ProjectStatus> CONTINUES =
+            EnumSet.of(ProjectStatus.TRANSLATING, ProjectStatus.PAUSED, ProjectStatus.STOPPED, ProjectStatus.FAILED);
     private static final double ROW_SPACING = 12;
     private static final double INFO_SPACING = 4;
     private static final double CHIP_SPACING = 6;
@@ -147,8 +152,7 @@ final class ProjectRowView {
     }
 
     private Button action(final ProjectRow row) {
-        final boolean continues =
-                !row.open() && (row.status() == ProjectStatus.TRANSLATING || row.status() == ProjectStatus.FAILED);
+        final boolean continues = !row.open() && CONTINUES.contains(row.status());
         final Button button = new Button(
                 messages.get(continues ? MessageKey.PROJECTS_ROW_CONTINUE : MessageKey.PROJECTS_ROW_OPEN_ACTION));
         button.setMinWidth(Region.USE_PREF_SIZE);

@@ -3029,6 +3029,10 @@ public enum MessageKey {
     PROJECTS_STATUS_NOT_STARTED("projects.status.notStarted"),
     /** Status chip of a project with an unfinished run. */
     PROJECTS_STATUS_TRANSLATING("projects.status.translating"),
+    /** Status chip of a project whose latest run was paused. */
+    PROJECTS_STATUS_PAUSED("projects.status.paused"),
+    /** Status chip of a project whose latest run was stopped. */
+    PROJECTS_STATUS_STOPPED("projects.status.stopped"),
     /** Status chip of a project whose run completed. */
     PROJECTS_STATUS_FINISHED("projects.status.finished"),
     /** Status chip of a project that was exported. */

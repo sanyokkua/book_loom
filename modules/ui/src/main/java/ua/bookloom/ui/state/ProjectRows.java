@@ -108,11 +108,17 @@ public final class ProjectRows {
         if (summary.lastExport() != null) {
             return ProjectStatus.EXPORTED;
         }
-        return switch (run.state()) {
-            case COMPLETED -> ProjectStatus.FINISHED;
-            case FAILED -> ProjectStatus.FAILED;
-            case NEW, RUNNING, PAUSED, CANCELLED -> ProjectStatus.TRANSLATING;
-        };
+        final ProjectStatus status =
+                switch (run.state()) {
+                    case NEW -> ProjectStatus.NOT_STARTED;
+                    case RUNNING -> ProjectStatus.TRANSLATING;
+                    case PAUSED -> ProjectStatus.PAUSED;
+                    case CANCELLED -> ProjectStatus.STOPPED;
+                    case COMPLETED -> ProjectStatus.FINISHED;
+                    case FAILED -> ProjectStatus.FAILED;
+                };
+        log.trace("project {}: run {} reads {}", summary.project().id(), run.state(), status);
+        return status;
     }
 
     private static ViewNames stepOf(final ProjectSummary summary) {

@@ -108,8 +108,8 @@ class ProjectRowsTest {
     @CsvSource({
         "NONE,  false, NOT_STARTED",
         "RUNNING, false, TRANSLATING",
-        "PAUSED, false, TRANSLATING",
-        "CANCELLED, false, TRANSLATING",
+        "PAUSED, false, PAUSED",
+        "CANCELLED, false, STOPPED",
         "COMPLETED, false, FINISHED",
         "FAILED, false, FAILED",
         "COMPLETED, true, EXPORTED",
@@ -168,9 +168,27 @@ class ProjectRowsTest {
         "FINISHED, PROJECTS_STATUS_FINISHED",
         "EXPORTED, PROJECTS_STATUS_EXPORTED",
         "FAILED, PROJECTS_STATUS_FAILED",
+        "PAUSED, PROJECTS_STATUS_PAUSED",
+        "STOPPED, PROJECTS_STATUS_STOPPED",
     })
     void messageKey_eachStatus_isItsOwnWords(
             final ProjectStatus status, final ua.bookloom.ui.i18n.MessageKey expected) {
         assertThat(status.messageKey()).isEqualTo(expected);
+    }
+
+    // IF an idle project's chip were the working blue, THEN a paused or stopped book would look as if it translated.
+    @ParameterizedTest
+    @CsvSource({
+        "NOT_STARTED, WAITING",
+        "PAUSED, WAITING",
+        "STOPPED, WAITING",
+        "TRANSLATING, WORKING",
+        "FINISHED, DONE",
+        "EXPORTED, DONE",
+        "FAILED, FAILED",
+    })
+    void meaning_eachStatus_isItsOwnColour(
+            final ProjectStatus status, final ua.bookloom.ui.control.StateMarker.Meaning expected) {
+        assertThat(status.meaning()).isEqualTo(expected);
     }
 }

@@ -506,7 +506,7 @@ The application SHALL show the Projects screen with the purpose line "A project 
 
 ### Requirement: Show what a project row says and offers
 
-Each project row SHALL show the project's name (a "named" chip when the person named it, "open" for the open one), its languages, AI model and quality, a progress bar with its percentage and when it was last opened, a status chip coloured by meaning, and Continue (or Open), and a ⋯ menu with "Rename…", "Show book file" and "Remove project…".
+Each project row SHALL show the project's name (a "named" chip when the person named it, "open" for the open one), its languages, AI model and quality, a progress bar with its percentage and when it was last opened, a status chip coloured by meaning (an idle project — not started, paused or stopped — reads grey, never the working colour), and Continue (or Open), and a ⋯ menu with "Rename…", "Show book file" and "Remove project…".
 
 **Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a row answers "which translation is this, how far has it got, and what can I do with it" without opening it.
 

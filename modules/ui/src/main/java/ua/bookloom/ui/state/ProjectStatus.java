@@ -5,10 +5,14 @@ import ua.bookloom.ui.i18n.MessageKey;
 
 /** What a project row says about the project's translation, with the words and the colour meaning of its chip. */
 public enum ProjectStatus {
-    /** No run was ever started. */
+    /** No run was ever started, or the latest one never began translating. */
     NOT_STARTED(MessageKey.PROJECTS_STATUS_NOT_STARTED, StateMarker.Meaning.WAITING),
-    /** A run began and has not completed: running, paused or cancelled. */
+    /** The latest run is translating, or was when the application last closed. */
     TRANSLATING(MessageKey.PROJECTS_STATUS_TRANSLATING, StateMarker.Meaning.WORKING),
+    /** The latest run was paused; idle, so grey. */
+    PAUSED(MessageKey.PROJECTS_STATUS_PAUSED, StateMarker.Meaning.WAITING),
+    /** The latest run was stopped by the person; idle, so grey. */
+    STOPPED(MessageKey.PROJECTS_STATUS_STOPPED, StateMarker.Meaning.WAITING),
     /** The latest run completed. */
     FINISHED(MessageKey.PROJECTS_STATUS_FINISHED, StateMarker.Meaning.DONE),
     /** The book was written out at least once. */

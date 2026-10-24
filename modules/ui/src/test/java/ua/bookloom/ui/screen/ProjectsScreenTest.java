@@ -54,7 +54,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
     // IF a row hid its pair, model, quality or progress, THEN two translations of a book could not be told apart.
     @Test
-    void list_runningRow_showsPairModelQualityProgressWhenAndTheTranslatingChip() throws Exception {
+    void list_pausedRow_showsPairModelQualityProgressWhenAndThePausedChip() throws Exception {
         showListing(ukrainianRunning());
 
         final String row = textOf("projects-row-" + EARTH_ID);
@@ -63,7 +63,8 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .contains("Earth Gravity · EN → UK")
                 .contains("EN → UK · Ollama · gemma4:e4b · Balanced")
                 .contains("51 % · yesterday")
-                .contains("Translating");
+                .contains("Paused")
+                .doesNotContain("Translating");
         assertThat(continueButton(EARTH_ID).getText()).isEqualTo("Continue");
     }
 
@@ -262,7 +263,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .contains("earth-gravity.epub · EPUB")
                 .contains("сегмент")
                 .contains("Перекласти іншою мовою");
-        assertThat(textOf("projects-row-" + EARTH_ID)).contains("учора").contains("Перекладається");
+        assertThat(textOf("projects-row-" + EARTH_ID)).contains("учора").contains("На паузі");
         assertThat(ThemeTestSupport.onFx(() -> List.of(continueButton(EARTH_ID).getText())))
                 .containsExactly("Продовжити");
     }
