@@ -139,6 +139,8 @@ final class TranslatingView {
             final StateMirror mirror, final Exits exits, final Reads reads) {
         return new TranslatingSummaryStrip.Inputs(
                 exits.runs().view(),
+                exits.runs().decidedSegments(),
+                exits.runs().totalSegments(),
                 reads.estimate().estimate(),
                 // The desk's count, or the run's own flagged rows while the desk has not counted them yet.
                 Bindings.createIntegerBinding(

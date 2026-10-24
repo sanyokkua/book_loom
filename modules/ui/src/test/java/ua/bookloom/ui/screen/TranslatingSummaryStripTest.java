@@ -8,9 +8,12 @@ import java.util.stream.IntStream;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.RunState;
@@ -88,6 +91,20 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
 
         assertThat(labelText("translating-strip-line")).startsWith("0 of 0 segments done");
         assertThat(progressBar().getProgress()).isZero();
+    }
+
+    // IF a reopened project showed 0 of 0 until a run began, THEN a finished or half-done book would look empty.
+    @ParameterizedTest
+    @CsvSource({"142, 134, 8 of 142 segments done, 0.05", "142, 0, 142 of 142 segments done, 1.0"})
+    void strip_projectReopenedWithNoRun_showsTheStoredCounts(
+            final int total, final int pending, final String line, final double fraction) throws Exception {
+        desk.willAnswerCounts(new ReviewCounts(total, total - pending, 0, 0, 0, pending, 0, 0, 0));
+        readyToStart();
+        showTranslating();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("translating-strip-line")).startsWith(line);
+        assertThat(progressBar().getProgress()).isCloseTo(fraction, org.assertj.core.data.Offset.offset(0.01));
     }
 
     // IF the bar's tooltip did not give the steps, THEN 64 % beside 791 segments would look like a mistake.

@@ -67,12 +67,16 @@ final class TranslatingSummaryStrip {
      * What the strip reads besides the mirror.
      *
      * @param runs the run-state row
+     * @param decided the segments decided: the stored project's before a run
+     * @param total the segments in all: the stored project's before a run
      * @param estimate the time the book is expected to take before a start
      * @param flagged the segments flagged for review, as the desk or the run counts them
      * @param onReview what "n to review" does
      */
     record Inputs(
             ReadOnlyObjectProperty<RunStateView> runs,
+            ObservableIntegerValue decided,
+            ObservableIntegerValue total,
             ReadOnlyObjectProperty<StartEstimate> estimate,
             ObservableIntegerValue flagged,
             Runnable onReview) {}
@@ -94,7 +98,12 @@ final class TranslatingSummaryStrip {
         how.getProperties().put(ChangeListener.class, onSteps);
         mirror.live().progress().addListener(new WeakChangeListener<>(onSteps));
         final VBox strip = new VBox(
-                SPACING, top, bar(mirror, messages), factsLine(mirror, messages), counts(mirror, messages), how);
+                SPACING,
+                top,
+                bar(mirror, inputs, messages),
+                factsLine(mirror, inputs, messages),
+                counts(mirror, messages),
+                how);
         strip.setId("translating-strip");
         strip.getStyleClass().addAll("card", "strip");
         return strip;
@@ -162,21 +171,31 @@ final class TranslatingSummaryStrip {
         return review;
     }
 
-    private static ProgressBar bar(final StateMirror mirror, final Messages messages) {
+    private static ProgressBar bar(final StateMirror mirror, final Inputs inputs, final Messages messages) {
         final ProgressBar bar = new ProgressBar();
         bar.setId("translating-strip-bar");
         bar.setMaxWidth(Double.MAX_VALUE);
-        followSteps(bar, mirror, messages);
+        followSteps(bar, mirror, inputs, messages);
         followProviderError(bar, mirror);
         return bar;
     }
 
     // The bar and its tooltip read the same figures, so the steps the tooltip counts are the share the bar shows.
-    private static void followSteps(final ProgressBar bar, final StateMirror mirror, final Messages messages) {
+    private static void followSteps(
+            final ProgressBar bar, final StateMirror mirror, final Inputs inputs, final Messages messages) {
         final ReadOnlyObjectProperty<ProgressFigures.Figures> steps =
                 mirror.live().progress();
-        final DoubleBinding fraction =
-                Bindings.createDoubleBinding(() -> steps.get().fraction(), steps);
+        // Before a run there are no steps: the bar shows how much of the stored project is decided.
+        final DoubleBinding fraction = Bindings.createDoubleBinding(
+                () -> mirror.runState().get() == RunState.IDLE
+                                && mirror.figures().get().total() == 0
+                        ? storedFraction(inputs)
+                        : steps.get().fraction(),
+                steps,
+                mirror.runState(),
+                mirror.figures(),
+                inputs.decided(),
+                inputs.total());
         // A binding is held weakly by what it watches; the bar keeps it, or the bar would stop following.
         bar.getProperties().put(FRACTION_KEY, fraction);
         Motion.followProgress(bar, fraction);
@@ -188,6 +207,11 @@ final class TranslatingSummaryStrip {
                                 steps.get().done(),
                                 steps.get().total()),
                         steps));
+    }
+
+    private static double storedFraction(final Inputs inputs) {
+        final int total = inputs.total().get();
+        return total == 0 ? 0.0 : (double) inputs.decided().get() / total;
     }
 
     // The danger role belongs to the pause on an error only: a resume clears the error, and any other state drops it.
@@ -208,12 +232,18 @@ final class TranslatingSummaryStrip {
         paint.run();
     }
 
-    private static Label factsLine(final StateMirror mirror, final Messages messages) {
+    private static Label factsLine(final StateMirror mirror, final Inputs inputs, final Messages messages) {
         final Label line = bound(
                 "translating-strip-line",
                 "strip-line",
                 () -> factsText(
-                        mirror.figures().get(), mirror.live().throughput().get(), messages),
+                        mirror.figures().get(),
+                        inputs.decided().get(),
+                        inputs.total().get(),
+                        mirror.live().throughput().get(),
+                        messages),
+                inputs.decided(),
+                inputs.total(),
                 mirror.figures(),
                 mirror.live().throughput());
         Tips.install(messages, line, MessageKey.TRANSLATING_STRIP_DONE_TIP);
@@ -221,10 +251,19 @@ final class TranslatingSummaryStrip {
         return line;
     }
 
-    static String factsText(final RunFigures figures, final Throughput pace, final Messages messages) {
+    // A run's own figures win once it has counted anything; before that the stored project's counts stand.
+    static String factsText(
+            final RunFigures figures,
+            final int storedDecided,
+            final int storedTotal,
+            final Throughput pace,
+            final Messages messages) {
+        final boolean counted = figures.total() > 0;
         final List<String> parts = new ArrayList<>();
         parts.add(messages.get(
-                MessageKey.TRANSLATING_STRIP_DONE, figures.total() - figures.remaining(), figures.total()));
+                MessageKey.TRANSLATING_STRIP_DONE,
+                counted ? figures.total() - figures.remaining() : storedDecided,
+                counted ? figures.total() : storedTotal));
         if (figures.sections() > 0) {
             parts.add(messages.get(MessageKey.TRANSLATING_LINE_SECTION, figures.section(), figures.sections()));
         }

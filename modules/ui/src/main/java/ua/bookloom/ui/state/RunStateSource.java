@@ -54,6 +54,7 @@ public final class RunStateSource {
     private final ReadOnlyBooleanWrapper projectOpen = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<ModelChoice> model = new ReadOnlyObjectWrapper<>(ModelChoice.NONE);
     private final ReadOnlyIntegerWrapper decidedSegments = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper totalSegments = new ReadOnlyIntegerWrapper();
     private final ReadOnlyStringWrapper projectName = new ReadOnlyStringWrapper("");
     private final InvalidationListener refresh = observed -> refresh();
 
@@ -165,6 +166,15 @@ public final class RunStateSource {
     }
 
     /**
+     * The segments in all: the stored project's before a run, the run's own during one.
+     *
+     * @return a read-only property; FX thread only
+     */
+    public ReadOnlyIntegerProperty totalSegments() {
+        return totalSegments.getReadOnlyProperty();
+    }
+
+    /**
      * How far the run is, for the question asked before it is stopped.
      *
      * @return the segments decided, the segments in all and the segments in flight; never null
@@ -191,6 +201,7 @@ public final class RunStateSource {
         projectName.set(book != null ? titleName(book) : runFile == null ? "" : runFile);
         final RunStateInputs in = inputs(choice);
         decidedSegments.set(in.decided());
+        totalSegments.set(in.total());
         setView(RunStateView.of(in));
         final boolean open = book != null || runFile != null;
         if (open != projectOpen.get()) {
