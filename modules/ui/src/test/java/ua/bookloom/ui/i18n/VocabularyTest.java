@@ -90,6 +90,9 @@ class VocabularyTest {
                 "brief.option.transliterate|en|Spell in the target alphabet",
                 "brief.suggest|en|✦ Fill in from the book",
                 "brief.policy.foreign|en|Text in other languages",
+                "activity.providerCheck|en|AI model test",
+                "activity.providerCheck|uk|Перевірка моделі ШІ",
+                "dialog.samePair.use|uk|Створити переклад ({0}) з цією назвою",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);

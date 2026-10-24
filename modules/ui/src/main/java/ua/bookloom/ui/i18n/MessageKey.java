@@ -143,6 +143,8 @@ public enum MessageKey {
     PROGRESS_FIGURES_LEFT("progress.figures.left"),
     /** Tooltip of a progress bar that counts steps; arguments: 0 steps done, 1 steps in all. */
     PROGRESS_BAR_STEPS("progress.bar.steps"),
+    /** The Translating strip bar's hover text: 0 the percent of all the work, 1 the steps done, 2 all the steps. */
+    TRANSLATING_STRIP_BAR_STEPS("translating.strip.barSteps"),
     /** "How progress is counted": one kind of step; arguments: 0 its name, 1 done, 2 planned, 3 measured seconds. */
     PROGRESS_HOW_COUNTED_LINE("progress.howCounted.line"),
     /** "How progress is counted": one kind of step not timed yet; arguments: 0 its name, 1 done, 2 planned. */
@@ -271,6 +273,8 @@ public enum MessageKey {
     CONFIRM_STOP_YES("confirm.stop.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_STOP_YES}. */
     CONFIRM_STOP_YES_TIP("confirm.stop.yes.tip"),
+    /** The safe answer of the stop question: the translation goes on. */
+    CONFIRM_STOP_NO("confirm.stop.no"),
     /** Title of the question asked before a project with progress is discarded. */
     CONFIRM_IMPORT_TITLE("confirm.import.title"),
     /** Body of the discard-this-project question. */

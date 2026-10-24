@@ -112,7 +112,8 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
     void bar_hovered_givesTheStepsCountedIncludingChecks() {
         running(RUNNING);
 
-        assertThat(TooltipProbe.tipText(progressBar())).isEqualTo("791 of 1,240 steps, checks included");
+        assertThat(TooltipProbe.tipText(progressBar()))
+                .isEqualTo("64 % of all the work — 791 of 1,240 steps, checks included");
     }
 
     // IF a running strip did not lead with the time left, THEN the one thing a person asks first would be missing.

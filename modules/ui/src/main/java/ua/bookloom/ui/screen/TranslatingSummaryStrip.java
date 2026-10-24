@@ -203,7 +203,8 @@ final class TranslatingSummaryStrip {
                 bar,
                 Bindings.createStringBinding(
                         () -> messages.get(
-                                MessageKey.PROGRESS_BAR_STEPS,
+                                MessageKey.TRANSLATING_STRIP_BAR_STEPS,
+                                steps.get().percent(),
                                 steps.get().done(),
                                 steps.get().total()),
                         steps));

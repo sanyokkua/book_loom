@@ -46,7 +46,8 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_STOP_TITLE,
                 MessageKey.CONFIRM_STOP_TEXT,
                 MessageKey.CONFIRM_STOP_YES,
-                MessageKey.CONFIRM_STOP_YES_TIP);
+                MessageKey.CONFIRM_STOP_YES_TIP,
+                MessageKey.CONFIRM_STOP_NO);
 
         /** Cancelling an import whose project already holds work. */
         public static final Question DISCARD_PROJECT = new Question(
