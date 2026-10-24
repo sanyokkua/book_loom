@@ -2,10 +2,12 @@ package ua.bookloom.ui.i18n;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 
 /**
  * The words a failure is shown in.
@@ -38,11 +40,21 @@ public final class ErrorWords {
      *
      * @param messages the catalogue of the display language
      * @param error the failure
-     * @return its own message in English, else the catalogue's message for its code
+     * @return its own message in English, else the catalogue's advice for the {@link FailureReason} its details carry,
+     *     else the catalogue's message for its code
      */
     public static String message(final Messages messages, final AppError error) {
         Objects.requireNonNull(error, "error");
-        return keepsOwnWords(messages) ? error.message() : messages.code(MessageKey.ERROR_CODE_MESSAGE, codeOf(error));
+        if (keepsOwnWords(messages)) {
+            return error.message();
+        }
+        final Optional<FailureReason> reason = FailureReason.in(error.details());
+        log.debug(
+                "failure {} worded by {}",
+                error.code(),
+                reason.map(FailureReason::token).orElse("its code"));
+        return reason.map(why -> messages.code(MessageKey.ERROR_REASON_MESSAGE, why.token()))
+                .orElseGet(() -> messages.code(MessageKey.ERROR_CODE_MESSAGE, codeOf(error)));
     }
 
     private static String codeOf(final AppError error) {

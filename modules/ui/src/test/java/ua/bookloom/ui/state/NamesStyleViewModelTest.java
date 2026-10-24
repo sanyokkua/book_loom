@@ -232,6 +232,18 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(noticeText()).isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
+    // IF a term on two rows went unreported, THEN the person would not know one of the rows was set aside.
+    @Test
+    void importCsv_termOnTwoRows_reportsTheDuplicate() {
+        showWith(hale());
+        glossary.willAnswer(Result.ok(new GlossaryImportReport(1, List.of(), List.of(), 1)));
+        glossary.willAnswer(Result.ok(List.of(hale())));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Imported 1 row. 1 row was replaced by a later row of the same term.");
+    }
+
     // IF a bad line dropped the good ones, or went unreported, THEN an import would lose names silently.
     @Test
     void importCsv_malformedAndRefusedLines_reportsBothAndKeepsTheImportedRows() {

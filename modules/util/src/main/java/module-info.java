@@ -14,6 +14,7 @@ module ua.bookloom.util {
     requires ua.bookloom.api;
 
     exports ua.bookloom.util.paths;
+    exports ua.bookloom.util.files;
     exports ua.bookloom.util.hash;
     exports ua.bookloom.util.lang;
     exports ua.bookloom.util.log;

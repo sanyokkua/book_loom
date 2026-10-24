@@ -172,31 +172,30 @@ final class SideFiles {
     private static Result<Path> writeOne(
             final Content content, final boolean overwrite, final ExportMoveOperation moves) {
         final Path fileName = Objects.requireNonNull(content.path().getFileName(), "file name");
-        final Path temporary = content.path().resolveSibling("." + fileName);
-        log.debug("Writing side file {} through {} overwrite={}", content.path(), temporary, overwrite);
-        final boolean linked = Files.isSymbolicLink(temporary);
-        log.debug("Side file temporary {} is a symbolic link: {}", temporary, linked);
-        if (linked) {
-            log.warn("Refused side file because temporary path {} is a symbolic link", temporary);
-            return Result.err(AppError.of(
-                    ErrorCode.validation,
-                    "This export path is unsafe",
-                    "The temporary path for " + fileName + " is a link to another file, so it was not written."));
-        }
+        log.debug("Writing side file {} overwrite={}", content.path(), overwrite);
+        @Nullable Path temporary = null;
         try {
+            temporary = Publication.reserveTemporary(content.path());
             Files.writeString(temporary, content.text(), StandardCharsets.UTF_8);
             Publication.move(moves, temporary, content.path(), overwrite);
             return Result.ok(content.path());
         } catch (Throwable cause) {
-            deleteTemporary(temporary);
-            log.error("Failed to write side file {}", content.path(), cause);
-            return Result.err(AppError.of(
-                    ErrorCode.internal,
-                    "A side file could not be written",
-                    "The book was written, but " + fileName + " could not be saved beside it.",
-                    null,
-                    cause));
+            if (temporary != null) {
+                deleteTemporary(temporary);
+            }
+            return Result.err(Publication.fixableWriteError(content.path(), cause)
+                    .orElseGet(() -> sideFileError(content.path(), fileName, cause)));
         }
+    }
+
+    private static AppError sideFileError(final Path path, final Path fileName, final Throwable cause) {
+        log.error("Failed to write side file {}", path, cause);
+        return AppError.of(
+                ErrorCode.internal,
+                "A side file could not be written",
+                "The book was written, but " + fileName + " could not be saved beside it.",
+                null,
+                cause);
     }
 
     private static void deleteTemporary(final Path temporary) {

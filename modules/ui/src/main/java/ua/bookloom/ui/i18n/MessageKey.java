@@ -445,6 +445,11 @@ public enum MessageKey {
     ERROR_CODE_TITLE("error.code.title"),
     /** A failure's one-sentence message in the display language, selected like {@link #ERROR_CODE_TITLE}. */
     ERROR_CODE_MESSAGE("error.code.message"),
+    /**
+     * A failure's one-sentence advice in the display language when its details carry a
+     * {@link ua.bookloom.api.FailureReason}, selected on the reason's token with hyphens as underscores (argument 0).
+     */
+    ERROR_REASON_MESSAGE("error.reason.message"),
     /** Label of the error dialog's control that copies the failure's safe details for support. */
     ERROR_DETAILS_COPY("error.details.copy"),
     /** Hover explanation of the control labelled by {@link #ERROR_DETAILS_COPY}. */
@@ -1891,6 +1896,8 @@ public enum MessageKey {
     NAMES_STYLE_IMPORT_MALFORMED("namesStyle.import.malformed"),
     /** Lines an import refused as locked without a target; argument 0 is the joined line numbers, argument 1 their count. */
     NAMES_STYLE_IMPORT_REFUSED("namesStyle.import.refused"),
+    /** How many rows of an imported file a later row of the same term replaced (argument 0). */
+    NAMES_STYLE_IMPORT_DUPLICATES("namesStyle.import.duplicates"),
     /** Result of an export; argument 0 is the written file name. */
     NAMES_STYLE_EXPORT_DONE("namesStyle.export.done"),
     /** Term type: a character. */

@@ -85,7 +85,12 @@ public enum ErrorCode {
 ## safe-details-allowlist {#safe-details-allowlist}
 
 `AppError.details` is populated only from an **allowlist** of safe fields — HTTP status, endpoint host (not full URL
-with tokens), model name, timeout value, attempt count, QA finding names. It **never** contains: credentials, resolved
+with tokens), model name, timeout value, attempt count, QA finding names, a failure reason and a folder's own name.
+The **failure reason** is a fixed token (`FailureReason`: `folder-missing`, `access-denied`, `read-only`, `disk-full`,
+`not-utf8`, `csv-header`), rendered first as `reason=<token>`, for a failure whose code alone cannot say what to fix: the
+services word failures in English, and the window words a failure in another display language by its reason when it
+has one, else by its code. A write that fails for a missing folder, a refused permission, a read-only place or a full
+disk is `validation` with that reason and the folder's last name only (never its path). It **never** contains: credentials, resolved
 secret values, `Authorization` headers, full request/response bodies, or file contents. A helper builds `details` from
 typed inputs, not from string-concatenating arbitrary exception messages, so secrets cannot leak into the UI or logs
 (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`).

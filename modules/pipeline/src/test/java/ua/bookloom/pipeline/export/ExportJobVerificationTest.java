@@ -257,9 +257,9 @@ class ExportJobVerificationTest {
         assertThat(zipEntry(destination, "OEBPS/toc.ncx")).contains("<text>Буря</text>");
     }
 
-    // A folder removed as the export starts gives the write's own error and leaves no file behind.
+    // A folder removed as the export starts is told as a missing folder, which the person can fix, and leaves no file.
     @Test
-    void run_destinationFolderDeleted_returnsWriteErrorAndLeavesNothing() throws IOException {
+    void run_destinationFolderDeleted_returnsFolderMissingAndLeavesNothing() throws IOException {
         final String id = fixture.importBook(TestBooks.markdown(tempDir.resolve("Book.md"), "One."), "en");
         final Path folder = Files.createDirectory(tempDir.resolve("out"));
         final Path destination = folder.resolve("Book.uk.md");
@@ -268,7 +268,8 @@ class ExportJobVerificationTest {
 
         final Result<ExportReport> result = job.run();
 
-        assertThat(error(result).code()).isEqualTo(ErrorCode.internal);
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(error(result).details()).isEqualTo("reason=folder-missing, folder=out");
         assertThat(folder).doesNotExist();
     }
 

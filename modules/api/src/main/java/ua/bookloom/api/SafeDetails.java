@@ -1,6 +1,7 @@
 package ua.bookloom.api;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,8 @@ import org.jspecify.annotations.Nullable;
  *         .render();
  * }
  *
+ * @param reason the {@link FailureReason#token()} of why the failure happened, or {@code null}; rendered first, so
+ *     {@link FailureReason#in(String)} can read it back
  * @param httpStatus the HTTP status of the failed call, or {@code null}
  * @param endpointHost the endpoint's host, with its port when one is given, and every other URI part discarded, or {@code null}
  * @param modelName the model identifier, flattened and capped, or {@code null}
@@ -44,8 +47,11 @@ import org.jspecify.annotations.Nullable;
  * @param qaFindings the rendered QA finding names, or {@code null}
  * @param expectedPlaceholders the space-joined expected placeholder tokens, or {@code null}
  * @param observedPlaceholders the space-joined observed placeholder tokens, or {@code null}
+ * @param folderName the last name of the folder a file was to be written into, flattened and capped — never the
+ *     folder's path, which can name the person — or {@code null}
  */
 public record SafeDetails(
+        @Nullable String reason,
         @Nullable Integer httpStatus,
         @Nullable String endpointHost,
         @Nullable String modelName,
@@ -53,7 +59,8 @@ public record SafeDetails(
         @Nullable String attempt,
         @Nullable String qaFindings,
         @Nullable String expectedPlaceholders,
-        @Nullable String observedPlaceholders) {
+        @Nullable String observedPlaceholders,
+        @Nullable String folderName) {
 
     /** Longest text a single allowlisted field may contribute, in characters. */
     private static final int MAX_FIELD_LENGTH = 120;
@@ -80,7 +87,7 @@ public record SafeDetails(
      * @return an instance with every allowlisted field absent
      */
     public static SafeDetails empty() {
-        return new SafeDetails(null, null, null, null, null, null, null, null);
+        return new SafeDetails(null, null, null, null, null, null, null, null, null, null);
     }
 
     /**
@@ -91,6 +98,7 @@ public record SafeDetails(
      */
     public SafeDetails withHttpStatus(int status) {
         return new SafeDetails(
+                reason,
                 status,
                 endpointHost,
                 modelName,
@@ -98,7 +106,8 @@ public record SafeDetails(
                 attempt,
                 qaFindings,
                 expectedPlaceholders,
-                observedPlaceholders);
+                observedPlaceholders,
+                folderName);
     }
 
     /**
@@ -117,6 +126,7 @@ public record SafeDetails(
         return host == null
                 ? this
                 : new SafeDetails(
+                        reason,
                         httpStatus,
                         sanitize(port < 0 ? host : host + ":" + port),
                         modelName,
@@ -124,7 +134,8 @@ public record SafeDetails(
                         attempt,
                         qaFindings,
                         expectedPlaceholders,
-                        observedPlaceholders);
+                        observedPlaceholders,
+                        folderName);
     }
 
     /**
@@ -136,6 +147,7 @@ public record SafeDetails(
     public SafeDetails withModelName(String model) {
         Objects.requireNonNull(model, "model");
         return new SafeDetails(
+                reason,
                 httpStatus,
                 endpointHost,
                 sanitize(model),
@@ -143,7 +155,8 @@ public record SafeDetails(
                 attempt,
                 qaFindings,
                 expectedPlaceholders,
-                observedPlaceholders);
+                observedPlaceholders,
+                folderName);
     }
 
     /**
@@ -155,6 +168,7 @@ public record SafeDetails(
     public SafeDetails withTimeout(Duration timeout) {
         Objects.requireNonNull(timeout, "timeout");
         return new SafeDetails(
+                reason,
                 httpStatus,
                 endpointHost,
                 modelName,
@@ -162,7 +176,8 @@ public record SafeDetails(
                 attempt,
                 qaFindings,
                 expectedPlaceholders,
-                observedPlaceholders);
+                observedPlaceholders,
+                folderName);
     }
 
     /**
@@ -174,6 +189,7 @@ public record SafeDetails(
      */
     public SafeDetails withAttempt(int attemptNumber, int maxAttempts) {
         return new SafeDetails(
+                reason,
                 httpStatus,
                 endpointHost,
                 modelName,
@@ -181,7 +197,8 @@ public record SafeDetails(
                 attemptNumber + "/" + maxAttempts,
                 qaFindings,
                 expectedPlaceholders,
-                observedPlaceholders);
+                observedPlaceholders,
+                folderName);
     }
 
     /**
@@ -204,6 +221,7 @@ public record SafeDetails(
         final int overflow = findingNames.size() - MAX_FINDINGS;
         final String summarised = overflow > 0 ? rendered + ",+" + overflow + " more" : rendered;
         return new SafeDetails(
+                reason,
                 httpStatus,
                 endpointHost,
                 modelName,
@@ -211,7 +229,8 @@ public record SafeDetails(
                 attempt,
                 summarised,
                 expectedPlaceholders,
-                observedPlaceholders);
+                observedPlaceholders,
+                folderName);
     }
 
     /**
@@ -247,6 +266,7 @@ public record SafeDetails(
             return this;
         }
         return new SafeDetails(
+                reason,
                 httpStatus,
                 endpointHost,
                 modelName,
@@ -254,7 +274,8 @@ public record SafeDetails(
                 attempt,
                 qaFindings,
                 String.join(" ", expected),
-                renderObserved(observed));
+                renderObserved(observed),
+                folderName);
     }
 
     /** Renders the model-derived side under both bounds, stating any overflow instead of dropping it silently. */
@@ -279,6 +300,51 @@ public record SafeDetails(
     }
 
     /**
+     * Records why the failure happened, where its code alone cannot say what to fix.
+     *
+     * @param why the reason
+     * @return a copy carrying the reason's token
+     */
+    public SafeDetails withReason(FailureReason why) {
+        Objects.requireNonNull(why, "why");
+        return new SafeDetails(
+                why.token(),
+                httpStatus,
+                endpointHost,
+                modelName,
+                timeoutMillis,
+                attempt,
+                qaFindings,
+                expectedPlaceholders,
+                observedPlaceholders,
+                folderName);
+    }
+
+    /**
+     * Records the folder a file was to be written into, by its last name only.
+     *
+     * @param folder the folder; only {@link Path#getFileName()} is kept
+     * @return a copy carrying the folder's name, or this instance when the path has no name (a file system root)
+     */
+    public SafeDetails withFolder(Path folder) {
+        Objects.requireNonNull(folder, "folder");
+        final Path name = folder.getFileName();
+        return name == null
+                ? this
+                : new SafeDetails(
+                        reason,
+                        httpStatus,
+                        endpointHost,
+                        modelName,
+                        timeoutMillis,
+                        attempt,
+                        qaFindings,
+                        expectedPlaceholders,
+                        observedPlaceholders,
+                        sanitize(name.toString()));
+    }
+
+    /**
      * Renders the recorded fields in component order.
      *
      * <p>Returns {@code null} rather than an empty string when nothing was recorded, so the result can be handed
@@ -287,7 +353,8 @@ public record SafeDetails(
      * @return the rendered detail string, or {@code null} when no field is set
      */
     public @Nullable String render() {
-        final List<String> parts = new ArrayList<>(8);
+        final List<String> parts = new ArrayList<>(10);
+        append(parts, "reason", reason);
         append(parts, "httpStatus", httpStatus);
         append(parts, "endpointHost", endpointHost);
         append(parts, "model", modelName);
@@ -296,6 +363,7 @@ public record SafeDetails(
         append(parts, "qaFindings", qaFindings);
         append(parts, "expectedPlaceholders", expectedPlaceholders);
         append(parts, "observedPlaceholders", observedPlaceholders);
+        append(parts, "folder", folderName);
         return parts.isEmpty() ? null : String.join(", ", parts);
     }
 

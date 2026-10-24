@@ -39,6 +39,7 @@ import ua.bookloom.document.model.MalformedFragmentException;
 import ua.bookloom.document.model.XmlCharacters;
 import ua.bookloom.document.txt.TxtReader;
 import ua.bookloom.document.txt.TxtWriter;
+import ua.bookloom.util.files.FileFailures;
 
 /**
  * The {@link DocumentPort} implementation: format dispatch plus error classification, and the module's port
@@ -146,10 +147,16 @@ public final class DocumentService implements DocumentPort {
             log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
         } catch (Throwable t) {
-            final AppError error = internalError(t);
+            final AppError error = writeFailure(t, destination);
             log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
         }
+    }
+
+    private AppError writeFailure(Throwable t, Path destination) {
+        final Optional<AppError> fixable = FileFailures.fixable(destination, t);
+        fixable.ifPresent(error -> log.warn("Writing {} failed: {}", destination, error.details(), t));
+        return fixable.orElseGet(() -> internalError(t));
     }
 
     private void logWriteEntry(

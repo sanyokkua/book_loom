@@ -74,12 +74,42 @@ class GlossaryCsvTest {
         assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n");
     }
 
+    // IF a missing folder read as a defect, THEN the person would not learn to create it or choose another.
     @Test
-    void exportCsv_unwritableDestination_answersInternal() {
+    void exportCsv_missingFolder_answersAFolderMissingValidation() {
         final Result<Path> failed =
                 service.exportCsv(PROJECT, dir.resolve("missing").resolve("glossary.csv"));
 
-        assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
+        assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(failed.error()).extracting(AppError::details).isEqualTo("reason=folder-missing, folder=missing");
+    }
+
+    // IF the file were written in place, THEN a failure part-way would leave a half glossary where a whole one was.
+    @Test
+    void exportCsv_overAnOldFile_replacesItWholeAndLeavesNoHiddenFile() throws IOException {
+        final Path file = Files.writeString(dir.resolve("glossary.csv"), "old");
+
+        service.exportCsv(PROJECT, file);
+
+        assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n");
+        try (var names = Files.list(dir)) {
+            assertThat(names.map(path -> path.getFileName().toString())).containsExactly("glossary.csv");
+        }
+    }
+
+    // IF a spreadsheet read a term as a formula, THEN opening the export could run it; a quote in front keeps it text.
+    @Test
+    void exportCsv_formulaLikeTerm_isWrittenAfterAQuoteAndImportsBackUnchanged() throws IOException {
+        service.add(new GlossaryEntry("p1:sum", PROJECT, "=SUM(A1)", "@home", TermType.OTHER, Gender.UNKNOWN, false));
+        final Path file = dir.resolve("glossary.csv");
+
+        service.exportCsv(PROJECT, file);
+        service.importCsv("p2", file);
+
+        assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n'=SUM(A1),'@home,other,unknown,false\r\n");
+        assertThat(service.entries("p2").data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::target)
+                .containsExactly(tuple("=SUM(A1)", "@home"));
     }
 
     @Test
@@ -241,14 +271,16 @@ class GlossaryCsvTest {
         assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
     }
 
+    // IF a file in another encoding read as "unreadable", THEN the person would not know to save it as UTF-8.
     @Test
-    void importCsv_fileThatIsNotUtf8_answersValidation() throws IOException {
+    void importCsv_fileThatIsNotUtf8_answersValidationNamingTheEncoding() throws IOException {
         final Path file = dir.resolve("glossary.csv");
         Files.write(file, new byte[] {(byte) 0xC3, (byte) 0x28});
 
-        assertThat(service.importCsv(PROJECT, file).error())
-                .extracting(AppError::code)
-                .isEqualTo(ErrorCode.validation);
+        final AppError error = service.importCsv(PROJECT, file).error();
+
+        assertThat(error).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(error).extracting(AppError::details).isEqualTo("reason=not-utf8");
     }
 
     @Test

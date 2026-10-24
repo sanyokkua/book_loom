@@ -40,6 +40,10 @@ final class ImportSummary {
                 new StringBuilder(messages.get(MessageKey.NAMES_STYLE_IMPORT_DONE, report.imported()));
         append(summary, MessageKey.NAMES_STYLE_IMPORT_MALFORMED, report.malformedLines());
         append(summary, MessageKey.NAMES_STYLE_IMPORT_REFUSED, report.refusedLines());
+        if (report.duplicates() > 0) {
+            log.debug("import kept the last of {} repeated terms", report.duplicates());
+            summary.append(' ').append(messages.get(MessageKey.NAMES_STYLE_IMPORT_DUPLICATES, report.duplicates()));
+        }
         return summary.toString();
     }
 
