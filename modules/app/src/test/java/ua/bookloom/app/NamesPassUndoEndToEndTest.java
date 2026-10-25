@@ -58,6 +58,8 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
     private static final String WREN_ID = "seed-wren";
     private static final String GATE_ID = "seed-gatewarden";
 
+    private static final String UNDONE = "Undone: Prepare names automatically · every change it made is put back";
+
     @Test
     void undoAll_afterThePseudoModelPass_leavesBothTablesAsTheyWereBeforeIt() throws Exception {
         final Path book = Files.writeString(booksDir.resolve("Story.txt"), body(), StandardCharsets.UTF_8);
@@ -80,7 +82,8 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
         final ChangeResults results = onFx(() -> names.results().get());
 
         assertThat(results.outcome()).isEqualTo(ChangeResults.Outcome.CHANGED);
-        assertThat(onFx(() -> Objects.requireNonNull(names.notice().get()).text())).startsWith("Names prepared");
+        assertThat(onFx(() -> Objects.requireNonNull(names.notice().get()).text()))
+                .startsWith("Names prepared");
         assertThat(namesNow(projectId)).isNotEqualTo(namesBefore);
         assertThat(entry(namesNow(projectId), GATE_ID)).isEqualTo(entry(namesBefore, GATE_ID));
 
@@ -91,8 +94,7 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
         assertThat(termsNow(projectId)).isEqualTo(termsBefore);
         assertThat(onFx(() -> List.copyOf(names.rows()))).containsExactlyInAnyOrderElementsOf(namesBefore);
         // IF the pass's notice stayed, THEN it would still claim names were prepared after all of them were undone.
-        assertThat(onFx(() -> Objects.requireNonNull(names.notice().get()).text()))
-                .isEqualTo("Undone: Prepare names automatically · every change it made is put back");
+        assertThat(noticeOf(names)).isEqualTo(UNDONE);
     }
 
     /**
@@ -160,6 +162,10 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
             }
             return Result.ok(new ChatResponse(reply.append("]}").toString(), FinishReason.STOP));
         }
+    }
+
+    private static String noticeOf(final NamesStyleViewModel names) {
+        return onFx(() -> Objects.requireNonNull(names.notice().get()).text());
     }
 
     private void seedThePersonsWork(final String projectId) {

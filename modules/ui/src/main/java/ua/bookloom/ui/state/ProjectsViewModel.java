@@ -50,6 +50,8 @@ public final class ProjectsViewModel {
     private final ReadOnlyObjectWrapper<ProjectsState> state = new ReadOnlyObjectWrapper<>(ProjectsState.LOADING);
     private final ReadOnlyObjectWrapper<List<BookGroup>> groups = new ReadOnlyObjectWrapper<>(List.of());
     private final StringProperty search = new SimpleStringProperty("");
+    // Set by searchOnNextVisit, so the visit it opens keeps the search instead of clearing it. FX thread only.
+    private boolean searchCarried;
     private final ObjectProperty<ProjectFilter> filter = new SimpleObjectProperty<>(ProjectFilter.ALL);
     private int generation;
 
@@ -131,14 +133,32 @@ public final class ProjectsViewModel {
     }
 
     /**
-     * Empties the search, as each visit of the screen begins: a search left from the last visit would hide rows behind
-     * "No project matches" the person no longer remembers typing. The filter is kept. FX thread only.
+     * Begins a visit of the screen with an empty search, unless the visit was opened on a book
+     * ({@link #searchOnNextVisit}): a search left from the last visit would hide rows behind "No project matches" the
+     * person no longer remembers typing. The filter is kept. FX thread only.
      */
-    public void clearSearch() {
+    public void beginVisit() {
+        if (searchCarried) {
+            log.debug("the visit opens on the search '{}' it was asked for", search.get());
+            searchCarried = false;
+            return;
+        }
         log.debug(
                 "the search is cleared for a new visit, it held {} characters",
                 search.get().length());
         search.set("");
+    }
+
+    /**
+     * Sets the search the next visit opens on, as "Show them" does for a book that is already stored. FX thread only.
+     *
+     * @param text the text to search for
+     */
+    public void searchOnNextVisit(final String text) {
+        Objects.requireNonNull(text, "text");
+        log.debug("the next visit opens on a search of {} characters", text.length());
+        search.set(text);
+        searchCarried = true;
     }
 
     /** Lists the stored projects again. Returns at once; the answer arrives on the FX thread. FX thread only. */

@@ -32,10 +32,8 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
@@ -179,15 +177,10 @@ final class ConformancePreparations {
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
     private void listAGlossary() throws TimeoutException {
         glossary.willAnswer(Result.ok(List.of(
-                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false)
-                        .withSuggestedGender(Gender.MALE),
-                new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
-                        .withSuggestedTarget("Віктор"),
-                // The longest gender labels: a suggested female and a person the book gives no evidence for.
-                new GlossaryEntry("e3", "p1", "Justine", null, TermType.CHARACTER, Gender.UNKNOWN, false)
-                        .withSuggestedGender(Gender.FEMALE),
-                new GlossaryEntry("e4", "p1", "Clerval", null, TermType.CHARACTER, Gender.UNKNOWN, false)
-                        .withNoGenderEvidence())));
+                AutoNamesFixture.character("e1", "Frankenstein", Gender.UNKNOWN).withSuggestedGender(Gender.MALE),
+                AutoNamesFixture.character("e2", "Victor", Gender.MALE).withSuggestedTarget("Віктор"),
+                AutoNamesFixture.character("e3", "Justine", Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE),
+                AutoNamesFixture.character("e4", "Clerval", Gender.UNKNOWN).withNoGenderEvidence())));
         openABook();
     }
 

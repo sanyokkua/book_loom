@@ -91,8 +91,13 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         assertThat(TooltipProbe.tipText(root.lookup(".text-field")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_TARGET_TIP"));
         assertThat(choices).hasSize(2).allMatch(node -> node instanceof Label);
-        assertThat(TooltipProbe.tipText(choices.get(0))).isEqualTo(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
-        assertThat(TooltipProbe.tipText(choices.get(1))).isEqualTo(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
+        // A value a narrow column cuts short is named whole before the column's explanation.
+        assertThat(TooltipProbe.tipText(choices.get(0)))
+                .startsWith(((Label) choices.get(0)).getText() + " — ")
+                .endsWith(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
+        assertThat(TooltipProbe.tipText(choices.get(1)))
+                .startsWith(((Label) choices.get(1)).getText() + " — ")
+                .endsWith(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
         assertThat(root.lookup(".toggle-switch")).isInstanceOf(ToggleSwitch.class);
         assertThat(TooltipProbe.tipText(root.lookup(".toggle-switch")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_LOCKED_TIP"));

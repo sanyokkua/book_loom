@@ -71,7 +71,7 @@ public final class ProjectsController {
     void initialize() {
         host.getProperties().put(ProjectsController.class, this);
         viewModel.state().addListener(new WeakChangeListener<>(onState));
-        viewModel.clearSearch();
+        viewModel.beginVisit();
         viewModel.refresh();
         show(viewModel.state().get());
     }

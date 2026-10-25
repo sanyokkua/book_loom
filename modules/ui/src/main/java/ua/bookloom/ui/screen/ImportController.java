@@ -301,7 +301,7 @@ public final class ImportController {
     private void showThem() {
         if (viewModel.state().get() instanceof ImportState.AlreadyInProjects already) {
             log.info("showing the projects of the book {}", already.fileName());
-            projectsView.search().set(already.bookTitle());
+            projectsView.searchOnNextVisit(already.bookTitle());
             projectsView.filter().set(ProjectFilter.ALL);
             navigator.navigate(ViewNames.PROJECTS);
         }

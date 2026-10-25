@@ -79,38 +79,22 @@ public final class StateMirror {
         return runState.getReadOnlyProperty();
     }
 
-    /**
-     * Segments accepted so far.
-     *
-     * @return the read-only count; read on the FX thread
-     */
+    /** {@return the segments accepted so far; read on the FX thread} */
     public ReadOnlyIntegerProperty accepted() {
         return accepted.getReadOnlyProperty();
     }
 
-    /**
-     * Segments flagged so far.
-     *
-     * @return the read-only count; read on the FX thread
-     */
+    /** {@return the segments flagged so far; read on the FX thread} */
     public ReadOnlyIntegerProperty flagged() {
         return flagged.getReadOnlyProperty();
     }
 
-    /**
-     * Segments not decided yet.
-     *
-     * @return the read-only count; read on the FX thread
-     */
+    /** {@return the segments not decided yet; read on the FX thread} */
     public ReadOnlyIntegerProperty remaining() {
         return remaining.getReadOnlyProperty();
     }
 
-    /**
-     * Accepted plus flagged plus remaining.
-     *
-     * @return the read-only count; read on the FX thread
-     */
+    /** {@return accepted plus flagged plus remaining; read on the FX thread} */
     public ReadOnlyIntegerProperty total() {
         return total.getReadOnlyProperty();
     }
@@ -133,20 +117,12 @@ public final class StateMirror {
         return sections.getReadOnlyProperty();
     }
 
-    /**
-     * The 1-based chunk within the section being translated.
-     *
-     * @return the read-only position, zero before the first; read on the FX thread
-     */
+    /** {@return the 1-based chunk within the section being translated, zero before the first; read on the FX thread} */
     public ReadOnlyIntegerProperty chunk() {
         return chunk.getReadOnlyProperty();
     }
 
-    /**
-     * How many chunks the section has.
-     *
-     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
-     */
+    /** {@return how many chunks the section has, zero before a snapshot arrives; read on the FX thread} */
     public ReadOnlyIntegerProperty chunks() {
         return chunks.getReadOnlyProperty();
     }
