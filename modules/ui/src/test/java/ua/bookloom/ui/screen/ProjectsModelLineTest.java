@@ -64,7 +64,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
 
         onFx(() -> probe().runFirstLaunch());
 
-        awaitCardContains("Looking for an AI program on this computer…");
+        awaitCardContains("Looking for an AI program on this computer...");
         assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isTrue();
         catalog.releaseDrafts();
         awaitCardContains("No AI model found");
@@ -80,7 +80,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
 
         awaitCardContains(
                 "AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)");
-        assertThat(textOf(CARD)).contains("Change…").doesNotContain("I use another program…");
+        assertThat(textOf(CARD)).contains("Change...").doesNotContain("I use another program...");
     }
 
     @Test
@@ -108,7 +108,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 .doesNotContain("ready ✓");
         assertThat(((Button) node("projects-empty-tryagain")).getText()).isEqualTo("Try again");
         assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isFalse();
-        assertThat(((Button) node("projects-empty-other")).getText()).isEqualTo("I use another program…");
+        assertThat(((Button) node("projects-empty-other")).getText()).isEqualTo("I use another program...");
     }
 
     // IF a card with no look this session offered no Try again, THEN a person whose program was closed at launch would
@@ -150,7 +150,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
                 .isEqualTo(ViewNames.SETTINGS);
     }
 
-    // IF dismissing the question left the card on "Looking…", THEN the person could neither retry nor go on; IF it said
+    // IF dismissing the question left the card on "Looking...", THEN the person could neither retry nor go on; IF it
+    // said
     // the program was closed, THEN it would contradict the models the program just listed.
     @Test
     void emptyCard_severalModelsAndNotNow_saysAProgramAnsweredAndTryAgainAsksAgain() throws Exception {
@@ -177,9 +178,9 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         onFx(() -> probe().runFirstLaunch());
         ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
 
-        awaitCardContains("Looking for an AI program on this computer…");
+        awaitCardContains("Looking for an AI program on this computer...");
         assertThat(textOf(CARD)).doesNotContain("is not open").doesNotContain("No AI model found");
-        assertThat(footerText()).isEqualTo("Looking for an AI model…");
+        assertThat(footerText()).isEqualTo("Looking for an AI model...");
         assertThat(node("nav-footer").getStyleClass()).doesNotContain("state-failed");
     }
 
@@ -207,7 +208,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         onFx(() -> probe().runFirstLaunch());
         ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
 
-        ImportScreenTestBase.awaitFx(() -> footerText().equals("Шукаємо модель ШІ…"));
+        ImportScreenTestBase.awaitFx(() -> footerText().equals("Шукаємо модель ШІ..."));
     }
 
     @Test

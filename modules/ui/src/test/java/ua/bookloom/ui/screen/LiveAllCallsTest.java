@@ -17,7 +17,7 @@ import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.LiveRow.Stage;
 
-/** "All calls…" lists the calls the run kept, newest first, in the progress dialog's Calls view. */
+/** "All calls..." lists the calls the run kept, newest first, in the progress dialog's Calls view. */
 class LiveAllCallsTest extends LiveCardTestBase {
 
     private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.REVIEW, CallKind.PLACEHOLDER_REPAIR);
@@ -50,7 +50,7 @@ class LiveAllCallsTest extends LiveCardTestBase {
         return ((Label) required("progress-step-" + index).lookup(".progress-step-name")).getText();
     }
 
-    // IF All calls… opened something else, THEN the person could not look back through the calls of the run.
+    // IF All calls... opened something else, THEN the person could not look back through the calls of the run.
     @Test
     void allCalls_pressed_opensTheCallsViewNewestFirst() {
         showWithCalls(1, 3);
@@ -89,7 +89,7 @@ class LiveAllCallsTest extends LiveCardTestBase {
         assertThat(isShown("calls-card")).isFalse();
     }
 
-    // IF the button did not say what it lists, THEN "All calls…" would not tell that only the last 50 are kept.
+    // IF the button did not say what it lists, THEN "All calls..." would not tell that only the last 50 are kept.
     @Test
     void allCalls_hovered_saysTheLastFiftyAreKept() {
         showWithCalls(1, 2);

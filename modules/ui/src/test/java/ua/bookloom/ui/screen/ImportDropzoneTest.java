@@ -70,7 +70,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         assertThat(isCompact()).isFalse();
         assertThat(isOneLine()).isFalse();
-        assertThat(textOf("import-dropzone")).contains("Drag a book here").contains("Browse files…");
+        assertThat(textOf("import-dropzone")).contains("Drag a book here").contains("Browse files...");
         assertThat(isShown("import-browse")).isTrue();
     }
 
@@ -93,7 +93,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         assertThat(isShown("import-browse")).isTrue();
         assertThat(button("import-browse").isDisable()).isFalse();
-        assertThat(button("import-browse").getText()).isEqualTo("Browse files…");
+        assertThat(button("import-browse").getText()).isEqualTo("Browse files...");
         assertThat(required("import-dropzone").getOnDragOver()).isNotNull();
         assertThat(required("import-dropzone").getOnDragDropped()).isNotNull();
     }

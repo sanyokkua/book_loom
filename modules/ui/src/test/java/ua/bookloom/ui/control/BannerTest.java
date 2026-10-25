@@ -36,7 +36,7 @@ class BannerTest extends FxTestBase {
         stage.show();
     }
 
-    // IF the glyph shrank with the words, THEN the export dialog's warning showed "…" where its ⚠ belonged.
+    // IF the glyph shrank with the words, THEN the export dialog's warning showed "..." where its ⚠ belonged.
     @Test
     void layout_longWordsInANarrowBanner_keepTheGlyphWhole() {
         final Label glyph = (Label) banner.lookup(".banner-icon");

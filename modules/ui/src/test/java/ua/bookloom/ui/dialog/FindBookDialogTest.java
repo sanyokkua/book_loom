@@ -56,7 +56,7 @@ class FindBookDialogTest extends ShellTestBase {
                 .contains(
                         "Find the book",
                         "The book file of Earth Gravity · my run is not where it was. Choose the same book to go on.",
-                        "Find the book…",
+                        "Find the book...",
                         "Cancel");
         assertThat(((Button) required("findbook-choose")).getStyleClass()).contains("btn-primary");
         assertThat(isShown("findbook-error")).isFalse();
@@ -119,6 +119,6 @@ class FindBookDialogTest extends ShellTestBase {
                 .contains(
                         "Знайти книгу",
                         "Файлу книги проєкту Earth Gravity · my run немає на колишньому місці. Виберіть ту саму книгу, щоб продовжити.",
-                        "Знайти книгу…");
+                        "Знайти книгу...");
     }
 }

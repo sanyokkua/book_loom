@@ -56,7 +56,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     // IF Add or Delete were disabled, THEN a person could not manage providers; IF an Edit button were left, THEN there
     // would be two ways to open the one form.
     @ParameterizedTest
-    @CsvSource({"add, + New provider", "delete, Delete…"})
+    @CsvSource({"add, + New provider", "delete, Delete..."})
     void providerActions_settingsScreen_addAndDeleteEnabledWithTheirWords(final String action, final String words) {
         openSettings();
 
@@ -286,7 +286,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
 
         assertThat(progress.isVisible()).isTrue();
         assertThat(progress.isManaged()).isTrue();
-        assertThat(progress.getText()).isEqualTo("Checking…");
+        assertThat(progress.getText()).isEqualTo("Checking...");
         assertThat(((Button) required("settings-test-connection")).isDisable()).isTrue();
 
         verifier.release();

@@ -158,7 +158,7 @@ class BusyHostTest extends ShellTestBase {
 
         assertThat(cancelled).containsExactly("GLOSSARY_SCAN");
         assertThat(cancel.isDisabled()).isTrue();
-        assertThat(text("progress-purpose")).isEqualTo("Cancelling…");
+        assertThat(text("progress-purpose")).isEqualTo("Cancelling...");
         assertThat(TooltipProbe.tipText(cancel)).isNotBlank();
     }
 

@@ -38,7 +38,7 @@ class TranslatingRowLayoutTest extends LiveCardTestBase {
         assertThat(isShown("translating-live-card")).isEqualTo(!ready);
     }
 
-    // IF a paused or stopped run still read "translating…" on the segments that were in its last call, THEN the card
+    // IF a paused or stopped run still read "translating..." on the segments that were in its last call, THEN the card
     // would claim work that is not going on.
     @ParameterizedTest
     @EnumSource(
@@ -46,7 +46,7 @@ class TranslatingRowLayoutTest extends LiveCardTestBase {
             names = {"PAUSED", "STOPPED", "FAILED"})
     void rows_runNotWorking_readWaitingWhereTheyWereInACall(final RunState state) {
         showRows(LiveRowFixtures.rows(2, Stage.IN_CALL));
-        assertThat(markerWords()).containsExactly("translating…", "translating…");
+        assertThat(markerWords()).containsExactly("translating...", "translating...");
 
         publish(state);
 
@@ -63,6 +63,6 @@ class TranslatingRowLayoutTest extends LiveCardTestBase {
 
         publish(state);
 
-        assertThat(markerWords()).isEqualTo(List.of("translating…", "translating…"));
+        assertThat(markerWords()).isEqualTo(List.of("translating...", "translating..."));
     }
 }

@@ -24,7 +24,7 @@ class BookBriefFocusTraversalTest extends BookBriefScreenTestBase {
     // Far more presses than the screen has controls: a screen that needs more is trapping the focus.
     private static final int MAX_PRESSES = 200;
 
-    // One control per card in reading order (the project name's Rename… link follows the languages) (the narrator's
+    // One control per card in reading order (the project name's Rename... link follows the languages) (the narrator's
     // gender is disabled until the narrator is first person).
     private static final List<String> IN_ORDER = List.of(
             "brief-source",

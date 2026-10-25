@@ -25,7 +25,7 @@ class BriefFillMessagesTest {
                 Arguments.of(MessageKey.BRIEF_PROJECT_NAME_LABEL, "en", "Project name"),
                 Arguments.of(MessageKey.BRIEF_PROJECT_NAME_NAMED, "en", "named by you"),
                 Arguments.of(MessageKey.BRIEF_PROJECT_NAME_NAMED, "uk", "задана вами"),
-                Arguments.of(MessageKey.BRIEF_PROJECT_NAME_RENAME, "en", "Rename…"),
+                Arguments.of(MessageKey.BRIEF_PROJECT_NAME_RENAME, "en", "Rename..."),
                 Arguments.of(MessageKey.BRIEF_APPLY, "en", "Apply to the brief"),
                 Arguments.of(MessageKey.BRIEF_APPLY, "uk", "Застосувати до брифу"),
                 Arguments.of(MessageKey.BRIEF_DECIDES_GROUP, "en", "What it decides"),

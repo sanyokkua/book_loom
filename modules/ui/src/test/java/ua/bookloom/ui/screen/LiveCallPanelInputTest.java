@@ -47,7 +47,7 @@ class LiveCallPanelInputTest extends LiveCardTestBase {
     void waitingCall_saysItWaitsForTheReply() {
         showDetailed(waiting(), Stage.IN_CALL);
 
-        assertThat(labelText(CALL + "-reply-note")).isEqualTo("Waiting for the reply…");
+        assertThat(labelText(CALL + "-reply-note")).isEqualTo("Waiting for the reply...");
     }
 
     @Test

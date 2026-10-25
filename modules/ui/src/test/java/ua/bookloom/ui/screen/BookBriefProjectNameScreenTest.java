@@ -17,7 +17,7 @@ import ua.bookloom.ui.state.RunStateSource;
 
 /**
  * The project name line of the languages card (book-brief "Show the project name on the brief and let the person
- * rename it"): the stored name, whether it follows the languages or was typed, and a Rename… link that opens the same
+ * rename it"): the stored name, whether it follows the languages or was typed, and a Rename... link that opens the same
  * question as the Projects screen.
  */
 class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
@@ -32,7 +32,7 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
 
         assertThat(textOfLabel("brief-project-name")).isEqualTo(AUTOMATIC_NAME);
         assertThat(textOfLabel("brief-project-origin")).isEqualTo("automatic — follows the languages");
-        assertThat(button("brief-rename").getText()).isEqualTo("Rename…");
+        assertThat(button("brief-rename").getText()).isEqualTo("Rename...");
     }
 
     @Test
@@ -97,7 +97,7 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
                 .isEqualTo("Земне тяжіння");
     }
 
-    // IF Rename… asked its own question, THEN the Brief and the Projects screen would rename by different rules.
+    // IF Rename... asked its own question, THEN the Brief and the Projects screen would rename by different rules.
     @Test
     void rename_pressed_asksTheRenameQuestionOfTheOpenProjectOnce() throws Exception {
         openAndShowBrief();
@@ -161,6 +161,6 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
         openAndShowBrief();
 
         assertThat(textOfLabel("brief-project-origin")).isEqualTo("автоматична — змінюється разом з мовами");
-        assertThat(button("brief-rename").getText()).isEqualTo("Перейменувати…");
+        assertThat(button("brief-rename").getText()).isEqualTo("Перейменувати...");
     }
 }

@@ -124,7 +124,7 @@ final class SettingsPreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    /** Presses Delete… on the open provider, so the confirm question is on screen. */
+    /** Presses Delete... on the open provider, so the confirm question is on screen. */
     void askToDelete() {
         pressInScene("settings-provider-delete");
     }

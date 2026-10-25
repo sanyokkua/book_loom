@@ -47,6 +47,26 @@ class SettingsFormLayoutTest extends SettingsScreenTestBase {
         assertThat(scroll.getMaxY()).isLessThanOrEqualTo(footer.getMinY());
     }
 
+    // IF the address shared its line with the status chip, THEN "127.0.0.1:11434" would read "127.0.0.1:114...".
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"en", "uk"})
+    void providerList_smallestWindow_showsEveryAddressWhole(final String tag) throws Exception {
+        useLocale(java.util.Locale.forLanguageTag(tag));
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+        openSettingsSettled();
+
+        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll(".provider-endpoint").stream()
+                        .map(javafx.scene.control.Label.class::cast)
+                        .filter(address -> address.getWidth() + 0.5 < address.prefWidth(-1))
+                        .map(javafx.scene.control.Label::getText)
+                        .toList()))
+                .as("addresses drawn narrower than their text")
+                .isEmpty();
+        assertThat(ThemeTestSupport.onFx(
+                        () -> scene.getRoot().lookupAll(".provider-endpoint").size()))
+                .isEqualTo(2);
+    }
+
     private static boolean isInside(final Node node, final Node ancestor) {
         return ThemeTestSupport.onFx(() -> {
             for (Node up = node; up != null; up = up.getParent()) {

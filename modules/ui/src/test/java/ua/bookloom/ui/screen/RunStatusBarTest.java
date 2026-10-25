@@ -183,7 +183,7 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
     void bar_pausing_showsPauseUnavailable() {
         runAt78(RunState.PAUSING);
 
-        assertThat(labelText("shell-run-state")).isEqualTo("Pausing…");
+        assertThat(labelText("shell-run-state")).isEqualTo("Pausing...");
         assertThat(button(CONTROL).getText()).isEqualTo("Pause");
         assertThat(button(CONTROL).isDisabled()).isTrue();
     }

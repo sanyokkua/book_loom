@@ -66,7 +66,7 @@ class ReviewDeskRunStateTest extends ReviewDeskTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(target().isEditable()).isFalse();
-        assertThat(textOf(BANNER)).contains("Trying again… the desk is available when the model answers.");
+        assertThat(textOf(BANNER)).contains("Trying again... the desk is available when the model answers.");
         assertThat(isShown("review-pause")).isFalse();
         assertThat(textOf("review-desk-left")).doesNotContain("read-only while translating");
     }

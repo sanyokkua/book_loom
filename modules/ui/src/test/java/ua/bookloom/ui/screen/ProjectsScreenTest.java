@@ -64,7 +64,8 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
         final String row = textOf("projects-row-" + EARTH_ID);
 
         assertThat(row)
-                .contains("Earth Gravity · EN → UK")
+                .contains("Earth Gravity")
+                .contains(" · EN → UK")
                 .contains("EN → UK · Ollama · gemma4:e4b · Balanced")
                 .contains("51 % · yesterday")
                 .contains("Paused")
@@ -103,12 +104,61 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .isEqualTo(title);
     }
 
+    private static ProjectSummary exported(final String id, final String name) {
+        final java.time.Instant opened = java.time.Instant.parse("2026-10-21T10:00:00Z");
+        return ProjectFixtures.summary(
+                ProjectFixtures.project(
+                        id,
+                        ProjectFixtures.BOOK_FILE,
+                        ProjectFixtures.BOOK_HASH,
+                        "en",
+                        "uk",
+                        ua.bookloom.api.project.NameOrigin.AUTO,
+                        name,
+                        opened),
+                ProjectFixtures.BOOK_SEGMENTS,
+                ProjectFixtures.run(id, ua.bookloom.api.pipeline.JobState.COMPLETED),
+                ProjectFixtures.export(opened));
+    }
+
+    private List<javafx.scene.control.Label> labelsIn(final String id, final String text) {
+        return node(id).lookupAll(".label").stream()
+                .map(javafx.scene.control.Label.class::cast)
+                .filter(label -> text.equals(label.getText()))
+                .toList();
+    }
+
+    // IF a short row cut the end of its name, THEN "earth-gravity · EN → UK" would lose its language pair.
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void list_smallestWindowOpenProject_showsTheWholeName(final String tag) throws Exception {
+        useLocale(Locale.forLanguageTag(tag));
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+        final String name = "earth-gravity · EN → UK";
+        onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
+                injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
+        showListing(exported("p1", name));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(ThemeTestSupport.onFx(() -> labelsIn("projects-row-p1", " · EN → UK").stream()
+                        .map(label -> label.getWidth() + 0.5 >= label.prefWidth(-1))
+                        .toList()))
+                .as("the language pair is whole")
+                .containsExactly(true);
+        assertThat(ThemeTestSupport.onFx(() -> labelsIn("projects-row-p1", "earth-gravity").stream()
+                        .map(label -> label.getWidth() + 0.5 >= label.prefWidth(-1)
+                                || name.equals(ua.bookloom.ui.TooltipProbe.tipText(label)))
+                        .toList()))
+                .as("the title is whole, or cut with the whole name as its tooltip")
+                .containsExactly(true);
+    }
+
     // IF the ⋯ menu offered another set, THEN the row actions of the specification would not all be reachable.
     @Test
     void list_row_moreMenuOffersRenameShowBookFileAndRemove() throws Exception {
         showListing(ukrainianRunning());
 
-        assertThat(menuCaptions(EARTH_ID)).containsExactly("Rename…", "Show book file", "Remove project…");
+        assertThat(menuCaptions(EARTH_ID)).containsExactly("Rename...", "Show book file", "Remove project...");
     }
 
     // IF a project that was never run said it was translating, THEN its row would promise work that has not begun.
@@ -274,8 +324,8 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
         assertThat(textOf("projects-empty-card"))
                 .contains("AI model: Ollama · gemma3:12b — ready ✓")
-                .contains("Change…")
-                .doesNotContain("I use another program…");
+                .contains("Change...")
+                .doesNotContain("I use another program...");
     }
 
     @Test
@@ -284,7 +334,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
         assertThat(textOf("projects-empty-card"))
                 .contains("No AI model found")
-                .contains("I use another program…")
+                .contains("I use another program...")
                 .doesNotContain("ready ✓");
     }
 

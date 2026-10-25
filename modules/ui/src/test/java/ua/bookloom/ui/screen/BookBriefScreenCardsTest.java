@@ -251,7 +251,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     }
 
     // IF a Ukrainian label were cut short, THEN a choice could not be read; the reference rendering was seen to read
-    // "Транслітерув…" at this width.
+    // "Транслітерув..." at this width.
     @ParameterizedTest
     @ValueSource(
             strings = {

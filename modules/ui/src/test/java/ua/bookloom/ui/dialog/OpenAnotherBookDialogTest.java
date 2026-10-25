@@ -106,7 +106,7 @@ class OpenAnotherBookDialogTest extends ShellTestBase {
 
         assertThat(openedNew.get() + replaced.get()).isEqualTo(1);
         assertThat(isShowing()).isTrue();
-        assertThat(textsUnder(required(OpenAnotherBookDialog.CARD_ID))).contains("Stopping the run…");
+        assertThat(textsUnder(required(OpenAnotherBookDialog.CARD_ID))).contains("Stopping the run...");
         assertThat(button(OpenAnotherBookDialog.NEW_ID).isDisabled()).isTrue();
         assertThat(button(OpenAnotherBookDialog.REPLACE_ID).isDisabled()).isTrue();
         assertThat(button(OpenAnotherBookDialog.CANCEL_ID).isDisabled()).isTrue();

@@ -72,7 +72,7 @@ class ImportVerdictScreenTest extends ImportScreenTestBase {
         projects.awaitEntered();
         awaitFx(() -> viewModel().opening().get());
 
-        assertThat(textOf("import-verdict-text")).isEqualTo("Reading…");
+        assertThat(textOf("import-verdict-text")).isEqualTo("Reading...");
         assertThat(ThemeTestSupport.onFx(() -> ((ProgressBar) required("import-verdict-bar")).isIndeterminate()))
                 .isTrue();
         assertThat(optional("import-verdict-cancel")).isNotNull();
@@ -108,7 +108,7 @@ class ImportVerdictScreenTest extends ImportScreenTestBase {
 
         assertThat(textOf("import-verdict-text"))
                 .isEqualTo("Purchased_Novel.epub is locked by the shop it came from. Encryption: Adobe ADEPT.");
-        assertThat(button("import-verdict-choose").getText()).isEqualTo("Choose another file…");
+        assertThat(button("import-verdict-choose").getText()).isEqualTo("Choose another file...");
         assertThat(optional("import-continue")).isNull();
     }
 
@@ -213,7 +213,7 @@ class ImportVerdictScreenTest extends ImportScreenTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"en, Choose another file…", "uk, Обрати інший файл…"})
+    @CsvSource({"en, Choose another file...", "uk, Обрати інший файл..."})
     void verdict_refusal_labelsTheChooseButtonInTheInterfaceLanguage(final String language, final String label)
             throws TimeoutException {
         useLocale(Locale.forLanguageTag(language));

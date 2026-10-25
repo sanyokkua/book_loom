@@ -121,7 +121,9 @@ final class ProgressResultsCard extends ModalCard {
     private Label untargeted(final List<String> terms) {
         final String shown = String.join(", ", terms.subList(0, Math.min(terms.size(), MAX_UNTARGETED)));
         final Label line = new Label(messages.get(
-                MessageKey.RESULTS_UNTARGETED, terms.size(), terms.size() > MAX_UNTARGETED ? shown + "…" : shown));
+                MessageKey.RESULTS_UNTARGETED,
+                terms.size(),
+                terms.size() > MAX_UNTARGETED ? shown + Messages.ELLIPSIS : shown));
         line.setId("results-untargeted");
         line.setWrapText(true);
         line.setMaxWidth(ResultRows.WIDTH);

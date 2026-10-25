@@ -12,7 +12,7 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.i18n.Messages;
 
-/** The "All calls…" dialog's model: one step per call of the history, each holding its call. */
+/** The "All calls..." dialog's model: one step per call of the history, each holding its call. */
 class CallHistoryTest {
 
     private static final Instant NOW = Instant.parse("2026-01-01T00:10:00Z");

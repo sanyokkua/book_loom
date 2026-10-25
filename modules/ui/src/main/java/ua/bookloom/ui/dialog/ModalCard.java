@@ -1,6 +1,7 @@
 package ua.bookloom.ui.dialog;
 
 import java.util.Objects;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -176,6 +177,15 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         feedback.getStyleClass().removeIf(name -> name.startsWith(FEEDBACK_CLASS + "-"));
     }
 
+    // A card has the one width fit() gave it, but its host asks for its height with no width, and text that wraps is
+    // then measured on one line: the card came out too short and its body scrolled with room left in the window
+    // (About's buttons half under the scroll edge). The height is measured at the width the content really gets.
+    @Override
+    protected double computePrefHeight(final double width) {
+        final double outer = width > 0 ? width : getPrefWidth();
+        return super.computePrefHeight(outer > 0 ? outer - snappedLeftInset() - snappedRightInset() : width);
+    }
+
     // The body is the one part that scrolls; DialogPane would otherwise squeeze a content taller than the card.
     private void wrapBody(final @Nullable Node now) {
         if (wrapping || now == null || now instanceof Body) {
@@ -247,6 +257,19 @@ public class ModalCard extends DialogPane implements FooterFeedback {
             getStyleClass().add("dialog-body");
             setFitToWidth(true);
             setHbarPolicy(ScrollBarPolicy.NEVER);
+        }
+
+        // The skin measures the content at the pane's own width; the content is narrower by the pane's padding, so
+        // its wrapped text would need more lines than measured.
+        @Override
+        protected double computePrefHeight(final double width) {
+            final Node content = getContent();
+            if (width <= 0 || content == null) {
+                return super.computePrefHeight(width);
+            }
+            final Insets insets = getInsets();
+            final double inner = width - insets.getLeft() - insets.getRight();
+            return snapSizeY(content.prefHeight(inner) + insets.getTop() + insets.getBottom());
         }
     }
 }

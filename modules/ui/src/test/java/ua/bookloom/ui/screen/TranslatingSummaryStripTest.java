@@ -185,7 +185,7 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
         assertThat(textOf("translating-how-counted")).isNotBlank();
     }
 
-    // IF the strip's counts truncated at the narrowest window, THEN "700 translated" would read "7…".
+    // IF the strip's counts truncated at the narrowest window, THEN "700 translated" would read "7...".
     @Test
     void counts_atMinimum_showNoTruncatedWords() {
         running(RUNNING);

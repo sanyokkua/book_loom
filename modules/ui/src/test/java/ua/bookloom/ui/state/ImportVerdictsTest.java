@@ -19,7 +19,7 @@ import ua.bookloom.ui.state.ImportVerdict.Kind;
 
 /**
  * The one line the import screen says per state, built without a scene: its kind and its exact words. Reading is
- * indeterminate and says only "Reading…", because the parsers report no chapters while they work.
+ * indeterminate and says only "Reading...", because the parsers report no chapters while they work.
  */
 class ImportVerdictsTest {
 
@@ -31,7 +31,7 @@ class ImportVerdictsTest {
 
     static Stream<Arguments> detectedStates() {
         return Stream.of(
-                Arguments.of(new ImportState.Opening("book.epub"), Kind.READING, "Reading…"),
+                Arguments.of(new ImportState.Opening("book.epub"), Kind.READING, "Reading..."),
                 Arguments.of(
                         new ImportState.Detected(card(5, 4_149), null),
                         Kind.READY,

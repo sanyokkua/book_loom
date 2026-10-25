@@ -41,7 +41,8 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
                 .allSatisfy(column -> assertThat(column.isResizable()).isTrue());
     }
 
-    // IF a minimum were lower, THEN a column could be dragged until its content vanished.
+    // IF a minimum were lower, THEN a column could be dragged until its content vanished. A header wider than the
+    // minimum raises it (glossaryHeaders_smallWindow_areWhole), so the figure is a floor.
     @ParameterizedTest
     @CsvSource({"0, 140", "1, 96", "2, 170", "3, 110", "4, 64", "5, 36"})
     void glossaryColumns_eachOne_hasItsSpecifiedMinimumWidth(final int column, final double minimum) throws Exception {
@@ -49,7 +50,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
 
         assertThat(ThemeTestSupport.onFx(
                         () -> table("names-style").getColumns().get(column).getMinWidth()))
-                .isEqualTo(minimum);
+                .isGreaterThanOrEqualTo(minimum);
     }
 
     // IF widening Term squeezed Translation below 170, THEN the target field a person types in would be cut.
@@ -71,7 +72,11 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
 
         drag("names-style", 4, 30);
 
-        assertThat(width("names-style", 4)).isCloseTo(64, within(TOLERANCE));
+        assertThat(width("names-style", 4))
+                .isCloseTo(
+                        ThemeTestSupport.onFx(
+                                () -> table("names-style").getColumns().get(4).getMinWidth()),
+                        within(TOLERANCE));
         assertThat(width("names-style", 0)).isCloseTo(220, within(TOLERANCE));
     }
 

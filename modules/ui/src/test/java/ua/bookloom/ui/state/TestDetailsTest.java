@@ -184,7 +184,7 @@ class TestDetailsTest {
         final TestDetail detail = TestDetails.of(EN, VerificationStage.INFERENCE, List.of(), true, "Ollama");
 
         assertThat(detail.severity()).isEqualTo(Severity.INFO);
-        assertThat(detail.verdict()).isEqualTo("Testing…");
+        assertThat(detail.verdict()).isEqualTo("Testing...");
     }
 
     @Test

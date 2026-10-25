@@ -268,7 +268,7 @@ class ContinueGuardTest extends ShellTestBase {
         assertThat(cancelled.get()).isZero();
     }
 
-    // IF "Use another AI model…" left the run waiting, THEN the Translating screen would stay busy behind Settings.
+    // IF "Use another AI model..." left the run waiting, THEN the Translating screen would stay busy behind Settings.
     @Test
     void useAnother_onTheNotAnsweringQuestion_opensSettingsStartsNothingAndCancels() {
         storedModelIs(STORED);

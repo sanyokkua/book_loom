@@ -202,7 +202,7 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
 
         final Banner verdict = (Banner) required("test-verdict");
         assertThat(ThemeTestSupport.onFx(() -> verdict.getStyleClass())).contains("banner-info");
-        assertThat(shown("test-verdict-text")).isEqualTo("Testing…");
+        assertThat(shown("test-verdict-text")).isEqualTo("Testing...");
         verifier.release();
     }
 

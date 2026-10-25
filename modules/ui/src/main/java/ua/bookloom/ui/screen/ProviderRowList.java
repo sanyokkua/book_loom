@@ -66,15 +66,16 @@ final class ProviderRowList {
         endpoint.getStyleClass().add("provider-endpoint");
         final Label badge = new Label();
         badge.getStyleClass().add("chip");
-        // The chip keeps its word whole; the name and the address give way, with the rest in a tooltip.
+        // The chip keeps its word whole and the name gives way, with the rest in a tooltip. The address is one token
+        // that a shared line would cut ("127.0.0.1:114..."), so it has the row's whole width on a line of its own.
         badge.setMinWidth(Region.USE_PREF_SIZE);
         Overrun.install(name);
         Overrun.install(endpoint);
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        final VBox text = new VBox(name, endpoint);
-        text.setMinWidth(0);
-        final HBox row = new HBox(text, spacer, badge);
+        final HBox heading = new HBox(name, spacer, badge);
+        heading.setAlignment(Pos.CENTER_LEFT);
+        final VBox row = new VBox(heading, endpoint);
         row.setId("provider-row-" + provider.id());
         Tips.install(messages, row, MessageKey.SETTINGS_PROVIDERS_TITLE_TIP);
         row.getStyleClass().add("list-item");

@@ -77,7 +77,7 @@ class TranslatingStripMessagesTest {
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
-            value = {"en|Waiting for the model… 0:12", "uk|Очікування відповіді моделі… 0:12"})
+            value = {"en|Waiting for the model... 0:12", "uk|Очікування відповіді моделі... 0:12"})
     void waitingForModel_eachLanguage_isTheWordsThenTheClock(final String tag, final String expected) {
         assertThat(messagesFor(tag).get(MessageKey.LIVE_WAITING_FOR_MODEL, "0:12"))
                 .isEqualTo(expected);

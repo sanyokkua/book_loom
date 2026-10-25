@@ -88,7 +88,7 @@ class TermTableCardTest extends TermTableCardTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"en, names-style, Import…, Export…", "uk, recurring, Імпорт…, Експорт…"})
+    @CsvSource({"en, names-style, Import..., Export...", "uk, recurring, Імпорт..., Експорт..."})
     void menu_foldedToolbar_holdsImportThenExportWithTheirOwnWords(
             final String tag, final String card, final String importCaption, final String exportCaption)
             throws Exception {

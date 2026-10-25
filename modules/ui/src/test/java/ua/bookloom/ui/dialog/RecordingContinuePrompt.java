@@ -53,7 +53,7 @@ public final class RecordingContinuePrompt implements ContinuePrompt {
         run(onTryAgain, "a not-answering question");
     }
 
-    /** Presses "Use another AI model…" on the last not-answering question. */
+    /** Presses "Use another AI model..." on the last not-answering question. */
     public void useAnother() {
         run(onUseAnother, "a not-answering question");
     }

@@ -310,7 +310,7 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
         assertThat(button("settings-provider-delete").isDisable()).isFalse();
     }
 
-    // IF LM Studio's note were one line, THEN its end would be cut at the card's edge ("co…").
+    // IF LM Studio's note were one line, THEN its end would be cut at the card's edge ("co...").
     @Test
     void modelNote_lmStudioOpened_wrapsItsWholeSentence() {
         openSettings();

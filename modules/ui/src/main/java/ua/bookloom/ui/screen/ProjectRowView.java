@@ -81,11 +81,8 @@ final class ProjectRowView {
 
     private Node info(final ProjectRow row) {
         final ProjectSummary summary = row.summary();
-        final Label name = new Label(summary.project().name());
-        name.getStyleClass().add("provider-name");
-        name.setMinWidth(0);
-        Overrun.install(name);
-        final HBox heading = new HBox(CHIP_SPACING, name);
+        final HBox heading = new HBox(CHIP_SPACING);
+        heading.getChildren().add(nameOf(summary.project().name()));
         heading.setAlignment(Pos.CENTER_LEFT);
         if (summary.project().nameOrigin() == NameOrigin.USER) {
             heading.getChildren().add(chip("projects-named-" + summary.project().id(), MessageKey.PROJECTS_ROW_NAMED));
@@ -99,6 +96,25 @@ final class ProjectRowView {
         final VBox info = new VBox(INFO_SPACING, heading, meta);
         info.setMinWidth(0);
         return info;
+    }
+
+    // A name ends in its language pair ("Earth Gravity · EN → UK"); when the row is short, the title is cut and the
+    // pair stays, so two translations of one book are still told apart. The tooltip holds the whole name.
+    private static HBox nameOf(final String name) {
+        final int pair = name.lastIndexOf(SEPARATOR);
+        final Label title = new Label(pair > 0 ? name.substring(0, pair) : name);
+        title.getStyleClass().add("provider-name");
+        title.setMinWidth(0);
+        Overrun.install(title, name);
+        final HBox parts = new HBox(title);
+        parts.setAlignment(Pos.CENTER_LEFT);
+        if (pair > 0) {
+            final Label tail = new Label(name.substring(pair));
+            tail.getStyleClass().add("provider-name");
+            tail.setMinWidth(Region.USE_PREF_SIZE);
+            parts.getChildren().add(tail);
+        }
+        return parts;
     }
 
     private Label chip(final String id, final MessageKey word) {

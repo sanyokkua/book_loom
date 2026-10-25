@@ -90,7 +90,8 @@ class DialogFitTest extends ShellTestBase {
                                         List.of("gemma4:e4b", "qwen3:8b", "llama3.1:8b"),
                                         model -> {},
                                         () -> {})),
-                opener("rename", DialogFitTest::askRename));
+                opener("rename", DialogFitTest::askRename),
+                opener("about", test -> ((javafx.scene.control.Button) test.required("shell-about")).fire()));
     }
 
     private static Stream<Named<Consumer<DialogFitTest>>> confirmOpeners() {
@@ -148,6 +149,7 @@ class DialogFitTest extends ShellTestBase {
 
         final List<String> overflowing = ThemeTestSupport.onFx(() -> FitProbe.overflowing(scene.getRoot(), size[0]));
         final List<String> squeezed = ThemeTestSupport.onFx(() -> FitProbe.squeezed(scene.getRoot()));
+        final List<String> halfHidden = ThemeTestSupport.onFx(() -> FitProbe.halfHidden(scene.getRoot()));
 
         assertThat(scene.getRoot().lookupAll(".dialog-card"))
                 .as("the dialog is open")
@@ -155,6 +157,7 @@ class DialogFitTest extends ShellTestBase {
         assertThat(overflowing).as("controls past their viewport or card").isEmpty();
         assertThat(squeezed).as("controls drawn narrower than they ask").isEmpty();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
+        assertThat(halfHidden).as("buttons a scroll edge cuts in half").isEmpty();
         assertThat(outside).as("dialog cards past the window's edge").isEmpty();
     }
 }

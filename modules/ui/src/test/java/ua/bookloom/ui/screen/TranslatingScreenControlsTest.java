@@ -53,7 +53,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-pause").fire());
 
         assertThat(job.calls()).contains("pause");
-        awaitState("Pausing…");
+        awaitState("Pausing...");
         assertThat(disabledControls()).containsExactly("translating-pause");
     }
 
@@ -82,7 +82,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
         assertThat(whileAsking).doesNotContain("cancel");
         assertThat(job.calls()).contains("cancel");
-        awaitState("Stopping…");
+        awaitState("Stopping...");
         job.finish(Result.ok(cancelledReport()));
         awaitState("Stopped at");
         assertThat(enabledControls()).containsExactly("translating-resume");

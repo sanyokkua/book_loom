@@ -356,6 +356,12 @@ tense for "you".
 | consistency pass, canonical-equal, round trip | "Last check before saving", "checked: opens, nothing missing" | technical line on Import |
 | BOOKLOOM_* and wire names in hints | the plain label first; the wire name in grey (`num_ctx`) only in Advanced | — |
 
+An ellipsis in the interface ("Change...", "Rename...", "Waiting for the model...") is written as **three full
+stops** in both languages, through `Messages.ELLIPSIS` in code: the macOS system font's single ellipsis character
+(U+2026) drew its third dot faint and small at the interface's text sizes, so it read as two dots. Where this
+specification writes `…` in a label, the shipped text has the three full stops (`EllipsisTest`). Book text keeps its
+own characters.
+
 The **Glossary**, **Recurring terms**, **Scan · Review · Translate** and **Locked** keep the owner's names (15i.U5).
 Their tooltips say what they do in plain words ("Locked — always use exactly this spelling").
 

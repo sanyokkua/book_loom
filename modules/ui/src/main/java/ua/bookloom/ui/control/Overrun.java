@@ -31,8 +31,18 @@ public final class Overrun {
      *     gets a tooltip
      */
     public static void install(final Labeled label) {
+        install(label, null);
+    }
+
+    /**
+     * Starts watching a label that shows a part of a longer text, which the tooltip then holds whole.
+     *
+     * @param label a label that shows one line and ends it in an ellipsis
+     * @param whole the text the tooltip shows while the label is cut, or {@code null} for the label's own text
+     */
+    public static void install(final Labeled label, final @Nullable String whole) {
         Objects.requireNonNull(label, "label");
-        final Watch watch = new Watch(label);
+        final Watch watch = new Watch(label, whole);
         label.widthProperty().addListener((observed, was, now) -> watch.refresh());
         label.textProperty().addListener((observed, was, now) -> watch.refresh());
         label.fontProperty().addListener((observed, was, now) -> watch.refresh());
@@ -42,16 +52,18 @@ public final class Overrun {
     private static final class Watch {
         private final Labeled label;
         private final Text ruler = new Text();
+        private final @Nullable String whole;
         private @Nullable Tooltip own;
 
-        Watch(final Labeled label) {
+        Watch(final Labeled label, final @Nullable String whole) {
             this.label = label;
+            this.whole = whole;
         }
 
         void refresh() {
             final String text = label.getText();
             if (isCut(text)) {
-                show(text);
+                show(whole == null ? text : whole);
             } else {
                 hide();
             }

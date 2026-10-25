@@ -80,7 +80,7 @@ class LiveRowDetailTest extends LiveCardTestBase {
     void rows_oneOfEachStage_readWaitingTranslatingTranslatedToReview() {
         showRows(mixedChunk());
 
-        assertThat(markerWords()).containsExactly("translated", "translating…", "waiting", "to review");
+        assertThat(markerWords()).containsExactly("translated", "translating...", "waiting", "to review");
     }
 
     // IF a kept segment read "translated", THEN the person would look for a translation that is not there.
@@ -132,7 +132,7 @@ class LiveRowDetailTest extends LiveCardTestBase {
         showRows(mixedChunk());
         pick(1);
 
-        assertThat(textOf(DETAIL)).contains("Source text 2", "Being translated now…");
+        assertThat(textOf(DETAIL)).contains("Source text 2", "Being translated now...");
     }
 
     @Test

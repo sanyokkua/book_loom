@@ -75,7 +75,7 @@ class StateMarkerTest extends FxTestBase {
         assertThat(marker.getText()).isEqualTo(word);
     }
 
-    // IF a queued item read "translating…", THEN a person would think the model was already at work on it; and IF two
+    // IF a queued item read "translating...", THEN a person would think the model was already at work on it; and IF two
     // meanings shared a word, THEN the word would not tell them apart.
     @ParameterizedTest
     @ValueSource(strings = {"en", "uk"})

@@ -40,7 +40,7 @@ class ProjectsActionsTest extends ProjectsScreenTestBase {
     void renameItem_chosen_asksTheActionsToRenameThatRow() throws Exception {
         showListing(ukrainianRunning(), germanNamed());
 
-        chooseMenuItem(GERMAN_ID, "Rename…");
+        chooseMenuItem(GERMAN_ID, "Rename...");
 
         assertThat(actions.renamed())
                 .extracting(row -> row.summary().project().id())
@@ -52,7 +52,7 @@ class ProjectsActionsTest extends ProjectsScreenTestBase {
     void removeItem_chosen_asksTheActionsToRemoveThatRowAndDeletesNothingItself() throws Exception {
         showListing(ukrainianRunning(), germanNamed());
 
-        chooseMenuItem(EARTH_ID, "Remove project…");
+        chooseMenuItem(EARTH_ID, "Remove project...");
 
         assertThat(actions.removed())
                 .extracting(row -> row.summary().project().id())
@@ -235,7 +235,7 @@ class ProjectsActionsTest extends ProjectsScreenTestBase {
     void rowRecords_ofTheListing_areTheOnesTheActionsReceive() throws Exception {
         showListing(germanNamed());
 
-        chooseMenuItem(GERMAN_ID, "Rename…");
+        chooseMenuItem(GERMAN_ID, "Rename...");
 
         final ProjectRow row = actions.renamed().getFirst();
         assertThat(row.summary()).isEqualTo(germanNamed());

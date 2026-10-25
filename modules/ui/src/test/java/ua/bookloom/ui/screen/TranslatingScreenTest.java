@@ -120,7 +120,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         publishProgress(413, 3, 799);
 
         assertThat(labelText("translating-count-translated")).isEqualTo("413 translated");
-        assertThat(labelText("translating-live-line")).startsWith("Pausing…");
+        assertThat(labelText("translating-live-line")).startsWith("Pausing...");
         assertThat(button("translating-pause").isDisabled()).isTrue();
     }
 
@@ -132,7 +132,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.STOPPING);
 
-        assertThat(labelText("translating-live-line")).startsWith("Stopping…");
+        assertThat(labelText("translating-live-line")).startsWith("Stopping...");
         assertThat(button("translating-stop").isDisabled()).isTrue();
     }
 

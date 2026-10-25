@@ -43,17 +43,17 @@ public final class RecordingProjectActions implements ProjectActions {
         findBookOpenings.add(opening);
     }
 
-    /** The rows Rename… was chosen for, in call order. */
+    /** The rows Rename... was chosen for, in call order. */
     public List<ProjectRow> renamed() {
         return List.copyOf(renamed);
     }
 
-    /** The ids of the open projects Rename… was chosen for on the Book Brief, in call order. */
+    /** The ids of the open projects Rename... was chosen for on the Book Brief, in call order. */
     public List<String> renamedOpen() {
         return List.copyOf(renamedOpen);
     }
 
-    /** The rows Remove project… was chosen for, in call order. */
+    /** The rows Remove project... was chosen for, in call order. */
     public List<ProjectRow> removed() {
         return List.copyOf(removed);
     }

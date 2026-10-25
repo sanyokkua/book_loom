@@ -46,7 +46,7 @@ final class ProviderTestView {
     private final Runnable close;
     private final ModalCard card = new ModalCard(ModalCard.Size.XL);
     private final Label title = new Label();
-    private final Banner verdict = new Banner("test-verdict", Banner.Role.INFO, "…", "", "");
+    private final Banner verdict = new Banner("test-verdict", Banner.Role.INFO, Messages.ELLIPSIS, "", "");
     private final Label requestLine = new Label();
     private final Button copyCurl = new Button();
     private final HBox requestRow = new HBox(10);
@@ -261,7 +261,7 @@ final class ProviderTestView {
                     case OK -> "✓";
                     case WARN -> "!";
                     case ERR -> "✕";
-                    case INFO -> "…";
+                    case INFO -> Messages.ELLIPSIS;
                 });
         verdict.setText(detail.verdict());
     }

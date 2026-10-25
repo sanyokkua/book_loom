@@ -89,7 +89,7 @@ class ImportScreenTest extends ImportScreenTestBase {
         assertThat(isShown("import-dropzone")).isTrue();
         assertThat(required("import-dropzone").getOnDragOver()).isNotNull();
         assertThat(required("import-dropzone").getOnDragDropped()).isNotNull();
-        assertThat(button("import-browse").getText()).isEqualTo("Browse files…");
+        assertThat(button("import-browse").getText()).isEqualTo("Browse files...");
         assertThat(button("import-browse").isDisable()).isFalse();
     }
 

@@ -292,7 +292,7 @@ class ExportScreenTest extends ExportScreenTestBase {
                 .contains(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML);
     }
 
-    // IF Change… did not hand the choice to the viewmodel, THEN the picked file would not be the destination.
+    // IF Change... did not hand the choice to the viewmodel, THEN the picked file would not be the destination.
     @Test
     void change_pressed_callsChooseDestinationWithThePickedFile() throws TimeoutException {
         openEpubAndShowExport();
@@ -366,6 +366,6 @@ class ExportScreenTest extends ExportScreenTestBase {
         openEpubAndShowExport();
 
         assertThat(button("export-run").getText()).isEqualTo("⬇ Експортувати книгу");
-        assertThat(button("export-browse").getText()).isEqualTo("Змінити…");
+        assertThat(button("export-browse").getText()).isEqualTo("Змінити...");
     }
 }

@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
@@ -59,6 +60,8 @@ final class TermTableCard<R> extends VBox {
     private static final double SEARCH_FLOOR = 120;
     private static final double SEARCH_MAX_WIDTH = 420;
     private static final double BLANK_HEADER_WIDTH = 24;
+    // The header cell's own padding and the sort arrow beside a sorted column's name.
+    private static final double HEADER_ROOM = 22;
     private static final String MORE_GLYPH = "⋯";
 
     /**
@@ -209,10 +212,27 @@ final class TermTableCard<R> extends VBox {
         }
         column.setReorderable(false);
         column.setPrefWidth(width);
-        column.setMinWidth(minWidth);
+        if (shown && column.getGraphic() instanceof Label caption) {
+            keepHeaderWhole(column, caption, minWidth);
+        } else {
+            column.setMinWidth(minWidth);
+        }
         column.setCellValueFactory(features -> new ReadOnlyObjectWrapper<>(features.getValue()));
         column.setCellFactory(_ -> cell.get());
         return column;
+    }
+
+    // A column is never narrower than its name: a narrow window takes the room from the wide columns instead, so a
+    // Ukrainian header ("Закріплено") is not cut. Followed after the stylesheet sets the header's font and padding and
+    // its skin, which is what first measures the words.
+    private static void keepHeaderWhole(final TableColumn<?, ?> column, final Label caption, final double minWidth) {
+        column.minWidthProperty()
+                .bind(Bindings.createDoubleBinding(
+                        () -> Math.max(minWidth, Math.ceil(caption.prefWidth(-1) + HEADER_ROOM)),
+                        caption.textProperty(),
+                        caption.fontProperty(),
+                        caption.paddingProperty(),
+                        caption.skinProperty()));
     }
 
     // Says why the model actions are off while other model work (a run, an export, a provider test) is under way.

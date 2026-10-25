@@ -198,6 +198,34 @@ public final class FitProbe {
                 && control.getHeight() + TOLERANCE >= control.prefHeight(control.getWidth()));
     }
 
+    /**
+     * Every shown button at or below {@code root} that a scroll viewport shows only in part: its top or bottom edge
+     * lies across the viewport's edge, so it is drawn half hidden. A button wholly out of view is reached by scrolling
+     * and is not listed. FX thread.
+     */
+    public static List<String> halfHidden(final Node root) {
+        final List<String> found = new ArrayList<>();
+        for (final Node node : root.lookupAll(".scroll-pane")) {
+            if (node instanceof ScrollPane scroll && scroll.isVisible() && scroll.lookup(".viewport") != null) {
+                final Node viewport = scroll.lookup(".viewport");
+                final Bounds view = viewport.localToScene(viewport.getLayoutBounds());
+                scroll.lookupAll(".button").stream()
+                        .filter(Node::isVisible)
+                        .filter(button -> isAcrossEdge(button.localToScene(button.getLayoutBounds()), view))
+                        .forEach(button -> found.add(describe(button)));
+            }
+        }
+        return found;
+    }
+
+    private static boolean isAcrossEdge(final Bounds box, final Bounds view) {
+        final boolean acrossBottom =
+                box.getMinY() < view.getMaxY() - TOLERANCE && box.getMaxY() > view.getMaxY() + TOLERANCE;
+        final boolean acrossTop =
+                box.getMinY() < view.getMinY() - TOLERANCE && box.getMaxY() > view.getMinY() + TOLERANCE;
+        return acrossBottom || acrossTop;
+    }
+
     private static String describe(final Node node) {
         final String text = node instanceof Labeled labeled
                 ? " '" + labeled.getText() + "'"

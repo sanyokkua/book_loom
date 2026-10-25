@@ -101,7 +101,11 @@ final class StructureChecksRows extends VBox {
         final List<Node> rows = new ArrayList<>();
         switch (state) {
             case StructureChecks.Running _ ->
-                rows.add(row("structure-check-roundtrip", "…", StatusRole.INFO, MessageKey.STRUCTURE_CHECK_RUNNING));
+                rows.add(row(
+                        "structure-check-roundtrip",
+                        Messages.ELLIPSIS,
+                        StatusRole.INFO,
+                        MessageKey.STRUCTURE_CHECK_RUNNING));
             case StructureChecks.Finished finished -> addFinished(rows, finished);
         }
         getChildren().setAll(rows);

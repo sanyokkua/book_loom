@@ -297,7 +297,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         assertThat(optional("import-continue")).isNull();
         assertThat(optional("import-cancel")).isNull();
         assertThat(optional("import-about")).isNull();
-        assertThat(button("import-verdict-choose").getText()).isEqualTo("Choose another file…");
+        assertThat(button("import-verdict-choose").getText()).isEqualTo("Choose another file...");
         assertThat(idsStartingWith("import-row-")).isEmpty();
     }
 

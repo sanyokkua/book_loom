@@ -39,7 +39,7 @@ final class ImportPreparations {
         });
     }
 
-    // The service is held, so the page stays on "Reading…" with its bar and Cancel.
+    // The service is held, so the page stays on "Reading..." with its bar and Cancel.
     void readABook() throws TimeoutException {
         final Path source = Path.of("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinImport()));

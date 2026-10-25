@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,21 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         showScreen(tag, 1024, 700, ROSALIND);
 
         assertThat(headers("names-style")).containsExactly(term, type, target, gender, locked, "");
+    }
+
+    // IF a column were squeezed below its header, THEN "Закріплено" would read "Закріпл..." at the smallest window.
+    @ParameterizedTest
+    @CsvSource({"en, 960", "uk, 960", "uk, 1040"})
+    void glossaryHeaders_smallWindow_areWhole(final String tag, final double width) throws Exception {
+        showScreen(tag, width, 640, ROSALIND);
+
+        assertThat(ThemeTestSupport.onFx(() -> table("names-style").getColumns().stream()
+                        .map(column -> (Label) column.getGraphic())
+                        .filter(header -> header.getWidth() + 0.5 < header.prefWidth(-1))
+                        .map(Label::getText)
+                        .toList()))
+                .as("headers drawn narrower than their words")
+                .isEmpty();
     }
 
     // IF the Used column were missing, THEN the person could not tell how often the book writes a repeated word.

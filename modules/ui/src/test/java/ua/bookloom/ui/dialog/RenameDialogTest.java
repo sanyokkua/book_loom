@@ -96,7 +96,7 @@ class RenameDialogTest extends ShellTestBase {
         ask();
 
         assertThat(textsUnder(required("rename-card")))
-                .contains("Rename the project", "Rename", "Cancel", "Remove project…");
+                .contains("Rename the project", "Rename", "Cancel", "Remove project...");
         assertThat(button("rename-confirm").getStyleClass()).contains("btn-primary");
         assertThat(field().getText()).isEqualTo(CURRENT);
     }
@@ -280,6 +280,6 @@ class RenameDialogTest extends ShellTestBase {
         ask(NameOrigin.USER, true, null);
 
         assertThat(textsUnder(required("rename-card")))
-                .contains("Перейменувати проєкт", "Перейменувати", "Видалити проєкт…", "Назву дали ви.");
+                .contains("Перейменувати проєкт", "Перейменувати", "Видалити проєкт...", "Назву дали ви.");
     }
 }

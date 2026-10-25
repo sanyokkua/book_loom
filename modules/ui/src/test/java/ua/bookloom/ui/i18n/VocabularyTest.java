@@ -54,6 +54,18 @@ class VocabularyTest {
                 .isEmpty();
     }
 
+    // IF a main-screen line said LLM, THEN a person would meet the engine's word for an AI model (Words table).
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void mainScreenValues_eachLanguage_sayAiModelNotLlm(final String language) {
+        final var hits = mainScreenValues(language)
+                .filter(e -> e.getValue().contains("LLM"))
+                .map(Map.Entry::getKey)
+                .toList();
+
+        assertThat(hits).isEmpty();
+    }
+
     // The Ukrainian source of the same rule: the English loan "чанк" is never a word of the interface.
     @ParameterizedTest
     @ValueSource(strings = {"uk"})

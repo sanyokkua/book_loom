@@ -16,7 +16,7 @@ class RowMarkerTest {
         return new LiveRow("s-1", "ch7 · p42", "Source.", null, stage, fallbackCode, List.of(), null);
     }
 
-    // IF a paused run still read "translating…", THEN the live card would claim work that is not going on.
+    // IF a paused run still read "translating...", THEN the live card would claim work that is not going on.
     @ParameterizedTest
     @CsvSource({
         "PAUSED, IN_CALL, WAITING",

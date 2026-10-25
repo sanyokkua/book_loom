@@ -60,7 +60,7 @@ class LanguageNamesTest {
         assertThat(tag).isEqualTo(Optional.ofNullable(expected));
     }
 
-    // IF a list showed "українська" under "Авто — …", THEN one list would mix a capital with lower-case entries.
+    // IF a list showed "українська" under "Авто — ...", THEN one list would mix a capital with lower-case entries.
     @ParameterizedTest
     @CsvSource({"uk, uk, Українська", "la, uk, Латинська", "la, en, Latin", "nb, en, Norwegian Bokmål"})
     void listName_tag_startsWithACapitalAsAListEntry(final String tag, final String locale, final String expected) {

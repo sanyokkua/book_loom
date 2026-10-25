@@ -18,7 +18,8 @@ class ModalCardTest extends ShellTestBase {
 
     private static final double TOLERANCE = 0.5;
 
-    // IF the footer sized every button alike, THEN the longest label would be cut ("Not stated — s…"), as the narrator
+    // IF the footer sized every button alike, THEN the longest label would be cut ("Not stated — s..."), as the
+    // narrator
     // card's was.
     @Test
     void footer_oneLongLabel_showsEveryLabelWhole() {

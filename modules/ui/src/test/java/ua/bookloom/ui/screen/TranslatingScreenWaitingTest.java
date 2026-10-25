@@ -104,7 +104,7 @@ class TranslatingScreenWaitingTest extends TranslatingScreenTestBase {
 
     // IF a wait still published when the run left RUNNING were shown, THEN a pending pause would read as stuck.
     @ParameterizedTest(name = "{0}")
-    @CsvSource({"PAUSING, Pausing…", "STOPPING, Stopping…"})
+    @CsvSource({"PAUSING, Pausing...", "STOPPING, Stopping..."})
     void banner_stuckThenStateLeavesRunning_showsTheStateAndNotTheStuckBanner(
             final RunState state, final String title) {
         runningOnTheShell();
@@ -138,7 +138,7 @@ class TranslatingScreenWaitingTest extends TranslatingScreenTestBase {
 
         waitOn(12L);
 
-        assertThat(labelText("translating-live-line")).isEqualTo("Waiting for the model… 0:12");
+        assertThat(labelText("translating-live-line")).isEqualTo("Waiting for the model... 0:12");
     }
 
     // IF a retry restarted the clock, THEN a call that has been going for three minutes would read as five seconds.
@@ -148,7 +148,7 @@ class TranslatingScreenWaitingTest extends TranslatingScreenTestBase {
 
         waitOnAttempt(5, 185);
 
-        assertThat(labelText("translating-live-line")).isEqualTo("Waiting for the model… 3:05");
+        assertThat(labelText("translating-live-line")).isEqualTo("Waiting for the model... 3:05");
     }
 
     // IF a wait of nine seconds already showed the words, THEN every ordinary call would flash them.
@@ -169,7 +169,7 @@ class TranslatingScreenWaitingTest extends TranslatingScreenTestBase {
 
         waitOn(12L);
 
-        assertThat(labelText("translating-live-line")).isEqualTo("Очікування відповіді моделі… 0:12");
+        assertThat(labelText("translating-live-line")).isEqualTo("Очікування відповіді моделі... 0:12");
     }
 
     // IF a stuck call showed its wait twice, THEN a slow model would read as a model with two clocks.

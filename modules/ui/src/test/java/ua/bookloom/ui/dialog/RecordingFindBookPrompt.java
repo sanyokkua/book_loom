@@ -31,7 +31,7 @@ public final class RecordingFindBookPrompt implements FindBookPrompt {
         onCancelled = cancelled;
     }
 
-    /** Presses "Find the book…" on the last question. */
+    /** Presses "Find the book..." on the last question. */
     public void choose() {
         require(onChoose).run();
     }

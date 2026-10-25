@@ -42,7 +42,7 @@ public final class RecordingRenamePrompt implements RenamePrompt {
         require(onRename).accept(name);
     }
 
-    /** Presses Remove project… on the last question. */
+    /** Presses Remove project... on the last question. */
     public void remove() {
         require(onRemove).run();
     }

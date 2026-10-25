@@ -51,7 +51,7 @@ class ChunkRowsTest {
                 .containsExactly("ch7 · p41", "ch7 · p42", "ch7 · p43", "ch7 · p44");
     }
 
-    // IF the marker waited for the chunk's check, THEN the fallback would read "translating…" until the end of it.
+    // IF the marker waited for the chunk's check, THEN the fallback would read "translating..." until the end of it.
     @Test
     void fellBackRow_draftedButNotYetDecided_alreadyReadsAlone() {
         state.snapshot(ChunkFixtures.batchWithMissingThird());
@@ -131,7 +131,7 @@ class ChunkRowsTest {
         assertThat(rows()).extracting(LiveRow::stage).containsExactly(Stage.ACCEPTED, Stage.QUEUED, Stage.QUEUED);
     }
 
-    // IF a reviewed chunk's drafts still read "translating…", THEN all its rows would turn translated at once.
+    // IF a reviewed chunk's drafts still read "translating...", THEN all its rows would turn translated at once.
     @Test
     void draftedSegment_readsDraftedUntilItIsDecided() {
         state.snapshot(draft(1, CallKind.DRAFT, 1, 2));

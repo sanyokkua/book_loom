@@ -85,14 +85,14 @@ class RunStateMappingTest {
             Ready to continue           | READY_TO_CONTINUE  | Ready · 51 % done                 | WAITING   | AI model ready
             Cannot start yet            | CANNOT_START       | Ready                             | FAILED    | No AI model
             Translating                 | TRANSLATING        | 51 % done · about 1 h 10 min left | WORKING   | Model answering
-            Pausing                     | PAUSING            | Pausing…                          | WORKING   | Model answering
+            Pausing                     | PAUSING            | Pausing...                          | WORKING   | Model answering
             Paused                      | PAUSED             | Paused at 51 %                    | WAITING   | Model idle
             Waiting for the AI model    | WAITING            | Waiting for Ollama                | FAILED    | Cannot reach Ollama
             Paused after an error       | PAUSED_AFTER_ERROR | Paused at 51 %                    | FAILED    | Cannot reach Ollama
             Stopped trying              | STOPPED_TRYING     | Paused at 51 %                    | FAILED    | Ollama: no answer for 12 h
             Model missing               | MODEL_MISSING      | Paused at 51 %                    | FAILED    | Model missing
             Stuck call                  | STUCK              | 51 % done · about 1 h 10 min left | ATTENTION | No answer for 3:40
-            Stopping                    | STOPPING           | Stopping…                         | WORKING   | Model answering
+            Stopping                    | STOPPING           | Stopping...                         | WORKING   | Model answering
             Stopped                     | STOPPED            | Stopped at 51 %                   | WAITING   | Model idle
             Finished, to review         | FINISHED_TO_REVIEW | Finished                          | WAITING   | Model idle
             Finished, nothing to review | FINISHED_NONE      | Finished                          | WAITING   | Model idle

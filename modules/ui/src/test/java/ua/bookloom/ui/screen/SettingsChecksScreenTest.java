@@ -59,7 +59,8 @@ class SettingsChecksScreenTest extends SettingsScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> result("INFERENCE").getText())).isEqualTo("– Inference: not attempted");
     }
 
-    // IF a long result sentence squeezed the button, THEN "Test connection" would read "Test co…" and hide its action.
+    // IF a long result sentence squeezed the button, THEN "Test connection" would read "Test co..." and hide its
+    // action.
     @Test
     void results_longSentence_keepTheTestButtonAtItsPreferredWidth() throws TimeoutException {
         openSettings();
@@ -114,7 +115,7 @@ class SettingsChecksScreenTest extends SettingsScreenTestBase {
                         button("settings-test-models").isDisabled(),
                         button("settings-test-inference").isDisabled())))
                 .containsOnly(true);
-        assertThat(ThemeTestSupport.onFx(() -> result("INFERENCE").getText())).isEqualTo("Testing…");
+        assertThat(ThemeTestSupport.onFx(() -> result("INFERENCE").getText())).isEqualTo("Testing...");
         verifier.release();
     }
 }

@@ -24,6 +24,13 @@ import org.jspecify.annotations.Nullable;
 @Singleton
 public final class Messages {
 
+    /**
+     * The one ellipsis the interface writes, in the bundles and in code: three full stops. The single ellipsis
+     * character (U+2026) of the macOS system font drew its third dot faint and small at the interface's text sizes,
+     * so "Change…" read as "Change.."; three separate full stops are three whole glyphs.
+     */
+    public static final String ELLIPSIS = "...";
+
     private static final String BASE_NAME = "ua.bookloom.ui.i18n.messages";
 
     private final LocaleProvider localeProvider;

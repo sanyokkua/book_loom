@@ -68,7 +68,7 @@ class ContinueDialogTest extends ShellTestBase {
                         "AI model not answering",
                         "Ollama · gemma4:e4b is not answering. If it is a program on this computer, open it, then press Try again.",
                         "Try again",
-                        "Use another AI model…",
+                        "Use another AI model...",
                         "Not now");
         assertThat(button("continue-try-again").getStyleClass()).contains("btn-primary");
         assertThat(button("continue-use-another").getStyleClass()).contains("btn-secondary");
@@ -147,16 +147,16 @@ class ContinueDialogTest extends ShellTestBase {
         askNotAnswering();
 
         assertThat(textsUnder(required("continue-card")))
-                .contains("Модель ШІ не відповідає", "Спробувати ще раз", "Використати іншу модель ШІ…", "Не зараз");
-        assertThat(button("continue-use-another").getText()).isEqualTo("Використати іншу модель ШІ…");
+                .contains("Модель ШІ не відповідає", "Спробувати ще раз", "Використати іншу модель ШІ...", "Не зараз");
+        assertThat(button("continue-use-another").getText()).isEqualTo("Використати іншу модель ШІ...");
 
         onFx(() -> button("continue-not-now").fire());
         askDifferent();
 
         assertThat(textsUnder(required("continue-card")))
                 .contains("Обрано іншу модель", "Використати попередню модель", "Продовжити з новою");
-        assertThat(shownTexts("continue-earlier")).noneMatch(text -> text.endsWith("…"));
-        assertThat(shownTexts("continue-new")).noneMatch(text -> text.endsWith("…"));
+        assertThat(shownTexts("continue-earlier")).noneMatch(text -> text.endsWith("..."));
+        assertThat(shownTexts("continue-new")).noneMatch(text -> text.endsWith("..."));
     }
 
     private List<String> shownTexts(final String buttonId) {

@@ -169,7 +169,7 @@ class ExportViewModelDestinationTest extends ExportViewModelTestBase {
 
         editDestination("/archive/out.epub");
 
-        assertThat(empty).isEqualTo("Choose where to write the book: press Change… to pick a file.");
+        assertThat(empty).isEqualTo("Choose where to write the book: press Change... to pick a file.");
         assertThat(onFx(() -> exports.currentNote().get())).isEmpty();
     }
 
