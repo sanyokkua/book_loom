@@ -93,6 +93,7 @@ class VocabularyTest {
                 "activity.providerCheck|en|AI model test",
                 "activity.providerCheck|uk|Перевірка моделі ШІ",
                 "dialog.samePair.use|uk|Створити переклад ({0}) з цією назвою",
+                "projects.empty.step3|uk|Запустіть переклад. Книга перекладається годинами; можна зупинити й продовжити будь-коли.",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);
@@ -123,5 +124,15 @@ class VocabularyTest {
     @ValueSource(strings = {"nav.settings.tip", "export.suggestName.noModel", "brief.suggest.noModel"})
     void aiModelWording_promptsToChooseAModel_sayAiModelNotProvider(final String key) {
         assertThat(Catalogues.load("en").get(key)).contains("AI model").doesNotContain("provider");
+    }
+
+    // IF the theme hint named a choice the control does not show, THEN a person would look for a "Match system" that
+    // is not there.
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void themeHint_namesTheSystemChoiceAsTheControlShowsIt(final String language) {
+        final Map<String, String> catalogue = Catalogues.load(language);
+
+        assertThat(catalogue.get("appearance.theme.hint")).contains(catalogue.get("appearance.theme.system"));
     }
 }
