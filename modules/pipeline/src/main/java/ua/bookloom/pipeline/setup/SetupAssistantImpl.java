@@ -30,7 +30,9 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.OriginalTitles;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -143,6 +145,29 @@ public final class SetupAssistantImpl implements SetupAssistant {
         } catch (Throwable cause) {
             return failed("narrator re-check", cause);
         }
+    }
+
+    @Override
+    public Result<NarratorHint> detectNarrator(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        log.debug("Narrator detection requested project={}", projectId);
+        try {
+            return opened(projectId).map(SetupAssistantImpl::detected);
+        } catch (Throwable cause) {
+            return failed("narrator detection", cause);
+        }
+    }
+
+    private static NarratorHint detected(final SetupBook book) {
+        final NarratorHint hint = NarratorDetector.detect(book.document(), book.languageOf())
+                .orElse(new NarratorHint(NarratorHint.Person.THIRD, 0, List.of(), 0));
+        log.info(
+                "Narrator detected for the start check project={} language={} person={} judged={}",
+                book.project().id(),
+                book.languageOf(),
+                hint.person(),
+                hint.judgedChapters());
+        return hint;
     }
 
     private static Narrator rechecked(final SetupBook book, final List<GlossaryEntry> people) {

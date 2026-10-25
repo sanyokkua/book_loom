@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 
 /** A setup assistant whose answers a test sets, and which records the projects it was asked about. */
 public final class ScriptedSetupAssistant implements SetupAssistant {
@@ -28,6 +29,8 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private Result<FileNameSuggestion> fileName = cast();
     private Result<BriefSuggestion> brief = cast();
     private Result<Narrator> recheck = cast();
+    private Result<NarratorHint> detection = Result.ok(new NarratorHint(NarratorHint.Person.THIRD, 0, List.of(), 0));
+    private final List<String> detected = new ArrayList<>();
     private final List<String> rechecked = new ArrayList<>();
     private final List<Boolean> recheckedOnFxThread = new ArrayList<>();
     private final List<String> asked = new ArrayList<>();
@@ -59,6 +62,16 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     }
 
     /** Sets what the narrator re-check answers; unscripted, it fails, which the window must survive. */
+    public ScriptedSetupAssistant answersDetection(final Result<NarratorHint> answer) {
+        this.detection = answer;
+        return this;
+    }
+
+    /** {@return the projects whose narrator was detected again, in order} */
+    public List<String> detected() {
+        return List.copyOf(detected);
+    }
+
     public ScriptedSetupAssistant answersRecheck(final Result<Narrator> answer) {
         this.recheck = answer;
         return this;
@@ -114,6 +127,12 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
         announced.forEach(progress);
         awaitGate();
         return suggestBrief(projectId, model);
+    }
+
+    @Override
+    public Result<NarratorHint> detectNarrator(final String projectId) {
+        detected.add(projectId);
+        return detection;
     }
 
     @Override

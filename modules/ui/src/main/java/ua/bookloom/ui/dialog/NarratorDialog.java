@@ -31,6 +31,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.NarratorDetection;
 import ua.bookloom.ui.state.NarratorHints;
 import ua.bookloom.ui.state.OpenedBook;
 
@@ -60,6 +61,7 @@ public final class NarratorDialog {
     private final CharacterGendersDialog genders;
     private final SetupAssistant assistant;
     private final ExecutorService executor;
+    private final NarratorDetection detection;
     // Touched on the FX thread only, like every dialog; holds the books the question has been answered for.
     private final Set<String> answered = new HashSet<>();
     // The books whose narrator is being re-checked in the background; a second Start meanwhile is ignored.
@@ -75,6 +77,7 @@ public final class NarratorDialog {
      * @param genders the question about characters without a gender, asked after the narrator's
      * @param assistant the port that re-checks the narrator's stored quotes before the question is asked
      * @param executor the background pool the re-check runs on, because it reads the whole book
+     * @param detection what judges a book the import could not, before the question is decided
      */
     @Inject
     public NarratorDialog(
@@ -84,7 +87,9 @@ public final class NarratorDialog {
             final BookBriefViewModel brief,
             final CharacterGendersDialog genders,
             final SetupAssistant assistant,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final NarratorDetection detection) {
+        this.detection = Objects.requireNonNull(detection, "detection");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.project = Objects.requireNonNull(project, "project");
@@ -107,6 +112,16 @@ public final class NarratorDialog {
     }
 
     private void askNarrator(final Runnable start) {
+        final OpenedBook book = project.book().get();
+        if (book == null) {
+            log.debug("no book is open: the narrator is not asked about");
+            start.run();
+            return;
+        }
+        detection.whenKnown(book.projectId(), () -> askKnown(start));
+    }
+
+    private void askKnown(final Runnable start) {
         final OpenedBook book = project.book().get();
         if (book == null || !mustAsk(book, project.brief().get())) {
             log.debug("the narrator is not asked about: starting");
@@ -181,7 +196,7 @@ public final class NarratorDialog {
     }
 
     private boolean mustAsk(final OpenedBook book, final @Nullable BookBrief current) {
-        return NarratorHints.needsGender(book, current) && !answered.contains(book.projectId());
+        return NarratorHints.needsGender(project.narratorHint().get(), current) && !answered.contains(book.projectId());
     }
 
     private DialogPane card(final VBox body) {

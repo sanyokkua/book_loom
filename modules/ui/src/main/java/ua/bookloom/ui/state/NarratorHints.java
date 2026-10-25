@@ -23,12 +23,11 @@ public final class NarratorHints {
      * least a quarter of the judged chapters) while the brief neither says the narrator's gender
      * nor says the narrator is third person.
      *
-     * @param book the open book, or null when none is open
+     * @param hint what the open book's text says, or null when none is open or it was not judged
      * @param brief its brief, or null when none is open
      * @return {@code true} when the narrator's gender is worth asking about, {@code false} otherwise
      */
-    public static boolean needsGender(final @Nullable OpenedBook book, final @Nullable BookBrief brief) {
-        final NarratorHint hint = book == null ? null : book.narratorHint();
+    public static boolean needsGender(final @Nullable NarratorHint hint, final @Nullable BookBrief brief) {
         return hint != null
                 && hint.hasFirstPersonShare()
                 && brief != null
@@ -39,13 +38,12 @@ public final class NarratorHints {
     /**
      * Whether a narrator the person has not touched should start as "first person" because the source says "I".
      *
-     * @param book the open book, or null when none is open
+     * @param hint what the open book's text says, or null when none is open or it was not judged
      * @param brief its brief, or null when none is open
      * @return {@code true} when the brief's narrator is unspecified and the hint says first person, or mixed with at least a quarter
      *     of the judged chapters in the first person
      */
-    public static boolean preselectsFirstPerson(final @Nullable OpenedBook book, final @Nullable BookBrief brief) {
-        final NarratorHint hint = book == null ? null : book.narratorHint();
+    public static boolean preselectsFirstPerson(final @Nullable NarratorHint hint, final @Nullable BookBrief brief) {
         return hint != null
                 && hint.hasFirstPersonShare()
                 && brief != null

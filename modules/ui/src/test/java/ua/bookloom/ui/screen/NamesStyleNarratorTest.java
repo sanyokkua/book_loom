@@ -80,7 +80,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
                         "Female",
                         "Male",
                         "The book is told in the first person. Choose the narrator's gender so the translation's verbs"
-                                + " and adjectives agree with it.");
+                                + " and adjectives agree with it. Enter chooses Not stated.");
         assertThat(engine.requests()).isEmpty();
     }
 

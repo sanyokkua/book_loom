@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 
 /**
  * The model's help with the setup of a translation, before any segment is translated: it reads the opened book and
@@ -44,6 +45,17 @@ public interface SetupAssistant {
      *     project is not stored or its book is not open
      */
     Result<Narrator> recheckNarrator(String projectId);
+
+    /**
+     * Detects from the book's text, with the source language the stored brief names now, whether it is told in the
+     * first person, with no model call and no write. The import cannot do this for a book that declares no language
+     * (Markdown, plain text) until the person has chosen the source, so Start asks again before its question.
+     *
+     * @param projectId the project whose book is open and whose brief names a target language
+     * @return the hint; a third-person hint with no judged chapter when the language has no pronoun list or nothing
+     *     could be judged; {@code validation} when the project is not stored or its book is not open
+     */
+    Result<NarratorHint> detectNarrator(String projectId);
 
     /**
      * As {@link #suggestFileName(String, ChatModel)}, announcing the model call so a screen can show it. An assistant

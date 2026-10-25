@@ -24,17 +24,20 @@ final class NarratorNotice {
     NarratorNotice(final CurrentProject project, final Consumer<NarratorPerson> setPerson) {
         this.project = Objects.requireNonNull(project, "project");
         this.setPerson = Objects.requireNonNull(setPerson, "setPerson");
-        project.book().addListener((observed, was, now) -> onBookOpened(now));
+        project.book().addListener((observed, was, now) -> onHint());
         project.brief().addListener((observed, was, now) -> derive(now));
-        onBookOpened(project.book().get());
+        // A book that declares no language is judged only at Start, once its source is chosen.
+        project.narratorHint().addListener((observed, was, now) -> onHint());
+        onHint();
     }
 
     ReadOnlyBooleanProperty shown() {
         return shown.getReadOnlyProperty();
     }
 
-    private void onBookOpened(final @Nullable OpenedBook book) {
-        if (NarratorHints.preselectsFirstPerson(book, project.brief().get())) {
+    private void onHint() {
+        if (NarratorHints.preselectsFirstPerson(
+                project.narratorHint().get(), project.brief().get())) {
             log.debug("narrator preselected as first person from the detected narration");
             setPerson.accept(NarratorPerson.FIRST);
         }
@@ -42,7 +45,7 @@ final class NarratorNotice {
     }
 
     private void derive(final @Nullable BookBrief brief) {
-        final boolean now = NarratorHints.needsGender(project.book().get(), brief);
+        final boolean now = NarratorHints.needsGender(project.narratorHint().get(), brief);
         shown.set(now);
         log.debug("narrator notice shown: {}", now);
     }

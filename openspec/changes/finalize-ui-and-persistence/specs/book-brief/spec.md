@@ -184,6 +184,17 @@ The application SHALL write nothing to the brief until the person presses "Apply
 - **WHEN** all steps have ended and the person presses "Apply to the brief"
 - **THEN** the decided genre, register, narrator and readers are written to the brief and the dialog closes
 
+### Requirement: Judge the narration before the Start question when the import could not
+
+WHEN Start translation is pressed and the open book's narration was not judged when it was opened, because the book declares no language (Markdown, plain text) and its source was chosen afterwards, the application SHALL first judge it from the text with the source language of the stored brief with no model call and no write, and SHALL then decide the `Who narrates?` question on that judgement. Enter SHALL choose `Not stated — start anyway`, as its text says.
+
+**Source**: `openspec/specs/book-brief/spec.md` "Ask who narrates once at Start translation". In plain words: a first-person Markdown or text book was judged only by the run, after the Start question, so the question never came and the narrator's gender went unasked; an EPUB that declares its language was asked.
+
+#### Scenario: A first-person Markdown book is asked about
+
+- **WHEN** `Harbour.md`, told as "I" with `Anna` named 9 times and no gender in the glossary, is opened, its source set to English and its target to Ukrainian, and Start translation is pressed
+- **THEN** `Who narrates?` is shown with "Enter chooses Not stated.", Enter closes it without a gender, and the question about characters without a gender names `Anna` before anything starts
+
 ## MODIFIED Requirements
 
 ### Requirement: Suggest the tone and style from verified readings, one decision per field

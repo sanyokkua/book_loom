@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
@@ -90,6 +91,11 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
 
         @Override
         public Result<Narrator> recheckNarrator(final String projectId) {
+            throw new UnsupportedOperationException("not asked");
+        }
+
+        @Override
+        public Result<NarratorHint> detectNarrator(final String projectId) {
             throw new UnsupportedOperationException("not asked");
         }
     }
