@@ -4,11 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
+import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.stage.Window;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -103,6 +109,36 @@ class TermTableCardTest extends TermTableCardTestBase {
         assertThat(files).extracting(MenuItem::getId).containsExactly(card + "-more-import", card + "-more-export");
     }
 
+    // IF the folded menu opened no popup under a real click, THEN Import and Export would be out of reach in a narrow
+    // window.
+    @ParameterizedTest
+    @CsvSource({"names-style", "recurring"})
+    void menu_foldedToolbarClicked_opensAPopupOfferingImportAndExport(final String card) throws Exception {
+        showScreen("en", 960, 640, ROSALIND);
+        final MenuButton more = (MenuButton) required(card + "-more");
+        // The stacked Recurring terms card starts below the fold, where a person scrolls before clicking.
+        ThemeTestSupport.onFx(() -> {
+            scrollIntoView(more);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        clickOn(more);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(ThemeTestSupport.onFx(more::isShowing)).isTrue();
+        assertThat(ThemeTestSupport.onFx(() -> Window.getWindows().stream()
+                        .filter(window -> window instanceof ContextMenu && window.isShowing())
+                        .flatMap(window -> window.getScene().getRoot().lookupAll(".label").stream())
+                        .filter(Node::isVisible)
+                        .map(label -> ((Labeled) label).getText())
+                        .toList()))
+                .contains("Import...", "Export...");
+        clickOn("Export...");
+        WaitForAsyncUtils.waitForFxEvents();
+        assertThat(ThemeTestSupport.onFx(more::isShowing)).isFalse();
+    }
+
     // IF the menu showed Review and Translate while their buttons are in the row, THEN each action would be offered
     // twice; an item shows only once its button has folded into the menu.
     @ParameterizedTest
@@ -118,6 +154,22 @@ class TermTableCardTest extends TermTableCardTestBase {
                         .map(MenuItem::isVisible)
                         .toList()))
                 .containsExactly(false, false);
+    }
+
+    // Scrolls the nearest scroll pane so that the node's top is in its viewport, as the person's wheel would.
+    private static void scrollIntoView(final Node node) {
+        Node walk = node.getParent();
+        while (walk != null && !(walk instanceof ScrollPane)) {
+            walk = walk.getParent();
+        }
+        if (walk instanceof ScrollPane pane && pane.getContent() != null) {
+            final double top = pane.getContent()
+                    .sceneToLocal(node.localToScene(node.getBoundsInLocal()))
+                    .getMinY();
+            final double room = pane.getContent().getBoundsInLocal().getHeight()
+                    - pane.getViewportBounds().getHeight();
+            pane.setVvalue(room <= 0 ? 0 : Math.min(1, top / room));
+        }
     }
 
     /** The scene bounds of every toolbar part of a card that a person can see. */
