@@ -76,6 +76,8 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         feedback.setId(FEEDBACK_ID);
         feedback.getStyleClass().add(FEEDBACK_CLASS);
         feedback.setManaged(false);
+        // The line is drawn over the footer's free middle; it must never take a press meant for a button there.
+        feedback.setMouseTransparent(true);
         getChildren().add(feedback);
         contentProperty().addListener((observable, old, now) -> wrapBody(now));
         fit(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -187,11 +189,12 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         }
     }
 
+    // The feedback line fills the free gap between the footer's left-hand group (Undo all, Continue in background
+    // and the note beside it) and its right-hand buttons, so it never lies over a button.
     @Override
     protected void layoutChildren() {
         super.layoutChildren();
-        final Node bar = lookup(".button-bar");
-        if (bar == null) {
+        if (!(lookup(".button-bar") instanceof ButtonBar bar)) {
             return;
         }
         final double used = bar.prefWidth(-1);
@@ -199,10 +202,22 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         final double inset = bar.getLayoutBounds().getWidth() > 0 ? FEEDBACK_INSET : 0;
         final double width = Math.max(0, room - 2 * inset);
         feedback.resizeRelocate(
-                bar.getLayoutX() + inset,
+                leftGroupEnd(bar) + inset,
                 bar.getLayoutY(),
                 width,
                 bar.getLayoutBounds().getHeight());
+    }
+
+    private double leftGroupEnd(final ButtonBar bar) {
+        double end = bar.getLayoutX();
+        for (final Node node : bar.getButtons()) {
+            if (ButtonBar.getButtonData(node) == ButtonBar.ButtonData.LEFT && node.isVisible() && node.isManaged()) {
+                end = Math.max(
+                        end,
+                        sceneToLocal(node.localToScene(node.getLayoutBounds())).getMaxX());
+            }
+        }
+        return end;
     }
 
     // ButtonBar sizes every button to the widest by default, and a card of fixed width then squeezes them all below

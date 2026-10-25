@@ -39,7 +39,8 @@ class FocusTraversalTest extends ConformanceTestBase {
             "NAMES_STYLE",
             "TRANSLATING_RUNNING",
             "TRANSLATING_REVIEW",
-            "EXPORT");
+            "EXPORT",
+            "RESULTS_DIALOG");
 
     static Stream<Arguments> workflowScreens() {
         return ConformanceCases.SCREENS.stream()

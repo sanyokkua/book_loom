@@ -1,0 +1,86 @@
+package ua.bookloom.ui;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepState;
+import ua.bookloom.api.pipeline.StepsPlanned;
+import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ActivityTracker;
+
+/**
+ * The progress dialog's footer answers a real mouse: a press at the centre of each footer button reaches that button,
+ * the left-hand Continue in background included — the footer's feedback line once lay over it and took every click.
+ */
+class ProgressDialogFooterTest extends ShellTestBase {
+
+    private static final long WITHIN_SECONDS = 3;
+
+    private final List<String> cancelled = new CopyOnWriteArrayList<>();
+
+    private ActivityTracker tracker() {
+        return injector.getInstance(ActivityTracker.class);
+    }
+
+    private ActivityTracker.Handle begin(final ActivityKind kind) {
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        onFx(() -> handle.set(tracker().begin(kind, () -> cancelled.add(kind.name()))));
+        return Objects.requireNonNull(handle.get(), "handle");
+    }
+
+    private boolean isDialogShown() {
+        final Node host = scene.getRoot().lookup("#" + BusyHost.HOST_ID);
+        final Node card = scene.getRoot().lookup("#busy-card");
+        return host != null && host.isVisible() && host.getOpacity() > 0 && card != null && card.isVisible();
+    }
+
+    private void await(final java.util.function.BooleanSupplier condition) throws TimeoutException {
+        WaitForAsyncUtils.waitFor(WITHIN_SECONDS, TimeUnit.SECONDS, condition::getAsBoolean);
+        interact(() -> {});
+    }
+
+    // IF a node lay over a footer button, THEN the mouse would press that node and the button would never act.
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(
+            value = ActivityKind.class,
+            names = {"NAMES_PASS", "SUGGEST_STYLE", "EXPORT", "GLOSSARY_SCAN"})
+    void footerButton_pressedAtItsCentre_isWhatTheMouseHits(final ActivityKind kind) throws TimeoutException {
+        final ActivityTracker.Handle work = begin(kind);
+        onFx(() -> work.steps(new StepsPlanned(StepKind.REQUEST, 4, false)));
+        onFx(() -> work.steps(new StepChanged(StepKind.REQUEST, "sample", 0, StepState.STARTED, null, null)));
+        await(this::isDialogShown);
+        final List<Button> buttons = ThemeTestSupport.onFx(() -> FooterHits.footerButtons(required("busy-card")));
+
+        final List<String> missed = FooterHits.missed(this, scene, buttons);
+
+        assertThat(buttons).as("the footer has buttons").isNotEmpty();
+        assertThat(missed).as("footer buttons the mouse cannot reach").isEmpty();
+    }
+
+    // IF Continue in background took no click, THEN the names pass could only be hidden with the keyboard.
+    @Test
+    void continueInBackground_clickedWithTheMouse_hidesTheDialog() throws TimeoutException {
+        begin(ActivityKind.NAMES_PASS);
+        await(this::isDialogShown);
+
+        clickOn(required("progress-background"));
+
+        await(() -> !isDialogShown());
+        assertThat(cancelled).isEmpty();
+        assertThat(tracker().running().stream().anyMatch(activity -> activity.kind() == ActivityKind.NAMES_PASS))
+                .isTrue();
+    }
+}
