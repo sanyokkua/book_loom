@@ -36,6 +36,13 @@ final class SettingsConformanceCases {
                     List.of(
                             new Part("#settings-form-dirty", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"),
                             new Part("#settings-form-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+            // Delete refused while the provider is at work: the title, the badge and the whole reason stay readable.
+            new Screen(
+                    "SETTINGS_DELETE_REFUSED",
+                    ViewNames.SETTINGS,
+                    Preparation.PROVIDER_IN_USE,
+                    Overlay.NONE,
+                    List.of(new Part("#settings-provider-delete-reason", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "SETTINGS_FOLD_OPEN",
                     ViewNames.SETTINGS,

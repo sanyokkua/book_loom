@@ -39,4 +39,12 @@ public interface Toasts {
      * @param args the arguments the entry's pattern names, in order
      */
     void feedback(Severity severity, MessageKey key, Object... args);
+
+    /**
+     * Takes back the shown messages of an occasion once what they said no longer holds, such as a model list that
+     * could not be read for a provider that is closed or deleted. Nothing happens when none is shown.
+     *
+     * @param occasion the occasion whose messages go
+     */
+    void withdraw(ToastOccasion occasion);
 }

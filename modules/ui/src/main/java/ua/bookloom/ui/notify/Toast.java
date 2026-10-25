@@ -139,6 +139,11 @@ final class Toast {
         return isDismissed;
     }
 
+    /** Whether the message shows the catalogue entry {@code otherKey} and is still up. */
+    boolean isOf(final MessageKey otherKey) {
+        return !isDismissed && key == otherKey;
+    }
+
     /** Whether a new message is the same one: the same severity, entry and arguments. */
     boolean isSameAs(final Severity otherSeverity, final MessageKey otherKey, final List<Object> otherArgs) {
         return !isDismissed && severity == otherSeverity && key == otherKey && args.equals(otherArgs);

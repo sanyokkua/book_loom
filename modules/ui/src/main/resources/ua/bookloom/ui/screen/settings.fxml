@@ -33,17 +33,18 @@
                     <HBox alignment="CENTER_LEFT" spacing="8">
                         <Label fx:id="formTitle" id="settings-form-title" styleClass="card-title"/>
                         <Label fx:id="formBadge" id="settings-form-badge" styleClass="chip, chip-ok"
-                               text="%settings.provider.current"/>
+                               minWidth="-Infinity" text="%settings.provider.current"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Label fx:id="formUseReason" id="settings-form-use-reason" styleClass="hint"
                                text="%settings.provider.use.dirty"/>
                         <Button fx:id="formUse" id="settings-form-use" styleClass="btn-ghost"
                                 text="%settings.provider.use"/>
-                        <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
-                               text="%settings.provider.delete.busy"/>
                         <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline"
-                                text="%settings.provider.delete"/>
+                                minWidth="-Infinity" text="%settings.provider.delete"/>
                     </HBox>
+                    <!-- Its own line: beside the buttons the sentence squeezed the title, the badge and Delete. -->
+                    <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
+                           wrapText="true" maxWidth="Infinity" text="%settings.provider.delete.busy"/>
                     <ScrollPane fx:id="formScroll" id="settings-form-scroll" styleClass="form-scroll" fitToWidth="true"
                                 hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
                         <VBox fx:id="formBody" id="settings-form-body" spacing="14"/>

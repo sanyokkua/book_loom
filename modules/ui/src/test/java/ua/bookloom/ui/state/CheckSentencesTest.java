@@ -47,6 +47,22 @@ class CheckSentencesTest {
         assertThat(CheckSentences.of(UK, failed, "Office LM")).contains("Office LM не відповідає");
     }
 
+    // IF an unset key variable read "QA Test does not answer", THEN the person would look at the server, which was
+    // never asked, instead of at the variable.
+    @Test
+    void of_connectionFailedOnAnUnsetKeyVariable_namesTheMissingKey() {
+        final StageChip failed = new StageChip(
+                VerificationStage.CONNECTION,
+                StageStatus.FAILED,
+                AppError.of(ErrorCode.missingCredential, "Missing credential", "QA_KEY is not set."),
+                null);
+
+        assertThat(CheckSentences.of(EN, failed, "QA Test"))
+                .contains("QA Test: the key is missing — its environment variable is not set");
+        assertThat(CheckSentences.of(UK, failed, "QA Test"))
+                .contains("QA Test: ключа немає — змінну середовища з ключем не задано");
+    }
+
     // IF the count were not worded, THEN "7" would not say that the chosen model is among them.
     @ParameterizedTest
     @CsvSource({"7, 7 models found — the chosen one is there", "1, 1 model found — the chosen one is there"})

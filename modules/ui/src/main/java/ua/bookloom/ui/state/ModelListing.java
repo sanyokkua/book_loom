@@ -193,6 +193,8 @@ public final class ModelListing {
         noListObtained.set(false);
         refusal.set("");
         listing.set(false);
+        // The warning was about the provider just closed; it must not sit over the next one's page.
+        toasts.withdraw(ToastOccasion.MODEL_LIST_UNREADABLE);
     }
 
     private void submit(final Supplier<Result<List<ModelInfo>>> ask, final long requested) {
@@ -280,7 +282,8 @@ public final class ModelListing {
         switch (failure.code()) {
             case cancelled -> log.debug("the listing was cancelled: nothing is said");
             case internal, busy -> errors.present(failure);
-            case validation -> {
+            // An unset key variable stops the request before it is sent: the cause is said in place.
+            case validation, missingCredential -> {
                 noListObtained.set(false);
                 refusal.set(ErrorWords.message(messages, failure));
             }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.event.ActionEvent;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import org.controlsfx.control.ToggleSwitch;
@@ -307,5 +308,18 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
         onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.TRANSLATION, () -> {}));
 
         assertThat(button("settings-provider-delete").isDisable()).isFalse();
+    }
+
+    // IF LM Studio's note were one line, THEN its end would be cut at the card's edge ("co…").
+    @Test
+    void modelNote_lmStudioOpened_wrapsItsWholeSentence() {
+        openSettings();
+
+        onFx(() -> viewModel().editProvider("lmstudio"));
+
+        final Label note = (Label) required("settings-model-note");
+        assertThat(note.isVisible()).isTrue();
+        assertThat(note.isWrapText()).isTrue();
+        assertThat(note.getText()).startsWith("LM Studio is slower");
     }
 }

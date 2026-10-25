@@ -209,6 +209,8 @@ public enum MessageKey {
     PROGRESS_OUTPUT("progress.output"),
     /** Progress dialog: what an input or output with nothing in it says. */
     PROGRESS_NOTHING("progress.nothing"),
+    /** Progress dialog, Simple: what an answered call with no translated text says; the raw reply is Detailed's. */
+    PROGRESS_REPLY_IN_DETAILED("progress.replyInDetailed"),
     /** Progress dialog, Detailed: the call line; arguments: 0 number, 1 kind words, 2 segments, 3 attempt, 4 of. */
     PROGRESS_DETAIL_CALL("progress.detail.call"),
     /** Progress dialog, Detailed: the call's clock; arguments: 0 waiting or other, 1 the clock, 2 the limit or none. */
@@ -3412,6 +3414,8 @@ public enum MessageKey {
     LIVE_DETAIL_PENDING("live.detail.pending"),
     /** Live detail: the translation of a segment not sent yet. */
     LIVE_DETAIL_NOT_YET("live.detail.notYet"),
+    /** Live card detail: a segment of formatting only (an image, a formula, a rule) has no words to show. */
+    LIVE_DETAIL_NO_WORDS("live.detail.noWords"),
     /** Live detail: the heading of the box of what the model works on. */
     LIVE_DETAIL_IN_FLIGHT("live.detail.inFlight"),
     /** Live detail: the box of what the model works on, with nothing in flight. */
@@ -3598,6 +3602,8 @@ public enum MessageKey {
     SETTINGS_CHECK_CONNECTION_OK("settings.check.connection.ok"),
     /** Connection result when the server did not answer; 0 is the provider's name. */
     SETTINGS_CHECK_CONNECTION_FAILED("settings.check.connection.failed"),
+    /** Providers test: the connection was not tried because the key's variable is unset; argument: provider name. */
+    SETTINGS_CHECK_CONNECTION_NO_KEY("settings.check.connection.noKey"),
     /** Models result when the chosen model is listed; 0 is the count. */
     SETTINGS_CHECK_MODELS_OK("settings.check.models.ok"),
     /** Models result for a server that answers but lists no models. */

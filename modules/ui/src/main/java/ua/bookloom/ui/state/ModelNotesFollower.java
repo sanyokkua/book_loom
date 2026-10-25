@@ -38,7 +38,7 @@ final class ModelNotesFollower {
         final List<ModelAdvice.Note> found = providers.stream()
                 .filter(row -> row.id().equals(selected))
                 .findFirst()
-                .map(row -> ModelAdvice.notesFor(row.kind(), draftModel.get()))
+                .map(row -> ModelAdvice.notesFor(ModelAdvice.Server.of(row), draftModel.get()))
                 .orElse(List.of());
         log.debug("model notes for provider '{}': {}", selected, found.size());
         notes.set(found);

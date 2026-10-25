@@ -15,6 +15,8 @@ import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.dialog.SwitchProviderDialog;
+import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
@@ -37,6 +39,7 @@ final class SettingsPreparations {
             case PROVIDER_FORM_DIRTY -> typeIntoTheForm();
             case PROVIDER_FOLD_OPEN -> openTheFold();
             case PROVIDER_TESTED -> runTheInferenceTest();
+            case PROVIDER_IN_USE -> putTheProviderToWork();
             case MODELS_OPEN -> openTheModelsTab();
             case MODELS_DIRTY -> changeTheModel();
             case GENERATION_OPEN -> openATab("settings-tab-generation");
@@ -52,6 +55,16 @@ final class SettingsPreparations {
         awaitProviders();
         onFx(() -> {
             injector.getInstance(ProviderForm.class).edit(draft -> draft.withRequestSeconds("240"));
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Starts model work on the current provider, so Delete is off and the form says why on its own line. */
+    void putTheProviderToWork() throws TimeoutException {
+        awaitProviders();
+        onFx(() -> {
+            injector.getInstance(ActivityTracker.class).begin(ActivityKind.TRANSLATION, () -> {});
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

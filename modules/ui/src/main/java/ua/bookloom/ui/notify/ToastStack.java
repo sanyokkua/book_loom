@@ -120,6 +120,15 @@ public final class ToastStack implements Toasts {
         log.debug("footer feedback {}: taken by a dialog {}", key.key(), taken);
     }
 
+    @Override
+    public void withdraw(final ToastOccasion occasion) {
+        Objects.requireNonNull(occasion, "occasion");
+        final List<Toast> gone =
+                shown.stream().filter(toast -> toast.isOf(occasion.key())).toList();
+        log.debug("withdrawing {} toast(s) of {}", gone.size(), occasion);
+        gone.forEach(toast -> drop(toast, true));
+    }
+
     /** Shows a message of any severity; the occasions are the callers' way in, this is the seam for the stack's tests. */
     void display(
             final Severity severity, final MessageKey key, final @Nullable ToastAction action, final Object[] args) {

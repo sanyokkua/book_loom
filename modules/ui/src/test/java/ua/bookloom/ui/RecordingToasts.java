@@ -18,6 +18,7 @@ public final class RecordingToasts implements Toasts {
     private final List<Raised> raised = new CopyOnWriteArrayList<>();
     private final List<ToastAction> actions = new CopyOnWriteArrayList<>();
     private final List<Raised> feedback = new CopyOnWriteArrayList<>();
+    private final List<ToastOccasion> withdrawn = new CopyOnWriteArrayList<>();
 
     @Override
     public void raise(final ToastOccasion occasion, final Object... args) {
@@ -33,6 +34,16 @@ public final class RecordingToasts implements Toasts {
     @Override
     public void feedback(final Severity severity, final MessageKey key, final Object... args) {
         feedback.add(new Raised(severity.name().toLowerCase(Locale.ROOT), key, List.of(args)));
+    }
+
+    @Override
+    public void withdraw(final ToastOccasion occasion) {
+        withdrawn.add(occasion);
+    }
+
+    /** The occasions withdrawn, in order. */
+    public List<ToastOccasion> withdrawn() {
+        return List.copyOf(withdrawn);
     }
 
     private static String severityName(final ToastOccasion occasion) {

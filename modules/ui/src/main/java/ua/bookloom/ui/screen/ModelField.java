@@ -88,7 +88,7 @@ final class ModelField {
         listing.offered().addListener(new WeakListChangeListener<>(onOffered));
         viewModel.modelNotes().addListener(new WeakChangeListener<>(onNotes));
         combo.setOnAction(event -> onEntryCommitted());
-        note.setId("settings-model-note");
+        configureNote();
         showNotes(viewModel.modelNotes().get());
         box.getChildren().addAll(entryRow(), note);
         box.getChildren()
@@ -142,6 +142,13 @@ final class ModelField {
         label.getStyleClass().add("hint");
         label.setWrapText(true);
         return label;
+    }
+
+    // A note is a sentence or two; it wraps under the entry rather than being cut at the card's edge.
+    private void configureNote() {
+        note.setId("settings-model-note");
+        note.setWrapText(true);
+        note.setMaxWidth(Double.MAX_VALUE);
     }
 
     private void showNotes(final List<ModelAdvice.Note> notes) {

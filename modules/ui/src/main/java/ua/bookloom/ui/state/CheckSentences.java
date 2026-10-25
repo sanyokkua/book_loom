@@ -5,6 +5,8 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -45,7 +47,13 @@ public final class CheckSentences {
             final Messages messages, final StageChip chip, final String providerName) {
         final Duration elapsed = chip.elapsed();
         if (chip.status() == StageStatus.FAILED) {
-            return Optional.of(messages.get(MessageKey.SETTINGS_CHECK_CONNECTION_FAILED, providerName));
+            // An unset key variable stops the request before it is sent: the server was never asked, so the headline
+            // names the cause instead of saying it does not answer.
+            final AppError error = chip.error();
+            final boolean noKey = error != null && error.code() == ErrorCode.missingCredential;
+            return Optional.of(messages.get(
+                    noKey ? MessageKey.SETTINGS_CHECK_CONNECTION_NO_KEY : MessageKey.SETTINGS_CHECK_CONNECTION_FAILED,
+                    providerName));
         }
         return chip.status() == StageStatus.PASSED && elapsed != null
                 ? Optional.of(messages.get(

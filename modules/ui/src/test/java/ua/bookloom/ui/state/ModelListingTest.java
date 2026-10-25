@@ -17,6 +17,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.ToastOccasion;
 
 /**
  * The life of a model listing: what it publishes, how each failure is routed, what is discarded, and how an answer that
@@ -235,6 +236,36 @@ class ModelListingTest extends SettingsViewModelTestBase {
         catalog.release();
         awaitNotListing(listing);
         pool.awaitFinished(1);
+    }
+
+    // IF an unset key variable read as an unreadable list, THEN the toast would blame the server, which was never
+    // asked.
+    @Test
+    void refresh_keyVariableUnset_isSaidInPlaceWithNoToast() {
+        catalog = ScriptedModelCatalog.failing(
+                AppError.of(ErrorCode.missingCredential, "Missing credential", "QA_KEY is not set."));
+        final ModelListing listing = newModelListing();
+
+        refreshAndAwait(listing, "ollama");
+
+        assertThat(toasts.raised()).isEmpty();
+        assertThat(onFx(() -> listing.refusal().get())).isNotEmpty();
+    }
+
+    // IF the warning outlived the provider it was about, THEN after a switch or a delete it would sit over another
+    // provider's page.
+    @Test
+    void discard_afterAnUnreadableList_withdrawsItsWarning() {
+        catalog = ScriptedModelCatalog.failing(AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing answered."));
+        final ModelListing listing = newModelListing();
+        refreshAndAwait(listing, "ollama");
+
+        onFx(() -> {
+            listing.discard();
+            return null;
+        });
+
+        assertThat(toasts.withdrawn()).containsExactly(ToastOccasion.MODEL_LIST_UNREADABLE);
     }
 
     // IF discarding left anything of the previous provider on screen, THEN a person would see one server's list, note

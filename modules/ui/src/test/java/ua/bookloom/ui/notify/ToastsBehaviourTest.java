@@ -51,6 +51,22 @@ class ToastsBehaviourTest extends ToastsTestBase {
         assertThat(ToastStack.READ_LIFETIME).isEqualTo(Duration.ofSeconds(12));
     }
 
+    // IF a message about a provider stayed after the provider was closed or deleted, THEN it would sit over another
+    // provider's page as if it were about that one; only the withdrawn occasion goes.
+    @Test
+    void withdraw_occasionShown_dropsItsToastAndKeepsTheOthers() {
+        onFx(() -> {
+            toasts().raise(ToastOccasion.MODEL_LIST_UNREADABLE);
+            toasts().raise(ToastOccasion.BOOK_OPENED, "A.epub");
+        });
+        awaitToasts(2);
+
+        onFx(() -> toasts().withdraw(ToastOccasion.MODEL_LIST_UNREADABLE));
+
+        awaitToasts(1);
+        assertThat(ThemeTestSupport.onFx(() -> textOf(shownToasts().get(0)))).isEqualTo("Opened A.epub.");
+    }
+
     // IF a fifth message stacked, THEN a burst would cover the content; the oldest makes way and the newest is last.
     @Test
     void toast_fifthRaised_dropsTheOldestAndKeepsTheNewestAtTheBottom() {
