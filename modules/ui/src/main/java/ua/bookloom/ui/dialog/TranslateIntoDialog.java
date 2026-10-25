@@ -2,22 +2,21 @@ package ua.bookloom.ui.dialog;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
-import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -78,7 +77,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         private final ProjectNameRules rules;
         private final @Nullable String source;
         private final FormCard card;
-        private final ComboBox<String> into = new ComboBox<>();
+        private final SearchableCombo<String> into;
         private final NameField name;
         private final Label hint = FormCard.text("", "dialog-sub");
         private final Button create;
@@ -91,6 +90,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             this.group = group;
             this.rules = rules;
             this.source = group.rows().getFirst().summary().project().brief().sourceLanguage();
+            this.into = languageBox();
             this.card = new FormCard(
                     modalHost,
                     messages,
@@ -107,7 +107,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
                     name.view(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_NAME)),
                     hint,
                     startFrom());
-            into.valueProperty().addListener((observable, old, now) -> refresh());
+            into.committedProperty().addListener((observable, old, now) -> refresh());
             refresh();
         }
 
@@ -126,7 +126,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
                     () -> {
                         final String typed = name.field().getText().strip();
                         onCreate.accept(
-                                Objects.requireNonNull(into.getValue(), "target"), typed.isEmpty() ? null : typed);
+                                Objects.requireNonNull(into.getCommitted(), "target"), typed.isEmpty() ? null : typed);
                     });
         }
 
@@ -134,26 +134,24 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             card.show();
         }
 
-        private void configureList() {
+        // Typing narrows the list by the shown name, the English name and the tag, so "Pol" then Return is Polish.
+        private SearchableCombo<String> languageBox() {
             final Locale locale = messages.locale();
+            final List<String> targets = languages.list(locale).stream()
+                    .filter(tag -> !tag.equals(source))
+                    .toList();
+            return SearchableCombo.parsed(
+                    targets,
+                    this::listText,
+                    tag -> languages.searchText(tag, locale),
+                    text -> languages.parse(text, locale).filter(tag -> !tag.equals(source)));
+        }
+
+        private void configureList() {
             into.setId(PREFIX + "into");
             into.setPromptText(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_INTO_PROMPT));
             into.setMaxWidth(Double.MAX_VALUE);
             Tips.install(messages, into, MessageKey.DIALOG_TRANSLATE_INTO_INTO_TIP);
-            into.setItems(FXCollections.observableArrayList(languages.list(locale).stream()
-                    .filter(tag -> !tag.equals(source))
-                    .toList()));
-            into.setConverter(new StringConverter<>() {
-                @Override
-                public String toString(final @Nullable String tag) {
-                    return tag == null ? "" : listText(tag);
-                }
-
-                @Override
-                public String fromString(final String text) {
-                    return text;
-                }
-            });
         }
 
         private String listText(final String tag) {
@@ -205,12 +203,12 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         }
 
         private String automaticName() {
-            final String target = into.getValue();
+            final String target = into.getCommitted();
             return target == null ? "" : Project.automaticName(group.title(), source, target);
         }
 
         private void refresh() {
-            final String target = into.getValue();
+            final String target = into.getCommitted();
             final boolean used = target != null && usedCount(target) > 0;
             final String text = name.field().getText();
             final ProjectNameRules.Check check = rules.check(text);

@@ -11,6 +11,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,6 +20,7 @@ import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ProjectFixtures;
 import ua.bookloom.ui.ShellTestBase;
+import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.state.BookGroup;
 import ua.bookloom.ui.state.ProjectNameRules;
 import ua.bookloom.ui.state.ProjectRow;
@@ -120,6 +122,20 @@ class TranslateIntoDialogTest extends ShellTestBase {
 
         assertThat(listed("uk")).isEqualTo("Ukrainian — already in 1 project");
         assertThat(listed("de")).isEqualTo("German");
+    }
+
+    // IF typing did not narrow the list, THEN Down and Return would pick the list's first language (Belarusian).
+    @Test
+    void languages_typedPolThenDownAndReturn_choosesPolish() {
+        ask("en");
+
+        clickOn(languages());
+        write("Pol");
+        type(KeyCode.DOWN);
+        type(KeyCode.ENTER);
+
+        assertThat(((SearchableCombo<String>) languages()).getCommitted()).isEqualTo("pl");
+        assertThat(name().getPromptText()).isEqualTo("Earth Gravity · EN → PL");
     }
 
     @Test

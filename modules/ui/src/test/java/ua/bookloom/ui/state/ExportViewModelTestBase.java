@@ -87,7 +87,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         exportService = new ScriptedExportService();
         models = ScriptedChatModelFactory.ok();
         settings = onFx(this::newSettings);
-        progress = onFx(() -> new WorkflowProgress(current, mirror));
+        progress = onFx(() -> new WorkflowProgress(current, mirror, desk, new DirectExecutor()));
         exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }

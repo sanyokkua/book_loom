@@ -5,16 +5,21 @@ import com.google.inject.Singleton;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.ViewNames;
 
 /**
  * Which workflow steps the person has completed, so the navigation can mark them.
  *
- * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed. Two
+ * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed, or
+ * the reopened project's stored segments were decided by an earlier run (all of them: translated). Two
  * steps (the brief and the export) have no state of their own, so their actions say so through
  * {@link #markDone}; those marks belong to the open project and are dropped when it changes or clears. The
  * set is touched on the FX Application Thread only.
@@ -29,6 +34,7 @@ public final class WorkflowProgress {
 
     private final CurrentProject project;
     private final StateMirror mirror;
+    private final PendingCount stored;
     private final Set<ViewNames> marked = EnumSet.noneOf(ViewNames.class);
     private final ObservableSet<ViewNames> done = FXCollections.observableSet(EnumSet.noneOf(ViewNames.class));
     private final ObservableSet<ViewNames> readOnlyDone = FXCollections.unmodifiableObservableSet(done);
@@ -38,20 +44,31 @@ public final class WorkflowProgress {
      *
      * @param project the open book, whose presence marks the import and whose change drops the explicit marks
      * @param mirror the run's state and file name
+     * @param desk where the open project's stored decisions are counted, so a reopened project keeps its marks
+     * @param executor the daemon executor the count is read on, never the FX thread
      */
     @Inject
-    WorkflowProgress(final CurrentProject project, final StateMirror mirror) {
+    WorkflowProgress(
+            final CurrentProject project,
+            final StateMirror mirror,
+            final ReviewDesk desk,
+            @BackgroundExecutor final ExecutorService executor) {
         this.project = Objects.requireNonNull(project, "project");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
+        this.stored = new PendingCount(desk, executor);
         project.book().addListener((observed, old, current) -> {
             log.debug("the open project changed, so the explicit workflow marks are dropped");
             marked.clear();
+            readStored(current);
             refresh();
         });
+        stored.count().addListener((observed, old, current) -> refresh());
+        stored.total().addListener((observed, old, current) -> refresh());
         mirror.runFileName().addListener((observed, old, current) -> refresh());
         mirror.runState().addListener((observed, old, current) -> refresh());
         mirror.remaining().addListener((observed, old, current) -> refresh());
         project.brief().addListener((observed, old, current) -> refresh());
+        readStored(project.book().get());
         refresh();
     }
 
@@ -89,14 +106,35 @@ public final class WorkflowProgress {
         if (!hasUsableLanguages()) {
             wanted.remove(ViewNames.BOOK_BRIEF);
         }
-        if (mirror.runFileName().get() != null) {
+        if (mirror.runFileName().get() != null || hasStoredDecisions()) {
             wanted.add(ViewNames.BOOK_BRIEF);
             wanted.add(ViewNames.NAMES_STYLE);
         }
-        if (isTranslated()) {
+        if (isTranslated() || isStoredTranslated()) {
             wanted.add(ViewNames.TRANSLATING);
         }
         apply(wanted);
+    }
+
+    private void readStored(final @Nullable OpenedBook book) {
+        if (book == null) {
+            stored.clear();
+        } else {
+            stored.refresh(book.projectId());
+        }
+    }
+
+    // A run of an earlier launch decided segments of the reopened project, so its brief and names were settled then.
+    // Not logged: refresh runs on every progress tick; the read and each mark it changes are logged.
+    private boolean hasStoredDecisions() {
+        return project.book().get() != null
+                && stored.count().get() < stored.total().get();
+    }
+
+    private boolean isStoredTranslated() {
+        return project.book().get() != null
+                && stored.total().get() > 0
+                && stored.count().get() == 0;
     }
 
     private boolean hasUsableLanguages() {

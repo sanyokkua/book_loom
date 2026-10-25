@@ -30,7 +30,7 @@ import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.FileSizes;
 
 /**
- * The card that reports a written book: the file, its folder, the verification result and the size, with Open folder
+ * The card that reports a written book: the file, its whole path, the verification result and the size, with Open folder
  * and Open book. It is the export's one success notice, so nothing else announces the same success. Shown in the
  * shell's modal host like the About card, so the stylesheet and the active theme block reach it.
  */
@@ -135,7 +135,6 @@ public final class ExportCompleteDialog {
         written.setWrapText(true);
         written.setMaxWidth(PATH_MAX_WIDTH);
         written.getStyleClass().add("dialog-text");
-        final Path folder = file.getParent();
         // Plain success-coloured words after a check mark, as the export screen's own checks read: a row value, not a
         // chip.
         final Label mark = new Label("✓");
@@ -144,16 +143,15 @@ public final class ExportCompleteDialog {
         verified.setId("export-complete-verified");
         verified.getStyleClass().add("status-ok");
         verified.setGraphic(mark);
-        // The whole folder path is also one hover away, as is the written file's.
+        // The whole written path is also one hover away.
         Tips.install(written, file.toString());
-        final Label location = plain(folder == null ? "" : folder.toString());
+        // Saved as is the written file itself, folder and name, so the person can tell which file in the folder is
+        // the book. A long path wraps inside the card instead of widening it; Copy path hands it to the clipboard.
+        final Label location = plain(file.toString());
         location.setId("export-complete-location");
-        // A long folder wraps inside the card instead of widening it; Copy path hands the whole path to the clipboard.
         location.setWrapText(true);
         location.setMaxWidth(PATH_MAX_WIDTH);
-        if (folder != null) {
-            Tips.install(location, folder.toString());
-        }
+        Tips.install(location, file.toString());
         final VBox body = new VBox(
                 written,
                 row(MessageKey.EXPORT_COMPLETE_LOCATION, location, copyPath(file)),
@@ -231,7 +229,7 @@ public final class ExportCompleteDialog {
                 MessageKey.EXPORT_COMPLETE_COPY_TIP);
         copy.setId("export-complete-copy");
         copy.getStyleClass().add("btn-ghost");
-        // A long folder wraps beside it; the button keeps its whole word (Ukrainian is longer).
+        // A long path wraps beside it; the button keeps its whole word (Ukrainian is longer).
         copy.setMinWidth(Region.USE_PREF_SIZE);
         copy.setOnAction(event -> {
             log.debug("export-complete copy path pressed");

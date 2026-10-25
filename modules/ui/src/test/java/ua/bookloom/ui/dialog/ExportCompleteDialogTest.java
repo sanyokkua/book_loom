@@ -54,7 +54,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 .contains(
                         "Export complete",
                         "Frankenstein.uk.epub was written and validated.",
-                        "/books",
+                        "/books/Frankenstein.uk.epub",
                         "Re-opened and verified",
                         "936 KB",
                         "Close",
@@ -62,12 +62,12 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         "Open book");
     }
 
-    // IF a long folder were only cut short, THEN a person could not tell where the book went.
+    // IF Saved as named only the folder, THEN a person could not tell which file in it is the book.
     @Test
-    void show_outcome_locationShowsTheWholeFolderOnHover() {
+    void show_outcome_locationShowsTheWholeFilePathOnHover() {
         show();
 
-        assertThat(TooltipProbe.tipText(required("export-complete-location"))).isEqualTo("/books");
+        assertThat(TooltipProbe.tipText(required("export-complete-location"))).isEqualTo("/books/Frankenstein.uk.epub");
     }
 
     @Test
@@ -343,9 +343,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
         showLongPathCopyingTo(new ArrayList<>());
 
         final Label location = (Label) required("export-complete-location");
-        assertThat(location.getText())
-                .isEqualTo(
-                        java.util.Objects.requireNonNull(LONG_BOOK.getParent()).toString());
+        assertThat(location.getText()).isEqualTo(LONG_BOOK.toString());
         assertThat(location.isWrapText()).isTrue();
         assertThat(ThemeTestSupport.onFx(() ->
                         required(ExportCompleteDialog.CARD_ID).getLayoutBounds().getWidth()))

@@ -6,10 +6,13 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ProgressFixtures;
+import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.ViewNames;
 
 /** The done marks derived from the open book, its languages and the run, beyond what the steps mark themselves. */
@@ -19,12 +22,13 @@ class WorkflowProgressTest extends FxTestBase {
     private CurrentProject project;
     private StateMirror mirror;
     private WorkflowProgress progress;
+    private final ScriptedReviewDesk desk = new ScriptedReviewDesk();
 
     @Override
     public void start(final Stage stage) {
         project = new CurrentProject();
         mirror = new StateMirror();
-        progress = new WorkflowProgress(project, mirror);
+        progress = new WorkflowProgress(project, mirror, desk, new DirectExecutor());
     }
 
     private void open(final @Nullable String source, final @Nullable String target) {
@@ -37,6 +41,32 @@ class WorkflowProgressTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
         mirror.publishOutcome(state, null, null);
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF the marks came from this session's run only, THEN a project reopened after a restart would show its brief and
+    // names as bare numbers although a run decided its segments; with nothing left, translating is done too.
+    @ParameterizedTest
+    @CsvSource({"2, false", "0, true"})
+    void storedProjectWithDecidedSegments_marksTheBriefAndNamesAndTranslatingOnceNothingIsLeft(
+            final int pending, final boolean translated) {
+        desk.willAnswerCounts(new ReviewCounts(142, 130, 8, 2, 0, pending, 0, 0, 0));
+
+        open("en", "uk");
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(progress.done()).contains(ViewNames.IMPORT, ViewNames.BOOK_BRIEF, ViewNames.NAMES_STYLE);
+        assertThat(progress.done().contains(ViewNames.TRANSLATING)).isEqualTo(translated);
+    }
+
+    // IF a stored project nobody ran were marked, THEN its brief would look finished before the person read it.
+    @Test
+    void storedProjectWithNothingDecided_marksOnlyTheImport() {
+        desk.willAnswerCounts(new ReviewCounts(142, 0, 0, 0, 0, 142, 0, 0, 0));
+
+        open("en", "uk");
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(progress.done()).containsExactly(ViewNames.IMPORT);
     }
 
     @Test
