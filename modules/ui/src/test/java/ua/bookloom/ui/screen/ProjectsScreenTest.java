@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ProjectFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -249,6 +250,20 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
         assertThat(isPresent("projects-row-" + EARTH_ID)).isTrue();
         assertThat(isPresent("projects-row-" + TIDE_ID)).isTrue();
         assertThat(((TextField) node("projects-search")).getText()).isEmpty();
+    }
+
+    // IF the search outlived a visit, THEN the person would come back to "No project matches" and type onto old text.
+    @Test
+    void search_screenLeftAndShownAgain_startsEmptyWithEveryRow() throws Exception {
+        showListing(ukrainianRunning(), tideExported());
+        searchFor("xyz");
+
+        onFx(() -> shell.activate(ViewNames.SETTINGS));
+        showListing(ukrainianRunning(), tideExported());
+
+        assertThat(((TextField) node("projects-search")).getText()).isEmpty();
+        assertThat(isPresent("projects-no-match")).isFalse();
+        assertThat(isPresent("projects-row-" + TIDE_ID)).isTrue();
     }
 
     // IF search looked only at project names, THEN a book could not be found by its file name or title.

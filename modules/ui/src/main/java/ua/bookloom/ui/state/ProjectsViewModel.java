@@ -130,6 +130,15 @@ public final class ProjectsViewModel {
         return query.isEmpty() || text.toLowerCase(Locale.ROOT).contains(query);
     }
 
+    /**
+     * Empties the search, as each visit of the screen begins: a search left from the last visit would hide rows behind
+     * "No project matches" the person no longer remembers typing. The filter is kept. FX thread only.
+     */
+    public void clearSearch() {
+        log.debug("the search is cleared for a new visit, it held {} characters", search.get().length());
+        search.set("");
+    }
+
     /** Lists the stored projects again. Returns at once; the answer arrives on the FX thread. FX thread only. */
     public void refresh() {
         final int mine = ++generation;

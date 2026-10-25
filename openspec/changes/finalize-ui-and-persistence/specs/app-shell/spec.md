@@ -515,6 +515,11 @@ The application SHALL show the Projects screen with the purpose line "A project 
 - **WHEN** `Finished` is chosen
 - **THEN** only projects whose translation has finished are listed
 
+#### Scenario: The search starts empty on each visit
+
+- **WHEN** `xyz` was typed, Settings was opened and Projects is shown again
+- **THEN** the search is empty, every project is listed and nothing reads `No project matches`; the chosen filter stays
+
 ### Requirement: Show what a project row says and offers
 
 Each project row SHALL show the project's name (a "named" chip when the person named it, "open" for the open one), its languages, AI model and quality, a progress bar with its percentage and when it was last opened, a status chip coloured by meaning (an idle project — not started, paused or stopped — reads grey, never the working colour), and Continue (or Open), and a ⋯ menu with "Rename…", "Show book file" and "Remove project…".
