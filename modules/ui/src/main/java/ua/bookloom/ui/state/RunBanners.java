@@ -144,14 +144,23 @@ final class RunBanners {
             case RunNotice.MissingInput missing -> {
                 final String token = missing.which().token();
                 yield cannotStartBanner(
-                        token,
-                        Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token),
-                        missing.which() == RunNotice.Input.MODEL ? List.of(settings) : List.of());
+                        token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), fixFor(missing.which(), settings));
             }
             case null -> {
                 final String token = RunNotice.Input.MODEL.token();
                 yield cannotStartBanner(token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), List.of(settings));
             }
+        };
+    }
+
+    // Each missing input leads to where it is supplied: the model to the settings, the target language to the brief.
+    private static List<RunAction> fixFor(final RunNotice.Input which, final RunAction settings) {
+        return switch (which) {
+            case MODEL -> List.of(settings);
+            case TARGET_LANGUAGE ->
+                List.of(action(
+                        RunStateView.GO_BRIEF, MessageKey.RUN_ACTION_GO_BRIEF, MessageKey.RUN_ACTION_GO_BRIEF_TIP));
+            case BOOK -> List.of();
         };
     }
 

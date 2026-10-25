@@ -72,8 +72,9 @@ resolved or dismissed and offers a relevant action (Try again now, Open settings
 **Built (task 5.8)** (`mockups/README.md`, L3): a pinned banner slot (`#shell-banners`, `BannerSlot` in `AppShellView`)
 sits between the toolbar and the scrolling content. It holds the **run banner** (`RunBanner`, `#translating-banner`,
 read from the run-state row) and the hidden-work banner. The run banner shows on **every** screen while it applies and,
-off Translating, offers "Go to Translating", so a problem is never hidden by leaving the Translating screen; a finished
-run's banner shows on Translating only.
+off Translating, offers "Go to Translating" while that step is open, so a problem is never hidden by leaving the
+Translating screen; a finished run's banner shows on Translating only. Cannot start yet for a missing target language
+offers "Go to Book Brief" instead, and is not shown on the Book Brief, where the language is chosen.
 
 The run banners and their exact wording come from the Run states table (`mockups/README.md`, Run states). The wording
 below is the user-facing text; the program name ("Ollama") is the configured provider's.
@@ -81,7 +82,7 @@ below is the user-facing text; the program name ("Ollama") is the configured pro
 | Run state | Banner |
 |---|---|
 | Ready to continue | "Welcome back — 74 of 142 segments are done." |
-| Cannot start yet | "Cannot start yet — no AI model is chosen." [Open settings] |
+| Cannot start yet | "Cannot start yet — no AI model is chosen." [Open settings]; with no target language: "Cannot start yet — no target language is chosen." [Go to Book Brief] |
 | Waiting for the AI model | "BookLoom cannot reach Ollama — Is the Ollama app open? BookLoom tries again by itself in 0:12." [Try again now] [Skip these 4 segments] [Open settings] |
 | Paused after an error | "Paused. Ollama could not be reached. Open Ollama, then press Resume." [Try again now] [Skip these 4 segments] [Open settings] |
 | Stopped trying (12 h) | "Ollama has not answered for 12 hours — BookLoom stopped trying by itself." [Try again now] [Skip these 4 segments] [Open settings] |

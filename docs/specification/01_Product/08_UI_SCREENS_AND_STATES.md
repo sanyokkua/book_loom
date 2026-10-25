@@ -596,8 +596,9 @@ G11), the toolbar (L2), the pinned banner (L3) and the live line. `state/RunStat
 out from `RunState` plus the recovery and call details (`RunNotice`, `RecoveryState`, `WaitingCall`, the controls on
 offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all sixteen rows. As built:
 
-- A banner is pinned in `#shell-banners` on every screen while it applies, with **Go to Translating** off Translating;
-  a finished run's banner shows on Translating only (`RunBanner`). A pause on an error (Waiting for the AI model, Paused
+- A banner is pinned in `#shell-banners` on every screen while it applies, with **Go to Translating** off Translating
+  while that step is open; a finished run's banner shows on Translating only (`RunBanner`). Cannot start yet for a
+  missing target language offers **Go to Book Brief** instead and is not shown on the Book Brief itself. A pause on an error (Waiting for the AI model, Paused
   after an error, Stopped trying) offers Try again now, Skip these N segments (N the segments of the call in flight)
   and Open settings; Model missing offers Choose another model…; a failed run offers Show details and opens no dialog
   by itself.

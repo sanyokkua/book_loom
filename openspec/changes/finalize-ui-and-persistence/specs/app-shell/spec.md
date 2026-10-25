@@ -803,6 +803,11 @@ WHILE a banner applies — the AI model is unreachable, a call is stuck, BookLoo
 - **WHEN** the content below the banner is scrolled to its end
 - **THEN** the banner stays in place
 
+#### Scenario: A missing target language leads to the Book Brief
+
+- **WHEN** a translation cannot start because the brief has no target language and Import is shown
+- **THEN** the banner offers `Go to Book Brief`, not `Go to Translating`; pressing it shows the Book Brief, where the banner is not shown
+
 ### Requirement: Show each of the sixteen run states the same way everywhere
 
 The application SHALL put a project in exactly one of sixteen run states — Ready, Ready to continue, Cannot start yet, Translating, Pausing, Paused, Waiting for the AI model, Paused after an error, Stopped trying, Model missing, Stuck call, Stopping, Stopped, Finished to review, Finished nothing to review, Failed — and the title bar's text, the AI-model chip's colour, the toolbar, the banner and the live line SHALL follow that state.

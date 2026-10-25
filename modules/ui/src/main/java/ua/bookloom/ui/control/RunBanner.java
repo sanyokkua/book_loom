@@ -28,13 +28,16 @@ import ua.bookloom.ui.state.RunStateView.BannerView;
 import ua.bookloom.ui.state.RunStateView.RunAction;
 import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
  * The run's banner, pinned above the content on every screen while its run-state row has one (README L3): one banner
  * node whose words, role and actions are replaced in place, so a change of state moves nothing on screen.
  *
- * <p>Off Translating it also offers Go to Translating; a finished run's banner shows on Translating only. Each action
+ * <p>Off Translating it also offers Go to Translating while that step is open and the banner leads nowhere else; a
+ * finished run's banner shows on Translating only, and a banner that leads to the Book Brief is not shown there. Each
+ * action
  * runs its own command: Try again now resumes, Skip flags the segments in flight and goes on, Open settings and Choose
  * another model open the settings, Show details opens the failure, which never opens by itself. FX thread only; the
  * row is worked out again on every tick of the run's clocks, so only a change of banner is logged.
@@ -52,6 +55,7 @@ public final class RunBanner {
     private final Navigator navigator;
     private final ShellBanners banners;
     private final Messages messages;
+    private final StepLocks locks;
     private final Map<String, Runnable> commands;
     private final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
     private final HBox actionRow = new HBox(ACTION_SPACING);
@@ -71,6 +75,7 @@ public final class RunBanner {
      * @param interventions what Skip asks to flag the segments in flight
      * @param mirror the failure Show details opens
      * @param errors where Show details opens it
+     * @param locks whether Translating is open, so Go to Translating is never offered for a closed step
      */
     @Inject
     public RunBanner(
@@ -81,11 +86,13 @@ public final class RunBanner {
             final TranslatingViewModel viewModel,
             final RunInterventions interventions,
             final StateMirror mirror,
-            final ErrorPresenter errors) {
+            final ErrorPresenter errors,
+            final StepLocks locks) {
         this.runs = Objects.requireNonNull(runs, "runs");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.banners = Objects.requireNonNull(banners, "banners");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.locks = Objects.requireNonNull(locks, "locks");
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(interventions, "interventions");
         Objects.requireNonNull(mirror, "mirror");
@@ -97,7 +104,8 @@ public final class RunBanner {
                 RunStateView.CHOOSE_MODEL, () -> navigator.navigate(ViewNames.SETTINGS),
                 RunStateView.SHOW_DETAILS, () -> showDetails(mirror.failure().get(), errors),
                 RunStateView.REVIEW_SEGMENTS, this::openReview,
-                RunStateView.GO_TRANSLATING, () -> navigator.navigate(ViewNames.TRANSLATING));
+                RunStateView.GO_TRANSLATING, () -> navigator.navigate(ViewNames.TRANSLATING),
+                RunStateView.GO_BRIEF, () -> navigator.navigate(ViewNames.BOOK_BRIEF));
         actionRow.setId("translating-banner-actions");
         actionRow.setAlignment(Pos.CENTER_LEFT);
         banner.addDetail(actionRow);
@@ -105,6 +113,7 @@ public final class RunBanner {
         runs.view().addListener(refresh);
         runs.projectOpen().addListener(refresh);
         navigator.currentView().addListener(refresh);
+        locks.lock(ViewNames.TRANSLATING).addListener(refresh);
         refresh();
     }
 
@@ -112,7 +121,7 @@ public final class RunBanner {
         final boolean onTranslating = navigator.currentView().get() == ViewNames.TRANSLATING;
         final @Nullable BannerView shown =
                 runs.projectOpen().get() ? runs.view().get().banner() : null;
-        if (shown == null || (shown.translatingOnly() && !onTranslating)) {
+        if (shown == null || (shown.translatingOnly() && !onTranslating) || leadsHere(shown)) {
             withdraw();
             return;
         }
@@ -137,10 +146,23 @@ public final class RunBanner {
         banners.withdraw(KEY);
     }
 
-    // A banner off Translating leads there, except a finished run's, which shows on Translating only.
+    // A banner whose action leads to the Book Brief tells what to do there; on the brief itself it is only noise.
+    private boolean leadsHere(final BannerView shown) {
+        final boolean here = navigator.currentView().get() == ViewNames.BOOK_BRIEF
+                && shown.actions().stream().anyMatch(action -> RunStateView.GO_BRIEF.equals(action.id()));
+        if (here && shownKey != null) {
+            log.debug("run banner {} not shown on the Book Brief it leads to", shownKey);
+        }
+        return here;
+    }
+
+    // A banner off Translating leads there, unless it leads to the brief instead or Translating is still closed.
     private List<RunAction> actionsOf(final BannerView shown, final boolean onTranslating) {
         final List<RunAction> actions = new ArrayList<>(shown.actions());
-        if (!onTranslating) {
+        final boolean leadsElsewhere = actions.stream().anyMatch(action -> RunStateView.GO_BRIEF.equals(action.id()));
+        if (!onTranslating
+                && !leadsElsewhere
+                && locks.lockReason(ViewNames.TRANSLATING).isEmpty()) {
             actions.add(new RunAction(
                     RunStateView.GO_TRANSLATING,
                     RunStateView.Text.of(MessageKey.RUN_ACTION_GO_TRANSLATING),

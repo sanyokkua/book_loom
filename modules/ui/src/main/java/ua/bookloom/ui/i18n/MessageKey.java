@@ -2883,6 +2883,10 @@ public enum MessageKey {
     RUN_ACTION_GO_TRANSLATING("run.action.goTranslating"),
     /** Hover explanation of the control labelled by {@link #RUN_ACTION_GO_TRANSLATING}. */
     RUN_ACTION_GO_TRANSLATING_TIP("run.action.goTranslating.tip"),
+    /** The button of the missing-target-language banner that opens the Book Brief. */
+    RUN_ACTION_GO_BRIEF("run.action.goBrief"),
+    /** Hover explanation of the control labelled by {@link #RUN_ACTION_GO_BRIEF}. */
+    RUN_ACTION_GO_BRIEF_TIP("run.action.goBrief.tip"),
     /** Banner action that opens the provider settings to choose another model. */
     RUN_ACTION_CHOOSE_MODEL("run.action.chooseModel"),
     /** Hover explanation of the control labelled by {@link #RUN_ACTION_CHOOSE_MODEL}. */

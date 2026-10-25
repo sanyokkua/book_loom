@@ -63,6 +63,8 @@ public record RunStateView(
     public static final String REVIEW_SEGMENTS = "translating-review-segments";
     /** Shows Translating from a banner on another screen. */
     public static final String GO_TRANSLATING = "translating-go-translating";
+    /** Shows the Book Brief, where a missing target language is chosen. */
+    public static final String GO_BRIEF = "translating-go-brief";
 
     /** The value a text argument takes when it is not known, which the catalogue's {@code select} words. */
     static final String NONE = "none";

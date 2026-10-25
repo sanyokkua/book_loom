@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.RunState;
 
@@ -103,5 +105,25 @@ class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
         assertThat(button("translating-start").isDisabled()).isTrue();
         assertThat(engine.requests()).isEmpty();
         assertNoDialogOrErrorToast();
+    }
+
+    // IF the banner of a missing target language led to Translating, THEN its button would lead away from where the
+    // language is chosen (and do nothing while the step is locked); it leads to the Book Brief and is gone there.
+    @Test
+    void cannotStart_noTargetLanguage_goToBookBriefOpensTheBriefWhereTheBannerIsGone() throws TimeoutException {
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
+        openImport();
+        openBook(BOOK);
+        chooseModel();
+        onFx(() -> shell.activate(ViewNames.IMPORT));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(button("translating-go-brief").getText()).isEqualTo("Go to Book Brief");
+        assertThat(optional("translating-go-translating")).isNull();
+        onFx(() -> button("translating-go-brief").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(injector.getInstance(Navigator.class).currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+        assertThat(optional("translating-banner")).isNull();
     }
 }
