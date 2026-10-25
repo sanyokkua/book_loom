@@ -24,13 +24,21 @@ import ua.bookloom.ui.state.ProjectNameRules;
 
 /**
  * The question cards the screens raise on their own — continue, model pick, rename and every confirm — in English and
- * Ukrainian at the smallest window and a full-HD one: no label or button is cut, and the card stays inside the window.
+ * Ukrainian from the smallest window to a full-HD one: no label or button is cut, clipped or squeezed, and the card
+ * stays inside the window.
  */
 class DialogFitTest extends ShellTestBase {
 
     private static final Instant OPENED = Instant.parse("2026-10-21T10:00:00Z");
-    private static final List<double[]> SIZES =
-            List.of(new double[] {CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT}, new double[] {1920, 700});
+    private static final List<double[]> SIZES = List.of(
+            new double[] {CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1000, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1040, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1100, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1250, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1440, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1700, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1920, 700});
     private static final List<Question> QUESTIONS = List.of(
             Question.STOP_RUN,
             Question.DISCARD_PROJECT,
@@ -138,9 +146,14 @@ class DialogFitTest extends ShellTestBase {
         final List<String> outside =
                 ThemeTestSupport.onFx(() -> FitProbe.cardsOutside(scene.getRoot(), size[0], size[1]));
 
+        final List<String> overflowing = ThemeTestSupport.onFx(() -> FitProbe.overflowing(scene.getRoot(), size[0]));
+        final List<String> squeezed = ThemeTestSupport.onFx(() -> FitProbe.squeezed(scene.getRoot()));
+
         assertThat(scene.getRoot().lookupAll(".dialog-card"))
                 .as("the dialog is open")
                 .isNotEmpty();
+        assertThat(overflowing).as("controls past their viewport or card").isEmpty();
+        assertThat(squeezed).as("controls drawn narrower than they ask").isEmpty();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
         assertThat(outside).as("dialog cards past the window's edge").isEmpty();
     }

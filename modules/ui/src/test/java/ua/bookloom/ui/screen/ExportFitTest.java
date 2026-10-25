@@ -22,7 +22,8 @@ import ua.bookloom.ui.ThemeTestSupport;
  */
 class ExportFitTest extends ExportScreenTestBase {
 
-    private static final Path EPUB = Path.of("Frankenstein.epub");
+    // Absolute, as a chooser hands it over: a relative path would be shown against the working folder.
+    private static final Path EPUB = Path.of("/books/Frankenstein.epub");
 
     // IF a long Ukrainian line about untranslated segments were cut, THEN the person would not know what is written.
     @ParameterizedTest(name = "{0} at {1} x {2}")
@@ -36,7 +37,7 @@ class ExportFitTest extends ExportScreenTestBase {
         resizeScene(width, height);
         exportService()
                 .reportWith(new ExportReport(
-                        Path.of("Frankenstein.uk.epub"),
+                        Path.of("/books/Frankenstein.uk.epub"),
                         9,
                         1,
                         0,

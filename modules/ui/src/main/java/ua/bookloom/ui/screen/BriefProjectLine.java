@@ -45,6 +45,10 @@ final class BriefProjectLine {
         rename.getStyleClass().add("btn-ghost");
         Tips.install(messages, rename, MessageKey.BRIEF_PROJECT_NAME_RENAME_TIP);
         rename.setOnAction(event -> project.rename());
+        // Only the name gives way in a narrow column (its whole text is its tooltip); the caption and Rename stay
+        // whole.
+        label.setMinWidth(Region.USE_PREF_SIZE);
+        rename.setMinWidth(Region.USE_PREF_SIZE);
         final HBox row = new HBox(ROW_SPACING, label, name, spacer, rename);
         row.setAlignment(Pos.CENTER_LEFT);
         final Label origin = origin(messages, project);

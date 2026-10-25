@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectChange;
@@ -63,6 +65,24 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
                 .doesNotContain(LONG_NAME);
         assertThat(read(() -> ua.bookloom.ui.TooltipProbe.tipText(required("brief-project-name"))))
                 .isEqualTo(LONG_NAME);
+    }
+
+    // IF Rename gave way to a long name, THEN it would shrink to an ellipsis no one could read (the owner's report).
+    @ParameterizedTest(name = "{0} px")
+    @ValueSource(doubles = {CONTENT_AT_MINIMUM_WIDTH, 1000, 1040, 1100, 1250, 1440, 1700})
+    void nameLine_longNameAtEachWidth_keepsRenameWholeAndOnlyTheNameGivesWay(final double width) throws Exception {
+        projects.willList(List.of(stored("uk", NameOrigin.USER, LONG_NAME)));
+        readyToStart();
+        showBrief();
+        resizeScene(width, CONTENT_AT_MINIMUM_HEIGHT);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(read(() -> ua.bookloom.ui.FitProbe.cutParts(scene.getRoot())))
+                .isEmpty();
+        assertThat(read(() -> ua.bookloom.ui.FitProbe.squeezed(scene.getRoot())))
+                .isEmpty();
+        assertThat(read(() -> ua.bookloom.ui.FitProbe.overflowing(scene.getRoot(), width)))
+                .isEmpty();
     }
 
     // IF the title bar derived its own name, THEN it would show a different name from the one the project is stored by.

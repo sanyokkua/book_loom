@@ -14,13 +14,20 @@ import ua.bookloom.ui.ConformanceCases.Screen;
 
 /**
  * Every screen state and screen-level dialog the conformance catalogue lists, in English and Ukrainian, at the
- * smallest window and at a full-HD one: no label or button is drawn shorter than its words, and a dialog card stays
+ * smallest window, at the widths around each layout switch and at a full-HD one: no label or button is drawn shorter
+ * than its words, no control runs past its viewport or card or is squeezed below its width, and a dialog card stays
  * inside the window. Ukrainian words are about a quarter longer, so they are the ones that overflow first.
  */
 class ScreenFitTest extends ConformanceTestBase {
 
     private static final List<double[]> SIZES = List.of(
             new double[] {CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1000, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1040, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1100, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1250, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1440, CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1700, CONTENT_AT_MINIMUM_HEIGHT},
             // 700 high: JavaFX's headless screen is a 1000 by 1000 buffer (see LayoutFitTest).
             new double[] {1920, 700});
 
@@ -37,7 +44,7 @@ class ScreenFitTest extends ConformanceTestBase {
     // IF a Ukrainian label were cut or a dialog ran past the window, THEN the person could not read or press it.
     @ParameterizedTest(name = "{0} in {1} at {2}")
     @MethodSource("screensInEachLanguageAndSize")
-    void screen_inEachLanguageAndSize_cutsNothingAndKeepsDialogsInsideTheWindow(
+    void screen_inEachLanguageAndSize_cutsClipsAndSqueezesNothingAndKeepsDialogsInsideTheWindow(
             final Screen screen, final String language, final double[] size) throws TimeoutException {
         show(screen, Locale.forLanguageTag(language));
         resizeScene(size[0], size[1]);
@@ -45,7 +52,11 @@ class ScreenFitTest extends ConformanceTestBase {
         final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
         final List<String> outside =
                 ThemeTestSupport.onFx(() -> FitProbe.cardsOutside(scene.getRoot(), size[0], size[1]));
+        final List<String> overflowing = ThemeTestSupport.onFx(() -> FitProbe.overflowing(scene.getRoot(), size[0]));
+        final List<String> squeezed = ThemeTestSupport.onFx(() -> FitProbe.squeezed(scene.getRoot()));
 
+        assertThat(overflowing).as("controls past their viewport or card").isEmpty();
+        assertThat(squeezed).as("controls drawn narrower than they ask").isEmpty();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
         assertThat(outside).as("dialog cards past the window's edge").isEmpty();
     }

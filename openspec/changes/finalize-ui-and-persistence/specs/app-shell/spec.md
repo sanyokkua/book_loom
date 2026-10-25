@@ -338,7 +338,7 @@ The application SHALL classify the content area as compact (below 1040 pixels), 
 
 ### Requirement: Keep list and detail side by side and stack cards where they do not fit
 
-The application SHALL keep the list-and-detail splits of the live panel, the review desk, the progress dialogs and Settings › Providers side by side at every width. It SHALL put Names & style's Glossary and Recurring terms cards side by side only while the content is wide and stack them otherwise, and WHILE the content is compact it SHALL stack the Import browser's Text pane and set the four count tiles 2 by 2.
+The application SHALL keep the list-and-detail splits of the live panel, the review desk, the progress dialogs and Settings › Providers side by side at every width. It SHALL put Names & style's Glossary and Recurring terms cards side by side only while the content is wide and stack them otherwise, and WHILE the content is compact it SHALL stack the Import browser's Text pane and set the four count tiles 2 by 2. IF a pair of cards does not fit side by side at its content's minimum widths (two equal columns as wide as the wider minimum plus the gap, or a main column's minimum beside a side column's preferred width), THEN the application SHALL stack it whatever its breakpoint, and SHALL put it side by side again only 16 pixels past that width; no control that cannot shrink is cut at the right edge in English or Ukrainian.
 
 **Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L6, L7), `docs/specification/mockups/README.md#step-3--names--style--n1n5-i`. In plain words: a list without its detail is useless, so those never stack. The glossary's columns need room, so its two cards share a row only on a wide screen. The split widths are the README's.
 
@@ -351,6 +351,11 @@ The application SHALL keep the list-and-detail splits of the live panel, the rev
 
 - **WHEN** Names & style is shown with a content area 1440 pixels wide
 - **THEN** the Glossary card and the Recurring terms card are side by side
+
+#### Scenario: A pair stacks before a control is cut
+
+- **WHEN** the Book Brief is shown in Ukrainian with a content area 748 pixels wide (a 1000-pixel window), above its 700-pixel breakpoint but narrower than its Tone & style card's register choice beside the Languages card
+- **THEN** the Tone & style card is below the Languages card and no control of either runs past the screen's right edge
 
 #### Scenario: The review desk never stacks
 

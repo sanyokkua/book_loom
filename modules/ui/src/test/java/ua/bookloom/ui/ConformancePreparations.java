@@ -136,7 +136,7 @@ final class ConformancePreparations {
     }
 
     private void openABook() throws TimeoutException {
-        final Path source = Path.of("Frankenstein.epub");
+        final Path source = Path.of("/books/Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openAndAwait(source, ImportState.Detected.class);
     }

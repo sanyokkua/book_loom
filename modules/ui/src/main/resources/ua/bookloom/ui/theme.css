@@ -1914,6 +1914,12 @@
     -fx-min-width: 170px;
 }
 
+/* The results list's column headings: the key look, but each keeps the width of its column (ResultRows). */
+.results-head {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+}
+
 .kv-value {
     -fx-text-fill: -color-text-strong;
     -fx-font-size: 13px;

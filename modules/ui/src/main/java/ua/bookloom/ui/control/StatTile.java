@@ -32,6 +32,8 @@ public final class StatTile extends VBox {
         Objects.requireNonNull(number, "number");
         Objects.requireNonNull(label, "label");
         label.getStyleClass().add("stat-caption");
+        // Four tiles share a row; in a narrow window a long caption goes on to a second line instead of being cut.
+        label.setWrapText(true);
         if (!number.getStyleClass().contains("stat-number")) {
             number.getStyleClass().add("stat-number");
         }

@@ -7,8 +7,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -17,6 +15,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
@@ -114,8 +113,9 @@ final class ExportView {
         titleModel.edits().removeListener(weakTitleEdited);
         titleModel.edits().addListener(weakTitleEdited);
         final VBox left = new VBox(SCREEN_SPACING, titles.node(), writeCard(book));
-        HBox.setHgrow(left, Priority.ALWAYS);
-        final HBox columns = new HBox(SCREEN_SPACING, left, sideFiles.build());
+        // The side files stack under the main cards in a window too narrow for both, rather than cutting either.
+        final TwoColumns columns = TwoColumns.withSideColumn(left, sideFiles.build());
+        columns.setId("export-columns");
         // Work in the background writes this book: its choices wait until it ends.
         columns.disableProperty().bind(hidden.freezes(ViewNames.EXPORT));
         showOutcome(viewModel.outcome().get());

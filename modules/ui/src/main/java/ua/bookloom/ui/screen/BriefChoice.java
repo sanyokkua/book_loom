@@ -13,6 +13,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +27,8 @@ import ua.bookloom.ui.i18n.Messages;
  * <p>A segment is never allowed to shrink below its label, because Ukrainian words are long and a label ending in an
  * ellipsis cannot be chosen with confidence. When the labels together are wider than the room the choice is given, each
  * label with more than one word is put on two lines instead, which is how a narrow window still shows every label whole.
+ * The choice's minimum width is the width of its labels on two lines, so a layout that decides from minimum widths
+ * (two columns that stack) gives it at least that room whichever form it shows at the moment.
  * Pressing the selected segment again does not clear the choice. A value the view model publishes is written with
  * {@link #show} without being handed back as if the person had picked it.
  *
@@ -35,6 +38,8 @@ import ua.bookloom.ui.i18n.Messages;
 final class BriefChoice<E> {
 
     private static final double HELP_SPACING = 4;
+    // A label measured to the exact pixel can still be drawn with an ellipsis after the skin snaps its box.
+    private static final double SNAP_ALLOWANCE = 1;
 
     /**
      * One segment: the value it stands for, the words on it and, when it has one, what choosing it does.
@@ -68,7 +73,7 @@ final class BriefChoice<E> {
         help.getStyleClass().add("hint");
         help.setWrapText(true);
         help.setId(id + "-help");
-        this.node = new SegmentedButton(segments);
+        this.node = new CompactSegments(segments, labels);
         node.setId(id);
         node.parentProperty().addListener((observed, was, now) -> watchRoom(now));
         node.getToggleGroup().selectedToggleProperty().addListener((observed, was, now) -> onToggled(was, now));
@@ -138,6 +143,32 @@ final class BriefChoice<E> {
         if (node.prefWidth(-1) > room) {
             labels.forEach((button, text) -> button.setText(onTwoLines(text)));
             log.debug("choice {} puts its labels on two lines in {} px", node.getId(), room);
+        }
+    }
+
+    /** A segmented button whose minimum width is its labels' width on two lines. */
+    private static final class CompactSegments extends SegmentedButton {
+
+        private final Map<ToggleButton, String> labels;
+        private final Text ruler = new Text();
+
+        CompactSegments(final ToggleButton[] segments, final Map<ToggleButton, String> labels) {
+            super(segments);
+            this.labels = labels;
+        }
+
+        @Override
+        protected double computeMinWidth(final double height) {
+            double width = getInsets().getLeft() + getInsets().getRight();
+            for (final ToggleButton button : getButtons()) {
+                ruler.setFont(button.getFont());
+                ruler.setText(onTwoLines(labels.getOrDefault(button, button.getText())));
+                width += ruler.getLayoutBounds().getWidth()
+                        + button.getInsets().getLeft()
+                        + button.getInsets().getRight()
+                        + SNAP_ALLOWANCE;
+            }
+            return width;
         }
     }
 

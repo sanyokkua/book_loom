@@ -214,13 +214,14 @@ so the rules are Java (mockup README, "Layout and sizes"):
 | **L4** | Content caps: form and list screens (Projects, Import, Brief, Export, Settings) at 1320 px; prose and hints at 680 px; Translating and Names & style use the full width. Input widths by kind: number 120, name 360, URL or path 640, model 480 | `maxWidth` on a centred content column; `prefColumnCount` / `maxWidth` per field |
 | **L5** | Screens that fill the window: Translating (the live panel), Import (the text browser, min 360 px high), Names & style (the two tables); they grow to the window height instead of scrolling inside a scroll | A `fills-viewport` style class opts out of the `minHeight = USE_PREF_SIZE` that `AppShellView.showContent` applies |
 | **L6** | Never stacks, list \| detail splits: the live panel (list 240 px … 34 %), the review desk and progress dialogs (list 220 px … 30 %), Settings › Providers (list 240, or 200 in compact). In compact, Detailed Input \| Output stacks inside the detail pane | `SplitPane` with divider positions and minimum sizes |
-| **L7** | Stacks in compact: Names & style's two cards; the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export); four tiles go 2 × 2 | Region width rules (`TwoColumns`), `GridPane` constraints |
-| **L8** | Truncation: one-line text is cut with an ellipsis and gets a tooltip only when it is cut; long text wraps in detail panes and dialogs | `Overrun` helper on `Labeled` |
+| **L7** | Stacks in compact: Names & style's two cards; the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export, Settings › Generation and Storage); four tiles go 2 × 2. A pair stacks whenever its width is below its readability breakpoint **or** below what its content needs side by side — two equal columns as wide as the wider column's minimum width plus the gap, or, for a main column with a side column (Export's side files), the main column's minimum, the gap and the side column's preferred width — so no control that cannot shrink (a segmented choice, a button) is cut in any language; it goes back side by side only 16 px past that width. The provider form's labelled rows put each label above its control the same way when the label column and the widest control do not fit | `TwoColumns` (equal, or `withSideColumn`), `FormGrid` |
+| **L8** | Truncation: one-line text is cut with an ellipsis and gets a tooltip only when it is cut; long text wraps in detail panes and dialogs. A button never gives way to the text beside it (Rename… beside a long project name keeps its words; the name is cut, with its tooltip), a segmented choice puts its labels on two lines before it would be cut, and a stat tile's caption wraps | `Overrun` helper on `Labeled`; `minWidth = USE_PREF_SIZE` on buttons in a row |
 | **L9** | Nav width 236 px, or 200 px when the window is narrower than 1200 px; no icon rail | `NavColumn` pref width |
-| **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk` | `LayoutFitTest` (it absorbed the former title-bar fit test), at 960×640 and 1920×1080 (1000 high in the headless platform), in `en` and `uk` |
+| **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk`. Every screen state and dialog is checked at the content widths 944 (the 960 window), 1000, 1040, 1100, 1250, 1440, 1700 and 1920: no control runs past the viewport that clips it or past its card, no button or segmented choice is narrower than it asks, and no cut one-line text lacks a tooltip holding its words | `LayoutFitTest` (it absorbed the former title-bar fit test), `ScreenFitTest` and `DialogFitTest` over `FitProbe`, in `en` and `uk` |
 
-Built today, the same intent is met screen by screen: `TwoColumns` switches by its own width (Import 760 px, Book Brief
-700 px, Names & style 1388 px, the wide class less the 52 px of screen padding), and the 960 × 640 fit above holds.
+Built today, the same intent is met screen by screen: `TwoColumns` switches by its own width and its content (L7; the
+readability breakpoints are Import 760 px, Book Brief 700 px, Settings › Generation and Storage 760 px, Names & style
+1388 px, the wide class less the 52 px of screen padding), and the fit checks of L10 hold at every width.
 
 ## global-patterns {#global-patterns}
 
@@ -384,7 +385,7 @@ Purpose: open a book, confirm what was detected and read the book's structure be
 
 Layout of a detected book, top to bottom: the compact drop zone; the details card beside the facts card; the structure
 card beside the segments card; the footer. Each pair is a `TwoColumns` control (`ui.control`): side by side while the
-content is at least 760 px wide, else stacked with the first card above the second, in the same order for Tab and
+content is at least 760 px wide and both cards fit at their minimum widths (L7), else stacked with the first card above the second, in the same order for Tab and
 for a reader. Since 15i.U3 there is no Structure step: this screen is where the structure is read, and its Continue
 leads to the Book Brief, whose Continue leads to Names & style.
 
@@ -430,7 +431,9 @@ everything else is optional and can be changed later."
 
 The screen has two columns (`TwoColumns`, breakpoint 700 px of content width): the **left** holds what the person
 decides and the model never touches, the **right** holds what the model predicts. The columns sit side by side from
-700 px and stack below that, left above right (at the 960 px minimum window), and Tab walks the left
+700 px while both fit at their minimum widths — the register and names choices with their labels on two lines — and
+stack otherwise, left above right (at the 960 px minimum window, and wider in Ukrainian), and
+Tab walks the left
 column, the right column, then the footer in both layouts. Each predicted field shows its basis under it when the
 suggestion wrote it (built wording; planned: "samples", see mockups/README.md Words): "3 of 4 passages" (a plural form of the count of passages read), "“quote” · 2 of 3 passages",
 "From what the model knows of this book" or "Counted over the whole book"; a field nothing supported shows the
@@ -784,7 +787,8 @@ asks **Unsaved changes** — Keep editing · Discard · Save (`LeaveGuard` gains
 restarts".
 
 - **Providers.** List \| form side by side at every width (list 240, or 200 in compact; the form column capped at 860
-  px; its footer pinned). Detail header: the provider's name, "current" or **Use this one**, **Delete…** (confirm).
+  px; its footer pinned; in a form too narrow for the 190 px label column beside its widest control, each label sits
+  above its control, L7). Detail header: the provider's name, "current" or **Use this one**, **Delete…** (confirm).
   **Summary card:** "Your AI model: Ollama · gemma4:e4b — ready ✓ · Answers in about 1 second · 7 models available" ·
   Test · Change model. **Connection details** (fold; opens by itself when there is a problem, for a new provider, or
   with Show technical details): the GoText form — Name (a name another provider shows, ignoring case, is a finding

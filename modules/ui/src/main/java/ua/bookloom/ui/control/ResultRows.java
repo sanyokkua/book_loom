@@ -38,6 +38,8 @@ final class ResultRows {
     private static final double WHY_WIDTH = 170;
     private static final double ACTION_WIDTH = 100;
     private static final double SPACING = 8;
+    // A text column gives up to this share of its width in a narrow window; its whole text is its tooltip.
+    private static final double MIN_SHARE = 0.6;
     private static final String NO_REASON = "—";
 
     /** A heading line of the list: the key of its words, whose argument is the count. */
@@ -131,13 +133,22 @@ final class ResultRows {
         final HBox heads = new HBox(SPACING);
         heads.setId("results-columns");
         heads.setPadding(new Insets(0, SPACING, 0, SPACING));
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, "kv-key"));
-        heads.getChildren().add(text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, "kv-key"));
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, "kv-key"));
-        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, "kv-key"));
+        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, "results-head"));
+        final Label change = text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, "results-head");
+        change.setMinWidth(BADGE_WIDTH);
+        heads.getChildren().add(change);
+        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, "results-head"));
+        heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, "results-head"));
         if (hasReasons) {
-            heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, "kv-key"));
+            heads.getChildren().add(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, "results-head"));
         }
+        // The same spacer and action room as a row, so headings and rows shrink alike and stay aligned.
+        final Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        final Region action = new Region();
+        action.setPrefWidth(ACTION_WIDTH);
+        action.setMinWidth(Region.USE_PREF_SIZE);
+        heads.getChildren().addAll(spacer, action);
         return heads;
     }
 
@@ -148,7 +159,7 @@ final class ResultRows {
     private static Label text(final String text, final double width, final String styleClass) {
         final Label label = new Label(text);
         label.setPrefWidth(width);
-        label.setMinWidth(width);
+        label.setMinWidth(width * MIN_SHARE);
         label.setMaxWidth(width);
         label.getStyleClass().add(styleClass);
         return label;
