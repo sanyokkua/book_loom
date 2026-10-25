@@ -37,6 +37,18 @@ class ProgressResultsActionsTest extends ProgressResultsTestBase {
         assertThat(texts()).contains("Reverted");
     }
 
+    // IF a reverted row kept its "added" chip and its new value, THEN the row would still read as a change made.
+    @Test
+    void revert_rowButtonPressed_rowReadsRevertedWithTheValueItWasPutBackTo() {
+        show(results(false, added(0, "Mid")));
+        final Button first = ThemeTestSupport.onFx(this::firstVisibleRevert);
+
+        onFx(first::fire);
+
+        assertThat(texts()).contains("reverted").doesNotContain("added", "Терм · character");
+        assertThat(required("results-list").lookupAll(".results-row-reverted")).isNotEmpty();
+    }
+
     @Test
     void undoAll_pressed_putsEveryRowBackAndDisablesItself() {
         show(results(false, added(0, "Mid"), added(1, "Hale")));

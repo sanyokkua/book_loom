@@ -1925,6 +1925,12 @@
     -fx-font-size: 13px;
 }
 
+/* A results row put back as it was: its words muted, so the rows still in force stand out (ResultRows). */
+.results-row-reverted .glossary-term,
+.results-row-reverted .kv-value {
+    -fx-text-fill: -color-muted;
+}
+
 /* A banner is told by its glyph and its words as well as by these roles, never by colour alone. */
 .banner {
     -fx-background-insets: 0;

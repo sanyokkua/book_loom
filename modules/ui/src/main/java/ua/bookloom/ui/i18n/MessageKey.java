@@ -3316,6 +3316,8 @@ public enum MessageKey {
     PROGRESS_RESULTS_BADGE_REMOVED("progress.results.badge.removed"),
     /** Results view: the badge of a changed row. */
     PROGRESS_RESULTS_BADGE_CHANGED("progress.results.badge.changed"),
+    /** The chip of a results row put back as it was. */
+    PROGRESS_RESULTS_BADGE_REVERTED("progress.results.badge.reverted"),
     /** Results view: the button that closes it. */
     PROGRESS_RESULTS_DONE("progress.results.done"),
     /** Hover explanation of the button labelled by {@link #PROGRESS_RESULTS_DONE}. */

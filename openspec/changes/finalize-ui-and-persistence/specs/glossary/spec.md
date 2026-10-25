@@ -60,6 +60,11 @@ WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle
 - **WHEN** the pass adds `Mira Holt` and `lantern` and drops `Hale`
 - **THEN** the Results view shows "2 added · 1 removed" in its subtitle and lists the three changes in the Changes tab
 
+#### Scenario: A reverted row reads as put back
+
+- **WHEN** the person presses Revert on the row that added `lantern`
+- **THEN** the row's chip reads "reverted", its After shows the value it has again, its words are muted, and Revert gives way to "Reverted"
+
 ### Requirement: Run the Scan, Review and Translate actions in the same dialog with two steps
 
 The Scan, Review and Translate actions on a card SHALL run the progress dialog with two steps, the action's requests and then the write, and SHALL NOT be hideable.

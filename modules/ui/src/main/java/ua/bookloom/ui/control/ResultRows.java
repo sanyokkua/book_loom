@@ -41,6 +41,8 @@ final class ResultRows {
     // A text column gives up to this share of its width in a narrow window; its whole text is its tooltip.
     private static final double MIN_SHARE = 0.6;
     private static final String NO_REASON = "—";
+    private static final String REVERTED_CHIP = "chip-neutral";
+    private static final String REVERTED_ROW = "results-row-reverted";
 
     /** A heading line of the list: the key of its words, whose argument is the count. */
     record Heading(MessageKey title, int count) {}
@@ -228,15 +230,21 @@ final class ResultRows {
             }
         }
 
+        // A reverted row reads as put back: a "reverted" chip, the value it now has again under After, its words
+        // muted.
         private void fill(final ChangeRow shown) {
-            show(term, shown.term());
-            badge.setText(messages.get(badgeKey(shown.kind())));
-            badge.getStyleClass().removeIf(name -> name.startsWith("chip-"));
-            badge.getStyleClass().add(badgeStyle(shown.kind()));
-            show(before, shown.before());
-            show(after, shown.after());
-            show(why, shown.reason() == null ? NO_REASON : shown.reason());
             final boolean done = results.reverted().contains(shown.id());
+            show(term, shown.term());
+            badge.setText(messages.get(done ? MessageKey.PROGRESS_RESULTS_BADGE_REVERTED : badgeKey(shown.kind())));
+            badge.getStyleClass().removeIf(name -> name.startsWith("chip-"));
+            badge.getStyleClass().add(done ? REVERTED_CHIP : badgeStyle(shown.kind()));
+            show(before, shown.before());
+            show(after, done ? shown.before() : shown.after());
+            show(why, shown.reason() == null ? NO_REASON : shown.reason());
+            row.getStyleClass().remove(REVERTED_ROW);
+            if (done) {
+                row.getStyleClass().add(REVERTED_ROW);
+            }
             reverted.setVisible(done);
             reverted.setManaged(done);
             revert.setVisible(!done);
