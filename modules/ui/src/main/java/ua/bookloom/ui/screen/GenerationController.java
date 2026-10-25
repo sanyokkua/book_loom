@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.settings.ReasoningSetting;
 import ua.bookloom.api.settings.SamplingSetting;
 import ua.bookloom.ui.control.EnumSegments;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -35,7 +36,6 @@ import ua.bookloom.ui.state.TechnicalDetails;
 @Slf4j
 public final class GenerationController {
 
-    private static final double STACK_BELOW = 760;
     private static final double GAP = 10;
 
     private final GenerationSettings settings;
@@ -124,7 +124,7 @@ public final class GenerationController {
     void initialize() {
         log.debug("building the generation area");
         qualityBody.getChildren().setAll(GenerationQualityTable.of(messages, profiles));
-        final TwoColumns pair = new TwoColumns(qualityCard, right, STACK_BELOW);
+        final TwoColumns pair = new TwoColumns(qualityCard, right, LayoutClass.Width.REGULAR);
         pair.setId("generation-two-columns");
         columns.getChildren().setAll(pair);
         wireThinking();

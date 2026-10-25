@@ -15,9 +15,9 @@ import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.Throughput;
 
 /**
- * The title bar's items give way by the window's width (app-shell "Let title-bar items give way by priority"): at
- * 1280 pixels or less the quality and review mode, the elapsed time and the speed go; at 1060 or less the project's
- * name goes too; the state text and the AI-model chip always stay.
+ * The title bar's items give way by the window's width class (app-shell "Let title-bar items give way by priority",
+ * {@code LayoutClass}): below the wide class (1440 px) the quality and review mode, the elapsed time and the speed go;
+ * in a compact window (below 1040) the project's name goes too; the state text and the AI-model chip always stay.
  */
 class TitleBarGiveWayTest extends ShellTestBase {
 
@@ -51,11 +51,10 @@ class TitleBarGiveWayTest extends ShellTestBase {
     @ParameterizedTest
     @CsvSource({
         "1440, shell-run-project shell-run-state shell-run-mode shell-run-elapsed shell-run-rate shell-run-connection",
-        "1281, shell-run-project shell-run-state shell-run-mode shell-run-elapsed shell-run-rate shell-run-connection",
+        "1439, shell-run-project shell-run-state shell-run-connection",
         "1280, shell-run-project shell-run-state shell-run-connection",
-        "1200, shell-run-project shell-run-state shell-run-connection",
-        "1061, shell-run-project shell-run-state shell-run-connection",
-        "1060, shell-run-state shell-run-connection",
+        "1040, shell-run-project shell-run-state shell-run-connection",
+        "1023, shell-run-state shell-run-connection",
         "1000, shell-run-state shell-run-connection"
     })
     void titleBar_windowWidth_givesWayByPriority(final double width, final String expected) {

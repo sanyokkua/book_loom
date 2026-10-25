@@ -7,12 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
-import javafx.stage.Window;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,18 +21,17 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The owner says whether it wants a droppable part shown through {@link #want}; the row shows it only while it also
  * fits. The row asks its parent for room for every wanted part, so a window made wider again brings the hidden parts
- * back. Parts named by {@link #dropAtWindowWidth} also leave whenever the window is that narrow or narrower, whatever
- * room the row itself has, so a title bar gives way the same at the same window size. Nothing is logged here: the row
- * is laid out on every pulse that changes a text in it, and the window's width is followed on every step of a drag.
+ * back. Parts named by {@link #dropBelow} also leave whenever the area the row sits in is of a narrower class
+ * ({@link LayoutClass}), whatever room the row itself has, so a title bar gives way the same at the same window size.
+ * Nothing is logged here: the row is laid out on every pulse that changes a text in it.
  */
 public final class PriorityRow extends HBox {
 
     private final List<Node> dropOrder = new ArrayList<>();
     private final Map<Node, Boolean> wanted = new HashMap<>();
     private final Set<Node> dropped = new HashSet<>();
-    private final Map<Node, Double> widthLimits = new HashMap<>();
+    private final Map<Node, LayoutClass.Width> widthLimits = new HashMap<>();
     private final Set<Node> narrowed = new HashSet<>();
-    private final ChangeListener<Number> onWindowWidth = (observed, was, now) -> followWindowWidth();
     private final List<List<Node>> foldStages = new ArrayList<>();
     private @Nullable Node foldMenu;
     private boolean folded;
@@ -52,54 +48,40 @@ public final class PriorityRow extends HBox {
      */
     public PriorityRow(final double spacing) {
         super(spacing);
-        sceneProperty().addListener((observed, was, scene) -> {
-            if (was != null) {
-                was.widthProperty().removeListener(onWindowWidth);
-            }
-            if (scene != null) {
-                scene.widthProperty().addListener(onWindowWidth);
-            }
-        });
+        LayoutClass.follow(this, this::followClass);
     }
 
     /**
-     * Names parts that leave whenever the window is at most {@code atMost} pixels wide, whatever room the row has.
+     * Names parts that leave whenever the area the row sits in is narrower than {@code shownFrom}, whatever room the
+     * row has.
      *
-     * @param atMost the widest window, in pixels, in which the parts are hidden
+     * @param shownFrom the narrowest area class in which the parts may show
      * @param parts children of this row, wanted until the owner says otherwise through {@link #want}
      */
-    public void dropAtWindowWidth(final double atMost, final Node... parts) {
+    public void dropBelow(final LayoutClass.Width shownFrom, final Node... parts) {
+        Objects.requireNonNull(shownFrom, "shownFrom");
         for (final Node part : parts) {
-            widthLimits.put(part, atMost);
+            widthLimits.put(part, shownFrom);
             wanted.putIfAbsent(part, part.isVisible());
         }
     }
 
-    // The row's own width need not change when the window does, so a crossed limit asks for a layout itself.
-    private void followWindowWidth() {
+    // The row's own width need not change when the area's class does, so a crossed class asks for a layout itself.
+    private void followClass() {
         if (!narrowedNow().equals(narrowed)) {
             requestLayout();
         }
     }
 
     private Set<Node> narrowedNow() {
-        final double window = windowWidth();
+        final LayoutClass.Width area = LayoutClass.of(this);
         final Set<Node> now = new HashSet<>();
-        widthLimits.forEach((part, limit) -> {
-            if (window <= limit) {
+        widthLimits.forEach((part, shownFrom) -> {
+            if (area.isBelow(shownFrom)) {
                 now.add(part);
             }
         });
         return now;
-    }
-
-    private double windowWidth() {
-        final Scene scene = getScene();
-        if (scene == null) {
-            return Double.MAX_VALUE;
-        }
-        final Window window = scene.getWindow();
-        return window == null ? scene.getWidth() : window.getWidth();
     }
 
     /**
@@ -257,8 +239,8 @@ public final class PriorityRow extends HBox {
     }
 
     private boolean isWanted(final Node part) {
-        final Double limit = widthLimits.get(part);
-        if (limit != null && windowWidth() <= limit) {
+        final LayoutClass.Width shownFrom = widthLimits.get(part);
+        if (shownFrom != null && LayoutClass.of(this).isBelow(shownFrom)) {
             return false;
         }
         final Boolean wish = wanted.get(part);

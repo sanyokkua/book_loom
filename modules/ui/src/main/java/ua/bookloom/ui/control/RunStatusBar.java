@@ -39,8 +39,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  *
  * <p>Everything shown is read from the {@link RunStateSource} row, the same row the toolbar and the banners read, and
  * the control calls the view model's {@code pause} and {@code resume}, as the toolbar's buttons do, so the two places
- * always agree. A window of 1280 pixels or less hides the mode, the time and the speed, one of 1060 or less the name
- * ({@link PriorityRow}). No line is logged for a redraw, because the elapsed time changes every second; only showing,
+ * always agree. A window narrower than the wide class hides the mode, the time and the speed, a compact one the name
+ * ({@link PriorityRow}, {@link LayoutClass}). No line is logged for a redraw, because the elapsed time changes every second; only showing,
  * hiding and a press are logged.
  */
 @Slf4j
@@ -50,8 +50,6 @@ public final class RunStatusBar {
     private static final double PART_SPACING = 12;
     // The project name shrinks to about twenty characters before any other part is hidden.
     private static final double NAME_COMFORT = 150;
-    private static final double WITHOUT_DETAILS_AT = 1280;
-    private static final double WITHOUT_NAME_AT = 1060;
     private static final long SECONDS_PER_MINUTE = 60;
     private static final List<String> MEANING_CLASSES = Arrays.stream(StateMarker.Meaning.values())
             .map(StateMarker.Meaning::styleClass)
@@ -158,8 +156,8 @@ public final class RunStatusBar {
     private void giveWay() {
         view.elastic(projectName, NAME_COMFORT);
         view.droppable(rate, modeText, elapsed);
-        view.dropAtWindowWidth(WITHOUT_DETAILS_AT, modeText, elapsed, rate);
-        view.dropAtWindowWidth(WITHOUT_NAME_AT, projectName);
+        view.dropBelow(LayoutClass.Width.WIDE, modeText, elapsed, rate);
+        view.dropBelow(LayoutClass.Width.REGULAR, projectName);
     }
 
     private void buildChip() {

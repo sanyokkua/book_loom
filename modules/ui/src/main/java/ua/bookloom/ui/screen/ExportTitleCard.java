@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.TitleOrigin;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.ProtectedMarks;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
@@ -29,9 +30,6 @@ import ua.bookloom.ui.state.BookTitleViewModel.Row;
  */
 @Slf4j
 final class ExportTitleCard {
-
-    // The original and the translated field sit side by side from this card width; below it they stack.
-    private static final double SIDE_BY_SIDE_FROM = 560;
 
     private final BookTitleViewModel viewModel;
     private final Messages messages;
@@ -87,7 +85,7 @@ final class ExportTitleCard {
                         messages,
                         isTitle ? MessageKey.EXPORT_BOOK_TITLE_TRANSLATED : MessageKey.EXPORT_BOOK_AUTHOR_TRANSLATED,
                         field),
-                SIDE_BY_SIDE_FROM));
+                LayoutClass.Width.REGULAR));
         if (isTitle) {
             rows.getChildren().addAll(line(titleReason, id + "-reason", "hint"), refusal(id));
         }

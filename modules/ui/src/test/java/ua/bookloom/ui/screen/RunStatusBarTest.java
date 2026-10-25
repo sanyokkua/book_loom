@@ -31,7 +31,7 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
     private static final String CONTROL = "shell-run-control";
     private static final String CHIP = "shell-run-connection";
 
-    // Wide enough for every part: a window of 1280 pixels or less hides the mode, the time and the speed.
+    // Wide enough for every part: a window below the wide class hides the mode, the time and the speed.
     private void runAt78(final RunState state) {
         resizeScene(1440, 700);
         mirror().publishRunStarted("Frankenstein.epub", null);

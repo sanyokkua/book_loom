@@ -12,6 +12,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.ModelSwitch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
@@ -32,8 +33,6 @@ import ua.bookloom.util.paths.AppPaths;
  */
 @Slf4j
 public final class StorageController {
-
-    private static final double STACK_BELOW = 760;
 
     private final StorageSettings storage;
     private final DetailedLogSwitch detailedLog;
@@ -120,7 +119,7 @@ public final class StorageController {
     @FXML
     void initialize() {
         log.debug("building the storage area");
-        final TwoColumns pair = new TwoColumns(projectsCard, logsCard, STACK_BELOW);
+        final TwoColumns pair = new TwoColumns(projectsCard, logsCard, LayoutClass.Width.REGULAR);
         pair.setId("storage-two-columns");
         columns.getChildren().setAll(pair);
         buildProjects();

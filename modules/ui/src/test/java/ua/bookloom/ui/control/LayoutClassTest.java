@@ -2,8 +2,10 @@ package ua.bookloom.ui.control;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.css.PseudoClass;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,47 @@ class LayoutClassTest extends FxTestBase {
         assertThat(states()).containsExactly(true, false, false);
         interact(() -> resize(1440));
         assertThat(states()).containsExactly(false, false, true);
+    }
+
+    // IF the one rule differed between callers, THEN two widgets would switch at different widths for the same need.
+    @ParameterizedTest
+    @CsvSource({"false, 699, true", "false, 700, false", "true, 715, true", "true, 716, false"})
+    void isNarrow_widthAgainstWhatTheWideFormNeeds_narrowsAtOnceAndWidensSixteenLate(
+            final boolean wasNarrow, final double width, final boolean expected) {
+        assertThat(LayoutClass.isNarrow(wasNarrow, width, 700)).isEqualTo(expected);
+    }
+
+    // IF a node could not read the class of the area it sits in, THEN it would measure the width again itself.
+    @Test
+    void of_nodeInsideAHostAndOutsideAny_readsTheHostClassOrWide() {
+        final Label inside = new Label("inside");
+        final Label outside = new Label("outside");
+        interact(() -> {
+            host.getChildren().add(inside);
+            LayoutClass.install(host);
+            resize(1000);
+        });
+
+        assertThat(LayoutClass.of(inside)).isEqualTo(Width.COMPACT);
+        assertThat(LayoutClass.of(outside)).isEqualTo(Width.WIDE);
+    }
+
+    // IF a follower were not told of a class change, THEN its layout would keep the old arrangement.
+    @Test
+    void follow_hostChangesClass_runsTheFollowerOnAttachAndOnEachChange() {
+        final Label inside = new Label("inside");
+        final AtomicInteger runs = new AtomicInteger();
+        interact(() -> {
+            LayoutClass.install(host);
+            resize(1000);
+            LayoutClass.follow(inside, runs::incrementAndGet);
+            host.getChildren().add(inside);
+        });
+        final int attached = runs.get();
+        interact(() -> resize(1500));
+
+        assertThat(attached).isEqualTo(1);
+        assertThat(runs.get()).isEqualTo(2);
     }
 
     private void resize(final double width) {

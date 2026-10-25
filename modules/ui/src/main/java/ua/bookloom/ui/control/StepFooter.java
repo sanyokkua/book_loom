@@ -3,9 +3,6 @@ package ua.bookloom.ui.control;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import javafx.collections.SetChangeListener;
-import javafx.collections.WeakSetChangeListener;
-import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -54,14 +51,11 @@ public final class StepFooter extends HBox {
     }
 
     private static final String HOST_ID = "#shell-actions";
-    private static final String CONTENT_ID = "#shell-content";
 
     private final Button forward;
     private final @Nullable Button back;
     private final @Nullable Action backAction;
-    private final SetChangeListener<PseudoClass> onWidthClass = change -> showBack();
     private @Nullable String compactBack;
-    private @Nullable Region content;
     private boolean backShort;
     private final Region spacer = new Region();
     private final Label hint = new Label();
@@ -82,6 +76,7 @@ public final class StepFooter extends HBox {
         hint.setId(forward.id() + "-hint");
         hint.getStyleClass().add("muted");
         restoreInPlace();
+        LayoutClass.follow(this, this::showBack);
         sceneProperty().addListener((observed, was, scene) -> {
             if (scene == null) {
                 release();
@@ -99,11 +94,6 @@ public final class StepFooter extends HBox {
             return;
         }
         host = slot;
-        if (scene.getRoot().lookup(CONTENT_ID) instanceof Region area) {
-            content = area;
-            area.getPseudoClassStates().addListener(new WeakSetChangeListener<>(onWidthClass));
-            showBack();
-        }
         getChildren().clear();
         slot.getChildren().addAll(hostedNodes());
         setVisible(false);
@@ -117,8 +107,6 @@ public final class StepFooter extends HBox {
             return;
         }
         host = null;
-        content = null;
-        showBack();
         slot.getChildren().removeAll(hostedNodes());
         restoreInPlace();
         setVisible(true);
@@ -185,7 +173,7 @@ public final class StepFooter extends HBox {
         return this;
     }
 
-    // The content area's width class lives on its pseudo-classes (LayoutClass); a footer outside the shell stays full.
+    // The content area's width class (LayoutClass); a footer outside the shell has all its room and stays full.
     private void showBack() {
         final Button button = back;
         final Action action = backAction;
@@ -193,9 +181,7 @@ public final class StepFooter extends HBox {
         if (button == null || action == null || shortLabel == null) {
             return;
         }
-        final Region area = content;
-        final boolean compact =
-                area != null && area.getPseudoClassStates().contains(LayoutClass.Width.COMPACT.pseudoClass());
+        final boolean compact = LayoutClass.of(this) == LayoutClass.Width.COMPACT;
         if (compact == backShort) {
             return;
         }

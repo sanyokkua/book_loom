@@ -51,9 +51,6 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 final class NamesStyleView {
 
     private static final double SCREEN_SPACING = 14;
-    // The wide class of the content area (1440 px) less the 26 px of padding the shell puts on each side of a screen,
-    // since a screen decides the switch from its own width.
-    private static final double STACK_BELOW = LayoutClass.Width.WIDE.floor() - 2 * 26;
     private static final String LISTENER_KEY = "names-style-listener";
 
     private final Messages messages;
@@ -99,7 +96,7 @@ final class NamesStyleView {
         glossary.show(projectId);
         final BooleanBinding frozen = hiddenWork.freezes(ViewNames.NAMES_STYLE);
         final NamesStyleCards parts = new NamesStyleCards(messages, glossary, csvFiles, modalHost, frozen);
-        final TwoColumns cards = new TwoColumns(parts.glossaryCard(), parts.recurringCard(), STACK_BELOW);
+        final TwoColumns cards = new TwoColumns(parts.glossaryCard(), parts.recurringCard(), LayoutClass.Width.WIDE);
         cards.equalHeightsProperty().set(true);
         final VBox screen = new VBox(
                 SCREEN_SPACING,

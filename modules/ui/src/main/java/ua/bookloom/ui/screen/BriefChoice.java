@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
@@ -17,6 +16,7 @@ import javafx.scene.text.Text;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -75,7 +75,6 @@ final class BriefChoice<E> {
         help.setId(id + "-help");
         this.node = new CompactSegments(segments, labels);
         node.setId(id);
-        node.parentProperty().addListener((observed, was, now) -> watchRoom(now));
         node.getToggleGroup().selectedToggleProperty().addListener((observed, was, now) -> onToggled(was, now));
     }
 
@@ -131,26 +130,15 @@ final class BriefChoice<E> {
         return button;
     }
 
-    private void watchRoom(final @Nullable Parent parent) {
-        if (parent instanceof Region region) {
-            region.widthProperty().addListener((observed, was, now) -> fitTo(now.doubleValue()));
-        }
-    }
-
-    // Measured with every label on one line, because that is the width the choice needs to show them all.
-    private void fitTo(final double room) {
-        labels.forEach(ToggleButton::setText);
-        if (node.prefWidth(-1) > room) {
-            labels.forEach((button, text) -> button.setText(onTwoLines(text)));
-            log.debug("choice {} puts its labels on two lines in {} px", node.getId(), room);
-        }
-    }
-
-    /** A segmented button whose minimum width is its labels' width on two lines. */
+    /**
+     * A segmented button whose minimum width is its labels' width on two lines, and which shows them on two lines
+     * while the room its parent gives it is narrower than they need on one ({@link LayoutClass#isNarrow}).
+     */
     private static final class CompactSegments extends SegmentedButton {
 
         private final Map<ToggleButton, String> labels;
         private final Text ruler = new Text();
+        private boolean twoLines;
 
         CompactSegments(final ToggleButton[] segments, final Map<ToggleButton, String> labels) {
             super(segments);
@@ -159,10 +147,34 @@ final class BriefChoice<E> {
 
         @Override
         protected double computeMinWidth(final double height) {
+            return width(true);
+        }
+
+        // Decided where the room is known, in layout; a changed form lays the segments out again on the next pulse.
+        @Override
+        protected void layoutChildren() {
+            final boolean narrow = LayoutClass.isNarrow(twoLines, room(), width(false));
+            if (narrow != twoLines) {
+                twoLines = narrow;
+                labels.forEach((button, text) -> button.setText(narrow ? onTwoLines(text) : text));
+            }
+            super.layoutChildren();
+        }
+
+        private double room() {
+            return getParent() instanceof Region parent
+                    ? parent.getWidth()
+                            - parent.getInsets().getLeft()
+                            - parent.getInsets().getRight()
+                    : getWidth();
+        }
+
+        private double width(final boolean onTwoLines) {
             double width = getInsets().getLeft() + getInsets().getRight();
             for (final ToggleButton button : getButtons()) {
+                final String text = labels.getOrDefault(button, button.getText());
                 ruler.setFont(button.getFont());
-                ruler.setText(onTwoLines(labels.getOrDefault(button, button.getText())));
+                ruler.setText(onTwoLines ? onTwoLines(text) : text);
                 width += ruler.getLayoutBounds().getWidth()
                         + button.getInsets().getLeft()
                         + button.getInsets().getRight()

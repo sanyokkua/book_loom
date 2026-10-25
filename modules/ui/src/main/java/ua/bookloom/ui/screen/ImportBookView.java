@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.document.BookStats;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -35,8 +36,6 @@ import ua.bookloom.ui.state.StructureSegmentsViewModel;
 @Slf4j
 final class ImportBookView {
 
-    // The content width, in px, below which a pair of sections would be squeezed until its rows are cut.
-    private static final double STACK_BELOW = 760;
     private static final double SECTION_SPACING = 10;
 
     private final Messages messages;
@@ -87,7 +86,7 @@ final class ImportBookView {
                 listing.totalSegments());
         checks.ensure(book.projectId(), brief.brief().get());
         final BookStats stats = StructureBrowser.statsOf(profile);
-        final TwoColumns columns = new TwoColumns(details, facts(stats, listing), STACK_BELOW);
+        final TwoColumns columns = new TwoColumns(details, facts(stats, listing), LayoutClass.Width.REGULAR);
         columns.setId("import-columns");
         final StructureTextBrowser text = new StructureTextBrowser(
                 browser.treeCard(listing, book.projectId()), browser.segmentsCard(), browser.textCard());

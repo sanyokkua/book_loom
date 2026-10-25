@@ -230,6 +230,7 @@ public final class AppShellView {
         final Node toastLayer = toasts.view();
         // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
         final StackPane shell = new StackPane(frame, busyHost.view(), toastLayer, modalHost.view());
+        LayoutClass.install(shell); // the window's width class: the navigation column and the title bar follow it (L9)
         keepOverTheContent(toastLayer);
         MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
             log.debug("the activity log is set in {}", face.family());
@@ -320,8 +321,7 @@ public final class AppShellView {
         final ScrollPane scroll = contentScroll;
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
-        // Both dimensions fit, so a screen whose list grows still fills the viewport; it scrolls once the screen's
-        // minimum, which showContent makes its preferred height, is taller than the window.
+        // Both fit: a growing list fills the viewport; it scrolls once the screen's minimum (showContent) is taller.
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);

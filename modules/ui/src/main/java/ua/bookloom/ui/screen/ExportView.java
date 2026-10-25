@@ -14,6 +14,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TwoColumns;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -114,7 +115,7 @@ final class ExportView {
         titleModel.edits().addListener(weakTitleEdited);
         final VBox left = new VBox(SCREEN_SPACING, titles.node(), writeCard(book));
         // The side files stack under the main cards in a window too narrow for both, rather than cutting either.
-        final TwoColumns columns = TwoColumns.withSideColumn(left, sideFiles.build());
+        final TwoColumns columns = TwoColumns.withSideColumn(left, sideFiles.build(), LayoutClass.Width.REGULAR);
         columns.setId("export-columns");
         // Work in the background writes this book: its choices wait until it ends.
         columns.disableProperty().bind(hidden.freezes(ViewNames.EXPORT));

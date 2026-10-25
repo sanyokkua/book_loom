@@ -8,14 +8,15 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
+import ua.bookloom.ui.control.LayoutClass;
 
 /**
  * Labelled rows in two aligned columns, where a row can be hidden as a whole without leaving a gap.
  *
  * <p>While the form is too narrow for the label column beside its widest control's minimum, every label sits above
  * its control instead, so no control is cut at the right edge of a narrow window, whatever its words in the display
- * language. The form goes back to two columns only 16 pixels past that width, as
- * {@link ua.bookloom.ui.control.TwoColumns} does. Nothing is logged in layout: it runs on every pass.
+ * language; the decision is {@link LayoutClass#isNarrow}, the rule every responsive part follows. Nothing is logged in
+ * layout: it runs on every pass.
  */
 final class FormGrid extends Region {
 
@@ -23,7 +24,6 @@ final class FormGrid extends Region {
     private static final double GAP = 10;
     private static final double COLUMN_GAP = GAP + GAP;
     private static final double LABEL_ABOVE_GAP = 4;
-    private static final double HYSTERESIS = 16;
 
     /** A row: its label and its control, shown or hidden together. */
     record Row(Label label, Node control) {
@@ -140,7 +140,7 @@ final class FormGrid extends Region {
     // Read by computePrefHeight and layoutChildren alike, without changing the held state.
     private boolean isStackedAt(final double inner) {
         final double sideBySide = LABEL_WIDTH + COLUMN_GAP + widestControlMinimum();
-        return inner < (stacked ? sideBySide + HYSTERESIS : sideBySide);
+        return LayoutClass.isNarrow(stacked, inner, sideBySide);
     }
 
     private double widestControlMinimum() {

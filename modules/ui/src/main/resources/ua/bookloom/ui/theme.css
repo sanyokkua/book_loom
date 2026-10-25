@@ -396,9 +396,9 @@
     -fx-max-width: 236px;
 }
 
-/* Under a 1200-pixel window the column narrows to 200 (the shell sets `narrow` from the scene width). */
-.shell-nav:narrow,
-.shell-nav:narrow:focused {
+/* In a compact window (below 1040 px; the window's class from ui.control.LayoutClass) the column narrows to 200. */
+.root:compact .shell-nav,
+.root:compact .shell-nav:focused {
     -fx-min-width: 200px;
     -fx-pref-width: 200px;
     -fx-max-width: 200px;

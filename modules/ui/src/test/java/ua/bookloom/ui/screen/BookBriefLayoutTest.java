@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.TwoColumns;
 
 /**
@@ -25,7 +26,6 @@ class BookBriefLayoutTest extends BookBriefScreenTestBase {
     private static final String LEFT = "brief-column-left";
     private static final String RIGHT = "brief-column-right";
     private static final double SAME_ROW = 1.0;
-    private static final double BREAKPOINT = 700;
     private static final List<String> LEFT_CARDS =
             List.of("brief-languages-card", "brief-policies-card", "brief-aux-card", "brief-quality-card");
     private static final List<String> PREDICTED_FIELDS = List.of(
@@ -38,13 +38,12 @@ class BookBriefLayoutTest extends BookBriefScreenTestBase {
 
     // IF the cards sat in a plain box, THEN the screen could not give way to a narrow window or use a wide one.
     @Test
-    void columns_bookOpened_areATwoColumnsControlThatBreaksAtSevenHundredPixels() throws TimeoutException {
+    void columns_bookOpened_areATwoColumnsControlSideBySideFromTheRegularClass() throws TimeoutException {
         openFrankensteinThenShowBrief();
 
         assertThat(required(COLUMNS)).isInstanceOf(TwoColumns.class);
-        assertThat(ThemeTestSupport.onFx(() ->
-                        ((TwoColumns) required(COLUMNS)).breakpointProperty().get()))
-                .isEqualTo(BREAKPOINT);
+        assertThat(ThemeTestSupport.onFx(() -> ((TwoColumns) required(COLUMNS)).sideBySideFrom()))
+                .isEqualTo(LayoutClass.Width.REGULAR);
     }
 
     // IF a decision the model never touches sat among the predicted fields, THEN a person could not tell which cards

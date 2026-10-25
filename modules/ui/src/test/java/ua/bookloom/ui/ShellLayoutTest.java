@@ -130,7 +130,7 @@ class ShellLayoutTest extends ShellTestBase {
     @ParameterizedTest
     @CsvSource({"1100, compact", "1300, regular", "1700, wide"})
     void contentHost_atASceneWidth_carriesOneWidthClassOfItsOwnWidth(final double sceneWidth, final String expected) {
-        // The navigation column takes 236 (200 below 1200) of the scene, and the host fills the rest.
+        // The navigation column takes 236 (200 in a compact window) of the scene, and the host fills the rest.
         resizeScene(sceneWidth, 700);
 
         final List<String> classes = onFxStates(required("shell-content"));
@@ -172,8 +172,8 @@ class ShellLayoutTest extends ShellTestBase {
 
     // IF the column kept 236 in a narrow window, THEN it would take a quarter of the screen that is left.
     @ParameterizedTest
-    @CsvSource({"1100, 200", "1199, 200", "1200, 236", "1280, 236"})
-    void navigation_atASceneWidth_isTwoHundredBelowTwelveHundredElseTwoThirtySix(
+    @CsvSource({"944, 200", "1023, 200", "1100, 236", "1280, 236"})
+    void navigation_atASceneWidth_isTwoHundredInACompactWindowElseTwoThirtySix(
             final double sceneWidth, final double expected) {
         resizeScene(sceneWidth, 700);
 

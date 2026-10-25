@@ -16,6 +16,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
@@ -37,8 +38,6 @@ import ua.bookloom.ui.state.WorkflowProgress;
 @Slf4j
 final class BriefView {
 
-    // The content width, in px, below which two columns of cards would be squeezed until their controls are cut.
-    private static final double STACK_BELOW = 700;
     private static final double CARD_SPACING = 14;
 
     private final BriefParts parts;
@@ -90,7 +89,7 @@ final class BriefView {
         subtitle.setId("brief-subtitle");
         final VBox left = column("brief-column-left", languages.node(), policies.node(), also.node(), quality.node());
         final VBox right = column("brief-column-right", tone.node());
-        final TwoColumns columns = new TwoColumns(left, right, STACK_BELOW);
+        final TwoColumns columns = new TwoColumns(left, right, LayoutClass.Width.REGULAR);
         columns.setId("brief-columns");
         columns.disableProperty().bind(parts.lock().readOnly());
         return new VBox(CARD_SPACING, subtitle, readOnlyBanner(), columns, footer);

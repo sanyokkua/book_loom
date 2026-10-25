@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.PriorityRow;
 import ua.bookloom.ui.control.TwoColumns;
 
@@ -176,8 +177,7 @@ class TermTableCardTest extends TermTableCardTestBase {
     // ---- two equal cards: stacked below the breakpoint, side by side above ------------------------------------
 
     // IF the screen kept the cards stacked on a wide window, THEN half the width would sit empty; IF it split a narrow
-    // one, THEN both tables would be unreadably narrow. The switch is the content width of the WIDE class (1440), less
-    // the 52 px the screen's own padding takes.
+    // one, THEN both tables would be unreadably narrow. The switch is the content area's WIDE class (1440 px).
     @ParameterizedTest
     @CsvSource({"1280, 800, true", "1660, 900, true", "1700, 900, false", "1920, 700, false"})
     void cards_atEachWindowSize_stackBelowTheBreakpointAndSitSideBySideAbove(
@@ -186,7 +186,7 @@ class TermTableCardTest extends TermTableCardTestBase {
 
         final TwoColumns columns = (TwoColumns) required("names-style-card").getParent();
         assertThat(required("recurring-card").getParent()).isSameAs(columns);
-        assertThat(columns.breakpointProperty().get()).isEqualTo(1388.0);
+        assertThat(columns.sideBySideFrom()).isEqualTo(LayoutClass.Width.WIDE);
         assertThat(ThemeTestSupport.onFx(columns::isStacked)).isEqualTo(stacked);
     }
 

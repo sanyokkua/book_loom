@@ -29,9 +29,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.control.LayoutClass.Width;
 
 /**
- * The shared two-column layout: side by side at or above its breakpoint of content width, stacked below it, left
+ * The shared two-column layout: side by side in an area of its class or wider, stacked in a narrower one, left
  * before right in the focus order either way, equal columns with one gap, no inline style, and no cut caption or
  * sideways scrolling at the two window sizes the app is held to.
  */
@@ -108,15 +109,20 @@ class TwoColumnsTest extends FxTestBase {
         return box;
     }
 
-    /** Shows the columns in a scroll pane that fits the width as the app's content area does, at a scene size. */
+    /**
+     * Shows the columns in a scroll pane that fits the width as the app's content area does, at a scene size, inside
+     * an area classified by {@link LayoutClass} as the content area is.
+     */
     private void show(
-            final double width, final double height, final double breakpoint, final VBox leftBox, final VBox rightBox) {
+            final double width, final double height, final Width from, final VBox leftBox, final VBox rightBox) {
         ThemeTestSupport.onFx(() -> {
             left = leftBox;
             right = rightBox;
-            columns = new TwoColumns(leftBox, rightBox, breakpoint);
+            columns = new TwoColumns(leftBox, rightBox, from);
             columns.setId("columns");
-            host = new ScrollPane(new VBox(columns));
+            final VBox area = new VBox(columns);
+            LayoutClass.install(area);
+            host = new ScrollPane(area);
             host.setFitToWidth(true);
             final Scene scene = new Scene(host, width, height);
             scene.getStylesheets().add(Theme.stylesheet());
@@ -162,11 +168,12 @@ class TwoColumnsTest extends FxTestBase {
                 () -> node.getLayoutX() + node.getLayoutBounds().getMaxX());
     }
 
-    // IF the columns stayed stacked at the breakpoint, THEN a wide window would waste half its width.
+    // IF the columns stayed stacked where their class allows two and their content fits, THEN a wide window would
+    // waste half its width.
     @ParameterizedTest(name = "{0} px")
     @CsvSource({"700", "701", "1150"})
-    void layout_atOrAboveTheBreakpoint_placesTheColumnsSideBySideInEqualWidths(final double contentWidth) {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
+    void layout_inTheirClassWithRoom_placesTheColumnsSideBySideInEqualWidths(final double contentWidth) {
+        show(1440, 900, Width.REGULAR, simpleLeft(), simpleRight());
         limitWidth(contentWidth);
 
         assertThat(columns.isStacked()).isFalse();
@@ -177,35 +184,34 @@ class TwoColumnsTest extends FxTestBase {
         assertThat(right(right)).isCloseTo(contentWidth, within(EDGE));
     }
 
-    // IF the columns stayed side by side below the breakpoint, THEN each would be too narrow to read.
+    // IF the columns stayed side by side in an area narrower than their class, THEN each would be too narrow to read.
     @ParameterizedTest(name = "{0} px")
-    @CsvSource({"699", "656", "320"})
-    void layout_belowTheBreakpoint_stacksTheRightColumnUnderTheLeftAtFullWidth(final double contentWidth) {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
-        limitWidth(contentWidth);
+    @CsvSource({"1039", "944", "656"})
+    void layout_inANarrowerClass_stacksTheRightColumnUnderTheLeftAtFullWidth(final double contentWidth) {
+        show(contentWidth, 900, Width.REGULAR, simpleLeft(), simpleRight());
 
         assertThat(columns.isStacked()).isTrue();
         assertThat(x(left)).isCloseTo(0, within(EDGE));
         assertThat(x(right)).isCloseTo(0, within(EDGE));
-        assertThat(width(left)).isCloseTo(contentWidth, within(EDGE));
-        assertThat(width(right)).isCloseTo(contentWidth, within(EDGE));
+        assertThat(width(left)).isCloseTo(width(columns), within(EDGE));
+        assertThat(width(right)).isCloseTo(width(columns), within(EDGE));
         assertThat(y(right)).isCloseTo(bottom(left) + GAP, within(EDGE));
     }
 
     // IF the control's own height ignored the stacked column, THEN the scroll pane could not reach the bottom card.
     @Test
     void layout_stacked_isAsTallAsBothColumnsAndTheGap() {
-        show(960, 640, 1040, simpleLeft(), simpleRight());
+        show(960, 640, Width.REGULAR, simpleLeft(), simpleRight());
 
         assertThat(columns.isStacked()).isTrue();
         assertThat(ThemeTestSupport.onFx(() -> columns.getLayoutBounds().getHeight()))
                 .isGreaterThanOrEqualTo(bottom(right) - EDGE);
     }
 
-    // IF a window crossing the breakpoint left the old layout, THEN a resize would need a screen reopen.
+    // IF a window crossing a class floor left the old layout, THEN a resize would need a screen reopen.
     @Test
     void layout_windowCrossesTheBreakpointBothWays_switchesEachTime() {
-        show(1200, 700, 1040, simpleLeft(), simpleRight());
+        show(1200, 700, Width.REGULAR, simpleLeft(), simpleRight());
         assertThat(columns.isStacked()).as("1200 wide").isFalse();
 
         resizeWindow(900, 700);
@@ -227,26 +233,25 @@ class TwoColumnsTest extends FxTestBase {
         interact(() -> {});
     }
 
-    // IF changing the breakpoint property did not re-lay the columns out, THEN a screen could not retune it.
+    // IF a pair whose own width is capped missed the area's class change, THEN it would keep the old layout.
     @Test
-    void breakpoint_changedWhileShown_relaysOutAtTheNewValue() {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
+    void areaClass_changesWhileThePairsWidthStays_relaysOutAtTheNewClass() {
+        show(1500, 900, Width.WIDE, simpleLeft(), simpleRight());
         limitWidth(800);
-        assertThat(columns.breakpointProperty().get()).isEqualTo(700);
         assertThat(columns.isStacked()).isFalse();
 
-        interact(() -> columns.breakpointProperty().set(900));
+        resizeWindow(1300, 900);
 
+        assertThat(width(columns)).isCloseTo(800, within(EDGE));
         assertThat(columns.isStacked()).isTrue();
         assertThat(y(right)).isGreaterThan(bottom(left));
     }
 
     // IF Tab went right before left in either layout, THEN the keyboard order would not match the reading order.
     @ParameterizedTest(name = "{0} px")
-    @CsvSource({"1150", "600"})
-    void tab_fromTheFirstControl_walksLeftThenRightInEitherLayout(final double contentWidth) {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
-        limitWidth(contentWidth);
+    @CsvSource({"1440", "944"})
+    void tab_fromTheFirstControl_walksLeftThenRightInEitherLayout(final double windowWidth) {
+        show(windowWidth, 900, Width.REGULAR, simpleLeft(), simpleRight());
         interact(() -> host.getScene().lookup("#l1").requestFocus());
 
         final List<String> walked = new ArrayList<>();
@@ -267,26 +272,25 @@ class TwoColumnsTest extends FxTestBase {
 
     // IF the children were reordered to stack, THEN focus order would differ; the children stay left, right.
     @ParameterizedTest(name = "{0} px")
-    @CsvSource({"1150", "600"})
-    void children_inEitherLayout_areLeftThenRight(final double contentWidth) {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
-        limitWidth(contentWidth);
+    @CsvSource({"1440", "944"})
+    void children_inEitherLayout_areLeftThenRight(final double windowWidth) {
+        show(windowWidth, 900, Width.REGULAR, simpleLeft(), simpleRight());
 
         assertThat(columns.getChildrenUnmodifiable()).containsExactly(left, right);
     }
 
     // IF a caption were cut or the page scrolled sideways, THEN the person would lose words or have to hunt for them.
-    @ParameterizedTest(name = "{0} x {1}, breakpoint {2} -> stacked {3}")
+    @ParameterizedTest(name = "{0} x {1}, side by side from {2} -> stacked {3}")
     @CsvSource({
-        "960, 640, 700, false",
-        "960, 640, 1040, true",
-        "1440, 900, 700, false",
-        "1440, 900, 1040, false",
-        "1440, 900, 1500, true"
+        "960, 640, COMPACT, false",
+        "960, 640, REGULAR, true",
+        "1440, 900, REGULAR, false",
+        "1500, 900, WIDE, false",
+        "1300, 900, WIDE, true"
     })
     void layout_atEachWindowSize_cutsNoCaptionAndNeedsNoSidewaysScrolling(
-            final double width, final double height, final double breakpoint, final boolean stacked) {
-        show(width, height, breakpoint, richLeft(), richRight());
+            final double width, final double height, final Width from, final boolean stacked) {
+        show(width, height, from, richLeft(), richRight());
 
         assertThat(columns.isStacked()).isEqualTo(stacked);
         assertThat(cutLabels(Set.of("left-title", "left-text", "left-action", "right-title", "right-text")))
@@ -329,7 +333,7 @@ class TwoColumnsTest extends FxTestBase {
     // IF a style were set on the control or its columns, THEN no theme swap could reach it.
     @Test
     void styling_control_usesAStyleClassAndNoInlineStyle() {
-        show(1440, 900, 700, simpleLeft(), simpleRight());
+        show(1440, 900, Width.REGULAR, simpleLeft(), simpleRight());
 
         assertThat(columns.getStyleClass()).contains("two-columns");
         assertThat(columns.getStyle()).isEmpty();
@@ -347,10 +351,10 @@ class TwoColumnsTest extends FxTestBase {
     @Test
     @SuppressWarnings("NullAway")
     void constructor_nullColumn_isRejectedByName() {
-        assertThatThrownBy(() -> new TwoColumns(null, simpleRight(), 700))
+        assertThatThrownBy(() -> new TwoColumns(null, simpleRight(), Width.REGULAR))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("left");
-        assertThatThrownBy(() -> new TwoColumns(simpleLeft(), null, 700))
+        assertThatThrownBy(() -> new TwoColumns(simpleLeft(), null, Width.REGULAR))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("right");
     }

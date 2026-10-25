@@ -5,21 +5,20 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.control.LayoutClass;
 
 /**
  * The book's text in one widget: the chapters, their segments and the picked segment's text, side by side in one
  * {@link SplitPane} so the person can drag one against another.
  *
- * <p>Below {@value #COMPACT_BELOW} pixels the three panes would be squeezed under their minimum widths, so the text
- * goes under the segments instead. The three panes are kept as fields and only re-parented, so the picked chapter, the
- * search and the picked segment survive the change. The width is watched without logging, since it changes on every
- * layout pass of a resize; only a change of arrangement is logged.
+ * <p>In a compact content area ({@link LayoutClass}) the three panes would be squeezed under their minimum widths, so
+ * the text goes under the segments instead (L7). The three panes are kept as fields and only re-parented, so the
+ * picked chapter, the search and the picked segment survive the change; only a change of arrangement is logged.
  */
 @Slf4j
 final class StructureTextBrowser extends SplitPane {
 
     static final String ID = "import-browser";
-    private static final double COMPACT_BELOW = 760;
     private static final double MIN_HEIGHT = 360;
     private static final double[] REGULAR_DIVIDERS = {0.22, 0.62};
     private static final double TREE_SHARE = 0.3;
@@ -40,12 +39,14 @@ final class StructureTextBrowser extends SplitPane {
         stacked.setOrientation(Orientation.VERTICAL);
         stacked.getStyleClass().add("import-split");
         arrange(false);
-        widthProperty().addListener((observed, was, now) -> {
-            final boolean compact = now.doubleValue() > 0 && now.doubleValue() < COMPACT_BELOW;
-            if (compact != isCompact && now.doubleValue() > 0) {
-                arrange(compact);
-            }
-        });
+        LayoutClass.follow(this, this::followClass);
+    }
+
+    private void followClass() {
+        final boolean compact = LayoutClass.of(this) == LayoutClass.Width.COMPACT;
+        if (compact != isCompact) {
+            arrange(compact);
+        }
     }
 
     // The nodes leave their old parent before they join the new one, or the scene graph would hold one twice.

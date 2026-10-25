@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.Styleable;
@@ -20,18 +18,16 @@ import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Two cards that sit side by side while the control is wide enough and stack, left above right, when it is not.
+ * Two cards that sit side by side while there is room and stack, left above right, when there is not.
  *
- * <p>The decision is made from the control's own laid-out width, so it follows the window without a listener, and the
- * children stay {@code [left, right]} in both layouts, which keeps the Tab order the reading order. The columns stack
- * whenever the width is below the breakpoint or below what the two columns need side by side — two equal columns as
- * wide as the wider minimum, and the gap; or, for {@link #withSideColumn}, the main column's minimum, the gap and the
- * side column's preferred width — so a control that cannot shrink (a segmented choice, a button) is never cut at the
- * right edge, whatever its words in the display language. They sit side by side again only once the width is 16
- * pixels past that boundary, the same hysteresis as {@link LayoutClass}: a minimum width that changes with the column
- * (a choice that puts its labels on two lines) or a scrollbar that comes and goes must not flip the layout back and
- * forth. The gap between the columns and between the stacked cards is the {@code -fx-gap} of {@code .two-columns} in
- * the theme. Nothing is logged in layout: it runs on every pass.
+ * <p>The children stay {@code [left, right]} in both layouts, which keeps the Tab order the reading order. Whether
+ * there is room is decided by {@link LayoutClass}, the one place that decides arrangements for a width: the columns
+ * stack while the area they sit in is narrower than the class they are built for, and while the control's own width
+ * is below what its content needs side by side — two equal columns as wide as the wider minimum, and the gap; or, for
+ * {@link #withSideColumn}, the main column's minimum, the gap and the side column's preferred width — by
+ * {@link LayoutClass#isNarrow}, so a control that cannot shrink is never cut at the right edge in any language. The
+ * gap between the columns and between the stacked cards is the {@code -fx-gap} of {@code .two-columns} in the theme.
+ * Nothing is logged in layout: it runs on every pass.
  */
 @Slf4j
 public final class TwoColumns extends Region {
@@ -50,38 +46,43 @@ public final class TwoColumns extends Region {
             };
 
     private static final List<CssMetaData<? extends Styleable, ?>> ALL_META_DATA = allMetaData();
-    private static final double HYSTERESIS = 16;
 
     private final Node left;
     private final Node right;
-    private final DoubleProperty breakpoint;
+    private final LayoutClass.Width sideBySideFrom;
     private final BooleanProperty equalHeights;
     private final StyleableDoubleProperty gap;
     private final boolean sideColumn;
     private boolean stacked;
 
     /**
-     * Builds the control.
+     * Builds a pair that sits side by side whenever its content fits, whatever the area's class.
      *
      * @param left the column shown first (the upper card when stacked)
      * @param right the column shown second (the lower card when stacked)
-     * @param breakpointPx the narrowest width, in px, at which the columns sit side by side even when both would fit
-     *     narrower: below it a column would be too narrow to read
      */
-    public TwoColumns(final Node left, final Node right, final double breakpointPx) {
-        this(left, right, breakpointPx, false);
+    public TwoColumns(final Node left, final Node right) {
+        this(left, right, LayoutClass.Width.COMPACT, false);
     }
 
-    private TwoColumns(final Node left, final Node right, final double breakpointPx, final boolean sideColumn) {
+    /**
+     * Builds a pair that sits side by side only in an area of at least {@code sideBySideFrom} and while its content
+     * fits.
+     *
+     * @param left the column shown first (the upper card when stacked)
+     * @param right the column shown second (the lower card when stacked)
+     * @param sideBySideFrom the narrowest area class in which the columns are readable side by side
+     */
+    public TwoColumns(final Node left, final Node right, final LayoutClass.Width sideBySideFrom) {
+        this(left, right, sideBySideFrom, false);
+    }
+
+    private TwoColumns(
+            final Node left, final Node right, final LayoutClass.Width sideBySideFrom, final boolean sideColumn) {
         this.sideColumn = sideColumn;
         this.left = Objects.requireNonNull(left, "left");
         this.right = Objects.requireNonNull(right, "right");
-        this.breakpoint = new SimpleDoubleProperty(this, "breakpoint", breakpointPx) {
-            @Override
-            protected void invalidated() {
-                requestLayout();
-            }
-        };
+        this.sideBySideFrom = Objects.requireNonNull(sideBySideFrom, "sideBySideFrom");
         this.equalHeights = new SimpleBooleanProperty(this, "equalHeights", false) {
             @Override
             protected void invalidated() {
@@ -96,29 +97,31 @@ public final class TwoColumns extends Region {
         };
         getStyleClass().add("two-columns");
         getChildren().addAll(left, right);
-        log.debug("two columns built with breakpoint {} px, side column {}", breakpointPx, sideColumn);
+        // A capped screen keeps its width when the area crosses a class floor, so the class change asks for a layout.
+        LayoutClass.follow(this, this::requestLayout);
+        log.debug("two columns built side by side from {}, side column {}", sideBySideFrom, sideColumn);
     }
 
     /**
-     * Builds a main column with a narrow side column at its preferred width on its right, both stacked, main above,
-     * when the main column's minimum and the side column do not fit side by side.
+     * Builds a main column with a narrow side column at its preferred width on its right; both stack, main above, in
+     * an area narrower than {@code sideBySideFrom} or when the main column's minimum and the side column do not fit.
      *
      * @param main the column that takes the rest of the width (the upper card when stacked)
      * @param side the column that keeps its preferred width beside the main one (the lower card when stacked)
-     * @return the control, with no breakpoint of its own: only the content decides
+     * @param sideBySideFrom the narrowest area class in which the two sit side by side
+     * @return the control
      */
-    public static TwoColumns withSideColumn(final Node main, final Node side) {
-        return new TwoColumns(main, side, 0, true);
+    public static TwoColumns withSideColumn(final Node main, final Node side, final LayoutClass.Width sideBySideFrom) {
+        return new TwoColumns(main, side, sideBySideFrom, true);
     }
 
     /**
-     * The narrowest width at which the columns sit side by side when their content fits; changing it lays the control
-     * out again.
+     * The narrowest area class in which the columns sit side by side.
      *
-     * @return the breakpoint in px
+     * @return the class given when the control was built
      */
-    public DoubleProperty breakpointProperty() {
-        return breakpoint;
+    public LayoutClass.Width sideBySideFrom() {
+        return sideBySideFrom;
     }
 
     /**
@@ -212,8 +215,7 @@ public final class TwoColumns extends Region {
         final double sideBySide = sideColumn
                 ? left.minWidth(-1) + gap.get() + right.prefWidth(-1)
                 : 2 * Math.max(left.minWidth(-1), right.minWidth(-1)) + gap.get();
-        final double needed = Math.max(breakpoint.get(), sideBySide);
-        return innerWidth < (stacked ? needed + HYSTERESIS : needed);
+        return LayoutClass.of(this).isBelow(sideBySideFrom) || LayoutClass.isNarrow(stacked, innerWidth, sideBySide);
     }
 
     private double leftWidth(final double innerWidth, final boolean stack) {

@@ -17,14 +17,13 @@ import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /**
- * The two-column layout decided by its content as well as its breakpoint: two equal columns need twice the wider
+ * The two-column layout decided by its content as well as its area's class: two equal columns need twice the wider
  * column's minimum and the gap, a side column keeps its preferred width, and going back side by side waits 16 px.
  */
 @SuppressWarnings("NullAway.Init")
 class TwoColumnsContentTest extends FxTestBase {
 
     private static final double EDGE = 0.51;
-    private static final double BREAKPOINT = 700;
     private static final double UNSHRINKABLE = 400;
     private static final double SIDE = 320;
 
@@ -52,10 +51,10 @@ class TwoColumnsContentTest extends FxTestBase {
                 final VBox side = column("side", 0);
                 side.setPrefWidth(SIDE);
                 right = side;
-                columns = TwoColumns.withSideColumn(column("main", UNSHRINKABLE), side);
+                columns = TwoColumns.withSideColumn(column("main", UNSHRINKABLE), side, LayoutClass.Width.COMPACT);
             } else {
                 right = column("right", UNSHRINKABLE);
-                columns = new TwoColumns(column("left", 0), right, BREAKPOINT);
+                columns = new TwoColumns(column("left", 0), right);
             }
             final ScrollPane host = new ScrollPane(new VBox(columns));
             host.setFitToWidth(true);
@@ -83,11 +82,11 @@ class TwoColumnsContentTest extends FxTestBase {
         return ThemeTestSupport.onFx(() -> node.getLayoutBounds().getWidth());
     }
 
-    // IF the columns stayed side by side above the breakpoint while a control could not fit its half, THEN the control
-    // would be cut at the right edge (the owner's narrow Book Brief).
+    // IF the columns stayed side by side while a control could not fit its half, THEN the control would be cut at the
+    // right edge (the owner's narrow Book Brief).
     @ParameterizedTest(name = "{0} px")
     @CsvSource({"815", "760", "701"})
-    void layout_aboveTheBreakpointButNarrowerThanTwoMinimumColumns_stacks(final double contentWidth) {
+    void layout_narrowerThanTwoMinimumColumns_stacks(final double contentWidth) {
         show(false);
         limitWidth(contentWidth);
 

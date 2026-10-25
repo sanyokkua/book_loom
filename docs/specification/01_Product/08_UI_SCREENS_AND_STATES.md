@@ -34,7 +34,7 @@ pinned banner slot between the toolbar and the content (`#shell-banners`, L3).
 |--------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Window / stage     | `Stage` + root `BorderPane`       | `.root` carries theme tokens                                                                                                                         |
 | Title bar          | `HBox`                            | Built today: product name, then the run status (only while a run exists, `#title-bar-run-status`), then the theme toggle. Planned: see `#title-bar-run-status` |
-| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (Projects, then five numbered steps, `#workflow-navigation`) and Application groups; 236 px wide (Planned: 200 px when the window is narrower than 1200 px, L9; no icon rail), scrolls vertically when the window is short |
+| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (Projects, then five numbered steps, `#workflow-navigation`) and Application groups; 236 px wide (200 px in a compact window, L9; no icon rail), scrolls vertically when the window is short |
 | Breadcrumb         | `Label`/`Breadcrumbs`-style bar   | Reflects current screen; Planned: "Workflow / Step · step n of 5" (`#shell-breadcrumb`)                                                              |
 | Toolbar actions    | `ToolBar` / `HBox` of `Button`    | The one action bar (L2): each screen's main and run actions, always visible (`StepFooter` in `#shell-actions`)                                       |
 | Banner slot        | `VBox` (`#shell-banners`)         | **Planned.** Pinned above the scrolling content; holds the run banners and the hidden-work banner (L3)                                               |
@@ -67,8 +67,9 @@ failures and speeds, and it opens Settings) · the one run control (`#shell-run-
 Resume of the same row with the same label ("Try again now" when the run stopped trying or the model is missing,
 "Continue translation" once stopped, shown unavailable while pausing or stopping, absent when ready, finished or failed).
 `RunStatusBar` reads the row from `RunStateSource`, the same row the toolbar and the banner read. Items give way by the
-window's width: at 1280 pixels or less the mode, the elapsed time and the speed are hidden, at 1060 or less the name;
-the state text, the chip and the control always stay (`PriorityRow.dropAtWindowWidth`, `TitleBarGiveWayTest`). A
+window's width class (L1): below the wide class (1440 px) the mode, the elapsed time and the speed are hidden, in a
+compact window (below 1040) the name; the state text, the chip and the control always stay (`PriorityRow.dropBelow`,
+`TitleBarGiveWayTest`). A
 narrower title bar still shortens the name first and hides the speed, the mode and the elapsed time in that order
 (`LayoutFitTest`). The project's name shows in the title bar, not in the sidebar (G6).
 
@@ -208,20 +209,20 @@ so the rules are Java (mockup README, "Layout and sizes"):
 
 | ID | Rule | JavaFX |
 |---|---|---|
-| **L1** | Width classes from the **content width**, not the window: compact < 1040 px · regular 1040–1439 · wide ≥ 1440, with 16 px hysteresis (at least the scrollbar width). Each region still decides its own two-column switch from its own width, as `TwoColumns` does; the classes drive CSS only | One `LayoutClass` helper: a width listener on the content host sets pseudo-classes `compact` / `regular` / `wide`; no logging in the listener |
+| **L1** | Width classes: compact < 1040 px · regular 1040–1439 · wide ≥ 1440, entered at the floor and kept until 16 px below it (at least the scrollbar width), for the **content area** (screens) and for the **window** (navigation column, title bar). Every width-dependent arrangement is decided in this one place, with one rule: the narrow form as soon as the width is below what the wide form needs, the wide form back only 16 px past it. No screen measures a width or holds a breakpoint of its own (`ResponsiveGuardTest`) | `LayoutClass`: hosts (the window root, the content host) carry pseudo-classes `compact` / `regular` / `wide`; `LayoutClass.of` / `follow` for a node's class, `isNarrow` for a content-driven decision (`TwoColumns`, `FormGrid`, the Brief's segmented choices); no logging in the listener |
 | **L2** | The toolbar is the one action bar: Import → Continue; Brief → Back · Continue; Names → Back · Start translation (or Go to Translating); Translating → Back · Pause / Resume · Stop · Review (n), or Start / Continue / Try again now by run state; Export → Back · ⬇ Export book, then Open folder · Open book; Projects → + New translation. In compact the Back label shortens to "‹ Back", the full label as tooltip | `StepFooter.claim()` mounts buttons in `#shell-actions` |
 | **L3** | A pinned banner slot between the toolbar and the scrolling content holds the run banners (provider unreachable, stuck, gave up, model missing, cannot start, welcome back, finished) and the hidden-work banner. Run banners show on every screen while they apply, with "Go to Translating" | `VBox #shell-banners` in `AppShellView` above the `ScrollPane` |
 | **L4** | Content caps: form and list screens (Projects, Import, Brief, Export, Settings) at 1320 px; prose and hints at 680 px; Translating and Names & style use the full width. Input widths by kind: number 120, name 360, URL or path 640, model 480 | `maxWidth` on a centred content column; `prefColumnCount` / `maxWidth` per field |
 | **L5** | Screens that fill the window: Translating (the live panel), Import (the text browser, min 360 px high), Names & style (the two tables); they grow to the window height instead of scrolling inside a scroll | A `fills-viewport` style class opts out of the `minHeight = USE_PREF_SIZE` that `AppShellView.showContent` applies |
 | **L6** | Never stacks, list \| detail splits: the live panel (list 240 px … 34 %), the review desk and progress dialogs (list 220 px … 30 %), Settings › Providers (list 240, or 200 in compact). In compact, Detailed Input \| Output stacks inside the detail pane | `SplitPane` with divider positions and minimum sizes |
-| **L7** | Stacks in compact: Names & style's two cards; the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export, Settings › Generation and Storage); four tiles go 2 × 2. A pair stacks whenever its width is below its readability breakpoint **or** below what its content needs side by side — two equal columns as wide as the wider column's minimum width plus the gap, or, for a main column with a side column (Export's side files), the main column's minimum, the gap and the side column's preferred width — so no control that cannot shrink (a segmented choice, a button) is cut in any language; it goes back side by side only 16 px past that width. The provider form's labelled rows put each label above its control the same way when the label column and the widest control do not fit | `TwoColumns` (equal, or `withSideColumn`), `FormGrid` |
+| **L7** | Stacks in compact: Names & style's two cards; the Import browser (Chapters \| Segments on top, Text below, 200 px); two-column card rows (Brief, Export, Settings › Generation and Storage); four tiles go 2 × 2. A pair stacks whenever its area is narrower than the class it is built for **or** its width is below what its content needs side by side — two equal columns as wide as the wider column's minimum width plus the gap, or, for a main column with a side column (Export's side files), the main column's minimum, the gap and the side column's preferred width — so no control that cannot shrink (a segmented choice, a button) is cut in any language; it goes back side by side only 16 px past that width. The provider form's labelled rows put each label above its control the same way when the label column and the widest control do not fit | `TwoColumns` (equal, or `withSideColumn`), `FormGrid` |
 | **L8** | Truncation: one-line text is cut with an ellipsis and gets a tooltip only when it is cut; long text wraps in detail panes and dialogs. A button never gives way to the text beside it (Rename… beside a long project name keeps its words; the name is cut, with its tooltip), a segmented choice puts its labels on two lines before it would be cut, and a stat tile's caption wraps | `Overrun` helper on `Labeled`; `minWidth = USE_PREF_SIZE` on buttons in a row |
-| **L9** | Nav width 236 px, or 200 px when the window is narrower than 1200 px; no icon rail | `NavColumn` pref width |
+| **L9** | Nav width 236 px, or 200 px in a compact window (below 1040 px); no icon rail | CSS `.root:compact .shell-nav` |
 | **L10** | Ukrainian labels are about 26 % longer: every fit test (title bar, toolbar, dialog footers, segmented controls in narrow panes) also runs under `uk`. Every screen state and dialog is checked at the content widths 944 (the 960 window), 1000, 1040, 1100, 1250, 1440, 1700 and 1920: no control runs past the viewport that clips it or past its card, no button or segmented choice is narrower than it asks, and no cut one-line text lacks a tooltip holding its words | `LayoutFitTest` (it absorbed the former title-bar fit test), `ScreenFitTest` and `DialogFitTest` over `FitProbe`, in `en` and `uk` |
 
-Built today, the same intent is met screen by screen: `TwoColumns` switches by its own width and its content (L7; the
-readability breakpoints are Import 760 px, Book Brief 700 px, Settings › Generation and Storage 760 px, Names & style
-1388 px, the wide class less the 52 px of screen padding), and the fit checks of L10 hold at every width.
+Built today: every pair is a `TwoColumns` built for a class (Names & style wide; the Brief, Import, Export, Export's
+title card, Settings › Generation and Storage, and the live call's prompt | reply regular) that also stacks while its
+content does not fit (L7), and the fit checks of L10 hold at every width.
 
 ## global-patterns {#global-patterns}
 
@@ -385,7 +386,7 @@ Purpose: open a book, confirm what was detected and read the book's structure be
 
 Layout of a detected book, top to bottom: the compact drop zone; the details card beside the facts card; the structure
 card beside the segments card; the footer. Each pair is a `TwoColumns` control (`ui.control`): side by side while the
-content is at least 760 px wide and both cards fit at their minimum widths (L7), else stacked with the first card above the second, in the same order for Tab and
+content area is regular or wide and both cards fit at their minimum widths (L7), else stacked with the first card above the second, in the same order for Tab and
 for a reader. Since 15i.U3 there is no Structure step: this screen is where the structure is read, and its Continue
 leads to the Book Brief, whose Continue leads to Names & style.
 
@@ -429,11 +430,10 @@ everything else is optional and can be changed later."
 | Left: Quality vs speed | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                   | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
 | Right: Tone & style (predicted) | the Suggest button, then genre (searchable free-text field over the forty genres), register, voice/era, audience, narrator and narrator gender, each with its basis line | `Button`, searchable `TextField`/`ComboBox`, `ComboBox`s, `Label`s | FR-BRIEF-02, FR-BRIEF-03 |
 
-The screen has two columns (`TwoColumns`, breakpoint 700 px of content width): the **left** holds what the person
-decides and the model never touches, the **right** holds what the model predicts. The columns sit side by side from
-700 px while both fit at their minimum widths — the register and names choices with their labels on two lines — and
-stack otherwise, left above right (at the 960 px minimum window, and wider in Ukrainian), and
-Tab walks the left
+The screen has two columns (`TwoColumns`, side by side from the regular class, L7): the **left** holds what the
+person decides and the model never touches, the **right** holds what the model predicts. The columns sit side by side
+in a regular or wide content area while both fit at their minimum widths — the register and names choices with their
+labels on two lines — and stack otherwise, left above right, and Tab walks the left
 column, the right column, then the footer in both layouts. Each predicted field shows its basis under it when the
 suggestion wrote it (built wording; planned: "samples", see mockups/README.md Words): "3 of 4 passages" (a plural form of the count of passages read), "“quote” · 2 of 3 passages",
 "From what the model knows of this book" or "Counted over the whole book"; a field nothing supported shows the
@@ -501,7 +501,7 @@ Purpose: review and edit the glossary and the book's recurring terms before or d
 
 The screen holds **two equal cards**, the Glossary and the Recurring terms, each built from the same widget (15i.U5):
 the same toolbar in the same order, the same table look (46 px rows) and the same row cross in the last column. They
-sit side by side when the screen's content is at least 1040 px wide and stack, Glossary above Recurring terms, when it
+sit side by side when the content area is wide (1440 px, L1) and stack, Glossary above Recurring terms, when it
 is narrower (one child order either way, so Tab reads the same); the tables fill the height (L5, L7).
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |

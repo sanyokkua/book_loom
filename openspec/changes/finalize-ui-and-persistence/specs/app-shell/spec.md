@@ -312,7 +312,7 @@ WHILE a translation has not started, the application SHALL show a time estimate 
 
 ### Requirement: Fit the layout to the width of the content area
 
-The application SHALL classify the content area as compact (below 1040 pixels), regular (1040 to 1439) or wide (1440 and above), with 16 pixels of hysteresis, and SHALL let each region decide its own switch to two columns from its own width. It SHALL cap form and list screens (Projects, Import, Brief, Export, Settings) at 1320 pixels and size the navigation column 236 pixels, or 200 below a 1200-pixel window.
+The application SHALL classify the content area, and the window, as compact (below 1040 pixels), regular (1040 to 1439) or wide (1440 and above), with 16 pixels of hysteresis, in one place, and every width-dependent arrangement SHALL be decided there: a pair of cards by the class it is built for and by whether its content fits, the navigation column and the title bar by the window's class. It SHALL cap form and list screens (Projects, Import, Brief, Export, Settings) at 1320 pixels and size the navigation column 236 pixels, or 200 in a compact window.
 
 **Source**: `docs/specification/mockups/README.md#layout-and-sizes-l` (L1, L4, L9). In plain words: the same screens must work at 960 and at 1920 pixels. The 16 pixels of hysteresis stop a layout from flipping back and forth when a scrollbar appears at the edge. Input widths and the cap on prose are the README's.
 
@@ -333,8 +333,8 @@ The application SHALL classify the content area as compact (below 1040 pixels), 
 
 #### Scenario: A narrower navigation column
 
-- **WHEN** the window is 1100 pixels wide
-- **THEN** the navigation column is 200 pixels wide, and 236 at 1280
+- **WHEN** the window is 1000 pixels wide
+- **THEN** the navigation column is 200 pixels wide, and 236 at 1100
 
 ### Requirement: Keep list and detail side by side and stack cards where they do not fit
 
@@ -955,7 +955,7 @@ IF the book file of a project is missing or its content has changed when the pro
 
 ### Requirement: Let title-bar items give way by priority
 
-WHILE the window is narrower than the title bar needs, the application SHALL hide the quality and review mode, the elapsed time and the speed at 1280 pixels or less, and the project name at 1060 pixels or less, keeping the state text and the AI-model chip.
+WHILE the window is narrower than the title bar needs, the application SHALL hide the quality and review mode, the elapsed time and the speed below the wide class (1440 pixels), and the project name in a compact window (below 1040 pixels), keeping the state text and the AI-model chip.
 
 **Source**: `docs/specification/mockups/README.md#window-chrome`. In plain words: a narrow window loses the least important items first, so the name of the state and whether the AI model is answering are never the ones to go.
 

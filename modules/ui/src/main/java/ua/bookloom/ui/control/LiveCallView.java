@@ -29,7 +29,6 @@ import ua.bookloom.ui.state.SectionMemory;
 public final class LiveCallView extends VBox {
 
     private static final double SPACING = 8;
-    private static final double PAIR_BREAKPOINT = 720;
 
     private final Messages messages;
     private final Label tokens = new FigureLabel();
@@ -62,8 +61,8 @@ public final class LiveCallView extends VBox {
         replyNote.setWrapText(true);
         replyNote.setMinHeight(Region.USE_PREF_SIZE);
         final VBox replyColumn = new VBox(SPACING, replyNote, reply);
-        // Prompt | reply side by side where the detail is wide, stacked where it is not, as the mockup's pair.
-        getChildren().addAll(tokens, input, new TwoColumns(prompt, replyColumn, PAIR_BREAKPOINT));
+        // Prompt | reply side by side, stacked in a compact window (L6), as the mockup's pair.
+        getChildren().addAll(tokens, input, new TwoColumns(prompt, replyColumn, LayoutClass.Width.REGULAR));
         show(null);
     }
 
