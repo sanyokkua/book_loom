@@ -80,6 +80,7 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
         final ChangeResults results = onFx(() -> names.results().get());
 
         assertThat(results.outcome()).isEqualTo(ChangeResults.Outcome.CHANGED);
+        assertThat(onFx(() -> Objects.requireNonNull(names.notice().get()).text())).startsWith("Names prepared");
         assertThat(namesNow(projectId)).isNotEqualTo(namesBefore);
         assertThat(entry(namesNow(projectId), GATE_ID)).isEqualTo(entry(namesBefore, GATE_ID));
 
@@ -89,6 +90,9 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
         assertThat(namesNow(projectId)).isEqualTo(namesBefore);
         assertThat(termsNow(projectId)).isEqualTo(termsBefore);
         assertThat(onFx(() -> List.copyOf(names.rows()))).containsExactlyInAnyOrderElementsOf(namesBefore);
+        // IF the pass's notice stayed, THEN it would still claim names were prepared after all of them were undone.
+        assertThat(onFx(() -> Objects.requireNonNull(names.notice().get()).text()))
+                .isEqualTo("Undone: Prepare names automatically · every change it made is put back");
     }
 
     /**

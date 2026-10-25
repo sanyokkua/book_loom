@@ -65,6 +65,17 @@ WHEN the pass finishes, its dialog SHALL become a Results view with the subtitle
 - **WHEN** the person presses Revert on the row that added `lantern`
 - **THEN** the row's chip reads "reverted", its After shows the value it has again, its words are muted, and Revert gives way to "Reverted"
 
+### Requirement: Say so on the screen when every change of an operation is put back
+
+WHEN every row an operation of Names & style changed is put back, by Undo all or one Revert at a time, the screen's line that announced the operation SHALL be replaced by "Undone: <operation> · every change it made is put back".
+
+**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`. In plain words: "Names prepared · model calls: 15" is no longer true once all of it is undone, and a line that claims work the tables no longer hold misleads.
+
+#### Scenario: Undo all replaces the names pass's line
+
+- **WHEN** the names pass ends with "Names prepared · model calls: 11" and Undo all puts back every row
+- **THEN** the line reads "Undone: Prepare names automatically · every change it made is put back"
+
 ### Requirement: Run the Scan, Review and Translate actions in the same dialog with two steps
 
 The Scan, Review and Translate actions on a card SHALL run the progress dialog with two steps, the action's requests and then the write, and SHALL NOT be hideable.

@@ -2810,6 +2810,8 @@ public enum MessageKey {
     RESULTS_UNDO_ALL("results.undoAll"),
     /** Hover explanation of the control labelled by {@link #RESULTS_UNDO_ALL}. */
     RESULTS_UNDO_ALL_TIP("results.undoAll.tip"),
+    /** The screen's line once every change of an operation is put back; {0} is the operation's name. */
+    RESULTS_UNDONE_ALL("results.undoneAll"),
     /** Button of the results dialog that closes it and shows only the changed rows. */
     RESULTS_SHOW_CHANGED("results.showChanged"),
     /** Hover explanation of the control labelled by {@link #RESULTS_SHOW_CHANGED}. */
