@@ -5,7 +5,10 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import javafx.application.Platform;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.MeasuredFrom;
@@ -24,6 +27,10 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
     private static final ModelSelection CHOSEN = new ModelSelection("ollama", "gemma");
 
     private BriefEstimate estimateOver(final int segments) {
+        return estimateOver(segments, executor);
+    }
+
+    private BriefEstimate estimateOver(final int segments, final Executor background) {
         final ScriptedProjectService projects = new ScriptedProjectService();
         final CurrentProject current = new CurrentProject();
         final SettingsViewModel viewModel = viewModel();
@@ -45,7 +52,10 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         final BriefProject project = onFx(() ->
                 new BriefProject(current, projects, new RecordingProjectActions(), new RecordingToasts(), executor));
         WaitForAsyncUtils.waitForFxEvents();
-        return onFx(() -> new BriefEstimate(current, viewModel, project, modelSettings, speeds));
+        final BriefEstimate estimate = onFx(() ->
+                new BriefEstimate(current, viewModel, project, modelSettings, speeds, background, Platform::runLater));
+        WaitForAsyncUtils.waitForFxEvents();
+        return estimate;
     }
 
     private static StartEstimate shown(final BriefEstimate estimate) {
@@ -73,7 +83,23 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
             speeds.bump();
             return null;
         });
+        WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(shown(estimate)).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.TEST));
+    }
+
+    // IF the stored speed were read on the FX thread, THEN each change of the brief would wait there on the database.
+    @Test
+    void estimate_storedSpeed_isReadInTheBackgroundAndShownOnceRead() {
+        modelSettings.measured("ollama", "gemma", 3.0, MeasuredFrom.RUN);
+        final List<Runnable> held = new ArrayList<>();
+
+        final BriefEstimate estimate = estimateOver(100, held::add);
+        final StartEstimate beforeTheRead = shown(estimate);
+        held.forEach(Runnable::run);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(beforeTheRead).isEqualTo(new StartEstimate.Relative());
+        assertThat(shown(estimate)).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.RUN));
     }
 }
