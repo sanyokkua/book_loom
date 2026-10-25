@@ -59,4 +59,17 @@ class LanguageNamesTest {
 
         assertThat(tag).isEqualTo(Optional.ofNullable(expected));
     }
+
+    // IF a list showed "українська" under "Авто — …", THEN one list would mix a capital with lower-case entries.
+    @ParameterizedTest
+    @CsvSource({"uk, uk, Українська", "la, uk, Латинська", "la, en, Latin", "nb, en, Norwegian Bokmål"})
+    void listName_tag_startsWithACapitalAsAListEntry(final String tag, final String locale, final String expected) {
+        assertThat(names.listName(tag, Locale.forLanguageTag(locale))).isEqualTo(expected);
+    }
+
+    // IF only the Ukrainian name were searched, THEN typing "Ukr" in the Ukrainian interface would find nothing.
+    @Test
+    void searchText_ukrainianInterface_holdsTheEnglishNameAndTheTag() {
+        assertThat(names.searchText("uk", UK)).contains("Українська", "Ukrainian", "uk");
+    }
 }

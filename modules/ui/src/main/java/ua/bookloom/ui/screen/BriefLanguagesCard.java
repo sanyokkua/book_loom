@@ -61,7 +61,12 @@ final class BriefLanguagesCard {
                 MessageKey.BRIEF_SOURCE_LABEL_TIP);
         this.target = Tips.install(
                 messages,
-                box("brief-target", tags, tag -> names.nameOf(tag, locale), text -> names.parse(text, locale)),
+                box(
+                        "brief-target",
+                        tags,
+                        tag -> names.listName(tag, locale),
+                        tag -> names.searchText(tag, locale),
+                        text -> names.parse(text, locale)),
                 MessageKey.BRIEF_TARGET_LABEL_TIP);
         source.committedProperty().addListener((observed, was, now) -> pickedSource(now, viewModel));
         target.committedProperty().addListener((observed, was, now) -> picked(now, viewModel::setTargetLanguage));
@@ -229,7 +234,8 @@ final class BriefLanguagesCard {
         return box(
                 "brief-source",
                 items,
-                tag -> AUTO.equals(tag) ? autoName : names.nameOf(tag, locale),
+                tag -> AUTO.equals(tag) ? autoName : names.listName(tag, locale),
+                tag -> AUTO.equals(tag) ? autoName : names.searchText(tag, locale),
                 text -> isAuto(text, autoName, autoWord) ? Optional.of(AUTO) : names.parse(text, locale));
     }
 
@@ -242,8 +248,9 @@ final class BriefLanguagesCard {
             final String id,
             final List<String> tags,
             final Function<String, String> name,
+            final Function<String, String> searchText,
             final Function<String, Optional<String>> parse) {
-        final SearchableCombo<String> box = SearchableCombo.parsed(tags, name, parse);
+        final SearchableCombo<String> box = SearchableCombo.parsed(tags, name, searchText, parse);
         box.setId(id);
         box.setMaxWidth(Double.MAX_VALUE);
         return box;

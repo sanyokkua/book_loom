@@ -157,7 +157,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         }
 
         private String listText(final String tag) {
-            final String language = languages.nameOf(tag, messages.locale());
+            final String language = languages.listName(tag, messages.locale());
             final int used = usedCount(tag);
             return used == 0 ? language : messages.get(MessageKey.DIALOG_TRANSLATE_INTO_USED, language, used);
         }
