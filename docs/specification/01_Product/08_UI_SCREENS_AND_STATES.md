@@ -668,7 +668,7 @@ verb.)
 | Show each segment when translated | On: when a reply arrives, the first newly translated segment is selected, unless the person clicked one (then "Follow again"). Only a click or key turns following off | `LiveCallPanel` |
 | Scene summary (T5) | Always under the detail: the summary's target text, else its source text, or "No scene summary yet.", and one wording on every quality ("Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter.") | `SceneSummary` reads `SummaryRepository` again when `MemoryUpdated(SUMMARY)` raises `LiveCalls.summaryVersion` |
 | Activity log tab | All · Problems only. Plain lines ("Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review"); debug lines only with technical details | `control/TaggedLog`, `ActivityLogFeed` |
-| All calls… | The progress dialog listing the translation's calls, newest first (last 50 kept), each named by its kind in words (Translate, Review, Placeholder repair); Simple shows each reply matched to its segments (a reply with no translated text says Detailed shows it), Detailed the full call (replaces `ModelCallsWindow`) | `ProgressDialog` |
+| All calls… | The progress dialog listing the translation's calls, newest first (last 50 kept), each named by its kind in words (Translate, Review, Placeholder repair); Simple shows each reply matched to its segments (a reply with no translated text says Detailed shows it, a review's says it answers with edits), Detailed the full call (replaces `ModelCallsWindow`); the call still waiting on a running translation is listed as at work ("Working on Translate.", "Nothing yet."), never as done | `ProgressDialog` |
 
 The **review desk** is a dialog opened from this screen (`#screen-review`).
 
@@ -805,7 +805,10 @@ restarts".
   the reason and the test dialog's verdict say "<Name> is not open. Open the app, then test again." instead of the
   failure's generic words, which stay for any other address or an answer with an error. `ProviderConfig` gains `displayName`, `auth`, `credentialRef`, `modelsPath`,
   `chatPath`, `headers`; header injection is in `:llm` `HttpExchange`; `ProviderVerifierImpl` takes an unsaved config.
-  The test dialog is `#dialog-test-provider`.
+  The test dialog is `#dialog-test-provider`; a test that an earlier failure ruled out (Models and Inference after a
+  failed Test connection, with or without Test inference) keeps its tab and says "Not attempted — the connection
+  failed first." instead of showing another test's request. A result row's **Details** keeps its whole width; the
+  reason under the chip wraps.
 - **Models** (decision 6). Model (a list across providers, ↻ Refresh), with "Each model keeps its own settings. All are
   optional — off means BookLoom picks the value per task." Found out from the program: how much it can read at once
   (and how much is loaded now) and whether it gives structured answers. **Use one temperature** (slider; off = the

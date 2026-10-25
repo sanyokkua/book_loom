@@ -39,6 +39,7 @@ final class SettingsPreparations {
             case PROVIDER_FORM_DIRTY -> typeIntoTheForm();
             case PROVIDER_FOLD_OPEN -> openTheFold();
             case PROVIDER_TESTED -> runTheInferenceTest();
+            case PROVIDER_CONNECTION_FAILED -> failTheConnectionTest();
             case PROVIDER_IN_USE -> putTheProviderToWork();
             case MODELS_OPEN -> openTheModelsTab();
             case MODELS_DIRTY -> changeTheModel();
@@ -153,6 +154,26 @@ final class SettingsPreparations {
                 WAIT_SECONDS,
                 TimeUnit.SECONDS,
                 () -> onFx(() -> viewModel.tests().stages().size() == 3
+                        && !viewModel.tests().checking().get()));
+    }
+
+    /**
+     * Runs Test connection alone against a local program that is closed, the one test there is with no model chosen, so
+     * the row holds the failed chip, the reason under it and Details beside it.
+     */
+    void failTheConnectionTest() throws TimeoutException {
+        awaitProviders();
+        final SettingsViewModel viewModel = injector.getInstance(SettingsViewModel.class);
+        ((ScriptedProviderVerifier) injector.getInstance(ProviderVerifier.class))
+                .respondWith(ProviderReports.connectionNotAnswered());
+        onFx(() -> {
+            viewModel.tests().run(ProviderTest.CONNECTION);
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> viewModel.tests().stages().size() == 1
                         && !viewModel.tests().checking().get()));
     }
 

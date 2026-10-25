@@ -37,6 +37,7 @@ class ScreenConformanceCoverageTest {
         "SETTINGS_DELETE_DIALOG",
         "SETTINGS_UNSAVED_DIALOG",
         "SETTINGS_TEST_DIALOG",
+        "SETTINGS_CONNECTION_FAILED",
         "SETTINGS_SWITCH_DIALOG",
         "SETTINGS_MODELS",
         "SETTINGS_MODELS_DIRTY",

@@ -293,7 +293,9 @@ final class ProviderTestView {
     private void showTabs(final List<StageChip> chips) {
         tabs.forEach((each, tab) -> {
             final boolean ran = chips.stream().anyMatch(chip -> chip.stage() == each);
-            tab.setDisable(!ran && each != stage);
+            // A stage never tried because an earlier one failed still opens, to say so.
+            final boolean told = ran || TestDetails.failedBefore(each, chips).isPresent();
+            tab.setDisable(!told && each != stage);
             tab.getStyleClass().removeAll("btn-secondary", "btn-ghost");
             tab.getStyleClass().add(each == stage ? "btn-secondary" : "btn-ghost");
         });

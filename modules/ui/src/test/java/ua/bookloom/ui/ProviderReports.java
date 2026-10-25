@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
@@ -22,6 +24,18 @@ public final class ProviderReports {
     /** A report in which all three stages passed and each kept the request it sent, the way the real verifier does. */
     public static Result<VerificationReport> allPassedWithExchanges() {
         return Result.ok(new VerificationReport(List.of(connection(), models(), inference())));
+    }
+
+    /** A report of Test connection alone that nothing answered, the way a closed local program fails it. */
+    public static Result<VerificationReport> connectionNotAnswered() {
+        return Result.ok(new VerificationReport(List.of(new StageOutcome(
+                VerificationStage.CONNECTION,
+                StageStatus.FAILED,
+                AppError.of(ErrorCode.unreachable, "Unreachable", "The server did not answer."),
+                null,
+                Duration.ofMillis(1400),
+                null,
+                new VerificationExchange("GET", "http://127.0.0.1:11434/", "", "", 0, null, null, false, HEADERS)))));
     }
 
     private static StageOutcome connection() {

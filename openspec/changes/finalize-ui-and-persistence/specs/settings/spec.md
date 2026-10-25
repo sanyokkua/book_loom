@@ -595,6 +595,11 @@ The application SHALL offer Test connection, Test models and Test inference on t
 - **THEN** the result reads `Ollama answers (41 ms)`
 - **AND** the models and inference results are not reported
 
+#### Scenario: A failed Test connection rules the later tests out in the test dialog
+
+- **WHEN** Test connection alone is used, nothing answers, and Details is opened and its Models tab pressed
+- **THEN** the Models and Inference tabs can be pressed and each says `Not attempted — the connection failed first.`, with no request line
+
 #### Scenario: An unreachable server fails the first stage only
 
 - **WHEN** Test inference is used and nothing is listening at `http://localhost:11434`

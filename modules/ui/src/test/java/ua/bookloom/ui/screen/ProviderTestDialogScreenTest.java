@@ -164,6 +164,28 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
                 .containsExactly(false, false, false);
     }
 
+    // IF the later tabs stayed off (or showed the connection again) after Test connection failed, THEN the person
+    // could not tell that the models and the inference were never tried. With no model chosen Test connection is the
+    // only test there is, so this is the path the real window takes.
+    @Test
+    void tabs_testConnectionAloneFailed_laterTabsSayTheyWereNotAttempted() throws TimeoutException {
+        openSettings();
+        verifier.respondWith(firstStageOnly(ua.bookloom.api.llm.StageStatus.FAILED));
+        onFx(() -> viewModel().tests().run(ua.bookloom.ui.state.ProviderTest.CONNECTION));
+        awaitFx(() -> !viewModel().tests().checking().get()
+                && viewModel().tests().stages().size() == 1);
+        click("check-result-CONNECTION");
+
+        onFx(() -> button("test-tab-models").fire());
+
+        assertThat(ThemeTestSupport.onFx(() -> List.of(
+                        button("test-tab-models").isDisabled(),
+                        button("test-tab-inference").isDisabled())))
+                .containsExactly(false, false);
+        assertThat(shown("test-verdict-text")).isEqualTo("Not attempted — the connection failed first.");
+        assertThat(shown("test-request-line")).isEmpty();
+    }
+
     // IF the summary card's Test only ran the check, THEN the person would still hunt for what it found.
     @Test
     void summaryTest_pressed_runsInferenceAndOpensTheDialogOnIt() throws TimeoutException {

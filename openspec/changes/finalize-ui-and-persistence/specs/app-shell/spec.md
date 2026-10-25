@@ -488,6 +488,12 @@ The Translating screen's live card SHALL hold two tabs, Live and Activity log. T
 - **WHEN** a translation has made 120 calls and `All calls…` is used
 - **THEN** the progress dialog lists calls 120 down to 71, newest first, and no older call
 
+#### Scenario: The call still at work
+
+- **WHEN** `All calls…` is used while call 16, a Translate call of 7 segments, still waits for its answer, and call 15 was answered with their translations
+- **THEN** call 16 reads `Working on Translate.` and `Nothing yet.`, not done
+- **AND** call 15 reads `Translate is done.` with the translations it brought back under What it says
+
 ### Requirement: Show the Projects screen as a list grouped by book
 
 The application SHALL show the Projects screen with the purpose line "A project is one translation of a book. One book can have several — into other languages, or the same language with another AI model. Progress is saved as you go.", a search over books and projects, an All, In progress and Finished filter, and the projects grouped under a header for each book with its cover, title, file, format, segment count and the number of translations.

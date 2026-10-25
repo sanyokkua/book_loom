@@ -7,13 +7,17 @@ import java.util.List;
 import java.util.stream.LongStream;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.LiveRowFixtures;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.LiveRow.Stage;
 
@@ -61,6 +65,45 @@ class LiveAllCallsTest extends LiveCardTestBase {
         assertThat(isShown("calls-card")).isTrue();
         assertThat(List.of(stepName(0), stepName(1), stepName(2)))
                 .containsExactly("Placeholder repair", "Review", "Translate");
+    }
+
+    private static CallSnapshot draft(final long id) {
+        return CallSnapshot.waiting(
+                id,
+                CallKind.DRAFT,
+                "draft-batch-json",
+                null,
+                List.of(new CallSegment("s-" + id, "ch1 · p" + id, "Source " + id)),
+                List.of(),
+                LiveCallFixtures.STARTED,
+                1,
+                2,
+                Duration.ofMinutes(3));
+    }
+
+    // The sentence over the selected call and what it says under "What it says".
+    private List<String> sayAndOutput() {
+        return ThemeTestSupport.onFx(() -> List.of(
+                ((Label) required("progress-say")).getText(), ((TextArea) required("progress-output")).getText()));
+    }
+
+    // IF the call still waiting on a running translation (the newest one, so the one the dialog opens on) were listed
+    // as done, THEN "Translate is done" would sit over "Nothing yet." every time the dialog is opened; it says the call
+    // is still at work, and an answered batch says the translations it brought back.
+    @Test
+    void allCalls_newestCallStillWaiting_saysItIsAtWorkAndAnAnsweredBatchShowsItsTranslations() {
+        final CallSnapshot answered = draft(1).answered("{\"1\":\"Джерело 1\"}", null, Duration.ofSeconds(3))
+                .withItems(List.of(new CallItem("1", "s-1", "Джерело 1", CallItemStatus.OK, List.of())));
+        showLive(LiveRowFixtures.calls(LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(answered, draft(2))));
+
+        onFx(() -> button("translating-live-all-calls").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+        final List<String> waiting = sayAndOutput();
+        clickOn(required("progress-step-1"));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(waiting).containsExactly("Working on Translate.", "Nothing yet.");
+        assertThat(sayAndOutput()).containsExactly("Translate is done.", "Джерело 1");
     }
 
     // IF the dialog listed a call the card no longer keeps, THEN it would promise a prompt that is gone.

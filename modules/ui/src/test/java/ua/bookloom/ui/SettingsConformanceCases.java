@@ -79,6 +79,14 @@ final class SettingsConformanceCases {
                             new Part("#test-metric-time", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
                             new Part("#test-metrics .kv", Kind.BORDER, "divider", "#eae4d8", "#3c4a51"),
                             new Part("#test-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
+            // A failed Test connection: the chip in the error tint, its reason wrapped under it and Details whole
+            // beside.
+            new Screen(
+                    "SETTINGS_CONNECTION_FAILED",
+                    ViewNames.SETTINGS,
+                    Preparation.PROVIDER_CONNECTION_FAILED,
+                    Overlay.NONE,
+                    List.of(new Part("#check-result-CONNECTION", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"))),
             // The Models card is a surface, the program's findings sit in the information tint.
             new Screen(
                     "SETTINGS_MODELS",

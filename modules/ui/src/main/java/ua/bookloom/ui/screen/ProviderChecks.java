@@ -107,6 +107,8 @@ final class ProviderChecks {
         cells.put(stage, cell);
         final Hyperlink details = new Hyperlink(messages.get(MessageKey.SETTINGS_CHECK_DETAILS));
         details.setId("check-details-" + stage.name());
+        // Like the button: a link's computed minimum is its ellipsis, so a failure's reason would squeeze it to "Det…".
+        details.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, details, MessageKey.SETTINGS_CHECK_DETAILS_TIP);
         details.setOnAction(event -> open(stage));
         grid.add(testButton(buttonId, test, text), 0, row);

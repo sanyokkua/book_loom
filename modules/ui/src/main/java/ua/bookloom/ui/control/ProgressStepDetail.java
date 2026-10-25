@@ -17,6 +17,7 @@ import org.controlsfx.control.SegmentedButton;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
@@ -290,20 +291,24 @@ final class ProgressStepDetail extends VBox {
         if (text != null && !text.isBlank()) {
             return text;
         }
-        return messages.get(nothingSaid(made == null ? null : made.state(), made == null ? null : made.reply()));
+        return made == null
+                ? messages.get(MessageKey.PROGRESS_NOTHING)
+                : messages.get(nothingSaid(made.state(), made.kind(), made.reply()));
     }
 
     /**
-     * What "What it says" reads when a step gave nothing to show: a call still waiting has said nothing yet; an ended
-     * call either brought no reply, or one with no translated text, which only the Detailed view shows raw.
+     * What "What it says" reads when a call gave nothing to show: a call still waiting has said nothing yet; an ended
+     * call either brought no reply, or one with no translated text, which only the Detailed view shows raw — a review
+     * answers with edits by design, so it says so instead of sounding like a failed translation.
      */
-    static MessageKey nothingSaid(final @Nullable CallState state, final @Nullable String reply) {
-        if (state == null || state == CallState.WAITING) {
+    static MessageKey nothingSaid(final CallState state, final CallKind kind, final @Nullable String reply) {
+        if (state == CallState.WAITING) {
             return MessageKey.PROGRESS_NOTHING;
         }
-        return reply == null || reply.isBlank()
-                ? MessageKey.LIVE_CALL_REPLY_NONE
-                : MessageKey.PROGRESS_REPLY_IN_DETAILED;
+        if (reply == null || reply.isBlank()) {
+            return MessageKey.LIVE_CALL_REPLY_NONE;
+        }
+        return kind == CallKind.REVIEW ? MessageKey.PROGRESS_REVIEW_IN_DETAILED : MessageKey.PROGRESS_REPLY_IN_DETAILED;
     }
 
     private String orNothing(final @Nullable String text) {

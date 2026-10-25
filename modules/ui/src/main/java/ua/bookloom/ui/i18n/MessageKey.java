@@ -211,6 +211,7 @@ public enum MessageKey {
     PROGRESS_NOTHING("progress.nothing"),
     /** Progress dialog, Simple: what an answered call with no translated text says; the raw reply is Detailed's. */
     PROGRESS_REPLY_IN_DETAILED("progress.replyInDetailed"),
+    PROGRESS_REVIEW_IN_DETAILED("progress.reviewInDetailed"),
     /** Progress dialog, Detailed: the call line; arguments: 0 number, 1 kind words, 2 segments, 3 attempt, 4 of. */
     PROGRESS_DETAIL_CALL("progress.detail.call"),
     /** Progress dialog, Detailed: the call's clock; arguments: 0 waiting or other, 1 the clock, 2 the limit or none. */

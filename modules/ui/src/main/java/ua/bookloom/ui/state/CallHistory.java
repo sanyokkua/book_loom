@@ -51,10 +51,26 @@ public final class CallHistory {
             steps = steps.apply(new StepChanged(StepKind.REQUEST, name, index, StepState.STARTED, null, null));
             // Read while the call's step runs, so the model keeps the call with that step.
             model.accept(activity(steps, call, now));
-            steps = steps.apply(new StepChanged(StepKind.REQUEST, name, index, StepState.ENDED, null, StepResult.DONE));
+            steps = ended(steps, call, name, index);
         }
         model.accept(activity(steps, null, now));
         return model;
+    }
+
+    // The history is read while the run goes on, so its newest call may still be waiting: that row stays at work, and
+    // only an answered call reads as done.
+    private static StepLog ended(final StepLog steps, final CallSnapshot call, final String name, final int index) {
+        final @Nullable StepResult result =
+                switch (call.state()) {
+                    case WAITING -> null;
+                    case ANSWERED -> StepResult.DONE;
+                    case FAILED, CANCELLED -> StepResult.FAILED;
+                };
+        if (result == null) {
+            log.debug("all calls: call {} is still waiting, its row stays at work", call.callId());
+            return steps;
+        }
+        return steps.apply(new StepChanged(StepKind.REQUEST, name, index, StepState.ENDED, null, result));
     }
 
     // A call's own label is the pipeline's prompt name (draft-batch-json); the row says what the call did in words.

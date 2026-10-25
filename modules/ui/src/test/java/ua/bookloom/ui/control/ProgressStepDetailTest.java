@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.i18n.MessageKey;
 
@@ -42,15 +43,15 @@ class ProgressStepDetailTest {
     // answered; it says whether a reply came and where to read it.
     @ParameterizedTest
     @CsvSource({
-        ", , PROGRESS_NOTHING",
-        "WAITING, , PROGRESS_NOTHING",
-        "ANSWERED, '{\"edits\":[]}', PROGRESS_REPLY_IN_DETAILED",
-        "ANSWERED, '', LIVE_CALL_REPLY_NONE",
-        "FAILED, , LIVE_CALL_REPLY_NONE",
-        "CANCELLED, , LIVE_CALL_REPLY_NONE",
+        "WAITING, DRAFT, , PROGRESS_NOTHING",
+        "ANSWERED, REVIEW, '{\"edits\":[]}', PROGRESS_REVIEW_IN_DETAILED",
+        "ANSWERED, DRAFT, '{\"1\":\"\"}', PROGRESS_REPLY_IN_DETAILED",
+        "ANSWERED, DRAFT, '', LIVE_CALL_REPLY_NONE",
+        "FAILED, REVIEW, , LIVE_CALL_REPLY_NONE",
+        "CANCELLED, DRAFT, , LIVE_CALL_REPLY_NONE",
     })
-    void nothingSaid_callStateAndReply_namesWhatTheEmptyAnswerMeans(
-            final CallState state, final String reply, final MessageKey expected) {
-        assertThat(ProgressStepDetail.nothingSaid(state, reply)).isEqualTo(expected);
+    void nothingSaid_callStateKindAndReply_namesWhatTheEmptyAnswerMeans(
+            final CallState state, final CallKind kind, final String reply, final MessageKey expected) {
+        assertThat(ProgressStepDetail.nothingSaid(state, kind, reply)).isEqualTo(expected);
     }
 }

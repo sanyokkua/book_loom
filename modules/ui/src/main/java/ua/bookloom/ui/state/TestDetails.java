@@ -29,6 +29,8 @@ public final class TestDetails {
 
     private static final int FIRST_SUCCESS = 200;
     private static final int LAST_SUCCESS = 299;
+    // The skipped verdict's select word when no earlier stage is known to have failed.
+    private static final String EARLIER = "earlier";
 
     /**
      * The dialog's content for one test.
@@ -53,14 +55,39 @@ public final class TestDetails {
         if (running) {
             return plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING));
         }
-        if (found.isEmpty()) {
+        final Optional<VerificationStage> failed = failedBefore(stage, chips);
+        if (found.isEmpty() && failed.isEmpty()) {
             return plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_NOT_RUN));
         }
-        final StageChip chip = found.get();
-        if (chip.status() == StageStatus.SKIPPED) {
-            return plain(Severity.WARN, messages.get(MessageKey.SETTINGS_TEST_VERDICT_SKIPPED));
+        if (found.isEmpty() || found.get().status() == StageStatus.SKIPPED) {
+            log.debug(
+                    "test {} not attempted: {} failed first",
+                    stage,
+                    failed.map(Enum::name).orElse("an earlier test"));
+            return plain(
+                    Severity.WARN,
+                    messages.get(
+                            MessageKey.SETTINGS_TEST_VERDICT_SKIPPED,
+                            failed.map(Enum::name).orElse(EARLIER)));
         }
-        return measured(messages, chip, providerName, localProgram);
+        return measured(messages, found.get(), providerName, localProgram);
+    }
+
+    /**
+     * The stage before {@code stage} that failed in the last run, which is why {@code stage} was never tried: Test
+     * connection alone reports no later stage at all, Test inference reports them as skipped.
+     *
+     * @param stage the test asked about
+     * @param chips the findings of the last run, empty before any
+     * @return the failed earlier stage if there is one, or empty if none failed
+     */
+    public static Optional<VerificationStage> failedBefore(final VerificationStage stage, final List<StageChip> chips) {
+        Objects.requireNonNull(stage, "stage");
+        Objects.requireNonNull(chips, "chips");
+        return chips.stream()
+                .filter(chip -> chip.stage().compareTo(stage) < 0 && chip.status() == StageStatus.FAILED)
+                .map(StageChip::stage)
+                .findFirst();
     }
 
     private static TestDetail plain(final Severity severity, final String verdict) {

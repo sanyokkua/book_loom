@@ -214,14 +214,28 @@ class TestDetailsTest {
 
     // IF a test the server never reached read as failed, THEN the person would blame the wrong stage.
     @Test
-    void of_skipped_isAWarningThatSaysAnEarlierTestDidNotPass() {
+    void of_skippedAfterAFailedConnection_isAWarningThatNamesTheConnection() {
+        final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, null, null);
         final StageChip skipped = new StageChip(VerificationStage.INFERENCE, StageStatus.SKIPPED, null, null);
 
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.INFERENCE, List.of(skipped), false, "Ollama", false);
+                TestDetails.of(EN, VerificationStage.INFERENCE, List.of(failed, skipped), false, "Ollama", false);
 
         assertThat(detail.severity()).isEqualTo(Severity.WARN);
-        assertThat(detail.verdict()).isEqualTo("Not attempted: an earlier test did not pass.");
+        assertThat(detail.verdict()).isEqualTo("Not attempted — the connection failed first.");
+    }
+
+    // IF Test connection alone failed and the models tab said "not tested yet", THEN it would read as a test still to
+    // run rather than one the failure ruled out; Ukrainian says it in Ukrainian.
+    @Test
+    void of_notReportedAfterAFailedConnectionInUkrainian_saysItWasNotAttempted() {
+        final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, null, null);
+
+        final TestDetail detail = TestDetails.of(UK, VerificationStage.MODELS, List.of(failed), false, "Ollama", false);
+
+        assertThat(detail.severity()).isEqualTo(Severity.WARN);
+        assertThat(detail.verdict()).isEqualTo("Не перевірялося — спершу не вдалося з’єднатися.");
+        assertThat(detail.requestLine()).isEmpty();
     }
 
     @Test

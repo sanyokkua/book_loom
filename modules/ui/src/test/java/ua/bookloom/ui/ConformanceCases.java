@@ -76,6 +76,7 @@ final class ConformanceCases {
         PROVIDER_FORM_DIRTY,
         PROVIDER_FOLD_OPEN,
         PROVIDER_TESTED,
+        PROVIDER_CONNECTION_FAILED,
         PROVIDER_IN_USE,
         MODELS_OPEN,
         MODELS_DIRTY,
