@@ -10,6 +10,8 @@ import javafx.scene.control.ButtonBase;
 import javafx.scene.control.Control;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.skin.VirtualFlow;
@@ -44,7 +46,12 @@ public final class FitProbe {
             if (isShort(labeled)) {
                 cut.add(labeled.getId() + " '" + labeled.getText() + "'");
             }
-            return;
+            // A table's row and cell are labeled parts that hold others: the cells, and the label or field a column
+            // shows
+            // its value in. A list's row is left out: it ends its one line in an ellipsis by design.
+            if (!(labeled instanceof TableRow<?> || labeled instanceof TableCell<?, ?>)) {
+                return;
+            }
         }
         if (node instanceof Parent parent) {
             parent.getChildrenUnmodifiable().forEach(child -> collect(child, cut));

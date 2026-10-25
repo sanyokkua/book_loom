@@ -135,7 +135,9 @@ public final class ProjectsViewModel {
      * "No project matches" the person no longer remembers typing. The filter is kept. FX thread only.
      */
     public void clearSearch() {
-        log.debug("the search is cleared for a new visit, it held {} characters", search.get().length());
+        log.debug(
+                "the search is cleared for a new visit, it held {} characters",
+                search.get().length());
         search.set("");
     }
 

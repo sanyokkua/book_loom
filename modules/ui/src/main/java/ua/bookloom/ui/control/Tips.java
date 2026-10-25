@@ -119,11 +119,36 @@ public final class Tips {
             @Override
             public void handle(final MouseEvent event) {
                 node.removeEventHandler(MouseEvent.MOUSE_ENTERED, this);
-                node.getProperties().remove(PENDING_KEY);
-                install(node, text);
+                final Object pending = node.getProperties().remove(PENDING_KEY);
+                install(node, pending instanceof String reworded ? reworded : text);
             }
         });
         return node;
+    }
+
+    /**
+     * Changes the explanation of a node given one by {@link #installOnHover}, waiting or attached, without building a
+     * popup: a table cell reused for another row explains that row's value.
+     *
+     * @param node the node explained on hover
+     * @param text the non-blank explanation now
+     */
+    public static void rewordOnHover(final Node node, final String text) {
+        Objects.requireNonNull(node, "node");
+        Objects.requireNonNull(text, "text");
+        if (node instanceof Control control) {
+            control.setAccessibleHelp(text);
+        }
+        if (node.getProperties().containsKey(PENDING_KEY)) {
+            node.getProperties().put(PENDING_KEY, text);
+            return;
+        }
+        final Object installed = node instanceof Control control && control.getTooltip() != null
+                ? control.getTooltip()
+                : node.getProperties().get(Tooltip.class.getName());
+        if (installed instanceof Tooltip tooltip) {
+            tooltip.setText(text);
+        }
     }
 
     /**

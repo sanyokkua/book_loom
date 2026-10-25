@@ -182,7 +182,12 @@ final class ConformancePreparations {
                 new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                         .withSuggestedGender(Gender.MALE),
                 new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
-                        .withSuggestedTarget("Віктор"))));
+                        .withSuggestedTarget("Віктор"),
+                // The longest gender labels: a suggested female and a person the book gives no evidence for.
+                new GlossaryEntry("e3", "p1", "Justine", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withSuggestedGender(Gender.FEMALE),
+                new GlossaryEntry("e4", "p1", "Clerval", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withNoGenderEvidence())));
         openABook();
     }
 

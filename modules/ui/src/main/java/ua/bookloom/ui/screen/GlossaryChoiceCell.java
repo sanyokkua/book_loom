@@ -76,7 +76,10 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
 
     @Override
     void show(final Label shown, final GlossaryEntry entry) {
-        shown.setText(shownLabel.apply(entry));
+        final String text = shownLabel.apply(entry);
+        shown.setText(text);
+        // A narrow column ends a long value ("female (suggested)") in an ellipsis; the explanation names it whole.
+        Tips.rewordOnHover(shown, messages.get(MessageKey.NAMES_STYLE_CHOICE_TIP, text, messages.get(tip)));
     }
 
     private void open(final boolean showList) {
