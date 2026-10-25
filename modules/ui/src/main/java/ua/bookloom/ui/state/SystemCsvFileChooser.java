@@ -29,7 +29,7 @@ public final class SystemCsvFileChooser implements CsvFileChooser {
         chooser.setInitialFileName(suggestedName);
         final File picked = chooser.showSaveDialog(owner);
         log.debug("the csv save dialog answered: a file was picked {}", picked != null);
-        return Optional.ofNullable(picked).map(File::toPath);
+        return Optional.ofNullable(picked).map(File::toPath).map(SaveNames::undoubled);
     }
 
     private static FileChooser chooser() {

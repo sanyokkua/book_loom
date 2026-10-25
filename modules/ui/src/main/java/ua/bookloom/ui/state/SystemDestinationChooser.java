@@ -27,6 +27,6 @@ public final class SystemDestinationChooser implements DestinationChooser {
         }
         final File picked = chooser.showSaveDialog(null);
         log.debug("the save dialog answered: a file was picked {}", picked != null);
-        return Optional.ofNullable(picked).map(File::toPath);
+        return Optional.ofNullable(picked).map(File::toPath).map(SaveNames::undoubled);
     }
 }
