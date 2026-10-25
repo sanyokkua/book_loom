@@ -45,6 +45,7 @@ final class ProjectRowView {
     private static final double PROGRESS_WIDTH = 170;
     private static final double PERCENT_SCALE = 100;
     private static final String SEPARATOR = " · ";
+    private static final String ARROW = " → ";
 
     private final Messages messages;
     private final ProjectsViewModel viewModel;
@@ -98,10 +99,12 @@ final class ProjectRowView {
         return info;
     }
 
-    // A name ends in its language pair ("Earth Gravity · EN → UK"); when the row is short, the title is cut and the
-    // pair stays, so two translations of one book are still told apart. The tooltip holds the whole name.
+    // A name ends in its language pair ("Earth Gravity · EN → UK", or "Earth Gravity → UK" from Auto); when the row is
+    // short, the title is cut and the pair stays, so two translations of one book are still told apart. The tooltip
+    // holds the whole name.
     private static HBox nameOf(final String name) {
-        final int pair = name.lastIndexOf(SEPARATOR);
+        final int separator = name.lastIndexOf(SEPARATOR);
+        final int pair = separator > 0 ? separator : name.lastIndexOf(ARROW);
         final Label title = new Label(pair > 0 ? name.substring(0, pair) : name);
         title.getStyleClass().add("provider-name");
         title.setMinWidth(0);
@@ -143,7 +146,7 @@ final class ProjectRowView {
         }
         final String quality = messages.get(QualityLabels.of(brief));
         if (model == null) {
-            return String.join(SEPARATOR, source + " → " + target, quality);
+            return String.join(SEPARATOR, source + ARROW + target, quality);
         }
         return messages.get(MessageKey.PROJECTS_ROW_META, source, target, row.providerName(), model.modelId(), quality);
     }

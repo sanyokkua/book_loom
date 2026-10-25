@@ -54,6 +54,45 @@ class TranslatingScreenMissingInputTest extends TranslatingScreenTestBase {
         assertNoDialogOrErrorToast();
     }
 
+    // IF the disabled Start showed nothing on hover, THEN its reason would be told only by the banner.
+    @Test
+    void cannotStart_hoverDisabledStart_showsTheTipNamingTheModel() throws TimeoutException {
+        bookOpenAndNoModel();
+
+        moveTo(button("translating-start"));
+
+        WaitForAsyncUtils.waitFor(
+                3,
+                java.util.concurrent.TimeUnit.SECONDS,
+                () -> ua.bookloom.ui.ThemeTestSupport.onFx(
+                        () -> button("translating-start").getTooltip().isShowing()));
+        assertThat(button("translating-start").getTooltip().getText())
+                .isEqualTo("Choose an AI model in Settings › Providers, then start the translation.");
+    }
+
+    // IF the no-model banner stayed on Settings, THEN its Open settings would lead to the screen the person is on.
+    @Test
+    void cannotStart_noModelOnSettings_showsNoBannerThatLeadsHere() throws TimeoutException {
+        bookOpenAndNoModel();
+
+        onFx(() -> shell.activate(ViewNames.SETTINGS));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(optional("translating-banner")).isNull();
+    }
+
+    // IF Go to Translating were offered while that step is locked, THEN the button would lead nowhere.
+    @Test
+    void cannotStart_noTargetLanguageOnNamesStyle_offersNoGoToTranslating() throws TimeoutException {
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
+        openImport();
+        openBook(BOOK);
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(optional("translating-go-translating")).isNull();
+    }
+
     // IF choosing a model left the refusal standing, THEN a ready start would still read as refused.
     @Test
     void cannotStart_modelThenChosen_isReadyWithStartOn() throws TimeoutException {

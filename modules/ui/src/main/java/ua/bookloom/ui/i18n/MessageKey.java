@@ -3117,6 +3117,8 @@ public enum MessageKey {
     PROJECTS_MODEL_TRY_AGAIN("projects.model.tryAgain"),
     /** Hover explanation of the control labelled by {@link #PROJECTS_MODEL_TRY_AGAIN}. */
     PROJECTS_MODEL_TRY_AGAIN_TIP("projects.model.tryAgain.tip"),
+    /** Line under the no-model help after Try again found nothing again. */
+    PROJECTS_MODEL_STILL_NOTHING("projects.model.stillNothing"),
     /** Caption of the project-name field on the project dialogs. */
     DIALOG_PROJECT_NAME_FIELD("dialog.projectName.field"),
     /** Hover explanation of the control labelled by {@link #DIALOG_PROJECT_NAME_FIELD}. */
@@ -3622,6 +3624,8 @@ public enum MessageKey {
     SETTINGS_TEST_VERDICT_MODELS_SOFT("settings.test.verdict.modelsSoft"),
     /** Verdict of a passed inference test. */
     SETTINGS_TEST_VERDICT_INFERENCE("settings.test.verdict.inference"),
+    /** Verdict and reason of a test of Ollama or LM Studio on this computer that nothing answered: the app is closed. */
+    SETTINGS_TEST_NOT_OPEN("settings.test.notOpen"),
     /** Verdict of a failed test; 0 is the reason. */
     SETTINGS_TEST_VERDICT_FAILED("settings.test.verdict.failed"),
     /** Verdict of a test an earlier failure kept from running. */

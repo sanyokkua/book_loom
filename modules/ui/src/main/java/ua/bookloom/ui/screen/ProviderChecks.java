@@ -26,6 +26,7 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
+import ua.bookloom.ui.state.TestSubject;
 
 /**
  * The three checks of the open provider as a grid: a button, the sentence the last run found and a Details link for
@@ -210,7 +211,16 @@ final class ProviderChecks {
             if (running != null && stage.compareTo(running.lastStage()) <= 0) {
                 chipRows.plain(result, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING), cell);
             } else if (found.isPresent()) {
-                chipRows.fill(result, found.get(), viewModel.testedName(), cell);
+                chipRows.fill(
+                        result,
+                        found.get(),
+                        viewModel.testedName(),
+                        viewModel
+                                .testedSubject()
+                                .get()
+                                .map(TestSubject::isLocalProgram)
+                                .orElse(false),
+                        cell);
             } else {
                 chipRows.plain(result, messages.get(MessageKey.SETTINGS_CHECK_NOT_RUN), cell);
             }

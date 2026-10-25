@@ -25,7 +25,7 @@ class ProjectNamesTest {
     static Stream<Arguments> automaticNames() {
         return Stream.of(
                 Arguments.of("Earth Gravity", "en", "uk", "Earth Gravity · EN → UK"),
-                Arguments.of("Earth Gravity", null, "uk", "Earth Gravity · → UK"),
+                Arguments.of("Earth Gravity", null, "uk", "Earth Gravity → UK"),
                 Arguments.of("Earth Gravity", "en", null, "Earth Gravity · EN"),
                 Arguments.of("Earth Gravity", null, null, "Earth Gravity"),
                 Arguments.of("Earth Gravity", "en-US", "uk-UA", "Earth Gravity · EN → UK"),

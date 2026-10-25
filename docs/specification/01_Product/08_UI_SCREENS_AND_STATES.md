@@ -329,7 +329,8 @@ States: **populated** (grouped list), **search without a match**, and **empty / 
 it translate · save the translated book; "your original file is never changed"), the **AI-model line** (found ✓ —
 "AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)" — or **No AI model
 found**: "Ollama is not open. Open the Ollama app, then press Try again." with [Try again] and "I use another
-program…", which opens Settings), and **＋ New translation**.
+program…", which opens Settings; while Try again looks, the line reads "Looking for an AI program on this computer…"
+with Try again off, and when it finds nothing again it adds "Still nothing answered."), and **＋ New translation**.
 
 **First launch and the AI model (owner decision 13, planned).** On the first launch BookLoom looks **once, by itself**
 for Ollama (`127.0.0.1:11434`) and LM Studio (`127.0.0.1:1234`) on this computer; if it finds one with models it creates
@@ -598,7 +599,9 @@ offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all s
 
 - A banner is pinned in `#shell-banners` on every screen while it applies, with **Go to Translating** off Translating
   while that step is open; a finished run's banner shows on Translating only (`RunBanner`). Cannot start yet for a
-  missing target language offers **Go to Book Brief** instead and is not shown on the Book Brief itself. A pause on an error (Waiting for the AI model, Paused
+  missing target language offers **Go to Book Brief** instead. An action that opens the screen on show is left out
+  (Open settings on Settings), and a banner whose every action does so is not shown there (Cannot start yet on the
+  Book Brief or on Settings). A pause on an error (Waiting for the AI model, Paused
   after an error, Stopped trying) offers Try again now, Skip these N segments (N the segments of the call in flight)
   and Open settings; Model missing offers Choose another model…; a failed run offers Show details and opens no dialog
   by itself.
@@ -616,7 +619,7 @@ offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all s
 |---|---|---|---|---|---|---|
 | Ready | IDLE | "Ready" · AI model ready (grey) | **Start translation** | — | "Nothing translated yet." · waiting | off · off · no |
 | Ready to continue | IDLE + stored progress | "Ready · 51 % done" | **Continue translation** · Review (6) | "Welcome back — 74 of 142 segments are done." | "Continues at Chapter 2, segment 5." · waiting | editable · partial · no |
-| Cannot start yet | IDLE + `MissingInput` | "Ready" · No AI model (red) | Start (disabled, tooltip names what is missing) | "Cannot start yet — no AI model is chosen." [Open settings] | — | off · off · no |
+| Cannot start yet | IDLE + `MissingInput` | "Ready" · No AI model (red) | Start (disabled, tooltip names what is missing; a disabled control's tooltip shows on hover through `DisabledTips` on the window's scene, which JavaFX alone never does) | "Cannot start yet — no AI model is chosen." [Open settings] | — | off · off · no |
 | Translating | RUNNING | "51 % done · about 1 h 10 min left" · Model answering (blue) | **Pause** · Stop · Review (6) | — | "Now translating: Chapter 2, segments 5–8" · translating… | read-only ("Pause to edit") · disabled · yes |
 | Pausing | PAUSING | "Pausing…" | Pause disabled · Stop | — | "Pausing… segments 5–8 are translated again when you resume." · translating… | read-only · disabled · yes |
 | Paused | PAUSED | "Paused at 51 %" · Model idle (grey) | **Resume** · Stop · Review (6) | — | "Paused. Segments 5–8 are translated again when you resume." · **waiting** | editable · partial · no |
@@ -798,7 +801,9 @@ restarts".
   endpoint** and **Inference endpoint** overrides (the inference one disabled for Ollama, with the reason) · Connect and
   request timeouts · Model (list + ↻, or typed) · Use custom headers (values may be `${env:NAME}`) · Use custom models
   (chips) · **Checks** in plain words ("Ollama answers (41 ms)", "7 models found — the chosen one is there", "The model
-  replied in 1.2 s") with **Details**. `ProviderConfig` gains `displayName`, `auth`, `credentialRef`, `modelsPath`,
+  replied in 1.2 s") with **Details**; when Ollama or LM Studio on this computer (a loopback address) does not answer,
+  the reason and the test dialog's verdict say "<Name> is not open. Open the app, then test again." instead of the
+  failure's generic words, which stay for any other address or an answer with an error. `ProviderConfig` gains `displayName`, `auth`, `credentialRef`, `modelsPath`,
   `chatPath`, `headers`; header injection is in `:llm` `HttpExchange`; `ProviderVerifierImpl` takes an unsaved config.
   The test dialog is `#dialog-test-provider`.
 - **Models** (decision 6). Model (a list across providers, ↻ Refresh), with "Each model keeps its own settings. All are

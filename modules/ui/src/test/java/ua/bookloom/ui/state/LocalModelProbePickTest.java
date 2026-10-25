@@ -82,7 +82,7 @@ class LocalModelProbePickTest extends LocalModelProbeTestBase {
         tryAgain(probe);
 
         assertThat(catalog.draftAddresses()).containsExactly(OLLAMA, LM_STUDIO, OLLAMA, LM_STUDIO);
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound(true));
     }
 
     // IF the look blocked on the calling thread, THEN the window would freeze while a program does not answer.
@@ -112,7 +112,7 @@ class LocalModelProbePickTest extends LocalModelProbeTestBase {
 
         firstLaunch(probe);
 
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound(false));
         assertThat(catalog.draftAddresses()).containsExactly(OLLAMA, LM_STUDIO);
     }
 }

@@ -192,8 +192,8 @@ public final class StepFooter extends HBox {
     }
 
     /**
-     * Says why the forward action cannot be pressed. A disabled button shows no tooltip, so the reason is a visible
-     * line beside it, in the footer or in the toolbar wherever the buttons are.
+     * Says why the forward action cannot be pressed, as a visible line beside it, in the footer or in the toolbar
+     * wherever the buttons are, so the reason is read without hovering.
      *
      * @param reason the already translated reason, or {@code null} to remove the line because the action can be pressed
      */

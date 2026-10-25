@@ -96,6 +96,26 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         assertThat(textOf(CARD)).doesNotContain("found on this computer");
     }
 
+    // IF Try again with nothing open ended on the same card, THEN the person could not tell the press did anything:
+    // the card says Looking with Try again off while it asks, then that nothing answered again.
+    @Test
+    void emptyCard_tryAgainAndStillNothing_saysLookingThenStillNothingAnswered() throws Exception {
+        showEmptyListing();
+        onFx(() -> probe().runFirstLaunch());
+        awaitCardContains("No AI model found");
+        assertThat(textOf(CARD)).doesNotContain("Still nothing answered.");
+        catalog.holdDrafts();
+
+        press("projects-empty-tryagain");
+
+        awaitCardContains("Looking for an AI program on this computer...");
+        assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isTrue();
+        catalog.releaseDrafts();
+        awaitCardContains("Still nothing answered.");
+        assertThat(textOf(CARD)).contains("No AI model found");
+        assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isFalse();
+    }
+
     @Test
     void emptyCard_nothingFound_showsNoModelTheHelpLineAndBothButtonsWithoutAnError() throws Exception {
         showEmptyListing();

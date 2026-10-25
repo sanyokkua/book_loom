@@ -161,8 +161,17 @@ final class ProjectsEmptyView {
                 NONE_SPACING,
                 title(messages.get(
                         declined ? MessageKey.PROJECTS_MODEL_DECLINED_TITLE : MessageKey.NAV_FOOTER_NO_MODEL)),
-                help,
-                other);
+                help);
+        // A press of Try again that finds nothing again would otherwise leave the card exactly as it was.
+        if (probe.outcome().get() instanceof ProbeOutcome.NotFound notFound && notFound.afterTryAgain()) {
+            log.debug("model line: try again found nothing again");
+            final Label still = new Label(messages.get(MessageKey.PROJECTS_MODEL_STILL_NOTHING));
+            still.setId("projects-empty-still-nothing");
+            still.setWrapText(true);
+            still.getStyleClass().add("banner-text");
+            words.getChildren().add(still);
+        }
+        words.getChildren().add(other);
         words.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(words, Priority.ALWAYS);
         modelLine.getChildren().addAll(words, tryAgain(false));

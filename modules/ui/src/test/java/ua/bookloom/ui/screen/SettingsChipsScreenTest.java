@@ -98,15 +98,15 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
     }
 
     // IF a failed stage's reason lived only in a tooltip, THEN a person who cannot hover would see a red chip and
-    // never learn why.
+    // never learn why. Ollama on this computer that does not answer is closed, so the reason says to open it.
     @Test
-    void chipDetail_failedStage_showsTheErrorMessageVisibly() throws TimeoutException {
+    void chipDetail_failedStageOfLocalOllama_showsThatTheAppIsNotOpenVisibly() throws TimeoutException {
         openSettings();
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
         final Label detail = detail("CONNECTION");
-        assertThat(detail.getText()).isEqualTo("The server did not answer.");
+        assertThat(detail.getText()).isEqualTo("Ollama is not open. Open the app, then test again.");
         assertThat(detail.getStyleClass()).contains("hint");
         assertThat(detail.isVisible()).isTrue();
         assertThat(result("CONNECTION").getParent())
@@ -115,14 +115,14 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
     // IF the failure's own English words were shown, THEN a Ukrainian screen would explain a failed stage in English.
     @Test
-    void chipDetail_failedStageInUkrainian_namesTheFailureInUkrainian() throws TimeoutException {
+    void chipDetail_failedStageOfLocalOllamaInUkrainian_saysThatTheAppIsNotOpenInUkrainian() throws TimeoutException {
         useLocale(Locale.forLanguageTag("uk"));
         openSettings();
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
         assertThat(detail("CONNECTION").getText())
-                .isEqualTo("За адресою моделі ШІ ніщо не відповідає. Перевірте, чи відкрито її програму.");
+                .isEqualTo("Ollama не відкрито. Відкрийте застосунок і перевірте ще раз.");
     }
 
     // IF the refusal kept its English words, THEN a Ukrainian screen would refuse a check in English.

@@ -61,8 +61,9 @@ until then the offline invariant has no exception and nothing probes at launch.
 project is one translation of a book. The same book can be translated into several languages, or into the same
 language more than once (for example with another model or quality).
 
-- The **automatic name** is `<book title> · <SRC> → <TGT>` (for example `Frankenstein · EN → UK`) and follows the
-  languages while it is automatic; a typed name never changes.
+- The **automatic name** is `<book title> · <SRC> → <TGT>` (for example `Frankenstein · EN → UK`), or
+  `<book title> → <TGT>` while the source is Auto, and follows the languages while it is automatic; a typed name never
+  changes.
 - A **language pair is unique per book** (same content hash) unless the project is named. Choosing a used pair opens
   **Same language pair**: open the existing project, or make a second translation with a name of its own (required,
   unique, case-insensitive).

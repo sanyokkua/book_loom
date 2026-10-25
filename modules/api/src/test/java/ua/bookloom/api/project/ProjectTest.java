@@ -55,7 +55,7 @@ class ProjectTest {
     @CsvSource(
             value = {
                 "Earth Gravity,en,uk,Earth Gravity · EN → UK",
-                "Earth Gravity,,uk,Earth Gravity · → UK",
+                "Earth Gravity,,uk,Earth Gravity → UK",
                 "Earth Gravity,en,,Earth Gravity · EN",
                 "Earth Gravity,,,Earth Gravity",
                 "Earth Gravity,en-US,uk-UA,Earth Gravity · EN → UK",

@@ -36,8 +36,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  * node whose words, role and actions are replaced in place, so a change of state moves nothing on screen.
  *
  * <p>Off Translating it also offers Go to Translating while that step is open and the banner leads nowhere else; a
- * finished run's banner shows on Translating only, and a banner that leads to the Book Brief is not shown there. Each
- * action
+ * finished run's banner shows on Translating only, an action that opens the screen on show is left out, and a banner
+ * whose every action does so is not shown there. Each action
  * runs its own command: Try again now resumes, Skip flags the segments in flight and goes on, Open settings and Choose
  * another model open the settings, Show details opens the failure, which never opens by itself. FX thread only; the
  * row is worked out again on every tick of the run's clocks, so only a change of banner is logged.
@@ -50,6 +50,13 @@ public final class RunBanner {
     public static final String KEY = "run";
 
     private static final double ACTION_SPACING = 8;
+
+    // The actions that only open a screen, with the screen each opens.
+    private static final Map<String, ViewNames> DESTINATIONS = Map.of(
+            RunStateView.OPEN_SETTINGS, ViewNames.SETTINGS,
+            RunStateView.CHOOSE_MODEL, ViewNames.SETTINGS,
+            RunStateView.GO_TRANSLATING, ViewNames.TRANSLATING,
+            RunStateView.GO_BRIEF, ViewNames.BOOK_BRIEF);
 
     private final RunStateSource runs;
     private final Navigator navigator;
@@ -121,7 +128,7 @@ public final class RunBanner {
         final boolean onTranslating = navigator.currentView().get() == ViewNames.TRANSLATING;
         final @Nullable BannerView shown =
                 runs.projectOpen().get() ? runs.view().get().banner() : null;
-        if (shown == null || (shown.translatingOnly() && !onTranslating) || leadsHere(shown)) {
+        if (shown == null || (shown.translatingOnly() && !onTranslating) || onlyLeadsHere(shown)) {
             withdraw();
             return;
         }
@@ -146,20 +153,28 @@ public final class RunBanner {
         banners.withdraw(KEY);
     }
 
-    // A banner whose action leads to the Book Brief tells what to do there; on the brief itself it is only noise.
-    private boolean leadsHere(final BannerView shown) {
-        final boolean here = navigator.currentView().get() == ViewNames.BOOK_BRIEF
-                && shown.actions().stream().anyMatch(action -> RunStateView.GO_BRIEF.equals(action.id()));
+    // A banner whose every action leads to the screen on show (Go to Book Brief on the brief, Open settings on
+    // Settings)
+    // tells what to do there; on that screen it is only noise.
+    private boolean onlyLeadsHere(final BannerView shown) {
+        final boolean here =
+                !shown.actions().isEmpty() && shown.actions().stream().allMatch(this::leadsHere);
         if (here && shownKey != null) {
-            log.debug("run banner {} not shown on the Book Brief it leads to", shownKey);
+            log.debug("run banner {} not shown on the screen it leads to", shownKey);
         }
         return here;
+    }
+
+    private boolean leadsHere(final RunAction action) {
+        return navigator.currentView().get() == DESTINATIONS.get(action.id());
     }
 
     // A banner off Translating leads there, unless it leads to the brief instead or Translating is still closed.
     private List<RunAction> actionsOf(final BannerView shown, final boolean onTranslating) {
         final List<RunAction> actions = new ArrayList<>(shown.actions());
-        final boolean leadsElsewhere = actions.stream().anyMatch(action -> RunStateView.GO_BRIEF.equals(action.id()));
+        actions.removeIf(this::leadsHere);
+        final boolean leadsElsewhere =
+                shown.actions().stream().anyMatch(action -> RunStateView.GO_BRIEF.equals(action.id()));
         if (!onTranslating
                 && !leadsElsewhere
                 && locks.lockReason(ViewNames.TRANSLATING).isEmpty()) {

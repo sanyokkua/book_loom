@@ -27,6 +27,7 @@ import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.ActivityChip;
 import ua.bookloom.ui.control.BannerSlot;
+import ua.bookloom.ui.control.DisabledTips;
 import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Overrun;
@@ -64,14 +65,12 @@ import ua.bookloom.ui.theme.ThemeController;
 public final class AppShellView {
 
     static final String REDUCED_MOTION_CLASS = "reduce-motion";
-
     // Style classes a screen carries: its own minimum height instead of the height hold, and the content cap.
     static final String FILLS_CLASS = "fills-viewport";
     static final String CAPPED_CLASS = "content-capped";
 
     /** The smallest <em>outer</em> window width; every screen fits the content area it leaves (about 944 wide). */
     public static final double MIN_WIDTH = 960;
-
     /** The smallest <em>outer</em> window height; it leaves a content area of about 600 pixels on Windows. */
     public static final double MIN_HEIGHT = 640;
 
@@ -176,8 +175,8 @@ public final class AppShellView {
     }
 
     /**
-     * Builds the window's scene around the shell and attaches the theme to it, so the composition root needs no
-     * theme type of its own.
+     * Builds the window's scene around the shell, attaches the theme and shows disabled controls' tooltips
+     * ({@link DisabledTips}), so the composition root needs no theme type of its own.
      *
      * @param width the initial scene width in pixels
      * @param height the initial scene height in pixels
@@ -187,6 +186,7 @@ public final class AppShellView {
         log.debug("creating the scene {}x{}", width, height);
         final Scene scene = new Scene(root(), width, height);
         themeController.attach(scene);
+        DisabledTips.install(scene);
         return scene;
     }
 

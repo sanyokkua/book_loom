@@ -6,11 +6,11 @@ import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.StageStatus;
-import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CheckSentences;
 import ua.bookloom.ui.state.StageChip;
+import ua.bookloom.ui.state.TestDetails;
 
 /**
  * Draws one provider-test finding: the result sentence, and under it the reason a person needs to read.
@@ -28,12 +28,17 @@ final class StageChipRows {
     }
 
     /** Draws a finding into its result label and, under a failed or qualified one, its reason; returns the cell. */
-    VBox fill(final Label result, final StageChip stage, final String providerName, final VBox cell) {
+    VBox fill(
+            final Label result,
+            final StageChip stage,
+            final String providerName,
+            final boolean localProgram,
+            final VBox cell) {
         final ChipLook look = ChipLook.of(stage.status());
         result.setText(textOf(stage, look, providerName));
         result.getStyleClass().setAll("label", "check-result", "chip", look.styleClass());
         cell.getChildren().setAll(result);
-        final String reason = reasonOf(stage);
+        final String reason = reasonOf(stage, providerName, localProgram);
         if (reason != null) {
             cell.getChildren().add(detailOf(stage, reason));
         }
@@ -73,9 +78,10 @@ final class StageChipRows {
     }
 
     /** What a person needs to read under a chip: the failure for a failed stage, the qualifier for a soft pass. */
-    private @Nullable String reasonOf(final StageChip stage) {
+    private @Nullable String reasonOf(final StageChip stage, final String providerName, final boolean localProgram) {
         final AppError error = stage.error();
-        final String errorMessage = error == null ? null : ErrorWords.message(messages, error);
+        final String errorMessage =
+                error == null ? null : TestDetails.failureOf(messages, error, providerName, localProgram);
         return switch (stage.status()) {
             case FAILED -> errorMessage != null ? errorMessage : stage.note();
             case SOFT_PASS -> stage.note() != null ? stage.note() : errorMessage;

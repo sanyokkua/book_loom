@@ -11,6 +11,7 @@ import javafx.scene.control.ToggleButton;
 import org.controlsfx.control.SegmentedButton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.ProjectSummary;
@@ -130,17 +131,21 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
     // IF a short row cut the end of its name, THEN "earth-gravity · EN → UK" would lose its language pair.
     @ParameterizedTest
-    @ValueSource(strings = {"en", "uk"})
-    void list_smallestWindowOpenProject_showsTheWholeName(final String tag) throws Exception {
+    @CsvSource({
+        "en, earth-gravity · EN → UK, ' · EN → UK'",
+        "uk, earth-gravity · EN → UK, ' · EN → UK'",
+        "uk, earth-gravity → UK, ' → UK'"
+    })
+    void list_smallestWindowOpenProject_keepsTheLanguagePair(final String tag, final String name, final String pair)
+            throws Exception {
         useLocale(Locale.forLanguageTag(tag));
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        final String name = "earth-gravity · EN → UK";
         onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
                 injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
         showListing(exported("p1", name));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(ThemeTestSupport.onFx(() -> labelsIn("projects-row-p1", " · EN → UK").stream()
+        assertThat(ThemeTestSupport.onFx(() -> labelsIn("projects-row-p1", pair).stream()
                         .map(label -> label.getWidth() + 0.5 >= label.prefWidth(-1))
                         .toList()))
                 .as("the language pair is whole")

@@ -56,8 +56,7 @@ public abstract class ShellTestBase extends FxTestBase {
         navigator = injector.getInstance(Navigator.class);
         themeController = injector.getInstance(ThemeController.class);
         themeController.setMode(ThemeMode.LIGHT);
-        scene = new Scene(shell.root(), SCENE_WIDTH, SCENE_HEIGHT);
-        themeController.attach(scene);
+        scene = shell.createScene(SCENE_WIDTH, SCENE_HEIGHT);
         stage.setScene(scene);
         stage.show();
         // The framework shares one stage between tests, so a test that resized it must not hand its size on.

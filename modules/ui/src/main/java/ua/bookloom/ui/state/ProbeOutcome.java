@@ -33,6 +33,11 @@ public sealed interface ProbeOutcome {
     /** A program answered with several models and the person chose none of them for now. */
     record Declined() implements ProbeOutcome {}
 
-    /** Nothing usable answered. */
-    record NotFound() implements ProbeOutcome {}
+    /**
+     * Nothing usable answered.
+     *
+     * @param afterTryAgain {@code true} when the person's "Try again" found nothing again, so the card says so instead
+     *     of looking as if the press did nothing; {@code false} after the first-launch look
+     */
+    record NotFound(boolean afterTryAgain) implements ProbeOutcome {}
 }

@@ -30,6 +30,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
 import ua.bookloom.ui.state.TestDetail;
 import ua.bookloom.ui.state.TestDetails;
+import ua.bookloom.ui.state.TestSubject;
 
 /** The card of {@link ProviderTestDialog}: it draws one {@link TestDetail} and redraws it when the runner changes. */
 @Slf4j
@@ -225,7 +226,13 @@ final class ProviderTestView {
         final ProviderTest runningTest = viewModel.tests().running().get();
         final boolean running = runningTest != null && stage.compareTo(runningTest.lastStage()) <= 0;
         final List<StageChip> chips = viewModel.tests().stages();
-        detail = TestDetails.of(messages, stage, chips, running, viewModel.testedName());
+        detail = TestDetails.of(
+                messages,
+                stage,
+                chips,
+                running,
+                viewModel.testedName(),
+                viewModel.testedSubject().get().map(TestSubject::isLocalProgram).orElse(false));
         log.debug("test dialog redrawn for {}: {}, running {}", stage, detail.severity(), running);
         title.setText(messages.get(titleOf(stage)));
         showVerdict();

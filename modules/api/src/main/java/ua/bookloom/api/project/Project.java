@@ -90,12 +90,14 @@ public record Project(
     /**
      * Builds the automatic name: the book's title, then the language pair, each shown as its primary subtag. Before a
      * target is chosen there is no pair to show, so the name carries no arrow; the source code alone still tells two
-     * untargeted projects of one book apart, which the per-book name rule needs.
+     * untargeted projects of one book apart, which the per-book name rule needs. A source left on Auto has no code to
+     * show, so the title leads straight into the arrow, with no separator before an empty slot.
      *
      * @param title the non-null book title
      * @param source the source language tag, or {@code null} when it is not known yet
      * @param target the target language tag, or {@code null} when none is chosen yet
-     * @return for example {@code Title · EN → UK}; {@code Title · EN} or {@code Title} while no target is chosen
+     * @return for example {@code Title · EN → UK}, or {@code Title → UK} with no source; {@code Title · EN} or
+     *     {@code Title} while no target is chosen
      */
     public static String automaticName(
             final String title, final @Nullable String source, final @Nullable String target) {
@@ -103,8 +105,8 @@ public record Project(
         if (target == null) {
             return source == null ? title : title + NAME_SEPARATOR + primaryCode(source);
         }
-        final String from = source == null ? "" : primaryCode(source) + " ";
-        return title + NAME_SEPARATOR + from + ARROW + primaryCode(target);
+        final String from = source == null ? " " : NAME_SEPARATOR + primaryCode(source) + " ";
+        return title + from + ARROW + primaryCode(target);
     }
 
     private static String primaryCode(final String tag) {

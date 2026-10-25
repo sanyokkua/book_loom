@@ -48,13 +48,28 @@ public final class ModelAdvice {
          */
         public static Server of(final ProviderRow row) {
             Objects.requireNonNull(row, "row");
-            if (row.kind() == ProviderKind.OLLAMA) {
+            return of(row.kind(), row.id(), row.displayName(), row.hostPort());
+        }
+
+        /**
+         * Tells the server from a provider's parts, for a description that is not a listed row (a form under test).
+         *
+         * @param kind the provider's protocol
+         * @param id the provider's id
+         * @param displayName the name it is shown by
+         * @param hostPort the endpoint's host and port without scheme or path
+         * @return the server; never null
+         */
+        public static Server of(
+                final ProviderKind kind, final String id, final String displayName, final String hostPort) {
+            Objects.requireNonNull(kind, "kind");
+            if (kind == ProviderKind.OLLAMA) {
                 return OLLAMA;
             }
-            final boolean lmStudio = row.hostPort().endsWith(LM_STUDIO_PORT)
-                    || compact(row.id()).contains(LM_STUDIO_WORD)
-                    || compact(row.displayName()).contains(LM_STUDIO_WORD);
-            log.debug("provider '{}' at {} is LM Studio: {}", row.id(), row.hostPort(), lmStudio);
+            final boolean lmStudio = hostPort.endsWith(LM_STUDIO_PORT)
+                    || compact(id).contains(LM_STUDIO_WORD)
+                    || compact(displayName).contains(LM_STUDIO_WORD);
+            log.debug("provider '{}' at {} is LM Studio: {}", id, hostPort, lmStudio);
             return lmStudio ? LM_STUDIO : OTHER_OPENAI_COMPATIBLE;
         }
     }

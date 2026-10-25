@@ -139,7 +139,7 @@ public final class LocalModelProbe {
         } catch (RuntimeException unexpected) {
             log.error("the look at the local AI programs failed unexpectedly", unexpected);
             markLooked();
-            publish(new ProbeOutcome.NotFound());
+            publish(new ProbeOutcome.NotFound(!atFirstLaunch));
         }
     }
 
@@ -216,8 +216,9 @@ public final class LocalModelProbe {
 
     private void conclude(final Optional<Answered> current, final boolean atFirstLaunch) {
         if (current.isEmpty()) {
+            log.debug("nothing answered, after try again {}", !atFirstLaunch);
             markLooked();
-            publish(new ProbeOutcome.NotFound());
+            publish(new ProbeOutcome.NotFound(!atFirstLaunch));
         } else if (current.get().models().size() == 1) {
             final ModelSelection chosen = new ModelSelection(
                     current.get().config().id(), current.get().models().get(0));

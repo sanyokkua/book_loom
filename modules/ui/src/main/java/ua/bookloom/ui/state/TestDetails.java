@@ -3,9 +3,11 @@ package ua.bookloom.ui.state;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -21,6 +23,7 @@ import ua.bookloom.ui.state.TestDetail.Severity;
 /** Works out what the test dialog shows for a test from the findings of the last run. */
 // Checkstyle parses source text before Lombok runs, so it cannot see the private constructor (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TestDetails {
 
@@ -35,6 +38,7 @@ public final class TestDetails {
      * @param chips the findings of the last run, empty before any
      * @param running whether a test is under way
      * @param providerName the name the provider is shown by
+     * @param localProgram whether the provider is Ollama or LM Studio on this computer ({@link TestSubject#isLocalProgram})
      * @return the verdict, the request, the figures and the reply
      */
     public static TestDetail of(
@@ -42,7 +46,8 @@ public final class TestDetails {
             final VerificationStage stage,
             final List<StageChip> chips,
             final boolean running,
-            final String providerName) {
+            final String providerName,
+            final boolean localProgram) {
         final Optional<StageChip> found =
                 chips.stream().filter(chip -> chip.stage() == stage).findFirst();
         if (running) {
@@ -55,19 +60,20 @@ public final class TestDetails {
         if (chip.status() == StageStatus.SKIPPED) {
             return plain(Severity.WARN, messages.get(MessageKey.SETTINGS_TEST_VERDICT_SKIPPED));
         }
-        return measured(messages, chip, providerName);
+        return measured(messages, chip, providerName, localProgram);
     }
 
     private static TestDetail plain(final Severity severity, final String verdict) {
         return new TestDetail(severity, verdict, "", "", "", "", List.of(), "", "");
     }
 
-    private static TestDetail measured(final Messages messages, final StageChip chip, final String providerName) {
+    private static TestDetail measured(
+            final Messages messages, final StageChip chip, final String providerName, final boolean localProgram) {
         final @Nullable VerificationExchange exchange = chip.exchange();
         final String noBody = messages.get(MessageKey.SETTINGS_TEST_NO_BODY);
         return new TestDetail(
                 severityOf(chip.status()),
-                verdictOf(messages, chip, providerName),
+                verdictOf(messages, chip, providerName, localProgram),
                 exchange == null ? "" : exchange.method() + " " + exchange.url(),
                 exchange == null ? "" : CurlCommand.of(exchange),
                 exchange == null ? "" : orElse(exchange.requestBody(), noBody),
@@ -89,7 +95,12 @@ public final class TestDetails {
         };
     }
 
-    private static String verdictOf(final Messages messages, final StageChip chip, final String providerName) {
+    private static String verdictOf(
+            final Messages messages, final StageChip chip, final String providerName, final boolean localProgram) {
+        final @Nullable AppError error = chip.error();
+        if (chip.status() == StageStatus.FAILED && error != null && isNotOpen(error, localProgram)) {
+            return failureOf(messages, error, providerName, localProgram);
+        }
         if (chip.status() == StageStatus.FAILED) {
             return messages.get(MessageKey.SETTINGS_TEST_VERDICT_FAILED, reasonOf(messages, chip));
         }
@@ -101,6 +112,32 @@ public final class TestDetails {
             case MODELS -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_MODELS);
             case INFERENCE -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_INFERENCE);
         };
+    }
+
+    /**
+     * The words a failed test is explained in: for Ollama or LM Studio on this computer that nothing answered, that the
+     * app is not open; otherwise the failure's own words.
+     *
+     * @param messages the catalogue the words come from
+     * @param error the failure
+     * @param providerName the name the provider is shown by
+     * @param localProgram whether the provider is Ollama or LM Studio on this computer
+     * @return one sentence; never blank
+     */
+    public static String failureOf(
+            final Messages messages, final AppError error, final String providerName, final boolean localProgram) {
+        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(providerName, "providerName");
+        if (isNotOpen(error, localProgram)) {
+            log.debug("test failure of {} worded as its app not open", providerName);
+            return messages.get(MessageKey.SETTINGS_TEST_NOT_OPEN, providerName);
+        }
+        return ErrorWords.message(messages, error);
+    }
+
+    // A local app that is closed refuses the connection; any answer, even an error, means it is open.
+    private static boolean isNotOpen(final AppError error, final boolean localProgram) {
+        return localProgram && error.code() == ErrorCode.unreachable;
     }
 
     private static String reasonOf(final Messages messages, final StageChip chip) {

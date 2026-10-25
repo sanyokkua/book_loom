@@ -90,7 +90,7 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
         firstLaunch(probe);
 
         assertThat(configs.saved()).hasSize(1);
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound(false));
     }
 
     // IF the flag were not written after a look that found nothing, THEN every launch would look again.
@@ -103,7 +103,7 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
         assertThat(configs.saved()).isEmpty();
         assertThat(storedModel()).isEmpty();
         assertThat(flagSet()).isTrue();
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound(false));
     }
 
     // IF a program that answers with no models counted as found, THEN the line would say ready for nothing.
@@ -116,7 +116,7 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
 
         assertThat(configs.saved()).isEmpty();
         assertThat(storedModel()).isEmpty();
-        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound());
+        assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.NotFound(false));
     }
 
     // IF the stored provider carried the look's one-second connect timeout, THEN every later call would give up early.
