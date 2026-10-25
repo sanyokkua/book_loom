@@ -39,7 +39,8 @@ record TranslatingDialogs(
     void showCalls(final List<CallSnapshot> oldestFirst) {
         log.info("all calls opened on {} kept calls", oldestFirst.size());
         modals.show(
-                ProgressDialog.calls(CallHistory.modelOf(oldestFirst, activities.now()), messages, modals::hide),
+                ProgressDialog.calls(
+                        CallHistory.modelOf(oldestFirst, activities.now(), messages), messages, modals::hide),
                 false);
     }
 

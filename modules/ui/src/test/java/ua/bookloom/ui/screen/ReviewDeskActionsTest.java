@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,24 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         awaitFx(() ->
                 desk.calls().contains("saveEdit(" + projectId() + ", " + LOW_SCORE_ID + ", " + TYPED_STORED + ")"));
+    }
+
+    // IF the saved note stayed, THEN "Saved — ch5 · p12." would sit beside another segment the person picked later.
+    @Test
+    void savedNote_anotherSegmentPickedAfterTheSave_isCleared() throws Exception {
+        openDesk();
+        selectRow(2, "ch5 · p12");
+        type(TYPED);
+        key(target(), KeyCode.ENTER, false, false, true);
+        awaitFx(() -> "Saved — ch5 · p12.".equals(feedback()));
+
+        selectRow(0, rowTexts().getFirst());
+
+        assertThat(feedback()).isEmpty();
+    }
+
+    private String feedback() {
+        return fx(() -> ((Label) required("modal-feedback")).getText());
     }
 
     // IF a plain Enter on a focused row accepted a segment, THEN one stray key would decide it unread.

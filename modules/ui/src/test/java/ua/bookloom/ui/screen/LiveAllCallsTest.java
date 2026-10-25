@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.stream.LongStream;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.CallKind;
@@ -19,11 +20,14 @@ import ua.bookloom.ui.state.LiveRow.Stage;
 /** "All calls…" lists the calls the run kept, newest first, in the progress dialog's Calls view. */
 class LiveAllCallsTest extends LiveCardTestBase {
 
+    private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.REVIEW, CallKind.PLACEHOLDER_REPAIR);
+
+    // The kinds take turns so the rows tell the calls apart; the label is the pipeline's prompt name, never shown.
     private static CallSnapshot call(final long id) {
         return CallSnapshot.waiting(
                         id,
-                        CallKind.DRAFT,
-                        "Call " + id + " · Draft · 1 segment",
+                        KINDS.get((int) ((id - 1) % KINDS.size())),
+                        "draft-batch-json",
                         null,
                         List.of(new CallSegment("s-" + id, "ch7 · p" + id, "Source " + id)),
                         List.of(),
@@ -56,8 +60,7 @@ class LiveAllCallsTest extends LiveCardTestBase {
 
         assertThat(isShown("calls-card")).isTrue();
         assertThat(List.of(stepName(0), stepName(1), stepName(2)))
-                .containsExactly(
-                        "Call 3 · Draft · 1 segment", "Call 2 · Draft · 1 segment", "Call 1 · Draft · 1 segment");
+                .containsExactly("Placeholder repair", "Review", "Translate");
     }
 
     // IF the dialog listed a call the card no longer keeps, THEN it would promise a prompt that is gone.
@@ -68,8 +71,9 @@ class LiveAllCallsTest extends LiveCardTestBase {
         onFx(() -> button("translating-live-all-calls").fire());
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(stepName(0)).isEqualTo("Call 120 · Draft · 1 segment");
-        assertThat(textOf("calls-card")).doesNotContain("Call 70 ");
+        assertThat(stepName(0)).isEqualTo("Placeholder repair");
+        assertThat(((ListView<?>) required("calls-card").lookup(".list-view")).getItems())
+                .hasSize(50);
     }
 
     // IF Close left the dialog up, THEN it would cover the card for the rest of the run.

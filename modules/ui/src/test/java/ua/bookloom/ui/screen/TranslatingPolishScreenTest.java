@@ -120,6 +120,21 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-count-to-review")).isEqualTo("5 to review");
     }
 
+    // IF Review (n) waited for the desk's read, which lags the run's last flush, THEN a row reading "to review" would
+    // sit beside Review (0) until the run ended.
+    @Test
+    void reviewButton_runDecidesFlaggedSegments_countsThemAsTheyAreDecided() throws TimeoutException {
+        readyToStart();
+        desk.willAnswerCounts(new ReviewCounts(100, 0, 0, 0, 0, 0, 0, 0, 0));
+        showTranslating();
+
+        publish(RunState.RUNNING);
+        publishProgress(10, 2, 88);
+
+        awaitFx(() -> "Review (2)".equals(button("translating-review-flagged").getText()));
+        assertThat(labelText("translating-count-to-review")).isEqualTo("2 to review");
+    }
+
     private void endedRunWithZeroLeft(final RunState state) {
         mirror().publishRunStarted("Frankenstein.epub", null);
         publishProgress(100, 0, 0);

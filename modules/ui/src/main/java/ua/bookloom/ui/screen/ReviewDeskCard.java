@@ -146,6 +146,9 @@ final class ReviewDeskCard extends ModalCard {
         viewModel.selected().addListener((observed, was, now) -> {
             if (was == null || now == null || !was.segmentId().equals(now.segmentId())) {
                 detailScroll.setVvalue(0);
+                // The desk confirms a decision after it moved on, so a note naming one segment stays only until the
+                // person picks another.
+                clearFeedback();
             }
         });
     }

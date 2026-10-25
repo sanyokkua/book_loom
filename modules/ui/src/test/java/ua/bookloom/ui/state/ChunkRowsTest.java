@@ -60,6 +60,20 @@ class ChunkRowsTest {
         assertThat(RowMarker.of(rows().get(2), RunRow.TRANSLATING)).isEqualTo(RowMarker.ALONE);
     }
 
+    // IF a batch call's later segments were listed when the call went out, THEN the segments between them, announced
+    // afterwards, would follow them (p41, p43, p42) instead of reading in book order.
+    @Test
+    void batchCallBeforeTheSegmentsBetweenAreAnnounced_rowsReadInBookOrder() {
+        state.started(started(1, CHUNK_ONE));
+        state.snapshot(draft(1, CallKind.DRAFT, 1, 3));
+        state.started(started(2, CHUNK_ONE));
+        state.started(started(3, CHUNK_ONE));
+        state.started(started(4, CHUNK_ONE));
+
+        assertThat(rows().stream().map(LiveRow::locator).toList())
+                .containsExactly("ch7 · p41", "ch7 · p42", "ch7 · p43", "ch7 · p44");
+    }
+
     // IF a directed fix of one paragraph replaced the rows with its own, THEN the chunk would vanish from the card.
     @Test
     void directedFixOfOneSegment_keepsTheChunksFourRows() {

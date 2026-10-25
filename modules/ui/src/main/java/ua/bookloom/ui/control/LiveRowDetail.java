@@ -31,6 +31,7 @@ import ua.bookloom.ui.state.SectionMemory;
 public final class LiveRowDetail extends VBox {
 
     private static final double SPACING = 10;
+    private static final String PLACEHOLDER = "live-placeholder";
     private static final double[] HALVES = {1, 1};
 
     private final Messages messages;
@@ -151,16 +152,35 @@ public final class LiveRowDetail extends VBox {
     }
 
     private void showTexts(final @Nullable LiveRow row, final @Nullable RowMarker marker) {
-        source.setText(row == null ? "" : row.displaySource());
+        final String shownSource = row == null ? "" : row.displaySource();
+        // A segment of formatting only (an image, a formula, a rule) has no words once its marks are hidden.
+        final boolean noWords = row != null && shownSource.isBlank();
+        show(source, noWords ? messages.get(MessageKey.LIVE_DETAIL_NO_WORDS) : shownSource, noWords);
         final String translated = row == null ? null : row.target();
-        target.getStyleClass().remove("live-placeholder");
-        if (translated != null && marker != RowMarker.TRANSLATING) {
-            target.setText(translated);
+        if (marker == RowMarker.KEPT) {
+            final String kept = translated == null || translated.isBlank() ? shownSource : translated;
+            show(target, kept.isBlank() ? messages.get(MessageKey.LIVE_DETAIL_NO_WORDS) : kept, kept.isBlank());
             return;
         }
-        target.getStyleClass().add("live-placeholder");
-        target.setText(messages.get(
-                marker == RowMarker.TRANSLATING ? MessageKey.LIVE_DETAIL_PENDING : MessageKey.LIVE_DETAIL_NOT_YET));
+        if (translated != null && marker != RowMarker.TRANSLATING) {
+            show(target, translated, false);
+            return;
+        }
+        show(
+                target,
+                messages.get(
+                        marker == RowMarker.TRANSLATING
+                                ? MessageKey.LIVE_DETAIL_PENDING
+                                : MessageKey.LIVE_DETAIL_NOT_YET),
+                true);
+    }
+
+    private static void show(final Label label, final String text, final boolean placeholder) {
+        label.getStyleClass().remove(PLACEHOLDER);
+        if (placeholder) {
+            label.getStyleClass().add(PLACEHOLDER);
+        }
+        label.setText(text);
     }
 
     private void showInFlight(final @Nullable CallSnapshot waiting) {

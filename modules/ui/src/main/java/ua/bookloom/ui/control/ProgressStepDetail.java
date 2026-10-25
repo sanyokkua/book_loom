@@ -157,7 +157,7 @@ final class ProgressStepDetail extends VBox {
         show(grid, step != null && grid.show(step.text(), step.isRunning()));
         input.setText(orNothing(step == null ? null : inputOf(step, made)));
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
-        output.setText(orNothing(step == null ? null : outputOf(step, made, technical)));
+        output.setText(said(step == null ? null : outputOf(step, made, technical), made));
         showCall(technical, made);
         show(notKept, technical && step != null && model.isPromptDropped(step));
         if (technical && made != null) {
@@ -284,6 +284,26 @@ final class ProgressStepDetail extends VBox {
                                         : messages.get(MessageKey.BRIEF_DECIDES_NO_QUOTE))))
                 .collect(Collectors.joining("\n"));
         return lines.isEmpty() ? null : lines;
+    }
+
+    private String said(final @Nullable String text, final @Nullable CallSnapshot made) {
+        if (text != null && !text.isBlank()) {
+            return text;
+        }
+        return messages.get(nothingSaid(made == null ? null : made.state(), made == null ? null : made.reply()));
+    }
+
+    /**
+     * What "What it says" reads when a step gave nothing to show: a call still waiting has said nothing yet; an ended
+     * call either brought no reply, or one with no translated text, which only the Detailed view shows raw.
+     */
+    static MessageKey nothingSaid(final @Nullable CallState state, final @Nullable String reply) {
+        if (state == null || state == CallState.WAITING) {
+            return MessageKey.PROGRESS_NOTHING;
+        }
+        return reply == null || reply.isBlank()
+                ? MessageKey.LIVE_CALL_REPLY_NONE
+                : MessageKey.PROGRESS_REPLY_IN_DETAILED;
     }
 
     private String orNothing(final @Nullable String text) {

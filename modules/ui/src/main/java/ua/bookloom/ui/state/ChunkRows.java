@@ -1,9 +1,12 @@
 package ua.bookloom.ui.state;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
@@ -19,9 +22,9 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.SegmentPath;
 
 /**
- * The rows of the live card: every segment the run has started, in the order it started them, each with how far it has
- * got. The chunk being translated is last and earlier chunks stay above it as history, so a reviewed chunk whose check
- * decides all its drafts at once never empties the card. A directed fix or a review call of one segment never adds a
+ * The rows of the live card: every segment the run has started, in book order, each with how far it has got. The
+ * chunk being translated is last and earlier chunks stay above it as history, so a reviewed chunk whose check decides
+ * all its drafts at once never empties the card. A directed fix or a review call of one segment never adds a
  * row; only a draft call adds a segment the run did not announce. The history is the run's own: a new run session
  * starts with an empty one.
  *
@@ -33,7 +36,11 @@ final class ChunkRows {
     /** How many rows the card keeps; the oldest goes first, so a whole book is never held or drawn at once. */
     static final int MAX_ROWS = 500;
 
-    private final Map<String, LiveRow> rows = new LinkedHashMap<>();
+    private final Map<String, LiveRow> rows = new HashMap<>();
+    // The rows in book order. The run announces segments in book order, but a batch call goes out with segments the
+    // run has not announced yet; those wait in place, and a segment announced later goes before the first of them.
+    private final List<String> order = new ArrayList<>();
+    private final Set<String> unannounced = new HashSet<>();
     private @Nullable List<LiveRow> shown;
 
     void started(final SegmentStarted event) {
@@ -41,11 +48,12 @@ final class ChunkRows {
         final LiveRow known = rows.get(event.segmentId());
         if (known != null && !known.stage().isDecided()) {
             log.debug("live rows: segment {} started again in chunk {}, kept in place", event.segmentId(), at.chunk());
+            unannounced.remove(event.segmentId());
             return;
         }
         if (known != null) {
             log.debug("live rows: decided segment {} started again, moved to the end", event.segmentId());
-            rows.remove(event.segmentId());
+            remove(event.segmentId());
         }
         log.debug(
                 "live rows: segment {} queued in chunk {} of section {}", event.segmentId(), at.chunk(), at.section());
@@ -60,8 +68,26 @@ final class ChunkRows {
                         null,
                         List.of(),
                         null));
+        order.add(firstUnannounced(), event.segmentId());
         bound();
         shown = null;
+    }
+
+    // Where an announced segment goes: before the first row a call listed ahead of its announcement, else at the end.
+    private int firstUnannounced() {
+        for (int index = 0; index < order.size(); index++) {
+            if (unannounced.contains(order.get(index))) {
+                log.debug("live rows: placed before {}, which a call listed early", order.get(index));
+                return index;
+            }
+        }
+        return order.size();
+    }
+
+    private void remove(final String segmentId) {
+        rows.remove(segmentId);
+        order.remove(segmentId);
+        unannounced.remove(segmentId);
     }
 
     void call(final CallSnapshot call) {
@@ -72,6 +98,8 @@ final class ChunkRows {
                 rows.put(segment.id(), known.inCall(call.callId(), waiting));
             } else if (call.kind() == CallKind.DRAFT) {
                 rows.put(segment.id(), unannounced(segment).inCall(call.callId(), waiting));
+                order.add(segment.id());
+                unannounced.add(segment.id());
             }
         }
         for (final SegmentOutcomeNote note : call.outcomes()) {
@@ -157,18 +185,18 @@ final class ChunkRows {
         if (now != null) {
             return now;
         }
-        final List<LiveRow> copied = List.copyOf(rows.values());
+        final List<LiveRow> copied = order.stream().map(rows::get).toList();
         shown = copied;
         return copied;
     }
 
     private void bound() {
-        final int over = rows.size() - MAX_ROWS;
+        final int over = order.size() - MAX_ROWS;
         if (over > 0) {
             log.debug("live rows: {} oldest rows dropped to keep {}", over, MAX_ROWS);
         }
-        while (rows.size() > MAX_ROWS) {
-            rows.remove(rows.keySet().iterator().next());
+        while (order.size() > MAX_ROWS) {
+            remove(order.getFirst());
         }
     }
 }

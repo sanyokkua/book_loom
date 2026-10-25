@@ -95,6 +95,7 @@ public final class RunStateSource {
         final List<Observable> inputs = List.of(
                 mirror.runState(),
                 mirror.runFileName(),
+                mirror.figures(),
                 mirror.total(),
                 mirror.remaining(),
                 mirror.live().progress(),
@@ -249,13 +250,23 @@ public final class RunStateSource {
                 timeLeft(state),
                 counts.decided(),
                 counts.total(),
-                review.flaggedCount().get() + mirror.live().suspicious().get(),
+                toReview(state) + mirror.live().suspicious().get(),
                 inFlight(call, waiting),
                 choice,
                 translating.controls().get(),
                 translating.otherWork().get(),
                 span(call, waiting),
                 null);
+    }
+
+    // The desk reads the stored count, which lags the run's last flush; while the run decides, its own figure counts
+    // each
+    // flagged segment as it is decided. Once settled the desk's count is the run's figure too (FlaggedCount.show).
+    private int toReview(final RunState state) {
+        final int desk = review.flaggedCount().get();
+        final boolean deciding = state == RunState.RUNNING || state == RunState.PAUSING || state == RunState.STOPPING;
+        // Not logged: this is read on every progress tick.
+        return deciding ? Math.max(desk, mirror.figures().get().flagged()) : desk;
     }
 
     /** How far the book is: the decided and all segments, and the share of the work done. */

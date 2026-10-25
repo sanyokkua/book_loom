@@ -99,6 +99,23 @@ class LiveRowDetailTest extends LiveCardTestBase {
         assertThat(cells().get(0).getTooltip().getText()).isEqualTo("Source text 1");
     }
 
+    // IF a segment of formatting only showed two empty boxes, THEN the person could not tell what was kept, or that
+    // nothing is missing; a kept text with words shows those words on both sides.
+    @Test
+    void simpleDetail_keptRowWithNoWords_saysSoOnBothSides() {
+        showRows(List.of(
+                new LiveRow("s-1", "ch7 · p41", "", "", Stage.KEPT, null, List.of(), null),
+                new LiveRow("s-2", "ch7 · p42", "IV", null, Stage.KEPT, null, List.of(), null)));
+
+        pick(0);
+        assertThat(textOf(DETAIL))
+                .containsSubsequence(
+                        "No words — only formatting, kept as in the book.",
+                        "No words — only formatting, kept as in the book.");
+        pick(1);
+        assertThat(textOf(DETAIL)).containsSubsequence("IV", "IV").doesNotContain("Not translated yet.");
+    }
+
     // IF Simple left out the source or the target, THEN the person could not compare them.
     @Test
     void simpleDetail_decidedRow_showsItsSourceAndItsTranslation() {
