@@ -239,7 +239,7 @@ IF a file already exists at the Save to path, or at the path of a side file that
 
 ### Requirement: Check the written book before it replaces the destination
 
-The system SHALL write the book to a temporary file beside the destination, open it again, and move it onto the destination — replacing an existing file only when the person agreed — only when it has the source's body segment count and every body segment keeps its placeholders, alt text set aside; a segment whose stored target fails the placeholder gate, or whose placeholders differ, SHALL be written in its source and reported; any other failure SHALL leave the destination unchanged.
+The system SHALL write the book to a temporary file beside the destination, under a name no file in that folder holds, so a file already there is never written over or removed, open it again, and move it onto the destination — replacing an existing file only when the person agreed — only when it has the source's body segment count and every body segment keeps its placeholders, alt text set aside; a segment whose stored target fails the placeholder gate, or whose placeholders differ, SHALL be written in its source and reported; any other failure SHALL leave the destination unchanged.
 
 **Source**: FR-EXPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#partial-results`, ADR-0041. In plain words: the book is proven to open with nothing lost before it takes the place of a good one, and one paragraph whose formatting broke is written in its source and named instead of costing the whole book; only body segments are counted, because auxiliary segments can legitimately merge or vanish on re-opening.
 
@@ -303,8 +303,21 @@ The system SHALL write the book to a temporary file beside the destination, open
 
 #### Scenario: A failed write leaves nothing behind
 
-- **WHEN** the destination folder is deleted as the export starts
-- **THEN** the export reports the write error, and neither the destination nor a temporary file exists
+- **WHEN** the destination folder `out` is deleted as the export starts
+- **THEN** the export reports `ErrorCode.validation` with the details `reason=folder-missing, folder=out`, which the
+  window words as advice to create the folder or choose another, and neither the destination nor a temporary file
+  exists
+
+#### Scenario: A hidden file beside the destination is left alone
+
+- **WHEN** `.Book.uk.md` already stands beside the destination `Book.uk.md` and the book is exported
+- **THEN** `Book.uk.md` holds the translation and `.Book.uk.md` is unchanged
+
+#### Scenario: A full disk says what to fix
+
+- **WHEN** writing the book fails because the disk has no space left
+- **THEN** the export reports `ErrorCode.validation` with the details `reason=disk-full, folder=<the folder's name>`,
+  and the window says in its display language that the disk is full and to free space or choose another disk
 
 #### Scenario: The source changed during the job
 

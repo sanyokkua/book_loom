@@ -82,9 +82,7 @@ book whose frontmatter holds no `lang` key, carry no language.
 
 ### Requirement: Check the written book before it replaces the destination
 
-The system SHALL write the translated book to a temporary file in the destination folder and open that file again. The
-temporary file SHALL be a new file under a name no file in that folder holds, so a file already there is never written
-over or removed. It
+The system SHALL write the translated book to a temporary file in the destination folder and open that file again. It
 SHALL move the file onto the destination only when it opens with as many body segments as the source and every
 re-opened body segment carries the same placeholders as the segment written into it — the same count, in the same
 order, and each placeholder's markup the same once any image's alt text in it is set aside — and SHALL replace an
@@ -175,21 +173,8 @@ temporary file, and report the error:
 
 #### Scenario: A failed write leaves nothing behind
 
-- **WHEN** the destination folder `out` is deleted as the export starts
-- **THEN** the export reports `ErrorCode.validation` with the details `reason=folder-missing, folder=out`, which the
-  window words as advice to create the folder or choose another, and neither the destination nor a temporary file
-  exists
-
-#### Scenario: A hidden file beside the destination is left alone
-
-- **WHEN** `.Book.uk.md` already stands beside the destination `Book.uk.md` and the book is exported
-- **THEN** `Book.uk.md` holds the translation and `.Book.uk.md` is unchanged
-
-#### Scenario: A full disk says what to fix
-
-- **WHEN** writing the book fails because the disk has no space left
-- **THEN** the export reports `ErrorCode.validation` with the details `reason=disk-full, folder=<the folder's name>`,
-  and the window says in its display language that the disk is full and to free space or choose another disk
+- **WHEN** the destination folder is deleted as the export starts
+- **THEN** the export reports the write error, and neither the destination nor a temporary file exists
 
 #### Scenario: The source changed during the job
 
