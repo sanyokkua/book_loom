@@ -239,7 +239,67 @@ The Names & style screen SHALL offer "Prepare names automatically" in a card abo
 - **WHEN** the pass succeeds and the person presses Show changed rows
 - **THEN** every changed row on both cards shows the left-edge mark, and both cards' changed filters are on
 
+### Requirement: Read an imported glossary file whole or not at all
+
+WHEN a CSV is imported, the application SHALL read its columns by the header's names in any order, trim the term and
+the target, take off the quote put before a formula-like value, and keep the last row of a term named twice, counting
+such terms; IF the file is not UTF-8 or its header does not name the five columns once each, THEN it SHALL store nothing
+and say which; IF storing fails part-way, THEN it SHALL put the glossary back as it was.
+
+**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/02_Architecture/09_ERROR_HANDLING.md#safe-details-allowlist`. In plain words: a glossary file comes back from spreadsheets and other people, so its columns may be reordered, its cells padded, a name repeated, its encoding wrong; each of these is either read the way the person meant or refused with a reason they can act on, in their display language, and a file is never half imported.
+
+#### Scenario: A header in another order is read by its names
+
+- **WHEN** an imported file's header is `locked,gender,type,target,term` and its line 2 is `true,male,character,Гейл,Hale`
+- **THEN** the glossary holds `Hale` → `Гейл`, character, male, locked
+
+#### Scenario: A file that is not UTF-8 is refused by name
+
+- **WHEN** an imported file holds the bytes `C3 28`
+- **THEN** the import answers `ErrorCode.validation` with the details `reason=not-utf8`, and nothing is stored
+
+#### Scenario: A term on two rows keeps the last
+
+- **WHEN** an imported file has `Hale,Хейл,character,male,false` on line 2 and `hale,Гейл,character,male,true` on line 3
+- **THEN** one row is imported, `Hale` → `Гейл`, and the report counts 1 duplicate
+
+#### Scenario: A formula-like term survives a spreadsheet
+
+- **WHEN** the glossary holds `=SUM(A1)` → `@home` and is exported
+- **THEN** the exported line is `'=SUM(A1),'@home,other,unknown,false`, and importing it back gives `=SUM(A1)` → `@home`
+
+#### Scenario: A storage failure part-way imports nothing
+
+- **WHEN** the glossary holds `Milton` → `Мілтон`, an imported file changes `Milton` on line 2 and adds `Hale` on line 3,
+  and storing line 3 fails
+- **THEN** the import answers that failure and the glossary holds only `Milton` → `Мілтон`
+
 ## MODIFIED Requirements
+
+### Requirement: Import and export the glossary as CSV
+
+The application SHALL export the glossary as UTF-8 CSV with the header `term,target,type,gender,locked` and quoting as
+RFC 4180 defines it, written whole through a new temporary file, with a single quote before a value that starts with
+`=`, `+`, `-`, `@`, a tab or a carriage return; and WHEN a CSV is imported it SHALL update an existing entry matched by
+source term, add the others, and report each malformed or refused row by its line number while importing the rest.
+
+**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
+
+#### Scenario: A term with a comma is quoted
+
+- **WHEN** the glossary holds `Hale, Margaret` → `Гейл, Маргарет`, character, female, locked
+- **THEN** the exported line is `"Hale, Margaret","Гейл, Маргарет",character,female,true`
+
+#### Scenario: A malformed row is reported and skipped
+
+- **WHEN** an imported file has the header, a valid line 2 `Hale,Гейл,character,male,true`, a line 3 `Milton,Мілтон`
+  with two fields, and a valid line 4
+- **THEN** lines 2 and 4 are imported and line 3 is reported as malformed
+
+#### Scenario: Import updates an existing term
+
+- **WHEN** the glossary holds `Hale` → `Хейл` and an imported line reads `Hale,Гейл,character,male,true`
+- **THEN** the glossary holds one `Hale` entry with target `Гейл`, locked
 
 ### Requirement: Show the glossary as an editable table on Names & style
 

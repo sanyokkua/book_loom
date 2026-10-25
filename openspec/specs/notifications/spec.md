@@ -71,8 +71,7 @@ build:
 - a run finished, at success severity, or at warning severity when at least one segment is flagged;
 - a flagged segment was accepted in review, at success severity, naming the segment and how many flagged segments remain;
 - a retry was refused because a run is translating (`busy`), at warning severity;
-- a model listing could not be read, at warning severity;
-- a folder was dropped on the import screen instead of a book file, at warning severity, titled `That is a folder`.
+- a model listing could not be read, at warning severity.
 
 An export being written raises no transient message of its own: `export`'s completion dialog is the one surface
 that reports it (see `export`, "Report the finished file").
