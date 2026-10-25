@@ -34,12 +34,12 @@ pinned banner slot between the toolbar and the content (`#shell-banners`, L3).
 |--------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Window / stage     | `Stage` + root `BorderPane`       | `.root` carries theme tokens                                                                                                                         |
 | Title bar          | `HBox`                            | Built today: product name, then the run status (only while a run exists, `#title-bar-run-status`), then the theme toggle. Planned: see `#title-bar-run-status` |
-| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (Projects, then five numbered steps, `#workflow-navigation`) and Application groups; 236 px wide (200 px in a compact window, L9; no icon rail), scrolls vertically when the window is short |
+| Left navigation    | `ScrollHost` around a `VBox`      | Workflow (Projects, then five numbered steps, `#workflow-navigation`) and Application groups; 236 px wide (200 px in a compact window, L9; no icon rail), scrolls vertically when the window is short |
 | Breadcrumb         | `Label`/`Breadcrumbs`-style bar   | Reflects current screen; Planned: "Workflow / Step · step n of 5" (`#shell-breadcrumb`)                                                              |
 | Toolbar actions    | `ToolBar` / `HBox` of `Button`    | The one action bar (L2): each screen's main and run actions, always visible (`StepFooter` in `#shell-actions`)                                       |
 | Banner slot        | `VBox` (`#shell-banners`)         | **Planned.** Pinned above the scrolling content; holds the run banners and the hidden-work banner (L3)                                               |
 | Theme toggle       | `ToggleButton`                    | **2-state light↔dark quick-toggle** only; the tri-state selector including `system` lives in Settings → Appearance (`07_SETTINGS.md#appearance-tab`) |
-| Content host       | `ScrollPane` around a `StackPane` | Hosts the active screen; scrolls when the screen is taller or wider than the window, and fits width and height so a growing list still fills it       |
+| Content host       | `ScrollHost` around a `StackPane` | Hosts the active screen; scrolls when the screen is taller or wider than the window, and fits width and height so a growing list still fills it       |
 | Work layer + scrim | `StackPane` overlay (`BusyHost`)  | Holds the progress dialogs of model work (`#busy-card`, G4), below the modal host                                                                    |
 | Modal host + scrim | `StackPane` overlay (`ModalHost`) | For `Dialog`/`Alert`; above the work layer (G1)                                                                                                      |
 | Toast host         | Native token-styled JavaFX nodes  | ok/info/warn/err, stacked in-shell at the bottom right (`#shell-toast-host`; G2, see `#toasts`)                                                  |
@@ -48,7 +48,10 @@ Smallest window: the stage's minimum is 960 × 640 as the outer window, title ba
 at 1024 × 700); the content area inside it is smaller by that decoration — about 944 wide with 8 px borders and about 612
 high with a 28 px title bar. At that size every screen fits the width of the content area (proved for 944 × 600) and
 every part stays reachable, scrolling vertically where the screen is taller: the navigation column and the content host
-scroll rather than clip, a count tile (`.stat`) keeps its 120 px minimum width, never narrower than its figure, and never shows an ellipsis for its caption or its figure, and a progress bar keeps its 9 px height (a progress bar's
+scroll rather than clip, every scroll pane is one `ScrollHost` (fitted to its width, a vertical bar whenever its content
+is taller; a Settings tab holds its content in one, since a tab clips what it holds — `ScrollGuardTest`), and the wheel
+reaches the last control of every catalogued screen, tab and dialog in English and Ukrainian at 944 or 960 by 600 or 640
+(`ScreenScrollTest`), a count tile (`.stat`) keeps its 120 px minimum width, never narrower than its figure, and never shows an ellipsis for its caption or its figure, and a progress bar keeps its 9 px height (a progress bar's
 own minimum height is zero, so the height is fixed in the stylesheet). The layout rules L1–L10 are in
 `#layout-and-sizes`.
 

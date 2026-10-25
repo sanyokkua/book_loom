@@ -34,6 +34,7 @@ import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.RunBanner;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.control.ScrollAnchor;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.SmoothScroll;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -98,7 +99,7 @@ public final class AppShellView {
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
     private final StackPane contentHost = new ContentHost();
-    private final ScrollPane contentScroll = new ScrollPane(contentHost);
+    private final ScrollPane contentScroll = new ScrollHost(contentHost);
     private final ScrollAnchor contentAnchor = ScrollAnchor.install(contentScroll);
     private final ToggleButton themeToggle = new ToggleButton();
     private @Nullable StackPane root;
@@ -322,10 +323,9 @@ public final class AppShellView {
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
         // Both fit: a growing list fills the viewport; it scrolls once the screen's minimum (showContent) is taller.
-        scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
+        // A screen narrower than its minimum width is scrolled across rather than cut.
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         return scroll;
     }
 

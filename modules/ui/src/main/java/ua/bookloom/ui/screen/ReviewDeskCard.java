@@ -18,6 +18,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -118,8 +119,7 @@ final class ReviewDeskCard extends ModalCard {
         list.maxWidthProperty().bind(widthProperty().multiply(LIST_SHARE));
         final ReviewDeskDetail detail = new ReviewDeskDetail(
                 viewModel, parts.sourceName(), parts.targetName(), parts.technical(), messages, inline);
-        final ScrollPane detailScroll = new ScrollPane(detail);
-        detailScroll.setFitToWidth(true);
+        final ScrollPane detailScroll = new ScrollHost(detail);
         detailScroll.setFitToHeight(true);
         detailScroll.getStyleClass().add("review-detail-scroll");
         keepInView(detailScroll);

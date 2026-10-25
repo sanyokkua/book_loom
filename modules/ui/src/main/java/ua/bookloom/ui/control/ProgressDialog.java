@@ -101,7 +101,7 @@ public final class ProgressDialog extends ModalCard {
         howCounted = new HowCountedPane("progress-how", messages);
         decisions = new DecisionPane(model, messages);
         answers = new BriefAnswerPane(messages);
-        detailScroll = new ScrollPane(detail);
+        detailScroll = new ScrollHost(detail);
         setHeader(header());
         setContent(body());
         if (getContent() instanceof ScrollPane scroll) {
@@ -169,14 +169,11 @@ public final class ProgressDialog extends ModalCard {
     }
 
     private Node body() {
-        detailScroll.setFitToWidth(true);
         detailScroll.getStyleClass().add("progress-detail-scroll");
-        final ScrollPane answersScroll = new ScrollPane(answers);
-        answersScroll.setFitToWidth(true);
+        final ScrollPane answersScroll = new ScrollHost(answers);
         answersScroll.getStyleClass().add("progress-detail-scroll");
         showAnswers(answersScroll);
-        final ScrollPane left = new ScrollPane(stepsColumn());
-        left.setFitToWidth(true);
+        final ScrollPane left = new ScrollHost(stepsColumn());
         left.setFitToHeight(true);
         left.getStyleClass().add("progress-detail-scroll");
         final SplitPane split = new SplitPane(left, new StackPane(detailScroll, answersScroll));

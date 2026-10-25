@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.PromptView;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -164,8 +165,7 @@ final class ReviewDeskTabs extends TabPane {
     }
 
     private static ScrollPane scroll(final Node content) {
-        final ScrollPane scroll = new ScrollPane(content);
-        scroll.setFitToWidth(true);
+        final ScrollPane scroll = new ScrollHost(content);
         scroll.getStyleClass().add("review-tab-scroll");
         return scroll;
     }

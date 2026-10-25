@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.Motion;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -64,7 +65,7 @@ final class NavColumn {
     private final Region footerDot = new Region();
     private boolean footerFailing;
     private final VBox column = new VBox();
-    private final ScrollPane scroll = new ScrollPane(column);
+    private final ScrollPane scroll = new ScrollHost(column);
 
     /**
      * Builds every group and entry.
@@ -101,11 +102,8 @@ final class NavColumn {
         // width and carries its background, and the entries sit in a transparent box inside it.
         scroll.setId(COLUMN_ID);
         scroll.getStyleClass().addAll("shell-nav", "nav-scroll");
-        scroll.setFitToWidth(true);
         // Fitting the height lets the spacer push the footer to the bottom of a tall window.
         scroll.setFitToHeight(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         log.debug("built navigation column with {} entries", entries.size());
     }
 

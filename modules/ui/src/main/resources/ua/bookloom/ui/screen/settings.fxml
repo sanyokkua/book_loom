@@ -3,7 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
+<?import ua.bookloom.ui.control.ScrollHost?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.layout.HBox?>
@@ -16,67 +16,80 @@
     <Label id="settings-subtitle" styleClass="muted, prose" wrapText="true" text="%settings.subtitle"/>
     <TabPane fx:id="tabs" id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
         <Tab id="settings-tab-providers" text="%settings.tab.providers">
-            <HBox spacing="14" alignment="TOP_LEFT">
-                <padding>
-                    <Insets top="14"/>
-                </padding>
-                <VBox id="settings-provider-card" styleClass="card, settings-list" spacing="10">
-                    <Label styleClass="card-title" text="%settings.providers.title"/>
-                    <Label fx:id="providerEmpty" id="settings-provider-empty" styleClass="hint" wrapText="true"
-                           text="%settings.providers.empty"/>
-                    <VBox fx:id="providerList" id="settings-provider-list" spacing="6"/>
-                    <Button fx:id="providerAdd" id="settings-provider-add" styleClass="btn-ghost"
-                            text="%settings.provider.add"/>
-                </VBox>
-                <VBox fx:id="formCard" id="settings-form-card" styleClass="card, form-card" spacing="10"
-                      HBox.hgrow="ALWAYS" maxWidth="860">
-                    <HBox alignment="CENTER_LEFT" spacing="8">
-                        <Label fx:id="formTitle" id="settings-form-title" styleClass="card-title"/>
-                        <Label fx:id="formBadge" id="settings-form-badge" styleClass="chip, chip-ok"
-                               minWidth="-Infinity" text="%settings.provider.current"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="formUseReason" id="settings-form-use-reason" styleClass="hint"
-                               text="%settings.provider.use.dirty"/>
-                        <Button fx:id="formUse" id="settings-form-use" styleClass="btn-ghost"
-                                text="%settings.provider.use"/>
-                        <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline"
-                                minWidth="-Infinity" text="%settings.provider.delete"/>
-                    </HBox>
-                    <!-- Its own line: beside the buttons the sentence squeezed the title, the badge and Delete. -->
-                    <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
-                           wrapText="true" maxWidth="Infinity" text="%settings.provider.delete.busy"/>
-                    <ScrollPane fx:id="formScroll" id="settings-form-scroll" styleClass="form-scroll" fitToWidth="true"
-                                hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
-                        <VBox fx:id="formBody" id="settings-form-body" spacing="14"/>
-                    </ScrollPane>
-                    <HBox styleClass="form-foot" alignment="CENTER_LEFT" spacing="10">
-                        <Label fx:id="formDirty" id="settings-form-dirty" styleClass="dirty"
-                               text="%settings.form.dirty"/>
-                        <Label fx:id="formSaved" id="settings-form-saved" styleClass="hint"
-                               text="%settings.form.saved"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="formCancel" id="settings-form-cancel" styleClass="btn-ghost"
-                                text="%settings.form.cancel"/>
-                        <Button fx:id="formSave" id="settings-form-save" styleClass="btn-primary"
-                                text="%settings.form.save"/>
-                    </HBox>
-                </VBox>
-            </HBox>
+            <!-- Every tab holds its content in a ScrollHost: the tab clips what it holds, and only a scroll pane
+                 lets the part below the window be reached. This one and Models fill the height (a pinned footer). -->
+            <ScrollHost id="settings-providers-scroll" fitToHeight="true">
+                <HBox spacing="14" alignment="TOP_LEFT">
+                    <padding>
+                        <Insets top="14"/>
+                    </padding>
+                    <VBox id="settings-provider-card" styleClass="card, settings-list" spacing="10">
+                        <Label styleClass="card-title" text="%settings.providers.title"/>
+                        <Label fx:id="providerEmpty" id="settings-provider-empty" styleClass="hint" wrapText="true"
+                               text="%settings.providers.empty"/>
+                        <VBox fx:id="providerList" id="settings-provider-list" spacing="6"/>
+                        <Button fx:id="providerAdd" id="settings-provider-add" styleClass="btn-ghost"
+                                text="%settings.provider.add"/>
+                    </VBox>
+                    <VBox fx:id="formCard" id="settings-form-card" styleClass="card, form-card" spacing="10"
+                          HBox.hgrow="ALWAYS" maxWidth="860">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label fx:id="formTitle" id="settings-form-title" styleClass="card-title"/>
+                            <Label fx:id="formBadge" id="settings-form-badge" styleClass="chip, chip-ok"
+                                   minWidth="-Infinity" text="%settings.provider.current"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="formUseReason" id="settings-form-use-reason" styleClass="hint"
+                                   text="%settings.provider.use.dirty"/>
+                            <Button fx:id="formUse" id="settings-form-use" styleClass="btn-ghost"
+                                    text="%settings.provider.use"/>
+                            <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline"
+                                    minWidth="-Infinity" text="%settings.provider.delete"/>
+                        </HBox>
+                        <!-- Its own line: beside the buttons the sentence squeezed the title, the badge and Delete. -->
+                        <Label fx:id="deleteReason" id="settings-provider-delete-reason" styleClass="hint"
+                               wrapText="true" maxWidth="Infinity" text="%settings.provider.delete.busy"/>
+                        <ScrollHost fx:id="formScroll" id="settings-form-scroll" styleClass="form-scroll" VBox.vgrow="ALWAYS">
+                            <VBox fx:id="formBody" id="settings-form-body" spacing="14"/>
+                        </ScrollHost>
+                        <HBox styleClass="form-foot" alignment="CENTER_LEFT" spacing="10">
+                            <Label fx:id="formDirty" id="settings-form-dirty" styleClass="dirty"
+                                   text="%settings.form.dirty"/>
+                            <Label fx:id="formSaved" id="settings-form-saved" styleClass="hint"
+                                   text="%settings.form.saved"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button fx:id="formCancel" id="settings-form-cancel" styleClass="btn-ghost"
+                                    text="%settings.form.cancel"/>
+                            <Button fx:id="formSave" id="settings-form-save" styleClass="btn-primary"
+                                    text="%settings.form.save"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+            </ScrollHost>
         </Tab>
         <Tab id="settings-tab-models" text="%settings.tab.models">
-            <fx:include source="models.fxml"/>
+            <ScrollHost id="settings-models-scroll" fitToHeight="true">
+                <fx:include source="models.fxml"/>
+            </ScrollHost>
         </Tab>
         <Tab id="settings-tab-generation" text="%settings.tab.generation">
-            <fx:include source="generation.fxml"/>
+            <ScrollHost id="settings-generation-scroll">
+                <fx:include source="generation.fxml"/>
+            </ScrollHost>
         </Tab>
         <Tab id="settings-tab-appearance" text="%settings.tab.appearance">
-            <fx:include source="appearance.fxml"/>
+            <ScrollHost id="settings-appearance-scroll">
+                <fx:include source="appearance.fxml"/>
+            </ScrollHost>
         </Tab>
         <Tab id="settings-tab-automation" text="%settings.tab.automation">
-            <fx:include source="automation.fxml"/>
+            <ScrollHost id="settings-automation-scroll">
+                <fx:include source="automation.fxml"/>
+            </ScrollHost>
         </Tab>
         <Tab id="settings-tab-storage" text="%settings.tab.storage">
-            <fx:include source="storage.fxml"/>
+            <ScrollHost id="settings-storage-scroll">
+                <fx:include source="storage.fxml"/>
+            </ScrollHost>
         </Tab>
     </TabPane>
 </VBox>

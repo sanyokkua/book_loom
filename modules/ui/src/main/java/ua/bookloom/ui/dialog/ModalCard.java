@@ -7,10 +7,10 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.notify.FooterFeedback;
 import ua.bookloom.ui.notify.Severity;
 
@@ -251,12 +251,10 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         return bar;
     }
 
-    private static final class Body extends ScrollPane {
+    private static final class Body extends ScrollHost {
         Body(final Node content) {
             super(content);
             getStyleClass().add("dialog-body");
-            setFitToWidth(true);
-            setHbarPolicy(ScrollBarPolicy.NEVER);
         }
 
         // The skin measures the content at the pane's own width; the content is narrower by the pane's padding, so

@@ -420,6 +420,11 @@ The application SHALL show scrollbars 12 pixels wide whenever content overflows,
 - **WHEN** the list fits
 - **THEN** no scrollbar is shown
 
+#### Scenario: A Settings tab taller than the window scrolls
+
+- **WHEN** Settings › Storage & logs is open in Ukrainian in a content area 944 pixels wide and 600 high, and its Logs card ends below the window's edge
+- **THEN** a vertical scrollbar is shown beside the tab's content, turning the mouse wheel over the content moves it, and at its end the button «Зберегти пакет діагностики...» is shown whole
+
 ### Requirement: Hide technical words unless Show technical details is on
 
 The application SHALL use plain words on the main screens and SHALL show chunks, calls, tokens, attempts, rule codes and wire names only in Detailed views, Advanced folds and when Settings › Appearance › "Show technical details" is on. The switch SHALL be off by default and remembered, SHALL open every Simple and Detailed view in Detailed and open the Settings folds, and SHALL add rule codes and debug lines. There SHALL be no third mode.

@@ -69,8 +69,7 @@ final class ProgressCallsCard extends ModalCard {
     private Node body() {
         final ProgressStepList calls = new ProgressStepList(model, messages, true);
         VBox.setVgrow(calls, Priority.ALWAYS);
-        final ScrollPane detail = new ScrollPane(new ProgressStepDetail(model, messages));
-        detail.setFitToWidth(true);
+        final ScrollPane detail = new ScrollHost(new ProgressStepDetail(model, messages));
         detail.getStyleClass().add("progress-detail-scroll");
         final SplitPane split = new SplitPane(calls, detail);
         split.setDividerPositions(DIVIDER);
