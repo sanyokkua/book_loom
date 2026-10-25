@@ -557,6 +557,22 @@ WHEN Continue or Open is used on a project, the application SHALL open it at its
 - **WHEN** the stored AI model `gemma4:e4b` is no longer available and Continue is used
 - **THEN** a dialog asks whether to try again, use another AI model or not now, as resume specifies
 
+### Requirement: Opening another project never shows the run of the one left behind
+
+WHEN Continue or Open is used on a project other than the one the window's run translates, the application SHALL leave a stopped, finished or failed run behind and show the opened project's own state; IF that run is still at work (running, pausing, paused or stopping), THEN it SHALL first ask "Stop the translation and open another project?" with `Stop and open` and Cancel, stop the run and wait for it to end before opening, and SHALL change nothing on Cancel.
+
+**Source**: `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/finalize-ui-and-persistence/design.md` "D11". In plain words: one translation exists per application run and belongs to its project; another project must never show its figures, rows or Continue translation, and a run is never stopped without the person agreeing.
+
+#### Scenario: A stopped run stays with its project
+
+- **WHEN** `Curtain` was stopped at 3 of 2,720 segments and `Open` is used on `earth-gravity · EN → UK`, never started, with 142 segments
+- **THEN** Translating shows Ready with 0 of 142 segments, the ready card and `Start translation`, and none of Curtain's rows
+
+#### Scenario: A paused run is stopped only after the question
+
+- **WHEN** `Curtain`'s translation is paused and `Open` is used on `earth-gravity · EN → UK`
+- **THEN** the question names `Curtain.epub` and `earth-gravity · EN → UK`; `Stop and open` stops the run and opens earth-gravity in the state Ready, and Cancel keeps Curtain open and paused
+
 ### Requirement: Open the last project or Projects at launch
 
 WHERE Settings › Automation "Reopen the last project" is on, the window SHALL open, at launch, the project that was open when BookLoom last closed; WHERE it is off, or no project was open, the window SHALL open Projects.
@@ -1039,7 +1055,7 @@ WHEN a book is chosen for import while a project is open, whatever its run state
 
 **Source**: `docs/specification/mockups/README.md#step-1--import--i1i4` (Header row), `docs/specification/mockups/README.md#other-dialogs`. In plain words: the safe answer is the main one: the earlier translation stays, saved, in Projects; deleting it is a separate, named choice. The dialog is book-import's ("Ask before another book is opened while a project is open").
 
-The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, open the book, delete the open project only once the new book is stored (a book that cannot be opened leaves the old project stored, and a book that is the open project's own resets that same project instead) and leave the run idle.
+The question comes first, before the file is read; "Already in projects" is a verdict that can only follow it (an answer of "Open as a new project" for a book that is already stored). "Open as a new project" SHALL stop a run that is still going and wait for it to end, because one translation exists per application run and the stopped translation can be continued later from Projects; it SHALL leave a paused, stopped or finished run as it is, the window showing the new book's own state instead of a stopped, finished or failed run, and SHALL never remove the open project. "Replace and delete this translation" SHALL end any run that has not ended, open the book, delete the open project only once the new book is stored (a book that cannot be opened leaves the old project stored, and a book that is the open project's own resets that same project instead) and leave the run idle.
 
 #### Scenario: Keeping a paused translation
 

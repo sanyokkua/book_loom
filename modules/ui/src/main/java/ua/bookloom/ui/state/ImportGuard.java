@@ -8,8 +8,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -137,12 +135,22 @@ public final class ImportGuard {
         log.info("open-another answered: open as a new project, beside project {}", book.projectId());
         final Runnable proceed = () -> {
             prompt.dismiss();
-            openChecked(source, null, () -> {});
+            openChecked(source, null, this::clearEndedRun);
         };
         switch (state) {
             case RUNNING -> whenReady(RunStates::hasEnded, true, proceed);
             case PAUSING, STOPPING -> whenReady(RunStates::isSettled, false, proceed);
             case IDLE, PAUSED, STOPPED, COMPLETED, FAILED -> proceed.run();
+        }
+    }
+
+    // A run that has ended belongs to the project left behind, so the new one does not show it; a paused run stays.
+    private void clearEndedRun() {
+        final RunState state = mirror.runState().get();
+        final boolean ended = state != RunState.IDLE && RunStates.hasEnded(state);
+        log.debug("the run of the project left behind is {}: cleared {}", state, ended);
+        if (ended) {
+            mirror.publishRunCleared();
         }
     }
 
@@ -161,14 +169,10 @@ public final class ImportGuard {
 
     // Carries on from the first state that satisfies done; the run is told to stop first when cancel is set.
     private void whenReady(final Predicate<RunState> done, final boolean cancel, final Runnable then) {
-        final RunState now = mirror.runState().get();
-        if (done.test(now)) {
-            then.run();
-            return;
-        }
-        log.debug("waiting for the run to end: now {}, cancelling {}", now, cancel);
-        mirror.runState().addListener(new EndWatcher(done, then));
-        if (cancel) {
+        final boolean waits = !done.test(mirror.runState().get());
+        log.debug("open-another waits for the run {}, cancelling {}", waits, cancel);
+        RunWaits.when(mirror, done, then);
+        if (waits && cancel) {
             runner.cancel();
         }
     }
@@ -266,30 +270,5 @@ public final class ImportGuard {
     private static String fileNameOf(final Path source) {
         final Path name = source.getFileName();
         return name == null ? source.toString() : name.toString();
-    }
-
-    /** Carries on from the first state change that satisfies the condition, then stops watching. */
-    private final class EndWatcher implements ChangeListener<@Nullable RunState> {
-
-        private final Predicate<RunState> done;
-        private final Runnable then;
-
-        EndWatcher(final Predicate<RunState> done, final Runnable then) {
-            this.done = done;
-            this.then = then;
-        }
-
-        @Override
-        public void changed(
-                final ObservableValue<? extends @Nullable RunState> observed,
-                final @Nullable RunState was,
-                final @Nullable RunState now) {
-            if (now == null || !done.test(now)) {
-                return;
-            }
-            mirror.runState().removeListener(this);
-            log.debug("the run reached {}: carrying on", now);
-            then.run();
-        }
     }
 }

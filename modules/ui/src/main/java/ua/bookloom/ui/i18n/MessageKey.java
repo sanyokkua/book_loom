@@ -282,6 +282,14 @@ public enum MessageKey {
     CONFIRM_STOP_YES_TIP("confirm.stop.yes.tip"),
     /** The safe answer of the stop question: the translation goes on. */
     CONFIRM_STOP_NO("confirm.stop.no"),
+    /** Heading of the question asked before another project opens while a translation is at work. */
+    CONFIRM_SWITCH_TITLE("confirm.switch.title"),
+    /** Body of that question; {0} is the book being translated, {1} the project to open. */
+    CONFIRM_SWITCH_TEXT("confirm.switch.text"),
+    /** Confirming button of that question. */
+    CONFIRM_SWITCH_YES("confirm.switch.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_SWITCH_YES}. */
+    CONFIRM_SWITCH_YES_TIP("confirm.switch.yes.tip"),
     /** Title of the question asked before a project with progress is discarded. */
     CONFIRM_IMPORT_TITLE("confirm.import.title"),
     /** Body of the discard-this-project question. */

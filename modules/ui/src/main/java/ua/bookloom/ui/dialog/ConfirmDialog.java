@@ -49,6 +49,13 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_STOP_YES_TIP,
                 MessageKey.CONFIRM_STOP_NO);
 
+        /** Opening another project while a translation is at work; the text names the book and the project. */
+        public static final Question SWITCH_PROJECT = new Question(
+                MessageKey.CONFIRM_SWITCH_TITLE,
+                MessageKey.CONFIRM_SWITCH_TEXT,
+                MessageKey.CONFIRM_SWITCH_YES,
+                MessageKey.CONFIRM_SWITCH_YES_TIP);
+
         /** Cancelling an import whose project already holds work. */
         public static final Question DISCARD_PROJECT = new Question(
                 MessageKey.CONFIRM_IMPORT_TITLE,

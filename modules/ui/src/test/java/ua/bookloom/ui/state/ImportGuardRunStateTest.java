@@ -110,7 +110,7 @@ class ImportGuardRunStateTest extends ImportGuardTestBase {
     }
 
     @Test
-    void openNew_runIsStopped_opensTheBookAtOnceWithoutCancelling() throws Exception {
+    void openNew_runIsStopped_opensTheBookAtOnceAndLeavesTheStoppedRunBehind() throws Exception {
         stopRun();
         requestImport(DRACULA);
 
@@ -118,7 +118,8 @@ class ImportGuardRunStateTest extends ImportGuardTestBase {
 
         assertThat(job.calls()).doesNotContain("cancel");
         assertThat(projects.imports()).containsExactly(FRANKENSTEIN, DRACULA);
-        assertThat(state()).isEqualTo(RunState.STOPPED);
+        // The stopped run belongs to the project left behind; the new book shows its own state.
+        assertThat(state()).isEqualTo(RunState.IDLE);
     }
 
     @ParameterizedTest

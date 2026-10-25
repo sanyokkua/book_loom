@@ -49,6 +49,7 @@ public final class StateMirror {
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable String> runProjectId = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunMode> runMode = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
@@ -188,6 +189,16 @@ public final class StateMirror {
     }
 
     /**
+     * The stored project the run translates, so a window that opens another project can tell the run is not its own.
+     *
+     * @return a read-only property holding {@code null} while no run exists or its starter named no project; read on
+     *     the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable String> runProjectId() {
+        return runProjectId.getReadOnlyProperty();
+    }
+
+    /**
      * The quality dial and review mode the run started with.
      *
      * @return a read-only property, {@code null} while no run exists or none was named; FX thread
@@ -233,7 +244,21 @@ public final class StateMirror {
     public void publishRunStarted(final String fileName, final @Nullable RunMode mode) {
         Objects.requireNonNull(fileName, "fileName");
         log.debug("publishing run started on {} with mode {}", fileName, mode);
-        Platform.runLater(() -> resetTo(fileName, mode, RunState.RUNNING));
+        Platform.runLater(() -> resetTo(null, fileName, mode, RunState.RUNNING));
+    }
+
+    /**
+     * As {@link #publishRunStarted(String, RunMode)}, naming the stored project the run translates.
+     *
+     * @param projectId the non-null id of the project the run belongs to
+     * @param fileName the non-null name of the book file the run translates
+     * @param mode the dial and review mode the title bar names, or {@code null} when the caller names none
+     */
+    public void publishRunStarted(final String projectId, final String fileName, final @Nullable RunMode mode) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(fileName, "fileName");
+        log.debug("publishing run started on project {} ({}) with mode {}", projectId, fileName, mode);
+        Platform.runLater(() -> resetTo(projectId, fileName, mode, RunState.RUNNING));
     }
 
     /**
@@ -242,7 +267,7 @@ public final class StateMirror {
      */
     public void publishRunCleared() {
         log.debug("publishing run cleared");
-        Platform.runLater(() -> resetTo(null, null, RunState.IDLE));
+        Platform.runLater(() -> resetTo(null, null, null, RunState.IDLE));
     }
 
     /**
@@ -334,8 +359,13 @@ public final class StateMirror {
         });
     }
 
-    private void resetTo(final @Nullable String fileName, final @Nullable RunMode mode, final RunState state) {
+    private void resetTo(
+            final @Nullable String projectId,
+            final @Nullable String fileName,
+            final @Nullable RunMode mode,
+            final RunState state) {
         applyFigures(RunFigures.EMPTY);
+        runProjectId.set(projectId);
         runFileName.set(fileName);
         runMode.set(mode);
         logEntries.clear();
