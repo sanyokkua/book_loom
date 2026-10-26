@@ -381,7 +381,7 @@ public final class BookBriefViewModel {
             return;
         }
         project.replaceBrief(changed);
-        // A same-language pair is refused: shown, never stored, so the project keeps its pair and name until they differ.
+        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
         if (changed.targetLanguage() != null && Objects.equals(changed.sourceLanguage(), changed.targetLanguage())) {
             log.debug("{} not saved: source and target are both {}", field, changed.targetLanguage());
             return;
