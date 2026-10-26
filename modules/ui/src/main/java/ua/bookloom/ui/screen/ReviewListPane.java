@@ -235,11 +235,7 @@ final class ReviewListPane extends VBox {
     /** A filter's word with its count, and its explanation on hover. Logs nothing: it is redrawn with the counts. */
     private final class FilterCell extends ListCell<ReviewFilter> {
 
-        private final Tooltip tip = new Tooltip();
-
-        FilterCell() {
-            tip.setWrapText(true);
-        }
+        private final Tooltip tip = Tips.tooltip("");
 
         @Override
         protected void updateItem(final @Nullable ReviewFilter item, final boolean empty) {
@@ -270,7 +266,7 @@ final class ReviewListPane extends VBox {
 
         private final Label locator = new Label();
         private final Label line = new Label();
-        private final Tooltip whole = new Tooltip();
+        private final Tooltip whole = Tips.tooltip("");
         private final HBox top = new HBox(SPACING);
         private final VBox row = new VBox(ROW_GAP, top, line);
         private final Region spacer = new Region();
@@ -285,7 +281,6 @@ final class ReviewListPane extends VBox {
             line.getStyleClass().add("review-row-line");
             line.setMinWidth(0);
             line.setMaxWidth(Double.MAX_VALUE);
-            whole.setWrapText(true);
         }
 
         @Override

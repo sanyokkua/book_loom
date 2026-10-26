@@ -13,7 +13,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +69,6 @@ public final class RunStatusBar {
     private final Label rate = new FigureLabel();
     private final Button control = new Button();
     private final Button chip = new Button();
-    private final Tooltip chipTip = new Tooltip();
     private RunStateView.@Nullable RunAction shownControl;
     private StateMarker.@Nullable Meaning shownMeaning;
     private @Nullable RunRow shownRow;
@@ -164,8 +162,7 @@ public final class RunStatusBar {
         chip.setId("shell-run-connection");
         chip.getStyleClass().addAll("chip", "state-marker", "connection-chip");
         chip.setMinWidth(Region.USE_PREF_SIZE);
-        chipTip.setText(messages.get(MessageKey.SHELL_CONNECTION));
-        chip.setTooltip(chipTip);
+        Tips.install(messages, chip, MessageKey.SHELL_CONNECTION);
         chip.setOnAction(event -> {
             log.debug("AI-model chip pressed: opening the settings");
             navigator.navigate(ViewNames.SETTINGS);
@@ -264,15 +261,17 @@ public final class RunStatusBar {
     private void showChipTip(final ConnectionStatus status) {
         final Duration since = status.sinceLastAnswer();
         final String model = runs.model().get().modelId();
-        chipTip.setText(messages.get(MessageKey.SHELL_CONNECTION) + "\n"
-                + messages.get(
-                        MessageKey.SHELL_CONNECTION_TIP,
-                        model.isBlank() ? none() : model,
-                        since == null ? none() : clock(since),
-                        String.valueOf(status.timeoutsRecently()),
-                        String.valueOf(status.failuresRecently()),
-                        rateOf(status.draftTokensPerSecond()),
-                        rateOf(status.judgeTokensPerSecond())));
+        Tips.rewordOnHover(
+                chip,
+                messages.get(MessageKey.SHELL_CONNECTION) + "\n"
+                        + messages.get(
+                                MessageKey.SHELL_CONNECTION_TIP,
+                                model.isBlank() ? none() : model,
+                                since == null ? none() : clock(since),
+                                String.valueOf(status.timeoutsRecently()),
+                                String.valueOf(status.failuresRecently()),
+                                rateOf(status.draftTokensPerSecond()),
+                                rateOf(status.judgeTokensPerSecond())));
     }
 
     private String none() {

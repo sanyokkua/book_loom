@@ -2032,7 +2032,6 @@ public enum MessageKey {
     /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
     LIVE_CONTEXT_LOCKED("live.context.locked"),
 
-
     /** Text of the live panel before the run has made a model call. */
     LIVE_CALL_NONE("live.call.none"),
 

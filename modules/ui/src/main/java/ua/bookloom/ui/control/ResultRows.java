@@ -9,7 +9,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -169,7 +168,7 @@ final class ResultRows {
 
     private static void show(final Label label, final String text) {
         label.setText(text);
-        label.setTooltip(new Tooltip(text));
+        Tips.install(label, text);
     }
 
     private final class ResultCell extends ListCell<Object> {

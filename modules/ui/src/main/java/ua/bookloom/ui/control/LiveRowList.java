@@ -281,7 +281,7 @@ public final class LiveRowList extends ListView<LiveRow> {
         private final Label locator = new Label();
         private final Label text = new Label();
         private final HBox row = new HBox(PART_SPACING);
-        private final Tooltip whole = new Tooltip();
+        private final Tooltip whole = Tips.tooltip("");
         private @Nullable RowMarker shownMarker;
         private @Nullable String shownCode;
 
@@ -295,7 +295,6 @@ public final class LiveRowList extends ListView<LiveRow> {
             text.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(text, Priority.ALWAYS);
             row.setAlignment(Pos.CENTER_LEFT);
-            whole.setWrapText(true);
         }
 
         @Override

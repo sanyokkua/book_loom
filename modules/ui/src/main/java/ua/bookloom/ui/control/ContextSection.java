@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -218,7 +217,7 @@ public final class ContextSection extends CopyablePane {
         lock.getStyleClass().add("context-lock");
         final String locked = messages().get(MessageKey.LIVE_CONTEXT_LOCKED);
         lock.setAccessibleText(locked);
-        Tooltip.install(lock, new Tooltip(locked));
+        Tips.install(lock, locked);
         final HBox cell = new HBox(SPACING, label, lock);
         cell.setAlignment(Pos.CENTER_LEFT);
         return cell;

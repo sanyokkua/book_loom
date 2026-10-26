@@ -200,7 +200,7 @@ public final class TaggedLog extends ListView<LogEntry> {
         private final Label tag = part("log-tag");
         private final Label body = part("log-text");
         private final Label repeats = part("log-repeats");
-        private final Tooltip repeatTip = new Tooltip();
+        private final Tooltip repeatTip = Tips.tooltip("");
         private final HBox row = new HBox(PART_SPACING, time, tag, body, repeats);
 
         EntryCell(final Messages messages) {

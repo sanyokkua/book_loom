@@ -60,11 +60,7 @@ public final class Tips {
     public static <N extends Node> N install(final N node, final String text) {
         Objects.requireNonNull(node, "node");
         Objects.requireNonNull(text, "text");
-        final Tooltip tooltip = new Tooltip(text);
-        tooltip.setShowDelay(SHOW_DELAY);
-        tooltip.setShowDuration(SHOW_DURATION);
-        tooltip.setWrapText(true);
-        tooltip.setMaxWidth(MAX_WIDTH);
+        final Tooltip tooltip = tooltip(text);
         if (node instanceof Control control) {
             control.setTooltip(tooltip);
             control.setAccessibleHelp(text);
@@ -72,6 +68,22 @@ public final class Tips {
             Tooltip.install(node, tooltip);
         }
         return node;
+    }
+
+    /**
+     * A tooltip that shows like every other explanation, for a list cell that hands one tooltip to each row it shows
+     * and takes it away from an empty row, which {@link #install(Node, String)} cannot do.
+     *
+     * @param text the explanation, possibly empty when each row sets its own
+     * @return a new tooltip with the shared delay, duration and width
+     */
+    public static Tooltip tooltip(final String text) {
+        final Tooltip tooltip = new Tooltip(Objects.requireNonNull(text, "text"));
+        tooltip.setShowDelay(SHOW_DELAY);
+        tooltip.setShowDuration(SHOW_DURATION);
+        tooltip.setWrapText(true);
+        tooltip.setMaxWidth(MAX_WIDTH);
+        return tooltip;
     }
 
     /**
