@@ -106,7 +106,7 @@ public final class ProjectOpener implements RowOpener {
         final RunState state = mirror.runState().get();
         final boolean another = isAnothersRun(id);
         log.debug("the window's run is {}, of another project {}", state, another);
-        if (another && !RunStates.hasEnded(state)) {
+        if (another && !state.isIdleOrEnded()) {
             askToStop(row, id);
             return;
         }
@@ -136,7 +136,7 @@ public final class ProjectOpener implements RowOpener {
                 "stopping the translation of {} before project {} opens",
                 runs.mirror().runProjectId().get(),
                 id);
-        RunWaits.when(runs.mirror(), RunStates::hasEnded, () -> executor.execute(() -> openOffThread(row, id)));
+        RunWaits.when(runs.mirror(), RunState::isIdleOrEnded, () -> executor.execute(() -> openOffThread(row, id)));
         runs.runner().cancel();
     }
 
@@ -184,7 +184,7 @@ public final class ProjectOpener implements RowOpener {
     private void adopt(final ProjectRow row, final ProjectOpening.Opened opened) {
         final String id = row.summary().project().id();
         final boolean leftBehind =
-                isAnothersRun(id) && RunStates.hasEnded(runs.mirror().runState().get());
+                isAnothersRun(id) && runs.mirror().runState().get().isIdleOrEnded();
         importer.adopt(row.summary().project().source(), opened.book());
         if (leftBehind) {
             log.info("the ended run of another project is left behind: project {} shows its own state", id);

@@ -138,8 +138,8 @@ public final class ImportGuard {
             openChecked(source, null, this::clearEndedRun);
         };
         switch (state) {
-            case RUNNING -> whenReady(RunStates::hasEnded, true, proceed);
-            case PAUSING, STOPPING -> whenReady(RunStates::isSettled, false, proceed);
+            case RUNNING -> whenReady(RunState::isIdleOrEnded, true, proceed);
+            case PAUSING, STOPPING -> whenReady(now -> now == RunState.IDLE || now.isSettled(), false, proceed);
             case IDLE, PAUSED, STOPPED, COMPLETED, FAILED -> proceed.run();
         }
     }
@@ -147,7 +147,7 @@ public final class ImportGuard {
     // A run that has ended belongs to the project left behind, so the new one does not show it; a paused run stays.
     private void clearEndedRun() {
         final RunState state = mirror.runState().get();
-        final boolean ended = state != RunState.IDLE && RunStates.hasEnded(state);
+        final boolean ended = state.hasEnded();
         log.debug("the run of the project left behind is {}: cleared {}", state, ended);
         if (ended) {
             mirror.publishRunCleared();
@@ -160,10 +160,10 @@ public final class ImportGuard {
             prompt.dismiss();
             openChecked(source, book.projectId(), mirror::publishRunCleared);
         };
-        if (RunStates.hasEnded(mirror.runState().get())) {
+        if (mirror.runState().get().isIdleOrEnded()) {
             proceed.run();
         } else {
-            whenReady(RunStates::hasEnded, true, proceed);
+            whenReady(RunState::isIdleOrEnded, true, proceed);
         }
     }
 
