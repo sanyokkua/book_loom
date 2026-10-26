@@ -66,7 +66,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
         assertThat(((Label) required("brief-source-proposal-text")).getText()).isEqualTo("Looks like English");
         assertThat(button("brief-source-use").getText()).isEqualTo("Use it");
         assertThat(brief().sourceLanguage()).isNull();
-        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Auto — the model identifies it");
+        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Find out from the text");
     }
 
     // IF "Use it" did not set the source, THEN the proposal would be a label the person had to retype.

@@ -184,7 +184,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(required("brief-tone-narrator-gender").isDisabled()).isTrue();
 
         onFx(() -> segmented("brief-tone-narrator").getButtons().get(1).setSelected(true));
-        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(2).setSelected(true));
+        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(1).setSelected(true));
 
         assertThat(brief().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
         assertThat(required("brief-tone-narrator-gender").isDisabled()).isFalse();
@@ -200,7 +200,21 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setNarratorGender(Gender.MALE));
 
         assertThat(selectedStates("brief-tone-narrator")).containsExactly(false, true, false);
-        assertThat(selectedStates("brief-tone-narrator-gender")).containsExactly(false, true, false);
+        assertThat(selectedStates("brief-tone-narrator-gender")).containsExactly(false, false, true);
+    }
+
+    // IF the line under the switched-off gender still described the stored gender, THEN a person would read that the
+    // narrator's verbs are checked while nothing checks them (W4-D3).
+    @Test
+    void narratorGender_storyNotToldAsI_helpSaysWhyTheChoiceIsOff() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
+        onFx(() -> briefModel().setNarratorGender(Gender.MALE));
+
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.UNSPECIFIED));
+
+        assertThat(((Label) required("brief-tone-narrator-gender-help")).getText())
+                .isEqualTo("Only for a story told as “I”: the narrator's gender is not used for this book.");
     }
 
     // IF a narrator choice had no explanation, THEN a person could not tell what the check does with it.

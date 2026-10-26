@@ -430,11 +430,11 @@ everything else is optional and can be changed later."
 
 | Column and section    | Control                                                                                                    | JavaFX control                                            | Requirement              |
 |-----------------------|--------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|--------------------------|
-| Left: Languages       | source (led by **Auto — the model identifies it**) and target, both editable and searchable over the same 34 languages; the model's "Looks like English — Use it" proposal under an Auto source | two searchable `ComboBox`es, a `Label` and a `Button`        | FR-BRIEF-01              |
-| Left: Translation policies | name, foreign-passage (keep-as-is / translate / translate+note), footnote, unit policies, faithful↔natural slider | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch`, `Slider`      | FR-BRIEF-04..07          |
-| Left: Also translate  | ToC/navigation labels (also governs page titles), image alt-text, book metadata title/author (also governs the description), frontmatter values | four `ToggleSwitch`es                                          | FR-BRIEF-04, FR-DOC      |
-| Left: Quality vs speed | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                   | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
-| Right: Tone & style (predicted) | the Suggest button, then genre (searchable free-text field over the forty genres), register, voice/era, audience, narrator and narrator gender, each with its basis line | `Button`, searchable `TextField`/`ComboBox`, `ComboBox`s, `Label`s | FR-BRIEF-02, FR-BRIEF-03 |
+| Left: Languages       | **Translate from** (led by **Find out from the text**) and **Translate into**, both editable and searchable over the same 34 languages; the model's "Looks like English — Use it" proposal under an Auto source | two searchable `ComboBox`es, a `Label` and a `Button`        | FR-BRIEF-01              |
+| Left: How to translate | names of people and places (Translate · Spell in the target alphabet · Keep as written), text in other languages (keep-as-is / translate / translate+note), footnotes, units, close to the original ↔ natural slider | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch`, `Slider`      | FR-BRIEF-04..07          |
+| Left: Also translate  | Table of contents and chapter titles (also governs page titles), Picture descriptions, The book's title and author (also governs the description), Copyright and edition notes (Markdown front-matter values) | four `ToggleSwitch`es                                          | FR-BRIEF-04, FR-DOC      |
+| Left: Quality and speed | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                   | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
+| Right: Tone & style (predicted) | the Suggest button, then genre (searchable free-text field over the forty genres), register, voice/era, Who reads it, Who tells the story (Unknown · “I” · “He / she”) and Narrator's gender (Unknown · Female · Male; off, with the line "Only for a story told as “I”", unless the story is told as “I”), each with its basis line | `Button`, searchable `TextField`/`ComboBox`, `ComboBox`s, `Label`s | FR-BRIEF-02, FR-BRIEF-03 |
 
 The screen has two columns (`TwoColumns`, side by side from the regular class, L7): the **left** holds what the
 person decides and the model never touches, the **right** holds what the model predicts. The columns sit side by side
@@ -445,7 +445,7 @@ suggestion wrote it (built wording; planned: "samples", see mockups/README.md Wo
 "From what the model knows of this book" or "Counted over the whole book"; a field nothing supported shows the
 "? Uncertain" chip beside "1 of 4 passages" and keeps the value it had.
 
-**Auto.** The source list begins with **Auto — the model identifies it**, which is chosen for a book that declares no
+**Auto.** The source list begins with **Find out from the text** (the Auto entry), which is chosen for a book that declares no
 language the application can name and which the person can choose over a declared one; the target list has no Auto
 entry. Under Auto the screen says the model will identify the language, `Continue` needs only a target language, and
 after Suggest the language most passages read as is offered as "Looks like English" beside a **Use it** button, which
@@ -459,11 +459,11 @@ from their majority. Choosing the same language for both is refused with `The so
 same.` There is no destination card on this screen — the save path and overwrite switch live on the Export screen
 (`#screen-export`).
 
-Every card on this screen is **live**: Tone & style, Translation policies, Also translate and Quality vs speed all
+Every card on this screen is **live**: Tone & style, How to translate, Also translate and Quality and speed all
 feed the run — none are drawn disabled. The faithful↔natural slider defaults to **55**. The **"Also translate"
-toggle group** controls which auxiliary text units the run translates: **ToC/navigation labels** (on by default;
-also governs the translation of page titles), **image alt-text** (on), **book metadata title/author** (on; also
-governs the translation of the description), and **frontmatter values** (off). The quality dial shows its three hint
+toggle group** controls which auxiliary text units the run translates: **Table of contents and chapter titles** (on by default;
+also governs the translation of page titles), **Picture descriptions** (image alt text; on), **The book's title and author** (on; also
+governs the translation of the description), and **Copyright and edition notes** (Markdown front-matter values; off). The quality dial shows its three hint
 lines and a model row naming the chosen provider and model with a `change` link — there is no readiness badge.
 Segmented-button labels **wrap** rather than truncate at narrow widths. There is no review-mode control on this
 screen (**Planned:** the review mode is Settings › Automation, `#screen-settings`). Opened with no book, the screen shows a **no-book state** ("No book is open" with an action that leads to

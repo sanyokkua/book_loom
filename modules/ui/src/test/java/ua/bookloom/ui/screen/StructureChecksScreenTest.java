@@ -80,8 +80,9 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         showChecked(FAITHFUL, plan());
 
         assertThat(labelText("structure-run-total"))
-                .isEqualTo("1,240 segments in the book text + 31 other texts (titles, alt texts, contents, metadata)"
-                        + " = 1,271 to translate");
+                .isEqualTo(
+                        "1,240 segments in the book text + 31 other texts (titles, picture descriptions, contents, book details)"
+                                + " = 1,271 to translate");
     }
 
     // IF the line showed when the run translates only the book text, THEN it would repeat the total in other words.

@@ -293,11 +293,11 @@ final class BriefToneCard {
                                 MessageKey.BRIEF_NARRATOR_GENDER_UNKNOWN,
                                 MessageKey.BRIEF_HELP_GENDER_UNKNOWN),
                         new BriefChoice.Option<>(
-                                Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE, MessageKey.BRIEF_HELP_GENDER_MALE),
-                        new BriefChoice.Option<>(
                                 Gender.FEMALE,
                                 MessageKey.BRIEF_NARRATOR_GENDER_FEMALE,
-                                MessageKey.BRIEF_HELP_GENDER_FEMALE)),
+                                MessageKey.BRIEF_HELP_GENDER_FEMALE),
+                        new BriefChoice.Option<>(
+                                Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE, MessageKey.BRIEF_HELP_GENDER_MALE)),
                 viewModel::setNarratorGender);
         Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_GENDER_TIP);
         return choice;
@@ -346,7 +346,12 @@ final class BriefToneCard {
             register.show(brief.register());
             narrator.show(brief.narrator().person());
             narratorGender.show(brief.narrator().gender());
-            narratorGender.node().setDisable(brief.narrator().person() != NarratorPerson.FIRST);
+            final boolean genderOff = brief.narrator().person() != NarratorPerson.FIRST;
+            narratorGender.node().setDisable(genderOff);
+            if (genderOff) {
+                // The stored gender is kept on purpose, but nothing reads it, so the line under it says why it is off.
+                narratorGender.explain(messages.get(MessageKey.BRIEF_HELP_GENDER_OFF));
+            }
             showText(voice, brief.voiceEra());
             showText(audience, brief.audience());
             showEvidence(brief);

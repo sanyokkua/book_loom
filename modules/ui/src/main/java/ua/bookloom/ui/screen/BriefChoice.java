@@ -108,7 +108,15 @@ final class BriefChoice<E> {
     }
 
     private void showHelp(final E value) {
-        final String text = helps.get(value);
+        showHelpText(helps.get(value));
+    }
+
+    /** Replaces the selected option's line with {@code text}, the reason the choice cannot be used now. */
+    void explain(final String text) {
+        showHelpText(Objects.requireNonNull(text, "text"));
+    }
+
+    private void showHelpText(final @Nullable String text) {
         help.setText(text == null ? "" : text);
         help.setVisible(text != null);
         help.setManaged(text != null);

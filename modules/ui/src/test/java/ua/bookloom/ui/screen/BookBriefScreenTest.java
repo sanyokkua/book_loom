@@ -101,7 +101,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setTargetLanguage("uk"));
 
         assertThat(brief().sourceLanguage()).isNull();
-        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Auto — the model identifies it");
+        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Find out from the text");
         assertThat(isShown("brief-source-undeclared")).isTrue();
         assertThat(button("brief-continue").isDisabled()).isFalse();
 

@@ -68,7 +68,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         assertThat(isVisibleInScene(CARD)).isTrue();
         assertThat(textsUnder(required(CARD)))
                 .contains(
-                        "Who narrates?",
+                        "Who tells the story?",
                         "Back",
                         "Not stated — start anyway",
                         "Female",
@@ -238,6 +238,6 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         startAndAwaitQuestion();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Хто розповідає?", "Назад", "Не вказано — почати все одно", "Жіноча", "Чоловіча");
+                .contains("Хто розповідає історію?", "Назад", "Не вказано — почати все одно", "Жіноча", "Чоловіча");
     }
 }

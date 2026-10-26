@@ -213,7 +213,7 @@ class ExportScreenTest extends ExportScreenTestBase {
 
         exportBook(report(3, 3, 0));
 
-        assertThat(textOf("export-check-language")).contains("Language metadata updated (en → uk)");
+        assertThat(textOf("export-check-language")).contains("Language in the book's details updated (en → uk)");
     }
 
     // IF a TXT book listed a language line, THEN it would claim metadata the format does not have.

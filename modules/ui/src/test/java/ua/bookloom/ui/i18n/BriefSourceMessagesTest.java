@@ -14,8 +14,8 @@ class BriefSourceMessagesTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "en | brief.source.auto | Auto — the model identifies it",
-                "uk | brief.source.auto | Авто — модель визначає сама",
+                "en | brief.source.auto | Find out from the text",
+                "uk | brief.source.auto | Визначити за текстом",
                 "en | brief.source.proposal | Looks like {0}",
                 "uk | brief.source.proposal | Схоже, це {0}",
                 "en | brief.source.use | Use it",

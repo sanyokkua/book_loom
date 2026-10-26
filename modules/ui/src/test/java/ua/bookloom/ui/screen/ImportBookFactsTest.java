@@ -185,8 +185,9 @@ class ImportBookFactsTest extends ImportBookTestBase {
         openCheckedFactsBook();
 
         assertThat(labelText("structure-run-total"))
-                .isEqualTo("5 segments in the book text + 31 other texts (titles, alt texts, contents, metadata)"
-                        + " = 36 to translate");
+                .isEqualTo(
+                        "5 segments in the book text + 31 other texts (titles, picture descriptions, contents, book details)"
+                                + " = 36 to translate");
         assertThat(isInside("structure-run-total", "import-facts-card")).isTrue();
     }
 

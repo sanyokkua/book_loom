@@ -23,7 +23,7 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.CurrentProject;
 
 /**
- * Start translation checks the narrator's stored quotes against the glossary before it asks "Who narrates?" (15i.T5):
+ * Start translation checks the narrator's stored quotes against the glossary before it asks "Who tells the story?" (15i.T5):
  * when that verifies the gender nobody is asked, and when it cannot, or fails, the question is asked as before.
  */
 class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {

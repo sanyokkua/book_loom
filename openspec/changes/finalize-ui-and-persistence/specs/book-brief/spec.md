@@ -193,7 +193,7 @@ WHEN Start translation is pressed and the open book's narration was not judged w
 #### Scenario: A first-person Markdown book is asked about
 
 - **WHEN** `Harbour.md`, told as "I" with `Anna` named 9 times and no gender in the glossary, is opened, its source set to English and its target to Ukrainian, and Start translation is pressed
-- **THEN** `Who narrates?` is shown with "Enter chooses Not stated.", Enter closes it without a gender, and the question about characters without a gender names `Anna` before anything starts
+- **THEN** `Who tells the story?` is shown with "Enter chooses Not stated.", Enter closes it without a gender, and the question about characters without a gender names `Anna` before anything starts
 
 ### Requirement: Cap the free-text fields every call carries
 

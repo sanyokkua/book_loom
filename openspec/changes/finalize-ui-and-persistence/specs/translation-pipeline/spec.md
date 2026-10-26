@@ -382,7 +382,7 @@ WHILE no translation has started for the open project, the Translating screen SH
 
 #### Scenario: Completed with pending segments offers a start
 
-- **WHEN** a translation of a Markdown book completes with `Frontmatter values` switched off, and the person then switches `Frontmatter values` on, leaving the book's 3 frontmatter values pending
+- **WHEN** a translation of a Markdown book completes with `Copyright and edition notes` switched off, and the person then switches `Copyright and edition notes` on, leaving the book's 3 frontmatter values pending
 - **THEN** the toolbar offers Start translation beside Continue to Export
 - **AND** Start translation begins a new run whose only model calls are for those 3 frontmatter values
 

@@ -384,6 +384,7 @@ public enum MessageKey {
     BRIEF_HELP_NARRATOR_THIRD("brief.help.narrator.third"),
     /** What the gender.unknown option does, shown under its choice and on hover. */
     BRIEF_HELP_GENDER_UNKNOWN("brief.help.gender.unknown"),
+    BRIEF_HELP_GENDER_OFF("brief.help.gender.off"),
     /** What the gender.male option does, shown under its choice and on hover. */
     BRIEF_HELP_GENDER_MALE("brief.help.gender.male"),
     /** What the gender.female option does, shown under its choice and on hover. */

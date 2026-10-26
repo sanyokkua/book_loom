@@ -106,6 +106,25 @@ class VocabularyTest {
                 "activity.providerCheck|uk|Перевірка моделі ШІ",
                 "dialog.samePair.use|uk|Створити переклад ({0}) з цією назвою",
                 "projects.empty.step3|uk|Запустіть переклад. Книга перекладається годинами; можна зупинити й продовжити будь-коли.",
+                "brief.aux.nav|en|Table of contents and chapter titles",
+                "brief.aux.alt|en|Picture descriptions",
+                "brief.aux.metadata|en|The book's title and author",
+                "brief.aux.frontmatter|en|Copyright and edition notes",
+                "brief.source.label|en|Translate from",
+                "brief.source.auto|en|Find out from the text",
+                "brief.target.label|en|Translate into",
+                "brief.tone.audience|en|Who reads it",
+                "brief.tone.narrator|en|Who tells the story",
+                "brief.narrator.unspecified|en|Unknown",
+                "brief.narrator.first|en|“I”",
+                "brief.narrator.third|en|“He / she”",
+                "brief.tone.narrator.gender|en|Narrator's gender",
+                "brief.card.policies|en|How to translate",
+                "brief.card.quality|en|Quality and speed",
+                "brief.policy.names|en|Names of people and places",
+                "brief.option.keepOriginal|en|Keep as written",
+                "brief.policy.balance|en|Close to the original ↔ natural",
+                "brief.policy.balance.hint|en|closer · balanced · freer",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);
@@ -123,6 +142,30 @@ class VocabularyTest {
     })
     void quitQuestions_progressIsSaved_noStaleLossClaim(final String language, final String key, final String stale) {
         assertThat(Catalogues.load(language).get(key)).doesNotContain(stale);
+    }
+
+    // IF a main-screen line said alt-text, ToC, front matter or metadata, THEN a reader would meet the file format's
+    // words where the Words table gives plain ones.
+    @ParameterizedTest
+    @ValueSource(strings = {"en"})
+    void mainScreenValues_english_haveNoFileFormatWords(final String language) {
+        final Pattern formatWords = Pattern.compile(
+                "alt[- ]texts?|\\bToC\\b|front ?matter|metadata|navigation labels", Pattern.CASE_INSENSITIVE);
+        final var hits = mainScreenValues(language)
+                .filter(e -> formatWords.matcher(e.getValue()).find())
+                .map(Map.Entry::getKey)
+                .toList();
+
+        assertThat(hits).isEmpty();
+    }
+
+    // IF the import message named a label the Book Brief does not show, THEN the person would look for it in vain.
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void twoLanguageMarks_namesTheSourceLabelTheBriefShows(final String language) {
+        final Map<String, String> catalogue = Catalogues.load(language);
+
+        assertThat(catalogue.get("import.verdict.twoMarks")).contains(catalogue.get("brief.source.label"));
     }
 
     @ParameterizedTest

@@ -14,7 +14,7 @@ class ExportTitleReasonMessagesTest {
             delimiter = '|',
             value = {
                 "export.bookTitle.fromDetails|From the book's details|З відомостей про книжку",
-                "export.bookTitle.fromFrontMatter|From the front matter|Із вступного блоку метаданих",
+                "export.bookTitle.fromFrontMatter|From the details at the top of the file|З відомостей на початку файлу",
                 "export.bookTitle.fromHeading|From the first heading|З першого заголовка",
                 "export.bookTitle.fromFileName|The book names no title — the file name is used|Книжка не називає назви — використано назву файлу"
             })

@@ -179,7 +179,7 @@ class ExportTitleCardTest extends TranslatingScreenTestBase {
             delimiter = '|',
             value = {
                 "DETAILS|From the book's details|aux:title",
-                "FRONT_MATTER|From the front matter|aux:fm:title",
+                "FRONT_MATTER|From the details at the top of the file|aux:fm:title",
                 "FIRST_HEADING|From the first heading|ch1:0",
                 "FILE_NAME|The book names no title — the file name is used|"
             })
