@@ -523,7 +523,9 @@ public enum MessageKey {
     SETTINGS_PROVIDER_LMSTUDIO("settings.provider.lmstudio"),
     /** Badge on the provider row that is the selected one. */
     SETTINGS_PROVIDER_CURRENT("settings.provider.current"),
-    /** Hover explanation of the model field on the Providers tab. */
+    /** Label before the model chosen for the selected provider. */
+    SETTINGS_MODEL_LABEL("settings.model.label"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODEL_LABEL}. */
     SETTINGS_MODEL_LABEL_TIP("settings.model.label.tip"),
     /** Shown in place of the model while none is chosen. */
     SETTINGS_MODEL_NOT_CHOSEN("settings.model.notChosen"),
@@ -1485,9 +1487,13 @@ public enum MessageKey {
     BRIEF_AUX_FRONTMATTER_HINT("brief.aux.frontmatter.hint"),
     /** Heading of the card holding the translated title and author. */
     EXPORT_BOOK_CARD("export.bookCard.title"),
-    /** Hover explanation of the translated title field of the Title card on Export. */
+    /** Label of the translated title field. */
+    EXPORT_BOOK_TITLE("export.bookTitle"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_BOOK_TITLE}. */
     EXPORT_BOOK_TITLE_TIP("export.bookTitle.tip"),
-    /** Hover explanation of the translated author field of the Title card on Export. */
+    /** Label of the translated author field. */
+    EXPORT_BOOK_AUTHOR("export.bookAuthor"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_BOOK_AUTHOR}. */
     EXPORT_BOOK_AUTHOR_TIP("export.bookAuthor.tip"),
     /** Reason line under the original title: it comes from the book's details. */
     EXPORT_BOOK_TITLE_FROM_DETAILS("export.bookTitle.fromDetails"),
@@ -3201,7 +3207,9 @@ public enum MessageKey {
     DIALOG_SAME_PAIR_USE("dialog.samePair.use"),
     /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_USE}. */
     DIALOG_SAME_PAIR_USE_TIP("dialog.samePair.use.tip"),
-    /** Hover explanation of the same-pair card's button that keeps the open project as it is. */
+    /** Button that keeps the language the person had; {0} names it. */
+    DIALOG_SAME_PAIR_KEEP("dialog.samePair.keep"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_KEEP}. */
     DIALOG_SAME_PAIR_KEEP_TIP("dialog.samePair.keep.tip"),
     /** Heading of the Translate into another language card. */
     DIALOG_TRANSLATE_INTO_TITLE("dialog.translateInto.title"),
@@ -3370,7 +3378,9 @@ public enum MessageKey {
     TRANSLATING_HELP_CLOSE_TIP("translating.help.close.tip"),
     /** Live card: the first tab. */
     LIVE_TAB_LIVE("live.tab.live"),
-    /** Hover explanation of the Simple and Detailed choice on the live card. */
+    /** Live card: the name of the Simple and Detailed choice. */
+    LIVE_MODE("live.mode"),
+    /** Hover explanation of the choice labelled by {@link #LIVE_MODE}. */
     LIVE_MODE_TIP("live.mode.tip"),
     /** Live card: the switch that follows each newly translated segment. */
     LIVE_FOLLOW("live.follow"),
