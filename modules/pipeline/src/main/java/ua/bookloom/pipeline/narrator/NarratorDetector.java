@@ -2,8 +2,10 @@ package ua.bookloom.pipeline.narrator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -21,13 +23,16 @@ import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.pipeline.checks.QuotedSpans;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.util.lang.Language;
+import ua.bookloom.util.lang.Languages;
 
 /**
  * Reads who narrates a book. A chapter is first person when, outside quotes and dialogue, at least
  * {@link #CHAPTER_FIRST_SHARE} of its sentences have the language's first-person pronoun ({@code firstPersonPronouns}
  * in the language's file) in them; a chapter with fewer than {@link #MIN_SENTENCES} such sentences says too little to
  * judge. The book is first person when every judged chapter is, third person when none is, and mixed otherwise (a book
- * whose narrators alternate). A language with no pronoun data, or a book with nothing to judge, gives no answer.
+ * whose narrators alternate). A language with no pronoun data, or a book with nothing to judge, gives no answer; an
+ * unknown language is read with every language that has pronoun data, and the reading with most "I" is the answer.
  *
  * <p>Speech is blanked first, so a third-person book whose characters say "I" in quotation marks is still third person;
  * that is the whole reason the share is taken over narration only.
@@ -94,7 +99,8 @@ public final class NarratorDetector {
      * Reads the narrator of an opened book. A chapter starts at each heading and at each body unit.
      *
      * @param document the non-null opened book; only its body units are read
-     * @param languageTag the source language's tag, or null when it is not known
+     * @param languageTag the source language's tag, or null when it is not known: then every language with pronoun data
+     *     reads the text
      * @return the hint, or empty when the language has no pronoun data or the book has no narration to judge
      */
     public static Optional<NarratorHint> detect(final Document document, @Nullable final String languageTag) {
@@ -106,24 +112,68 @@ public final class NarratorDetector {
      * Reads the narrator of a book given as paragraphs per chapter.
      *
      * @param chapters the non-null paragraphs of each chapter, in reading order
-     * @param languageTag the source language's tag, or null when it is not known
+     * @param languageTag the source language's tag, or null when it is not known: then every language with pronoun data
+     *     reads the text
      * @return the hint, or empty when the language has no pronoun data or no chapter has enough narration to judge
      */
     public static Optional<NarratorHint> detect(final List<List<String>> chapters, @Nullable final String languageTag) {
         Objects.requireNonNull(chapters, "chapters");
         if (languageTag == null) {
-            log.debug("Narrator detection skipped: the source language is not known");
-            return Optional.empty();
+            return detectAnyLanguage(chapters);
         }
         final Set<String> pronouns = LanguageRules.bundled().firstPersonPronouns(languageTag);
         log.debug("Narrator detection language={} chapters={} pronouns={}", languageTag, chapters.size(), pronouns);
         if (pronouns.isEmpty()) {
             return Optional.empty();
         }
+        return detectIn(chapters, languageTag, pronouns).map(NarratorDetector::logged);
+    }
+
+    // Auto with no declaration the application recognises: the text is read once with every language that names its
+    // first-person pronoun (a language sharing another's pronouns is read once). A text told as "I" in any of them is
+    // what a first-person book looks like; the pronouns barely overlap across languages, so a third-person book in one
+    // language does not read as told as "I" in another. The languages read are never shown or chosen (ADR-0042).
+    private static Optional<NarratorHint> detectAnyLanguage(final List<List<String>> chapters) {
+        final Map<Set<String>, String> readers = new LinkedHashMap<>();
+        for (final Language language : Languages.all()) {
+            final Set<String> pronouns = LanguageRules.bundled().firstPersonPronouns(language.tag());
+            if (!pronouns.isEmpty()) {
+                readers.putIfAbsent(pronouns, language.tag());
+            }
+        }
+        log.debug("Narrator detection with no source language: reading with {}", readers.values());
+        Optional<NarratorHint> best = Optional.empty();
+        for (final Map.Entry<Set<String>, String> reader : readers.entrySet()) {
+            final Optional<NarratorHint> read = detectIn(chapters, reader.getValue(), reader.getKey());
+            log.debug("Narrator read as {} gives {}", reader.getValue(), read.map(NarratorHint::person));
+            if (read.isPresent()
+                    && (best.isEmpty()
+                            || read.get().firstPersonShare() > best.get().firstPersonShare())) {
+                best = read;
+            }
+        }
+        if (best.isEmpty()) {
+            log.info("Narrator not judged: the source language is not known and no language finds narration to judge");
+        }
+        return best.map(NarratorDetector::logged);
+    }
+
+    private static Optional<NarratorHint> detectIn(
+            final List<List<String>> chapters, final String languageTag, final Set<String> pronouns) {
         final List<Tally> tallies = chapters.stream()
                 .map(paragraphs -> tally(paragraphs, languageTag, pronouns))
                 .toList();
         return classify(tallies);
+    }
+
+    private static NarratorHint logged(final NarratorHint hint) {
+        log.info(
+                "Narrator detected person={} firstPersonShare={} firstPersonChapters={} judged={}",
+                hint.person(),
+                hint.firstPersonShare(),
+                hint.chapters().size(),
+                hint.judgedChapters());
+        return hint;
     }
 
     private static Optional<NarratorHint> classify(final List<Tally> tallies) {
@@ -144,14 +194,7 @@ public final class NarratorDetector {
                 : first.size() == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
         final int sentences = tallies.stream().mapToInt(Tally::sentences).sum();
         final int firstPerson = tallies.stream().mapToInt(Tally::firstPerson).sum();
-        final NarratorHint hint = new NarratorHint(person, (double) firstPerson / sentences, first, judged);
-        log.info(
-                "Narrator detected person={} firstPersonShare={} firstPersonChapters={} judged={}",
-                person,
-                hint.firstPersonShare(),
-                first.size(),
-                judged);
-        return Optional.of(hint);
+        return Optional.of(new NarratorHint(person, (double) firstPerson / sentences, first, judged));
     }
 
     private static void logChapter(final int chapter, final Tally tally) {

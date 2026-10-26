@@ -32,6 +32,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.IdSource;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
@@ -374,25 +375,24 @@ class ProjectServiceImplTest {
             "I had left the letter on the table. I knew that I would regret it.",
             "When I reached the gate, I stopped and listened for a long time.");
 
-    // IF the detector ran with a language nobody chose or declared, THEN Auto would read every book as English.
+    // IF a book of unknown language were not judged at all, THEN Start would never ask who narrates a first-person
+    // story; it is read with every language that names its first-person pronoun, and the source stays Auto.
     @Test
-    void create_firstPersonTextDeclaringNothing_isAutoWithNoHint() {
-        final Path book = TestBooks.txt(tempDir.resolve("first.txt"), FIRST_PERSON_CHAPTER);
-
-        final ImportedBook imported = importOk(book);
-
-        assertThat(briefOf(imported).sourceLanguage()).isNull();
-        assertThat(imported.narratorHint()).isNull();
+    void create_firstPersonTextDeclaringNothing_isAutoWithAFirstPersonHint() {
+        assertAutoFirstPerson(importOk(TestBooks.txt(tempDir.resolve("first.txt"), FIRST_PERSON_CHAPTER)));
     }
 
     @Test
-    void create_firstPersonEpubDeclaringALanguageNothingRecognises_isAutoWithNoHint() {
-        final Path book =
-                TestBooks.epub(tempDir.resolve("first.epub"), List.of(List.of(FIRST_PERSON_CHAPTER)), "xx-yy");
+    void create_firstPersonEpubDeclaringALanguageNothingRecognises_isAutoWithAFirstPersonHint() {
+        assertAutoFirstPerson(importOk(
+                TestBooks.epub(tempDir.resolve("first.epub"), List.of(List.of(FIRST_PERSON_CHAPTER)), "xx-yy")));
+    }
 
-        final ImportedBook imported = importOk(book);
-
+    private void assertAutoFirstPerson(final ImportedBook imported) {
         assertThat(briefOf(imported).sourceLanguage()).isNull();
-        assertThat(imported.narratorHint()).isNull();
+        assertThat(imported.narratorHint())
+                .isNotNull()
+                .extracting(NarratorHint::person)
+                .isEqualTo(NarratorHint.Person.FIRST);
     }
 }

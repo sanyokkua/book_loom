@@ -11,6 +11,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.api.FxRobot;
@@ -71,6 +72,30 @@ class StartNarratorQuestionTest extends WorkspaceTestBase {
         waitUntil(() -> shell.root().lookup("#genders-card") != null);
         assertThat(onFx(() -> shell.root().lookup("#narrator-card"))).isNull();
         assertThat(runState()).isEqualTo(RunState.IDLE);
+    }
+
+    // IF the narration of a book whose source is "Find out from the text" and which declares no language were judged
+    // with no language at all, THEN it read as third person and Start never asked who narrates; the desktop window over
+    // its SQLite store reads the text with every language that names its first-person pronoun.
+    @Test
+    void start_firstPersonMarkdownWithAutoSourceOverTheStore_asksWhoNarrates() throws Exception {
+        final Path book = markdown();
+        startStoredWindow(true);
+        onFx(() ->
+                injector.getInstance(ua.bookloom.ui.state.ImportViewModel.class).open(book));
+        waitUntil(() -> injector.getInstance(CurrentProject.class).book().get() != null);
+        final var brief = injector.getInstance(ua.bookloom.ui.state.BookBriefViewModel.class);
+        onFx(brief::setSourceAuto);
+        onFx(() -> brief.setTargetLanguage("uk"));
+        waitUntil(() -> !brief.saving().get());
+        assertThat(onFx(() -> brief.brief().get().sourceLanguage())).isNull();
+        chooseModel();
+        onFx(() -> shell.activate(ViewNames.TRANSLATING));
+
+        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#translating-start"))).fire());
+
+        waitUntil(() -> shell.root().lookup("#narrator-unknown") != null);
+        assertThat(runState()).as("nothing starts before the answer").isEqualTo(RunState.IDLE);
     }
 
     private void chooseLanguages() throws Exception {

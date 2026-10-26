@@ -186,7 +186,7 @@ The application SHALL write nothing to the brief until the person presses "Apply
 
 ### Requirement: Judge the narration before the Start question when the import could not
 
-WHEN Start translation is pressed and the open book's narration was not judged when it was opened, because the book declares no language (Markdown, plain text) and its source was chosen afterwards, the application SHALL first judge it from the text with the source language of the stored brief with no model call and no write, and SHALL then decide the `Who narrates?` question on that judgement. Enter SHALL choose `Not stated — start anyway`, as its text says.
+WHEN Start translation is pressed and the open book's narration was not judged when it was opened (it declares no language and its source was chosen afterwards), the application SHALL first judge it from the text with no model call and no write — in the brief's source language, or under Auto in every language whose first-person pronoun it knows, never showing one — and SHALL decide the `Who narrates?` question on that judgement. Enter SHALL choose `Not stated — start anyway`.
 
 **Source**: `openspec/specs/book-brief/spec.md` "Ask who narrates once at Start translation". In plain words: a first-person Markdown or text book was judged only by the run, after the Start question, so the question never came and the narrator's gender went unasked; an EPUB that declares its language was asked.
 
@@ -194,6 +194,11 @@ WHEN Start translation is pressed and the open book's narration was not judged w
 
 - **WHEN** `Harbour.md`, told as "I" with `Anna` named 9 times and no gender in the glossary, is opened, its source set to English and its target to Ukrainian, and Start translation is pressed
 - **THEN** `Who tells the story?` is shown with "Enter chooses Not stated.", Enter closes it without a gender, and the question about characters without a gender names `Anna` before anything starts
+
+#### Scenario: A first-person Markdown book with an Auto source is asked about
+
+- **WHEN** `Harbour.md`, told as "I" and declaring no language, is opened in the window over its SQLite store, its source left at `Find out from the text` and its target set to Ukrainian, and Start translation is pressed
+- **THEN** the narration reads as first person with the English pronoun `I`, `Who tells the story?` is shown, and nothing starts before the answer
 
 ### Requirement: Cap the free-text fields every call carries
 
