@@ -163,7 +163,7 @@ final class ReviewDeskDetail extends VBox {
         final FindingBadge badge = view.status() == SegmentStatus.FLAGGED
                 ? FindingBadge.of(view.findings(), view.judgeScore()).orElse(null)
                 : null;
-        worst.setText(badge == null ? "" : messages.get(badge.label()));
+        worst.setText(badge == null ? "" : messages.get(badge.why()));
         worst.setVisible(badge != null);
         worst.setManaged(badge != null);
         tabs.show(view, technical.get());

@@ -45,6 +45,17 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         assertThat(fx(() -> filterBox().getItems())).contains(ReviewFilter.ALL_SEGMENTS);
     }
 
+    // IF the chip and the row said the rule's code ("wrong lang?", "omission"), THEN the person would read the engine's
+    // words where the Words table says what may be wrong (W6-4, M11).
+    @Test
+    void chipAndRow_wrongLanguageFinding_sayWhatMayBeWrongInPlainWords() throws Exception {
+        openDeskWith(List.of(ReviewFixtures.wrongLanguage()), List.of());
+
+        assertThat(labelText("review-worst")).isEqualTo("part of it may be in another language");
+        assertThat(fx(() -> ((javafx.scene.control.Label) rowList().lookup(".review-row-line")).getText()))
+                .startsWith("part of it may be in another language");
+    }
+
     @Test
     void previousAndNext_inToReview_followTheListAndStopAtTheEnds() throws Exception {
         openDeskWith(ReviewDeskFixtures.fourToReview(), List.of());
@@ -98,7 +109,7 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         assertThat(fx(() -> rowList().lookupAll(".review-row-line").stream()
                         .map(node -> ((javafx.scene.control.Labeled) node).getText())
                         .toList()))
-                .containsExactly("name · Гейл відчинив старі двері.");
+                .containsExactly("a name may not match the glossary · Гейл відчинив старі двері.");
     }
 
     // IF "worth a second look" were a bare label, THEN a person could not tell what the audit doubts or why; it

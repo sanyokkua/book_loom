@@ -297,7 +297,7 @@ final class ReviewListPane extends VBox {
             line.setText(
                     badge == null
                             ? item.fullText()
-                            : messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.label()), item.fullText()));
+                            : messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.why()), item.fullText()));
             whole.setText(item.fullText());
             setTooltip(whole);
             top.getChildren()
