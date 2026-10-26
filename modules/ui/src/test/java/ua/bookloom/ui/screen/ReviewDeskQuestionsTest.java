@@ -7,6 +7,7 @@ import javafx.scene.input.KeyCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.ReviewDeskFixtures;
 import ua.bookloom.ui.ReviewFixtures;
 
@@ -59,6 +60,61 @@ class ReviewDeskQuestionsTest extends ReviewDeskTestBase {
         assertThat(asked).isTrue();
         assertThat(target().getText()).isEqualTo(TYPED);
         assertThat(selectedLocator()).isEqualTo("ch2 · p05");
+    }
+
+    // IF the question outlived the typing, THEN "Your edit … is not saved." would stand beside a footer saying Saved
+    // (G1-1): answering it with Save my edit & next, or typing the text back, closes it.
+    @Test
+    void unsavedQuestion_savedWithTheMainButton_closes() throws Exception {
+        openDesk();
+        selectRow(2, "ch5 · p12");
+        type("Він пішов ⟦0⟧геть⟦1⟧.");
+        onFx(() -> button("review-next").fire());
+        final boolean asked = isShown("review-question");
+
+        onFx(() -> main().fire());
+
+        assertThat(asked).isTrue();
+        awaitFx(() -> desk.calls().stream().anyMatch(call -> call.startsWith("saveEdit(")));
+        awaitFx(() -> !isShown("review-question"));
+    }
+
+    @Test
+    void unsavedQuestion_typingUndoneByHand_closes() throws Exception {
+        openDesk();
+        final String before = fx(() -> target().getText());
+        type(TYPED);
+        onFx(() -> button("review-next").fire());
+
+        type(before);
+
+        assertThat(isShown("review-question")).isFalse();
+    }
+
+    @Test
+    void undoQuestion_nothingTyped_staysUntilAnswered() throws Exception {
+        openDeskWith(List.of(ReviewFixtures.withUserEdit()), List.of());
+        final String before = fx(() -> target().getText());
+
+        chooseMore("review-more-undo");
+        type(TYPED);
+        type(before);
+
+        assertThat(isShown("review-question")).isTrue();
+    }
+
+    // IF a question outlived its segment, THEN Undo asked about one segment would revert the one picked after it.
+    @Test
+    void undoQuestion_anotherSegmentPicked_closes() throws Exception {
+        openDeskWith(List.of(ReviewFixtures.withUserEdit(), ReviewFixtures.lowScore()), List.of());
+        chooseMore("review-more-undo");
+        final boolean asked = isShown("review-question");
+
+        onFx(() -> button("review-next").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(asked).isTrue();
+        assertThat(isShown("review-question")).isFalse();
     }
 
     @Test

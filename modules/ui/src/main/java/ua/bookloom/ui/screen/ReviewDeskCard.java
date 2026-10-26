@@ -143,8 +143,9 @@ final class ReviewDeskCard extends ModalCard {
             if (was == null || now == null || !was.segmentId().equals(now.segmentId())) {
                 detailScroll.setVvalue(0);
                 // The desk confirms a decision after it moved on, so a note naming one segment stays only until the
-                // person picks another.
+                // person picks another; a question about the segment left behind no longer applies either.
                 clearFeedback();
+                inline.closeQuestion();
             }
         });
     }
@@ -251,7 +252,7 @@ final class ReviewDeskCard extends ModalCard {
             return true;
         }
         log.debug("unsaved typing in segment {}: asking before moving", shown.segmentId());
-        inline.ask(
+        inline.askWhile(
                 new ReviewInlinePanels.Question(
                         messages.get(MessageKey.REVIEW_UNSAVED_QUESTION, shown.locator()),
                         MessageKey.REVIEW_UNSAVED_DISCARD,
@@ -261,7 +262,8 @@ final class ReviewDeskCard extends ModalCard {
                 () -> {
                     viewModel.editor().discard();
                     move.run();
-                });
+                },
+                viewModel.editor().dirty());
         return false;
     }
 

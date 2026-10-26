@@ -133,6 +133,11 @@ abstract class ReviewDeskTestBase extends TranslatingScreenTestBase {
         awaitFx(() -> filterBox().getValue() == filter);
     }
 
+    void selectRow(final int index, final String locator) throws TimeoutException {
+        onFx(() -> rowList().getSelectionModel().select(index));
+        awaitFx(() -> locator.equals(selectedLocator()));
+    }
+
     String selectedLocator() {
         return labelText("review-locator");
     }

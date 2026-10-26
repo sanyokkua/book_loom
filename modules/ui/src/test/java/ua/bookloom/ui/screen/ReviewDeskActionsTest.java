@@ -20,11 +20,6 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
     private static final String TYPED_STORED = "Він пішов ⟦g0⟧геть⟦g1⟧.";
     private static final String DISPLAYED_TARGET = "Гейл відчинив ⟦0⟧старі⟦1⟧ двері.";
 
-    private void selectRow(final int index, final String locator) throws Exception {
-        onFx(() -> rowList().getSelectionModel().select(index));
-        awaitFx(() -> locator.equals(selectedLocator()));
-    }
-
     // IF the button never changed, THEN pressing Accept after typing would throw the typing away; once the text is
     // back to the model's it says Accept again.
     @Test

@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -61,6 +63,13 @@ final class ReviewInlinePanels {
     private final Button questionConfirm = new Button();
     private final Button questionKeep = new Button();
     private @Nullable Runnable onConfirm;
+    private @Nullable ObservableBooleanValue askedWhile;
+    private final ChangeListener<Boolean> stillHolds = (observed, was, holds) -> {
+        if (!holds) {
+            log.debug("the question no longer applies: closed");
+            closeQuestion();
+        }
+    };
 
     ReviewInlinePanels(final Messages messages, final NoteAnswer answer) {
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -115,6 +124,7 @@ final class ReviewInlinePanels {
      */
     void ask(final Question asked, final Runnable confirmed) {
         log.debug("question asked in the desk: confirm {}", asked.confirm());
+        stopWatching();
         questionText.setText(asked.text());
         word(questionConfirm, asked.confirm(), asked.confirmTip());
         word(questionKeep, asked.keep(), asked.keepTip());
@@ -123,14 +133,32 @@ final class ReviewInlinePanels {
         questionKeep.requestFocus();
     }
 
+    /**
+     * Asks a question that only stands while {@code condition} holds — "your typing is not saved" goes away by itself
+     * once the typing is saved or typed back, so it never stands beside a footer that says Saved.
+     */
+    void askWhile(final Question asked, final Runnable confirmed, final ObservableBooleanValue condition) {
+        ask(asked, confirmed);
+        askedWhile = condition;
+        condition.addListener(stillHolds);
+    }
+
     /** Whether a question is waiting for its answer. */
     boolean isAsking() {
         return question.isVisible();
     }
 
     void closeQuestion() {
+        stopWatching();
         onConfirm = null;
         Visibility.show(question, false);
+    }
+
+    private void stopWatching() {
+        if (askedWhile != null) {
+            askedWhile.removeListener(stillHolds);
+            askedWhile = null;
+        }
     }
 
     private void buildNote(final NoteAnswer answer) {

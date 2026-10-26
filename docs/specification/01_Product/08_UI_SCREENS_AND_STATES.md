@@ -708,7 +708,8 @@ without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDesk
   edit & next** once the text is edited (T7), and "& continue" when a review pause resumes after it. Ctrl/⌘+Enter runs
   the main button and plain Enter does nothing; Ctrl+Alt+↓/↑ moves between segments. **Try again with a note** opens an
   inline panel inside the desk, and Undo and unsaved typing ask in an inline bar, so no second card replaces the desk.
-  Escape and Close ask first when typing is not saved. Feedback is a footer line (G2).
+  Escape and Close ask first when typing is not saved; the bar about unsaved typing closes by itself once the typing
+  is saved or typed back, and any question closes when another segment is shown. Feedback is a footer line (G2).
 
 **Target editor.** The editable pane shows, in order of preference: the saved human edit, else the machine target,
 else the model's refused reply, else the source — all in **masked** form: `⟦gN⟧` tokens stay visible and a locked
