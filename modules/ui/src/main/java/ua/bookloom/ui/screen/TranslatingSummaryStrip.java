@@ -122,6 +122,10 @@ final class TranslatingSummaryStrip {
                 inputs.runs(),
                 mirror.live().throughput(),
                 inputs.estimate());
+        // The Ukrainian estimate before Start is wider than the smallest window: it breaks instead of losing its end.
+        big.setWrapText(true);
+        big.setMinHeight(Region.USE_PREF_SIZE);
+        HBox.setHgrow(big, Priority.SOMETIMES);
         Visibility.bind(big, big.textProperty().isNotEmpty());
         return big;
     }
