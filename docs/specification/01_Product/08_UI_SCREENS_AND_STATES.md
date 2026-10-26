@@ -371,7 +371,8 @@ From, the book's source; project name; **Start from**: the brief · Glossary and
 emptied · optionally the latest project's AI model; "Create and open the brief"; nothing is imported again — the book
 is reused by `contentHash`); **Same language pair**; **Rename…** (chips, uniqueness error, a typed name of at most 120
 characters with no `/`, `\` or control character — each refused in its own line — "Use the automatic name again"); **Remove project…** (deletes this project's saved work only — never the book, the exported files or the
-book's other projects). `Project` gains `name` and `nameOrigin`; a `ProjectNames` service in `:pipeline` builds the name
+book's other projects; while its own translation is at work the question is "Stop the translation and remove …?" with
+**Stop and remove**, and the run ends before anything is deleted). `Project` gains `name` and `nameOrigin`; a `ProjectNames` service in `:pipeline` builds the name
 and reports a conflict as a typed result.
 
 ## screen-import {#screen-import}

@@ -118,19 +118,39 @@ abstract class WorkspaceTestBase {
      * registry, both lifecycle phases. A second call is a restart over the same file.
      */
     protected void startStoredWindow() throws Exception {
+        startStoredWindow(false);
+    }
+
+    /**
+     * As {@link #startStoredWindow()}; with {@code pseudo} the store also holds the pseudo provider a run can use, and
+     * the window has read it.
+     */
+    protected void startStoredWindow(final boolean pseudo) throws Exception {
         closeStoredWindow();
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
+        // Assisted, so a run pauses on the pseudo model's first flagged segment as in startWorkspace.
         final StartupContext startup = new StartupContext(
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
-                ReviewModeResolver.resolve(name -> null, name -> null));
+                ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
         final Injector built = Guice.createInjector(
                 new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule());
         lifecycle = new AppLifecycle();
         lifecycle.phaseOne(built);
         lifecycle.phaseTwo(built);
+        if (pseudo) {
+            assertThat(built.getInstance(ProviderConfigs.class)
+                            .save(new PseudoOnlyProviderConfigs().all().get(0))
+                            .isOk())
+                    .isTrue();
+        }
         BookLoomApplication.seedPreferences(built);
         showWindow(built);
+        if (pseudo) {
+            final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
+            onFx(settings::reloadProviders);
+            waitUntil(() -> !settings.providers().isEmpty());
+        }
     }
 
     // Stops the stored window's work and closes its database, as BookLoomApplication.stop() does.

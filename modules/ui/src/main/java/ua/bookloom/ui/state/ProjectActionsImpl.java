@@ -53,6 +53,7 @@ public final class ProjectActionsImpl implements ProjectActions {
     private final Messages messages;
     private final LanguageNames languages;
     private final ErrorPresenter errors;
+    private final ProjectOpener.RunSwitch runs;
     private final OffThread calls;
 
     /**
@@ -73,6 +74,7 @@ public final class ProjectActionsImpl implements ProjectActions {
      * @param messages the catalogue the refusals and language names come from
      * @param languages names languages in the interface language
      * @param errors where an unexpected failure is shown
+     * @param runs the window's run, stopped before its own project is removed
      * @param executor the daemon executor the service runs on, never the FX thread
      */
     @Inject
@@ -91,6 +93,7 @@ public final class ProjectActionsImpl implements ProjectActions {
             final Messages messages,
             final LanguageNames languages,
             final ErrorPresenter errors,
+            final ProjectOpener.RunSwitch runs,
             @BackgroundExecutor final ExecutorService executor) {
         this.projects = Objects.requireNonNull(projects, "projects");
         this.renamePrompt = Objects.requireNonNull(renamePrompt, "renamePrompt");
@@ -106,6 +109,7 @@ public final class ProjectActionsImpl implements ProjectActions {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.languages = Objects.requireNonNull(languages, "languages");
         this.errors = Objects.requireNonNull(errors, "errors");
+        this.runs = Objects.requireNonNull(runs, "runs");
         this.calls = new OffThread(Objects.requireNonNull(executor, "executor"));
     }
 
@@ -178,11 +182,29 @@ public final class ProjectActionsImpl implements ProjectActions {
     public void remove(final ProjectRow row) {
         Objects.requireNonNull(row, "row");
         final Project project = row.summary().project();
+        final boolean atWork = project.id().equals(runs.mirror().runProjectId().get())
+                && !runs.mirror().runState().get().isIdleOrEnded();
+        log.debug("remove asked for project={} its run at work={}", project.id(), atWork);
+        if (atWork) {
+            confirm.ask(
+                    ConfirmPrompt.Question.REMOVE_RUNNING_PROJECT,
+                    List.of(project.name()),
+                    List.of(project.name()),
+                    () -> stopThenRemove(project.id()));
+            return;
+        }
         confirm.ask(
                 ConfirmPrompt.Question.REMOVE_PROJECT,
                 List.of(project.name()),
                 List.of(),
                 () -> applyRemove(project.id()));
+    }
+
+    // The run writes its record and its decisions until it ends; deleting the project under it would fail those writes.
+    private void stopThenRemove(final String id) {
+        log.info("stopping the translation of project={} before it is removed", id);
+        RunWaits.when(runs.mirror(), RunState::isIdleOrEnded, () -> applyRemove(id));
+        runs.runner().cancel();
     }
 
     private void applyRemove(final String id) {
@@ -197,6 +219,10 @@ public final class ProjectActionsImpl implements ProjectActions {
             if (open != null && open.projectId().equals(id)) {
                 current.clear();
                 importer.get().showEmpty();
+            }
+            if (id.equals(runs.mirror().runProjectId().get())) {
+                log.debug("the ended run of the removed project={} is cleared", id);
+                runs.mirror().publishRunCleared();
             }
             list.get().refresh();
         });

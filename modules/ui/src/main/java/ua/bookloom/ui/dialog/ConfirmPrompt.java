@@ -95,6 +95,13 @@ public interface ConfirmPrompt {
                 MessageKey.CONFIRM_REMOVE_PROJECT_YES,
                 MessageKey.CONFIRM_REMOVE_PROJECT_YES_TIP);
 
+        /** Removing a project whose translation is at work: it is stopped first; the title and text name the project. */
+        public static final Question REMOVE_RUNNING_PROJECT = new Question(
+                MessageKey.CONFIRM_REMOVE_RUNNING_TITLE,
+                MessageKey.CONFIRM_REMOVE_RUNNING_TEXT,
+                MessageKey.CONFIRM_REMOVE_RUNNING_YES,
+                MessageKey.CONFIRM_REMOVE_RUNNING_YES_TIP);
+
         /** Deleting a provider and its per-model settings; the title and the text name the provider. */
         public static final Question DELETE_PROVIDER = new Question(
                 MessageKey.CONFIRM_DELETE_PROVIDER_TITLE,

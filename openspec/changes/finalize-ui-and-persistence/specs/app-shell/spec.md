@@ -743,7 +743,7 @@ WHEN a name is typed for a project, the application SHALL refuse it with "That n
 
 ### Requirement: Rename and remove a project
 
-WHEN "Rename…" is used, the application SHALL ask for a name with chips, an error for a used name and "Use the automatic name again". WHEN "Remove project…" is used, it SHALL ask for confirmation naming the project and saying that the book file, the exported files and the book's other projects stay; what removing deletes is specified by local-storage.
+WHEN "Rename…" is used, the application SHALL ask for a name with chips, an error for a used name and "Use the automatic name again". WHEN "Remove project…" is used, it SHALL ask for confirmation naming the project and saying that the book file, the exported files and the book's other projects stay; what removing deletes is specified by local-storage. WHILE the project's own translation is at work (running, pausing, paused or stopping), the question SHALL instead say that removing stops the translation first ("Stop and remove"), and on confirmation the application SHALL stop the run, wait for it to end, and only then remove the project, so no write of the run fails afterwards.
 
 **Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#other-dialogs`. In plain words: removing one translation must not take away anything else a person has, and the question says so before anything is removed.
 
@@ -756,6 +756,11 @@ WHEN "Rename…" is used, the application SHALL ask for a name with chips, an er
 
 - **WHEN** `Remove project…` is used on `Earth Gravity · EN → UK` while `Earth Gravity · EN → DE` exists
 - **THEN** the confirmation names `Earth Gravity · EN → UK`, and after it is confirmed the UK row is gone and the DE row is still listed
+
+#### Scenario: Removing the project being translated
+
+- **WHEN** `Remove project…` is used on `Earth Gravity · EN → UK` while its translation is paused
+- **THEN** the question reads "Stop the translation and remove “Earth Gravity · EN → UK”?", nothing changes before the answer, and after "Stop and remove" the run ends, the project is removed and no storage write fails
 
 ### Requirement: Translate a book into another language without importing it again
 

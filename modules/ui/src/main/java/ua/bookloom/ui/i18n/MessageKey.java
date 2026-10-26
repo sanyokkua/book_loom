@@ -3263,6 +3263,14 @@ public enum MessageKey {
     CONFIRM_REMOVE_PROJECT_YES("confirm.removeProject.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_REMOVE_PROJECT_YES}. */
     CONFIRM_REMOVE_PROJECT_YES_TIP("confirm.removeProject.yes.tip"),
+    /** Title of the question before removing a project whose translation is at work; argument 0 is its name. */
+    CONFIRM_REMOVE_RUNNING_TITLE("confirm.removeRunning.title"),
+    /** Text of that question; argument 0 is the project's name. */
+    CONFIRM_REMOVE_RUNNING_TEXT("confirm.removeRunning.text"),
+    /** Confirming button of that question. */
+    CONFIRM_REMOVE_RUNNING_YES("confirm.removeRunning.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_REMOVE_RUNNING_YES}. */
+    CONFIRM_REMOVE_RUNNING_YES_TIP("confirm.removeRunning.yes.tip"),
     /** Heading of the delete-provider question; argument 0 is the provider's name. */
     CONFIRM_DELETE_PROVIDER_TITLE("confirm.deleteProvider.title"),
     /** What deleting a provider does; argument 0 is the provider's name. */
