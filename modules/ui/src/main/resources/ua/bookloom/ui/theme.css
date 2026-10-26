@@ -303,12 +303,6 @@
     -fx-background-color: -color-surface-2;
 }
 
-/* --- Placeholder screens: the one label style the FXML stand-ins share ---------------------------------- */
-.placeholder-label {
-    -fx-text-fill: -color-text;
-    -fx-font-size: 14px;
-}
-
 /* --- Shell chrome (ui-mockup.html: .titlebar .sidebar .nav-* .toolbar .crumbs .content) ---------------------- */
 /* Roles only: every colour below is a looked-up role, so the dark block re-themes the chrome with no extra rule. */
 .shell-title-bar {
@@ -2058,10 +2052,6 @@
     -fx-font-weight: bold;
 }
 
-.stat-number-warn {
-    -fx-text-fill: -color-warn-fg;
-}
-
 .stat-caption {
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
@@ -2098,41 +2088,10 @@
     -fx-text-fill: -color-text-strong;
 }
 
-.live-row {
-    -fx-border-color: transparent transparent -color-divider transparent;
-    -fx-border-width: 0 0 1px 0;
-    -fx-padding: 10px 4px 12px 4px;
-}
-
-/* One live call block: a quiet divider under it, its segments in a framed scroll area; the viewport only scrolls, */
-/* so it stays clear. */
+/* One live call block: a quiet divider under it. */
 .live-call {
     -fx-border-color: transparent transparent -color-divider transparent;
     -fx-border-width: 0 0 1px 0;
-}
-
-.live-call-title {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -color-text-strong;
-}
-
-.live-call .scroll-pane.edge-to-edge {
-    -fx-background-color: -color-surface;
-    -fx-background-insets: 0;
-    -fx-background-radius: 6px;
-    -fx-border-color: -color-border;
-    -fx-border-width: 1px;
-    -fx-border-radius: 6px;
-}
-
-.live-call .scroll-pane.edge-to-edge > .viewport {
-    -fx-background-color: transparent;
-}
-
-.context-origin {
-    -fx-text-fill: -color-text-strong;
-    -fx-font-size: 12px;
 }
 
 .review-list .list-cell:empty,
