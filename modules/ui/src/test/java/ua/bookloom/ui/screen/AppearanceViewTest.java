@@ -327,6 +327,20 @@ class AppearanceViewTest extends ShellTestBase {
                 .isTrue();
     }
 
+    // IF the button kept saying "Restart now" while the window closed, THEN the seconds before it closes would look
+    // like nothing happened.
+    @Test
+    void restartNow_underWay_saysRestarting() throws TimeoutException {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(textOf("appearance-restart")).isEqualTo("Restarting...");
+    }
+
     @Test
     void theme_storeRefuses_saveErrorShownAndThemeHolds() throws TimeoutException {
         store.failPuts();

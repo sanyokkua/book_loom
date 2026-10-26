@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.util.Locale;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WeakChangeListener;
@@ -61,6 +62,11 @@ final class AppearanceLanguageRow {
         chooser.getProperties().put(OWNER_KEY, this);
         Visibility.bind(restart, language.restartNeededProperty());
         restart.disableProperty().bind(language.restartingProperty());
+        // From the press until the window closes, the button says the restart is under way.
+        restart.textProperty()
+                .bind(Bindings.when(language.restartingProperty())
+                        .then(messages.get(MessageKey.APPEARANCE_RESTARTING))
+                        .otherwise(messages.get(MessageKey.APPEARANCE_RESTART)));
         restart.setOnAction(event -> restartNow());
         Tips.install(messages, restart, MessageKey.APPEARANCE_RESTART_TIP);
         hide(restartError);

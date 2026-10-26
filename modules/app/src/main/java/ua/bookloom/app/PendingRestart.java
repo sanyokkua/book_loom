@@ -1,6 +1,7 @@
 package ua.bookloom.app;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 public final class PendingRestart {
 
     private final AtomicReference<@Nullable List<String>> command = new AtomicReference<>();
+    private final AtomicReference<@Nullable String> window = new AtomicReference<>();
 
     /** Created empty by the launcher. */
     public PendingRestart() {
@@ -43,6 +45,16 @@ public final class PendingRestart {
     }
 
     /**
+     * Keeps the closing window's place and size for the next copy, so a restart does not move or resize it.
+     *
+     * @param placement the place as {@link WindowPlacement#of} writes it
+     */
+    public void keepWindow(final String placement) {
+        Objects.requireNonNull(placement, "placement");
+        window.set(placement);
+    }
+
+    /**
      * Starts the next copy if one was asked for. A copy that cannot start is logged: the window is gone either way.
      *
      * @param processes starts the process
@@ -56,7 +68,10 @@ public final class PendingRestart {
         }
         log.info("starting the next copy after shutdown");
         try {
-            if (processes.start(next).isEmpty()) {
+            final String placement = window.get();
+            final Map<String, String> environment =
+                    placement == null ? Map.of() : Map.of(WindowPlacement.ENVIRONMENT, placement);
+            if (processes.start(next, environment).isEmpty()) {
                 log.warn("the next copy could not be started; the window is closed");
             }
         } catch (RuntimeException e) {

@@ -64,6 +64,7 @@ public final class BookLoomApplication extends Application {
     private final BiConsumer<AppError, Integer> startupFailure;
 
     private @Nullable Injector injector;
+    private @Nullable Stage window;
 
     /** Constructed reflectively by the JavaFX launcher, which is why {@link StartupContext} exists. */
     public BookLoomApplication() {
@@ -205,6 +206,10 @@ public final class BookLoomApplication extends Application {
 
         stage.setTitle(TITLE);
         shell.applyWindowLimits(stage);
+        // Set by the copy that closed for "Restart now"; an ordinary launch has none and opens at the default size.
+        WindowPlacement.parse(System.getenv(WindowPlacement.ENVIRONMENT))
+                .ifPresent(placement -> WindowPlacement.apply(stage, placement));
+        window = stage;
         // Closing with work under way asks first; stage.close() is not a close request, so confirming does not loop.
         final ExitGuard exitGuard = injector().getInstance(ExitGuard.class);
         stage.setOnCloseRequest(event -> {
@@ -235,7 +240,20 @@ public final class BookLoomApplication extends Application {
     @Override
     public void stop() {
         log.info("window closing, releasing resources");
+        keepWindowForRestart();
         lifecycle.close();
+    }
+
+    private void keepWindowForRestart() {
+        final Stage shown = window;
+        if (shown == null || injector == null) {
+            return;
+        }
+        final PendingRestart restart = injector.getInstance(StartupContext.class).pendingRestart();
+        if (restart.requested().isPresent()) {
+            log.debug("restart asked: the window's place and size go to the next copy");
+            restart.keepWindow(WindowPlacement.of(shown));
+        }
     }
 
     /**

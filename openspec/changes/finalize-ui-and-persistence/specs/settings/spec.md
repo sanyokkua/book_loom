@@ -236,6 +236,22 @@ WHEN the Models tab reads the providers' models and a provider's program does no
 - **WHEN** Ollama does not answer and Refresh is pressed on the Models tab
 - **THEN** the line under the chooser reads `Ollama did not answer, so only its models BookLoom already knows are shown.`
 
+### Requirement: Say that Restart now is under way and bring the window back where it was
+
+WHEN Restart now is pressed, the button SHALL read `Restarting...` until the window closes, and the next copy SHALL open its window at the place and size the closing window had (maximized when it was), unless that place is on no screen now. An ordinary launch SHALL open at the default size.
+
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: for the two seconds before the window closed nothing changed on screen, and the new window came back at 1024 × 700 in the middle of the screen; the closing copy now hands its place to the next one through the next copy's environment (`BOOKLOOM_WINDOW`).
+
+#### Scenario: The window comes back as it was
+
+- **WHEN** the window is 1300 × 820 at 40, 60 and Restart now is pressed
+- **THEN** the button reads `Restarting...`, and the next copy's window is 1300 × 820 at 40, 60
+
+#### Scenario: A place on no screen is not used
+
+- **WHEN** the closing window was on a display that is no longer connected
+- **THEN** the next copy opens at the default size and place
+
 ### Requirement: Report what the program says about a model
 
 The Models tab SHALL show, as found out from the program, how much the model can read at once, how much is loaded now where the program says so, and whether it gives structured answers.

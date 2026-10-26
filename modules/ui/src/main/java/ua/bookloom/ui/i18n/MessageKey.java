@@ -1133,6 +1133,8 @@ public enum MessageKey {
     APPEARANCE_LANGUAGE_NOTE("appearance.language.note"),
     /** Button that restarts BookLoom in the chosen language. */
     APPEARANCE_RESTART("appearance.restart"),
+    /** The restart button's words while BookLoom closes to open again. */
+    APPEARANCE_RESTARTING("appearance.restarting"),
     /** Hover explanation of the control labelled by {@link #APPEARANCE_RESTART}. */
     APPEARANCE_RESTART_TIP("appearance.restart.tip"),
     /** Line shown when the restart could not start a new copy. */
