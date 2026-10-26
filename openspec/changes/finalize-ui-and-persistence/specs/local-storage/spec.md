@@ -134,6 +134,11 @@ WHEN a person removes a project, the system SHALL delete that project's stored d
 - **THEN** its decisions, brief and term lists are gone and `Earth Gravity · EN → DE` is unchanged
 - **AND** the book file `earth-gravity.epub` and a previously exported `earth-gravity.uk.epub` are untouched
 
+#### Scenario: The database file gives back the removed project's space
+
+- **WHEN** the only project, whose glossary takes most of a 3 MB `bookloom.db`, is removed
+- **THEN** the file is rewritten without the freed pages (`VACUUM`, then the WAL is checkpointed), so the Storage tab's size falls to under a quarter; a rewrite another reader blocks only leaves the space, with one WARN
+
 ### Requirement: Delete the stored book with its last project
 
 WHEN the last project of a book is removed, the system SHALL also delete the stored book (its metadata and file location), and SHALL leave the book file on disk untouched.

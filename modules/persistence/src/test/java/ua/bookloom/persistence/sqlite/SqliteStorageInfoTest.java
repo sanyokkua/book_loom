@@ -8,11 +8,13 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,8 +24,11 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.TermType;
 
 /** Proves the stored-file facts the Storage tab shows. */
 class SqliteStorageInfoTest {
@@ -164,6 +169,22 @@ class SqliteStorageInfoTest {
             assertThat(copy.get(30, TimeUnit.SECONDS).isOk()).isTrue();
         }
         assertThat(projects.all().data()).hasSize(3);
+    }
+
+    // IF a removed project's pages stayed in the file, THEN the Storage tab would show 100 MB for no projects.
+    @Test
+    void sizeBytes_afterTheOnlyLargeProjectIsRemoved_shrinksWithIt() {
+        storeProjects("a");
+        final List<GlossaryEntry> entries = IntStream.range(0, 3000)
+                .mapToObj(i -> new GlossaryEntry(
+                        "a:" + i, "a", "Name" + i, "Імʼя".repeat(100), TermType.CHARACTER, Gender.UNKNOWN, false))
+                .toList();
+        assertThat(new SqliteGlossaryRepository(db, new JsonCodec()).putAll("a", entries).isOk()).isTrue();
+        final long stored = info.sizeBytes();
+
+        assertThat(new SqliteProjectRepository(db, new JsonCodec()).delete("a").data()).isTrue();
+
+        assertThat(info.sizeBytes()).isLessThan(stored / 4);
     }
 
     private void storeProjects(final String... ids) {

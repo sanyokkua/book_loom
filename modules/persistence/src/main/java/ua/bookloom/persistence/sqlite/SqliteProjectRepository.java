@@ -144,7 +144,30 @@ public final class SqliteProjectRepository implements ProjectRepository {
             final int orphans = h.execute(DELETE_ORPHAN_BOOKS);
             log.debug("Project delete projectId={} removed={} booksRemoved={}", projectId, removed, orphans);
             return removed;
+        }).map(removed -> {
+            if (removed) {
+                compact(projectId);
+            }
+            return removed;
         });
+    }
+
+    // A removed project's pages stay in the file as free space, so a removed book of 100 MB kept the file at 100 MB.
+    // The file is rewritten without them; a refused rewrite (another connection reading) only leaves the space.
+    private void compact(final String projectId) {
+        final Result<Boolean> compacted = db.exclusive("vacuum after project delete", h -> {
+            h.execute("VACUUM");
+            h.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+            return true;
+        });
+        if (compacted.isErr()) {
+            log.warn(
+                    "Project delete projectId={}: the file keeps the freed space: {}",
+                    projectId,
+                    Objects.requireNonNull(compacted.error(), "error").code());
+        } else {
+            log.debug("Project delete projectId={}: the file was compacted", projectId);
+        }
     }
 
     @Override
