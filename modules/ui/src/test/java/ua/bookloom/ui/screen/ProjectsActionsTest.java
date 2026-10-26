@@ -87,6 +87,23 @@ class ProjectsActionsTest extends ProjectsScreenTestBase {
         assertThat(revealer.revealed()).containsExactly(EARTH);
     }
 
+    // IF Show book file on a moved book asked the file manager anyway, THEN nothing visible would happen; the person is
+    // asked to find the book instead.
+    @Test
+    void showBookFileItem_bookMoved_asksToFindTheBookAndRevealsNothing() throws Exception {
+        revealer.remove(EARTH);
+        showListing(ukrainianRunning());
+
+        chooseMenuItem(EARTH_ID, "Show book file");
+        ProjectFixtures.awaitBackgroundIdle(injector);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(revealer.revealed()).isEmpty();
+        assertThat(actions.findBookRows())
+                .extracting(row -> row.summary().project().id())
+                .containsExactly(EARTH_ID);
+    }
+
     // IF Continue started a run, THEN opening a project would spend the person's model time without a word; it opens
     // the stored project, shows the step the row names, and starts nothing.
     @Test

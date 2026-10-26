@@ -23,6 +23,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
@@ -239,12 +240,18 @@ public final class ProjectsViewModel {
         final Path source = row.summary().project().source();
         log.debug("show book file chosen on project {}", row.summary().project().id());
         log.trace("showing {}", source);
-        executor.execute(() -> reveal(source));
+        executor.execute(() -> reveal(row, source));
     }
 
-    private void reveal(final Path source) {
+    // A book moved or deleted since it was stored is not shown in an empty folder: the person is asked to find it.
+    private void reveal(final ProjectRow row, final Path source) {
         try {
-            revealer.reveal(source);
+            if (revealer.isPresent(source)) {
+                revealer.reveal(source);
+                return;
+            }
+            log.warn("show book file: the book of project {} is not where it was stored", row.summary().project().id());
+            Platform.runLater(() -> actions.findBook(row, new ProjectOpening.BookFileMissing(row.summary().project())));
         } catch (Throwable thrown) {
             log.warn("the book file could not be shown", thrown);
         }

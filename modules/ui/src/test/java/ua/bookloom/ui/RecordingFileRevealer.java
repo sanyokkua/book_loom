@@ -10,6 +10,7 @@ public final class RecordingFileRevealer implements FileRevealer {
 
     private final List<Path> revealed = new CopyOnWriteArrayList<>();
     private final List<Path> opened = new CopyOnWriteArrayList<>();
+    private final List<Path> missing = new CopyOnWriteArrayList<>();
 
     @Override
     public void reveal(final Path file) {
@@ -19,6 +20,16 @@ public final class RecordingFileRevealer implements FileRevealer {
     @Override
     public void open(final Path file) {
         opened.add(file);
+    }
+
+    @Override
+    public boolean isPresent(final Path file) {
+        return !missing.contains(file);
+    }
+
+    /** Makes {@code file} answer as not there, as a book moved after it was stored. */
+    public void remove(final Path file) {
+        missing.add(file);
     }
 
     public List<Path> opened() {

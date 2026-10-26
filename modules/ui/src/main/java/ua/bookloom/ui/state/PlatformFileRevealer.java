@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -55,6 +56,14 @@ public final class PlatformFileRevealer implements FileRevealer {
     public void open(final Path file) {
         Objects.requireNonNull(file, "file");
         submit(OsCommand.forOpen(osName.get(), file), "opening", file);
+    }
+
+    @Override
+    public boolean isPresent(final Path file) {
+        Objects.requireNonNull(file, "file");
+        final boolean present = Files.isRegularFile(file);
+        log.debug("{} is present: {}", file.getFileName(), present);
+        return present;
     }
 
     private void submit(final List<String> command, final String purpose, final Path file) {

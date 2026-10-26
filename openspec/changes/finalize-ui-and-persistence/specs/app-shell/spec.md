@@ -1005,6 +1005,11 @@ IF the book file of a project is missing or its content has changed when the pro
 - **WHEN** `velk-chronicle.fb2` is chosen instead
 - **THEN** the dialog says `This is a different book` and the project stays closed
 
+#### Scenario: Show book file on a moved book asks to find it
+
+- **WHEN** `earth-gravity.epub` was moved away and "Show book file" is chosen in the row's ⋯ menu
+- **THEN** no file manager is asked to show it, and the same question as at Continue asks the person to find the book
+
 ### Requirement: Let title-bar items give way by priority
 
 WHILE the window is narrower than the title bar needs, the application SHALL hide the quality and review mode, the elapsed time and the speed below the wide class (1440 pixels), and the project name in a compact window (below 1040 pixels), keeping the state text and the AI-model chip.
