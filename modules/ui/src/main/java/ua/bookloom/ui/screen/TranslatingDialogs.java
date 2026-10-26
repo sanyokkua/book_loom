@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.ProgressDialog;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
@@ -26,7 +26,7 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @Slf4j
 record TranslatingDialogs(
         NarratorDialog narrator,
-        ConfirmDialog confirm,
+        ConfirmPrompt confirm,
         ModalHost modals,
         Messages messages,
         ActivityTracker activities) {
@@ -56,7 +56,7 @@ record TranslatingDialogs(
                 figures.total(),
                 figures.inFlight());
         confirm.ask(
-                ConfirmDialog.Question.STOP_RUN,
+                ConfirmPrompt.Question.STOP_RUN,
                 List.of(figures.decided(), figures.total(), figures.inFlight()),
                 viewModel::stop);
     }

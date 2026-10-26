@@ -15,8 +15,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.ui.dialog.ConfirmDialog;
-import ua.bookloom.ui.dialog.ConfirmDialog.Question;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
+import ua.bookloom.ui.dialog.ConfirmPrompt.Question;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.RenameDialog;
@@ -99,7 +99,7 @@ class DialogFitTest extends ShellTestBase {
                 .map(question -> opener(
                         "confirm " + question.title(),
                         test -> test.injector
-                                .getInstance(ConfirmDialog.class)
+                                .getInstance(ConfirmPrompt.class)
                                 .ask(question, List.of(2), List.of(74, 142, 4), () -> {})));
     }
 

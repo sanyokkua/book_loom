@@ -20,7 +20,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.RenamePrompt;
 import ua.bookloom.ui.dialog.SamePairPrompt;
@@ -44,7 +44,7 @@ public final class ProjectActionsImpl implements ProjectActions {
     private final SamePairPrompt samePairPrompt;
     private final TranslateIntoPrompt translatePrompt;
     private final FindBookPrompt findBookPrompt;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final BookFileChooser chooser;
     private final Provider<RowOpener> opener;
     private final Provider<ProjectsViewModel> list;
@@ -82,7 +82,7 @@ public final class ProjectActionsImpl implements ProjectActions {
             final SamePairPrompt samePairPrompt,
             final TranslateIntoPrompt translatePrompt,
             final FindBookPrompt findBookPrompt,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final BookFileChooser chooser,
             final Provider<RowOpener> opener,
             final Provider<ProjectsViewModel> list,
@@ -179,7 +179,7 @@ public final class ProjectActionsImpl implements ProjectActions {
         Objects.requireNonNull(row, "row");
         final Project project = row.summary().project();
         confirm.ask(
-                ConfirmDialog.Question.REMOVE_PROJECT,
+                ConfirmPrompt.Question.REMOVE_PROJECT,
                 List.of(project.name()),
                 List.of(),
                 () -> applyRemove(project.id()));

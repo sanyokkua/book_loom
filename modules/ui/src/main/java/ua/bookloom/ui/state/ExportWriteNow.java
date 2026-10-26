@@ -5,7 +5,7 @@ import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 
 /**
  * "Write the file now" on the export's progress dialog: asks first with what the last check has reread so far, and on
@@ -16,7 +16,7 @@ import ua.bookloom.ui.dialog.ConfirmDialog;
 public final class ExportWriteNow {
 
     private final ExportViewModel exports;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
 
     /**
      * Creates the action.
@@ -25,7 +25,7 @@ public final class ExportWriteNow {
      * @param confirm the question asked first
      */
     @Inject
-    public ExportWriteNow(final ExportViewModel exports, final ConfirmDialog confirm) {
+    public ExportWriteNow(final ExportViewModel exports, final ConfirmPrompt confirm) {
         this.exports = Objects.requireNonNull(exports, "exports");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
     }
@@ -35,12 +35,12 @@ public final class ExportWriteNow {
         final ExportActivity.RereadTally tally = exports.rereadTally();
         log.debug("write now pressed: {} of {} reread, {} fixed", tally.reread(), tally.total(), tally.fixed());
         if (tally.total() == 0) {
-            confirm.ask(ConfirmDialog.Question.WRITE_NOW_EARLY, exports::writeNow);
+            confirm.ask(ConfirmPrompt.Question.WRITE_NOW_EARLY, exports::writeNow);
             return;
         }
         final int rest = Math.max(0, tally.total() - tally.reread());
         confirm.ask(
-                ConfirmDialog.Question.WRITE_NOW,
+                ConfirmPrompt.Question.WRITE_NOW,
                 List.of(tally.reread(), tally.total(), tally.fixed(), rest),
                 exports::writeNow);
     }

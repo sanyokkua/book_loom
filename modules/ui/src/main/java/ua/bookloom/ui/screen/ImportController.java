@@ -28,7 +28,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -71,7 +71,7 @@ public final class ImportController {
     private final ImportGuard guard;
     private final Messages messages;
     private final Navigator navigator;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final WorkflowProgress progress;
     private final StateMirror mirror;
     private final CurrentProject project;
@@ -129,7 +129,7 @@ public final class ImportController {
             final Messages messages,
             final Navigator navigator,
             final LanguageNames names,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final WorkflowProgress progress,
             final StateMirror mirror,
             final CurrentProject project,
@@ -328,7 +328,7 @@ public final class ImportController {
                 || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
         log.debug("cancel pressed, the project holds work: {}", holdsWork);
         if (holdsWork) {
-            confirm.ask(ConfirmDialog.Question.DISCARD_PROJECT, viewModel::cancel);
+            confirm.ask(ConfirmPrompt.Question.DISCARD_PROJECT, viewModel::cancel);
         } else {
             viewModel.cancel();
         }

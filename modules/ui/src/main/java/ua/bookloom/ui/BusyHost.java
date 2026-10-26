@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.ProgressDialog;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.state.Activity;
@@ -68,7 +68,7 @@ public final class BusyHost {
     private final ProgressDialogDefaults defaults;
     private final ProgressFigures.Factory figures;
     private final WorkVisibility work;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final Provider<ExportWriteNow> writeEarly;
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
@@ -107,7 +107,7 @@ public final class BusyHost {
             final ProgressDialogDefaults defaults,
             final ProgressFigures.Factory figures,
             final WorkVisibility work,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final DialogFeedback feedback,
             final Provider<ExportWriteNow> writeEarly) {
         this.activities = Objects.requireNonNull(activities, "activities");
@@ -224,7 +224,7 @@ public final class BusyHost {
     private void cancel(final ActivityKind kind, final long id) {
         if (kind == ActivityKind.EXPORT) {
             log.debug("work layer: the export's Cancel asks first");
-            confirm.ask(ConfirmDialog.Question.CANCEL_EXPORT, () -> activities.stop(id));
+            confirm.ask(ConfirmPrompt.Question.CANCEL_EXPORT, () -> activities.stop(id));
         } else {
             activities.stop(id);
         }

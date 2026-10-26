@@ -9,7 +9,7 @@ import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
@@ -91,7 +91,7 @@ public final class TranslatingController {
             final ReviewDeskLauncher desk,
             final SectionMemory sections,
             final NarratorDialog narratorDialog,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final RunStateSource runs,
             final Parts parts) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");

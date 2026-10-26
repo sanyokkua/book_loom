@@ -13,7 +13,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.notify.ErrorPresenter;
 
 /**
@@ -46,7 +46,7 @@ public final class ProjectOpener implements RowOpener {
      * @param runner what stops a run still at work
      * @param confirm the question asked before it is stopped
      */
-    public record RunSwitch(StateMirror mirror, TranslationRunner runner, ConfirmDialog confirm) {
+    public record RunSwitch(StateMirror mirror, TranslationRunner runner, ConfirmPrompt confirm) {
 
         /** Receives the three from the injector. */
         @Inject
@@ -124,7 +124,7 @@ public final class ProjectOpener implements RowOpener {
         log.info("project {} waits for an answer: another project's translation is at work", id);
         runs.confirm()
                 .ask(
-                        ConfirmDialog.Question.SWITCH_PROJECT,
+                        ConfirmPrompt.Question.SWITCH_PROJECT,
                         List.of(book, row.summary().project().name()),
                         () -> stopThenOpen(row, id));
     }

@@ -18,7 +18,6 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
-import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingProjectRepository;
 import ua.bookloom.ui.RecordingToasts;
@@ -30,10 +29,9 @@ import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.UiTestInjector;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.RecordingConfirmPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.DialogFeedback;
 
 /**
  * What the export view model tests share: a real {@link ImportViewModel} over the scripted project service and a
@@ -117,7 +115,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         return newExports(executor, null);
     }
 
-    /** Builds an export view model with a setup helper, or none. FX thread only (the question card is a node). */
+    /** Builds an export view model with a setup helper, or none. FX thread only. */
     ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
                 current,
@@ -133,7 +131,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 setup,
                 storedSettings,
                 store,
-                new ConfirmDialog(new ModalHost(new WorkVisibility(), new DialogFeedback()), messages),
+                new RecordingConfirmPrompt(),
                 (ExportOutcome outcome) -> {},
                 Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC));
     }

@@ -23,7 +23,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -49,7 +49,7 @@ public final class SettingsController {
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
     private final Messages messages;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final ProviderTestDialog testDialog;
     private final ProviderSwitch providerSwitch;
     private final ActivityTracker activities;
@@ -138,7 +138,7 @@ public final class SettingsController {
             final SettingsViewModel viewModel,
             final ProviderForm form,
             final Messages messages,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final ProviderTestDialog testDialog,
             final ProviderSwitch providerSwitch,
             final ActivityTracker activities,
@@ -344,7 +344,7 @@ public final class SettingsController {
         final String name = viewModel.providerName(id);
         log.debug("delete of provider '{}' asked", id);
         confirm.ask(
-                ConfirmDialog.Question.DELETE_PROVIDER, List.of(name), List.of(name), () -> form.delete(id, () -> {}));
+                ConfirmPrompt.Question.DELETE_PROVIDER, List.of(name), List.of(name), () -> form.delete(id, () -> {}));
     }
 
     private void onFocusRequested(final ProviderForm.Spot spot) {

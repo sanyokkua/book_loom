@@ -32,7 +32,7 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.util.paths.DestinationPath;
 
@@ -94,7 +94,7 @@ public final class ExportViewModel {
             final @Nullable SetupHelper setup,
             final SettingsRepository stored,
             final ProjectRepository store,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final ExportAnnouncer announcer,
             final Clock clock) {
         this.project = Objects.requireNonNull(project, "project");

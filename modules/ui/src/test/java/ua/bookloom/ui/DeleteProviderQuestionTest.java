@@ -8,7 +8,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 
 /** The question asked before a provider is deleted: it names the provider and Cancel is the safe default. */
 class DeleteProviderQuestionTest extends ShellTestBase {
@@ -17,9 +17,9 @@ class DeleteProviderQuestionTest extends ShellTestBase {
 
     private void ask() {
         ThemeTestSupport.onFx(() -> {
-            injector.getInstance(ConfirmDialog.class)
+            injector.getInstance(ConfirmPrompt.class)
                     .ask(
-                            ConfirmDialog.Question.DELETE_PROVIDER,
+                            ConfirmPrompt.Question.DELETE_PROVIDER,
                             List.of("Office LM"),
                             List.of("Office LM"),
                             () -> deleted.add("Office LM"));

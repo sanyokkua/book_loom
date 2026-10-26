@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 
 /**
  * Asks before an export replaces files: when the book or a chosen side file exists — looked for off the FX thread as
@@ -15,9 +15,9 @@ import ua.bookloom.ui.dialog.ConfirmDialog;
 @Slf4j
 final class ReplaceCheck {
 
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
 
-    ReplaceCheck(final ConfirmDialog confirm) {
+    ReplaceCheck(final ConfirmPrompt confirm) {
         this.confirm = Objects.requireNonNull(confirm, "confirm");
     }
 
@@ -34,7 +34,7 @@ final class ReplaceCheck {
         log.debug("replace asked for {}", taken);
         final String paths = taken.stream().map(Path::toString).collect(Collectors.joining("\n"));
         confirm.ask(
-                ConfirmDialog.Question.REPLACE_EXISTING, List.of(taken.size()), List.of(taken.size(), paths), () -> {
+                ConfirmPrompt.Question.REPLACE_EXISTING, List.of(taken.size()), List.of(taken.size(), paths), () -> {
                     log.info("replace answered yes for {} paths", taken.size());
                     replace.run();
                 });

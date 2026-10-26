@@ -26,6 +26,8 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookDialog;
@@ -159,6 +161,7 @@ public final class UiModule extends AbstractModule {
         bind(TranslateIntoPrompt.class).to(TranslateIntoDialog.class);
         bind(FindBookPrompt.class).to(FindBookDialog.class);
         bind(SwitchProviderPrompt.class).to(SwitchProviderDialog.class);
+        bind(ConfirmPrompt.class).to(ConfirmDialog.class);
         bind(TextClipboard.class).to(SystemTextClipboard.class);
     }
 
