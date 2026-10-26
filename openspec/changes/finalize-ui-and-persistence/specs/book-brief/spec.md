@@ -285,6 +285,27 @@ WHEN the person presses "✦ Fill in from the book", the application SHALL ask w
 - **THEN** the suggestion ends as cancelled and the brief is unchanged
 
 
+### Requirement: Refuse a brief whose source and target are the same language
+
+IF the chosen source language and the chosen target language are the same, THEN the book-brief screen SHALL show the message `The source and target languages are the same.` beside the language fields, SHALL keep `Continue` unavailable until they differ, and SHALL NOT store the brief while they are the same, so the project keeps its stored pair and its name.
+
+**Source**: FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: a run like that would spend hours asking a model to translate a book into the language it is already in. Storing the pair renamed the project to `X · EN → EN` and announced it, so a refused pair is now only shown; any other choice made meanwhile is stored with the next pair that differs.
+
+#### Scenario: The same language on both sides is refused
+
+- **WHEN** the source is `English` and `English` is chosen as the target
+- **THEN** the message `The source and target languages are the same.` is shown and `Continue` is unavailable
+
+#### Scenario: Changing either side clears the refusal
+
+- **WHEN** that brief's target is changed to `Ukrainian`
+- **THEN** the message disappears and `Continue` becomes available
+
+#### Scenario: A refused pair is never stored
+
+- **WHEN** the project `Night · EN → UK` has its target changed to `English`, its genre set to `Noir`, and its target changed back to `Ukrainian`
+- **THEN** the stored target stays `uk` throughout, the project stays named `Night · EN → UK` with no message about a new name, and the genre `Noir` is stored with the last change
+
 ## REMOVED Requirements
 
 ### Requirement: Say so when no book is open on the book brief

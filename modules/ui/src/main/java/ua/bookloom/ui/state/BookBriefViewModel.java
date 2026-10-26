@@ -381,6 +381,13 @@ public final class BookBriefViewModel {
             return;
         }
         project.replaceBrief(changed);
+        // The same language on both sides is refused: shown and kept from Continue, never stored, so the project keeps
+        // its pair and name; the brief is stored whole again once the languages differ.
+        final @Nullable String source = changed.sourceLanguage();
+        if (source != null && source.equals(changed.targetLanguage())) {
+            log.debug("{} not saved: source and target are both {}", field, changed.targetLanguage());
+            return;
+        }
         saver.enqueue(book.projectId(), changed);
     }
 
