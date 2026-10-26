@@ -3561,6 +3561,8 @@ public enum MessageKey {
     REVIEW_MORE_RETRY("review.more.retry"),
     /** The line under {@link #REVIEW_MORE_RETRY}. */
     REVIEW_MORE_RETRY_SUB("review.more.retry.sub"),
+    REVIEW_MORE_RETRY_UNDO_FIRST("review.more.retry.undoFirst"),
+    REVIEW_MORE_RETRY_NOT_DECIDED("review.more.retry.notDecided"),
     /** More menu item. */
     REVIEW_MORE_RETRY_NOTE("review.more.retryNote"),
     /** The line under {@link #REVIEW_MORE_RETRY_NOTE}. */

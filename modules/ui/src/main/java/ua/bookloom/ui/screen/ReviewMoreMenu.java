@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Objects;
+import java.util.Optional;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ObservableBooleanValue;
@@ -14,6 +15,9 @@ import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -78,26 +82,74 @@ final class ReviewMoreMenu {
                         MessageKey.REVIEW_MORE_LATER_SUB,
                         () -> asks.guard().run(viewModel::leaveForLater),
                         viewModel.selected().isNull()),
-                simple(
+                retry(
+                        simple(
+                                messages,
+                                "review-more-retry",
+                                MessageKey.REVIEW_MORE_RETRY,
+                                MessageKey.REVIEW_MORE_RETRY_SUB,
+                                () -> asks.guard().run(() -> viewModel.retry(null, false)),
+                                notRetryable(viewModel)),
+                        viewModel,
                         messages,
-                        "review-more-retry",
-                        MessageKey.REVIEW_MORE_RETRY,
-                        MessageKey.REVIEW_MORE_RETRY_SUB,
-                        () -> asks.guard().run(() -> viewModel.retry(null, false)),
-                        locked(viewModel)),
-                simple(
+                        MessageKey.REVIEW_MORE_RETRY_SUB),
+                retry(
+                        simple(
+                                messages,
+                                "review-more-note",
+                                MessageKey.REVIEW_MORE_RETRY_NOTE,
+                                MessageKey.REVIEW_MORE_RETRY_NOTE_SUB,
+                                asks.askNote(),
+                                notRetryable(viewModel)),
+                        viewModel,
                         messages,
-                        "review-more-note",
-                        MessageKey.REVIEW_MORE_RETRY_NOTE,
-                        MessageKey.REVIEW_MORE_RETRY_NOTE_SUB,
-                        asks.askNote(),
-                        locked(viewModel)),
+                        MessageKey.REVIEW_MORE_RETRY_NOTE_SUB),
                 undo(messages, viewModel, asks.askUndo()));
     }
 
     // Off with no segment selected, or while the actions are not offered (a run translates, a retry is in flight).
     private static ObservableBooleanValue locked(final ReviewViewModel viewModel) {
         return Bindings.or(viewModel.selected().isNull(), Bindings.not(viewModel.actionsAvailable()));
+    }
+
+    // Off as the other actions are, and also for a segment the desk cannot retry: only one to review or an accepted
+    // one.
+    private static ObservableBooleanValue notRetryable(final ReviewViewModel viewModel) {
+        return Bindings.or(
+                locked(viewModel),
+                Bindings.createBooleanBinding(
+                        () -> !isRetryable(viewModel.selected().get()), viewModel.selected()));
+    }
+
+    private static boolean isRetryable(final @Nullable SegmentView segment) {
+        return segment != null
+                && (segment.status() == SegmentStatus.FLAGGED || segment.status() == SegmentStatus.ACCEPTED);
+    }
+
+    // The line under Try again says why it is off for a segment it cannot retry, rather than answering after a press.
+    private static CustomMenuItem retry(
+            final CustomMenuItem item,
+            final ReviewViewModel viewModel,
+            final Messages messages,
+            final MessageKey usual) {
+        final Label sub = (Label) ((VBox) item.getContent()).getChildren().get(1);
+        sub.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                whyNotRetryable(viewModel.selected().get()).orElse(usual)),
+                        viewModel.selected()));
+        return item;
+    }
+
+    private static Optional<MessageKey> whyNotRetryable(final @Nullable SegmentView segment) {
+        if (segment == null || isRetryable(segment)) {
+            return Optional.empty();
+        }
+        log.debug("try again is off for segment {} in status {}", segment.segmentId(), segment.status());
+        return Optional.of(
+                segment.userTarget() == null
+                        ? MessageKey.REVIEW_MORE_RETRY_NOT_DECIDED
+                        : MessageKey.REVIEW_MORE_RETRY_UNDO_FIRST);
     }
 
     private static CustomMenuItem simple(
