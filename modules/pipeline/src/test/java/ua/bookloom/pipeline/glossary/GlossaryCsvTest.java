@@ -9,15 +9,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
@@ -128,7 +132,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(2, List.of(3), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(2, List.of(3), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale", "Moreau");
@@ -140,7 +145,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(2), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(1, List.of(2), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -215,21 +221,31 @@ class GlossaryCsvTest {
                 .containsExactly(tuple("Milton", null, TermType.PLACE));
     }
 
+    // IF a malformed row said only its line, THEN a file of 5,000 rows typed "person" would read as 5,000 riddles
+    // (G1-4); the report names what was wrong, once per kind.
     @ParameterizedTest
-    @ValueSource(
-            strings = {
-                "Hale,Гейл,person,male,true",
-                "Hale,Гейл,character,robot,true",
-                "Hale,Гейл,character,male,yes",
-                "Hale,Гейл,character,male,true,extra",
-                ",Гейл,character,male,true"
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "'Hale,Гейл,person,male,true'|UNKNOWN_TYPE",
+                "'Hale,Гейл,character,robot,true'|UNKNOWN_GENDER",
+                "'Hale,Гейл,character,male,yes'|UNKNOWN_LOCKED",
+                "'Hale,Гейл,character,male,true,extra'|FIELD_COUNT",
+                "',Гейл,character,male,true'|NO_TERM",
+                "'Hale,Гейл,person,she,true'|UNKNOWN_TYPE,UNKNOWN_GENDER"
             })
-    void importCsv_rowWithAnUnknownValueOrWrongFieldCount_isMalformed(final String row) throws IOException {
+    void importCsv_rowWithAnUnknownValueOrWrongFieldCount_isMalformedNamingWhy(final String row, final String problems)
+            throws IOException {
         final Path file = write(HEADER, row);
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(0, List.of(2), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of(), 0, problemsOf(problems)));
+    }
+
+    private static Set<CsvProblem> problemsOf(final String names) {
+        return Arrays.stream(names.split(",")).map(CsvProblem::valueOf).collect(Collectors.toSet());
     }
 
     @Test
@@ -239,7 +255,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(2, List.of(4), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(2, List.of(4), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale\nSr", "Moreau");
@@ -261,7 +278,7 @@ class GlossaryCsvTest {
         final Path file = write(HEADER, "\"Hale,Гейл,character,male,true");
 
         assertThat(service.importCsv(PROJECT, file).data())
-                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of()));
+                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of(), 0, Set.of(CsvProblem.OPEN_QUOTE)));
     }
 
     @Test

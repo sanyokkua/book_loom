@@ -61,7 +61,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
         if (before.isErr()) {
             return Result.err(Objects.requireNonNull(before.error(), "error"));
         }
-        final Result<GlossaryImportReport> report = applyAll(rows, parsed.malformedLines(), duplicates);
+        final Result<GlossaryImportReport> report = applyAll(rows, parsed, duplicates);
         if (report.isErr()) {
             log.warn("Glossary import project={} failed half-way: the glossary is put back as it was", projectId);
             GlossaryRestore.restore(glossary, projectId, Objects.requireNonNull(before.data(), "before"));
@@ -85,9 +85,10 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
     }
 
     private Result<GlossaryImportReport> applyAll(
-            final List<GlossaryCsv.Row> rows, final List<Integer> malformed, final int duplicates) {
+            final List<GlossaryCsv.Row> rows, final GlossaryCsv.Parsed parsed, final int duplicates) {
         return apply.apply(rows)
-                .map(refused -> new GlossaryImportReport(rows.size() - refused.size(), malformed, refused, duplicates));
+                .map(refused -> new GlossaryImportReport(
+                        rows.size() - refused.size(), parsed.malformedLines(), refused, duplicates, parsed.problems()));
     }
 
     // A term named twice keeps the row that comes last, in the place of its first row.

@@ -1951,14 +1951,28 @@ public enum MessageKey {
     NAMES_STYLE_SUGGESTED_BADGE_TIP("namesStyle.suggestedBadge.tip"),
     /** Result of an import; argument 0 is the row count, passed as an Integer. */
     NAMES_STYLE_IMPORT_DONE("namesStyle.import.done"),
-    /** Lines an import could not read; argument 0 is the joined line numbers, argument 1 their count. */
+    /** Lines an import could not read; argument 0 is the line numbers as spans, argument 1 their count. */
     NAMES_STYLE_IMPORT_MALFORMED("namesStyle.import.malformed"),
-    /** Lines an import refused as locked without a target; argument 0 is the joined line numbers, argument 1 their count. */
+    /** Lines an import refused as locked without a target; argument 0 is the lines as spans, argument 1 their count. */
     NAMES_STYLE_IMPORT_REFUSED("namesStyle.import.refused"),
     /** How many rows of an imported file a later row of the same term replaced (argument 0). */
     NAMES_STYLE_IMPORT_DUPLICATES("namesStyle.import.duplicates"),
     /** Why an import took nothing: the file holds no row below its header, or nothing at all. */
     NAMES_STYLE_IMPORT_NO_ROWS("namesStyle.import.noRows"),
+    /** A cut list of line numbers; argument 0 is the spans shown, argument 1 how many lines were left out. */
+    NAMES_STYLE_IMPORT_MORE_LINES("namesStyle.import.moreLines"),
+    /** Why an import could not read a row: a quote never closes. */
+    NAMES_STYLE_IMPORT_PROBLEM_QUOTE("namesStyle.import.problem.quote"),
+    /** Why an import could not read a row: it does not hold one value per column. */
+    NAMES_STYLE_IMPORT_PROBLEM_FIELDS("namesStyle.import.problem.fields"),
+    /** Why an import could not read a row: its term is empty. */
+    NAMES_STYLE_IMPORT_PROBLEM_TERM("namesStyle.import.problem.term"),
+    /** Why an import could not read a row: an unknown type; argument 0 is the values a file may use. */
+    NAMES_STYLE_IMPORT_PROBLEM_TYPE("namesStyle.import.problem.type"),
+    /** Why an import could not read a row: an unknown gender; argument 0 is the values a file may use. */
+    NAMES_STYLE_IMPORT_PROBLEM_GENDER("namesStyle.import.problem.gender"),
+    /** Why an import could not read a row: locked is neither true nor false. */
+    NAMES_STYLE_IMPORT_PROBLEM_LOCKED("namesStyle.import.problem.locked"),
     /** Result of an export; argument 0 is the written file name. */
     NAMES_STYLE_EXPORT_DONE("namesStyle.export.done"),
     /** Term type: a character. */

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.IdSource;
@@ -42,20 +43,9 @@ class GlossaryLargeCsvImportTest {
 
     @Test
     void importCsv_fiveThousandRows_storesThemAllWithinSeconds() throws Exception {
-        final Injector injector = Guice.createInjector(
-                new DocumentModule(),
-                new SqlitePersistenceModule(dir.resolve("bookloom.db"), Clock.systemUTC()),
-                binder -> {
-                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
-                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
-                });
-        final Path book =
-                Files.writeString(dir.resolve("Harbour.txt"), "Mira saw the ships.\n", StandardCharsets.UTF_8);
-        final Result<ImportedBook> imported =
-                injector.getInstance(ProjectServiceImpl.class).create(book);
-        final String project = Objects.requireNonNull(
-                Objects.requireNonNull(imported.data(), "imported").projectId());
-        final Path csv = Files.writeString(dir.resolve("names.csv"), csvOf(ROWS), StandardCharsets.UTF_8);
+        final Injector injector = injector();
+        final String project = project(injector);
+        final Path csv = Files.writeString(dir.resolve("names.csv"), csvOf(ROWS, "character"), StandardCharsets.UTF_8);
         final GlossaryServiceImpl glossary = injector.getInstance(GlossaryServiceImpl.class);
 
         final long started = System.nanoTime();
@@ -69,10 +59,49 @@ class GlossaryLargeCsvImportTest {
         assertThat(millis).isLessThan(WITHIN_MILLIS);
     }
 
-    private static String csvOf(final int rows) {
+    // IF each of 5,000 rows typed "person" were reported on its own, THEN the person would get a wall of line numbers
+    // and no reason (G1-4); the report names the one cause, still within seconds.
+    @Test
+    void importCsv_fiveThousandRowsOfAnUnknownType_namesTheCauseOnceWithinSeconds() throws Exception {
+        final Injector injector = injector();
+        final String project = project(injector);
+        final Path csv = Files.writeString(dir.resolve("names.csv"), csvOf(ROWS, "person"), StandardCharsets.UTF_8);
+        final GlossaryServiceImpl glossary = injector.getInstance(GlossaryServiceImpl.class);
+
+        final long started = System.nanoTime();
+        final GlossaryImportReport report =
+                Objects.requireNonNull(glossary.importCsv(project, csv).data(), "report");
+        final long millis = (System.nanoTime() - started) / 1_000_000;
+
+        assertThat(report.imported()).isZero();
+        assertThat(report.malformedLines()).hasSize(ROWS).startsWith(2).endsWith(ROWS + 1);
+        assertThat(report.problems()).containsExactly(CsvProblem.UNKNOWN_TYPE);
+        assertThat(millis).isLessThan(WITHIN_MILLIS);
+    }
+
+    private Injector injector() {
+        return Guice.createInjector(
+                new DocumentModule(),
+                new SqlitePersistenceModule(dir.resolve("bookloom.db"), Clock.systemUTC()),
+                binder -> {
+                    binder.bind(Clock.class).toInstance(Clock.systemUTC());
+                    binder.bind(IdSource.class).toInstance(new UuidIdSource());
+                });
+    }
+
+    private String project(final Injector injector) throws java.io.IOException {
+        final Path book =
+                Files.writeString(dir.resolve("Harbour.txt"), "Mira saw the ships.\n", StandardCharsets.UTF_8);
+        final Result<ImportedBook> imported =
+                injector.getInstance(ProjectServiceImpl.class).create(book);
+        return Objects.requireNonNull(
+                Objects.requireNonNull(imported.data(), "imported").projectId());
+    }
+
+    private static String csvOf(final int rows, final String type) {
         return "term,target,type,gender,locked\n"
                 + IntStream.range(0, rows)
-                        .mapToObj(i -> "Name" + i + ",Імʼя" + i + ",character," + GENDERS[i % 2] + ",false")
+                        .mapToObj(i -> "Name" + i + ",Імʼя" + i + "," + type + "," + GENDERS[i % 2] + ",false")
                         .collect(Collectors.joining("\n", "", "\n"));
     }
 }

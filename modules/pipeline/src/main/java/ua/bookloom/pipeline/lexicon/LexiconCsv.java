@@ -2,12 +2,15 @@ package ua.bookloom.pipeline.lexicon;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.glossary.CsvRecords;
 import ua.bookloom.pipeline.glossary.CsvRecords.CsvRecord;
@@ -42,8 +45,9 @@ final class LexiconCsv {
      *
      * @param rows the well-formed rows in file order
      * @param malformedLines the lines of the rows that lack two fields, have no term or hold a quote that never closes
+     * @param problems why those lines could not be read, each cause once
      */
-    record Parsed(List<Row> rows, List<Integer> malformedLines) {}
+    record Parsed(List<Row> rows, List<Integer> malformedLines, Set<CsvProblem> problems) {}
 
     /** The terms sorted by their comparison key, each with its established rendering or none. */
     static String format(final List<LexiconEntry> entries) {
@@ -69,16 +73,19 @@ final class LexiconCsv {
         final boolean headed = !records.isEmpty() && isHeader(records.getFirst());
         final List<Row> rows = new ArrayList<>();
         final List<Integer> malformed = new ArrayList<>();
+        final Set<CsvProblem> problems = EnumSet.noneOf(CsvProblem.class);
         for (final CsvRecord record : records.stream().skip(headed ? 1 : 0).toList()) {
-            if (isUsable(record)) {
+            final CsvProblem problem = problemOf(record);
+            if (problem == null) {
                 final String target = record.fields().get(1);
                 rows.add(new Row(record.line(), record.fields().getFirst(), target.isEmpty() ? null : target));
             } else {
                 malformed.add(record.line());
+                problems.add(problem);
             }
         }
-        log.debug("Lexicon CSV parsed: {} rows, {} malformed", rows.size(), malformed.size());
-        return new Parsed(List.copyOf(rows), List.copyOf(malformed));
+        log.debug("Lexicon CSV parsed: {} rows, {} malformed, problems {}", rows.size(), malformed.size(), problems);
+        return new Parsed(List.copyOf(rows), List.copyOf(malformed), Set.copyOf(problems));
     }
 
     private static boolean isHeader(final CsvRecord record) {
@@ -89,9 +96,13 @@ final class LexiconCsv {
                 && fields.get(1).strip().equalsIgnoreCase(expected.get(1));
     }
 
-    private static boolean isUsable(final CsvRecord record) {
-        return record.terminated()
-                && record.fields().size() == FIELD_COUNT
-                && !record.fields().getFirst().isBlank();
+    private static @Nullable CsvProblem problemOf(final CsvRecord record) {
+        if (!record.terminated()) {
+            return CsvProblem.OPEN_QUOTE;
+        }
+        if (record.fields().size() != FIELD_COUNT) {
+            return CsvProblem.FIELD_COUNT;
+        }
+        return record.fields().getFirst().isBlank() ? CsvProblem.NO_TERM : null;
     }
 }

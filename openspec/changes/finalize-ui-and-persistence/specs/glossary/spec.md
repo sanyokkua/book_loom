@@ -297,9 +297,11 @@ WHEN a CSV is imported, the application SHALL read the stored glossary once and 
 The application SHALL export the glossary as UTF-8 CSV with the header `term,target,type,gender,locked` and quoting as
 RFC 4180 defines it, written whole through a new temporary file, with a single quote before a value that starts with
 `=`, `+`, `-`, `@`, a tab or a carriage return; and WHEN a CSV is imported it SHALL update an existing entry matched by
-source term, add the others, and report each malformed or refused row by its line number while importing the rest.
+source term, add the others, and report the malformed and refused rows by their lines, runs of lines as one span and
+at most ten spans named, with each cause of a malformed row said once (for an unknown type or gender, with the values a
+file may use), while importing the rest.
 
-**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
+**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`. In plain words: a series keeps its names across books, so a glossary must travel as a plain file any spreadsheet can open; one bad line must not throw away a hundred good ones, and a file whose every row has the same mistake gets one sentence naming it, not five thousand line numbers. A row that would lock a term with no target is refused like a malformed one (see "Lock only an entry that has a target").
 
 #### Scenario: A term with a comma is quoted
 
@@ -311,6 +313,11 @@ source term, add the others, and report each malformed or refused row by its lin
 - **WHEN** an imported file has the header, a valid line 2 `Hale,Гейл,character,male,true`, a line 3 `Milton,Мілтон`
   with two fields, and a valid line 4
 - **THEN** lines 2 and 4 are imported and line 3 is reported as malformed
+
+#### Scenario: Every row has a type the file may not use
+
+- **WHEN** an imported file has the header and 5,000 rows, lines 2 to 5001, each with the type `person`
+- **THEN** nothing is imported and the report reads "Imported 0 rows. 5,000 lines could not be read: 2–5001. The type must be one of: character, place, term, title, other." within seconds
 
 #### Scenario: Import updates an existing term
 

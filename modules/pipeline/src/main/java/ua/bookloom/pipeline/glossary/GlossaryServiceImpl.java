@@ -48,6 +48,9 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     static final String LOCKED_NEEDS_TARGET = "A locked term needs a target.";
 
+    /** How many line numbers an import's warning names; the count says how many there were. */
+    private static final int LOGGED_LINES = 20;
+
     private final GlossaryRepository glossary;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
@@ -278,10 +281,23 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     private static void logImport(final String projectId, final Path source, final GlossaryImportReport report) {
-        report.malformedLines().forEach(line -> log.warn("Glossary import path={} line {} is malformed", source, line));
-        report.refusedLines()
-                .forEach(line ->
-                        log.warn("Glossary import path={} line {} refused: {}", source, line, LOCKED_NEEDS_TARGET));
+        // One line per kind, not per row: a file of 5,000 bad rows must not write 5,000 warnings.
+        if (!report.malformedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} malformed={} problems={} lines={}",
+                    source,
+                    report.malformedLines().size(),
+                    report.problems(),
+                    report.malformedLines().stream().limit(LOGGED_LINES).toList());
+        }
+        if (!report.refusedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} refused={} ({}) lines={}",
+                    source,
+                    report.refusedLines().size(),
+                    LOCKED_NEEDS_TARGET,
+                    report.refusedLines().stream().limit(LOGGED_LINES).toList());
+        }
         log.info(
                 "Glossary imported project={} path={} imported={} malformed={} refused={} duplicates={}",
                 projectId,

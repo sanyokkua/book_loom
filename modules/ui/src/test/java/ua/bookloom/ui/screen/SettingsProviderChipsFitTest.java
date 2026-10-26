@@ -35,14 +35,14 @@ class SettingsProviderChipsFitTest extends SettingsScreenTestBase {
         useLocale(Locale.forLanguageTag(language));
         openSettings();
         resizeScene(width, height);
-        onFx(() -> form().edit(draft -> draft.withName(LONG_NAME)
-                .withSignIn(ProviderAuth.BEARER)
-                .withCredentialRef("RETEST_MISSING_KEY")));
+        onFx(() -> form().edit(draft ->
+                draft.withName(LONG_NAME).withSignIn(ProviderAuth.BEARER).withCredentialRef("RETEST_MISSING_KEY")));
 
         checkWithReport(refusedSignIn());
 
         final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
-        assertThat(ThemeTestSupport.onFx(() -> required("settings-form-key-status").isVisible()))
+        assertThat(ThemeTestSupport.onFx(
+                        () -> required("settings-form-key-status").isVisible()))
                 .isTrue();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
     }
