@@ -17,6 +17,7 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
@@ -99,7 +100,7 @@ final class ExportView {
     /** The content shown while no book is open: no separate empty state, only the disabled action and its footer. */
     Node empty() {
         log.debug("building the export screen with no book open");
-        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
+        final Label subtitle = Wrapped.label(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
         subtitle.setId("export-subtitle");
         return new VBox(SCREEN_SPACING, subtitle, result.tiles(), footer());
     }
@@ -108,7 +109,7 @@ final class ExportView {
     Node build(final OpenedBook book) {
         Objects.requireNonNull(book, "book");
         log.debug("building the export screen for project {}", book.projectId());
-        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
+        final Label subtitle = Wrapped.label(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
         subtitle.setId("export-subtitle");
         // build() runs on every book change; the one listener is moved, not added again.
         titleModel.edits().removeListener(weakTitleEdited);

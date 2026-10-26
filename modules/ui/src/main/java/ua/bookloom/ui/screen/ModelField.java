@@ -17,6 +17,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelAdvice;
@@ -102,7 +103,7 @@ final class ModelField {
                                 messages.get(MessageKey.SETTINGS_MODEL_NO_LIST),
                                 listing.noListObtained()),
                         refusal(listing),
-                        plain(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT)));
+                        Wrapped.label(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT), "hint"));
     }
 
     private HBox entryRow() {
@@ -130,17 +131,10 @@ final class ModelField {
     }
 
     private static Label hint(final String id, final String text, final ObservableBooleanValue shown) {
-        final Label label = plain(text);
+        final Label label = Wrapped.label(text, "hint");
         label.setId(id);
         label.visibleProperty().bind(shown);
         label.managedProperty().bind(label.visibleProperty());
-        return label;
-    }
-
-    private static Label plain(final String text) {
-        final Label label = new Label(text);
-        label.getStyleClass().add("hint");
-        label.setWrapText(true);
         return label;
     }
 

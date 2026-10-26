@@ -20,6 +20,7 @@ import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -85,7 +86,7 @@ final class BriefView {
     }
 
     private Node build() {
-        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.BRIEF_SUBTITLE), "muted");
+        final Label subtitle = Wrapped.label(messages.get(MessageKey.BRIEF_SUBTITLE), "muted");
         subtitle.setId("brief-subtitle");
         final VBox left = column("brief-column-left", languages.node(), policies.node(), also.node(), quality.node());
         final VBox right = column("brief-column-right", tone.node());

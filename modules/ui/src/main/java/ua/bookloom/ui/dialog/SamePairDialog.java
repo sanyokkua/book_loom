@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.i18n.QualityLabels;
@@ -144,7 +145,7 @@ public final class SamePairDialog implements SamePairPrompt {
 
         private Node[] content(final ProjectRow existing) {
             return new Node[] {
-                FormCard.text(messages.get(MessageKey.DIALOG_SAME_PAIR_BODY), "dialog-text"),
+                Wrapped.label(messages.get(MessageKey.DIALOG_SAME_PAIR_BODY), "dialog-text"),
                 table(existing),
                 choice(
                         open,
@@ -170,7 +171,7 @@ public final class SamePairDialog implements SamePairPrompt {
         }
 
         private VBox nameSection() {
-            final Label hint = FormCard.text(messages.get(MessageKey.DIALOG_SAME_PAIR_NAME_HINT), "dialog-sub");
+            final Label hint = Wrapped.label(messages.get(MessageKey.DIALOG_SAME_PAIR_NAME_HINT), "dialog-sub");
             return new VBox(ROW_GAP, name.view(messages.get(MessageKey.DIALOG_SAME_PAIR_NAME_LABEL)), hint);
         }
 
@@ -184,7 +185,7 @@ public final class SamePairDialog implements SamePairPrompt {
             radio.setId(PREFIX + id);
             radio.setText(messages.get(caption, arguments));
             Tips.install(messages, radio, tip);
-            final Label noteLabel = FormCard.text(messages.get(note), "dialog-sub");
+            final Label noteLabel = Wrapped.label(messages.get(note), "dialog-sub");
             return new VBox(NOTE_GAP, radio, noteLabel);
         }
 

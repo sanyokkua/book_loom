@@ -67,13 +67,6 @@ final class FormCard {
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
     }
 
-    static Label text(final String text, final String style) {
-        final Label label = new Label(text);
-        label.setWrapText(true);
-        label.getStyleClass().add(style);
-        return label;
-    }
-
     void body(final Node... nodes) {
         card.setContent(new VBox(BODY_SPACING, nodes));
     }

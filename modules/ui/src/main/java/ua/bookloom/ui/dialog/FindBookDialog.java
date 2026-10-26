@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProjectRow;
@@ -57,7 +58,7 @@ public final class FindBookDialog implements FindBookPrompt {
                 : MessageKey.DIALOG_FIND_BOOK_MISSING;
         addButtons(card, choose, cancelled);
         card.onEscape(cancelled);
-        card.body(FormCard.text(messages.get(body, row.summary().project().name()), "dialog-text"), errorLine(error));
+        card.body(Wrapped.label(messages.get(body, row.summary().project().name()), "dialog-text"), errorLine(error));
         card.show();
     }
 
@@ -77,10 +78,8 @@ public final class FindBookDialog implements FindBookPrompt {
     }
 
     private static Label errorLine(final @Nullable String error) {
-        final Label problem = new Label(error == null ? "" : error);
+        final Label problem = Wrapped.label(error == null ? "" : error, "dialog-error");
         problem.setId(PREFIX + "error");
-        problem.getStyleClass().add("dialog-error");
-        problem.setWrapText(true);
         problem.setVisible(error != null);
         problem.setManaged(error != null);
         return problem;

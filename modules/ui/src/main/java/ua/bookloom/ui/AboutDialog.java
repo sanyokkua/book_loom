@@ -10,6 +10,7 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -90,19 +91,19 @@ final class AboutDialog {
     }
 
     private Node body() {
-        final Label description = text(messages.get(MessageKey.ABOUT_DESCRIPTION), "dialog-text");
+        final Label description = Wrapped.label(messages.get(MessageKey.ABOUT_DESCRIPTION), "dialog-text");
         return new VBox(description, diagnosticSection());
     }
 
     // The state is stated plainly, with the one way to change it, because nothing in the window can change it yet.
     private Node diagnosticSection() {
-        final Label heading = text(messages.get(MessageKey.ABOUT_LOG_HEADING), "dialog-title");
+        final Label heading = Wrapped.label(messages.get(MessageKey.ABOUT_LOG_HEADING), "dialog-title");
         final boolean detailed = diagnostics.diagnosticLog().detailed();
-        final Label state =
-                text(messages.get(detailed ? MessageKey.ABOUT_LOG_ON : MessageKey.ABOUT_LOG_OFF), "dialog-text");
+        final Label state = Wrapped.label(
+                messages.get(detailed ? MessageKey.ABOUT_LOG_ON : MessageKey.ABOUT_LOG_OFF), "dialog-text");
         state.setId(LOG_STATE_ID);
-        final Label privacy = text(messages.get(MessageKey.ABOUT_LOG_PRIVACY), "hint");
-        final Label folder = text(
+        final Label privacy = Wrapped.label(messages.get(MessageKey.ABOUT_LOG_PRIVACY), "hint");
+        final Label folder = Wrapped.label(
                 messages.get(
                         MessageKey.ABOUT_LOG_FOLDER,
                         diagnostics.diagnosticLog().directory().toString()),
@@ -140,12 +141,5 @@ final class AboutDialog {
         Tips.install(messages, button, tip);
         button.setOnAction(event -> onPress.run());
         return button;
-    }
-
-    private static Label text(final String value, final String styleClass) {
-        final Label label = new Label(value);
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
     }
 }

@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProjectNameRules;
@@ -97,7 +98,7 @@ public final class RenameDialog implements RenamePrompt {
             this.confirm = addButtons(rename, remove, cancelled);
             card.onEscape(cancelled);
             card.body(
-                    FormCard.text(
+                    Wrapped.label(
                             messages.get(
                                     auto ? MessageKey.DIALOG_RENAME_BODY_AUTO : MessageKey.DIALOG_RENAME_BODY_NAMED),
                             "dialog-text"),
@@ -142,7 +143,7 @@ public final class RenameDialog implements RenamePrompt {
             use.getStyleClass().add("btn-secondary");
             Tips.install(messages, use, MessageKey.DIALOG_RENAME_USE_AUTO_TIP);
             use.setOnAction(event -> useAutomaticName());
-            final Label note = FormCard.text(messages.get(MessageKey.DIALOG_RENAME_USE_AUTO_NOTE), "dialog-sub");
+            final Label note = Wrapped.label(messages.get(MessageKey.DIALOG_RENAME_USE_AUTO_NOTE), "dialog-sub");
             final boolean offered = row.summary().project().nameOrigin() == NameOrigin.USER
                     && rules.pairFree()
                     && rules.automaticName() != null;

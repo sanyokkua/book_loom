@@ -10,8 +10,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * The small parts the import page and the screens after it share: a key and its value on a ruled row, the wrapped
- * label and the format's name.
+ * The small parts the import page and the screens after it share: a key and its value on a ruled row and the format's name.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -20,13 +19,6 @@ import ua.bookloom.ui.i18n.MessageKey;
 final class ImportViews {
 
     static final String WARNING_GLYPH = "⚠";
-
-    static Label wrapped(final String text, final String styleClass) {
-        final Label label = new Label(text);
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
-    }
 
     /** One key and its wrapped value on a ruled row, whose whole node id is {@code id}. */
     static Node keyValue(final String id, final String label, final String value) {

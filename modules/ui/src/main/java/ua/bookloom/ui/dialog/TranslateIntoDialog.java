@@ -18,6 +18,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -79,7 +80,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         private final FormCard card;
         private final SearchableCombo<String> into;
         private final NameField name;
-        private final Label hint = FormCard.text("", "dialog-sub");
+        private final Label hint = Wrapped.label("", "dialog-sub");
         private final Button create;
 
         Card(
@@ -102,7 +103,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             card.onEscape(cancelled);
             configureList();
             card.body(
-                    FormCard.text(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_BODY, group.title()), "dialog-text"),
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_BODY, group.title()), "dialog-text"),
                     languagePair(),
                     name.view(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_NAME)),
                     hint,
@@ -198,8 +199,8 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             return new VBox(
                     ROW_GAP,
                     caption,
-                    FormCard.text(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_BRIEF), "dialog-text"),
-                    FormCard.text(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_GLOSSARY), "dialog-text"));
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_BRIEF), "dialog-text"),
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_GLOSSARY), "dialog-text"));
         }
 
         private String automaticName() {

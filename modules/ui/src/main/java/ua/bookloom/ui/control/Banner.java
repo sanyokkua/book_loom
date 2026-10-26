@@ -45,8 +45,8 @@ public final class Banner extends HBox {
     }
 
     private final Label icon = new Label();
-    private final Label title = wrapped("banner-title");
-    private final Label text = wrapped("banner-text");
+    private final Label title = Wrapped.label("", "banner-title");
+    private final Label text = Wrapped.label("", "banner-text");
     private final VBox column = new VBox(TEXT_SPACING, title, text);
     private Role role;
 
@@ -188,12 +188,5 @@ public final class Banner extends HBox {
     public static void setActionShown(final Button button, final boolean shown) {
         button.setVisible(shown);
         button.setManaged(shown);
-    }
-
-    private static Label wrapped(final String styleClass) {
-        final Label label = new Label();
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
     }
 }
