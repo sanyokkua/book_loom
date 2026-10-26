@@ -57,6 +57,7 @@ public final class ProgressDialog extends ModalCard {
     private final ScrollPane detailScroll;
     private final Button cancel;
     private @Nullable Button apply;
+    private final Label footnote = new Label();
     private @Nullable Boolean shownCancelling;
     private @Nullable Boolean shownOffered;
 
@@ -286,7 +287,7 @@ public final class ProgressDialog extends ModalCard {
     // The line saying what Cancel does sits in the footer's left group, after Continue in background.
     private void footnote() {
         final ActivityKind kind = model.activity().get().kind();
-        final Label footnote = new Label(messages.get(
+        footnote.setText(messages.get(
                 switch (kind) {
                     case EXPORT -> MessageKey.PROGRESS_FOOTER_EXPORT;
                     case SUGGEST_STYLE -> MessageKey.BRIEF_DIALOG_WRITES_NOTHING;
@@ -320,6 +321,8 @@ public final class ProgressDialog extends ModalCard {
         Visibility.show(details, !now.details().isEmpty());
         showFigures();
         Visibility.show(cancel, now.cancellable());
+        // What Cancel writes is said only while there is a Cancel; work that cannot be stopped says so above instead.
+        Visibility.show(footnote, now.cancellable());
         cancel.setDisable(now.cancelling());
         if (!Boolean.valueOf(now.cancelling()).equals(shownCancelling)) {
             shownCancelling = now.cancelling();

@@ -51,11 +51,11 @@ class BookIndexScanReadsTest {
         assertThat(second.getLast()).isSameAs(first.getLast());
     }
 
-    // IF nothing of a segment is cut, THEN its scan read is the read made at the build, not a second tokenisation.
+    // IF nothing of a segment is cut, THEN its scan read holds the same words and sentences as the whole segment's.
     @Test
-    void scanReads_segmentNothingIsCutFrom_isTheBuildRead() {
+    void scanReads_segmentNothingIsCutFrom_readsAsTheWholeSegment() {
         assertThat(index.scanReads(List.of(1), "en").getFirst())
-                .isSameAs(index.reads(List.of(1)).getFirst());
+                .isEqualTo(index.reads(List.of(1)).getFirst());
     }
 
     private static Segment segment(final int order, final String masked, final List<PlaceholderPair> pairs) {

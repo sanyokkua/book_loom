@@ -107,7 +107,7 @@ check before saving, and All calls (the translation's model calls). Its parts:
 | Simple / Detailed | Simple: one plain sentence for the selected step and Input \| Output in plain words. Detailed: adds the info grid (attempt, a clock against the timeout, first token, tokens, speed), the call kind code and the parsed prompt (G5) | Opens in Detailed when **Show technical details** is on (G12) |
 | Follow current step | Switch | On: the list selects the step the work is on. Only a person's click or key turns it off |
 | Left list | Steps or items in groups, each with a state marker (G11) and one result line | Finished steps stay selectable with their data; a step not started says so |
-| Footer | Left: **Continue in background** (long work only) and one line saying what Cancel does ("Cancel writes nothing."). Right: Cancel, then the result action | The export pass also offers **Write the file now** |
+| Footer | Left: **Continue in background** (long work only) and one line saying what Cancel does ("Cancel writes nothing."), shown only while the work can be cancelled (work that cannot, such as opening a book, says "This work cannot be stopped; it ends by itself." under the title instead). Right: Cancel, then the result action | The export pass also offers **Write the file now** |
 
 **Continue in background** is offered only for long work — the names pass and the export pass; short work (brief
 suggestion, file name, tests) cannot be hidden. Hiding collapses the dialog into the title bar's activity chip; a click

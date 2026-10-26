@@ -25,7 +25,6 @@ final class IndexBuilder {
 
     private final List<SegmentInfo> infos = new ArrayList<>();
     private final List<String> texts = new ArrayList<>();
-    private final List<Occurrences.Read> reads = new ArrayList<>();
     private final List<SegmentFacts> facts = new ArrayList<>();
     private final List<UnitSpan> spans = new ArrayList<>();
     private final Map<String, Integer> ordinalById = new HashMap<>();
@@ -56,7 +55,6 @@ final class IndexBuilder {
             LetterScripts.addTo(segment.masked(), storyScripts);
         }
         final Occurrences.Read read = Occurrences.read(segment.masked());
-        reads.add(read);
         for (int index = 0; index < read.words().size(); index++) {
             final Occurrences.Word word = read.words().get(index);
             final Posting posting = new Posting(
@@ -88,7 +86,6 @@ final class IndexBuilder {
         return new IndexData(
                 List.copyOf(infos),
                 List.copyOf(texts),
-                List.copyOf(reads),
                 List.copyOf(facts),
                 List.copyOf(spans),
                 Map.copyOf(ordinalById),

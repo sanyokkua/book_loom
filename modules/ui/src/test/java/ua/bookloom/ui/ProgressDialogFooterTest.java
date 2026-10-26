@@ -43,6 +43,17 @@ class ProgressDialogFooterTest extends ProgressWorkTestBase {
         assertThat(missed).as("footer buttons the mouse cannot reach").isEmpty();
     }
 
+    // IF work that cannot be stopped said what Cancel writes, THEN the footer would promise a button that is not there
+    // while the line above says the work cannot be stopped.
+    @Test
+    void footnote_workThatCannotBeStopped_isNotShown() throws TimeoutException {
+        onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.IMPORT, null));
+        await(this::isDialogShown);
+
+        assertThat(ThemeTestSupport.onFx(() -> required("progress-footnote").isVisible())).isFalse();
+        assertThat(ThemeTestSupport.onFx(() -> required("progress-cancel").isVisible())).isFalse();
+    }
+
     // IF Continue in background took no click, THEN the names pass could only be hidden with the keyboard.
     @Test
     void continueInBackground_clickedWithTheMouse_hidesTheDialog() throws TimeoutException {

@@ -137,6 +137,11 @@ WHEN the application asks the model for the brief, the names, a file name, the l
 - **WHEN** the brief suggestion's dialog is shown
 - **THEN** its footer reads `Cancel writes nothing.` with Cancel on the right
 
+#### Scenario: Work that cannot be stopped promises no Cancel
+
+- **WHEN** the dialog shows the opening of a book, which cannot be stopped
+- **THEN** it says `This work cannot be stopped; it ends by itself.` under its title, and neither a Cancel button nor `Cancel writes nothing.` is shown
+
 ### Requirement: Offer Simple and Detailed views of a step
 
 The progress dialog SHALL show a selected step in a Simple view, with one plain sentence and the input and output in plain words, or in a Detailed view that adds the attempt, a clock against the timeout, first token, tokens, speed, the call's kind and the parsed prompt. It SHALL open in Detailed when "Show technical details" is on.
