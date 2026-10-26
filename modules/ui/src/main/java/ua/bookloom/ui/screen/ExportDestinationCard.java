@@ -8,6 +8,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -56,8 +57,10 @@ final class ExportDestinationCard {
         Tips.installLive(path, viewModel.destination());
         HBox.setHgrow(path, Priority.ALWAYS);
         path.setMaxWidth(Double.MAX_VALUE);
-        // The folders give way first; the home note and the buttons keep their words whole.
+        // The folders give way first, cut from the front so the file name stays in sight; the home note and the buttons
+        // keep their words whole.
         path.setMinWidth(0);
+        path.setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
         final Label inHome = new Label(messages.get(MessageKey.EXPORT_SAVE_TO_HOME));
         inHome.setId("export-save-to-home");
         inHome.getStyleClass().add("hint");

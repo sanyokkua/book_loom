@@ -56,7 +56,8 @@ public final class ExportViewModel {
     private final Messages messages;
     private final Clock clock;
     private final ExportAnnouncer announcer;
-    private final ObservableSet<SideFile> sideFiles = FXCollections.observableSet(EnumSet.of(SideFile.GLOSSARY_CSV));
+    private final ObservableSet<SideFile> sideFiles =
+            FXCollections.observableSet(EnumSet.of(SideFile.GLOSSARY_CSV, SideFile.QUALITY_REPORT));
     private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper currentNote = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper runNote = new ReadOnlyStringWrapper("");

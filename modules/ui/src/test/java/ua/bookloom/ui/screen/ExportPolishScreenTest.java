@@ -63,7 +63,7 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
 
     // IF a book written with segments still untranslated were announced as ready, THEN the person would think it done.
     @ParameterizedTest
-    @CsvSource({"0, Translated book ready", "4, Your book so far"})
+    @CsvSource({"0, The translated book is ready", "4, Your book so far"})
     void title_afterExport_saysReadyOnlyWhenNothingIsPending(final int pending, final String expected)
             throws TimeoutException {
         openEpubAndShowExport();
@@ -86,7 +86,7 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
 
         assertThat(box.isWrapText()).isTrue();
         assertThat(String.join("", shown).replace("\n", " ").strip())
-                .isEqualTo("Bilingual copy (source and translation side by side)");
+                .isEqualTo("Bilingual copy (original and translation side by side)");
     }
 
     // IF the switch stood alone under its card's heading, THEN it would not say what turning it on does.

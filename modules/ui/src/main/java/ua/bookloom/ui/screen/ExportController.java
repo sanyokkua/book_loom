@@ -105,7 +105,7 @@ public final class ExportController {
     // A book written with segments still untranslated is not "ready": it is the book so far.
     private void showTitle(final @Nullable ExportOutcome outcome) {
         final MessageKey key = outcome == null
-                ? MessageKey.NAV_EXPORT
+                ? MessageKey.EXPORT_TITLE_BEFORE
                 : outcome.report().pending() > 0 ? MessageKey.EXPORT_TITLE_PARTIAL : MessageKey.EXPORT_TITLE;
         log.debug("export title {}", key);
         title.setText(messages.get(key));

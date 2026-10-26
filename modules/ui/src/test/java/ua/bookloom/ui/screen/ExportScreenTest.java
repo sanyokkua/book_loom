@@ -237,7 +237,36 @@ class ExportScreenTest extends ExportScreenTestBase {
         assertThat(TooltipProbe.tipText(required("export-save-to"))).isEqualTo("Frankenstein.uk.epub");
         assertThat(required("export-save-to")).isNotInstanceOf(TextField.class);
         assertThat(textOf("export-format")).contains("EPUB — same as the original");
-        assertThat(labelText("export-title")).isEqualTo("Export");
+        assertThat(labelText("export-title")).isEqualTo("Export the translated book");
+    }
+
+    // IF the bilingual copy started checked, THEN every export would write a file the mockup leaves to the person
+    // (W6-7, M6).
+    @Test
+    void sideFiles_beforeAnyChoice_glossaryAndReportOnBilingualOff() throws TimeoutException {
+        openEpubAndShowExport();
+
+        assertThat(((CheckBox) required("export-aux-glossary")).isSelected()).isTrue();
+        assertThat(((CheckBox) required("export-aux-bilingual")).isSelected()).isFalse();
+        assertThat(((CheckBox) required("export-aux-report")).isSelected()).isTrue();
+    }
+
+    // IF a long path outside the home folder were cut at its end, THEN the file name — the part a person checks —
+    // would be the part hidden (W6-7, M8).
+    @Test
+    void saveAs_deepFolderOutsideHome_keepsTheFileNameInSight() throws TimeoutException {
+        openEpubAndShowExport();
+        chooser().answer(Path.of("/private/tmp/" + "a-very-long-folder-name/".repeat(12) + "out.uk.epub"));
+
+        onFx(() -> button("export-browse").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        final String shown = ThemeTestSupport.onFx(() -> required("export-save-to").lookupAll(".text").stream()
+                .filter(javafx.scene.text.Text.class::isInstance)
+                .map(node -> ((javafx.scene.text.Text) node).getText())
+                .findFirst()
+                .orElse(""));
+        assertThat(shown).endsWith("out.uk.epub").startsWith("...");
     }
 
     // IF the no-book state were a screen of its own, THEN Export would be empty exactly where it must say why.

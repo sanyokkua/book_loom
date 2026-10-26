@@ -2241,6 +2241,7 @@ public enum MessageKey {
     EXPORT_TITLE("export.title"),
     /** Export screen heading after writing a book that still has untranslated segments. */
     EXPORT_TITLE_PARTIAL("export.title.partial"),
+    EXPORT_TITLE_BEFORE("export.title.before"),
     /** Line under the export heading: the book is written when Export book is pressed, at any time. */
     EXPORT_SUBTITLE("export.subtitle"),
     /** Heading of the card that writes the book. */
