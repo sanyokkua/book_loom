@@ -1510,7 +1510,7 @@ The application SHALL hold each workflow screen's main and run actions in the to
 
 ### Requirement: Show the chosen provider and model in the navigation footer
 
-The navigation column SHALL end with a footer line naming the AI program and the chosen model, separated by " · ", with the tooltip "the one network destination". Its dot and text SHALL follow the same source as the AI-model chip in the title bar: red `No AI model found` when none is chosen, and for example `Ollama · Cannot reach Ollama` when it does not answer.
+The navigation column SHALL end with a footer line naming the AI program and the chosen model, separated by " · ", with the tooltip "the one network destination". Its dot and text SHALL follow the same source as the AI-model chip in the title bar: red `No AI model found` when no AI program is selected or the first-launch look found none, red `No AI model chosen` when a program is selected but no model is chosen, and for example `Ollama · Cannot reach Ollama` when it does not answer.
 
 **Source**: FR-UI-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`), FR-MODEL-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), `docs/specification/mockups/README.md#window-chrome`. In plain words: the navigation is visible from every screen, so a person sees which program a translation uses and whether it answers. Footer and chip are one fact shown twice.
 
@@ -1521,8 +1521,13 @@ The navigation column SHALL end with a footer line naming the AI program and the
 
 #### Scenario: No model chosen shows the empty state
 
-- **WHEN** no AI model is chosen
+- **WHEN** no AI program is selected and no AI model is chosen
 - **THEN** the footer reads `No AI model found` in the error colour
+
+#### Scenario: A program without a chosen model says the choice is missing
+
+- **WHEN** Ollama is selected and no AI model is chosen, for example after Use this one on a provider whose model was not chosen yet
+- **THEN** the footer reads `No AI model chosen` in the error colour, not `No AI model found`
 
 #### Scenario: An unreachable program
 

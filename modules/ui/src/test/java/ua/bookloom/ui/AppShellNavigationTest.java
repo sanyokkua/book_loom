@@ -123,9 +123,10 @@ class AppShellNavigationTest extends ShellTestBase {
     }
 
     @Test
-    void navigation_footerWithNoModel_saysNoAiModelFoundInTheErrorColour() {
-        // IF an empty model were joined to the provider, THEN the footer would read "Ollama · ".
-        assertThat(footerText()).isEqualTo("No AI model found");
+    void navigation_footerWithAProgramButNoModel_saysNoAiModelChosenInTheErrorColour() {
+        // IF an empty model were joined to the provider, THEN the footer would read "Ollama · "; and IF it said "found"
+        // while Ollama is selected, THEN it would claim a search failed when only the choice is missing (W5-D7).
+        assertThat(footerText()).isEqualTo("No AI model chosen");
         assertThat(required("nav-footer").getStyleClass()).contains("state-failed");
     }
 

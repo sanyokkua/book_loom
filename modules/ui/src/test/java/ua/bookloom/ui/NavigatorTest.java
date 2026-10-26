@@ -120,11 +120,11 @@ class NavigatorTest extends FxTestBase {
     }
 
     // IF the loader did not use the active catalogue, THEN a Ukrainian session would show the English label. The
-    // export screen opens on its neutral heading, the navigation label, because no run has finished.
+    // export screen opens on its heading before any export, "Export the translated book".
     @ParameterizedTest
     @CsvSource({
-        "en, Export",
-        "uk, Експорт",
+        "en, Export the translated book",
+        "uk, Експорт перекладеної книги",
     })
     void navigate_underEachLanguage_rendersThatLanguagesExportHeading(final String language, final String expected) {
         final Navigator localised =

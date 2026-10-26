@@ -316,7 +316,7 @@ final class NavColumn {
                         MessageKey.NAV_FOOTER_SELECTION,
                         choice.provider(),
                         chipWord == null ? choice.modelId() : chipWord)
-                : messages.get(looking ? MessageKey.NAV_FOOTER_LOOKING : noModelKey(probe));
+                : messages.get(looking ? MessageKey.NAV_FOOTER_LOOKING : noModelKey(choice, probe));
         final boolean failing = choice.chosen() ? chipWord != null : !looking;
         if (!text.equals(footer.getText()) || failing != footerFailing) {
             log.debug("navigation footer now reads '{}' (failing {}, looking {})", text, failing, looking);
@@ -325,11 +325,12 @@ final class NavColumn {
         markFailing(failing);
     }
 
-    // A program that answered with models the person did not choose is no "not found".
-    private static MessageKey noModelKey(final ProbeOutcome probe) {
-        return probe instanceof ProbeOutcome.Declined
-                ? MessageKey.NAV_FOOTER_NOT_CHOSEN
-                : MessageKey.NAV_FOOTER_NO_MODEL;
+    // "Found" only when the look found nothing or no program is selected; a selected program, or one that answered
+    // with models the person did not choose, lacks only the choice.
+    private static MessageKey noModelKey(final ModelChoice choice, final ProbeOutcome probe) {
+        final boolean nothingFound = probe instanceof ProbeOutcome.NotFound
+                || (choice.provider().isEmpty() && !(probe instanceof ProbeOutcome.Declined));
+        return nothingFound ? MessageKey.NAV_FOOTER_NO_MODEL : MessageKey.NAV_FOOTER_NOT_CHOSEN;
     }
 
     // A failing footer is the red state marker, so it reads at the marker's own contrast on the dark column.

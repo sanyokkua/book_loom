@@ -164,7 +164,7 @@ unlock when a project is open"; Projects and Settings stay available (`NavColumn
 **Built (task 5.8).** The navigation column's footer (`#nav-footer`) reads "AI program · model", for example `Ollama ·
 gemma4:26b`, with the tooltip "The one network destination: the AI program and model BookLoom sends its requests to." It
 reads the same source as the title bar's AI-model chip (`RunStateSource`): `No AI model found` as a red state marker
-when none is chosen — `Looking for an AI model…`, not red, while the look at the local programs runs or its "Which model
+when no program is selected or the look found none, `No AI model chosen` when a program is selected without a model — `Looking for an AI model…`, not red, while the look at the local programs runs or its "Which model
 should BookLoom use?" question is open, and `No AI model chosen` after that question was answered Not now — and, while a project is open and the chip is red, the program and the chip's words (`Ollama ·
 Cannot reach Ollama`).
 
