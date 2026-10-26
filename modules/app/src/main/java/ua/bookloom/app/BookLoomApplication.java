@@ -206,10 +206,7 @@ public final class BookLoomApplication extends Application {
 
         stage.setTitle(TITLE);
         shell.applyWindowLimits(stage);
-        // Set by the copy that closed for "Restart now"; an ordinary launch has none and opens at the default size.
-        WindowPlacement.parse(System.getenv(WindowPlacement.ENVIRONMENT))
-                .ifPresent(placement -> WindowPlacement.apply(stage, placement));
-        window = stage;
+        placeWindow(stage);
         // Closing with work under way asks first; stage.close() is not a close request, so confirming does not loop.
         final ExitGuard exitGuard = injector().getInstance(ExitGuard.class);
         stage.setOnCloseRequest(event -> {
@@ -242,6 +239,13 @@ public final class BookLoomApplication extends Application {
         log.info("window closing, releasing resources");
         keepWindowForRestart();
         lifecycle.close();
+    }
+
+    // Set by the copy that closed for "Restart now"; an ordinary launch has none and opens at the default size.
+    private void placeWindow(final Stage stage) {
+        WindowPlacement.parse(System.getenv(WindowPlacement.ENVIRONMENT))
+                .ifPresent(placement -> WindowPlacement.apply(stage, placement));
+        window = stage;
     }
 
     private void keepWindowForRestart() {

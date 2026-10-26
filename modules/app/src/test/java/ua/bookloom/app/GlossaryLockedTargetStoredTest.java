@@ -42,10 +42,7 @@ class GlossaryLockedTargetStoredTest extends WorkspaceTestBase {
                 UUID.randomUUID().toString(), project, "Mira", "Міра", TermType.CHARACTER, Gender.FEMALE, true);
         assertThat(injector.getInstance(GlossaryService.class).add(locked).isOk())
                 .isTrue();
-        final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
-        onFx(() -> brief.setSourceLanguage("en"));
-        onFx(() -> brief.setTargetLanguage("uk"));
-        waitUntil(() -> !brief.saving().get());
+        chooseLanguages();
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
         waitUntil(() -> "Міра".equals(textOf(targetField())));
 
@@ -64,6 +61,13 @@ class GlossaryLockedTargetStoredTest extends WorkspaceTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> textOf(targetField()))).isEqualTo("Міра");
+    }
+
+    private void chooseLanguages() throws Exception {
+        final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
+        onFx(() -> brief.setSourceLanguage("en"));
+        onFx(() -> brief.setTargetLanguage("uk"));
+        waitUntil(() -> !brief.saving().get());
     }
 
     private static @Nullable String textOf(final @Nullable TextField field) {
