@@ -695,7 +695,7 @@ without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDesk
   look explains itself on hover) and ‹ › to move; rows show the location, a **state marker** (to review · accepted · your
   edit · later · kept as source) and a one-line "why · text" with no formatting tokens; a muted line under the list
   names the shortcuts.
-- **Detail:** the locator, the worst finding's badge and the Technical details switch (the shared one); Original
+- **Detail:** the locator, the worst finding said in plain words ("may be missing words", never the rule's code) and the Technical details switch (the shared one); Original
   (read-only) \| Translation (the editor); the readable view under them. **Planned (6.6b):** protected formatting marks
   `⟦1⟧` in the editor and the strip naming them; until then the editor shows the `⟦gN⟧` tokens and a refused save
   names the tokens it lacks.
