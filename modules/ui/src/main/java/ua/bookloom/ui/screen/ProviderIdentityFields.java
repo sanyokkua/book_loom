@@ -14,6 +14,7 @@ import org.controlsfx.control.SegmentedButton;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
@@ -176,6 +177,7 @@ final class ProviderIdentityFields {
 
     private VBox keyVariableBox() {
         keyStatus.setId("settings-form-key-status");
+        Wrapped.wholeWords(keyStatus);
         final Label hint = new Label(messages.get(MessageKey.SETTINGS_FORM_KEY_VARIABLE_HINT));
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);

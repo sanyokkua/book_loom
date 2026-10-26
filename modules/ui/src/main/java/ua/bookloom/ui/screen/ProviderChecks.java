@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -93,7 +94,7 @@ final class ProviderChecks {
 
     private void addRow(final int row, final ProviderTest test, final String buttonId, final MessageKey text) {
         final VerificationStage stage = test.lastStage();
-        final Label result = new Label();
+        final Label result = Wrapped.wholeWords(new Label());
         result.setId("check-result-" + stage.name());
         result.setFocusTraversable(true);
         Tips.install(messages, result, MessageKey.SETTINGS_CHECK_DETAILS_TIP);
