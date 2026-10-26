@@ -121,6 +121,11 @@ WHILE a paused translation waits for the AI model by itself, the application SHA
 - **WHEN** Ollama stops answering while segments 5–8 are being translated, and the next try is in 12 seconds
 - **THEN** a warning banner reads `BookLoom cannot reach Ollama — Is the Ollama app open? BookLoom tries again by itself in 0:12.` and offers `Try again now`, `Skip these 4 segments` and `Open settings`
 
+#### Scenario: A program that answers with an error is not "cannot reach"
+
+- **WHEN** the wait began, or its latest check answered, with an HTTP 5xx or a reply BookLoom cannot read (`upstream`, `discoveryFailed`)
+- **THEN** the banner reads `Ollama answered with an error — Ollama answers, but with an error of its own or a reply BookLoom cannot read. BookLoom tries again by itself in 0:12.` and the AI-model chip reads `Ollama reports an error`; "cannot reach" is said only when nothing answered (`unreachable`, `timeout`)
+
 #### Scenario: A person who paused the wait gets the plain paused banner
 
 - **WHEN** the person pauses while the wait is running

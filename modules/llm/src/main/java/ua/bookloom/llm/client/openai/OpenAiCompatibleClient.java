@@ -31,6 +31,7 @@ import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
+import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.EndpointPaths;
@@ -349,7 +350,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private Result<ChatResponse> unreadableChatResponse(String modelId, @Nullable Throwable cause) {
-        return Result.err(unexpectedError("read chat response", modelId, cause));
+        return Result.err(UnreadableReply.error(config, modelId, cause));
     }
 
     private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {

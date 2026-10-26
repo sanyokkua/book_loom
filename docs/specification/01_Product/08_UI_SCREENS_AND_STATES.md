@@ -65,7 +65,8 @@ of its run-state row (`#shell-run-state`, `#run-states`, for example "51 % done 
 dial and review mode (`#shell-run-mode`, "Balanced · Unattended") · while translating, elapsed time and speed
 (`#shell-run-elapsed`, `#shell-run-rate`, "9.4 tok/s" with its tooltip) · the **AI-model chip** (`#shell-run-connection`,
 a state marker coloured by G11 — grey "AI model ready" / "Model idle", blue "Model answering", amber "No answer for
-3:40", red "Cannot reach Ollama", "Model missing", "No AI model", "Error"; its tooltip keeps the last answer, timeouts,
+3:40", red "Cannot reach Ollama" (only when nothing answered), "Ollama reports an error" (it answered with an HTTP
+5xx or a reply BookLoom cannot read), "Model missing", "No AI model", "Error"; its tooltip keeps the last answer, timeouts,
 failures and speeds, and it opens Settings) · the one run control (`#shell-run-control`), which is the toolbar's Pause or
 Resume of the same row with the same label ("Try again now" when the run stopped trying or the model is missing,
 "Continue translation" once stopped, shown unavailable while pausing or stopping, absent when ready, finished or failed).

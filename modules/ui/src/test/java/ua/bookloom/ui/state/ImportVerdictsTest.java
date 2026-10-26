@@ -83,7 +83,8 @@ class ImportVerdictsTest {
                         "Already in projects: Earth Gravity · EN → UK, Earth Gravity · EN → PL."));
     }
 
-    // A damaged file names the format its name promised, and a TXT or Markdown name over other content is no text file; an unknown type and an empty book are never named "Unknown".
+    // A damaged file names the format its name promised, and a TXT or Markdown name over other content is no text file;
+    // an unknown type and an empty book are never named "Unknown".
     static Stream<Arguments> damagedAndEmptyStates() {
         return Stream.of(
                 Arguments.of(

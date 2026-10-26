@@ -2877,6 +2877,8 @@ public enum MessageKey {
     RUN_CHIP_IDLE("run.chip.idle"),
     /** AI-model chip while the AI program cannot be reached: the program. */
     RUN_CHIP_UNREACHABLE("run.chip.unreachable"),
+    /** AI-model chip while the AI program answers with an error or an unreadable reply: the program. */
+    RUN_CHIP_PROGRAM_ERROR("run.chip.programError"),
     /** AI-model chip once the run stopped trying by itself: the program and the hours. */
     RUN_CHIP_GAVE_UP("run.chip.gaveUp"),
     /** AI-model chip while the chosen model is not available. */
@@ -2935,6 +2937,10 @@ public enum MessageKey {
     RUN_BANNER_WAITING("run.banner.waiting"),
     /** Second line of the waiting banner: the program and the time to the next try. */
     RUN_BANNER_WAITING_TEXT("run.banner.waitingText"),
+    /** Title of the waiting banner while the AI program answers with an error: the program. */
+    RUN_BANNER_PROGRAM_ERROR("run.banner.programError"),
+    /** Second line of that banner: the program and the time to the next try. */
+    RUN_BANNER_PROGRAM_ERROR_TEXT("run.banner.programErrorText"),
     /** Banner of a run paused on an error: the program and {@code reach} or another token. */
     RUN_BANNER_PAUSED_ERROR("run.banner.pausedError"),
     /** Second line of the paused-on-error banner: the program and the same token. */

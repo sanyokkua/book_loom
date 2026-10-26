@@ -70,14 +70,20 @@ final class RunBanners {
                 List.of());
     }
 
+    // "Cannot reach" only when nothing answered; a program that answered with an error or an unreadable reply is
+    // told as such.
     private static BannerView waiting(final RunStateInputs in) {
         final String provider = in.model().provider();
+        final boolean unreachable = RunChips.isUnreachable(RunChips.outageCode(in));
         return banner(
                 "waiting",
                 Tone.WARN,
                 "⏳",
-                Text.of(MessageKey.RUN_BANNER_WAITING, provider),
-                Text.of(MessageKey.RUN_BANNER_WAITING_TEXT, provider, nextTry(in.recovery())),
+                Text.of(unreachable ? MessageKey.RUN_BANNER_WAITING : MessageKey.RUN_BANNER_PROGRAM_ERROR, provider),
+                Text.of(
+                        unreachable ? MessageKey.RUN_BANNER_WAITING_TEXT : MessageKey.RUN_BANNER_PROGRAM_ERROR_TEXT,
+                        provider,
+                        nextTry(in.recovery())),
                 pausedOnErrorActions(in));
     }
 

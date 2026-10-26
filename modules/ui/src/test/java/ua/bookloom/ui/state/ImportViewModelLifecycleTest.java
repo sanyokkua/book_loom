@@ -268,7 +268,8 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(projects.closeCallsOnFxThread()).containsExactly(false);
     }
 
-    // IF Cancel left the project open, THEN the next screens would still read it; a Cancel that keeps the project (a run
+    // IF Cancel left the project open, THEN the next screens would still read it; a Cancel that keeps the project (a
+    // run
     // decided segments in it) releases exactly the open project, empties the holder and returns to the drop zone.
     @Test
     void cancel_keepingTheProject_closesItsProjectEmptiesTheHolderAndReturnsToIdle() {

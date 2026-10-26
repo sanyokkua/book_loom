@@ -180,9 +180,10 @@ public final class ImportViewModel {
             return;
         }
         final OpenedBook previous = current.book().get();
-        final String discarded = discardCreated && previous != null && previous.projectId().equals(createdHere)
-                ? previous.projectId()
-                : null;
+        final String discarded =
+                discardCreated && previous != null && previous.projectId().equals(createdHere)
+                        ? previous.projectId()
+                        : null;
         log.debug("cancel requested, a book is open: {}, new project discarded: {}", previous != null, discarded);
         current.clear();
         state.set(new ImportState.Idle());
@@ -307,8 +308,7 @@ public final class ImportViewModel {
         }
     }
 
-    private void accept(
-            final String fileName, final ImportAnswers.Answer answer, final @Nullable Set<String> before) {
+    private void accept(final String fileName, final ImportAnswers.Answer answer, final @Nullable Set<String> before) {
         final ImportedBook imported = answer.imported();
         final OpenedBook opened = openedOf(answer.source(), imported);
         final boolean isNew = before != null && !before.contains(opened.projectId());

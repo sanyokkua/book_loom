@@ -188,10 +188,15 @@ class OpenAiCompatibleClientTest {
 
     @ParameterizedTest
     @MethodSource("malformedChatBodies")
-    void chat_malformedResponse_returnsInternal(String body) {
+    void chat_malformedResponse_returnsUpstreamSayingTheReplyCouldNotBeRead(String body) {
         stubChatStatus(200, body);
 
-        assertChatError(messageOnlyRequest(), ErrorCode.internal);
+        final Result<ChatResponse> result =
+                client().chat(MODEL_ID, messageOnlyRequest()).result();
+
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.upstream);
+        assertThat(error.message()).isEqualTo("The AI program answered, but its reply could not be read.");
     }
 
     @ParameterizedTest
@@ -303,6 +308,19 @@ class OpenAiCompatibleClientTest {
         assertThat(interruptRestored).isTrue();
     }
 
+    // A server that answers with an error is not one that cannot be reached: the message names its status.
+    @Test
+    void chat_http500_isUpstreamNamingTheStatus() {
+        stubChatStatus(500, "");
+
+        final Result<ChatResponse> result =
+                client().chat(MODEL_ID, messageOnlyRequest()).result();
+
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.upstream);
+        assertThat(error.message()).isEqualTo("The AI program had an error (HTTP 500).");
+    }
+
     @ParameterizedTest
     @MethodSource("chatHttpFailures")
     void chat_httpFailuresReturnTypedErrorsWithoutBodies(int status, String body, ErrorCode expected) {
@@ -366,6 +384,7 @@ class OpenAiCompatibleClientTest {
 
     private static Stream<String> malformedChatBodies() {
         return Stream.of(
+                "",
                 "not-json",
                 "<html>proxy error</html>",
                 "null",

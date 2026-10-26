@@ -32,7 +32,10 @@ final class RunChips {
             case TRANSLATING, PAUSING, STOPPING -> new Chip(Meaning.WORKING, Text.of(MessageKey.RUN_CHIP_ANSWERING));
             case PAUSED, STOPPED, FINISHED_TO_REVIEW, FINISHED_NONE ->
                 new Chip(Meaning.WAITING, Text.of(MessageKey.RUN_CHIP_IDLE));
-            case WAITING -> new Chip(Meaning.FAILED, Text.of(MessageKey.RUN_CHIP_UNREACHABLE, provider));
+            case WAITING ->
+                isUnreachable(outageCode(in))
+                        ? new Chip(Meaning.FAILED, Text.of(MessageKey.RUN_CHIP_UNREACHABLE, provider))
+                        : new Chip(Meaning.FAILED, Text.of(MessageKey.RUN_CHIP_PROGRAM_ERROR, provider));
             case PAUSED_AFTER_ERROR ->
                 isUnreachable(in.pausedOn())
                         ? new Chip(Meaning.FAILED, Text.of(MessageKey.RUN_CHIP_UNREACHABLE, provider))
@@ -45,6 +48,18 @@ final class RunChips {
             case STUCK -> new Chip(Meaning.ATTENTION, Text.of(MessageKey.RUN_CHIP_STUCK, stuckClock(in)));
             case FAILED -> new Chip(Meaning.FAILED, Text.of(MessageKey.RUN_CHIP_ERROR));
         };
+    }
+
+    /**
+     * What a waiting run last heard from its AI program: the latest probe's answer, else the call it paused on.
+     *
+     * @param in what is known about the run
+     * @return the code, or {@code null} when nothing answered at all
+     */
+    static @Nullable ErrorCode outageCode(final RunStateInputs in) {
+        final RecoveryState recovery = in.recovery();
+        final ErrorCode probed = recovery == null ? null : recovery.probeFailure();
+        return probed != null ? probed : in.pausedOn();
     }
 
     /**

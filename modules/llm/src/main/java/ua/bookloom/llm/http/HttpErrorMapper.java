@@ -188,7 +188,7 @@ public final class HttpErrorMapper {
                     ErrorCode.upstream,
                     "server-error",
                     "Provider server error",
-                    "The provider could not complete the request.");
+                    "The AI program had an error (HTTP " + status + ").");
         }
         if (status == HTTP_BAD_REQUEST || status == HTTP_UNPROCESSABLE) {
             return classifyBadRequest(reply.body());

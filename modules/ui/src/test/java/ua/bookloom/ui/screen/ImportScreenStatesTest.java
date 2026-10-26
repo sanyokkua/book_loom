@@ -239,27 +239,27 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         assertOnlyChooseAnotherFooter();
     }
 
-    // IF Cancel did not release the book, THEN an abandoned import would stay stored and open.
+    // IF Cancel kept the project the import just stored, THEN every abandoned import would stay in Projects.
     @Test
-    void cancel_bookOpened_releasesTheProjectAndReturnsToTheDropZone() throws TimeoutException {
+    void cancel_bookOpened_removesTheProjectItStoredAndReturnsToTheDropZone() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
         openBook(source);
 
         onFx(() -> button("import-cancel").fire());
-        awaitFx(() -> projects.closedProjects().size() == 1);
+        awaitFx(() -> projects.removedProjects().size() == 1);
 
-        assertThat(projects.closedProjects()).containsExactly("p1");
+        assertThat(projects.removedProjects()).containsExactly("p1");
         assertThat(state()).isEqualTo(new ImportState.Idle());
         assertThat(optional("import-about")).isNull();
         assertThat(isShown("import-dropzone")).isTrue();
     }
 
     // IF Cancel dropped a project that holds work without asking, THEN one click would lose the brief, the names and
-    // the translated segments; the project is closed only after the confirming button.
+    // the translated segments; the project goes only after the confirming button.
     @Test
-    void cancel_projectWithProgress_asksFirstAndReleasesOnlyWhenConfirmed() throws TimeoutException {
+    void cancel_projectWithProgress_asksFirstAndDiscardsOnlyWhenConfirmed() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
@@ -268,12 +268,12 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
 
         onFx(() -> button("import-cancel").fire());
         final boolean asked = isShown("confirm-card");
-        final List<String> closedWhileAsking = List.copyOf(projects.closedProjects());
+        final List<String> removedWhileAsking = List.copyOf(projects.removedProjects());
         onFx(() -> button("confirm-yes").fire());
-        awaitFx(() -> projects.closedProjects().size() == 1);
+        awaitFx(() -> projects.removedProjects().size() == 1);
 
         assertThat(asked).isTrue();
-        assertThat(closedWhileAsking).isEmpty();
+        assertThat(removedWhileAsking).isEmpty();
         assertThat(state()).isEqualTo(new ImportState.Idle());
     }
 

@@ -134,6 +134,22 @@ A chat reply of HTTP `400` or `404` whose body says the server has no model load
 - **WHEN** LM Studio answers `400` with the body `{"error":"Model unloaded"}` to a chat call
 - **THEN** the call's error is `ErrorCode.modelUnavailable`
 
+### Requirement: Classify a reply that answered but cannot be read as upstream
+
+WHEN an AI program answers a chat request with HTTP 200 and a body that is empty, is not the dialect's JSON, or holds no message, the `:llm` client SHALL return `ErrorCode.upstream` with the message "The AI program answered, but its reply could not be read." and the endpoint host and model as its only details, logged once at WARN with no body, never `internal` and never at ERROR; and WHEN it answers with HTTP 5xx, the message SHALL name the status ("The AI program had an error (HTTP 500).").
+
+**Source**: `docs/specification/02_Architecture/09_ERROR_HANDLING.md` (`upstream` — the endpoint failed), final QA W2-D2. In plain words: a server that answered is not one BookLoom cannot reach, and its broken reply is its fault, not an unexpected failure of BookLoom.
+
+#### Scenario: An unreadable reply from either dialect
+
+- **WHEN** Ollama's `/api/chat` or an OpenAI-compatible `/v1/chat/completions` answers 200 with an empty body, `not-json` or `{}`
+- **THEN** the call fails with `upstream` and "The AI program answered, but its reply could not be read.", and no ERROR line is logged
+
+#### Scenario: A server error names its status
+
+- **WHEN** either dialect's chat endpoint answers HTTP 500
+- **THEN** the call fails with `upstream` and "The AI program had an error (HTTP 500)."
+
 ### Requirement: Describe how a provider signs in
 
 The system SHALL describe a provider's sign-in as none, a Bearer token, or a named API-key header, SHALL hold for the last two only the name of the environment variable that holds the key, and SHALL NOT hold a key value; IF a Bearer or API-key sign-in has no variable name, or an API-key sign-in has no header name, THEN the system SHALL refuse the description with `ErrorCode.validation`.

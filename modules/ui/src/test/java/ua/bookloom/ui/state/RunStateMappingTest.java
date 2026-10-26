@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -205,6 +206,23 @@ class RunStateMappingTest {
         assertThat(banner.title().in(ENGLISH))
                 .isEqualTo("The model is taking longer than usual (3:40). BookLoom tries again by itself at 6:00."
                         + " You do not need to do anything.");
+    }
+
+    // A program that answers with an error (HTTP 5xx) or a reply that cannot be read was reached: the banner and the
+    // chip say what it answered, never "cannot reach".
+    @ParameterizedTest
+    @CsvSource({"upstream", "discoveryFailed"})
+    void banner_waitingOnAProgramThatAnswersWithAnError_saysItAnsweredNotThatItCannotBeReached(final ErrorCode code) {
+        final RunStateView view = RunInputs.in(RunState.PAUSED)
+                .recovery(RecoveryWaiting.Status.WAITING, code)
+                .view();
+
+        final BannerView banner = Objects.requireNonNull(view.banner());
+        assertThat(banner.title().in(ENGLISH)).isEqualTo("Ollama answered with an error");
+        assertThat(Objects.requireNonNull(banner.text()).in(ENGLISH))
+                .isEqualTo("Ollama answers, but with an error of its own or a reply BookLoom cannot read."
+                        + " BookLoom tries again by itself in 0:12.");
+        assertThat(view.chip().word().in(ENGLISH)).isEqualTo("Ollama reports an error");
     }
 
     @Test

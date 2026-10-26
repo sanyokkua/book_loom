@@ -29,6 +29,7 @@ import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
+import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.EndpointPaths;
@@ -60,7 +61,7 @@ public final class OllamaClient implements ProviderClient {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.replies = new OllamaReplyReader(
-                config, mapper, (modelId, cause) -> unexpectedError("read chat response", modelId, cause));
+                config, mapper, (modelId, cause) -> UnreadableReply.error(config, modelId, cause));
     }
 
     @Override

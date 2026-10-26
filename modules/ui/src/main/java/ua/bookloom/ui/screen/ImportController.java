@@ -141,7 +141,8 @@ public final class ImportController {
         this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
         this.verdictView = new ImportVerdictView(
                 messages,
-                new ImportVerdictView.Actions(() -> viewModel.cancel(true), this::showThem, this::chooseFile, this::showDetails));
+                new ImportVerdictView.Actions(
+                        () -> viewModel.cancel(true), this::showThem, this::chooseFile, this::showDetails));
     }
 
     /**
