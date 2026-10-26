@@ -556,6 +556,11 @@ Each project row SHALL show the project's name (a "named" chip when the person n
 - **WHEN** ⋯ is used on a row
 - **THEN** `Rename…`, `Show book file` and `Remove project…` are offered
 
+#### Scenario: A translation cut off by closing the application
+
+- **WHEN** BookLoom was closed or ended while `Earth Gravity · EN → UK` was translating or paused, and Projects is shown after the next launch
+- **THEN** its row shows a grey `Interrupted` chip and `Continue`, never `Translating` or `Paused`, and still `Interrupted` after the project was opened in this session (the store keeps that run as stopped); a run paused in this window reads `Paused`
+
 ### Requirement: Open a project at its step and never continue it by itself
 
 WHEN Continue or Open is used on a project, the application SHALL open it at its step. A project whose stored run reads running or paused, after a clean quit or a crash, SHALL show "Ready to continue" and wait for the person to press Continue translation; a finished project SHALL show Finished, not "Ready to continue". How the stored run is read and continued is specified by resume.

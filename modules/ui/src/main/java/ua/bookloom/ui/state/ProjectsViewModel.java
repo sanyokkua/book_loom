@@ -213,7 +213,8 @@ public final class ProjectsViewModel {
             return;
         }
         final @Nullable OpenedBook open = current.book().get();
-        final List<BookGroup> books = ProjectRows.of(listed, open == null ? null : open.projectId(), providerNames);
+        final List<BookGroup> books = ProjectRows.of(
+                listed, open == null ? null : open.projectId(), providerNames, opener::isInterrupted);
         log.info("projects listed: {} project(s) in {} book(s)", listed.size(), books.size());
         groups.set(books);
         state.set(books.isEmpty() ? ProjectsState.EMPTY : ProjectsState.LIST);

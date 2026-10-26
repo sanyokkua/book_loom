@@ -38,7 +38,12 @@ final class ProjectRowView {
 
     // The statuses whose row offers Continue: a translation that began and did not finish.
     private static final Set<ProjectStatus> CONTINUES =
-            EnumSet.of(ProjectStatus.TRANSLATING, ProjectStatus.PAUSED, ProjectStatus.STOPPED, ProjectStatus.FAILED);
+            EnumSet.of(
+                    ProjectStatus.TRANSLATING,
+                    ProjectStatus.PAUSED,
+                    ProjectStatus.INTERRUPTED,
+                    ProjectStatus.STOPPED,
+                    ProjectStatus.FAILED);
     private static final double ROW_SPACING = 12;
     private static final double INFO_SPACING = 4;
     private static final double CHIP_SPACING = 6;

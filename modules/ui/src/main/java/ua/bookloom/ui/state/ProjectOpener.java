@@ -2,14 +2,18 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
@@ -38,6 +42,8 @@ public final class ProjectOpener implements RowOpener {
     private final RunSwitch runs;
 
     private final OffThread calls;
+    // The runs this window found cut off when it opened their project; the store keeps them as stopped. FX thread only.
+    private final Set<String> interruptedRuns = new HashSet<>();
 
     /**
      * What opening another project does to the window's run.
@@ -111,6 +117,25 @@ public final class ProjectOpener implements RowOpener {
         openOffThread(row, id);
     }
 
+    /**
+     * Whether a project's stored latest run was cut off by the application closing: one this window found so when it
+     * opened the project, or one stored as running or paused that this window is not at work on. FX thread only.
+     *
+     * @param run the stored latest run
+     * @return {@code true} if it was interrupted, {@code false} otherwise
+     */
+    public boolean isInterrupted(final RunRecord run) {
+        Objects.requireNonNull(run, "run");
+        if (interruptedRuns.contains(run.runId())) {
+            return true;
+        }
+        final boolean open = run.state() == JobState.RUNNING || run.state() == JobState.PAUSED;
+        final StateMirror mirror = runs.mirror();
+        final boolean live = !mirror.runState().get().isIdleOrEnded()
+                && run.projectId().equals(mirror.runProjectId().get());
+        return open && !live;
+    }
+
     // Whether the window holds a run, at work or ended, of a project other than this one.
     private boolean isAnothersRun(final String id) {
         final StateMirror mirror = runs.mirror();
@@ -179,6 +204,10 @@ public final class ProjectOpener implements RowOpener {
             runs.mirror().publishRunCleared();
         }
         log.info("opened project {}, interrupted run: {}", id, opened.interrupted());
+        final RunRecord cutOff = row.summary().latestRun();
+        if (opened.interrupted() && cutOff != null) {
+            interruptedRuns.add(cutOff.runId());
+        }
         final ViewNames step = locks.lockReason(row.step()).isPresent() ? ViewNames.BOOK_BRIEF : row.step();
         log.debug("step for {} is {}", id, step);
         navigator.navigate(step);

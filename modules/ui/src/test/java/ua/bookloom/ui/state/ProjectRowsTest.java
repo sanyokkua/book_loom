@@ -122,6 +122,21 @@ class ProjectRowsTest {
         assertThat(onlyRow(summary, null).status()).isEqualTo(expected);
     }
 
+    // IF a run whose window is gone read as still translating, or as stopped by the person, THEN a crash would be hidden
+    // behind "Translating" or "Stopped"; a run the window counts as interrupted reads "Interrupted".
+    @ParameterizedTest
+    @CsvSource({"RUNNING", "PAUSED", "CANCELLED"})
+    void of_runCountedAsInterrupted_readsInterrupted(final JobState state) {
+        final ProjectSummary summary = of(state, false);
+
+        final ProjectRow row = ProjectRows.of(List.of(summary), null, PROVIDERS, run -> true)
+                .getFirst()
+                .rows()
+                .getFirst();
+
+        assertThat(row.status()).isEqualTo(ProjectStatus.INTERRUPTED);
+    }
+
     // IF Continue opened the wrong step, THEN a finished book would reopen on Names & style, or a new one on Export.
     @ParameterizedTest
     @CsvSource({

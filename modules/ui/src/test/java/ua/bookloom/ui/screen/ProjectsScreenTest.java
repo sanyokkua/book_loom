@@ -19,8 +19,10 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ProjectFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StateMirror;
 
 /**
  * The Projects screen the application builds, read from the real scene: the list grouped by book, what a row says, the
@@ -58,9 +60,23 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .isEqualTo("A segment is a paragraph, heading or caption — one piece of the book's text.");
     }
 
+    // IF a run stored as paused or running whose window is gone read "Paused" or "Translating", THEN a crash or a quit in
+    // the middle of a run would look like a run still under way.
+    @Test
+    void list_storedPausedRunNoRunInThisWindow_showsTheInterruptedChipAndContinue() throws Exception {
+        showListing(ukrainianRunning());
+
+        assertThat(textOf("projects-row-" + EARTH_ID)).contains("Interrupted").doesNotContain("Paused");
+        assertThat(continueButton(EARTH_ID).getText()).isEqualTo("Continue");
+    }
+
     // IF a row hid its pair, model, quality or progress, THEN two translations of a book could not be told apart.
     @Test
     void list_pausedRow_showsPairModelQualityProgressWhenAndThePausedChip() throws Exception {
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted(EARTH_ID, "earth-gravity.epub", null);
+        mirror.publishRunState(RunState.PAUSED);
+        WaitForAsyncUtils.waitForFxEvents();
         showListing(ukrainianRunning());
 
         final String row = textOf("projects-row-" + EARTH_ID);
@@ -368,7 +384,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .contains("earth-gravity.epub · EPUB")
                 .contains("сегмент")
                 .contains("Перекласти іншою мовою");
-        assertThat(textOf("projects-row-" + EARTH_ID)).contains("учора").contains("На паузі");
+        assertThat(textOf("projects-row-" + EARTH_ID)).contains("учора").contains("Перервано");
         assertThat(ThemeTestSupport.onFx(() -> List.of(continueButton(EARTH_ID).getText())))
                 .containsExactly("Продовжити");
     }

@@ -3113,6 +3113,8 @@ public enum MessageKey {
     PROJECTS_STATUS_PAUSED("projects.status.paused"),
     /** Status chip of a project whose latest run was stopped. */
     PROJECTS_STATUS_STOPPED("projects.status.stopped"),
+    /** The chip of a project whose translation was cut off when BookLoom closed or was ended. */
+    PROJECTS_STATUS_INTERRUPTED("projects.status.interrupted"),
     /** Status chip of a project whose run completed. */
     PROJECTS_STATUS_FINISHED("projects.status.finished"),
     /** Status chip of a project that was exported. */

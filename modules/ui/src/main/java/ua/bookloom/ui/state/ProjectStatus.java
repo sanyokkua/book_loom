@@ -7,10 +7,12 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum ProjectStatus {
     /** No run was ever started, or the latest one never began translating. */
     NOT_STARTED(MessageKey.PROJECTS_STATUS_NOT_STARTED, StateMarker.Meaning.WAITING),
-    /** The latest run is translating, or was when the application last closed. */
+    /** The latest run is translating in this window. */
     TRANSLATING(MessageKey.PROJECTS_STATUS_TRANSLATING, StateMarker.Meaning.WORKING),
     /** The latest run was paused; idle, so grey. */
     PAUSED(MessageKey.PROJECTS_STATUS_PAUSED, StateMarker.Meaning.WAITING),
+    /** The latest run was cut off when the application closed or was ended; idle, so grey. */
+    INTERRUPTED(MessageKey.PROJECTS_STATUS_INTERRUPTED, StateMarker.Meaning.WAITING),
     /** The latest run was stopped by the person; idle, so grey. */
     STOPPED(MessageKey.PROJECTS_STATUS_STOPPED, StateMarker.Meaning.WAITING),
     /** The latest run completed. */
