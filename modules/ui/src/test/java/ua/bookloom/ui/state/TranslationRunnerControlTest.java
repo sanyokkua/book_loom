@@ -68,13 +68,13 @@ class TranslationRunnerControlTest extends RunnerTestBase {
 
         job.emit(decided("s-412", SegmentStatus.ACCEPTED, progress(412, 0, 88)));
         deliverAndTick();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
         assertThat(state()).isEqualTo(RunState.PAUSING);
 
         job.emit(decided("s-413", SegmentStatus.ACCEPTED, progress(413, 0, 87)));
         deliverAndTick();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(413);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(413);
         assertThat(state()).isEqualTo(RunState.PAUSING);
         assertThat(states).containsExactly(RunState.RUNNING, RunState.PAUSING);
         job.finish(Result.ok(cancelledReport()));

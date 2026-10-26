@@ -72,10 +72,7 @@ class StateMirrorTest extends FxTestBase {
         final List<Boolean> onFxThread = new CopyOnWriteArrayList<>();
         onFx(() -> {
             mirror.runState().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
-            mirror.accepted().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
-            mirror.flagged().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
-            mirror.remaining().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
-            mirror.total().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
+            mirror.figures().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.live().progress().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.failure().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
             mirror.report().addListener((o, a, b) -> onFxThread.add(Platform.isFxApplicationThread()));
@@ -119,10 +116,10 @@ class StateMirrorTest extends FxTestBase {
         final StateMirror mirror = new StateMirror();
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.IDLE);
-        assertThat(onFx(() -> mirror.accepted().get())).isZero();
-        assertThat(onFx(() -> mirror.flagged().get())).isZero();
-        assertThat(onFx(() -> mirror.remaining().get())).isZero();
-        assertThat(onFx(() -> mirror.total().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().flagged())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isZero();
         assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
         assertThat(onFx(() -> mirror.failure().get())).isNull();
         assertThat(onFx(() -> mirror.report().get())).isNull();
@@ -144,7 +141,7 @@ class StateMirrorTest extends FxTestBase {
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.IDLE);
         assertThat(onFx(() -> mirror.runFileName().get())).isNull();
-        assertThat(onFx(() -> mirror.total().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isZero();
         assertThat(onFx(() -> mirror.activityLog().size())).isZero();
     }
 
@@ -214,10 +211,10 @@ class StateMirrorTest extends FxTestBase {
         mirror.publishProgress(ProgressFixtures.progress(1, 1, 768, 3, 469));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(768);
-        assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(3);
-        assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(469);
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(1240);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(768);
+        assertThat(onFx(() -> mirror.figures().get().flagged())).isEqualTo(3);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isEqualTo(469);
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(1240);
         assertThat(onFx(() -> mirror.live().progress().get().fraction())).isCloseTo(0.6217741935483871, within(1e-12));
     }
 
@@ -229,11 +226,11 @@ class StateMirrorTest extends FxTestBase {
         mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 7, 11, 768, 3, 469, 41, 66, 700, 68));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.section().get())).isEqualTo(7);
-        assertThat(onFx(() -> mirror.sections().get())).isEqualTo(11);
-        assertThat(onFx(() -> mirror.chunk().get())).isEqualTo(41);
-        assertThat(onFx(() -> mirror.chunks().get())).isEqualTo(66);
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(768);
+        assertThat(onFx(() -> mirror.figures().get().section())).isEqualTo(7);
+        assertThat(onFx(() -> mirror.figures().get().sections())).isEqualTo(11);
+        assertThat(onFx(() -> mirror.figures().get().chunk())).isEqualTo(41);
+        assertThat(onFx(() -> mirror.figures().get().chunks())).isEqualTo(66);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(768);
     }
 
     // IF the file name were set before any run, THEN the title bar would show a run that does not exist.
@@ -256,7 +253,7 @@ class StateMirrorTest extends FxTestBase {
         mirror.publishProgress(ProgressFixtures.progress(7, 11, 768, 3, 469));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(1240);
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(1240);
         assertThat(onFx(() -> mirror.live().progress().get().fraction())).isCloseTo(0.6217741935483871, within(1e-12));
     }
 
@@ -269,7 +266,7 @@ class StateMirrorTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
-        assertThat(onFx(() -> mirror.total().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isZero();
     }
 
     // IF the terminal publish dropped the report or the failure, THEN the export screen and the error surface would
@@ -314,10 +311,10 @@ class StateMirrorTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.RUNNING);
-        assertThat(onFx(() -> mirror.accepted().get())).isZero();
-        assertThat(onFx(() -> mirror.flagged().get())).isZero();
-        assertThat(onFx(() -> mirror.remaining().get())).isZero();
-        assertThat(onFx(() -> mirror.total().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().flagged())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isZero();
         assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(0.0);
         assertThat(onFx(() -> mirror.activityLog().size())).isZero();
         assertThat(onFx(() -> mirror.failure().get())).isNull();
@@ -334,7 +331,7 @@ class StateMirrorTest extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.PAUSING);
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(500);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(500);
     }
 }

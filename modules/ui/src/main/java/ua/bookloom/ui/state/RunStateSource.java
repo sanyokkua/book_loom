@@ -96,8 +96,6 @@ public final class RunStateSource {
                 mirror.runState(),
                 mirror.runFileName(),
                 mirror.figures(),
-                mirror.total(),
-                mirror.remaining(),
                 mirror.live().progress(),
                 mirror.live().throughput(),
                 mirror.live().waitingCall(),
@@ -280,8 +278,9 @@ public final class RunStateSource {
                     Math.max(0, total - translating.pendingCounts().count().get());
             return new Counts(decided, total, percentOf(decided, total));
         }
-        final int total = mirror.total().get();
-        final int decided = Math.max(0, total - mirror.remaining().get());
+        final RunFigures figures = mirror.figures().get();
+        final int total = figures.total();
+        final int decided = Math.max(0, total - figures.remaining());
         return new Counts(decided, total, mirror.live().progress().get().percent());
     }
 

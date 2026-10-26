@@ -122,13 +122,13 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         startAndPrepare();
         emitAccepted(job, 1, 412);
         deliverAndTick();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
 
         job.finish(Result.err(failureOf(ErrorCode.unreachable)));
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
     }
 
     // IF a pause on an error did not show the provider-error state, THEN a provider hiccup would read as a crash.

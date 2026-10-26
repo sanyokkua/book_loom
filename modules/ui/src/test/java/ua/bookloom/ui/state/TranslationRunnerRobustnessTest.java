@@ -98,7 +98,7 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
         awaitState(RunState.COMPLETED);
 
         assertThat(states).containsExactly(RunState.RUNNING, RunState.COMPLETED);
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(2);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(2);
         assertThat(ticks.stops()).isEqualTo(1);
         assertThat(job.calls()).contains("unsubscribe");
         assertARunCanStartAgain(runner);

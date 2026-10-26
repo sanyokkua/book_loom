@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
@@ -33,14 +31,6 @@ public final class StateMirror {
     public static final int MAX_LOG_ENTRIES = 500;
 
     private final ReadOnlyObjectWrapper<RunState> runState = new ReadOnlyObjectWrapper<>(RunState.IDLE);
-    private final ReadOnlyIntegerWrapper accepted = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper remaining = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper section = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper sections = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
@@ -73,54 +63,6 @@ public final class StateMirror {
      */
     public ReadOnlyObjectProperty<RunState> runState() {
         return runState.getReadOnlyProperty();
-    }
-
-    /** {@return the segments accepted so far; read on the FX thread} */
-    public ReadOnlyIntegerProperty accepted() {
-        return accepted.getReadOnlyProperty();
-    }
-
-    /** {@return the segments flagged so far; read on the FX thread} */
-    public ReadOnlyIntegerProperty flagged() {
-        return flagged.getReadOnlyProperty();
-    }
-
-    /** {@return the segments not decided yet; read on the FX thread} */
-    public ReadOnlyIntegerProperty remaining() {
-        return remaining.getReadOnlyProperty();
-    }
-
-    /** {@return accepted plus flagged plus remaining; read on the FX thread} */
-    public ReadOnlyIntegerProperty total() {
-        return total.getReadOnlyProperty();
-    }
-
-    /**
-     * The 1-based body unit the run is translating.
-     *
-     * @return the read-only position, zero before the first; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty section() {
-        return section.getReadOnlyProperty();
-    }
-
-    /**
-     * How many body units the book has.
-     *
-     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty sections() {
-        return sections.getReadOnlyProperty();
-    }
-
-    /** {@return the 1-based chunk within the section being translated, zero before the first; read on the FX thread} */
-    public ReadOnlyIntegerProperty chunk() {
-        return chunk.getReadOnlyProperty();
-    }
-
-    /** {@return how many chunks the section has, zero before a snapshot arrives; read on the FX thread} */
-    public ReadOnlyIntegerProperty chunks() {
-        return chunks.getReadOnlyProperty();
     }
 
     /**
@@ -329,14 +271,6 @@ public final class StateMirror {
     private void applyFigures(final RunFigures figures) {
         this.figures.set(figures);
         live.showCount(figures.total() - figures.remaining(), figures.total());
-        accepted.set(figures.accepted());
-        flagged.set(figures.flagged());
-        remaining.set(figures.remaining());
-        total.set(figures.total());
-        section.set(figures.section());
-        sections.set(figures.sections());
-        chunk.set(figures.chunk());
-        chunks.set(figures.chunks());
     }
 
     // A line that says what the previous one said is counted on it instead of repeated, so a stalled call that fails

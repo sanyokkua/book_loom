@@ -54,8 +54,9 @@ final class RunEnding {
     static void announce(final StateMirror mirror, final Toasts toasts) {
         final JobReport report = mirror.report().get();
         final int accepted =
-                report != null ? report.accepted() : mirror.accepted().get();
-        final int flagged = report != null ? report.flagged() : mirror.flagged().get();
+                report != null ? report.accepted() : mirror.figures().get().accepted();
+        final int flagged =
+                report != null ? report.flagged() : mirror.figures().get().flagged();
         log.debug("run completed: {} accepted, {} flagged", accepted, flagged);
         if (flagged > 0) {
             toasts.raise(ToastOccasion.RUN_FINISHED_FLAGGED, accepted, flagged);

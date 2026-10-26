@@ -66,7 +66,7 @@ public final class WorkflowProgress {
         stored.total().addListener((observed, old, current) -> refresh());
         mirror.runFileName().addListener((observed, old, current) -> refresh());
         mirror.runState().addListener((observed, old, current) -> refresh());
-        mirror.remaining().addListener((observed, old, current) -> refresh());
+        mirror.figures().addListener((observed, old, current) -> refresh());
         project.brief().addListener((observed, old, current) -> refresh());
         readStored(project.book().get());
         refresh();
@@ -146,8 +146,8 @@ public final class WorkflowProgress {
     private boolean isTranslated() {
         final RunState state = mirror.runState().get();
         final boolean endedEarly = state == RunState.STOPPED || state == RunState.FAILED;
-        final boolean nothingLeft =
-                mirror.total().get() > 0 && mirror.remaining().get() == 0;
+        final RunFigures figures = mirror.figures().get();
+        final boolean nothingLeft = figures.total() > 0 && figures.remaining() == 0;
         return state == RunState.COMPLETED || (endedEarly && nothingLeft);
     }
 

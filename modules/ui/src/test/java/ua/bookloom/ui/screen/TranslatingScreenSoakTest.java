@@ -72,7 +72,7 @@ class TranslatingScreenSoakTest extends TranslatingScreenTestBase {
         IntStream.range(0, SEGMENTS).forEach(this::emitSegment);
         job.drain();
         WaitForAsyncUtils.waitForFxEvents();
-        awaitFx(() -> mirror().total().get() == SEGMENTS);
+        awaitFx(() -> mirror().figures().get().total() == SEGMENTS);
 
         final Duration worst = Duration.ofNanos(worstLatencyNanos.get());
         final long growth = retainedMib() - before;
@@ -82,7 +82,8 @@ class TranslatingScreenSoakTest extends TranslatingScreenTestBase {
         assertThat(worst).isLessThan(MAX_FX_LATENCY);
         assertThat(ThemeTestSupport.onFx(() -> mirror().activityLog().size())).isLessThanOrEqualTo(500);
         assertThat(ThemeTestSupport.onFx(() -> logList().getItems().size())).isLessThanOrEqualTo(500);
-        assertThat(ThemeTestSupport.onFx(() -> mirror().accepted().get())).isEqualTo(SEGMENTS - SEGMENTS / 10);
+        assertThat(ThemeTestSupport.onFx(() -> mirror().figures().get().accepted()))
+                .isEqualTo(SEGMENTS - SEGMENTS / 10);
         assertThat(ThemeTestSupport.onFx(() -> mirror().live().calls().get().rows()))
                 .hasSizeLessThanOrEqualTo(500);
         assertThat(ThemeTestSupport.onFx(() -> mirror().live().calls().get().recent()))
