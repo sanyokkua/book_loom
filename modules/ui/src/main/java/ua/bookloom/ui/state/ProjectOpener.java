@@ -5,10 +5,8 @@ import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
@@ -39,7 +37,7 @@ public final class ProjectOpener implements RowOpener {
     private final ErrorPresenter errors;
     private final RunSwitch runs;
 
-    private final ExecutorService executor;
+    private final OffThread calls;
 
     /**
      * What opening another project does to the window's run.
@@ -88,7 +86,7 @@ public final class ProjectOpener implements RowOpener {
         this.actions = Objects.requireNonNull(actions, "actions");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.runs = Objects.requireNonNull(runs, "runs");
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.calls = new OffThread(Objects.requireNonNull(executor, "executor"));
     }
 
     /**
@@ -110,7 +108,7 @@ public final class ProjectOpener implements RowOpener {
             askToStop(row, id);
             return;
         }
-        executor.execute(() -> openOffThread(row, id));
+        openOffThread(row, id);
     }
 
     // Whether the window holds a run, at work or ended, of a project other than this one.
@@ -136,26 +134,16 @@ public final class ProjectOpener implements RowOpener {
                 "stopping the translation of {} before project {} opens",
                 runs.mirror().runProjectId().get(),
                 id);
-        RunWaits.when(runs.mirror(), RunState::isIdleOrEnded, () -> executor.execute(() -> openOffThread(row, id)));
+        RunWaits.when(runs.mirror(), RunState::isIdleOrEnded, () -> openOffThread(row, id));
         runs.runner().cancel();
     }
 
     private void openOffThread(final ProjectRow row, final String id) {
-        log.debug("opening project {} on {}", id, Thread.currentThread().getName());
-        Result<ProjectOpening> answer;
-        try {
-            answer = projects.open(id);
-        } catch (Throwable thrown) {
-            log.error("the project service threw instead of returning a result while opening {}", id, thrown);
-            answer = Result.err(AppError.of(
-                    ErrorCode.internal,
-                    "Unexpected error",
-                    "The project could not be opened because of an unexpected error.",
-                    null,
-                    thrown));
-        }
-        final Result<ProjectOpening> published = answer;
-        Platform.runLater(() -> publish(row, published));
+        calls.call(
+                "open project " + id,
+                "The project could not be opened because of an unexpected error.",
+                () -> projects.open(id),
+                answer -> publish(row, answer));
     }
 
     private void publish(final ProjectRow row, final Result<ProjectOpening> answer) {

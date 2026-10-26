@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.ReviewDesk;
@@ -265,19 +264,13 @@ public final class TranslationRunner {
             return job.run();
         } catch (Throwable thrown) {
             log.error("the job threw instead of returning a result", thrown);
-            return Result.err(AppError.of(
-                    ErrorCode.internal,
-                    "Unexpected error",
-                    "The run stopped because of an unexpected error.",
-                    null,
-                    thrown));
+            return Result.err(AppErrors.unexpected("The run stopped because of an unexpected error.", thrown));
         }
     }
 
     private boolean abandon(final ActiveRun run, final Throwable cause) {
         log.error("the run could not be started", cause);
-        final AppError error =
-                AppError.of(ErrorCode.internal, "Unexpected error", "The run could not be started.", null, cause);
+        final AppError error = AppErrors.unexpected("The run could not be started.", cause);
         try {
             run.session().finish(Result.err(error), () -> release(run));
         } catch (RuntimeException failure) {

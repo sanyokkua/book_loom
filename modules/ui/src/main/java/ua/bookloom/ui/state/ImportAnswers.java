@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
 
@@ -38,11 +37,6 @@ final class ImportAnswers {
     }
 
     static AppError internalError(final @Nullable Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The book could not be opened because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The book could not be opened because of an unexpected error.", cause);
     }
 }

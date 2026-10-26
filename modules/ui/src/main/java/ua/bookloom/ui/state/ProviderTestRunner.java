@@ -299,12 +299,7 @@ public final class ProviderTestRunner {
     }
 
     private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The provider test stopped because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The provider test stopped because of an unexpected error.", cause);
     }
 
     private void publish(

@@ -19,7 +19,6 @@ import javafx.beans.property.StringProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -178,12 +177,8 @@ public final class ProjectsViewModel {
             names = providerNames();
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while listing", thrown);
-            listed = Result.err(AppError.of(
-                    ErrorCode.internal,
-                    "Unexpected error",
-                    "The projects could not be listed because of an unexpected error.",
-                    null,
-                    thrown));
+            listed = Result.err(
+                    AppErrors.unexpected("The projects could not be listed because of an unexpected error.", thrown));
         }
         final Result<List<ProjectSummary>> answer = listed;
         final Map<String, String> providerNames = names;

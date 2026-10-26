@@ -17,7 +17,6 @@ import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
@@ -222,12 +221,7 @@ public final class ModelListing {
     }
 
     private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The model list stopped because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The model list stopped because of an unexpected error.", cause);
     }
 
     private void publish(final long requested, final Result<List<ModelInfo>> result) {

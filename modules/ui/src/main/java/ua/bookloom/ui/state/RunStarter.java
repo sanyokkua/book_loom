@@ -196,11 +196,6 @@ public final class RunStarter {
     }
 
     private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The run could not be started because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The run could not be started because of an unexpected error.", cause);
     }
 }
