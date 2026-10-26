@@ -567,6 +567,8 @@ public enum MessageKey {
     SETTINGS_MODELS_ENTRY("settings.models.entry"),
     /** Models tab: ↻ Refresh */
     SETTINGS_MODELS_REFRESH("settings.models.refresh"),
+    /** The providers that did not list their models (argument 0, joined) and how many (argument 1). */
+    SETTINGS_MODELS_UNANSWERED("settings.models.unanswered"),
     /** Models tab: Reads the models of every provider again. */
     SETTINGS_MODELS_REFRESH_TIP("settings.models.refresh.tip"),
     /** Models tab: Each model keeps its own settings. All are optional — off means BookLoom picks the value per task. */

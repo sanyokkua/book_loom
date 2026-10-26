@@ -64,6 +64,9 @@ public final class ModelsController {
     private Label explain;
 
     @FXML
+    private Label unanswered;
+
+    @FXML
     private Label empty;
 
     @FXML
@@ -153,6 +156,17 @@ public final class ModelsController {
     private void bindVisibility() {
         final BooleanBinding none = Bindings.isEmpty(roster.entries());
         Visibility.bind(listing, roster.listing());
+        Visibility.bind(unanswered, Bindings.createBooleanBinding(
+                () -> !roster.listing().get() && !roster.unanswered().get().isEmpty(),
+                roster.listing(),
+                roster.unanswered()));
+        unanswered.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                MessageKey.SETTINGS_MODELS_UNANSWERED,
+                                String.join(", ", roster.unanswered().get()),
+                                roster.unanswered().get().size()),
+                        roster.unanswered()));
         Visibility.bind(empty, Bindings.and(none, roster.listing().not()));
         Visibility.bind(scroll, none.not());
         Visibility.bind(foot, none.not());

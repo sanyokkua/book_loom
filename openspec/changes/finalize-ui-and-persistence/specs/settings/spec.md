@@ -225,6 +225,17 @@ The Models tab SHALL list the models across all providers, and SHALL keep for th
 - **WHEN** `gemma4:e4b` is given the context window 16384 and `gpt-oss:20b` is left unchanged
 - **THEN** the Models tab shows 16384 for `gemma4:e4b` and no value for `gpt-oss:20b`
 
+### Requirement: Say which providers did not list their models on the Models tab
+
+WHEN the Models tab reads the providers' models and a provider's program does not list them, the tab SHALL say under the chooser which providers did not answer and that only the models BookLoom already knows are shown for them, until a later reading has every provider answer.
+
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: Refresh with Ollama closed changed nothing on the screen, so it looked broken; the line says why the list is short.
+
+#### Scenario: Refresh while Ollama is closed
+
+- **WHEN** Ollama does not answer and Refresh is pressed on the Models tab
+- **THEN** the line under the chooser reads `Ollama did not answer, so only its models BookLoom already knows are shown.`
+
 ### Requirement: Report what the program says about a model
 
 The Models tab SHALL show, as found out from the program, how much the model can read at once, how much is loaded now where the program says so, and whether it gives structured answers.

@@ -7,12 +7,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +42,7 @@ public final class ModelRoster {
     private final ObservableList<ModelEntry> entries = FXCollections.observableArrayList();
     private final ObservableList<ModelEntry> entriesView = FXCollections.unmodifiableObservableList(entries);
     private final ReadOnlyBooleanWrapper listing = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyObjectWrapper<List<String>> unanswered = new ReadOnlyObjectWrapper<>(List.of());
     private final ProviderConfigs configs;
     private final ModelCatalog catalog;
     private final ModelSettingsRepository modelSettings;
@@ -85,6 +89,16 @@ public final class ModelRoster {
         return listing.getReadOnlyProperty();
     }
 
+    /**
+     * The providers whose program did not list its models at the last reading, by display name, so the tab can say
+     * why their stored models are all it shows.
+     *
+     * @return a read-only property; never null, empty when every provider answered
+     */
+    public ReadOnlyObjectProperty<List<String>> unanswered() {
+        return unanswered.getReadOnlyProperty();
+    }
+
     /** Reads every provider's models again; an older reading still in flight is dropped. FX thread only. */
     public void refresh() {
         final long mine = ++epoch;
@@ -93,47 +107,62 @@ public final class ModelRoster {
         log.debug("model roster reading #{} for {} provider(s)", mine, names.size());
         listing.set(true);
         background.execute(() -> {
-            final List<ModelEntry> read = readOrNothing(mine, names);
+            final Reading read = readOrNothing(mine, names);
             Platform.runLater(() -> publish(mine, read));
         });
     }
 
     // A reading that fails unexpectedly still ends: the list is empty and the tab stops saying it is reading.
-    private List<ModelEntry> readOrNothing(final long reading, final Map<String, String> names) {
+    private Reading readOrNothing(final long reading, final Map<String, String> names) {
         try {
             return read(names);
         } catch (RuntimeException failure) {
             log.warn("model roster reading #{} failed", reading, failure);
-            return List.of();
+            return new Reading(List.of(), List.of());
         }
     }
 
-    private void publish(final long reading, final List<ModelEntry> read) {
+    /** What one reading found: the models, and the providers that did not list theirs. */
+    private record Reading(List<ModelEntry> entries, List<String> unanswered) {}
+
+    private void publish(final long reading, final Reading read) {
         if (reading != epoch) {
             log.debug("model roster reading #{} dropped: the latest is #{}", reading, epoch);
             return;
         }
-        entries.setAll(read);
+        entries.setAll(read.entries());
+        unanswered.set(read.unanswered());
         listing.set(false);
-        log.debug("model roster reading #{} published {} model(s)", reading, read.size());
+        log.debug(
+                "model roster reading #{} published {} model(s); {} provider(s) did not answer",
+                reading,
+                read.entries().size(),
+                read.unanswered().size());
     }
 
     // Off the FX thread: the stores are read here and each provider is listed on the I/O executor.
-    private List<ModelEntry> read(final Map<String, String> names) {
+    private Reading read(final Map<String, String> names) {
         final List<ProviderConfig> providers = ProviderRows.sorted(configs);
         final Map<String, List<String>> storedByProvider = storedModels();
-        final List<Future<List<String>>> listed = providers.stream()
+        final List<Future<Optional<List<String>>>> listed = providers.stream()
                 .map(config -> io.submit(() -> listed(config.id())))
                 .toList();
         final List<ModelEntry> result = new ArrayList<>();
+        final List<String> silent = new ArrayList<>();
         for (int i = 0; i < providers.size(); i++) {
             final ProviderConfig config = providers.get(i);
+            final String name = names.getOrDefault(config.id(), config.id());
+            final Optional<List<String>> answered = await(listed.get(i));
+            if (answered.isEmpty()) {
+                silent.add(name);
+            }
             final List<String> ids = ModelOrder.merge(
-                    await(listed.get(i)), config.customModels(), storedByProvider.getOrDefault(config.id(), List.of()));
-            ids.forEach(id -> result.add(
-                    new ModelEntry(config.id(), names.getOrDefault(config.id(), config.id()), config.kind(), id)));
+                    answered.orElse(List.of()),
+                    config.customModels(),
+                    storedByProvider.getOrDefault(config.id(), List.of()));
+            ids.forEach(id -> result.add(new ModelEntry(config.id(), name, config.kind(), id)));
         }
-        return result;
+        return new Reading(result, List.copyOf(silent));
     }
 
     private Map<String, List<String>> storedModels() {
@@ -152,29 +181,30 @@ public final class ModelRoster {
         return byProvider;
     }
 
-    private List<String> listed(final String providerId) {
+    // Empty when the program did not list its models.
+    private Optional<List<String>> listed(final String providerId) {
         final Result<List<ModelInfo>> result = catalog.listModels(providerId);
         if (result.isErr()) {
             log.debug(
                     "models of '{}' not listed: {}",
                     providerId,
                     Objects.requireNonNull(result.error(), "error").code());
-            return List.of();
+            return Optional.empty();
         }
-        return Objects.requireNonNull(result.data(), "data").stream()
+        return Optional.of(Objects.requireNonNull(result.data(), "data").stream()
                 .map(ModelInfo::id)
-                .toList();
+                .toList());
     }
 
-    private static List<String> await(final Future<List<String>> listed) {
+    private static Optional<List<String>> await(final Future<Optional<List<String>>> listed) {
         try {
             return listed.get();
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            return List.of();
+            return Optional.empty();
         } catch (ExecutionException failed) {
             log.warn("a provider listing failed unexpectedly", failed);
-            return List.of();
+            return Optional.empty();
         }
     }
 }

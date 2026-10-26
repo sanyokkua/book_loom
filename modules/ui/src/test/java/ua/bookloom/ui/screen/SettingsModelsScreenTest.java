@@ -11,6 +11,8 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.RefusedSetting;
@@ -48,6 +50,21 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
         awaitFx(() -> !roster().listing().get());
 
         assertThat(catalog.callCount()).isEqualTo(before + 2);
+    }
+
+    // IF a provider that did not answer was left unsaid, THEN Refresh would seem to do nothing while Ollama is down.
+    @Test
+    void refresh_ollamaDoesNotAnswer_saysSoUnderTheChooser() throws TimeoutException {
+        openModels();
+        assertThat(visible("models-unanswered")).isFalse();
+        catalog.failFor("ollama", AppError.of(ErrorCode.unreachable, "Unreachable", "No answer."));
+
+        press("models-refresh");
+        awaitFx(() -> !roster().listing().get());
+
+        assertThat(visible("models-unanswered")).isTrue();
+        assertThat(shown("models-unanswered"))
+                .isEqualTo("Ollama did not answer, so only its models BookLoom already knows are shown.");
     }
 
     // IF only the context length were shown, THEN the loaded figure that suggests the window would be invisible.
