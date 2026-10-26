@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -98,8 +99,7 @@ final class AutoNamesBar {
         confirm.getStyleClass().add("btn-ghost");
         confirm.setMinWidth(Region.USE_PREF_SIZE);
         confirm.disableProperty().bind(names.busy().or(frozen));
-        confirm.visibleProperty().bind(names.suggestedGenderCount().greaterThan(0));
-        confirm.managedProperty().bind(confirm.visibleProperty());
+        Visibility.bind(confirm, names.suggestedGenderCount().greaterThan(0));
         confirm.setOnAction(event -> {
             log.debug("names-style-confirm-genders pressed");
             names.confirmGenders();

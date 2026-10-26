@@ -6,6 +6,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Label;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.RunState;
@@ -16,12 +17,6 @@ import ua.bookloom.ui.state.StateMirror;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class SettingsNotes {
-
-    /** Shows {@code label} only while {@code shown} holds, taking no room otherwise. */
-    static void show(final Label label, final ObservableValue<Boolean> shown) {
-        label.visibleProperty().bind(shown);
-        label.managedProperty().bind(label.visibleProperty());
-    }
 
     /** Whether a translation is under way, from the first call to its end. */
     static BooleanBinding runUnderWay(final StateMirror mirror) {
@@ -42,6 +37,6 @@ final class SettingsNotes {
                             return name == null ? "" : messages.get(wording, name);
                         },
                         source));
-        show(note, source.map(name -> name != null));
+        Visibility.bind(note, source.map(name -> name != null));
     }
 }

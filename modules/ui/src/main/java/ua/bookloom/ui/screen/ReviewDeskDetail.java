@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.ComparePanes;
 import ua.bookloom.ui.control.ProtectedMarks;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.FindingBadge;
@@ -128,10 +129,10 @@ final class ReviewDeskDetail extends VBox {
         label.setMinHeight(Region.USE_PREF_SIZE);
         label.textProperty().bind(text);
         // A bound value may still be null before the desk has a segment; that is no text, not a failed binding.
-        label.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
+        Visibility.bind(
+                label,
+                Bindings.createBooleanBinding(
                         () -> label.getText() != null && !label.getText().isEmpty(), label.textProperty()));
-        label.managedProperty().bind(label.visibleProperty());
         return label;
     }
 

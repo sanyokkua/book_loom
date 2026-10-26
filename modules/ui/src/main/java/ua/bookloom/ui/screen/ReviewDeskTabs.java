@@ -20,6 +20,7 @@ import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.PromptView;
 import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ReviewViewModel;
@@ -77,8 +78,8 @@ final class ReviewDeskTabs extends TabPane {
         now.setText(Objects.requireNonNullElse(
                 view.maskedUserTarget(), Objects.requireNonNullElse(view.maskedMachineTarget(), "")));
         proposal.setText(Objects.requireNonNullElse(proposed, ""));
-        shown(proposalBox, proposed != null);
-        shown(none, proposed == null);
+        Visibility.show(proposalBox, proposed != null);
+        Visibility.show(none, proposed == null);
         suggestionTab.setText(messages.get(MessageKey.REVIEW_TAB_SUGGESTION, proposed == null ? 0 : 1));
     }
 
@@ -177,10 +178,5 @@ final class ReviewDeskTabs extends TabPane {
         label.setWrapText(true);
         label.setMinHeight(Region.USE_PREF_SIZE);
         return label;
-    }
-
-    private static void shown(final Node node, final boolean visible) {
-        node.setVisible(visible);
-        node.setManaged(visible);
     }
 }

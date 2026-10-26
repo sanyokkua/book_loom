@@ -20,6 +20,7 @@ import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -98,7 +99,7 @@ final class BriefView {
 
     // While a translation is at work the whole brief is read-only; the banner stays outside the columns so Pause works.
     private Banner readOnlyBanner() {
-        final Banner banner = BriefCards.shownWhile(
+        final Banner banner = Visibility.bind(
                 new Banner(
                         "brief-readonly-banner",
                         Banner.Role.WARN,

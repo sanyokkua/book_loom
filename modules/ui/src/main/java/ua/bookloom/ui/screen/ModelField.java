@@ -17,6 +17,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -123,18 +124,16 @@ final class ModelField {
         refusal.getStyleClass().add("hint");
         refusal.setWrapText(true);
         refusal.textProperty().bind(listing.refusal());
-        refusal.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> !listing.refusal().get().isEmpty(), listing.refusal()));
-        refusal.managedProperty().bind(refusal.visibleProperty());
+        Visibility.bind(
+                refusal,
+                Bindings.createBooleanBinding(() -> !listing.refusal().get().isEmpty(), listing.refusal()));
         return refusal;
     }
 
     private static Label hint(final String id, final String text, final ObservableBooleanValue shown) {
         final Label label = Wrapped.label(text, "hint");
         label.setId(id);
-        label.visibleProperty().bind(shown);
-        label.managedProperty().bind(label.visibleProperty());
+        Visibility.bind(label, shown);
         return label;
     }
 

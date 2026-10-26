@@ -14,6 +14,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -70,8 +71,7 @@ final class EmptyState {
             buttons.setAlignment(Pos.CENTER);
             buttons.getChildren().getFirst().disableProperty().bind(actions.scanOff());
             buttons.getChildren().getLast().disableProperty().bind(actions.frozen());
-            buttons.visibleProperty().bind(Bindings.createBooleanBinding(() -> !isFiltering(query), query));
-            buttons.managedProperty().bind(buttons.visibleProperty());
+            Visibility.bind(buttons, Bindings.createBooleanBinding(() -> !isFiltering(query), query));
             state.getChildren().add(buttons);
         }
         return state;

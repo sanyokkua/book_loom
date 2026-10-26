@@ -13,6 +13,7 @@ import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.ProtectedMarks;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
@@ -111,7 +112,7 @@ final class ExportTitleCard {
     private Node refusal(final String id) {
         line(titleRefusal, id + "-refusal", "status-err");
         titleRefusal.textProperty().bind(viewModel.refusal());
-        return BriefCards.shownWhile(titleRefusal, viewModel.refusal().isNotEmpty());
+        return Visibility.bind(titleRefusal, viewModel.refusal().isNotEmpty());
     }
 
     private static Label line(final Label label, final String id, final String styleClass) {

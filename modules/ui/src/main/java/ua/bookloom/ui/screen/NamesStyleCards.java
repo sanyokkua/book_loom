@@ -8,6 +8,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.dialog.AddRecurringTermDialog;
 import ua.bookloom.ui.dialog.AddTermDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -148,8 +149,7 @@ final class NamesStyleCards {
             glossary.acceptAll();
         });
         acceptAll.disableProperty().bind(glossary.busy().or(frozen));
-        acceptAll.visibleProperty().bind(glossary.suggestedCount().greaterThan(0));
-        acceptAll.managedProperty().bind(acceptAll.visibleProperty());
+        Visibility.bind(acceptAll, glossary.suggestedCount().greaterThan(0));
         return acceptAll;
     }
 

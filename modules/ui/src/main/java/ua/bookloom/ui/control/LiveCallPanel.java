@@ -155,9 +155,7 @@ public final class LiveCallPanel extends VBox {
 
     private void showTab(final VBox body, final int index) {
         VBox.setVgrow(body, Priority.ALWAYS);
-        body.visibleProperty()
-                .bind(tabs.getSelectionModel().selectedIndexProperty().isEqualTo(index));
-        body.managedProperty().bind(body.visibleProperty());
+        Visibility.bind(body, tabs.getSelectionModel().selectedIndexProperty().isEqualTo(index));
     }
 
     private void listen() {
@@ -246,8 +244,7 @@ public final class LiveCallPanel extends VBox {
                 messages, new Button(messages.get(MessageKey.LIVE_FOLLOW_AGAIN)), MessageKey.LIVE_FOLLOW_AGAIN_TIP);
         again.setId("translating-live-follow-again");
         again.getStyleClass().add("btn-ghost");
-        again.visibleProperty().bind(list.followingProperty().not());
-        again.managedProperty().bind(again.visibleProperty());
+        Visibility.bind(again, list.followingProperty().not());
         again.setOnAction(event -> {
             log.debug("live card: Follow again pressed");
             list.followAgain();

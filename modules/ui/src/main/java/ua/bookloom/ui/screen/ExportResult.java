@@ -22,6 +22,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportFigures;
@@ -63,8 +64,7 @@ final class ExportResult {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         checks.setId("export-checks");
-        checks.visibleProperty().bind(Bindings.isNotEmpty(checks.getChildren()));
-        checks.managedProperty().bind(checks.visibleProperty());
+        Visibility.bind(checks, Bindings.isNotEmpty(checks.getChildren()));
         actions = List.of(
                 action(
                         "export-reveal",

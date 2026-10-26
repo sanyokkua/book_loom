@@ -21,6 +21,7 @@ import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -122,7 +123,7 @@ final class NamesStyleView {
 
     // Both tables stay editable while a translation is at work: the run reads the glossary as it is when it gets there.
     private Banner runBanner() {
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 new Banner(
                         "names-style-run-banner",
                         Banner.Role.INFO,
@@ -134,7 +135,7 @@ final class NamesStyleView {
 
     // Work in the background writes to this screen once, at its end, so it may not be edited meanwhile.
     private Banner hiddenBanner(final BooleanBinding frozen) {
-        final Banner banner = BriefCards.shownWhile(
+        final Banner banner = Visibility.bind(
                 new Banner(
                         "names-style-hidden-banner",
                         Banner.Role.INFO,

@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -95,7 +96,7 @@ final class ReviewInlinePanels {
         log.debug("note panel opened");
         noteText.clear();
         lower.setSelected(false);
-        shown(note, true);
+        Visibility.show(note, true);
         noteText.requestFocus();
     }
 
@@ -103,7 +104,7 @@ final class ReviewInlinePanels {
         if (note.isVisible()) {
             log.debug("note panel closed");
         }
-        shown(note, false);
+        Visibility.show(note, false);
     }
 
     /**
@@ -118,7 +119,7 @@ final class ReviewInlinePanels {
         word(questionConfirm, asked.confirm(), asked.confirmTip());
         word(questionKeep, asked.keep(), asked.keepTip());
         onConfirm = confirmed;
-        shown(question, true);
+        Visibility.show(question, true);
         questionKeep.requestFocus();
     }
 
@@ -129,7 +130,7 @@ final class ReviewInlinePanels {
 
     void closeQuestion() {
         onConfirm = null;
-        shown(question, false);
+        Visibility.show(question, false);
     }
 
     private void buildNote(final NoteAnswer answer) {
@@ -155,7 +156,7 @@ final class ReviewInlinePanels {
         // The field reads as shown or not with its panel, so focus and lookups never reach a hidden field.
         noteText.visibleProperty().bind(note.visibleProperty());
         noteText.managedProperty().bind(note.visibleProperty());
-        shown(note, false);
+        Visibility.show(note, false);
     }
 
     // The note's text is book-adjacent wording the person typed, so only its length is logged above TRACE.
@@ -195,7 +196,7 @@ final class ReviewInlinePanels {
         question.getStyleClass().add("inline-panel");
         question.setAlignment(Pos.CENTER_LEFT);
         question.getChildren().setAll(questionText, questionKeep, questionConfirm);
-        shown(question, false);
+        Visibility.show(question, false);
     }
 
     private Button button(final String id, final MessageKey label, final MessageKey tip) {
@@ -207,10 +208,5 @@ final class ReviewInlinePanels {
     private void word(final Button button, final MessageKey label, final MessageKey tip) {
         button.setText(messages.get(label));
         Tips.install(messages, button, tip);
-    }
-
-    private static void shown(final Region node, final boolean visible) {
-        node.setVisible(visible);
-        node.setManaged(visible);
     }
 }

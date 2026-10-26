@@ -6,6 +6,7 @@ import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeMarks;
@@ -26,8 +27,7 @@ final class ChangedMarks {
         filter.setMinWidth(Region.USE_PREF_SIZE);
         filter.setMaxHeight(Double.MAX_VALUE);
         filter.selectedProperty().bindBidirectional(side.onlyChanged());
-        filter.visibleProperty().bind(Bindings.createBooleanBinding(() -> side.size() > 0, side.revision()));
-        filter.managedProperty().bind(filter.visibleProperty());
+        Visibility.bind(filter, Bindings.createBooleanBinding(() -> side.size() > 0, side.revision()));
         return filter;
     }
 }

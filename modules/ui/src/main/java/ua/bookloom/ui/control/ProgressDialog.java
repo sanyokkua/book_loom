@@ -195,13 +195,13 @@ public final class ProgressDialog extends ModalCard {
 
     // A selected decision row replaces the selected step's detail with what each sample answered for it.
     private void showAnswers(final ScrollPane answersScroll) {
-        showFor(answersScroll, false);
+        Visibility.show(answersScroll, false);
         decisions.selected().addListener((observed, was, row) -> {
             if (row != null) {
                 answers.show(row);
             }
-            showFor(answersScroll, row != null);
-            showFor(detailScroll, row == null);
+            Visibility.show(answersScroll, row != null);
+            Visibility.show(detailScroll, row == null);
         });
     }
 
@@ -317,9 +317,9 @@ public final class ProgressDialog extends ModalCard {
         details.setText(now.details().stream()
                 .map(line -> line.label() + " " + line.value())
                 .collect(Collectors.joining(DETAIL_JOIN)));
-        showFor(details, !now.details().isEmpty());
+        Visibility.show(details, !now.details().isEmpty());
         showFigures();
-        showFor(cancel, now.cancellable());
+        Visibility.show(cancel, now.cancellable());
         cancel.setDisable(now.cancelling());
         if (!Boolean.valueOf(now.cancelling()).equals(shownCancelling)) {
             shownCancelling = now.cancelling();
@@ -365,7 +365,7 @@ public final class ProgressDialog extends ModalCard {
         final boolean counted = !model.activity().get().steps().isEmpty();
         final ProgressFigures.Figures read = model.figures().get();
         figures.setText(counted ? read.line(messages) : "");
-        showFor(figures, counted);
+        Visibility.show(figures, counted);
         howCounted.show(read.kinds());
     }
 
@@ -376,10 +376,5 @@ public final class ProgressDialog extends ModalCard {
      */
     public void tick(final Instant now) {
         detail.tick(now);
-    }
-
-    private static void showFor(final Node node, final boolean shown) {
-        node.setVisible(shown);
-        node.setManaged(shown);
     }
 }

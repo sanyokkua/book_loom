@@ -30,6 +30,7 @@ import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.HowCountedPane;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProgressFigures;
@@ -121,8 +122,7 @@ final class TranslatingSummaryStrip {
                 inputs.runs(),
                 mirror.live().throughput(),
                 inputs.estimate());
-        big.visibleProperty().bind(big.textProperty().isNotEmpty());
-        big.managedProperty().bind(big.visibleProperty());
+        Visibility.bind(big, big.textProperty().isNotEmpty());
         return big;
     }
 
@@ -162,8 +162,7 @@ final class TranslatingSummaryStrip {
                 () -> inputs.flagged().get() > 0 && mirror.runState().get() != RunState.IDLE,
                 inputs.flagged(),
                 mirror.runState());
-        review.visibleProperty().bind(offered);
-        review.managedProperty().bind(review.visibleProperty());
+        Visibility.bind(review, offered);
         review.setOnAction(event -> {
             log.debug("strip: {} to review pressed", inputs.flagged().get());
             inputs.onReview().run();
@@ -294,8 +293,7 @@ final class TranslatingSummaryStrip {
         final FlowPane row = new FlowPane(COUNT_GAP, SPACING / 2, translated, fixed, toReview, kept, secondLook);
         row.setId("translating-counts");
         // A book not yet started has nothing to count.
-        row.visibleProperty().bind(mirror.runState().isNotEqualTo(RunState.IDLE));
-        row.managedProperty().bind(row.visibleProperty());
+        Visibility.bind(row, mirror.runState().isNotEqualTo(RunState.IDLE));
         return row;
     }
 
@@ -319,8 +317,7 @@ final class TranslatingSummaryStrip {
                 mirror.live().suspicious());
         secondLook.getStyleClass().add("strip-count-warn");
         Tips.install(messages, secondLook, MessageKey.TRANSLATING_STRIP_SECOND_LOOK_TIP);
-        secondLook.visibleProperty().bind(mirror.live().suspicious().greaterThan(0));
-        secondLook.managedProperty().bind(secondLook.visibleProperty());
+        Visibility.bind(secondLook, mirror.live().suspicious().greaterThan(0));
         return secondLook;
     }
 

@@ -5,12 +5,10 @@ import java.util.Objects;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -21,6 +19,7 @@ import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelEntry;
@@ -153,25 +152,20 @@ public final class ModelsController {
 
     private void bindVisibility() {
         final BooleanBinding none = Bindings.isEmpty(roster.entries());
-        show(listing, roster.listing());
-        show(empty, Bindings.and(none, roster.listing().not()));
-        show(scroll, none.not());
-        show(foot, none.not());
-        show(explain, none.not());
+        Visibility.bind(listing, roster.listing());
+        Visibility.bind(empty, Bindings.and(none, roster.listing().not()));
+        Visibility.bind(scroll, none.not());
+        Visibility.bind(foot, none.not());
+        Visibility.bind(explain, none.not());
         model.disableProperty().bind(none);
         refresh.disableProperty().bind(roster.listing());
     }
 
     private void bindFooter() {
-        show(dirty, form.dirty());
-        show(saved, form.justSaved());
+        Visibility.bind(dirty, form.dirty());
+        Visibility.bind(saved, form.justSaved());
         cancel.disableProperty().bind(form.dirty().not());
         save.disableProperty().bind(form.dirty().not().or(form.saving()));
-    }
-
-    private static void show(final Node node, final ObservableBooleanValue shown) {
-        node.visibleProperty().bind(shown);
-        node.managedProperty().bind(node.visibleProperty());
     }
 
     private void showCurrent() {

@@ -20,6 +20,7 @@ import ua.bookloom.ui.control.EnumSegments;
 import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.GenerationSettings;
@@ -188,9 +189,9 @@ public final class GenerationController {
     }
 
     private void bindNotes() {
-        SettingsNotes.show(running, SettingsNotes.runUnderWay(mirror));
-        SettingsNotes.show(saveError, settings.saveFailedProperty());
-        SettingsNotes.show(thinkingTech, technicalDetails.property());
+        Visibility.bind(running, SettingsNotes.runUnderWay(mirror));
+        Visibility.bind(saveError, settings.saveFailedProperty());
+        Visibility.bind(thinkingTech, technicalDetails.property());
         SettingsNotes.overrideNote(
                 messages,
                 thinkingOverride,

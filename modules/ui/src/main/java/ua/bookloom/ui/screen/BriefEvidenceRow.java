@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -53,16 +54,11 @@ final class BriefEvidenceRow {
         return node;
     }
 
-    static void shownIf(final Node shown, final boolean isShown) {
-        shown.setVisible(isShown);
-        shown.setManaged(isShown);
-    }
-
     void show(final @Nullable FieldEvidence evidence) {
         final boolean uncertain = evidence != null && !evidence.isKept();
-        shownIf(node, evidence != null);
-        shownIf(line, evidence != null);
-        shownIf(chip, uncertain);
+        Visibility.show(node, evidence != null);
+        Visibility.show(line, evidence != null);
+        Visibility.show(chip, uncertain);
         if (evidence == null) {
             return;
         }

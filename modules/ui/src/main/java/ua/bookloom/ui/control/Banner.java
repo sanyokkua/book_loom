@@ -147,7 +147,7 @@ public final class Banner extends HBox {
      * @param id the button's node id
      * @param label the visible, already translated text
      * @param action what pressing it does
-     * @return the button, shown; the caller may hide it with {@link #setActionShown(Button, boolean)}
+     * @return the button, shown; the caller may hide it with {@link Visibility#show(javafx.scene.Node, boolean)}
      */
     public Button addAction(final String id, final String label, final Runnable action) {
         Objects.requireNonNull(action, "action");
@@ -177,16 +177,5 @@ public final class Banner extends HBox {
         HBox.setHgrow(column, Priority.ALWAYS);
         getChildren().add(button);
         return button;
-    }
-
-    /**
-     * Shows or hides an action button so that a hidden one takes no room.
-     *
-     * @param button a button returned by {@link #addAction}
-     * @param shown whether it is visible and takes space
-     */
-    public static void setActionShown(final Button button, final boolean shown) {
-        button.setVisible(shown);
-        button.setManaged(shown);
     }
 }

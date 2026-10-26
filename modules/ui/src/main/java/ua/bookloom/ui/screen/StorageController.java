@@ -16,6 +16,7 @@ import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.ModelSwitch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.DetailedLogSwitch;
@@ -186,8 +187,8 @@ public final class StorageController {
                         ? MessageKey.SETTINGS_STORAGE_DETAILED_ON
                         : MessageKey.SETTINGS_STORAGE_DETAILED_OFF));
         showOverride();
-        SettingsNotes.show(detailedDev, detailedLog.onProperty().map(on -> detailedLog.developmentAlways()));
-        SettingsNotes.show(saveError, detailedLog.saveFailedProperty());
+        Visibility.bind(detailedDev, detailedLog.onProperty().map(on -> detailedLog.developmentAlways()));
+        Visibility.bind(saveError, detailedLog.saveFailedProperty());
         savedLine(bundleStatus, diagnostics.bundleSavedProperty(), MessageKey.ABOUT_BUNDLE_SAVED);
         openLogs.setOnAction(event -> diagnostics.openFolder());
         bundle.setOnAction(event -> diagnostics.saveBundle());
@@ -200,7 +201,7 @@ public final class StorageController {
         line.textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> fileName.getValue() == null ? "" : messages.get(wording, fileName.getValue()), fileName));
-        SettingsNotes.show(line, fileName.map(name -> name != null));
+        Visibility.bind(line, fileName.map(name -> name != null));
     }
 
     private void showOverride() {

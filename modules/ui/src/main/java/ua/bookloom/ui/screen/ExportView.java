@@ -17,6 +17,7 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TwoColumns;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -224,7 +225,7 @@ final class ExportView {
         failure.setWrapText(true);
         failure.getStyleClass().add("status-err");
         failure.textProperty().bind(viewModel.failure());
-        return BriefCards.shownWhile(failure, viewModel.failure().isNotEmpty());
+        return Visibility.bind(failure, viewModel.failure().isNotEmpty());
     }
 
     private static String tag(final @Nullable String language) {

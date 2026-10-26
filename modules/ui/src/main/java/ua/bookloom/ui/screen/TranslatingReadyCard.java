@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
@@ -85,7 +86,7 @@ final class TranslatingReadyCard {
     private static Node modelHint(final TranslatingViewModel viewModel, final Messages messages) {
         final Label hint = BriefCards.hint(messages, MessageKey.TRANSLATING_READY_MODEL_HINT);
         hint.setId("translating-ready-model-hint");
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 hint,
                 Bindings.createBooleanBinding(() -> viewModel.modelText().get().isBlank(), viewModel.modelText()));
     }

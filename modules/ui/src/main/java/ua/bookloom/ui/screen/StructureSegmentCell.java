@@ -12,6 +12,7 @@ import javafx.scene.layout.Region;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureSegmentRow;
@@ -91,9 +92,9 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
         kind.setText(messages.get(StructureKindLabels.of(preview.kind())));
         text.setText(preview.displaySource());
         tokens.setText(numbers.format(preview.tokenEstimate()));
-        shown(tokens, technical.get());
-        shown(verbatim, preview.keptVerbatim());
-        shown(source, preview.keptAsSource());
+        Visibility.show(tokens, technical.get());
+        Visibility.show(verbatim, preview.keptVerbatim());
+        Visibility.show(source, preview.keptAsSource());
         showChunk(preview);
         if (row.chunkStart()) {
             getStyleClass().add(CHUNK_START);
@@ -103,7 +104,7 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
 
     private void showChunk(final SegmentPreview preview) {
         final boolean chunked = technical.get() && preview.chunkIndex() > 0;
-        shown(chunk, chunked);
+        Visibility.show(chunk, chunked);
         if (!chunked) {
             return;
         }
@@ -116,10 +117,5 @@ final class StructureSegmentCell extends ListCell<StructureSegmentRow> {
         final Label label = new Label();
         label.getStyleClass().addAll("chip", id, role);
         return label;
-    }
-
-    private static void shown(final Label label, final boolean visible) {
-        label.setVisible(visible);
-        label.setManaged(visible);
     }
 }

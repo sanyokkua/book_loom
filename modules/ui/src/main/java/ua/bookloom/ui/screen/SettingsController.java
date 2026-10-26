@@ -9,7 +9,6 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
@@ -23,6 +22,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -275,16 +275,13 @@ public final class SettingsController {
     }
 
     private void bindEmptyState() {
-        providerEmpty.visibleProperty().bind(Bindings.isEmpty(viewModel.providers()));
-        providerEmpty.managedProperty().bind(providerEmpty.visibleProperty());
-        formCard.visibleProperty()
-                .bind(Bindings.isNotEmpty(viewModel.providers()).or(viewModel.adding()));
-        formCard.managedProperty().bind(formCard.visibleProperty());
+        Visibility.bind(providerEmpty, Bindings.isEmpty(viewModel.providers()));
+        Visibility.bind(formCard, Bindings.isNotEmpty(viewModel.providers()).or(viewModel.adding()));
     }
 
     private void bindFooter() {
-        show(formDirty, form.dirty());
-        show(formSaved, form.justSaved());
+        Visibility.bind(formDirty, form.dirty());
+        Visibility.bind(formSaved, form.justSaved());
         formCancel
                 .disableProperty()
                 .bind(Bindings.createBooleanBinding(
@@ -292,11 +289,6 @@ public final class SettingsController {
         formSave.disableProperty()
                 .bind(Bindings.createBooleanBinding(
                         () -> !form.dirty().get() || form.saving().get(), form.dirty(), form.saving()));
-    }
-
-    private static void show(final Label label, final ObservableBooleanValue shown) {
-        label.visibleProperty().bind(shown);
-        label.managedProperty().bind(label.visibleProperty());
     }
 
     private void onProvidersLoaded() {

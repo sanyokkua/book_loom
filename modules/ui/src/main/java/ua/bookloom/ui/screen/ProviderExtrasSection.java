@@ -13,6 +13,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
@@ -91,8 +92,7 @@ final class ProviderExtrasSection {
     }
 
     private static void bindPart(final ToggleSwitch toggle, final VBox part) {
-        part.visibleProperty().bind(toggle.selectedProperty());
-        part.managedProperty().bind(part.visibleProperty());
+        Visibility.bind(part, toggle.selectedProperty());
     }
 
     private void addTyped() {

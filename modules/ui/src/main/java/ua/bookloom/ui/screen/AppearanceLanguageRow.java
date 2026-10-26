@@ -12,6 +12,7 @@ import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.LanguageChoice;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -58,14 +59,12 @@ final class AppearanceLanguageRow {
         this.restartError = Objects.requireNonNull(restartError, "restartError");
         buildChooser();
         chooser.getProperties().put(OWNER_KEY, this);
-        restart.visibleProperty().bind(language.restartNeededProperty());
-        restart.managedProperty().bind(restart.visibleProperty());
+        Visibility.bind(restart, language.restartNeededProperty());
         restart.disableProperty().bind(language.restartingProperty());
         restart.setOnAction(event -> restartNow());
         Tips.install(messages, restart, MessageKey.APPEARANCE_RESTART_TIP);
         hide(restartError);
-        saveError.visibleProperty().bind(language.saveFailedProperty().or(themeSaveFailed));
-        saveError.managedProperty().bind(saveError.visibleProperty());
+        Visibility.bind(saveError, language.saveFailedProperty().or(themeSaveFailed));
     }
 
     private void buildChooser() {

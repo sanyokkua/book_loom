@@ -1,7 +1,6 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Objects;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -77,12 +76,5 @@ final class BriefCards {
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
         return hint;
-    }
-
-    /** Shows the node only while {@code shown} says so, and takes no room otherwise. */
-    static <T extends Node> T shownWhile(final T node, final ObservableBooleanValue shown) {
-        node.visibleProperty().bind(shown);
-        node.managedProperty().bind(node.visibleProperty());
-        return node;
     }
 }

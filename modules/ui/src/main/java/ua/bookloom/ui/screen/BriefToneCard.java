@@ -29,6 +29,7 @@ import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -111,7 +112,7 @@ final class BriefToneCard {
         genderSuggested.setId("brief-tone-narrator-gender-suggested");
         genderSuggested.getStyleClass().add("hint");
         Tips.install(messages, genderSuggested, MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED_TIP);
-        BriefEvidenceRow.shownIf(genderSuggested, false);
+        Visibility.show(genderSuggested, false);
     }
 
     // The gender the model proved reads "Male (suggested)" until the person changes it.
@@ -123,7 +124,7 @@ final class BriefToneCard {
                     brief.narrator().gender(),
                     suggested);
         }
-        BriefEvidenceRow.shownIf(genderSuggested, suggested);
+        Visibility.show(genderSuggested, suggested);
         if (suggested) {
             final MessageKey gender = brief.narrator().gender() == Gender.MALE
                     ? MessageKey.BRIEF_NARRATOR_GENDER_MALE
@@ -155,7 +156,7 @@ final class BriefToneCard {
     // A field shows the suggestion's evidence only while it holds what the suggestion wrote into it.
     private void showEvidence(final @Nullable BookBrief brief) {
         if (brief == null) {
-            BriefEvidenceRow.shownIf(genderSuggested, false);
+            Visibility.show(genderSuggested, false);
         } else {
             showGenderSuggested(brief);
         }
@@ -213,7 +214,7 @@ final class BriefToneCard {
                 .bind(Bindings.createStringBinding(
                         () -> outcomeText(viewModel.styleSuggestion().outcome().get(), messages),
                         viewModel.styleSuggestion().outcome()));
-        BriefCards.shownWhile(outcome, outcome.textProperty().isNotEmpty());
+        Visibility.bind(outcome, outcome.textProperty().isNotEmpty());
         return new VBox(FIELD_SPACING, suggest, blockedReason(atWork, messages), outcome);
     }
 
@@ -226,7 +227,7 @@ final class BriefToneCard {
         reason.textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> atWork.get() ? messages.get(MessageKey.MODEL_BLOCKED_PAUSE_FIRST) : "", atWork));
-        BriefCards.shownWhile(reason, atWork);
+        Visibility.bind(reason, atWork);
         return reason;
     }
 
@@ -248,8 +249,7 @@ final class BriefToneCard {
         final Label notice = BriefCards.hint(messages, MessageKey.BRIEF_NARRATOR_NOTICE);
         notice.setId("brief-tone-narrator-notice");
         Tips.install(messages, notice, MessageKey.BRIEF_NARRATOR_NOTICE_TIP);
-        notice.visibleProperty().bind(viewModel.narratorNotice());
-        notice.managedProperty().bind(notice.visibleProperty());
+        Visibility.bind(notice, viewModel.narratorNotice());
         return notice;
     }
 

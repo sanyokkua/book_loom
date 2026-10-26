@@ -4,7 +4,6 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.Objects;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -12,6 +11,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelForm;
@@ -58,10 +58,10 @@ final class ModelRefusedSection {
     void show() {
         rows.getChildren().setAll(form.refused().stream().map(this::row).toList());
         final boolean empty = form.refused().isEmpty();
-        none.getChildren().forEach(label -> setShown(label, empty));
-        setShown(none, empty);
-        setShown(rows, !empty);
-        setShown(failed, form.refusedFailed().get());
+        none.getChildren().forEach(label -> Visibility.show(label, empty));
+        Visibility.show(none, empty);
+        Visibility.show(rows, !empty);
+        Visibility.show(failed, form.refusedFailed().get());
     }
 
     private HBox row(final RefusedSetting refused) {
@@ -104,10 +104,5 @@ final class ModelRefusedSection {
         label.setWrapText(true);
         label.getStyleClass().add(style);
         return label;
-    }
-
-    private static void setShown(final Node node, final boolean shown) {
-        node.setVisible(shown);
-        node.setManaged(shown);
     }
 }

@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -172,8 +173,7 @@ final class ReviewDeskCard extends ModalCard {
                 messages, new Button(messages.get(MessageKey.REVIEW_DESK_PAUSE)), MessageKey.REVIEW_DESK_PAUSE_TIP);
         pauseButton.setId("review-pause");
         pauseButton.getStyleClass().add("btn-secondary");
-        pauseButton.visibleProperty().bind(viewModel.translating());
-        pauseButton.managedProperty().bind(pauseButton.visibleProperty());
+        Visibility.bind(pauseButton, viewModel.translating());
         pauseButton.setOnAction(event -> {
             log.info("review desk: pause pressed");
             pause.run();
@@ -182,8 +182,7 @@ final class ReviewDeskCard extends ModalCard {
         banner.setId("review-readonly");
         banner.setAlignment(Pos.CENTER_LEFT);
         banner.getStyleClass().addAll("banner", "banner-info");
-        banner.visibleProperty().bind(viewModel.lockReason().isNotNull());
-        banner.managedProperty().bind(banner.visibleProperty());
+        Visibility.bind(banner, viewModel.lockReason().isNotNull());
         return banner;
     }
 

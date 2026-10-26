@@ -15,6 +15,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.control.EnumSegments;
 import ua.bookloom.ui.control.ModelSwitch;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.AutomationSettings;
@@ -141,9 +142,9 @@ public final class AutomationController {
     }
 
     private void bindNotes() {
-        SettingsNotes.show(running, SettingsNotes.runUnderWay(mirror));
-        SettingsNotes.show(saveError, settings.saveFailedProperty());
-        SettingsNotes.show(
+        Visibility.bind(running, SettingsNotes.runUnderWay(mirror));
+        Visibility.bind(saveError, settings.saveFailedProperty());
+        Visibility.bind(
                 lastCheckHint,
                 settings.loadedProperty().and(settings.lastCheckChosenProperty().not()));
         SettingsNotes.overrideNote(

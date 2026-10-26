@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.PriorityRow;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeMarks;
@@ -243,8 +244,7 @@ final class TermTableCard<R> extends VBox {
         note.setWrapText(true);
         note.setMinHeight(Region.USE_PREF_SIZE);
         note.textProperty().bind(names.modelBlockedReason());
-        note.visibleProperty().bind(names.modelBlockedReason().isNotEmpty());
-        note.managedProperty().bind(note.visibleProperty());
+        Visibility.bind(note, names.modelBlockedReason().isNotEmpty());
         return note;
     }
 

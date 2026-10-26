@@ -14,6 +14,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -60,8 +61,7 @@ final class ExportDestinationCard {
         inHome.setId("export-save-to-home");
         inHome.getStyleClass().add("hint");
         inHome.setMinWidth(Region.USE_PREF_SIZE);
-        BriefCards.shownWhile(
-                inHome, Bindings.createBooleanBinding(() -> shortPath().inHome(), viewModel.destination()));
+        Visibility.bind(inHome, Bindings.createBooleanBinding(() -> shortPath().inHome(), viewModel.destination()));
         final HBox row = new HBox(ROW_SPACING, path, inHome, changeButton());
         if (viewModel.nameSuggestion.isOffered()) {
             row.getChildren().add(suggestButton());
@@ -110,13 +110,13 @@ final class ExportDestinationCard {
         final Label notice = BriefCards.hint(messages, MessageKey.EXPORT_SUGGEST_NAME_DONE);
         notice.setId("export-name-notice");
         notice.textProperty().bind(viewModel.nameSuggestion.notice());
-        return BriefCards.shownWhile(notice, viewModel.nameSuggestion.notice().isNotEmpty());
+        return Visibility.bind(notice, viewModel.nameSuggestion.notice().isNotEmpty());
     }
 
     private Node authorNote() {
         final Label note = BriefCards.hint(messages, MessageKey.EXPORT_SUGGEST_NAME_AUTHOR_KEPT);
         note.setId("export-author-kept");
-        return BriefCards.shownWhile(note, viewModel.nameSuggestion.authorKept());
+        return Visibility.bind(note, viewModel.nameSuggestion.authorKept());
     }
 
     private Node refusal() {
@@ -125,7 +125,7 @@ final class ExportDestinationCard {
         refusal.setWrapText(true);
         refusal.getStyleClass().add("status-err");
         refusal.textProperty().bind(viewModel.refusal());
-        return BriefCards.shownWhile(refusal, viewModel.refusal().isNotEmpty());
+        return Visibility.bind(refusal, viewModel.refusal().isNotEmpty());
     }
 
     // Not an error: the result above is current, and exporting again only asks before replacing it.
@@ -135,7 +135,7 @@ final class ExportDestinationCard {
         note.setWrapText(true);
         note.getStyleClass().add("hint");
         note.textProperty().bind(viewModel.currentNote());
-        return BriefCards.shownWhile(note, viewModel.currentNote().isNotEmpty());
+        return Visibility.bind(note, viewModel.currentNote().isNotEmpty());
     }
 
     private void change() {

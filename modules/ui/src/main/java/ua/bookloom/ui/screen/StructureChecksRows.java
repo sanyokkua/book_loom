@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StatusRole;
@@ -84,8 +85,7 @@ final class StructureChecksRows extends VBox {
                                         finished.runSegments())
                                 : "",
                         checks.state()));
-        line.visibleProperty().bind(line.textProperty().isNotEmpty());
-        line.managedProperty().bind(line.visibleProperty());
+        Visibility.bind(line, line.textProperty().isNotEmpty());
         return line;
     }
 

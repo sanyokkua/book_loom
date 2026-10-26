@@ -28,6 +28,7 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.LiveCallPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -169,13 +170,13 @@ final class TranslatingView {
         line.setId("translating-help-sleep");
         line.setAlignment(Pos.CENTER_LEFT);
         line.getStyleClass().addAll("banner", "banner-info");
-        line.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
+        Visibility.bind(
+                line,
+                Bindings.createBooleanBinding(
                         () -> sleep.shown().get()
                                 && RUNNING.contains(mirror.runState().get()),
                         sleep.shown(),
                         mirror.runState()));
-        line.managedProperty().bind(line.visibleProperty());
         return line;
     }
 
@@ -253,8 +254,7 @@ final class TranslatingView {
                             return kind == null ? "" : BlockedWords.in(messages, kind, ActivityKind.TRANSLATION);
                         },
                         viewModel.otherWork()));
-        note.visibleProperty().bind(note.textProperty().isNotEmpty());
-        note.managedProperty().bind(note.visibleProperty());
+        Visibility.bind(note, note.textProperty().isNotEmpty());
         return note;
     }
 

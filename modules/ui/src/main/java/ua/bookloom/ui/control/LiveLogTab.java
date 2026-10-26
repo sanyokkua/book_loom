@@ -79,8 +79,7 @@ final class LiveLogTab {
                 MessageKey.TRANSLATING_LOG_JUMP_TIP);
         jump.setId("translating-log-jump");
         jump.getStyleClass().add("btn-ghost");
-        jump.visibleProperty().bind(logList.followingProperty().not());
-        jump.managedProperty().bind(jump.visibleProperty());
+        Visibility.bind(jump, logList.followingProperty().not());
         jump.setOnAction(event -> logList.jumpToLatest());
         return jump;
     }

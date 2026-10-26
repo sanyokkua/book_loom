@@ -3,7 +3,6 @@ package ua.bookloom.ui.screen;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -11,6 +10,7 @@ import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelDraft;
@@ -95,9 +95,9 @@ final class ModelLimitsSection {
 
     private void showNames(final ModelEntry entry) {
         final boolean ollama = entry != null && entry.kind() == ProviderKind.OLLAMA;
-        setShown(contextTech, ollama && technical.isOn());
-        setShown(contextOpenAi, entry != null && !ollama);
-        setShown(limitTech, technical.isOn());
+        Visibility.show(contextTech, ollama && technical.isOn());
+        Visibility.show(contextOpenAi, entry != null && !ollama);
+        Visibility.show(limitTech, technical.isOn());
     }
 
     private void switched(final boolean on, final boolean isContext) {
@@ -152,10 +152,5 @@ final class ModelLimitsSection {
         if (!text.equals(field.getText())) {
             field.setText(text);
         }
-    }
-
-    private static void setShown(final Node node, final boolean shown) {
-        node.setVisible(shown);
-        node.setManaged(shown);
     }
 }

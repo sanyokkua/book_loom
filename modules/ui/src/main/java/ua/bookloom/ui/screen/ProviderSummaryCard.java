@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -57,8 +58,7 @@ final class ProviderSummaryCard {
         line.setWrapText(true);
         bindWords();
         box.getChildren().addAll(title, line, new HBox(8, test(dialog), changeModel(form)), reason);
-        box.visibleProperty().bind(viewModel.adding().not());
-        box.managedProperty().bind(box.visibleProperty());
+        Visibility.bind(box, viewModel.adding().not());
         viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
         markBad();
     }
@@ -82,9 +82,8 @@ final class ProviderSummaryCard {
                         this::lineText,
                         viewModel.modelListing().offered(),
                         viewModel.tests().stages()));
-        line.visibleProperty()
-                .bind(Bindings.createBooleanBinding(() -> !line.getText().isEmpty(), line.textProperty()));
-        line.managedProperty().bind(line.visibleProperty());
+        Visibility.bind(
+                line, Bindings.createBooleanBinding(() -> !line.getText().isEmpty(), line.textProperty()));
         bindReason();
     }
 
@@ -103,8 +102,7 @@ final class ProviderSummaryCard {
                                     : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
                         },
                         viewModel.tests().blockedBy()));
-        reason.visibleProperty().bind(reason.textProperty().isNotEmpty());
-        reason.managedProperty().bind(reason.visibleProperty());
+        Visibility.bind(reason, reason.textProperty().isNotEmpty());
     }
 
     private Button test(final ProviderTestDialog dialog) {

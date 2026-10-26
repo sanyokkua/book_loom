@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.stream.Collectors;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -155,12 +154,12 @@ final class ProgressStepDetail extends VBox {
         final StepEntry step = model.selected().get();
         final CallSnapshot made = step == null ? null : model.callOf(step);
         say.setText(step == null ? "" : StepWords.sentence(messages, step));
-        show(grid, step != null && grid.show(step.text(), step.isRunning()));
+        Visibility.show(grid, step != null && grid.show(step.text(), step.isRunning()));
         input.setText(orNothing(step == null ? null : inputOf(step, made)));
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
         output.setText(said(step == null ? null : outputOf(step, made, technical), made));
         showCall(technical, made);
-        show(notKept, technical && step != null && model.isPromptDropped(step));
+        Visibility.show(notKept, technical && step != null && model.isPromptDropped(step));
         if (technical && made != null) {
             prompt.show(made.sections(), made.sent(), Map.of());
             reply.show(made.reply(), made.items(), locators(made));
@@ -168,14 +167,14 @@ final class ProgressStepDetail extends VBox {
             prompt.show(List.of());
             reply.show(null, List.of(), Map.of());
         }
-        show(prompt, technical && made != null);
-        show(reply, technical && made != null && made.reply() != null);
+        Visibility.show(prompt, technical && made != null);
+        Visibility.show(reply, technical && made != null && made.reply() != null);
     }
 
     private void showCall(final boolean technical, final @Nullable CallSnapshot made) {
-        show(call, technical);
-        show(clock, technical && made != null);
-        show(tokens, technical && made != null && made.usage() != null);
+        Visibility.show(call, technical);
+        Visibility.show(clock, technical && made != null);
+        Visibility.show(tokens, technical && made != null && made.usage() != null);
         if (made == null) {
             call.setText(messages.get(MessageKey.PROGRESS_DETAIL_NO_CALL));
             return;
@@ -331,10 +330,5 @@ final class ProgressStepDetail extends VBox {
             return NONE;
         }
         return String.format(Locale.ROOT, "%.1f", written * MILLIS_PER_SECOND / generation.toMillis());
-    }
-
-    private static void show(final Node node, final boolean shown) {
-        node.setVisible(shown);
-        node.setManaged(shown);
     }
 }

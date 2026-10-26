@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
@@ -68,7 +69,7 @@ final class ExportBanners {
     }
 
     private Banner runningBanner(final BooleanBinding running) {
-        final Banner banner = BriefCards.shownWhile(
+        final Banner banner = Visibility.bind(
                 new Banner(
                         "export-banner-running",
                         Banner.Role.WARN,
@@ -101,7 +102,7 @@ final class ExportBanners {
                 exports.figures());
         partialWords.addListener((observed, was, now) -> banner.setTitle(now));
         banner.setTitle(partialWords.get());
-        return BriefCards.shownWhile(banner, partial.and(running.not()));
+        return Visibility.bind(banner, partial.and(running.not()));
     }
 
     private Banner nothingBanner(final BooleanBinding running) {
@@ -111,7 +112,7 @@ final class ExportBanners {
                     return figures != null && figures.isNothing();
                 },
                 exports.figures());
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 new Banner(
                         "export-banner-nothing",
                         Banner.Role.INFO,
@@ -122,7 +123,7 @@ final class ExportBanners {
     }
 
     private Banner hiddenBanner() {
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 new Banner(
                         "export-banner-hidden",
                         Banner.Role.INFO,

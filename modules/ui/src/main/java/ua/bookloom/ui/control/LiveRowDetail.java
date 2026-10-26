@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Objects;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -128,10 +127,10 @@ public final class LiveRowDetail extends VBox {
         shown = next;
         showHead(row, marker);
         showTexts(row, marker);
-        showFor(inFlight, !detailed);
+        Visibility.show(inFlight, !detailed);
         showInFlight(waiting);
         final boolean sent = next.call() != null;
-        showFor(notSent, detailed && row != null && !sent);
+        Visibility.show(notSent, detailed && row != null && !sent);
         call.show(detailed ? next.call() : null);
     }
 
@@ -143,7 +142,7 @@ public final class LiveRowDetail extends VBox {
         locator.setText(row.locator());
         final boolean toReview = marker == RowMarker.TO_REVIEW;
         why.setText(toReview ? messages.get(MessageKey.LIVE_DETAIL_WHY, reasonOf(row, marker)) : "");
-        showFor(why, toReview);
+        Visibility.show(why, toReview);
         head.getChildren().setAll(StateMarker.of(marker.meaning(), messages.get(marker.word())), locator, why);
     }
 
@@ -218,10 +217,5 @@ public final class LiveRowDetail extends VBox {
                 .filter(held -> held.callId() == id)
                 .findFirst()
                 .orElse(null);
-    }
-
-    private static void showFor(final Node node, final boolean visible) {
-        node.setVisible(visible);
-        node.setManaged(visible);
     }
 }

@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -125,15 +126,13 @@ final class ProviderChecks {
         final Label progress = new Label(messages.get(MessageKey.SETTINGS_CHECK_PROGRESS));
         progress.setId("settings-check-progress");
         progress.getStyleClass().add("muted");
-        progress.visibleProperty().bind(viewModel.tests().checking());
-        progress.managedProperty().bind(progress.visibleProperty());
+        Visibility.bind(progress, viewModel.tests().checking());
         return progress;
     }
 
     private Label blockedNote() {
         final Label blocked = note("settings-checks-blocked", MessageKey.SETTINGS_CHECKS_BLOCKED);
-        blocked.visibleProperty().bind(viewModel.testsBlocked());
-        blocked.managedProperty().bind(blocked.visibleProperty());
+        Visibility.bind(blocked, viewModel.testsBlocked());
         return blocked;
     }
 
@@ -166,9 +165,8 @@ final class ProviderChecks {
                         this::checkLine,
                         viewModel.tests().checkRefusal(),
                         viewModel.tests().blockedBy()));
-        refusal.visibleProperty()
-                .bind(Bindings.createBooleanBinding(() -> !refusal.getText().isEmpty(), refusal.textProperty()));
-        refusal.managedProperty().bind(refusal.visibleProperty());
+        Visibility.bind(
+                refusal, Bindings.createBooleanBinding(() -> !refusal.getText().isEmpty(), refusal.textProperty()));
         return refusal;
     }
 
