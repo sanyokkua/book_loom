@@ -189,7 +189,9 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             log.debug("Provider verification models stage soft pass provider={} reason=empty-list", providerId);
             return new ModelsProbe(StageOutcomes.softPass(null, 0), List.of());
         }
-        final boolean selectedModelListed = models.stream().map(ModelInfo::id).anyMatch(modelId::equals);
+        // With no model chosen yet the question is only whether the list can be read; it is answered by the count.
+        final boolean selectedModelListed =
+                modelId.isBlank() || models.stream().map(ModelInfo::id).anyMatch(modelId::equals);
         log.debug(
                 "Provider verification models stage decision provider={} selectedModel={} listedCount={} found={}",
                 providerId,

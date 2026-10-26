@@ -31,7 +31,13 @@ public enum FailureReason {
     NOT_UTF8("not-utf8"),
 
     /** A CSV file's header names columns that are missing, unknown or repeated. */
-    CSV_HEADER("csv-header");
+    CSV_HEADER("csv-header"),
+
+    /**
+     * A provider answered with an HTTP success whose body is only an error: the address reaches a server that does not
+     * serve this path, most often an OpenAI-compatible address missing its {@code /v1}.
+     */
+    WRONG_PATH("wrong-path");
 
     private static final String PREFIX = "reason=";
 

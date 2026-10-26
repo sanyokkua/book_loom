@@ -288,6 +288,20 @@ class ProviderVerifierImplDraftTest {
         assertThat(models.httpStatus()).isEqualTo(200);
     }
 
+    // IF no model is chosen yet, THEN the models check passes on a readable list and counts it (LAN-6).
+    @Test
+    void verifyDraft_noModelChosen_modelsPassesWithTheCount() {
+        server.stubFor(get(urlEqualTo("/api/version")).willReturn(okJson("{\"version\":\"0.6.0\"}")));
+        server.stubFor(get(urlEqualTo("/api/tags"))
+                .willReturn(okJson("{\"models\":[{\"name\":\"test-model\"},{\"name\":\"other\"}]}")));
+
+        final VerificationReport report =
+                report(verifier(Map.of()).verify(ollamaDraft(), "", VerificationPolicy.CONNECTION_AND_MODELS));
+
+        assertThat(report.stages().get(1).status()).isEqualTo(StageStatus.PASSED);
+        assertThat(report.stages().get(1).count()).isEqualTo(2);
+    }
+
     // IF the connection stage passed, THEN its exchange has an empty response body and status 200.
     @Test
     void verifyDraft_connectionExchange_hasNoBody() {

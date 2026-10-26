@@ -157,9 +157,19 @@ public final class RequestHeaders {
                     "Sign-in key missing",
                     variable.isBlank()
                             ? "The provider needs the name of the environment variable that holds its key."
-                            : "The environment variable " + variable + " is not set or is empty."));
+                            : missingVariable(variable)));
         }
         return Result.ok(value);
+    }
+
+    // An app opened from the Dock, a file manager or an IDE never sees a shell profile's export lines, so the words
+    // say where a variable is read from; BookLoom reads it at each request, so no restart is needed.
+    private static String missingVariable(String variable) {
+        return "The environment variable " + variable + " is not set where BookLoom can read it."
+                + " An app opened from the Dock, the Start menu or an IDE does not see export lines in a shell profile."
+                + " Set it for your user account — macOS: launchctl setenv " + variable + " <key>;"
+                + " Windows: setx " + variable + " <key>; Linux: a line " + variable
+                + "=<key> in ~/.config/environment.d/50-bookloom.conf — and test again; no restart is needed.";
     }
 
     private static Result<String> checkedValue(String name, String value) {
