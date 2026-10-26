@@ -83,7 +83,7 @@ class ImportVerdictsTest {
                         "Already in projects: Earth Gravity · EN → UK, Earth Gravity · EN → PL."));
     }
 
-    // A damaged file names the format its name promised; an unknown type and an empty book are never named "Unknown".
+    // A damaged file names the format its name promised, and a TXT or Markdown name over other content is no text file; an unknown type and an empty book are never named "Unknown".
     static Stream<Arguments> damagedAndEmptyStates() {
         return Stream.of(
                 Arguments.of(
@@ -96,12 +96,12 @@ class ImportVerdictsTest {
                         new ImportState.Refused(
                                 "notes.md", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
                         Kind.DAMAGED,
-                        "notes.md could not be read as a Markdown file. The file may be damaged."),
+                        "notes.md is not a text file."),
                 Arguments.of(
                         new ImportState.Refused(
                                 "notes.txt", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
                         Kind.DAMAGED,
-                        "notes.txt could not be read as a plain text file. The file may be damaged."),
+                        "notes.txt is not a text file."),
                 Arguments.of(
                         new ImportState.Refused("book", AppError.of(ErrorCode.validation, "Not opened", "Damaged.")),
                         Kind.DAMAGED,

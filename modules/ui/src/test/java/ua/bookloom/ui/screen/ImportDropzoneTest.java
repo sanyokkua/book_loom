@@ -103,7 +103,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
     void dropzone_bookCancelled_returnsToTheFullBox() throws TimeoutException {
         openFactsBook();
 
-        onFx(() -> viewModel().cancel());
+        onFx(() -> viewModel().cancel(true));
 
         assertThat(isCompact()).isFalse();
         assertThat(isOneLine()).isFalse();

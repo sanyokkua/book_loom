@@ -84,7 +84,7 @@ class ImportGuardAlreadyTest extends ImportGuardTestBase {
 
         requestImport(file);
         onFx(() -> {
-            imports.cancel();
+            imports.cancel(true);
             return null;
         });
         requestImport(DRACULA);

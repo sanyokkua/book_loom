@@ -44,7 +44,12 @@ public final class FormatResolver {
     /** A zip archive's local-file-header signature, {@code PK}. */
     private static final byte[] ZIP_MAGIC = {'P', 'K', 3, 4};
 
-    private static final int PROLOG_PROBE_BYTES = 1024;
+    private static final int PROLOG_PROBE_BYTES = 8192;
+    // Text never holds a NUL byte, and more than one control character in ten (tab, line breaks and form feed aside)
+    // is a binary file, whatever its name says.
+    private static final int MAX_CONTROL_SHARE_DIVISOR = 10;
+    private static final int FIRST_PRINTABLE = 0x20;
+    private static final int DELETE = 0x7F;
     private static final String FICTION_BOOK_ROOT = "<FictionBook";
 
     /**
@@ -93,9 +98,10 @@ public final class FormatResolver {
     }
 
     /**
-     * Confirms the extension against the leading bytes: a zip signature where a container is expected, and a
-     * FictionBook root element where a bare FB2 is. Markdown and TXT are deliberately unconfirmed — any bytes are
-     * valid content for both, so there is nothing a content check could establish.
+     * Confirms the extension against the leading bytes: a zip signature where a container is expected, a FictionBook
+     * root element where a bare FB2 is, and text where Markdown or TXT is. Any text is valid Markdown and TXT, so for
+     * those two only what is certainly not text is refused: an archive (an EPUB renamed {@code .txt}), a NUL byte or a
+     * run of control characters. A UTF-16 or UTF-32 byte-order mark announces text with NUL bytes, so it passes.
      */
     private static void confirmAgainstContent(Path source, String fileName, BookFormat candidate) {
         final byte[] prolog = readProlog(source);
@@ -105,7 +111,39 @@ public final class FormatResolver {
         }
         if (candidate == BookFormat.FB2) {
             refuseUnless(looksLikeFictionBook(prolog), "This file does not contain the FictionBook its name promises");
+            return;
         }
+        refuseUnless(looksLikeText(prolog), "This file does not contain the text its name promises");
+    }
+
+    private static boolean looksLikeText(byte[] prolog) {
+        if (startsWithZipMagic(prolog)) {
+            return false;
+        }
+        if (hasWideBom(prolog)) {
+            return true;
+        }
+        int controls = 0;
+        for (final byte b : prolog) {
+            final int value = b & 0xFF;
+            if (value == 0) {
+                return false;
+            }
+            if ((value < FIRST_PRINTABLE && !Character.isWhitespace(value)) || value == DELETE) {
+                controls++;
+            }
+        }
+        return controls * MAX_CONTROL_SHARE_DIVISOR <= prolog.length;
+    }
+
+    // FF FE or FE FF opens UTF-16 (and FF FE 00 00 UTF-32 LE); 00 00 FE FF opens UTF-32 BE.
+    private static boolean hasWideBom(byte[] prolog) {
+        final int first = prolog.length > 0 ? prolog[0] & 0xFF : -1;
+        final int second = prolog.length > 1 ? prolog[1] & 0xFF : -1;
+        final boolean utf16 = (first == 0xFF && second == 0xFE) || (first == 0xFE && second == 0xFF);
+        final boolean utf32be = prolog.length > 3 && first == 0 && second == 0 && (prolog[2] & 0xFF) == 0xFE
+                && (prolog[3] & 0xFF) == 0xFF;
+        return utf16 || utf32be;
     }
 
     private static void refuseUnless(boolean confirmed, String reason) {

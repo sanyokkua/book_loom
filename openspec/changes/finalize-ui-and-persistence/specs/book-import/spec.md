@@ -230,9 +230,14 @@ The import screen SHALL accept a book from the file picker or dropped onto its f
 - **WHEN** an EPUB's manifest holds two items with the same id, or its spine lists one document twice
 - **THEN** the repeated manifest id is refused as an unreadable book (`validation`, "could not be read as a book") and no project is left in Projects; a document the spine repeats is read once, at its first place, so every stored segment id is unique; and whenever storing a new project's segments fails, the project row written before them is removed again
 
+#### Scenario: A file named as text that holds something else
+
+- **WHEN** `noise.txt` holds binary bytes (a NUL byte, or more than one control character in ten besides tab, line breaks and form feed) or `book.txt` is an EPUB archive renamed
+- **THEN** the inspection answers `DAMAGED` before any reader runs, no project is stored, and the verdict reads `noise.txt is not a text file.` (Ukrainian `noise.txt — не текстовий файл.`) with Choose another file…; a UTF-16 or UTF-32 text with its byte-order mark is still read
+
 #### Scenario: A book with no text is refused
 
-- **WHEN** a 0-byte or whitespace-only `empty.txt`, an empty Markdown file, an FB2 with no paragraph or an EPUB whose body is empty is opened
+- **WHEN** a 0-byte or whitespace-only `empty.txt`, an empty Markdown file, a 0-byte `.epub` or `.fb2`, an FB2 with no paragraph or no `<body>` at all, or an EPUB whose body is empty is opened
 - **THEN** the import answers the `NO_TEXT` verdict and stores no project, and the verdict reads `This book has no text to translate.` (Ukrainian `У цій книзі немає тексту для перекладу.`) with Choose another file… and no Continue
 
 #### Scenario: Opening a second book replaces the first

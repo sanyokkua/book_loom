@@ -168,9 +168,11 @@ public final class BookInspectorService implements BookInspector {
                 ? BookFormat.ofFileName(String.valueOf(source.getFileName()))
                 : Optional.empty();
         if (promised.isPresent()) {
-            log.debug("Damaged file source={} promisedFormat={}", source, promised.get());
+            // An empty file holds no text to translate; it is not a damaged one.
+            final InspectionVerdict verdict = isEmpty(source) ? InspectionVerdict.NO_TEXT : InspectionVerdict.DAMAGED;
+            log.debug("Refused file source={} promisedFormat={} verdict={}", source, promised.get(), verdict);
             return new BookInspection(
-                    InspectionVerdict.DAMAGED,
+                    verdict,
                     promised.get(),
                     null,
                     promised.get().name(),
@@ -187,6 +189,14 @@ public final class BookInspectorService implements BookInspector {
                 detectedType,
                 null,
                 LanguageEvidenceReader.evaluate(null, List.of()));
+    }
+
+    private static boolean isEmpty(Path source) {
+        try {
+            return Files.size(source) == 0;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Unable to read file for inspection", e);
+        }
     }
 
     private static String detectedTypeOf(Path source, byte[] head) {

@@ -104,7 +104,13 @@ public final class Fb2Inspection implements FormatInspection {
                 Fb2Metadata.childOf(Fb2Metadata.childOf(tree.getRootElement(), "description"), "title-info");
         final LanguageEvidence evidence =
                 LanguageEvidenceReader.evaluate(Fb2Metadata.declaredLang(titleInfo), List.of());
-        return new BookInspection(InspectionVerdict.READABLE, BookFormat.FB2, null, FB2_TYPE, null, evidence);
+        // A well-formed FictionBook with a description and no body is a book with nothing to translate, not a
+        // damaged file.
+        final boolean hasBody = tree.getRootElement().getChildren().stream()
+                .anyMatch(child -> BODY_ELEMENT_NAME.equals(child.getName()));
+        log.debug("FB2 inspected hasBody={}", hasBody);
+        final InspectionVerdict verdict = hasBody ? InspectionVerdict.READABLE : InspectionVerdict.NO_TEXT;
+        return new BookInspection(verdict, BookFormat.FB2, null, FB2_TYPE, null, evidence);
     }
 
     private static byte[] unzippedMember(byte[] fileBytes) {
