@@ -72,6 +72,27 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
         return Result.ok(entry);
     }
 
+    // One read-modify-write of the document for all of them; a refused entry leaves the document as it was.
+    @Override
+    public Result<List<GlossaryEntry>> putAll(final String projectId, final List<GlossaryEntry> entries) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(entries, "entries");
+        return db.write("glossary putAll", h -> {
+                    final Optional<GlossaryDocument> next = load(h, codec, projectId).putAll(entries);
+                    if (next.isEmpty()) {
+                        log.debug("Glossary putAll refused projectId={}: a term is held under another id", projectId);
+                        return Result.<List<GlossaryEntry>>err(AppError.of(
+                                ErrorCode.validation,
+                                "Duplicate glossary term",
+                                "That term already exists in this project's glossary, ignoring case."));
+                    }
+                    store(h, codec, projectId, next.get());
+                    log.debug("Glossary putAll projectId={} entries={}", projectId, entries.size());
+                    return Result.ok(List.copyOf(entries));
+                })
+                .flatMap(Function.identity());
+    }
+
     @Override
     public Result<Optional<GlossaryEntry>> update(
             final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {

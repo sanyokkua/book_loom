@@ -1,8 +1,10 @@
 package ua.bookloom.persistence.sqlite;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -45,6 +47,39 @@ public record GlossaryDocument(List<GlossaryEntry> entries, List<String> removed
         final Set<String> stillRemoved = new LinkedHashSet<>(removed);
         stillRemoved.remove(GlossaryKeys.of(entry.term()));
         return new GlossaryDocument(next, List.copyOf(stillRemoved));
+    }
+
+    /**
+     * Puts many entries at once: one whose id is held replaces it in place, any other is appended and its term is no
+     * longer remembered as removed. Indexed once, so thousands of entries cost one pass, not one pass each.
+     *
+     * @return the new document, or empty when an entry's term is held under another id
+     */
+    Optional<GlossaryDocument> putAll(final List<GlossaryEntry> puts) {
+        final Map<String, Integer> positionById = new HashMap<>();
+        final Map<String, String> idByKey = new HashMap<>();
+        final List<GlossaryEntry> next = new ArrayList<>(entries);
+        for (int at = 0; at < next.size(); at++) {
+            positionById.put(next.get(at).id(), at);
+            idByKey.put(GlossaryKeys.of(next.get(at).term()), next.get(at).id());
+        }
+        final Set<String> stillRemoved = new LinkedHashSet<>(removed);
+        for (final GlossaryEntry entry : puts) {
+            final String key = GlossaryKeys.of(entry.term());
+            final String holder = idByKey.putIfAbsent(key, entry.id());
+            if (holder != null && !holder.equals(entry.id())) {
+                return Optional.empty();
+            }
+            final Integer at = positionById.get(entry.id());
+            if (at == null) {
+                positionById.put(entry.id(), next.size());
+                next.add(entry);
+                stillRemoved.remove(key);
+            } else {
+                next.set(at, entry);
+            }
+        }
+        return Optional.of(new GlossaryDocument(next, List.copyOf(stillRemoved)));
     }
 
     /** Replaces the entry with the same id in place, keeping its position. */

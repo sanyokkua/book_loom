@@ -239,6 +239,18 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(noticeText()).isEqualTo("Imported 1 row. 1 row was replaced by a later row of the same term.");
     }
 
+    // IF an empty or header-only file said only "Imported 0 rows.", THEN the person would not know why nothing came in.
+    @Test
+    void importCsv_fileWithNoRows_saysTheFileHoldsNone() {
+        showWith(hale());
+        glossary.willAnswer(Result.ok(new GlossaryImportReport(0, List.of(), List.of(), 0)));
+        glossary.willAnswer(Result.ok(List.of(hale())));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Imported 0 rows. The file holds no rows to import.");
+    }
+
     // IF a bad line dropped the good ones, or went unreported, THEN an import would lose names silently.
     @Test
     void importCsv_malformedAndRefusedLines_reportsBothAndKeepsTheImportedRows() {

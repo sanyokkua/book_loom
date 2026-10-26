@@ -29,9 +29,7 @@ import ua.bookloom.api.project.TmEntry;
  * {@link RunRepository} contract, continuing {@link RepositoryContractTest} in its own file by the project's
  * class-length limit (ADR-0034, {@code design.md} D2).
  */
-public abstract class GlossaryTmSummaryDeferralRunContractTest extends ProjectFindersContractTest {
-
-    protected abstract GlossaryRepository glossaryRepository();
+public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryPutAllContractTest {
 
     protected abstract TmRepository tmRepository();
 

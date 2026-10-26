@@ -8,7 +8,6 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,10 +31,11 @@ import ua.bookloom.util.text.GlossaryKeys;
  * term (the last one wins), the whole import or none of it, and an export that never leaves a half-written file.
  *
  * @param glossary where the rows are stored
- * @param apply stores one row's entry, with the service's own rules for an added or a changed entry
+ * @param apply stores the rows' entries, with the service's own rules for an added or a changed entry, and answers the
+ *     lines of the rows it refused
  */
 @Slf4j
-record GlossaryCsvFiles(GlossaryRepository glossary, Function<GlossaryCsv.Row, Result<Boolean>> apply) {
+record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.Row>, Result<List<Integer>>> apply) {
 
     GlossaryCsvFiles {
         Objects.requireNonNull(glossary, "glossary");
@@ -86,20 +86,8 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<GlossaryCsv.Row, R
 
     private Result<GlossaryImportReport> applyAll(
             final List<GlossaryCsv.Row> rows, final List<Integer> malformed, final int duplicates) {
-        final List<Integer> refused = new ArrayList<>();
-        int imported = 0;
-        for (final GlossaryCsv.Row row : rows) {
-            final Result<Boolean> applied = apply.apply(row);
-            if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
-            }
-            if (Boolean.TRUE.equals(applied.data())) {
-                imported++;
-            } else {
-                refused.add(row.line());
-            }
-        }
-        return Result.ok(new GlossaryImportReport(imported, malformed, refused, duplicates));
+        return apply.apply(rows)
+                .map(refused -> new GlossaryImportReport(rows.size() - refused.size(), malformed, refused, duplicates));
     }
 
     // A term named twice keeps the row that comes last, in the place of its first row.

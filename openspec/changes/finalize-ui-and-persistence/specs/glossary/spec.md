@@ -274,6 +274,22 @@ and say which; IF storing fails part-way, THEN it SHALL put the glossary back as
   and storing line 3 fails
 - **THEN** the import answers that failure and the glossary holds only `Milton` → `Мілтон`
 
+### Requirement: Import a large glossary file in one write and say when a file holds no rows
+
+WHEN a CSV is imported, the application SHALL read the stored glossary once and store all of the file's entries in one write, keeping the rules an edit follows (a row locked with no target refused, a changed target deferring the decided segments that used it, a person's gender shared with the other spellings of the person); IF the file holds no row (it is empty or holds only its header), THEN the result line SHALL say so after the count.
+
+**Source**: FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`). In plain words: row by row, every row read and wrote the whole stored glossary, so a 5,000-row file took about two and a half minutes with no sign of progress; in one write it takes seconds. And "Imported 0 rows." alone never said why nothing came in.
+
+#### Scenario: Five thousand rows import in seconds
+
+- **WHEN** a file of 5,000 rows, half of them naming a gender, is imported into a project stored in SQLite
+- **THEN** all 5,000 entries are stored within 10 seconds
+
+#### Scenario: A header-only file says it holds no rows
+
+- **WHEN** a file holding only `term,target,type,gender,locked` is imported
+- **THEN** the result line reads `Imported 0 rows. The file holds no rows to import.`
+
 ## MODIFIED Requirements
 
 ### Requirement: Import and export the glossary as CSV

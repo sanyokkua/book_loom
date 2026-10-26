@@ -269,7 +269,8 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     private Result<GlossaryImportReport> readAndImport(final String projectId, final Path source) {
         final Result<GlossaryImportReport> report =
-                new GlossaryCsvFiles(glossary, row -> applyRow(projectId, row)).importFrom(projectId, source);
+                new GlossaryCsvFiles(glossary, rows -> rowsImport(projectId).apply(projectId, rows))
+                        .importFrom(projectId, source);
         if (report.isOk()) {
             logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
         }
@@ -291,30 +292,15 @@ public final class GlossaryServiceImpl implements GlossaryService {
                 report.duplicates());
     }
 
-    private Result<Boolean> applyRow(final String projectId, final GlossaryCsv.Row row) {
-        if (row.locked() && isBlank(row.target())) {
-            return Result.ok(Boolean.FALSE);
-        }
-        final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(projectId, row.term());
-        if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
-        }
-        final Optional<GlossaryEntry> existing = Objects.requireNonNull(held.data(), "held");
-        final Result<GlossaryEntry> stored = existing.isPresent()
-                ? updateEntry(GlossaryCsv.replaced(existing.get(), row))
-                : addEntry(new GlossaryEntry(
-                        GlossaryIds.of(projectId, row.term()),
-                        projectId,
-                        row.term(),
-                        row.target(),
-                        row.type(),
-                        row.gender(),
-                        row.locked()));
-        return stored.map(entry -> Boolean.TRUE);
+    private GlossaryRowsImport rowsImport(final String projectId) {
+        final Document document = openProjects.get(projectId);
+        final String language = document == null ? null : languageOf(briefOf(projectId), document);
+        return new GlossaryRowsImport(glossary, segments, deferrals, language);
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {
-        return new GlossaryCsvFiles(glossary, row -> applyRow(projectId, row)).exportTo(projectId, destination);
+        return new GlossaryCsvFiles(glossary, rows -> rowsImport(projectId).apply(projectId, rows))
+                .exportTo(projectId, destination);
     }
 
     private static boolean isLockedWithoutTarget(final GlossaryEntry entry) {

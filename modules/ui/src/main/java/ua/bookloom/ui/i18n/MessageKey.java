@@ -1948,6 +1948,8 @@ public enum MessageKey {
     NAMES_STYLE_IMPORT_REFUSED("namesStyle.import.refused"),
     /** How many rows of an imported file a later row of the same term replaced (argument 0). */
     NAMES_STYLE_IMPORT_DUPLICATES("namesStyle.import.duplicates"),
+    /** Why an import took nothing: the file holds no row below its header, or nothing at all. */
+    NAMES_STYLE_IMPORT_NO_ROWS("namesStyle.import.noRows"),
     /** Result of an export; argument 0 is the written file name. */
     NAMES_STYLE_EXPORT_DONE("namesStyle.export.done"),
     /** Term type: a character. */
