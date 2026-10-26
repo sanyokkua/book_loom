@@ -1,6 +1,6 @@
 package ua.bookloom.ui.control;
 
-import java.util.function.Consumer;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -16,7 +16,7 @@ abstract class TextBodyPane extends CopyablePane {
     TextBodyPane(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final MessageKey tip,
             final MessageKey copyLabel,
             final MessageKey copyTip) {
@@ -26,7 +26,7 @@ abstract class TextBodyPane extends CopyablePane {
     private TextBodyPane(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final MessageKey tip,
             final MessageKey copyLabel,
             final MessageKey copyTip,

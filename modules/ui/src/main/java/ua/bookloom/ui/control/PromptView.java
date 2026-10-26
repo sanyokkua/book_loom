@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.function.Consumer;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
@@ -13,6 +12,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -45,14 +46,14 @@ public final class PromptView extends CopyablePane {
      * @param messages the catalogue the headings are worded from
      */
     public PromptView(final String id, final Messages messages) {
-        this(id, messages, CopyablePane::toClipboard);
+        this(id, messages, new SystemTextClipboard());
     }
 
-    PromptView(final String id, final Messages messages, final Consumer<String> clipboard) {
+    PromptView(final String id, final Messages messages, final TextClipboard clipboard) {
         this(id, messages, clipboard, new VBox(SPACING));
     }
 
-    private PromptView(final String id, final Messages messages, final Consumer<String> clipboard, final VBox cards) {
+    private PromptView(final String id, final Messages messages, final TextClipboard clipboard, final VBox cards) {
         super(
                 id,
                 messages,

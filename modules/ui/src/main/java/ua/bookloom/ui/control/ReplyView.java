@@ -3,11 +3,12 @@ package ua.bookloom.ui.control;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallItemStatus;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -39,14 +40,14 @@ public final class ReplyView extends CopyablePane {
      * @param messages the catalogue the headings are worded from
      */
     public ReplyView(final String id, final Messages messages) {
-        this(id, messages, CopyablePane::toClipboard);
+        this(id, messages, new SystemTextClipboard());
     }
 
-    ReplyView(final String id, final Messages messages, final Consumer<String> clipboard) {
+    ReplyView(final String id, final Messages messages, final TextClipboard clipboard) {
         this(id, messages, clipboard, new VBox(SPACING));
     }
 
-    private ReplyView(final String id, final Messages messages, final Consumer<String> clipboard, final VBox content) {
+    private ReplyView(final String id, final Messages messages, final TextClipboard clipboard, final VBox content) {
         super(
                 id,
                 messages,

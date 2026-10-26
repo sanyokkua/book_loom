@@ -1,11 +1,12 @@
 package ua.bookloom.ui.control;
 
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -21,10 +22,10 @@ final class InputPane extends TextBodyPane {
     private String input = "";
 
     InputPane(final String id, final Messages messages) {
-        this(id, messages, CopyablePane::toClipboard);
+        this(id, messages, new SystemTextClipboard());
     }
 
-    InputPane(final String id, final Messages messages, final Consumer<String> clipboard) {
+    InputPane(final String id, final Messages messages, final TextClipboard clipboard) {
         super(
                 id,
                 messages,

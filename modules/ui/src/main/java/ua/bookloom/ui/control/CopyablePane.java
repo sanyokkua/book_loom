@@ -1,18 +1,16 @@
 package ua.bookloom.ui.control;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.SectionMemory;
@@ -34,7 +32,7 @@ public abstract class CopyablePane extends TitledPane {
     private static final double SPACING = 6;
 
     private final Messages messages;
-    private final Consumer<String> clipboard;
+    private final TextClipboard clipboard;
     private final Region body;
     private final Button copy;
     private @Nullable SectionMemory memory;
@@ -53,7 +51,7 @@ public abstract class CopyablePane extends TitledPane {
     CopyablePane(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final MessageKey tip,
             final MessageKey copyLabel,
             final MessageKey copyTip,
@@ -128,7 +126,7 @@ public abstract class CopyablePane extends TitledPane {
     private void copyNow() {
         final String text = plainText();
         log.debug("copying the context of {} ({} characters)", getId(), text.length());
-        clipboard.accept(text);
+        clipboard.copy(text);
     }
 
     private HBox copyRow() {
@@ -137,11 +135,5 @@ public abstract class CopyablePane extends TitledPane {
         final HBox row = new HBox(spacer, copy);
         row.setAlignment(Pos.CENTER_RIGHT);
         return row;
-    }
-
-    static void toClipboard(final String text) {
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(text);
-        Clipboard.getSystemClipboard().setContent(content);
     }
 }

@@ -2,8 +2,8 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -20,7 +20,7 @@ final class RawBlock extends TextBodyPane {
     RawBlock(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final Supplier<String> text,
             final BooleanSupplier hostOpen,
             final MessageKey tip,

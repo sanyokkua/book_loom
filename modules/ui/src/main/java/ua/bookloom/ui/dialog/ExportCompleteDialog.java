@@ -12,8 +12,6 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -48,7 +46,7 @@ public final class ExportCompleteDialog {
     private final ModalHost modalHost;
     private final Messages messages;
     private final FileRevealer revealer;
-    private final Consumer<String> clipboard;
+    private final TextClipboard clipboard;
 
     /**
      * Creates the dialog.
@@ -56,35 +54,18 @@ public final class ExportCompleteDialog {
      * @param modalHost the shared overlay the card is shown in
      * @param messages the catalogue every word of the card comes from
      * @param revealer what Open folder and Open book ask of the system
-     */
-    @Inject
-    public ExportCompleteDialog(final ModalHost modalHost, final Messages messages, final FileRevealer revealer) {
-        this(modalHost, messages, revealer, ExportCompleteDialog::toClipboard);
-    }
-
-    /**
-     * Creates the dialog with its own clipboard, so a test can see what Copy path puts there.
-     *
-     * @param modalHost the shared overlay the card is shown in
-     * @param messages the catalogue every word of the card comes from
-     * @param revealer what Open folder and Open book ask of the system
      * @param clipboard where Copy path puts the file's path
      */
-    ExportCompleteDialog(
+    @Inject
+    public ExportCompleteDialog(
             final ModalHost modalHost,
             final Messages messages,
             final FileRevealer revealer,
-            final Consumer<String> clipboard) {
+            final TextClipboard clipboard) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.revealer = Objects.requireNonNull(revealer, "revealer");
         this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
-    }
-
-    private static void toClipboard(final String text) {
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(text);
-        Clipboard.getSystemClipboard().setContent(content);
     }
 
     /**
@@ -233,7 +214,7 @@ public final class ExportCompleteDialog {
         copy.setMinWidth(Region.USE_PREF_SIZE);
         copy.setOnAction(event -> {
             log.debug("export-complete copy path pressed");
-            clipboard.accept(file.toString());
+            clipboard.copy(file.toString());
         });
         return copy;
     }

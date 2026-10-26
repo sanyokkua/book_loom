@@ -14,13 +14,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -29,6 +26,7 @@ import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
 import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Severity;
@@ -57,11 +55,11 @@ public final class DiagnosticActions {
     private final String version;
     private final ExecutorService executor;
     private final Clock clock;
-    private final Consumer<String> clipboard;
+    private final TextClipboard clipboard;
     private final StringProperty bundleSaved = new SimpleStringProperty();
 
     /**
-     * Creates the actions over the system clipboard and clock.
+     * Creates the actions over the system clock.
      *
      * @param diagnosticLog where the logs are and whether the detailed log is on
      * @param session the facts {@code session.json} names
@@ -71,6 +69,7 @@ public final class DiagnosticActions {
      * @param errors shows why a bundle could not be saved
      * @param version the build version {@code session.json} names
      * @param executor the daemon pool the bundle is written on
+     * @param clipboard where Copy path puts the log folder's path
      */
     @Inject
     public DiagnosticActions(
@@ -81,7 +80,8 @@ public final class DiagnosticActions {
             final Toasts toasts,
             final ErrorPresenter errors,
             @BuildVersion final String version,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final TextClipboard clipboard) {
         this(
                 diagnosticLog,
                 session,
@@ -92,7 +92,7 @@ public final class DiagnosticActions {
                 version,
                 executor,
                 Clock.system(ZoneId.systemDefault()),
-                DiagnosticActions::copyToSystemClipboard);
+                clipboard);
     }
 
     DiagnosticActions(
@@ -105,7 +105,7 @@ public final class DiagnosticActions {
             final String version,
             final ExecutorService executor,
             final Clock clock,
-            final Consumer<String> clipboard) {
+            final TextClipboard clipboard) {
         this.diagnosticLog = Objects.requireNonNull(diagnosticLog, "diagnosticLog");
         this.session = Objects.requireNonNull(session, "session");
         this.revealer = Objects.requireNonNull(revealer, "revealer");
@@ -146,7 +146,7 @@ public final class DiagnosticActions {
     /** Puts the log folder's path on the clipboard and says so. FX thread only. */
     public void copyPath() {
         log.info("copying the log folder path to the clipboard");
-        clipboard.accept(diagnosticLog.directory().toString());
+        clipboard.copy(diagnosticLog.directory().toString());
         toasts.feedback(Severity.INFO, MessageKey.ABOUT_LOG_PATH_COPIED);
     }
 
@@ -204,11 +204,5 @@ public final class DiagnosticActions {
 
     private static String property(final String name) {
         return System.getProperty(name, "unknown");
-    }
-
-    private static void copyToSystemClipboard(final String text) {
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(text);
-        Clipboard.getSystemClipboard().setContent(content);
     }
 }

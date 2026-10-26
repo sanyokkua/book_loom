@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import javafx.geometry.Pos;
@@ -24,6 +23,8 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -52,15 +53,15 @@ public final class ContextSection extends CopyablePane {
      * @param messages the catalogue the headings are worded from
      */
     public ContextSection(final String id, final Messages messages) {
-        this(id, messages, CopyablePane::toClipboard);
+        this(id, messages, new SystemTextClipboard());
     }
 
-    ContextSection(final String id, final Messages messages, final Consumer<String> clipboard) {
+    ContextSection(final String id, final Messages messages, final TextClipboard clipboard) {
         this(id, messages, clipboard, new VBox(SECTION_SPACING));
     }
 
     private ContextSection(
-            final String id, final Messages messages, final Consumer<String> clipboard, final VBox sections) {
+            final String id, final Messages messages, final TextClipboard clipboard, final VBox sections) {
         super(
                 id,
                 messages,
