@@ -1,7 +1,9 @@
 package ua.bookloom.ui.screen;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -62,6 +64,7 @@ final class ProviderFormView {
         form.findings().addListener(new WeakChangeListener<>(onFeedback));
         form.errorsShown().addListener(new WeakChangeListener<>(onFeedback));
         form.saveFailed().addListener(new WeakChangeListener<>(onFeedback));
+        form.dirty().addListener(new WeakChangeListener<>(onFeedback));
         form.credentialStatus().addListener(new WeakChangeListener<>(onFeedback));
         form.errorsShown().addListener(new WeakChangeListener<>(onRefused));
         form.saveFailed().addListener(new WeakChangeListener<>(onRefused));
@@ -115,6 +118,7 @@ final class ProviderFormView {
     private void showFeedback() {
         connection.showCredential(form.credentialStatus().get());
         connection.showAdvice(form.findings().get());
+        showFieldErrors();
         final List<String> lines = form.errorsShown().get()
                 ? form.findings().get().stream()
                         .filter(ProviderDraft.FormFinding::blocking)
@@ -128,6 +132,22 @@ final class ProviderFormView {
         errorsText.setText(String.join("\n", lines));
         errors.setVisible(!lines.isEmpty());
         errors.setManaged(!lines.isEmpty());
+    }
+
+    // Each field's first blocking finding sits under it once the person has typed or pressed Save; an untouched new
+    // form is not scolded for the name nobody has typed yet.
+    private void showFieldErrors() {
+        final boolean shown = form.dirty().get() || form.errorsShown().get();
+        final Map<ProviderDraft.Field, String> errorOf = new EnumMap<>(ProviderDraft.Field.class);
+        if (shown) {
+            form.findings().get().stream()
+                    .filter(ProviderDraft.FormFinding::blocking)
+                    .forEach(finding -> errorOf.putIfAbsent(
+                            finding.field(),
+                            messages.get(finding.key(), finding.args().toArray())));
+        }
+        connection.showErrors(field -> errorOf.getOrDefault(field, ""));
+        extras.showHeadersError(errorOf.getOrDefault(ProviderDraft.Field.HEADERS, ""));
     }
 
     // A refused or failed save shows its reasons inside the fold, so the fold must not be shut on them.

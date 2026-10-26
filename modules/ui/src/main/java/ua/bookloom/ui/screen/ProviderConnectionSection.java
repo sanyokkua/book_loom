@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.List;
+import java.util.function.Function;
 import javafx.scene.Node;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -35,8 +36,8 @@ final class ProviderConnectionSection {
                 MessageKey.SETTINGS_FORM_REQUEST_TIMEOUT_TIP,
                 ProviderDraft::requestSeconds,
                 ProviderDraft::withRequestSeconds);
-        grid.row(messages.get(MessageKey.SETTINGS_FORM_CONNECT_TIMEOUT), connect.node());
-        grid.row(messages.get(MessageKey.SETTINGS_FORM_REQUEST_TIMEOUT), request.node());
+        grid.row(messages.get(MessageKey.SETTINGS_FORM_CONNECT_TIMEOUT), connect.cell());
+        grid.row(messages.get(MessageKey.SETTINGS_FORM_REQUEST_TIMEOUT), request.cell());
     }
 
     Node node() {
@@ -53,6 +54,14 @@ final class ProviderConnectionSection {
 
     void showCredential(final ProviderDraft.CredentialStatus status) {
         identity.showCredential(status);
+    }
+
+    /** Shows each field's first finding under it; {@code errorOf} answers an empty text for a field that is fine. */
+    void showErrors(final Function<ProviderDraft.Field, String> errorOf) {
+        identity.showErrors(errorOf);
+        endpoints.showErrors(errorOf);
+        connect.showError(errorOf.apply(ProviderDraft.Field.CONNECT_TIMEOUT));
+        request.showError(errorOf.apply(ProviderDraft.Field.REQUEST_TIMEOUT));
     }
 
     void showAdvice(final List<ProviderDraft.FormFinding> findings) {

@@ -30,6 +30,7 @@ final class VerificationExchanges {
 
     private static final double NANOS_PER_SECOND = 1_000_000_000.0;
     private static final int OK = 200;
+    private static final Pattern USER_INFO = Pattern.compile("^([A-Za-z][A-Za-z0-9+.-]*://)[^/?#@]*@");
     private static final Pattern STATUS = Pattern.compile("httpStatus=(\\d{3})");
 
     static VerificationExchange connection(final ProviderConfig config, final StageOutcome outcome) {
@@ -115,7 +116,11 @@ final class VerificationExchanges {
                     case MODELS -> EndpointPaths.modelsPath(config, ollama ? "/api/tags" : "/models");
                     case INFERENCE -> EndpointPaths.chatPath(config, ollama ? "/api/chat" : "/chat/completions");
                 };
-        final String base = config.baseUrl().toString().replaceFirst("/+$", "");
+        // A user name or password in a stored address never reaches the dialog or the curl line copied from it.
+        final String base = USER_INFO
+                .matcher(config.baseUrl().toString())
+                .replaceFirst("$1")
+                .replaceFirst("/+$", "");
         return base + "/" + path.replaceFirst("^/+", "");
     }
 }

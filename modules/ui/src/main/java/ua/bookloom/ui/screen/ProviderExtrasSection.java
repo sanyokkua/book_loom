@@ -32,6 +32,7 @@ final class ProviderExtrasSection {
     private final ToggleSwitch headersOn = new ToggleSwitch();
     private final VBox headerRows = new VBox(6);
     private final VBox headersPart = new VBox(6);
+    private final Label headersError = new Label();
     private final ToggleSwitch modelsOn = new ToggleSwitch();
     private final FlowPane chips = new FlowPane(6, 6);
     private final TextField modelInput = new TextField();
@@ -63,7 +64,11 @@ final class ProviderExtrasSection {
         final Label hint = new Label(messages.get(MessageKey.SETTINGS_FORM_HEADERS_HINT));
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
-        headersPart.getChildren().addAll(headerRows, add, hint);
+        headersError.setId("settings-form-headers-error");
+        headersError.getStyleClass().add("hint-err");
+        headersError.setWrapText(true);
+        showHeadersError("");
+        headersPart.getChildren().addAll(headerRows, headersError, add, hint);
         bindPart(headersOn, headersPart);
         headersOn.selectedProperty().addListener((observed, was, now) -> {
             if (!now) {
@@ -109,6 +114,16 @@ final class ProviderExtrasSection {
         final List<T> grown = new ArrayList<>(list);
         grown.add(added);
         return grown;
+    }
+
+    /**
+     * Shows what is wrong with the header rows under them.
+     *
+     * @param text the translated finding; empty when the rows are fine
+     */
+    void showHeadersError(final String text) {
+        headersError.setText(text);
+        Visibility.show(headersError, !text.isEmpty());
     }
 
     /** Shows the draft's lists; a switch that was turned on stays on while its list is still empty. */

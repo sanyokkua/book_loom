@@ -1,18 +1,21 @@
 package ua.bookloom.app;
 
+import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.ProvisionException;
+import com.google.inject.spi.Message;
 import com.google.inject.util.Modules;
 import java.time.Clock;
 import java.time.ZoneId;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -30,6 +33,7 @@ import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.OpenStepsModule;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.StartupMessages;
 import ua.bookloom.ui.StoredPreferences;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
@@ -57,45 +61,73 @@ public final class BookLoomApplication extends Application {
     private static final int EXIT_STORAGE_FAILED = 1;
 
     private final AppLifecycle lifecycle = new AppLifecycle();
+    private final BiConsumer<AppError, Integer> startupFailure;
 
     private @Nullable Injector injector;
 
     /** Constructed reflectively by the JavaFX launcher, which is why {@link StartupContext} exists. */
     public BookLoomApplication() {
-        // Nothing here: init() runs before start() and is the supported place for real work.
+        this(StartupFailureDialog::showOnRunningToolkitAndExit);
+    }
+
+    /**
+     * For a test that watches where a startup failure goes instead of letting the process exit.
+     *
+     * @param startupFailure shows the failure and ends the process; a test's recorder returns instead
+     */
+    BookLoomApplication(final BiConsumer<AppError, Integer> startupFailure) {
+        this.startupFailure = Objects.requireNonNull(startupFailure, "startupFailure");
     }
 
     @Override
     public void init() {
         final StartupContext startup = StartupContext.take();
-
-        injector = ResolveAll.isEnabled()
-                ? smokeBuild(Platform::runLater, () -> smokeInjector(startup))
-                : developmentInjector(startup);
-
-        lifecycle.phaseOne(injector);
-        openResources(injector);
+        final Injector built = buildAndOpen(startup);
+        injector = built;
         // init() is not the FX thread: this read seeds the stored review mode the FX-thread readers (ready card) see.
         log.debug(
                 "seeded review mode {}",
-                injector.getInstance(ReviewModeSource.class).current());
-        seedPreferences(injector);
+                built.getInstance(ReviewModeSource.class).current());
+        seedPreferences(built);
         log.info("injector built and two-phase init complete");
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
-        injector.getInstance(SessionInfo.class)
+        built.getInstance(SessionInfo.class)
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
     }
 
-    // A database that cannot be opened stops the start with its own message; any other failure stays a crash.
-    private void openResources(final Injector built) {
+    // A database that cannot be opened stops the start with its own message; any other failure stays a crash. The
+    // database opens while the injector is built (an eager singleton reads the providers), not only in phase two, so
+    // both sit inside the one catch.
+    private Injector buildAndOpen(final StartupContext startup) {
         try {
+            final Injector built = ResolveAll.isEnabled()
+                    ? smokeBuild(Platform::runLater, () -> smokeInjector(startup))
+                    : developmentInjector(startup);
+            lifecycle.phaseOne(built);
             lifecycle.phaseTwo(built);
-        } catch (ProvisionException e) {
-            final AppError storage = StorageOpenException.errorIn(e).orElseThrow(() -> e);
-            log.error("startup stopped: the database could not be opened, title={}", storage.title());
-            StartupFailureDialog.showOnRunningToolkitAndExit(storage, EXIT_STORAGE_FAILED);
+            return built;
+        } catch (RuntimeException e) {
+            final AppError storage = storageFailure(e).orElseThrow(() -> e);
+            log.error("startup stopped: the database could not be opened, code={}", storage.code());
+            startupFailure.accept(
+                    StartupMessages.storageFailure(storage, startup.paths().dataDir(), Locale.getDefault()),
+                    EXIT_STORAGE_FAILED);
             throw e;
         }
+    }
+
+    // Guice reports a failure while it builds the graph as a CreationException whose messages hold the causes.
+    static Optional<AppError> storageFailure(final Throwable thrown) {
+        final Optional<AppError> direct = StorageOpenException.errorIn(thrown);
+        if (direct.isPresent() || !(thrown instanceof CreationException creation)) {
+            return direct;
+        }
+        return creation.getErrorMessages().stream()
+                .map(Message::getCause)
+                .filter(Objects::nonNull)
+                .map(StorageOpenException::errorIn)
+                .flatMap(Optional::stream)
+                .findFirst();
     }
 
     /**

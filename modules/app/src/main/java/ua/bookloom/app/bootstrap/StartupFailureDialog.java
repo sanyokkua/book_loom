@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
 
 /**
@@ -82,6 +83,10 @@ public final class StartupFailureDialog {
     public static void showOnRunningToolkitAndExit(AppError error, int exitCode) {
         Objects.requireNonNull(error, "error");
         final CountDownLatch dismissed = new CountDownLatch(1);
+        // Logging is configured by now (this runs from init()), so a local logger is safe; the packaged image's
+        // read-only-database smoke waits for this line.
+        LoggerFactory.getLogger(StartupFailureDialog.class)
+                .info("startup message shown code={} exitCode={}", error.code(), exitCode);
         Platform.runLater(() -> show(error, dismissed));
         awaitDismissal(dismissed);
         Platform.exit();

@@ -164,6 +164,20 @@ public abstract class ProviderConfigsContractTest {
         assertThat(configs().find("literal-ref")).isEmpty();
     }
 
+    // A key whose characters happen to make a valid variable name is still a key; the store refuses it on its own,
+    // even when no form judged it first.
+    @ParameterizedTest
+    @ValueSource(strings = {"sk_live_51HabcDEF123ghiJKL456", "ghp_a1B2c3D4e5F6g7H8i9J0", "AKIAIOSFODNN7EXAMPLE"})
+    void save_keyShapedCredentialRef_isRefusedAndNotStored(final String key) {
+        assertRefused(sample("key-shaped").withAuth(ProviderAuth.BEARER).withCredentialRef(key));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://user:pass@127.0.0.1:11434", "http://127.0.0.1:0", "http://127.0.0.1:65536"})
+    void save_addressWithCredentialsOrBadPort_isRefusedAndNotStored(final String address) {
+        assertRefused(sample("bad-address").withBaseUrl(URI.create(address)));
+    }
+
     @Test
     void save_environmentVariableNameAsCredentialRef_isAccepted() {
         final ProviderConfig referenced =

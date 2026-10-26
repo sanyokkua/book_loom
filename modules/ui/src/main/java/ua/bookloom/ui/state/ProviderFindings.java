@@ -51,6 +51,8 @@ final class ProviderFindings {
         final List<String> args = subject == null ? List.of() : List.of(subject.strip());
         return switch (finding.rule()) {
             case BASE_URL_INVALID -> blocking(MessageKey.SETTINGS_ERROR_ADDRESS, Field.ADDRESS);
+            case BASE_URL_CREDENTIALS -> blocking(MessageKey.SETTINGS_ERROR_ADDRESS_CREDENTIALS, Field.ADDRESS);
+            case BASE_URL_PORT -> blocking(MessageKey.SETTINGS_ERROR_ADDRESS_PORT, Field.ADDRESS);
             case TIMEOUT_NOT_POSITIVE -> blocking(MessageKey.SETTINGS_ERROR_NUMBER, Field.REQUEST_TIMEOUT);
             case TIMEOUT_TOO_LONG -> blocking(MessageKey.SETTINGS_ERROR_TIMEOUT_TOO_LONG, Field.REQUEST_TIMEOUT);
             case OLLAMA_CHAT_PATH -> blocking(MessageKey.SETTINGS_ERROR_OLLAMA_CHAT_PATH, Field.CHAT_PATH);

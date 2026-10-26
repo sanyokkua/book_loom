@@ -800,10 +800,14 @@ restarts".
   Test · Change model. **Connection details** (fold; opens by itself when there is a problem, for a new provider, or
   with Show technical details): the GoText form — Name (a name another provider shows, ignoring case, is a finding
   that refuses Save) · Kind (Ollama / OpenAI-compatible) · Sign-in (None · Bearer
-  token · API-key header + header name; key from environment variable, "set" / "not set") · Address · **Models
+  token · API-key header + header name; key from environment variable, "set" / "not set"; a value that is not a
+  variable name or reads like a key is refused) · Address (absolute `http`/`https` with a host, port 1–65535, no user
+  name or password) · **Models
   endpoint** and **Inference endpoint** overrides (the inference one disabled for Ollama, with the reason) · Connect and
   request timeouts · Model (list + ↻, or typed) · Use custom headers (values may be `${env:NAME}`) · Use custom models
-  (chips) · **Checks** in plain words ("Ollama answers (41 ms)", "7 models found — the chosen one is there", "The model
+  (chips; a header name of up to 64 token characters). Each finding sits under its field (`#<field-id>-error`, the
+  field's edge in the error role) once the person has typed or pressed Save; Save stays pressable, its hover names the
+  first finding, and a press lists them all at the top of the fold; the store refuses the same description. **Checks** in plain words ("Ollama answers (41 ms)", "7 models found — the chosen one is there", "The model
   replied in 1.2 s") with **Details**; when Ollama or LM Studio on this computer (a loopback address) does not answer,
   the reason and the test dialog's verdict say "<Name> is not open. Open the app, then test again." instead of the
   failure's generic words, which stay for any other address or an answer with an error. `ProviderConfig` gains `displayName`, `auth`, `credentialRef`, `modelsPath`,

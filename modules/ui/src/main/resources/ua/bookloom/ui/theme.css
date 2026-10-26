@@ -3053,6 +3053,16 @@
     -fx-font-size: 12px;
 }
 
+/* A finding under the form field it is about; the field's edge takes the same role. */
+.hint-err {
+    -fx-text-fill: -color-err-fg;
+    -fx-font-size: 12px;
+}
+
+.text-field.field-invalid {
+    -fx-border-color: -color-err-bd;
+}
+
 .key-status-set {
     -fx-text-fill: -color-ok-fg;
     -fx-font-size: 12px;

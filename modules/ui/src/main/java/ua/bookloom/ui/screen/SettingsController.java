@@ -29,6 +29,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.ProviderDraft;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderInUse;
 import ua.bookloom.ui.state.ProviderRow;
@@ -187,7 +188,18 @@ public final class SettingsController {
         Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
         Tips.install(messages, formUse, MessageKey.SETTINGS_PROVIDER_USE_TIP);
         Tips.install(messages, formCancel, MessageKey.SETTINGS_FORM_CANCEL_TIP);
-        Tips.install(messages, formSave, MessageKey.SETTINGS_FORM_SAVE_TIP);
+        Tips.installLive(formSave, Bindings.createStringBinding(this::saveTip, form.findings()));
+    }
+
+    // Save stays pressable so a press can list every problem; until then its explanation names the first one.
+    private String saveTip() {
+        return form.findings().get().stream()
+                .filter(ProviderDraft.FormFinding::blocking)
+                .findFirst()
+                .map(finding -> messages.get(
+                        MessageKey.SETTINGS_FORM_SAVE_BLOCKED,
+                        messages.get(finding.key(), finding.args().toArray())))
+                .orElseGet(() -> messages.get(MessageKey.SETTINGS_FORM_SAVE_TIP));
     }
 
     private void bindHeader() {

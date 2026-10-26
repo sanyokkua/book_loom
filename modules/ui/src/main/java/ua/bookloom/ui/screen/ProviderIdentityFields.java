@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Objects;
+import java.util.function.Function;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Toggle;
@@ -45,10 +46,10 @@ final class ProviderIdentityFields {
                 ProviderDraft::name,
                 ProviderDraft::withName);
         keys = new KeyFields(form, messages);
-        grid.row(messages.get(MessageKey.SETTINGS_FORM_NAME), name.node());
+        grid.row(messages.get(MessageKey.SETTINGS_FORM_NAME), name.cell());
         grid.row(messages.get(MessageKey.SETTINGS_KIND_LABEL), kindCombo());
         grid.row(messages.get(MessageKey.SETTINGS_FORM_AUTH), authButtons());
-        keyHeaderRow = grid.row(messages.get(MessageKey.SETTINGS_FORM_KEY_HEADER), keys.header.node());
+        keyHeaderRow = grid.row(messages.get(MessageKey.SETTINGS_FORM_KEY_HEADER), keys.header.cell());
         keyVariableRow = grid.row(messages.get(MessageKey.SETTINGS_FORM_KEY_VARIABLE), keyVariableBox());
     }
 
@@ -169,7 +170,7 @@ final class ProviderIdentityFields {
         final Label hint = new Label(messages.get(MessageKey.SETTINGS_FORM_KEY_VARIABLE_HINT));
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
-        return new VBox(4, new HBox(8, keys.variable.node(), keyStatus), hint);
+        return new VBox(4, new HBox(8, keys.variable.cell(), keyStatus), hint);
     }
 
     void show(final ProviderDraft draft) {
@@ -182,6 +183,13 @@ final class ProviderIdentityFields {
         showAuth(draft.auth());
         keyHeaderRow.show(draft.auth() == ProviderAuth.API_KEY);
         keyVariableRow.show(draft.auth() != ProviderAuth.NONE);
+    }
+
+    /** Shows the findings of the name, the key header and the key variable under those fields. */
+    void showErrors(final Function<ProviderDraft.Field, String> errorOf) {
+        name.showError(errorOf.apply(ProviderDraft.Field.NAME));
+        keys.header.showError(errorOf.apply(ProviderDraft.Field.KEY_HEADER));
+        keys.variable.showError(errorOf.apply(ProviderDraft.Field.KEY_VARIABLE));
     }
 
     /** Shows whether the key's variable has a value, in words; never the value. */

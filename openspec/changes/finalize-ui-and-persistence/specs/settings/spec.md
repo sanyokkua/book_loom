@@ -102,19 +102,34 @@ The provider form SHALL let the person add custom headers as name and value rows
 
 ### Requirement: Refuse a header name or a timeout a request could not use
 
-IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, or a connect or request timeout is longer than 3600 seconds, THEN the provider form SHALL hold Save with a finding on that field, and a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent.
+IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, or is longer than 64 characters, or a connect or request timeout is not a whole number from 1 to 3600 seconds, or the address is not an absolute `http`/`https` address with a host, names a port outside 1 to 65535 or carries a user name or password, or the key variable is not the name of an environment variable (letters, digits and underscores, not starting with a digit) or reads like a key (a known key prefix such as `sk-`, `sk_`, `ghp_`, `AKIA…`, or 24 or more characters mixing lower case, upper case and digits), THEN the provider form SHALL show the finding under that field once the person has typed or pressed Save, SHALL refuse Save while explaining on Save's hover what holds it, and the provider store SHALL refuse the same description with `ErrorCode.validation` so nothing of it is written; a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent, and the test dialog and its curl line SHALL show its address without any user name or password.
 
 **Source**: `docs/specification/mockups/README.md#providers`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
 
 #### Scenario: A header name with a space
 
 - **WHEN** the header `X Team` is added with the value `blue`
-- **THEN** Save is held and the form says the header name `X Team` can hold only Latin letters, digits and `- _ . ~`
+- **THEN** Save is held and the form says under the headers that the header name `X Team` can hold only up to 64 Latin letters, digits and `- _ . ~`
 
 #### Scenario: A timeout longer than an hour
 
 - **WHEN** the connect timeout is `3601`
-- **THEN** Save is held and the form asks for at most 3600 seconds
+- **THEN** Save is held and the form asks under the connect timeout for at most 3600 seconds
+
+#### Scenario: A key typed where its variable's name belongs
+
+- **WHEN** Bearer token is chosen and `sk-literal-SECRET-abc123` or `sk_live_51HabcDEF123ghiJKL456` is typed as the key variable and Save is pressed
+- **THEN** the form says under the field "Type the NAME of an environment variable that holds the key, not the key itself.", nothing is stored, and the value appears in no log line
+
+#### Scenario: An address with a password or an impossible port
+
+- **WHEN** the address is `http://user:pass@127.0.0.1:11434` or `http://127.0.0.1:65536`
+- **THEN** Save is held with the finding under the address, and nothing is stored
+
+#### Scenario: An address without a scheme
+
+- **WHEN** the address is `127.0.0.1` or `localhost:11434`
+- **THEN** Save is held and the form asks under the address for one that starts with `http://` or `https://`
 
 ### Requirement: Use one provider and ask first while the open project has stored decisions
 

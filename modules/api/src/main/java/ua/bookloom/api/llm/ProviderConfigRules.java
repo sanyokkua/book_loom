@@ -29,15 +29,27 @@ public interface ProviderConfigRules {
 
     /**
      * The characters an HTTP header name may hold (RFC 7230's {@code token}); a space, a colon or a control character
-     * would pass a save and then fail every request as a transport error.
+     * would pass a save and then fail every request as a transport error. Sixty-four is longer than any real header
+     * name, so a longer one is a paste in the wrong field.
      */
-    Pattern HEADER_NAME = Pattern.compile("[!#$%&'*+\\-.^_`|~0-9A-Za-z]+");
+    Pattern HEADER_NAME = Pattern.compile("[!#$%&'*+\\-.^_`|~0-9A-Za-z]{1,64}");
 
     /** The longest connect or request timeout: an hour, longer than any single model call is worth waiting for. */
     Duration MAX_TIMEOUT = Duration.ofHours(1);
 
     /** A path ending in the {@code v1} segment. */
     Pattern V1_SUFFIX = Pattern.compile("(^|/)v1/?$");
+
+    /**
+     * A value that has a variable name's shape yet reads like a key: the prefix of a well-known key format, or a long run
+     * that mixes lower case, upper case and digits the way generated keys do and variable names do not.
+     */
+    Pattern SECRET_SHAPE =
+            Pattern.compile("(sk|pk|rk|ghp|gho|ghu|ghs|ghr|github_pat|glpat|hf|xox[abprs])[-_].*|AKIA[0-9A-Z]{16}"
+                    + "|(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9_]{24,}");
+
+    /** The highest TCP port. */
+    int MAX_PORT = 65_535;
 
     /** Lower-case fragments that make a header name credential-like. */
     List<String> CREDENTIAL_NAME_PARTS = List.of("authorization", "key", "token", "secret");
@@ -46,6 +58,10 @@ public interface ProviderConfigRules {
     enum Rule {
         /** The base URL is not an absolute HTTP or HTTPS address. */
         BASE_URL_INVALID,
+        /** The base URL carries a user name or password, which would be stored and shown in clear. */
+        BASE_URL_CREDENTIALS,
+        /** The base URL names a port outside 1 to 65535. */
+        BASE_URL_PORT,
         /** A connect or request timeout is zero or negative. */
         TIMEOUT_NOT_POSITIVE,
         /** A connect or request timeout is longer than {@link #MAX_TIMEOUT}. */
@@ -140,6 +156,16 @@ public interface ProviderConfigRules {
             findings.add(new Finding(Rule.BASE_URL_INVALID, null));
             return;
         }
+        if (url.getRawUserInfo() != null) {
+            errors.add(validation("The provider base URL must not carry a user name or password."));
+            findings.add(new Finding(Rule.BASE_URL_CREDENTIALS, null));
+            return;
+        }
+        if (url.getPort() == 0 || url.getPort() > MAX_PORT) {
+            errors.add(validation("The provider base URL must name a port from 1 to 65535."));
+            findings.add(new Finding(Rule.BASE_URL_PORT, null));
+            return;
+        }
         final String path = url.getPath() == null ? "" : url.getPath();
         if (config.kind() == ProviderKind.OPENAI_COMPATIBLE
                 && !V1_SUFFIX.matcher(path).find()) {
@@ -194,9 +220,7 @@ public interface ProviderConfigRules {
     private static void checkSignIn(
             final ProviderConfig config, final List<AppError> errors, final List<Finding> findings) {
         final String reference = config.credentialRef();
-        if (reference != null
-                && !reference.isBlank()
-                && !ENV_NAME.matcher(reference).matches()) {
+        if (reference != null && !reference.isBlank() && !isVariableName(reference)) {
             errors.add(validation("The sign-in reference must be the name of an environment variable (letters, digits"
                     + " and underscores, not starting with a digit), never the key itself."));
             findings.add(new Finding(Rule.CREDENTIAL_REF_NOT_A_NAME, null));
@@ -220,6 +244,17 @@ public interface ProviderConfigRules {
                     + " holds a space, a colon or another character a header name may not."));
             findings.add(new Finding(Rule.API_KEY_HEADER_INVALID, keyHeader));
         }
+    }
+
+    /**
+     * Tells whether a sign-in reference may be stored: a variable name that does not read like a key.
+     *
+     * @param reference the typed reference
+     * @return {@code true} if it has a variable name's shape and no key's shape, {@code false} otherwise
+     */
+    static boolean isVariableName(final String reference) {
+        return ENV_NAME.matcher(reference).matches()
+                && !SECRET_SHAPE.matcher(reference).matches();
     }
 
     private static boolean isBlank(final @Nullable String value) {

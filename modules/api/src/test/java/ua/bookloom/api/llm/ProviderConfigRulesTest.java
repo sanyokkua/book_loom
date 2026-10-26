@@ -197,7 +197,14 @@ class ProviderConfigRulesTest {
                 "1KEY|BEARER|false",
                 "MY KEY|API_KEY|false",
                 "${env:LMS_KEY}|BEARER|false",
-                "sk-test-123|NONE|false"
+                "sk-test-123|NONE|false",
+                "OPENAI_API_KEY|BEARER|true",
+                "HF_TOKEN|BEARER|true",
+                "MyLocalServerKey|BEARER|true",
+                "sk_live_51HabcDEF123ghiJKL456|BEARER|false",
+                "ghp_a1B2c3D4e5F6g7H8i9J0|BEARER|false",
+                "AKIAIOSFODNN7EXAMPLE|BEARER|false",
+                "a8Fk2Lq9Zx7Wm3Np5Rt1Vb6Yc4|BEARER|false"
             })
     void check_credentialRef_mustBeAnEnvironmentVariableName(
             final String reference, final String auth, final boolean accepted) {
@@ -225,6 +232,30 @@ class ProviderConfigRulesTest {
     void check_noAuth_needsNoCredential() {
         assertThat(ProviderConfigRules.check(config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE))
                         .isValid())
+                .isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "http://user:pass@127.0.0.1:11434,BASE_URL_CREDENTIALS",
+        "http://user@127.0.0.1:11434,BASE_URL_CREDENTIALS",
+        "http://127.0.0.1:0,BASE_URL_PORT",
+        "http://127.0.0.1:65536,BASE_URL_PORT",
+        "http://127.0.0.1:-1,BASE_URL_INVALID",
+        "127.0.0.1,BASE_URL_INVALID",
+        "localhost:11434,BASE_URL_INVALID",
+        "file:///tmp/x,BASE_URL_INVALID"
+    })
+    void findings_badAddress_namesItsRule(final String url, final ProviderConfigRules.Rule rule) {
+        assertThat(ProviderConfigRules.check(config(url, ProviderKind.OLLAMA)).findings())
+                .extracting(ProviderConfigRules.Finding::rule)
+                .containsExactly(rule);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://127.0.0.1:1", "http://127.0.0.1:65535", "http://[::1]:11434", "https://host"})
+    void check_addressWithUsablePort_isValid(final String url) {
+        assertThat(ProviderConfigRules.check(config(url, ProviderKind.OLLAMA)).isValid())
                 .isTrue();
     }
 

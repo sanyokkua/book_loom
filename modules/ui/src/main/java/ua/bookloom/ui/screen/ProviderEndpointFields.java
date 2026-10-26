@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.ProviderKind;
@@ -47,7 +48,7 @@ final class ProviderEndpointFields {
                 ProviderDraft::chatPath,
                 ProviderDraft::withChatPath);
         grid.row(messages.get(MessageKey.SETTINGS_FORM_ADDRESS), addressBox());
-        grid.row(messages.get(MessageKey.SETTINGS_FORM_MODELS_PATH), modelsPath.node());
+        grid.row(messages.get(MessageKey.SETTINGS_FORM_MODELS_PATH), modelsPath.cell());
         grid.row(messages.get(MessageKey.SETTINGS_FORM_CHAT_PATH), chatBox());
     }
 
@@ -55,7 +56,7 @@ final class ProviderEndpointFields {
         addressWarning.setId("settings-form-address-warning");
         addressWarning.getStyleClass().add("hint-warn");
         addressWarning.setWrapText(true);
-        return new VBox(4, address.node(), addressWarning);
+        return new VBox(4, address.cell(), addressWarning);
     }
 
     private VBox chatBox() {
@@ -63,7 +64,7 @@ final class ProviderEndpointFields {
         chatNote.setText(messages.get(MessageKey.SETTINGS_FORM_CHAT_PATH_NOTE));
         chatNote.getStyleClass().add("hint");
         chatNote.setWrapText(true);
-        return new VBox(4, chatPath.node(), chatNote);
+        return new VBox(4, chatPath.cell(), chatNote);
     }
 
     void show(final ProviderDraft draft) {
@@ -74,6 +75,12 @@ final class ProviderEndpointFields {
         chatPath.node().setDisable(ollama);
         chatNote.setVisible(ollama);
         chatNote.setManaged(ollama);
+    }
+
+    /** Shows the findings of the address and the chat endpoint under those fields. */
+    void showErrors(final Function<ProviderDraft.Field, String> errorOf) {
+        address.showError(errorOf.apply(ProviderDraft.Field.ADDRESS));
+        chatPath.showError(errorOf.apply(ProviderDraft.Field.CHAT_PATH));
     }
 
     /** Shows the advice (not the errors) that belongs under the address. */

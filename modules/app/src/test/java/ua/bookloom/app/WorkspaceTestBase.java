@@ -90,6 +90,7 @@ abstract class WorkspaceTestBase {
 
     protected Injector injector;
     protected AppShellView shell;
+    private @Nullable AppLifecycle lifecycle;
     private final ListAppender<ILoggingEvent> pauseLog = new ListAppender<>();
 
     /** Boots the injector for {@code mode} and shows the window on the Import screen. */
@@ -105,13 +106,46 @@ abstract class WorkspaceTestBase {
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? flag : null, name -> null));
-        final Stage stage = FxToolkit.registerPrimaryStage();
         // Built here, not through BookLoomApplication.init(): that hard-codes its modules, and this test needs to
-        // replace one. It therefore skips AppLifecycle's two phases, which hold nothing yet; when persistence fills
-        // phase two this test must run it too.
-        injector = Guice.createInjector(
+        // replace one. It therefore skips AppLifecycle's two phases, which open nothing over the in-memory adapters.
+        showWindow(Guice.createInjector(
                 Modules.override(new CoreModules(startup, new InMemoryPersistenceModule()), new UiModule())
-                        .with(new PseudoOnlyModule(), extra));
+                        .with(new PseudoOnlyModule(), extra)));
+    }
+
+    /**
+     * Boots the window the way the desktop app does: the SQLite database in {@link #dataDir}, the real provider
+     * registry, both lifecycle phases. A second call is a restart over the same file.
+     */
+    protected void startStoredWindow() throws Exception {
+        closeStoredWindow();
+        final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(dataDir, logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
+        final Injector built = Guice.createInjector(
+                new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule());
+        lifecycle = new AppLifecycle();
+        lifecycle.phaseOne(built);
+        lifecycle.phaseTwo(built);
+        BookLoomApplication.seedPreferences(built);
+        showWindow(built);
+    }
+
+    // Stops the stored window's work and closes its database, as BookLoomApplication.stop() does.
+    private void closeStoredWindow() throws Exception {
+        if (lifecycle != null) {
+            FxToolkit.cleanupStages();
+            shutDown(injector);
+            lifecycle.close();
+            lifecycle = null;
+        }
+    }
+
+    private void showWindow(final Injector built) throws Exception {
+        final Stage stage = FxToolkit.registerPrimaryStage();
+        injector = built;
         shell = injector.getInstance(AppShellView.class);
         watchPauses();
         onFx(() -> {
@@ -128,6 +162,7 @@ abstract class WorkspaceTestBase {
         pauseLog.stop();
         FxToolkit.cleanupStages();
         shutDown(injector);
+        closeStoredWindow();
     }
 
     /**

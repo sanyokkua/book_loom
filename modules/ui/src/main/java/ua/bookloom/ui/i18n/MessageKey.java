@@ -481,6 +481,12 @@ public enum MessageKey {
     TOAST_IMPORT_FOLDER("toast.importFolder"),
     /** Transient message raised when the stored work was moved aside at launch; argument 0 is the new file name. */
     TOAST_STORAGE_SET_ASIDE("toast.storageSetAside"),
+    /** Title of the startup message shown when the saved work cannot be opened. */
+    STARTUP_STORAGE_TITLE("startup.storage.title"),
+    /** Startup message: the database file cannot be written; argument 0 is the data folder. */
+    STARTUP_STORAGE_NOT_WRITABLE("startup.storage.notWritable"),
+    /** Startup message: another program holds the database file; argument 0 is the data folder. */
+    STARTUP_STORAGE_IN_USE("startup.storage.inUse"),
     /** Transient message raised when a provider's model list could not be read outside a dialog. */
     TOAST_MODEL_LIST_UNREADABLE("toast.modelListUnreadable"),
     /** Transient message raised when a project's automatic name changed; argument 0 is the new name. */
@@ -665,6 +671,10 @@ public enum MessageKey {
     SETTINGS_MODELS_FIELD_OLLAMA("settings.models.field.ollama"),
     /** Error under the address field: it must be an http or https address. */
     SETTINGS_ERROR_ADDRESS("settings.error.address"),
+    /** Error under the address field: it carries a user name or password. */
+    SETTINGS_ERROR_ADDRESS_CREDENTIALS("settings.error.addressCredentials"),
+    /** Error under the address field: its port is outside 1 to 65535. */
+    SETTINGS_ERROR_ADDRESS_PORT("settings.error.addressPort"),
     /** Error under the chat endpoint: Ollama has its own chat protocol and takes no override. */
     SETTINGS_ERROR_OLLAMA_CHAT_PATH("settings.error.ollamaChatPath"),
     /** Error on the headers: argument 0 is the header whose value looks like a key. */
@@ -819,6 +829,8 @@ public enum MessageKey {
     SETTINGS_FORM_SAVE("settings.form.save"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_SAVE}. */
     SETTINGS_FORM_SAVE_TIP("settings.form.save.tip"),
+    /** Hover explanation of Save while a marked field holds it back; argument 0 is the first problem. */
+    SETTINGS_FORM_SAVE_BLOCKED("settings.form.saveBlocked"),
     /** The footer’s note after a successful save. */
     SETTINGS_FORM_SAVED("settings.form.saved"),
     /** Error on the headers: argument 0 is a header written twice. */

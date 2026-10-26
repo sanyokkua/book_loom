@@ -65,19 +65,19 @@ IF the stored database was made by another schema version, or cannot be read, TH
 
 ### Requirement: Keep a database that is in use or cannot be written and refuse to start
 
-IF the stored database is held locked by another program, or the file or its folder cannot be written, THEN the system SHALL leave the file where it is, untouched, and SHALL stop at startup with a message that says which of the two it is.
+IF the stored database is held locked by another program, or the file or its folder cannot be written, THEN the system SHALL leave the file where it is, untouched, and SHALL stop at startup, before any window, with one startup message in the operating system's language (English or Ukrainian) that says which of the two it is, names the data folder and tells what to do, and SHALL then exit with a non-zero status. The database opens while the window's object graph is built, so a failure there takes the same path as one in the later start-up phase.
 
 **Source**: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#corruption-and-recovery`. In plain words: a lock or a permission problem says nothing about whether the file is readable. Setting it aside would hide every project behind a fixable problem, so the person is told what to fix instead.
 
 #### Scenario: A read-only database
 
 - **WHEN** the application starts and `bookloom.db` is a valid database whose permissions are read-only
-- **THEN** no `bookloom.db.old-…` file is created, `bookloom.db` is unchanged, and the startup message `Storage not writable` is shown
+- **THEN** no `bookloom.db.old-…` file is created, `bookloom.db` is unchanged, the startup message "BookLoom cannot write its saved work in the folder <data folder>. Check the permissions of the data folder and start BookLoom again." is shown once, no window opens and the process exits with status 1
 
 #### Scenario: A database locked by another program
 
 - **WHEN** the application starts while another program holds `bookloom.db` in an exclusive lock
-- **THEN** no `bookloom.db.old-…` file is created and the startup message `Storage in use` is shown
+- **THEN** no `bookloom.db.old-…` file is created and the startup message "Another program is using the saved work in the folder <data folder>. Close that program and start BookLoom again." is shown
 
 ### Requirement: Store a credential never, only the name of an environment variable
 
