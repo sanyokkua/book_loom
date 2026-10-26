@@ -409,6 +409,17 @@ WHEN one line of text does not fit, the application SHALL cut it with an ellipsi
 - **WHEN** the project name `Velk · EN → UK` fits
 - **THEN** it shows no tooltip of its own
 
+### Requirement: Explain a fold on its title bar only
+
+WHERE a fold (a titled section that opens and closes) carries a hover explanation, the application SHALL show it only while the pointer is on the fold's title bar, never over the fold's open content.
+
+**Source**: `docs/specification/mockups/README.md#layout-and-sizes-l`; the window re-test of `finalize-ui-and-persistence` (G2-3). In plain words: the Connection details explanation once opened wherever the pointer rested in the open provider form and stood over the fields being filled in.
+
+#### Scenario: The open provider form shows no fold explanation
+
+- **WHEN** Connection details is open in Settings › Providers and the pointer rests on the Checks note inside it for more than a second
+- **THEN** "Shows or hides the fields behind this provider…" is not shown, and it is shown while the pointer is on the Connection details title
+
 ### Requirement: Show scrollbars whenever content overflows
 
 The application SHALL show scrollbars 12 pixels wide whenever content overflows, never as bars that hide themselves, with the thumb in the muted-2 role on the surface-2 track, and in the navigation column the nav-fg-muted role on the nav-bg-2 track.

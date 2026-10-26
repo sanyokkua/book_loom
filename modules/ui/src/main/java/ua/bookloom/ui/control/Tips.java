@@ -2,12 +2,14 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.InvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
@@ -34,6 +36,8 @@ public final class Tips {
     private static final Duration SHOW_DURATION = Duration.seconds(30);
     private static final double MAX_WIDTH = 320;
     private static final String PENDING_KEY = "bookloom.tips.pending";
+    private static final String TITLE_CLASS = "title";
+    private static final String TITLE_TIP_KEY = "bookloom.tips.title";
 
     /**
      * Attaches the explanation {@code tip} names to {@code node}.
@@ -84,6 +88,32 @@ public final class Tips {
         tooltip.setWrapText(true);
         tooltip.setMaxWidth(MAX_WIDTH);
         return tooltip;
+    }
+
+    /**
+     * Attaches the explanation of a fold to its title bar only. A tip on the whole pane opens wherever the pointer
+     * rests in the open content and stands over the fields the person is filling in (re-test G2-3); the content's
+     * own controls explain themselves. The pane carries the text as its accessible help.
+     *
+     * @param messages the catalogue the text is drawn from
+     * @param pane the fold; its title bar exists once its skin does, so the tip follows a new skin
+     * @param tip the catalogue entry holding the explanation
+     * @param <P> the fold's type, returned unchanged so a call can wrap a construction
+     * @return {@code pane}
+     */
+    public static <P extends TitledPane> P installOnTitle(final Messages messages, final P pane, final MessageKey tip) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(pane, "pane");
+        final String text = messages.get(tip);
+        final Tooltip tooltip = tooltip(text);
+        pane.setAccessibleHelp(text);
+        pane.getProperties().put(TITLE_TIP_KEY, tooltip);
+        final InvalidationListener attach = observed -> pane.getChildrenUnmodifiable().stream()
+                .filter(child -> child.getStyleClass().contains(TITLE_CLASS))
+                .forEach(title -> Tooltip.install(title, tooltip));
+        pane.skinProperty().addListener(attach);
+        attach.invalidated(pane.skinProperty());
+        return pane;
     }
 
     /**
@@ -155,6 +185,10 @@ public final class Tips {
             node.getProperties().put(PENDING_KEY, text);
             return;
         }
+        if (node.getProperties().get(TITLE_TIP_KEY) instanceof Tooltip title) {
+            title.setText(text);
+            return;
+        }
         final Object installed = node instanceof Control control && control.getTooltip() != null
                 ? control.getTooltip()
                 : node.getProperties().get(Tooltip.class.getName());
@@ -164,7 +198,8 @@ public final class Tips {
     }
 
     /**
-     * The explanation a node shows on hover, attached already or waiting for the pointer's first visit.
+     * The explanation a node shows on hover, attached already (a fold's, to its title bar) or waiting for the pointer's
+     * first visit.
      *
      * @param node the node asked about
      * @return the text if the node has an explanation, or empty if it has none
@@ -173,6 +208,9 @@ public final class Tips {
         Objects.requireNonNull(node, "node");
         if (node.getProperties().get(PENDING_KEY) instanceof String pending) {
             return Optional.of(pending);
+        }
+        if (node.getProperties().get(TITLE_TIP_KEY) instanceof Tooltip title) {
+            return Optional.of(title.getText());
         }
         final Object installed = node instanceof Control control && control.getTooltip() != null
                 ? control.getTooltip()

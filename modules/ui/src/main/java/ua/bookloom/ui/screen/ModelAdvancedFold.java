@@ -59,7 +59,7 @@ final class ModelAdvancedFold {
         fold.setAnimated(false);
         fold.setMinHeight(Region.USE_PREF_SIZE);
         fold.setExpanded(technical.isOn());
-        Tips.install(messages, fold, MessageKey.SETTINGS_MODELS_ADVANCED_TIP);
+        Tips.installOnTitle(messages, fold, MessageKey.SETTINGS_MODELS_ADVANCED_TIP);
         fold.setContent(new VBox(8, heading, segmented, ollama));
         technical.property().addListener(new WeakChangeListener<>(onTechnical));
     }

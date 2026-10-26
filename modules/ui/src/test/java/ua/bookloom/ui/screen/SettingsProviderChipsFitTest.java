@@ -29,7 +29,7 @@ class SettingsProviderChipsFitTest extends SettingsScreenTestBase {
 
     // IF a chip ended its words in an ellipsis, THEN the person would read "не за…" or half a verdict.
     @ParameterizedTest(name = "{0} at {1} x {2}")
-    @CsvSource({"en, 944, 600", "uk, 944, 600", "en, 1920, 700", "uk, 1920, 700"})
+    @CsvSource({"en, 944, 600", "uk, 944, 600", "uk, 960, 640", "en, 1920, 700", "uk, 1920, 700"})
     void chips_unsetKeyAndRefusedSignIn_cutNoWord(final String language, final double width, final double height)
             throws TimeoutException {
         useLocale(Locale.forLanguageTag(language));
@@ -43,6 +43,10 @@ class SettingsProviderChipsFitTest extends SettingsScreenTestBase {
         final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
         assertThat(ThemeTestSupport.onFx(
                         () -> required("settings-form-key-status").isVisible()))
+                .isTrue();
+        // "Перевірити відповідь" looked cramped at 960 (re-test G2-3): the probe reads it as whole, so it is in view.
+        assertThat(ThemeTestSupport.onFx(
+                        () -> required("settings-test-inference").isVisible()))
                 .isTrue();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
     }

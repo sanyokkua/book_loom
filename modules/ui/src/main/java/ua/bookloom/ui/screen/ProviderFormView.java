@@ -96,7 +96,7 @@ final class ProviderFormView {
         fold.setContentDisplay(ContentDisplay.RIGHT);
         fold.setAnimated(false);
         fold.setMinHeight(Region.USE_PREF_SIZE);
-        Tips.install(messages, fold, MessageKey.SETTINGS_CONNECTION_TIP);
+        Tips.installOnTitle(messages, fold, MessageKey.SETTINGS_CONNECTION_TIP);
         errors.setId("settings-form-errors");
         errors.getStyleClass().add("form-errors");
         errorsText.setId("settings-form-errors-text");

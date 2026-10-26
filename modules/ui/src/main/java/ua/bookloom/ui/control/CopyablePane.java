@@ -67,7 +67,7 @@ public abstract class CopyablePane extends TitledPane {
         copy.getStyleClass().add("btn-ghost");
         copy.setOnAction(event -> copyNow());
         setContent(new VBox(SPACING, copyRow(), body));
-        Tips.install(messages, this, tip);
+        Tips.installOnTitle(messages, this, tip);
         assignIds(Objects.requireNonNull(id, "id"));
     }
 

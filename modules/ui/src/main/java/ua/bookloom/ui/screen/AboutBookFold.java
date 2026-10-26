@@ -40,7 +40,7 @@ final class AboutBookFold extends TitledPane {
         setAnimated(false);
         // Without this a page shorter than its parts would squash an open fold down to its title bar.
         setMinHeight(Region.USE_PREF_SIZE);
-        Tips.install(messages, this, MessageKey.IMPORT_ABOUT_TIP);
+        Tips.installOnTitle(messages, this, MessageKey.IMPORT_ABOUT_TIP);
         expandedProperty().addListener((observed, was, now) -> log.debug("the About this book fold is open: {}", now));
     }
 
