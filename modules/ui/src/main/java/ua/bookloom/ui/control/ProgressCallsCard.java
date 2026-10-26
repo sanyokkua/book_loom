@@ -4,7 +4,6 @@ import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
@@ -35,15 +34,14 @@ final class ProgressCallsCard extends ModalCard {
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(onClose, "onClose");
         setId("calls-card");
-        getStyleClass().addAll("dialog-card", "elevation-lg");
-        setHeader(header());
+        final Label title = title(messages.get(MessageKey.BUSY_CALLS));
+        title.setId("progress-title");
+        final Label purpose = Wrapped.label(messages.get(MessageKey.PROGRESS_CALLS_PURPOSE), "dialog-sub");
+        purpose.setId("progress-purpose");
+        header(title, purpose).getStyleClass().add("progress-header");
         setContent(body());
-        final ButtonType close =
-                new ButtonType(messages.get(MessageKey.COMMON_CLOSE), ButtonBar.ButtonData.CANCEL_CLOSE);
-        getButtonTypes().setAll(close);
-        final Button button = (Button) lookupButton(close);
-        button.setId("calls-close");
-        button.getStyleClass().add("btn-primary");
+        final Button button = button(
+                messages.get(MessageKey.COMMON_CLOSE), ButtonBar.ButtonData.CANCEL_CLOSE, "calls-close", "btn-primary");
         Tips.install(messages, button, MessageKey.COMMON_CLOSE_TIP);
         button.setOnAction(event -> {
             log.info("calls: close pressed");
@@ -51,19 +49,6 @@ final class ProgressCallsCard extends ModalCard {
         });
         setOnEscape(onClose);
         log.debug("calls view built over {} calls", model.rows().size());
-    }
-
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.BUSY_CALLS));
-        title.setId("progress-title");
-        title.getStyleClass().add("dialog-title");
-        final Label purpose = new Label(messages.get(MessageKey.PROGRESS_CALLS_PURPOSE));
-        purpose.setId("progress-purpose");
-        purpose.getStyleClass().add("dialog-sub");
-        purpose.setWrapText(true);
-        final VBox header = new VBox(title, purpose);
-        header.getStyleClass().addAll("dialog-h", "progress-header");
-        return header;
     }
 
     private Node body() {

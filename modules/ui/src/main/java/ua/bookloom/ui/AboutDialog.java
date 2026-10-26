@@ -3,11 +3,9 @@ package ua.bookloom.ui;
 import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Wrapped;
@@ -21,7 +19,7 @@ import ua.bookloom.ui.state.DiagnosticActions;
  * (header, body, footer), and the diagnostic log — whether the detailed one is on, where the logs are, and the actions
  * that open, copy and bundle them for a report.
  *
- * <p>A {@link DialogPane} placed in the {@link ModalHost} rather than a {@code Dialog} in its own window: the pane is
+ * <p>A {@link javafx.scene.control.DialogPane} placed in the {@link ModalHost} rather than a {@code Dialog} in its own window: the pane is
  * the control the reference's dialog maps to, and staying inside the scene keeps the stylesheet and the active theme
  * block, which a second window would not inherit.
  */
@@ -64,30 +62,22 @@ final class AboutDialog {
      * @return the card's root node, ready for {@link ModalHost#show(Node, boolean)}
      */
     Node card() {
-        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
+        final ModalCard card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        card.setHeader(header());
+        card.header(
+                ModalCard.title(messages.get(MessageKey.SHELL_TITLE)),
+                ModalCard.subtitle(messages.get(MessageKey.ABOUT_SUBTITLE, version)));
         card.setContent(body());
-        card.getButtonTypes().add(ButtonType.CLOSE);
-        final Button close = (Button) card.lookupButton(ButtonType.CLOSE);
-        close.setId(CLOSE_ID);
-        Tips.install(messages, close, MessageKey.COMMON_CLOSE_TIP);
-        close.setText(messages.get(MessageKey.COMMON_CLOSE));
-        close.getStyleClass().add("btn-primary");
-        close.setOnAction(event -> onClose.run());
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.COMMON_CLOSE),
+                                ButtonBar.ButtonData.CANCEL_CLOSE,
+                                CLOSE_ID,
+                                "btn-primary"),
+                        MessageKey.COMMON_CLOSE_TIP)
+                .setOnAction(event -> onClose.run());
         return card;
-    }
-
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.SHELL_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(messages.get(MessageKey.ABOUT_SUBTITLE, version));
-        subtitle.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().add("dialog-h");
-        return header;
     }
 
     private Node body() {

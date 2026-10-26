@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -93,7 +94,11 @@ public final class RenameDialog implements RenamePrompt {
             this.current = row.summary().project().name();
             final boolean auto = row.summary().project().nameOrigin() == NameOrigin.AUTO;
             this.card = new FormCard(
-                    modalHost, messages, PREFIX, ModalCard.Size.DIALOG, messages.get(MessageKey.DIALOG_RENAME_TITLE));
+                    modalHost,
+                    messages,
+                    PREFIX + "card",
+                    ModalCard.Size.DIALOG,
+                    messages.get(MessageKey.DIALOG_RENAME_TITLE));
             this.name = new NameField(messages, PREFIX, "field", () -> current, this::edited);
             this.confirm = addButtons(rename, remove, cancelled);
             card.onEscape(cancelled);
@@ -115,19 +120,22 @@ public final class RenameDialog implements RenamePrompt {
                     PREFIX + "remove",
                     messages.get(MessageKey.DIALOG_RENAME_REMOVE),
                     MessageKey.DIALOG_RENAME_REMOVE_TIP,
-                    FormCard.Kind.LEFT,
+                    ButtonBar.ButtonData.LEFT,
+                    "btn-ghost",
                     remove);
             card.button(
                     PREFIX + "cancel",
                     messages.get(MessageKey.COMMON_CANCEL),
                     MessageKey.COMMON_CANCEL_TIP,
-                    FormCard.Kind.SECONDARY,
+                    ButtonBar.ButtonData.CANCEL_CLOSE,
+                    "btn-secondary",
                     cancelled);
             return card.button(
                     PREFIX + "confirm",
                     messages.get(MessageKey.DIALOG_RENAME_CONFIRM),
                     MessageKey.DIALOG_RENAME_CONFIRM_TIP,
-                    FormCard.Kind.PRIMARY,
+                    ButtonBar.ButtonData.OK_DONE,
+                    "btn-primary",
                     () -> rename.accept(
                             automatic ? null : name.field().getText().strip()));
         }

@@ -7,77 +7,98 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * The shape the project cards share: a heading, a body, and a footer whose every button hides the card before it runs
+ * The card every question shares: a heading, a body, and a footer whose every button hides the card before it runs
  * its action, so the answer is never run under a card that is still shown. FX thread only.
  */
-final class FormCard {
+public final class FormCard {
 
     private static final double BODY_SPACING = 12;
-
-    /** How a footer button looks and where the footer puts it. */
-    enum Kind {
-        /** The confirming button. */
-        PRIMARY(ButtonBar.ButtonData.OK_DONE, "btn-primary"),
-        /** A button that leaves the card unanswered. */
-        SECONDARY(ButtonBar.ButtonData.CANCEL_CLOSE, "btn-secondary"),
-        /** A button of the footer's left side that leads elsewhere. */
-        LEFT(ButtonBar.ButtonData.LEFT, "btn-ghost");
-
-        private final ButtonBar.ButtonData data;
-        private final String style;
-
-        Kind(final ButtonBar.ButtonData data, final String style) {
-            this.data = data;
-            this.style = style;
-        }
-    }
 
     private final ModalHost host;
     private final Messages messages;
     private final ModalCard card;
 
-    FormCard(
+    /**
+     * Builds the card with its heading.
+     *
+     * @param host the shared overlay the card is shown in and hidden from
+     * @param messages the catalogue the buttons' hover explanations come from
+     * @param cardId the card's node id
+     * @param size the card's width class
+     * @param title the heading's words; a long heading wraps
+     */
+    public FormCard(
             final ModalHost host,
             final Messages messages,
-            final String idPrefix,
+            final String cardId,
             final ModalCard.Size size,
             final String title) {
         this.host = Objects.requireNonNull(host, "host");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.card = new ModalCard(size);
-        card.setId(idPrefix + "card");
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label heading = new Label(title);
-        heading.getStyleClass().add("dialog-title");
+        card.setId(Objects.requireNonNull(cardId, "cardId"));
+        final Label heading = ModalCard.title(title);
         heading.setWrapText(true);
-        final VBox header = new VBox(heading);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        card.header(heading);
     }
 
-    void body(final Node... nodes) {
+    /**
+     * The card itself, for what only a few questions need (Escape firing a button, waiting for a free window).
+     *
+     * @return the card
+     */
+    public ModalCard card() {
+        return card;
+    }
+
+    /**
+     * Sets the body: the nodes stacked with the cards' usual gap.
+     *
+     * @param nodes the body's parts, in order
+     */
+    public void body(final Node... nodes) {
         card.setContent(new VBox(BODY_SPACING, nodes));
     }
 
-    Button button(final String id, final String caption, final MessageKey tip, final Kind kind, final Runnable action) {
-        final ButtonType type = new ButtonType(caption, kind.data);
-        card.getButtonTypes().add(type);
-        final Button button = (Button) card.lookupButton(type);
-        button.setId(id);
-        button.getStyleClass().add(kind.style);
-        Tips.install(messages, button, tip);
+    /**
+     * Sets a body that is one paragraph, as a question's is.
+     *
+     * @param text the paragraph
+     */
+    public void text(final String text) {
+        card.setContent(new VBox(Wrapped.label(text, "dialog-text")));
+    }
+
+    /**
+     * Adds a footer button that hides the card, then runs its action.
+     *
+     * @param id the button's node id
+     * @param caption the button's words
+     * @param tip its hover explanation
+     * @param data where the footer puts it
+     * @param styleClass how it looks
+     * @param action what it does once the card is hidden
+     * @return the button, for a card that makes it the default or focuses it
+     */
+    public Button button(
+            final String id,
+            final String caption,
+            final MessageKey tip,
+            final ButtonBar.ButtonData data,
+            final String styleClass,
+            final Runnable action) {
+        Objects.requireNonNull(action, "action");
+        final Button button = Tips.install(messages, card.button(caption, data, id, styleClass), tip);
         button.setOnAction(event -> {
             host.hide();
             action.run();
@@ -85,7 +106,12 @@ final class FormCard {
         return button;
     }
 
-    void onEscape(final Runnable cancelled) {
+    /**
+     * Makes Escape hide the card and run {@code cancelled}.
+     *
+     * @param cancelled what an unanswered card does
+     */
+    public void onEscape(final Runnable cancelled) {
         card.setOnEscape(() -> {
             host.hide();
             cancelled.run();
@@ -116,7 +142,8 @@ final class FormCard {
         });
     }
 
-    void show() {
+    /** Shows the card; Escape closes it, a click outside does not. */
+    public void show() {
         host.show(card, false, true);
     }
 }

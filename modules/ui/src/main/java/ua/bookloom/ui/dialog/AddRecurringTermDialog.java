@@ -2,13 +2,8 @@ package ua.bookloom.ui.dialog;
 
 import java.util.Objects;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
@@ -58,14 +53,31 @@ public final class AddRecurringTermDialog {
      * @return the card's root node, ready for {@code ModalHost.show}
      */
     public Node card() {
-        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
+        final ModalCard card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        card.setHeader(header());
+        card.header(
+                ModalCard.title(messages.get(MessageKey.DIALOG_ADD_RECURRING_TITLE)),
+                ModalCard.subtitle(messages.get(MessageKey.DIALOG_ADD_RECURRING_SUBTITLE)));
         card.setContent(new VBox(FIELD_SPACING, term));
-        buttons(card);
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.DIALOG_ADD_TERM_CANCEL),
+                                ButtonBar.ButtonData.CANCEL_CLOSE,
+                                "recurring-add-cancel",
+                                "btn-ghost"),
+                        MessageKey.DIALOG_ADD_TERM_CANCEL_TIP)
+                .setOnAction(event -> onClose.run());
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.DIALOG_ADD_RECURRING_CONFIRM),
+                                ButtonBar.ButtonData.OK_DONE,
+                                "recurring-add-confirm",
+                                "btn-primary"),
+                        MessageKey.DIALOG_ADD_RECURRING_CONFIRM_TIP)
+                .setOnAction(event -> confirm());
         card.setPrefWidth(CARD_WIDTH);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
     }
 
@@ -77,33 +89,5 @@ public final class AddRecurringTermDialog {
         }
         recurring.add(typed);
         onClose.run();
-    }
-
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.DIALOG_ADD_RECURRING_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(messages.get(MessageKey.DIALOG_ADD_RECURRING_SUBTITLE));
-        subtitle.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().add("dialog-h");
-        return header;
-    }
-
-    private void buttons(final DialogPane card) {
-        final ButtonType cancelType =
-                new ButtonType(messages.get(MessageKey.DIALOG_ADD_TERM_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType addType =
-                new ButtonType(messages.get(MessageKey.DIALOG_ADD_RECURRING_CONFIRM), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(cancelType, addType);
-        final Button cancel = (Button) card.lookupButton(cancelType);
-        cancel.setId("recurring-add-cancel");
-        Tips.install(messages, cancel, MessageKey.DIALOG_ADD_TERM_CANCEL_TIP);
-        cancel.getStyleClass().add("btn-ghost");
-        cancel.setOnAction(event -> onClose.run());
-        final Button add = (Button) card.lookupButton(addType);
-        add.setId("recurring-add-confirm");
-        Tips.install(messages, add, MessageKey.DIALOG_ADD_RECURRING_CONFIRM_TIP);
-        add.getStyleClass().add("btn-primary");
-        add.setOnAction(event -> confirm());
     }
 }

@@ -3,13 +3,18 @@ package ua.bookloom.ui.dialog;
 import java.util.Objects;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.kordamp.ikonli.Ikon;
+import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.notify.FooterFeedback;
 import ua.bookloom.ui.notify.Severity;
@@ -80,8 +85,85 @@ public class ModalCard extends DialogPane implements FooterFeedback {
         // The line is drawn over the footer's free middle; it must never take a press meant for a button there.
         feedback.setMouseTransparent(true);
         getChildren().add(feedback);
+        getStyleClass().addAll("dialog-card", "elevation-lg");
         contentProperty().addListener((observable, old, now) -> wrapBody(now));
         fit(Double.MAX_VALUE, Double.MAX_VALUE);
+        setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    }
+
+    /**
+     * A card's heading.
+     *
+     * @param text the heading's words
+     * @return a new label in the heading's style
+     */
+    public static Label title(final String text) {
+        final Label title = new Label(text);
+        title.getStyleClass().add("dialog-title");
+        return title;
+    }
+
+    /**
+     * A line under a card's heading.
+     *
+     * @param text the line's words
+     * @return a new label in the line's style
+     */
+    public static Label subtitle(final String text) {
+        final Label subtitle = new Label(text);
+        subtitle.getStyleClass().add("dialog-sub");
+        return subtitle;
+    }
+
+    /**
+     * Sets the header every card has: its lines stacked, the heading first.
+     *
+     * @param lines the heading and any lines beneath it
+     * @return the header, for a card that adds a style class of its own
+     */
+    public final VBox header(final Node... lines) {
+        final VBox header = new VBox(lines);
+        header.getStyleClass().add("dialog-h");
+        setHeader(header);
+        return header;
+    }
+
+    /**
+     * Sets the header of a card that warns: its icon before its heading, which wraps.
+     *
+     * @param icon the icon's glyph
+     * @param iconStyle the style class that colours the icon
+     * @param title the heading's words
+     * @return the heading, for its node id
+     */
+    public final Label iconHeader(final Ikon icon, final String iconStyle, final String title) {
+        final FontIcon glyph = new FontIcon(icon);
+        glyph.getStyleClass().add(iconStyle);
+        final Label heading = title(title);
+        heading.setWrapText(true);
+        final HBox header = new HBox(glyph, heading);
+        header.getStyleClass().addAll("dialog-h", "error-header");
+        setHeader(header);
+        return heading;
+    }
+
+    /**
+     * Adds a footer button.
+     *
+     * @param caption the button's words
+     * @param data where the footer puts it
+     * @param id the button's node id
+     * @param styleClass how it looks
+     * @return the button, for its action
+     */
+    public final Button button(
+            final String caption, final ButtonBar.ButtonData data, final String id, final String styleClass) {
+        final ButtonType type = new ButtonType(caption, data);
+        getButtonTypes().add(type);
+        final Button button = (Button) lookupButton(type);
+        button.setId(id);
+        button.getStyleClass().add(styleClass);
+        return button;
     }
 
     /**

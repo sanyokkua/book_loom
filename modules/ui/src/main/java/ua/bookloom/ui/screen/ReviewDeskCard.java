@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -74,10 +75,10 @@ final class ReviewDeskCard extends ModalCard {
         Objects.requireNonNull(parts, "parts");
         inline = new ReviewInlinePanels(messages, (note, lower) -> guard(() -> viewModel.retry(note, lower)));
         setId("review-desk");
-        getStyleClass().addAll("dialog-card", "elevation-lg", "review-desk");
+        getStyleClass().add("review-desk");
         setEnterNeedsShortcut(true);
         setOnEscape(this::closeAsked);
-        setHeader(header());
+        buildHeader();
         setContent(body(parts));
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
@@ -87,13 +88,9 @@ final class ReviewDeskCard extends ModalCard {
         log.debug("review desk built");
     }
 
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.REVIEW_DESK_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final Label left = new Label();
+    private void buildHeader() {
+        final Label left = Wrapped.label("", "dialog-sub");
         left.setId("review-desk-left");
-        left.getStyleClass().add("dialog-sub");
-        left.setWrapText(true);
         left.textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> messages.get(
@@ -107,9 +104,7 @@ final class ReviewDeskCard extends ModalCard {
                         viewModel.translating(),
                         viewModel.flaggedCount(),
                         viewModel.deskTotal()));
-        final VBox header = new VBox(title, left);
-        header.getStyleClass().add("dialog-h");
-        return header;
+        header(title(messages.get(MessageKey.REVIEW_DESK_TITLE)), left);
     }
 
     private Node body(final Parts parts) {
@@ -193,16 +188,13 @@ final class ReviewDeskCard extends ModalCard {
     }
 
     private void footer(final Parts parts) {
-        final ButtonType closeType =
-                new ButtonType(messages.get(MessageKey.REVIEW_CLOSE), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType moreType = new ButtonType(messages.get(MessageKey.REVIEW_MORE), ButtonBar.ButtonData.OTHER);
-        final ButtonType mainType = new ButtonType("", ButtonBar.ButtonData.OK_DONE);
-        getButtonTypes().setAll(closeType, moreType, mainType);
-        final Button close = (Button) lookupButton(closeType);
-        close.setId("review-close");
-        close.getStyleClass().add("btn-ghost");
+        final Button close = button(
+                messages.get(MessageKey.REVIEW_CLOSE), ButtonBar.ButtonData.CANCEL_CLOSE, "review-close", "btn-ghost");
         Tips.install(messages, close, MessageKey.REVIEW_CLOSE_TIP);
         close.setOnAction(event -> closeAsked());
+        final ButtonType moreType = new ButtonType(messages.get(MessageKey.REVIEW_MORE), ButtonBar.ButtonData.OTHER);
+        final ButtonType mainType = new ButtonType("", ButtonBar.ButtonData.OK_DONE);
+        getButtonTypes().addAll(moreType, mainType);
         ReviewMoreMenu.install(
                 (Button) lookupButton(moreType),
                 viewModel,

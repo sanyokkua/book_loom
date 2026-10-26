@@ -6,14 +6,8 @@ import java.util.List;
 import java.util.Objects;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -198,48 +192,39 @@ public final class ConfirmDialog {
         Objects.requireNonNull(textArgs, "textArgs");
         Objects.requireNonNull(onConfirm, "onConfirm");
         log.debug("asking: {} with {}", question.title(), textArgs);
-        final Label text = new Label(messages.get(question.text(), textArgs.toArray()));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(question.title(), titleArgs.toArray()));
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(new VBox(text));
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        final FormCard card = new FormCard(
+                modalHost,
+                messages,
+                CARD_ID,
+                ModalCard.Size.DIALOG,
+                messages.get(question.title(), titleArgs.toArray()));
+        card.text(messages.get(question.text(), textArgs.toArray()));
         final Button cancel = wire(card, question, onConfirm);
-        modalHost.show(card, false, true);
+        card.show();
         cancel.requestFocus();
     }
 
-    private Button wire(final DialogPane card, final Question question, final Runnable onConfirm) {
-        final ButtonType cancelType = new ButtonType(messages.get(question.no()), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType yesType = new ButtonType(messages.get(question.yes()), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(cancelType, yesType);
-        final Button cancel = (Button) card.lookupButton(cancelType);
-        cancel.setId(CANCEL_ID);
-        Tips.install(messages, cancel, MessageKey.COMMON_CANCEL_TIP);
-        cancel.getStyleClass().add("btn-secondary");
-        // The safe answer is the one Enter gives.
+    private Button wire(final FormCard card, final Question question, final Runnable onConfirm) {
+        final Button cancel = card.button(
+                CANCEL_ID,
+                messages.get(question.no()),
+                MessageKey.COMMON_CANCEL_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
+                () -> log.debug("the question {} was answered no", question.title()));
+        card.button(
+                        YES_ID,
+                        messages.get(question.yes()),
+                        question.yesTip(),
+                        ButtonBar.ButtonData.OK_DONE,
+                        "btn-danger-outline",
+                        () -> {
+                            log.info("the question {} was confirmed", question.title());
+                            onConfirm.run();
+                        })
+                .setDefaultButton(false);
+        // The safe answer is the one Enter gives; set once every button is in, as each new one resets the default.
         cancel.setDefaultButton(true);
-        cancel.setOnAction(event -> {
-            log.debug("the question {} was answered no", question.title());
-            modalHost.hide();
-        });
-        final Button yes = (Button) card.lookupButton(yesType);
-        yes.setId(YES_ID);
-        Tips.install(messages, yes, question.yesTip());
-        yes.getStyleClass().add("btn-danger-outline");
-        yes.setDefaultButton(false);
-        yes.setOnAction(event -> {
-            log.info("the question {} was confirmed", question.title());
-            modalHost.hide();
-            onConfirm.run();
-        });
         return cancel;
     }
 }

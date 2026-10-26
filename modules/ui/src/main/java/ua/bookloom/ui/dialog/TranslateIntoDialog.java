@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -95,7 +96,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             this.card = new FormCard(
                     modalHost,
                     messages,
-                    PREFIX,
+                    PREFIX + "card",
                     ModalCard.Size.WIDE,
                     messages.get(MessageKey.DIALOG_TRANSLATE_INTO_TITLE));
             this.name = new NameField(messages, PREFIX, "name", this::automaticName, this::refresh);
@@ -117,13 +118,15 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
                     PREFIX + "cancel",
                     messages.get(MessageKey.COMMON_CANCEL),
                     MessageKey.COMMON_CANCEL_TIP,
-                    FormCard.Kind.SECONDARY,
+                    ButtonBar.ButtonData.CANCEL_CLOSE,
+                    "btn-secondary",
                     cancelled);
             return card.button(
                     PREFIX + "create",
                     messages.get(MessageKey.DIALOG_TRANSLATE_INTO_CREATE),
                     MessageKey.DIALOG_TRANSLATE_INTO_CREATE_TIP,
-                    FormCard.Kind.PRIMARY,
+                    ButtonBar.ButtonData.OK_DONE,
+                    "btn-primary",
                     () -> {
                         final String typed = name.field().getText().strip();
                         onCreate.accept(

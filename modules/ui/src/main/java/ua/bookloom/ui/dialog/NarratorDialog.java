@@ -10,13 +10,7 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -26,7 +20,6 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.ModalHost;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -187,62 +180,46 @@ public final class NarratorDialog {
             return;
         }
         log.debug("asking who narrates before starting project {}", projectId);
-        final Label text = new Label(messages.get(MessageKey.DIALOG_NARRATOR_TEXT));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        final DialogPane card = card(new VBox(text));
+        final FormCard card = new FormCard(
+                modalHost, messages, CARD_ID, ModalCard.Size.WIDE, messages.get(MessageKey.DIALOG_NARRATOR_TITLE));
+        card.text(messages.get(MessageKey.DIALOG_NARRATOR_TEXT));
         wire(card, projectId, start);
-        modalHost.show(card, false);
+        card.show();
     }
 
     private boolean mustAsk(final OpenedBook book, final @Nullable BookBrief current) {
         return NarratorHints.needsGender(project.narratorHint().get(), current) && !answered.contains(book.projectId());
     }
 
-    private DialogPane card(final VBox body) {
-        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(MessageKey.DIALOG_NARRATOR_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(body);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        return card;
-    }
-
-    private void wire(final DialogPane card, final String projectId, final Runnable start) {
-        final ButtonType backType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_BACK), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType unknownType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_UNKNOWN), ButtonBar.ButtonData.OK_DONE);
-        final ButtonType femaleType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_FEMALE), ButtonBar.ButtonData.OTHER);
-        final ButtonType maleType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_MALE), ButtonBar.ButtonData.OTHER);
-        card.getButtonTypes().setAll(backType, unknownType, femaleType, maleType);
-        final Button back = button(card, backType, BACK_ID, MessageKey.DIALOG_NARRATOR_BACK_TIP, "btn-secondary");
-        back.setOnAction(event -> {
-            log.debug("going back without starting");
-            modalHost.hide();
-        });
-        button(card, unknownType, UNKNOWN_ID, MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP, "btn-primary")
-                .setOnAction(event -> answer(projectId, Gender.UNKNOWN, start));
-        button(card, femaleType, FEMALE_ID, MessageKey.DIALOG_NARRATOR_FEMALE_TIP, "btn-secondary")
-                .setOnAction(event -> answer(projectId, Gender.FEMALE, start));
-        button(card, maleType, MALE_ID, MessageKey.DIALOG_NARRATOR_MALE_TIP, "btn-secondary")
-                .setOnAction(event -> answer(projectId, Gender.MALE, start));
-    }
-
-    private Button button(
-            final DialogPane card, final ButtonType type, final String id, final MessageKey tip, final String style) {
-        final Button button = (Button) card.lookupButton(type);
-        button.setId(id);
-        Tips.install(messages, button, tip);
-        button.getStyleClass().add(style);
-        return button;
+    private void wire(final FormCard card, final String projectId, final Runnable start) {
+        card.button(
+                BACK_ID,
+                messages.get(MessageKey.DIALOG_NARRATOR_BACK),
+                MessageKey.DIALOG_NARRATOR_BACK_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
+                () -> log.debug("going back without starting"));
+        card.button(
+                UNKNOWN_ID,
+                messages.get(MessageKey.DIALOG_NARRATOR_UNKNOWN),
+                MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP,
+                ButtonBar.ButtonData.OK_DONE,
+                "btn-primary",
+                () -> answer(projectId, Gender.UNKNOWN, start));
+        card.button(
+                FEMALE_ID,
+                messages.get(MessageKey.DIALOG_NARRATOR_FEMALE),
+                MessageKey.DIALOG_NARRATOR_FEMALE_TIP,
+                ButtonBar.ButtonData.OTHER,
+                "btn-secondary",
+                () -> answer(projectId, Gender.FEMALE, start));
+        card.button(
+                MALE_ID,
+                messages.get(MessageKey.DIALOG_NARRATOR_MALE),
+                MessageKey.DIALOG_NARRATOR_MALE_TIP,
+                ButtonBar.ButtonData.OTHER,
+                "btn-secondary",
+                () -> answer(projectId, Gender.MALE, start));
     }
 
     private void answer(final String projectId, final Gender gender, final Runnable start) {
@@ -251,7 +228,6 @@ public final class NarratorDialog {
         if (gender != Gender.UNKNOWN) {
             brief.setFirstPersonNarrator(gender);
         }
-        modalHost.hide();
         startWhenSaved(start);
     }
 

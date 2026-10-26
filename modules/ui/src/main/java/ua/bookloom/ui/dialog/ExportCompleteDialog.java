@@ -5,12 +5,9 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -20,6 +17,7 @@ import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
@@ -76,7 +74,7 @@ public final class ExportCompleteDialog {
     public void show(final ExportOutcome outcome) {
         Objects.requireNonNull(outcome, "outcome");
         log.debug("showing the export-complete card for {}", outcome.report().destination());
-        modalHost.show(card(outcome), false);
+        card(outcome).show();
     }
 
     /**
@@ -90,32 +88,24 @@ public final class ExportCompleteDialog {
         log.debug(
                 "export-complete card for {} waits for a free window",
                 outcome.report().destination());
-        modalHost.showWhenFree(card(outcome));
+        modalHost.showWhenFree(card(outcome).card());
     }
 
-    private DialogPane card(final ExportOutcome outcome) {
+    private FormCard card(final ExportOutcome outcome) {
         final Path file = outcome.report().destination();
-        final DialogPane card = new ModalCard(ModalCard.Size.WIDE);
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(MessageKey.EXPORT_COMPLETE_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(body(file, outcome));
+        final FormCard card = new FormCard(
+                modalHost, messages, CARD_ID, ModalCard.Size.WIDE, messages.get(MessageKey.EXPORT_COMPLETE_TITLE));
+        card.card().setContent(body(file, outcome));
         buttons(card, file);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
     }
 
     private Node body(final Path file, final ExportOutcome outcome) {
         final long sizeBytes = outcome.sizeBytes();
         final ExportReport report = outcome.report();
-        final Label written = new Label(messages.get(MessageKey.EXPORT_COMPLETE_WRITTEN, file.getFileName()));
-        written.setWrapText(true);
+        final Label written =
+                Wrapped.label(messages.get(MessageKey.EXPORT_COMPLETE_WRITTEN, file.getFileName()), "dialog-text");
         written.setMaxWidth(PATH_MAX_WIDTH);
-        written.getStyleClass().add("dialog-text");
         // Plain success-coloured words after a check mark, as the export screen's own checks read: a row value, not a
         // chip.
         final Label mark = new Label("✓");
@@ -160,10 +150,7 @@ public final class ExportCompleteDialog {
         });
         addPartialWarnings(body, report);
         for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
-            final Label text = new Label(line);
-            text.setWrapText(true);
-            text.getStyleClass().add("dialog-text");
-            body.getChildren().add(text);
+            body.getChildren().add(Wrapped.label(line, "dialog-text"));
         }
     }
 
@@ -228,43 +215,33 @@ public final class ExportCompleteDialog {
         return row;
     }
 
-    private void buttons(final DialogPane card, final Path file) {
-        final ButtonType close =
-                new ButtonType(messages.get(MessageKey.COMMON_CLOSE), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType folder = new ButtonType(messages.get(MessageKey.EXPORT_REVEAL), ButtonBar.ButtonData.OTHER);
-        final ButtonType open = new ButtonType(messages.get(MessageKey.EXPORT_OPEN_BOOK), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(close, folder, open);
-        wire((Button) card.lookupButton(close), CLOSE_ID, MessageKey.COMMON_CLOSE_TIP, "btn-ghost", path -> {}, file);
-        wire(
-                (Button) card.lookupButton(folder),
+    private void buttons(final FormCard card, final Path file) {
+        card.button(
+                CLOSE_ID,
+                messages.get(MessageKey.COMMON_CLOSE),
+                MessageKey.COMMON_CLOSE_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-ghost",
+                () -> log.debug("export-complete button {} pressed", CLOSE_ID));
+        card.button(
                 FOLDER_ID,
+                messages.get(MessageKey.EXPORT_REVEAL),
                 MessageKey.EXPORT_REVEAL_TIP,
+                ButtonBar.ButtonData.OTHER,
                 "btn-secondary",
-                revealer::reveal,
-                file);
-        wire(
-                (Button) card.lookupButton(open),
+                () -> {
+                    log.debug("export-complete button {} pressed", FOLDER_ID);
+                    revealer.reveal(file);
+                });
+        card.button(
                 OPEN_ID,
+                messages.get(MessageKey.EXPORT_OPEN_BOOK),
                 MessageKey.EXPORT_OPEN_BOOK_TIP,
+                ButtonBar.ButtonData.OK_DONE,
                 "btn-primary",
-                revealer::open,
-                file);
-    }
-
-    private void wire(
-            final Button button,
-            final String id,
-            final MessageKey tip,
-            final String styleClass,
-            final Consumer<Path> action,
-            final Path file) {
-        button.setId(id);
-        Tips.install(messages, button, tip);
-        button.getStyleClass().add(styleClass);
-        button.setOnAction(event -> {
-            log.debug("export-complete button {} pressed", id);
-            modalHost.hide();
-            action.accept(file);
-        });
+                () -> {
+                    log.debug("export-complete button {} pressed", OPEN_ID);
+                    revealer.open(file);
+                });
     }
 }

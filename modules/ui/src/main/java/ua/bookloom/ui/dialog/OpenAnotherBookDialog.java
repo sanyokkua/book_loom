@@ -6,15 +6,13 @@ import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.RunState;
@@ -67,20 +65,21 @@ public final class OpenAnotherBookDialog implements OpenAnotherBookPrompt {
         Objects.requireNonNull(onReplace, "onReplace");
         log.debug("asking about opening {}, run {}", newFileName, state);
         log.trace("the open project is named {}", openProjectName);
-        final Label text = new Label(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_BODY, openProjectName, newFileName));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        final VBox body = new VBox(text);
+        final VBox body = new VBox(Wrapped.label(
+                messages.get(MessageKey.DIALOG_OPEN_ANOTHER_BODY, openProjectName, newFileName), "dialog-text"));
         if (state == RunState.RUNNING) {
-            final Label running = new Label(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_RUNNING));
-            running.setWrapText(true);
-            running.getStyleClass().add("dialog-sub");
-            body.getChildren().add(running);
+            body.getChildren().add(Wrapped.label(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_RUNNING), "dialog-sub"));
         }
-        final DialogPane card = card(body);
+        final FormCard card = new FormCard(
+                modalHost,
+                messages,
+                CARD_ID,
+                ModalCard.Size.DIALOG,
+                messages.get(MessageKey.DIALOG_OPEN_ANOTHER_TITLE));
+        card.card().setContent(body);
         wire(card, body, state == RunState.RUNNING, onOpenNew, onReplace);
-        shown = card;
-        modalHost.show(card, false, true);
+        shown = card.card();
+        card.show();
     }
 
     @Override
@@ -95,52 +94,41 @@ public final class OpenAnotherBookDialog implements OpenAnotherBookPrompt {
         }
     }
 
-    private DialogPane card(final Node body) {
-        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(body);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        return card;
-    }
-
     private void wire(
-            final DialogPane card,
+            final FormCard card,
             final VBox body,
             final boolean isRunning,
             final Runnable onOpenNew,
             final Runnable onReplace) {
-        final ButtonType cancelType =
-                new ButtonType(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType replaceType =
-                new ButtonType(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_REPLACE), ButtonBar.ButtonData.OTHER);
-        final ButtonType newType =
-                new ButtonType(messages.get(MessageKey.DIALOG_OPEN_ANOTHER_NEW), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(cancelType, replaceType, newType);
-        final Button cancel = (Button) card.lookupButton(cancelType);
-        final Button replace = (Button) card.lookupButton(replaceType);
-        final Button openNew = (Button) card.lookupButton(newType);
-        style(cancel, CANCEL_ID, MessageKey.DIALOG_OPEN_ANOTHER_CANCEL_TIP, "btn-secondary");
-        style(replace, REPLACE_ID, MessageKey.DIALOG_OPEN_ANOTHER_REPLACE_TIP, "btn-danger-outline");
-        style(openNew, NEW_ID, MessageKey.DIALOG_OPEN_ANOTHER_NEW_TIP, "btn-primary");
-        cancel.setOnAction(event -> {
-            log.debug("the open-another-book question was cancelled");
-            modalHost.hide();
-        });
+        final Button cancel = card.button(
+                CANCEL_ID,
+                messages.get(MessageKey.DIALOG_OPEN_ANOTHER_CANCEL),
+                MessageKey.DIALOG_OPEN_ANOTHER_CANCEL_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
+                () -> log.debug("the open-another-book question was cancelled"));
+        // An answer hides the card itself, or keeps it while a running run stops.
+        final Button replace = Tips.install(
+                messages,
+                card.card()
+                        .button(
+                                messages.get(MessageKey.DIALOG_OPEN_ANOTHER_REPLACE),
+                                ButtonBar.ButtonData.OTHER,
+                                REPLACE_ID,
+                                "btn-danger-outline"),
+                MessageKey.DIALOG_OPEN_ANOTHER_REPLACE_TIP);
+        final Button openNew = Tips.install(
+                messages,
+                card.card()
+                        .button(
+                                messages.get(MessageKey.DIALOG_OPEN_ANOTHER_NEW),
+                                ButtonBar.ButtonData.OK_DONE,
+                                NEW_ID,
+                                "btn-primary"),
+                MessageKey.DIALOG_OPEN_ANOTHER_NEW_TIP);
         final Button[] all = {cancel, replace, openNew};
         replace.setOnAction(event -> answered("replace", isRunning, body, all, onReplace));
         openNew.setOnAction(event -> answered("open as a new project", isRunning, body, all, onOpenNew));
-    }
-
-    private void style(final Button button, final String id, final MessageKey tip, final String styleClass) {
-        button.setId(id);
-        Tips.install(messages, button, tip);
-        button.getStyleClass().add(styleClass);
     }
 
     // A running run is stopped before the answer takes effect, so the card stays until the guard dismisses it.

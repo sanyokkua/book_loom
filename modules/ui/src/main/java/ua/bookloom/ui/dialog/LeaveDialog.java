@@ -5,15 +5,9 @@ import com.google.inject.Singleton;
 import java.util.Objects;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.UnsavedSubject;
@@ -66,12 +60,35 @@ public final class LeaveDialog {
         Objects.requireNonNull(stopAndLeave, "stopAndLeave");
         Objects.requireNonNull(leaveRunning, "leaveRunning");
         log.debug("asking before leaving the screen of {}", activity);
-        final DialogPane card = card(
+        final FormCard card = card(
                 CARD_ID,
                 messages.get(MessageKey.DIALOG_LEAVE_TITLE),
                 messages.get(MessageKey.DIALOG_LEAVE_TEXT, activity));
         wire(card, stopAndLeave, leaveRunning);
-        modalHost.show(card, false);
+        card.show();
+    }
+
+    private void wire(final FormCard card, final Runnable stopAndLeave, final Runnable leaveRunning) {
+        card.button(
+                KEEP_ID,
+                messages.get(MessageKey.DIALOG_LEAVE_KEEP),
+                MessageKey.DIALOG_LEAVE_KEEP_TIP,
+                ButtonBar.ButtonData.OTHER,
+                "btn-secondary",
+                () -> {
+                    log.debug("leaving with the work still running");
+                    leaveRunning.run();
+                });
+        card.button(
+                STOP_ID,
+                messages.get(MessageKey.DIALOG_LEAVE_STOP),
+                MessageKey.DIALOG_LEAVE_STOP_TIP,
+                ButtonBar.ButtonData.OK_DONE,
+                "btn-danger-outline",
+                () -> {
+                    log.debug("stopping the work and leaving");
+                    stopAndLeave.run();
+                });
     }
 
     /**
@@ -85,12 +102,30 @@ public final class LeaveDialog {
         Objects.requireNonNull(activity, "activity");
         Objects.requireNonNull(continueInBackground, "continueInBackground");
         log.debug("asking before leaving the screen of {}, which runs shown", activity);
-        final DialogPane card = card(
+        final FormCard card = card(
                 WORK_CARD_ID,
                 messages.get(MessageKey.DIALOG_WORK_TITLE),
                 messages.get(MessageKey.DIALOG_WORK_TEXT, activity));
-        final Button stay = wireWork(card, activity, continueInBackground);
-        modalHost.show(card, false, true);
+        final Button stay = card.button(
+                WORK_STAY_ID,
+                messages.get(MessageKey.DIALOG_WORK_STAY),
+                MessageKey.DIALOG_WORK_STAY_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
+                () -> log.debug("staying with {} in view", activity));
+        card.button(
+                WORK_BACKGROUND_ID,
+                messages.get(MessageKey.DIALOG_WORK_BACKGROUND),
+                MessageKey.DIALOG_WORK_BACKGROUND_TIP,
+                ButtonBar.ButtonData.OTHER,
+                "btn-secondary",
+                () -> {
+                    log.info("leaving with {} continuing in the background", activity);
+                    continueInBackground.run();
+                });
+        // Set once every button is in: each new one resets the default.
+        stay.setDefaultButton(true);
+        card.show();
         stay.requestFocus();
     }
 
@@ -117,112 +152,61 @@ public final class LeaveDialog {
         Objects.requireNonNull(discardAndLeave, "discardAndLeave");
         Objects.requireNonNull(saveAndLeave, "saveAndLeave");
         log.debug("asking before leaving a form with unsaved changes, named {}", subject != null);
-        final DialogPane card = subject == null
+        final FormCard card = subject == null
                 ? card(
                         UNSAVED_CARD_ID,
                         messages.get(MessageKey.DIALOG_UNSAVED_TITLE),
                         messages.get(MessageKey.DIALOG_UNSAVED_TEXT))
                 : card(UNSAVED_CARD_ID, messages.get(subject.title(), subject.name()), messages.get(subject.text()));
-        final ButtonType keepType =
-                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_KEEP), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType discardType =
-                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_DISCARD), ButtonBar.ButtonData.OTHER);
-        final ButtonType saveType =
-                new ButtonType(messages.get(MessageKey.DIALOG_UNSAVED_SAVE), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(keepType, discardType, saveType);
-        final Button keep = answer(card, keepType, UNSAVED_KEEP_ID, MessageKey.DIALOG_UNSAVED_KEEP_TIP, () -> {});
-        keep.setDefaultButton(true);
-        answer(card, discardType, UNSAVED_DISCARD_ID, MessageKey.DIALOG_UNSAVED_DISCARD_TIP, discardAndLeave)
-                .setDefaultButton(false);
-        answer(card, saveType, UNSAVED_SAVE_ID, MessageKey.DIALOG_UNSAVED_SAVE_TIP, saveAndLeave)
-                .setDefaultButton(false);
-        modalHost.show(card, false, true);
+        final Button keep = wireUnsaved(card, discardAndLeave, saveAndLeave);
+        card.show();
         keep.requestFocus();
     }
 
-    // Each answer closes the card first, then does what it says.
+    private Button wireUnsaved(final FormCard card, final Runnable discardAndLeave, final Runnable saveAndLeave) {
+        final Button keep = answer(
+                card,
+                UNSAVED_KEEP_ID,
+                MessageKey.DIALOG_UNSAVED_KEEP,
+                MessageKey.DIALOG_UNSAVED_KEEP_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                () -> {});
+        answer(
+                card,
+                UNSAVED_DISCARD_ID,
+                MessageKey.DIALOG_UNSAVED_DISCARD,
+                MessageKey.DIALOG_UNSAVED_DISCARD_TIP,
+                ButtonBar.ButtonData.OTHER,
+                discardAndLeave);
+        answer(
+                        card,
+                        UNSAVED_SAVE_ID,
+                        MessageKey.DIALOG_UNSAVED_SAVE,
+                        MessageKey.DIALOG_UNSAVED_SAVE_TIP,
+                        ButtonBar.ButtonData.OK_DONE,
+                        saveAndLeave)
+                .setDefaultButton(false);
+        // Set once every button is in: each new one resets the default.
+        keep.setDefaultButton(true);
+        return keep;
+    }
+
     private Button answer(
-            final DialogPane card, final ButtonType type, final String id, final MessageKey tip, final Runnable then) {
-        final Button button = (Button) card.lookupButton(type);
-        button.setId(id);
-        button.getStyleClass().add("btn-secondary");
-        Tips.install(messages, button, tip);
-        button.setOnAction(event -> {
+            final FormCard card,
+            final String id,
+            final MessageKey caption,
+            final MessageKey tip,
+            final ButtonBar.ButtonData data,
+            final Runnable then) {
+        return card.button(id, messages.get(caption), tip, data, "btn-secondary", () -> {
             log.debug("unsaved changes answered with {}", id);
-            modalHost.hide();
             then.run();
         });
-        return button;
     }
 
-    private Button wireWork(final DialogPane card, final String activity, final Runnable continueInBackground) {
-        final ButtonType backgroundType =
-                new ButtonType(messages.get(MessageKey.DIALOG_WORK_BACKGROUND), ButtonBar.ButtonData.OTHER);
-        final ButtonType stayType =
-                new ButtonType(messages.get(MessageKey.DIALOG_WORK_STAY), ButtonBar.ButtonData.CANCEL_CLOSE);
-        card.getButtonTypes().setAll(stayType, backgroundType);
-        final Button background = (Button) card.lookupButton(backgroundType);
-        background.setId(WORK_BACKGROUND_ID);
-        background.getStyleClass().add("btn-secondary");
-        Tips.install(messages, background, MessageKey.DIALOG_WORK_BACKGROUND_TIP);
-        background.setDefaultButton(false);
-        background.setOnAction(event -> {
-            log.info("leaving with {} continuing in the background", activity);
-            modalHost.hide();
-            continueInBackground.run();
-        });
-        final Button stay = (Button) card.lookupButton(stayType);
-        stay.setId(WORK_STAY_ID);
-        stay.getStyleClass().add("btn-secondary");
-        Tips.install(messages, stay, MessageKey.DIALOG_WORK_STAY_TIP);
-        stay.setDefaultButton(true);
-        stay.setOnAction(event -> {
-            log.debug("staying with {} in view", activity);
-            modalHost.hide();
-        });
-        return stay;
-    }
-
-    private DialogPane card(final String id, final String heading, final String body) {
-        final Label text = new Label(body);
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        final DialogPane card = new ModalCard(ModalCard.Size.DIALOG);
-        card.setId(id);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(heading);
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(new VBox(text));
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    private FormCard card(final String id, final String heading, final String body) {
+        final FormCard card = new FormCard(modalHost, messages, id, ModalCard.Size.DIALOG, heading);
+        card.text(body);
         return card;
-    }
-
-    private void wire(final DialogPane card, final Runnable stopAndLeave, final Runnable leaveRunning) {
-        final ButtonType keepType =
-                new ButtonType(messages.get(MessageKey.DIALOG_LEAVE_KEEP), ButtonBar.ButtonData.OTHER);
-        final ButtonType stopType =
-                new ButtonType(messages.get(MessageKey.DIALOG_LEAVE_STOP), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(keepType, stopType);
-        final Button keep = (Button) card.lookupButton(keepType);
-        keep.setId(KEEP_ID);
-        Tips.install(messages, keep, MessageKey.DIALOG_LEAVE_KEEP_TIP);
-        keep.getStyleClass().add("btn-secondary");
-        keep.setOnAction(event -> {
-            log.debug("leaving with the work still running");
-            modalHost.hide();
-            leaveRunning.run();
-        });
-        final Button stop = (Button) card.lookupButton(stopType);
-        stop.setId(STOP_ID);
-        Tips.install(messages, stop, MessageKey.DIALOG_LEAVE_STOP_TIP);
-        stop.getStyleClass().add("btn-danger-outline");
-        stop.setOnAction(event -> {
-            log.debug("stopping the work and leaving");
-            modalHost.hide();
-            stopAndLeave.run();
-        });
     }
 }

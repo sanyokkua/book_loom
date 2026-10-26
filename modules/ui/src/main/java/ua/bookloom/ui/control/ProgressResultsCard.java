@@ -50,8 +50,7 @@ final class ProgressResultsCard extends ModalCard {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.results = view.results();
         setId(CARD_ID);
-        getStyleClass().addAll("dialog-card", "elevation-lg");
-        setHeader(header());
+        buildHeader();
         setContent(tabs());
         buttons();
         setOnEscape(view.onDone());
@@ -63,17 +62,13 @@ final class ProgressResultsCard extends ModalCard {
                 results.elapsed());
     }
 
-    private Node header() {
-        final Label title = new Label(messages.get(
+    private void buildHeader() {
+        final Label title = title(messages.get(
                 MessageKey.RESULTS_TITLE, messages.get(results.operation().label())));
         title.setId("progress-title");
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(subtitleText());
+        final Label subtitle = subtitle(subtitleText());
         subtitle.setId("progress-subtitle");
-        subtitle.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().addAll("dialog-h", "progress-header");
-        return header;
+        header(title, subtitle).getStyleClass().add("progress-header");
     }
 
     private String subtitleText() {

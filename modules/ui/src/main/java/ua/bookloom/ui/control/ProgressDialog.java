@@ -45,7 +45,7 @@ public final class ProgressDialog extends ModalCard {
 
     private final ProgressDialogModel model;
     private final Messages messages;
-    private final Label title = new Label();
+    private final Label title = title("");
     private final Label purpose = new Label();
     private final ProgressBar bar = new ProgressBar();
     private final FigureLabel figures = new FigureLabel();
@@ -96,13 +96,12 @@ public final class ProgressDialog extends ModalCard {
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(onCancel, "onCancel");
         setId("busy-card");
-        getStyleClass().addAll("dialog-card", "elevation-lg");
         detail = new ProgressStepDetail(model, messages);
         howCounted = new HowCountedPane("progress-how", messages);
         decisions = new DecisionPane(model, messages);
         answers = new BriefAnswerPane(messages);
         detailScroll = new ScrollHost(detail);
-        setHeader(header());
+        buildHeader();
         setContent(body());
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
@@ -143,9 +142,8 @@ public final class ProgressDialog extends ModalCard {
         return new ProgressCallsCard(model, messages, onClose);
     }
 
-    private Node header() {
+    private void buildHeader() {
         title.setId("progress-title");
-        title.getStyleClass().add("dialog-title");
         purpose.setId("progress-purpose");
         purpose.getStyleClass().add("dialog-sub");
         purpose.setWrapText(true);
@@ -163,9 +161,7 @@ public final class ProgressDialog extends ModalCard {
         figures.getStyleClass().add("dialog-sub");
         details.setId("progress-details");
         details.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, purpose, bar, figures, details);
-        header.getStyleClass().addAll("dialog-h", "progress-header");
-        return header;
+        header(title, purpose, bar, figures, details).getStyleClass().add("progress-header");
     }
 
     private Node body() {

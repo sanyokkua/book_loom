@@ -5,14 +5,9 @@ import com.google.inject.Singleton;
 import java.util.Objects;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.ui.ModalHost;
-import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderNames;
@@ -73,7 +68,7 @@ public final class ContinueDialog implements ContinuePrompt {
         Objects.requireNonNull(useAnother, "useAnother");
         Objects.requireNonNull(notNow, "notNow");
         log.debug("asking about the model that is not answering: {}", model.providerId());
-        final ModalCard card = card(
+        final FormCard card = card(
                 MessageKey.DIALOG_CONTINUE_NOT_ANSWERING_TITLE,
                 MessageKey.DIALOG_CONTINUE_NOT_ANSWERING_BODY,
                 ProviderNames.displayName(messages, model.providerId()),
@@ -81,8 +76,8 @@ public final class ContinueDialog implements ContinuePrompt {
         final Button notNowButton = add(card, new Answer(NOT_NOW_ID, NOT_NOW, false, notNow));
         add(card, new Answer(USE_ANOTHER_ID, USE_ANOTHER, false, useAnother));
         add(card, new Answer(TRY_AGAIN_ID, TRY_AGAIN, true, tryAgain));
-        card.setOnEscape(() -> notNowButton.fire());
-        modalHost.show(card, false, true);
+        card.card().setOnEscape(notNowButton::fire);
+        card.show();
     }
 
     @Override
@@ -98,7 +93,7 @@ public final class ContinueDialog implements ContinuePrompt {
         Objects.requireNonNull(useNew, "useNew");
         Objects.requireNonNull(cancelled, "cancelled");
         log.debug("asking about a different model: earlier {}, now {}", earlier, now);
-        final ModalCard card = card(
+        final FormCard card = card(
                 MessageKey.DIALOG_CONTINUE_DIFFERENT_TITLE,
                 MessageKey.DIALOG_CONTINUE_DIFFERENT_BODY,
                 ProviderNames.displayName(messages, earlier.providerId()),
@@ -107,45 +102,29 @@ public final class ContinueDialog implements ContinuePrompt {
                 now.modelId());
         add(card, new Answer(NEW_ID, NEW, false, useNew));
         add(card, new Answer(EARLIER_ID, EARLIER, true, useEarlier));
-        card.setOnEscape(() -> {
+        card.onEscape(() -> {
             log.debug("different-model question closed with Escape");
-            modalHost.hide();
             cancelled.run();
         });
-        modalHost.show(card, false, true);
+        card.show();
     }
 
-    private ModalCard card(final MessageKey title, final MessageKey body, final Object... arguments) {
-        final ModalCard card = new ModalCard(ModalCard.Size.DIALOG);
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label heading = new Label(messages.get(title));
-        heading.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(heading);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        final Label text = new Label(messages.get(body, arguments));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        card.setContent(new VBox(text));
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    private FormCard card(final MessageKey title, final MessageKey body, final Object... arguments) {
+        final FormCard card = new FormCard(modalHost, messages, CARD_ID, ModalCard.Size.DIALOG, messages.get(title));
+        card.text(messages.get(body, arguments));
         return card;
     }
 
-    private Button add(final ModalCard card, final Answer answer) {
-        final ButtonType type = new ButtonType(
+    private Button add(final FormCard card, final Answer answer) {
+        return card.button(
+                answer.id(),
                 messages.get(answer.words().caption()),
-                answer.primary() ? ButtonBar.ButtonData.OK_DONE : ButtonBar.ButtonData.OTHER);
-        card.getButtonTypes().add(type);
-        final Button button = (Button) card.lookupButton(type);
-        button.setId(answer.id());
-        button.getStyleClass().add(answer.primary() ? "btn-primary" : "btn-secondary");
-        Tips.install(messages, button, answer.words().tip());
-        button.setOnAction(event -> {
-            log.debug("continue question answered with {}", answer.id());
-            modalHost.hide();
-            answer.action().run();
-        });
-        return button;
+                answer.words().tip(),
+                answer.primary() ? ButtonBar.ButtonData.OK_DONE : ButtonBar.ButtonData.OTHER,
+                answer.primary() ? "btn-primary" : "btn-secondary",
+                () -> {
+                    log.debug("continue question answered with {}", answer.id());
+                    answer.action().run();
+                });
     }
 }

@@ -3,6 +3,7 @@ package ua.bookloom.ui.dialog;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -52,7 +53,11 @@ public final class FindBookDialog implements FindBookPrompt {
                 opening.getClass().getSimpleName(),
                 error != null);
         final FormCard card = new FormCard(
-                modalHost, messages, PREFIX, ModalCard.Size.DIALOG, messages.get(MessageKey.DIALOG_FIND_BOOK_TITLE));
+                modalHost,
+                messages,
+                PREFIX + "card",
+                ModalCard.Size.DIALOG,
+                messages.get(MessageKey.DIALOG_FIND_BOOK_TITLE));
         final MessageKey body = opening instanceof ProjectOpening.BookFileChanged
                 ? MessageKey.DIALOG_FIND_BOOK_CHANGED
                 : MessageKey.DIALOG_FIND_BOOK_MISSING;
@@ -67,13 +72,15 @@ public final class FindBookDialog implements FindBookPrompt {
                 PREFIX + "cancel",
                 messages.get(MessageKey.COMMON_CANCEL),
                 MessageKey.COMMON_CANCEL_TIP,
-                FormCard.Kind.SECONDARY,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
                 cancelled);
         card.button(
                 PREFIX + "choose",
                 messages.get(MessageKey.DIALOG_FIND_BOOK_CHOOSE),
                 MessageKey.DIALOG_FIND_BOOK_CHOOSE_TIP,
-                FormCard.Kind.PRIMARY,
+                ButtonBar.ButtonData.OK_DONE,
+                "btn-primary",
                 choose);
     }
 

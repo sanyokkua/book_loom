@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Severity;
@@ -46,7 +47,7 @@ final class ProviderTestView {
     private final TextClipboard clipboard;
     private final Runnable close;
     private final ModalCard card = new ModalCard(ModalCard.Size.XL);
-    private final Label title = new Label();
+    private final Label title = ModalCard.title("");
     private final Banner verdict = new Banner("test-verdict", Banner.Role.INFO, Messages.ELLIPSIS, "", "");
     private final Label requestLine = new Label();
     private final Button copyCurl = new Button();
@@ -106,14 +107,7 @@ final class ProviderTestView {
 
     private void build() {
         card.setId("test-card");
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE));
-        subtitle.getStyleClass().add("dialog-sub");
-        subtitle.setWrapText(true);
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
+        card.header(title, Wrapped.label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE), "dialog-sub"));
         buildRequestRow();
         final HBox columns = new HBox(
                 COLUMN_SPACING,
@@ -180,8 +174,6 @@ final class ProviderTestView {
     }
 
     private void buildFooter() {
-        final ButtonType closeType =
-                new ButtonType(messages.get(MessageKey.SETTINGS_TEST_CLOSE), ButtonBar.ButtonData.OK_DONE);
         card.getButtonTypes().clear();
         for (final VerificationStage each : VerificationStage.values()) {
             final ButtonType type = new ButtonType(CheckSentences.stageName(messages, each), ButtonBar.ButtonData.LEFT);
@@ -192,12 +184,15 @@ final class ProviderTestView {
             tab.setOnAction(event -> show(each));
             tabs.put(each, tab);
         }
-        card.getButtonTypes().add(closeType);
-        final Button closeButton = (Button) card.lookupButton(closeType);
-        closeButton.setId("test-close");
-        closeButton.getStyleClass().add("btn-primary");
-        Tips.install(messages, closeButton, MessageKey.SETTINGS_TEST_CLOSE_TIP);
-        closeButton.setOnAction(event -> close.run());
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.SETTINGS_TEST_CLOSE),
+                                ButtonBar.ButtonData.OK_DONE,
+                                "test-close",
+                                "btn-primary"),
+                        MessageKey.SETTINGS_TEST_CLOSE_TIP)
+                .setOnAction(event -> close.run());
         card.setOnEscape(close);
     }
 

@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
@@ -104,7 +105,7 @@ public final class SamePairDialog implements SamePairPrompt {
             this.card = new FormCard(
                     modalHost,
                     messages,
-                    PREFIX,
+                    PREFIX + "card",
                     ModalCard.Size.WIDE,
                     messages.get(MessageKey.DIALOG_SAME_PAIR_TITLE, languageName));
             final String automatic = rules.automaticName();
@@ -132,15 +133,22 @@ public final class SamePairDialog implements SamePairPrompt {
                     PREFIX + "cancel",
                     keepName,
                     MessageKey.DIALOG_SAME_PAIR_KEEP_TIP,
-                    FormCard.Kind.SECONDARY,
+                    ButtonBar.ButtonData.CANCEL_CLOSE,
+                    "btn-secondary",
                     cancelled);
-            return card.button(PREFIX + "use", "", MessageKey.DIALOG_SAME_PAIR_USE_TIP, FormCard.Kind.PRIMARY, () -> {
-                if (open.isSelected()) {
-                    openExisting.run();
-                } else {
-                    makeSecond.accept(name.field().getText().strip());
-                }
-            });
+            return card.button(
+                    PREFIX + "use",
+                    "",
+                    MessageKey.DIALOG_SAME_PAIR_USE_TIP,
+                    ButtonBar.ButtonData.OK_DONE,
+                    "btn-primary",
+                    () -> {
+                        if (open.isSelected()) {
+                            openExisting.run();
+                        } else {
+                            makeSecond.accept(name.field().getText().strip());
+                        }
+                    });
         }
 
         private Node[] content(final ProjectRow existing) {
