@@ -40,9 +40,8 @@ import ua.bookloom.util.paths.DestinationPath;
  * Where the translation is written, what is written beside it, whether the last check runs, and the export itself.
  *
  * <p>A singleton, like {@link CurrentProject}, because the screens are rebuilt on every visit while the choices must
- * survive them; it proposes a destination for a book that is already open when it is first built. {@link
- * ExportProposals} builds the name through {@link DestinationPath}, shared with the command line, and the proposal
- * follows the brief's target language until the person has picked a path.
+ * survive them; it proposes a destination for an open book when built. {@link ExportProposals} builds the name through
+ * {@link DestinationPath}, shared with the command line; it follows the target language until a path is picked.
  *
  * <p>Looking for files at the destination is I/O, so it runs on the background executor and its answer is published
  * back with {@code Platform.runLater}; an answer about an older question is dropped. Pressing Export book looks again,

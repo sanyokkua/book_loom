@@ -43,6 +43,30 @@ final class ReviewMoreMenu {
      */
     record Asks(Runnable askNote, Runnable askUndo, ReviewListPane.Guard guard) {}
 
+    /** The word of a Try again item and the line under it while it is offered. */
+    private enum Words {
+        /** Try again with the same context. */
+        RETRY(MessageKey.REVIEW_MORE_RETRY, MessageKey.REVIEW_MORE_RETRY_SUB),
+        /** Try again with a note that tells the model what to fix. */
+        NOTE(MessageKey.REVIEW_MORE_RETRY_NOTE, MessageKey.REVIEW_MORE_RETRY_NOTE_SUB);
+
+        private final MessageKey word;
+        private final MessageKey sub;
+
+        Words(final MessageKey word, final MessageKey sub) {
+            this.word = word;
+            this.sub = sub;
+        }
+
+        MessageKey word() {
+            return word;
+        }
+
+        MessageKey sub() {
+            return sub;
+        }
+    }
+
     /**
      * Turns a footer button into More ▾.
      *
@@ -83,27 +107,12 @@ final class ReviewMoreMenu {
                         () -> asks.guard().run(viewModel::leaveForLater),
                         viewModel.selected().isNull()),
                 retry(
-                        simple(
-                                messages,
-                                "review-more-retry",
-                                MessageKey.REVIEW_MORE_RETRY,
-                                MessageKey.REVIEW_MORE_RETRY_SUB,
-                                () -> asks.guard().run(() -> viewModel.retry(null, false)),
-                                notRetryable(viewModel)),
-                        viewModel,
                         messages,
-                        MessageKey.REVIEW_MORE_RETRY_SUB),
-                retry(
-                        simple(
-                                messages,
-                                "review-more-note",
-                                MessageKey.REVIEW_MORE_RETRY_NOTE,
-                                MessageKey.REVIEW_MORE_RETRY_NOTE_SUB,
-                                asks.askNote(),
-                                notRetryable(viewModel)),
                         viewModel,
-                        messages,
-                        MessageKey.REVIEW_MORE_RETRY_NOTE_SUB),
+                        "review-more-retry",
+                        Words.RETRY,
+                        () -> asks.guard().run(() -> viewModel.retry(null, false))),
+                retry(messages, viewModel, "review-more-note", Words.NOTE, asks.askNote()),
                 undo(messages, viewModel, asks.askUndo()));
     }
 
@@ -128,10 +137,13 @@ final class ReviewMoreMenu {
 
     // The line under Try again says why it is off for a segment it cannot retry, rather than answering after a press.
     private static CustomMenuItem retry(
-            final CustomMenuItem item,
-            final ReviewViewModel viewModel,
             final Messages messages,
-            final MessageKey usual) {
+            final ReviewViewModel viewModel,
+            final String id,
+            final Words words,
+            final Runnable action) {
+        final MessageKey usual = words.sub();
+        final CustomMenuItem item = simple(messages, id, words.word(), usual, action, notRetryable(viewModel));
         final Label sub = (Label) ((VBox) item.getContent()).getChildren().get(1);
         sub.textProperty()
                 .bind(Bindings.createStringBinding(

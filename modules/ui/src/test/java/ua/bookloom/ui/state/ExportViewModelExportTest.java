@@ -82,7 +82,8 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         export();
 
         assertThat(exportService.requests())
-                .containsExactly(new ExportRequest("p1", destination, false, Set.of(SideFile.GLOSSARY_CSV), false));
+                .containsExactly(new ExportRequest(
+                        "p1", destination, false, Set.of(SideFile.GLOSSARY_CSV, SideFile.QUALITY_REPORT), false));
         assertThat(exportService.models()).containsOnlyNulls();
     }
 
@@ -251,7 +252,7 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         exportedOnce();
 
         onFx(() -> {
-            exports.setSideFile(SideFile.QUALITY_REPORT, true);
+            exports.setSideFile(SideFile.BILINGUAL_HTML, true);
             return null;
         });
 
