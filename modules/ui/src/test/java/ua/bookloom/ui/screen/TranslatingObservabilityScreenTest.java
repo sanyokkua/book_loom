@@ -43,7 +43,6 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
 
     private void waitOn(final WaitingCall call) {
         mirror().live().publishWaitingCall(call);
-        mirror().publishWaitingSeconds((int) call.attemptWaited().toSeconds());
         WaitForAsyncUtils.waitForFxEvents();
     }
 

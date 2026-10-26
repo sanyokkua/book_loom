@@ -67,7 +67,6 @@ class NamesStyleRunBannerScreenTest extends TranslatingScreenTestBase {
                         Duration.ofSeconds(90),
                         Duration.ofSeconds(61),
                         true));
-        mirror().publishWaitingSeconds(61);
         WaitForAsyncUtils.waitForFxEvents();
     }
 

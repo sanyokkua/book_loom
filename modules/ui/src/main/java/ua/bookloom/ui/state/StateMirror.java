@@ -32,9 +32,6 @@ public final class StateMirror {
     /** The activity log keeps this many of the newest entries; a whole book would otherwise exhaust the list view. */
     public static final int MAX_LOG_ENTRIES = 500;
 
-    /** The value of {@link #waitingSeconds()} while no model request has been outstanding long enough to mention. */
-    public static final int NOT_WAITING = -1;
-
     private final ReadOnlyObjectWrapper<RunState> runState = new ReadOnlyObjectWrapper<>(RunState.IDLE);
     private final ReadOnlyIntegerWrapper accepted = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
@@ -44,7 +41,6 @@ public final class StateMirror {
     private final ReadOnlyIntegerWrapper sections = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
     private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
@@ -125,16 +121,6 @@ public final class StateMirror {
     /** {@return how many chunks the section has, zero before a snapshot arrives; read on the FX thread} */
     public ReadOnlyIntegerProperty chunks() {
         return chunks.getReadOnlyProperty();
-    }
-
-    /**
-     * How long the request now outstanding has been waiting, once that is long enough for the banner to say so.
-     *
-     * @return a read-only whole number of seconds, or {@link #NOT_WAITING} when there is nothing to say; read on the FX
-     *     thread
-     */
-    public ReadOnlyIntegerProperty waitingSeconds() {
-        return waitingSeconds.getReadOnlyProperty();
     }
 
     /**
@@ -257,18 +243,6 @@ public final class StateMirror {
         Platform.runLater(() -> runState.set(state));
     }
 
-    /**
-     * Shows how long the model has been slow to answer, or withdraws the notice.
-     *
-     * <p>Not logged here: the run session logs when a wait is first shown and when it is cleared, and this is called
-     * once a second while one lasts.
-     *
-     * @param seconds whole seconds the outstanding request has waited, or {@link #NOT_WAITING} to withdraw the notice
-     */
-    public void publishWaitingSeconds(final int seconds) {
-        Platform.runLater(() -> waitingSeconds.set(seconds));
-    }
-
     void showFlagged(final int count) {
         applyFigures(figures.get().withFlagged(count));
     }
@@ -347,7 +321,6 @@ public final class StateMirror {
         logEntries.clear();
         failure.set(null);
         report.set(null);
-        waitingSeconds.set(NOT_WAITING);
         live.reset();
         review.reset();
         runState.set(state);

@@ -15,7 +15,6 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
 import ua.bookloom.ui.state.RunState;
-import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.WaitingCall;
 
 /**
@@ -69,13 +68,11 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
                 Duration.ofSeconds(61),
                 true);
         mirror().live().publishWaitingCall(call);
-        mirror().publishWaitingSeconds(61);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void modelAnswers() {
         mirror().live().publishWaitingCall(null);
-        mirror().publishWaitingSeconds(StateMirror.NOT_WAITING);
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {});
     }
