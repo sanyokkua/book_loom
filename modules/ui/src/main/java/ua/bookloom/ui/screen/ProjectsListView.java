@@ -127,18 +127,23 @@ final class ProjectsListView {
         }
     }
 
+    // A search with no hits names the text and offers Clear search; a filter alone that leaves nothing says what it found
+    // none of, since the filter's own segment takes it back.
     private Node noMatch() {
         final String shown = viewModel.search().get().strip();
-        final Label line = new Label(messages.get(
-                MessageKey.PROJECTS_NO_MATCH,
-                shown.isEmpty() ? messages.get(viewModel.filter().get().label()) : shown));
+        final HBox box = new HBox(CARD_SPACING);
+        box.setId("projects-no-match");
+        box.setAlignment(Pos.CENTER_LEFT);
+        if (shown.isEmpty()) {
+            box.getChildren().add(new Label(messages.get(viewModel.filter().get().none())));
+            return box;
+        }
+        final Label line = new Label(messages.get(MessageKey.PROJECTS_NO_MATCH, shown));
         final Hyperlink clear = new Hyperlink(messages.get(MessageKey.PROJECTS_CLEAR_SEARCH));
         clear.setId("projects-clear-search");
         Tips.install(messages, clear, MessageKey.PROJECTS_CLEAR_SEARCH_TIP);
         clear.setOnAction(event -> clearSearch());
-        final HBox box = new HBox(CARD_SPACING, line, clear);
-        box.setId("projects-no-match");
-        box.setAlignment(Pos.CENTER_LEFT);
+        box.getChildren().addAll(line, clear);
         return box;
     }
 

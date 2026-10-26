@@ -525,6 +525,11 @@ The application SHALL show the Projects screen with the purpose line "A project 
 - **WHEN** `Finished` is chosen
 - **THEN** only projects whose translation has finished are listed
 
+#### Scenario: A filter that leaves nothing says what it found none of
+
+- **WHEN** the search is empty, no project is finished and `Finished` is chosen
+- **THEN** the list reads `No finished translations yet.` with no `Clear search` link (`In progress` reads `No translation in progress.`), never `No project matches 'Finished'.`
+
 #### Scenario: The search starts empty on each visit
 
 - **WHEN** `xyz` was typed, Settings was opened and Projects is shown again

@@ -3055,6 +3055,12 @@ public enum MessageKey {
     PROJECTS_FILTER_FINISHED_TIP("projects.filter.finished.tip"),
     /** The line shown when a search keeps no project: the searched text. */
     PROJECTS_NO_MATCH("projects.noMatch"),
+    /** The line of the All filter when the list holds no project. */
+    PROJECTS_FILTER_ALL_NONE("projects.filter.all.none"),
+    /** The line of the In progress filter when no project is in progress. */
+    PROJECTS_FILTER_IN_PROGRESS_NONE("projects.filter.inProgress.none"),
+    /** The line of the Finished filter when no project is finished. */
+    PROJECTS_FILTER_FINISHED_NONE("projects.filter.finished.none"),
     /** The link that empties the search. */
     PROJECTS_CLEAR_SEARCH("projects.clearSearch"),
     /** Hover explanation of the clear-search link. */
