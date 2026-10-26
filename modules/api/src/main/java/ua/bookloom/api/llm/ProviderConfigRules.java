@@ -56,6 +56,10 @@ public interface ProviderConfigRules {
     Pattern VARIABLE_REFERENCE =
             Pattern.compile("\\$(?:\\{(?:env:)?)?([A-Za-z_][A-Za-z0-9_]*)}?|%([A-Za-z_][A-Za-z0-9_]*)%");
 
+    /** The refusal of a header name; it never names the name, which may be a key pasted into the wrong field. */
+    String BAD_HEADER_NAME =
+            "A header name holds a space, a colon or another character a header name may not, or reads like a key.";
+
     /** The highest TCP port. */
     int MAX_PORT = 65_535;
 
@@ -98,7 +102,8 @@ public interface ProviderConfigRules {
      * One thing a rule found, kept apart from the English text of {@link Check#errors()}.
      *
      * @param rule the rule that fired
-     * @param subject the header name the finding is about, or null; never a value
+     * @param subject the accepted header name or variable name the finding is about, or null; never a value and
+     *     never a refused name
      */
     record Finding(Rule rule, @Nullable String subject) {
 
@@ -211,10 +216,9 @@ public interface ProviderConfigRules {
     private static void checkHeaders(
             final Map<String, String> headers, final List<AppError> errors, final List<Finding> findings) {
         for (final Map.Entry<String, String> header : headers.entrySet()) {
-            if (!HEADER_NAME.matcher(header.getKey()).matches()) {
-                errors.add(validation("The header name " + header.getKey().strip()
-                        + " holds a space, a colon or another character a header name may not."));
-                findings.add(new Finding(Rule.HEADER_NAME_INVALID, header.getKey()));
+            if (!isHeaderName(header.getKey())) {
+                errors.add(validation(BAD_HEADER_NAME));
+                findings.add(new Finding(Rule.HEADER_NAME_INVALID, null));
                 continue;
             }
             final String name = header.getKey().toLowerCase(Locale.ROOT);
@@ -250,16 +254,14 @@ public interface ProviderConfigRules {
         if (config.auth() == ProviderAuth.API_KEY && isBlank(keyHeader)) {
             errors.add(missing("An API-key sign-in needs the header name that carries the key."));
             findings.add(new Finding(Rule.API_KEY_HEADER_MISSING, null));
-        } else if (config.auth() == ProviderAuth.API_KEY
-                && keyHeader != null
-                && !HEADER_NAME.matcher(keyHeader).matches()) {
-            errors.add(validation("The key header name " + keyHeader.strip()
-                    + " holds a space, a colon or another character a header name may not."));
-            findings.add(new Finding(Rule.API_KEY_HEADER_INVALID, keyHeader));
+        } else if (config.auth() == ProviderAuth.API_KEY && keyHeader != null && !isHeaderName(keyHeader)) {
+            errors.add(validation(BAD_HEADER_NAME));
+            findings.add(new Finding(Rule.API_KEY_HEADER_INVALID, null));
         }
     }
 
-    // A variable written as $NAME or ${env:NAME} is named back bare, so the person sees exactly what to type instead.
+    // A variable written as $NAME or ${env:NAME} is named back bare (a key written that way is no name and is refused
+    // as one, never named back), so the person sees exactly what to type instead.
     private static boolean isReference(
             final String reference, final List<AppError> errors, final List<Finding> findings) {
         final Matcher written = VARIABLE_REFERENCE.matcher(reference.strip());
@@ -267,6 +269,9 @@ public interface ProviderConfigRules {
             return false;
         }
         final String bare = written.group(1) != null ? written.group(1) : written.group(2);
+        if (!isVariableName(bare)) {
+            return false;
+        }
         errors.add(validation("Enter only the variable's name, " + bare + ", without $ or braces."));
         findings.add(new Finding(Rule.CREDENTIAL_REF_REFERENCE, bare));
         return true;
@@ -281,6 +286,18 @@ public interface ProviderConfigRules {
     static boolean isVariableName(final String reference) {
         return ENV_NAME.matcher(reference).matches()
                 && !SECRET_SHAPE.matcher(reference).matches();
+    }
+
+    /**
+     * Tells whether a header name may be stored and sent: the characters of a header name, and no key's shape, so a
+     * key pasted into a header-name field is refused instead of being stored and sent as a name.
+     *
+     * @param name the typed header name
+     * @return {@code true} if it may be used as a header name, {@code false} otherwise
+     */
+    static boolean isHeaderName(final String name) {
+        return HEADER_NAME.matcher(name).matches()
+                && !SECRET_SHAPE.matcher(name).matches();
     }
 
     private static boolean isBlank(final @Nullable String value) {

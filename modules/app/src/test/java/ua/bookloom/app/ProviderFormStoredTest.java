@@ -7,7 +7,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import org.junit.jupiter.api.Tag;
@@ -33,7 +35,13 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     private static final String ADDRESS = "http://127.0.0.1:9/v1";
 
     @ParameterizedTest
-    @ValueSource(strings = {"sk-literal-SECRET-abc123", "sk_live_51HabcDEF123ghiJKL456", "my key"})
+    @ValueSource(
+            strings = {
+                "sk-literal-SECRET-abc123",
+                "sk_live_51HabcDEF123ghiJKL456",
+                "$sk_live_51HabcDEF123ghiJKL456",
+                "my key"
+            })
     void save_keyTypedAsTheVariable_isRefusedAtTheFieldAndNothingIsStored(final String typed) throws Exception {
         startStoredWindow();
         newProvider("Cloud", ADDRESS);
@@ -46,6 +54,22 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
                 .isEqualTo("Type the NAME of an environment variable that holds the key, not the key itself.");
         assertThat(saveTip()).startsWith("Fix the marked fields first:");
         assertThat(stored()).isZero();
+    }
+
+    // IF the refused key were echoed (G1-2: "BookLoom cannot read sk_live_… launchctl setenv sk_live_…"), THEN the
+    // key would stand on the screen in words; no text, hint or tooltip of the window holds it, only the field itself.
+    @ParameterizedTest
+    @ValueSource(strings = {"sk_live_51HabcDEF123ghiJKL456", "$sk_live_51HabcDEF123ghiJKL456"})
+    void keyTypedAsTheVariable_isNeverShownBackOutsideTheField(final String typed) throws Exception {
+        startStoredWindow();
+        newProvider("Cloud", ADDRESS);
+        onFx(() -> ((ToggleButton) node("#settings-form-auth-bearer")).fire());
+        type("#settings-form-key-variable", typed);
+
+        pressSave();
+
+        assertThat(errorUnder("#settings-form-key-variable")).isNotEmpty();
+        assertThat(shownTexts()).noneMatch(text -> text.contains("sk_live_51HabcDEF123ghiJKL456"));
     }
 
     @ParameterizedTest
@@ -103,7 +127,9 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
 
         pressSave();
 
-        assertThat(errorUnder("#settings-form-headers")).startsWith("The header name " + header);
+        assertThat(errorUnder("#settings-form-headers"))
+                .startsWith("A header name can hold only")
+                .doesNotContain(header);
         assertThat(stored()).isZero();
     }
 
@@ -115,7 +141,7 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
 
         pressSave();
 
-        assertThat(errorUnder("#settings-form-headers")).startsWith("The header name X-aaa");
+        assertThat(errorUnder("#settings-form-headers")).startsWith("A header name can hold only");
         assertThat(stored()).isZero();
     }
 
@@ -169,6 +195,19 @@ class ProviderFormStoredTest extends WorkspaceTestBase {
     private String saveTip() {
         return onFx(() -> Objects.requireNonNull(((Button) node("#settings-form-save")).getTooltip())
                 .getText());
+    }
+
+    // Every visible label's and button's words and every tooltip in the window; a text field's own text is left out.
+    private List<String> shownTexts() {
+        return onFx(() -> shell.root().lookupAll("*").stream()
+                .filter(Node::isVisible)
+                .flatMap(node -> java.util.stream.Stream.of(
+                        node instanceof Labeled labeled ? labeled.getText() : null,
+                        node instanceof Control control && control.getTooltip() != null
+                                ? control.getTooltip().getText()
+                                : null))
+                .filter(Objects::nonNull)
+                .toList());
     }
 
     private int stored() {

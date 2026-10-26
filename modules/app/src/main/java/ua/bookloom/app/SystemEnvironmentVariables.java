@@ -57,14 +57,14 @@ final class SystemEnvironmentVariables implements EnvironmentVariables {
     /**
      * The variable's value, for a request header only.
      *
-     * @param name the variable's name; anything but letters, digits and underscores (not starting with a digit) is
-     *     never looked up
+     * @param name the variable's name; anything but letters, digits and underscores (not starting with a digit), or a
+     *     name shaped like a key, is never looked up, so a key typed into the name field never reaches a command line
      * @return the non-blank value, or {@code null} when it is unset, blank, unreadable or the name is not a name
      */
     @Nullable
     String value(final String name) {
         Objects.requireNonNull(name, "name");
-        if (!ProviderConfigRules.ENV_NAME.matcher(name).matches()) {
+        if (!ProviderConfigRules.isVariableName(name)) {
             log.debug("Environment variable not looked up: not a variable name length={}", name.length());
             return null;
         }

@@ -115,14 +115,19 @@ The provider form SHALL let the person add custom headers as name and value rows
 
 ### Requirement: Refuse a header name or a timeout a request could not use
 
-IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, or is longer than 64 characters, or a connect or request timeout is not a whole number from 1 to 3600 seconds, or the address is not an absolute `http`/`https` address with a host, names a port outside 1 to 65535 or carries a user name or password, or the key variable is not the name of an environment variable (letters, digits and underscores, not starting with a digit) or reads like a key (a known key prefix such as `sk-`, `sk_`, `ghp_`, `AKIA…`, or 24 or more characters mixing lower case, upper case and digits), THEN the provider form SHALL show the finding under that field once the person has typed or pressed Save, SHALL refuse Save while explaining on Save's hover what holds it, and the provider store SHALL refuse the same description with `ErrorCode.validation` so nothing of it is written; a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent, and the test dialog and its curl line SHALL show its address without any user name or password.
+IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, is longer than 64 characters or reads like a key, or a connect or request timeout is not a whole number from 1 to 3600 seconds, or the address is not an absolute `http`/`https` address with a host, names a port outside 1 to 65535 or carries a user name or password, or the key variable is not the name of an environment variable (letters, digits and underscores, not starting with a digit) or reads like a key (a known key prefix such as `sk-`, `sk_`, `ghp_`, `AKIA…`, or 24 or more characters mixing lower case, upper case and digits), THEN the provider form SHALL show the finding under that field once the person has typed or pressed Save, never naming the refused text back, SHALL refuse Save while explaining on Save's hover what holds it, and the provider store SHALL refuse the same description with `ErrorCode.validation` so nothing of it is written; a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent, and the test dialog and its curl line SHALL show its address without any user name or password.
 
 **Source**: `docs/specification/mockups/README.md#providers`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
 
 #### Scenario: A header name with a space
 
 - **WHEN** the header `X Team` is added with the value `blue`
-- **THEN** Save is held and the form says under the headers that the header name `X Team` can hold only up to 64 Latin letters, digits and `- _ . ~`
+- **THEN** Save is held and the form says under the headers that a header name can hold only up to 64 Latin letters, digits and `- _ . ~`, without repeating `X Team`
+
+#### Scenario: A key typed where the variable's name belongs is never shown back
+
+- **WHEN** Bearer token is chosen, `sk_live_51HabcDEF123ghiJKL456` or `$sk_live_51HabcDEF123ghiJKL456` is typed as the key variable and Save is pressed
+- **THEN** Save is held, the field says to type the NAME of a variable, not the key itself, the form shows neither "set" nor "not set" nor the line saying where to set it, no text or tooltip of the window holds the typed text, and the operating system's variables are not asked for it
 
 #### Scenario: A timeout longer than an hour
 

@@ -90,6 +90,20 @@ class SystemEnvironmentVariablesTest {
         assertThat(os.asked).isEmpty();
     }
 
+    // IF a key typed where its variable's name belongs were looked up, THEN it would reach a launchctl command line
+    // and the debug log as a "name"; it is never looked up and never logged.
+    @Test
+    void value_keyTypedAsTheName_isNeverLookedUpOrLogged() {
+        resolverLog.setLevel(Level.TRACE);
+
+        final String value = variables.value("sk_live_51HabcDEF123ghiJKL456");
+
+        resolverLog.setLevel(null);
+        assertThat(value).isNull();
+        assertThat(os.asked).isEmpty();
+        assertThat(appender.list).noneMatch(event -> event.getFormattedMessage().contains("sk_live_"));
+    }
+
     @Test
     void value_osReaderFails_isUnsetWithOneWarnAcrossCalls() {
         os.failure = new IllegalStateException("launchctl timed out");

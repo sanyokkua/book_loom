@@ -228,6 +228,45 @@ class ProviderConfigRulesTest {
         assertThat(check.errors().toString()).doesNotContain("sk-test-123");
     }
 
+    // IF a key written as $sk_live_… were read as "a reference to the variable sk_live_…", THEN the refusal would
+    // say the key back to the person ("Enter only the variable's name, sk_live_…"); it is refused as no name instead.
+    @Test
+    void findings_keyWrittenAsAReference_isNotANameAndNamesNothing() {
+        final ProviderConfig config = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.BEARER)
+                .withCredentialRef("${env:sk_live_51HabcDEF123ghiJKL456}");
+
+        final ProviderConfigRules.Check check = ProviderConfigRules.check(config);
+
+        assertThat(check.findings())
+                .containsExactly(
+                        new ProviderConfigRules.Finding(ProviderConfigRules.Rule.CREDENTIAL_REF_NOT_A_NAME, null));
+        assertThat(check.errors().toString()).doesNotContain("sk_live_51HabcDEF123ghiJKL456");
+    }
+
+    // IF a refused header name were named back, THEN a key pasted into a header-name field would be shown and logged;
+    // a header name shaped like a key is refused too, so it is never stored or sent.
+    @ParameterizedTest
+    @ValueSource(strings = {"X Api Key", "sk_live_51HabcDEF123ghiJKL456"})
+    void check_refusedHeaderNames_areNeverNamedBack(final String name) {
+        final ProviderConfig custom =
+                config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE).withHeaders(Map.of(name, "1"));
+        final ProviderConfig keyHeader = config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE)
+                .withAuth(ProviderAuth.API_KEY)
+                .withCredentialRef("LMS_KEY")
+                .withApiKeyHeader(name);
+
+        final ProviderConfigRules.Check customCheck = ProviderConfigRules.check(custom);
+        final ProviderConfigRules.Check keyCheck = ProviderConfigRules.check(keyHeader);
+
+        assertThat(customCheck.findings())
+                .containsExactly(new ProviderConfigRules.Finding(ProviderConfigRules.Rule.HEADER_NAME_INVALID, null));
+        assertThat(keyCheck.findings())
+                .containsExactly(
+                        new ProviderConfigRules.Finding(ProviderConfigRules.Rule.API_KEY_HEADER_INVALID, null));
+        assertThat(customCheck.errors() + " " + keyCheck.errors()).doesNotContain(name);
+    }
+
     @Test
     void check_noAuth_needsNoCredential() {
         assertThat(ProviderConfigRules.check(config("http://host/v1", ProviderKind.OPENAI_COMPATIBLE))

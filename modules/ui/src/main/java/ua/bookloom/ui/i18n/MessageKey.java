@@ -682,7 +682,7 @@ public enum MessageKey {
     SETTINGS_ERROR_OLLAMA_CHAT_PATH("settings.error.ollamaChatPath"),
     /** Error on the headers: argument 0 is the header whose value looks like a key. */
     SETTINGS_ERROR_HEADER_LITERAL("settings.error.headerLiteral"),
-    /** Error under a header name: it holds a space, a colon or another character a header name may not; argument 0 is the name. */
+    /** Error under a header name it refuses (a bad character, or a key's shape); it never names that name. */
     SETTINGS_ERROR_HEADER_NAME_INVALID("settings.error.headerNameInvalid"),
     /** Error under the key variable: a variable's name is wanted, not a key. */
     SETTINGS_ERROR_REF_NOT_NAME("settings.error.refNotName"),

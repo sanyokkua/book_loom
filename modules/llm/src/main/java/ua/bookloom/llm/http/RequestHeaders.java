@@ -103,7 +103,7 @@ public final class RequestHeaders {
         }
         final String name = config.auth() == ProviderAuth.BEARER ? AUTHORIZATION : headerName(config);
         if (!isHeaderName(name)) {
-            return Result.err(validation("The key header name " + name.strip() + " is not a valid header name."));
+            return Result.err(validation(ProviderConfigRules.BAD_HEADER_NAME));
         }
         final String value = config.auth() == ProviderAuth.BEARER ? "Bearer " + key.data() : key.data();
         final Result<String> checked = checkedValue(name, Objects.requireNonNull(value, "value"));
@@ -120,7 +120,7 @@ public final class RequestHeaders {
 
     private static Result<String> customValue(String name, String template, Function<String, @Nullable String> env) {
         if (!isHeaderName(name)) {
-            return Result.err(validation("The header name " + name.strip() + " is not a valid header name."));
+            return Result.err(validation(ProviderConfigRules.BAD_HEADER_NAME));
         }
         if (RESTRICTED.contains(name.toLowerCase(Locale.ROOT))) {
             log.warn("Request header refused because its name is restricted header={}", name);
@@ -139,11 +139,12 @@ public final class RequestHeaders {
         return checkedValue(name, resolved.toString());
     }
 
-    // A name with a space, a colon or a control character would make the HTTP client throw at send time.
+    // A name with a space, a colon or a control character would make the HTTP client throw at send time; a refused
+    // name is never logged or named back, since it may be a key pasted into the wrong field.
     private static boolean isHeaderName(String name) {
-        final boolean valid = ProviderConfigRules.HEADER_NAME.matcher(name).matches();
+        final boolean valid = ProviderConfigRules.isHeaderName(name);
         if (!valid) {
-            log.warn("Request header refused because its name is not a valid header name header={}", name.strip());
+            log.warn("Request header refused because its name is not a valid header name length={}", name.length());
         }
         return valid;
     }

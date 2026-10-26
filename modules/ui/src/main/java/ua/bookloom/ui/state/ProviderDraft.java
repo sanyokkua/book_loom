@@ -254,11 +254,12 @@ public record ProviderDraft(
      * Tells whether the sign-in's variable has a value.
      *
      * @param environment where variables are looked up
-     * @return {@link CredentialStatus#NONE} without a sign-in or a variable name
+     * @return {@link CredentialStatus#NONE} without a sign-in or without a usable variable name
      */
     public CredentialStatus credentialStatus(final EnvironmentVariables environment) {
         Objects.requireNonNull(environment, "environment");
-        if (auth == ProviderAuth.NONE || credentialRef.isBlank()) {
+        // A reference the rules refuse may be the key itself: it is never looked up, and "not set" never names it.
+        if (auth == ProviderAuth.NONE || !ProviderConfigRules.isVariableName(credentialRef.strip())) {
             return CredentialStatus.NONE;
         }
         return environment.isSet(credentialRef.strip()) ? CredentialStatus.SET : CredentialStatus.NOT_SET;

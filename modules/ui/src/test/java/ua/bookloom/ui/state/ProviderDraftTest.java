@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
@@ -183,18 +184,16 @@ class ProviderDraftTest {
         assertThat(officeLm().withRequestSeconds("3600").findings()).isEmpty();
     }
 
-    // IF a header name with a space or a colon could be saved, THEN every request would fail as a transport error.
+    // IF a header name with a space or a colon could be saved, THEN every request would fail as a transport error; the
+    // refused name is not named back, since it may be a key pasted into the wrong field.
     @ParameterizedTest
-    @ValueSource(strings = {"X Team", "X-Team:"})
-    void findings_headerNameNotAToken_blocksNamingIt(final String name) {
+    @ValueSource(strings = {"X Team", "X-Team:", "sk_live_51HabcDEF123ghiJKL456"})
+    void findings_headerNameNotAToken_blocksWithoutNamingIt(final String name) {
         final ProviderDraft draft = officeLm().withHeaders(List.of(new ProviderDraft.HeaderRow(name, "blue")));
 
         assertThat(draft.findings())
                 .containsExactly(new ProviderDraft.FormFinding(
-                        MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID,
-                        List.of(name),
-                        ProviderDraft.Field.HEADERS,
-                        true));
+                        MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID, List.of(), ProviderDraft.Field.HEADERS, true));
     }
 
     @Test
@@ -207,7 +206,7 @@ class ProviderDraftTest {
         assertThat(draft.findings())
                 .containsExactly(new ProviderDraft.FormFinding(
                         MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID,
-                        List.of("X Api Key"),
+                        List.of(),
                         ProviderDraft.Field.KEY_HEADER,
                         true));
     }
@@ -305,6 +304,20 @@ class ProviderDraftTest {
         assertThat(bearer.credentialStatus(name -> true)).isEqualTo(ProviderDraft.CredentialStatus.SET);
         assertThat(bearer.credentialStatus(name -> false)).isEqualTo(ProviderDraft.CredentialStatus.NOT_SET);
         assertThat(officeLm().credentialStatus(name -> true)).isEqualTo(ProviderDraft.CredentialStatus.NONE);
+    }
+
+    // IF a refused reference had a status, THEN the form would say "not set" and where to set it, naming the key typed
+    // into the field (and look it up in the operating system); it has none, and nothing is asked.
+    @ParameterizedTest
+    @ValueSource(strings = {"sk_live_51HabcDEF123ghiJKL456", "$sk_live_51HabcDEF123ghiJKL456", "my key"})
+    void credentialStatus_refusedReference_isNoneAndTheEnvironmentIsNotAsked(final String typed) {
+        final List<String> asked = new ArrayList<>();
+        final ProviderDraft bearer = officeLm().withAuth(ProviderAuth.BEARER).withCredentialRef(typed);
+
+        final ProviderDraft.CredentialStatus status = bearer.credentialStatus(name -> asked.add(name));
+
+        assertThat(status).isEqualTo(ProviderDraft.CredentialStatus.NONE);
+        assertThat(asked).isEmpty();
     }
 
     // IF an unparsable address hid the header checks, THEN a key typed into a header would show only after the address.
