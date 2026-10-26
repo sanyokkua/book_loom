@@ -77,9 +77,7 @@ class PromptEvalTest {
                         .map(tag -> languageReport(calls, model, tag, repeats))
                         .toList();
 
-        for (final EvalReport report : reports) {
-            write(report);
-        }
+        writeAll(reports);
         assertThat(reports)
                 .allSatisfy(report ->
                         assertThat(report.meetsThresholds()).as(report.table()).isTrue());
@@ -117,6 +115,12 @@ class PromptEvalTest {
     private static String rulesLabel() {
         final String asked = System.getProperty("bookloom.eval.rules", System.getenv("BOOKLOOM_EVAL_RULES"));
         return "generic".equalsIgnoreCase(asked) ? "generic" : "language";
+    }
+
+    private static void writeAll(final List<EvalReport> reports) throws IOException {
+        for (final EvalReport report : reports) {
+            write(report);
+        }
     }
 
     private static void write(final EvalReport report) throws IOException {

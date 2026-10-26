@@ -247,16 +247,21 @@ class BookInspectorServiceInspectTest {
     @Test
     void inspect_unrecognizedBinaryFile_unsupportedNamedUnknown() throws Exception {
         final Path bin = tempDir.resolve("mystery.bin");
-        final byte[] bytes = new byte[2048];
-        for (int i = 0; i < bytes.length; i++) {
-            bytes[i] = (byte) (i * 31 + 7);
-        }
-        Files.write(bin, bytes);
+        Files.write(bin, unrecognizedBytes());
 
         final BookInspection inspection = inspectionOf(bin);
 
         assertThat(inspection.verdict()).isEqualTo(InspectionVerdict.UNSUPPORTED);
         assertThat(inspection.detectedType()).isEqualTo("Unknown").isEqualTo(BookInspection.UNKNOWN_TYPE);
+    }
+
+    // 2 KB of a byte pattern that starts none of the known magics.
+    private static byte[] unrecognizedBytes() {
+        final byte[] bytes = new byte[2048];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (i * 31 + 7);
+        }
+        return bytes;
     }
 
     // IF a file whose name promises a supported format held something else, THEN it is damaged, not "Unknown": the
