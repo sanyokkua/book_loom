@@ -40,11 +40,15 @@ class ImportBrokenEpubTest extends WorkspaceTestBase {
         onFx(() -> injector.getInstance(ImportViewModel.class).open(book));
         waitUntil(() -> !injector.getInstance(ImportViewModel.class).opening().get());
 
-        final ImportState state = onFx(() -> injector.getInstance(ImportViewModel.class).state().get());
+        final ImportState state =
+                onFx(() -> injector.getInstance(ImportViewModel.class).state().get());
         assertThat(state).isInstanceOf(ImportState.Refused.class);
         assertThat(((ImportState.Refused) state).error().message()).contains("could not be read as a book");
-        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get())).isNull();
-        assertThat(Objects.requireNonNull(injector.getInstance(ProjectService.class).list().data())).isEmpty();
+        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get()))
+                .isNull();
+        assertThat(Objects.requireNonNull(
+                        injector.getInstance(ProjectService.class).list().data()))
+                .isEmpty();
     }
 
     @Test
@@ -62,6 +66,8 @@ class ImportBrokenEpubTest extends WorkspaceTestBase {
 
         openBook(book, 2);
 
-        assertThat(Objects.requireNonNull(injector.getInstance(ProjectService.class).list().data())).hasSize(1);
+        assertThat(Objects.requireNonNull(
+                        injector.getInstance(ProjectService.class).list().data()))
+                .hasSize(1);
     }
 }

@@ -55,8 +55,8 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
 
         removeFromProjects(id);
         waitUntil(() -> shell.root().lookup("#confirm-yes") != null);
-        final String question = onFx(() -> ((Label) Objects.requireNonNull(shell.root().lookup(".dialog-title")))
-                .getText());
+        final String question =
+                onFx(() -> ((Label) Objects.requireNonNull(shell.root().lookup(".dialog-title"))).getText());
         assertThat(question).startsWith("Stop the translation and remove");
         assertThat(runState()).as("nothing changes before the answer").isEqualTo(RunState.PAUSED);
         onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#confirm-yes"))).fire());
@@ -64,7 +64,9 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
         org.testfx.util.WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS,
                 java.util.concurrent.TimeUnit.SECONDS,
-                () -> Objects.requireNonNull(injector.getInstance(ProjectRepository.class).find(id).data())
+                () -> Objects.requireNonNull(injector.getInstance(ProjectRepository.class)
+                                .find(id)
+                                .data())
                         .isEmpty());
         waitUntil(() -> injector.getInstance(StateMirror.class).runState().get().isIdleOrEnded());
         org.testfx.util.WaitForAsyncUtils.waitForFxEvents();
@@ -72,7 +74,8 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
                 .as("no write of the run fails once its project is gone")
                 .filteredOn(event -> event.getLevel().isGreaterOrEqual(Level.ERROR))
                 .isEmpty();
-        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get())).isNull();
+        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get()))
+                .isNull();
     }
 
     private String pausedRun() throws Exception {

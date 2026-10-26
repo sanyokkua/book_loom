@@ -22,10 +22,33 @@ final class ProjectDisposal {
 
     private final ProjectService projects;
     private final ExecutorService executor;
+    // The project the last import stored new, while it is the open one; FX thread only.
+    private @Nullable String createdHere;
 
     ProjectDisposal(final ProjectService projects, final ExecutorService executor) {
         this.projects = Objects.requireNonNull(projects, "projects");
         this.executor = Objects.requireNonNull(executor, "executor");
+    }
+
+    /** Remembers the project the last import stored new, or {@code null} when it reused one or another was opened. */
+    void storedNew(final @Nullable String projectId) {
+        log.debug("project stored new by the last import: {}", projectId);
+        createdHere = projectId;
+    }
+
+    /**
+     * Lets the open book go on Cancel: the project the last import stored new is removed when {@code discardCreated},
+     * so a cancelled import leaves nothing in Projects; any other project is only released.
+     */
+    void letGo(final @Nullable OpenedBook previous, final boolean discardCreated) {
+        final String created = createdHere;
+        createdHere = null;
+        if (previous != null && discardCreated && previous.projectId().equals(created)) {
+            log.info("the project {} the cancelled import stored is removed", created);
+            removeLater(previous.projectId());
+        } else {
+            release(previous);
+        }
     }
 
     /** Closes the project of a book that is no longer open; nothing to do for {@code null}. */

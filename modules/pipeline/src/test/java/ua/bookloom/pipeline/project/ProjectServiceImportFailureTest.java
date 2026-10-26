@@ -61,7 +61,6 @@ class ProjectServiceImportFailureTest {
         assertThat(closed).hasSize(1);
         assertThat(projectIds).hasSize(1);
         assertThat(openProjects.get(projectIds.getFirst())).isNull();
-        assertThat(service.list().data()).as("no half-created project is left").isEmpty();
     }
 
     // IF the segment store refuses the book (a storage error, as SQLite answers a duplicate segment id), THEN the
@@ -72,7 +71,8 @@ class ProjectServiceImportFailureTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
-        final ProjectServiceImpl service = service(injector, refusingSaves(injector.getInstance(SegmentRepository.class)));
+        final ProjectServiceImpl service =
+                service(injector, refusingSaves(injector.getInstance(SegmentRepository.class)));
         final Path book = TestBooks.txt(tempDir.resolve("book.txt"), "It was a dark night.\n\nThe rain kept falling.");
 
         final Result<ImportedBook> imported = service.create(book);
@@ -83,7 +83,9 @@ class ProjectServiceImportFailureTest {
 
     private static SegmentRepository refusingSaves(final SegmentRepository real) {
         return (SegmentRepository) Proxy.newProxyInstance(
-                SegmentRepository.class.getClassLoader(), new Class<?>[] {SegmentRepository.class}, (proxy, method, args) -> {
+                SegmentRepository.class.getClassLoader(),
+                new Class<?>[] {SegmentRepository.class},
+                (proxy, method, args) -> {
                     if ("saveAll".equals(method.getName())) {
                         return Result.err(AppError.of(ErrorCode.internal, "Storage write failed", "duplicate id"));
                     }

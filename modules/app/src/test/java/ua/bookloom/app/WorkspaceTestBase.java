@@ -10,7 +10,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.util.Modules;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -36,14 +35,11 @@ import org.slf4j.LoggerFactory;
 import org.testfx.api.FxToolkit;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
-import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -134,7 +130,8 @@ abstract class WorkspaceTestBase {
         final StartupContext startup = new StartupContext(
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
-                ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
+                ReviewModeResolver.resolve(
+                        name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
         FxToolkit.registerPrimaryStage();
         final Injector built = Guice.createInjector(
                 new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule());
@@ -143,16 +140,18 @@ abstract class WorkspaceTestBase {
         lifecycle.phaseTwo(built);
         if (pseudo) {
             assertThat(built.getInstance(ProviderConfigs.class)
-                            .save(new PseudoOnlyProviderConfigs().all().get(0))
+                            .save(PseudoOnlyModule.PSEUDO)
                             .isOk())
                     .isTrue();
         }
         BookLoomApplication.seedPreferences(built);
         showWindow(built);
         if (pseudo) {
+            // As the first-launch look does: the rows are read again and the provider is made current.
             final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
             onFx(settings::reloadProviders);
             waitUntil(() -> !settings.providers().isEmpty());
+            onFx(() -> settings.adopt(new ModelSelection(PseudoOnlyModule.PSEUDO.id(), "uppercase")));
         }
     }
 
@@ -246,10 +245,8 @@ abstract class WorkspaceTestBase {
 
     // The registry is read on the background executor; a model typed before its rows arrive belongs to no provider.
     protected void chooseModel() throws Exception {
-        waitUntil(() -> !injector.getInstance(SettingsViewModel.class)
-                .selectedProviderId()
-                .get()
-                .isEmpty());
+        waitUntil(
+                () -> !injector.getInstance(SettingsViewModel.class).providers().isEmpty());
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("uppercase"));
         assertThat(onFx(() -> injector.getInstance(SettingsViewModel.class).selection()))
                 .contains(new ModelSelection("pseudo", "uppercase"));
@@ -370,47 +367,5 @@ abstract class WorkspaceTestBase {
 
     protected static void waitUntil(final Supplier<Boolean> condition) throws Exception {
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> onFx(condition::get));
-    }
-
-    /** The one substitution: the provider registry lists only {@code pseudo}, so the settings viewmodel selects it. */
-    private static final class PseudoOnlyModule extends AbstractModule {
-        @Override
-        protected void configure() {
-            bind(ProviderConfigs.class).toInstance(new PseudoOnlyProviderConfigs());
-        }
-    }
-
-    /** A registry of exactly one provider, {@code pseudo}; its address is never contacted. */
-    private static final class PseudoOnlyProviderConfigs implements ProviderConfigs {
-
-        private final ProviderConfig pseudo = new ProviderConfig(
-                "pseudo",
-                ProviderKind.OLLAMA,
-                URI.create("http://localhost:1"),
-                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
-
-        @Override
-        public Result<ProviderConfig> save(final ProviderConfig config) {
-            Objects.requireNonNull(config, "config");
-            return Result.err(AppError.of(ErrorCode.validation, "Not supported", "This registry is fixed."));
-        }
-
-        @Override
-        public Result<Boolean> delete(final String id) {
-            Objects.requireNonNull(id, "id");
-            return Result.err(AppError.of(ErrorCode.validation, "Not supported", "This registry is fixed."));
-        }
-
-        @Override
-        public Optional<ProviderConfig> find(final String id) {
-            Objects.requireNonNull(id, "id");
-            return all().stream().filter(config -> config.id().equals(id)).findFirst();
-        }
-
-        @Override
-        public List<ProviderConfig> all() {
-            return List.of(pseudo);
-        }
     }
 }

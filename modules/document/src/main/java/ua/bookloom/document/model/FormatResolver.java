@@ -141,7 +141,10 @@ public final class FormatResolver {
         final int first = prolog.length > 0 ? prolog[0] & 0xFF : -1;
         final int second = prolog.length > 1 ? prolog[1] & 0xFF : -1;
         final boolean utf16 = (first == 0xFF && second == 0xFE) || (first == 0xFE && second == 0xFF);
-        final boolean utf32be = prolog.length > 3 && first == 0 && second == 0 && (prolog[2] & 0xFF) == 0xFE
+        final boolean utf32be = prolog.length > 3
+                && first == 0
+                && second == 0
+                && (prolog[2] & 0xFF) == 0xFE
                 && (prolog[3] & 0xFF) == 0xFF;
         return utf16 || utf32be;
     }

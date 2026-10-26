@@ -54,14 +54,9 @@ class OpenAiCompatibleClientLoggingTest {
         server.stubFor(post(urlEqualTo("/v1/chat/completions"))
                 .willReturn(aResponse().withStatus(200).withBody(PRIVATE_BODY)));
         final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiCompatibleClient.class);
-        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
-        appender.start();
-        logger.addAppender(appender);
+        final ListAppender<ILoggingEvent> appender = attached(logger);
         final Logger unreadableReply = (Logger) LoggerFactory.getLogger(UnreadableReply.class);
-        final ListAppender<ILoggingEvent> unreadableReplyLog = new ListAppender<>();
-        unreadableReplyLog.start();
-        unreadableReply.addAppender(unreadableReplyLog);
+        final ListAppender<ILoggingEvent> unreadableReplyLog = attached(unreadableReply);
 
         try {
             final Result<ChatResponse> result =
@@ -83,6 +78,14 @@ class OpenAiCompatibleClientLoggingTest {
             logger.detachAppender(appender);
             appender.stop();
         }
+    }
+
+    private static ListAppender<ILoggingEvent> attached(final Logger logger) {
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        appender.start();
+        logger.addAppender(appender);
+        return appender;
     }
 
     private OpenAiCompatibleClient client() {

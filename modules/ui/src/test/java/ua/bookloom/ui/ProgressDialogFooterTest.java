@@ -50,8 +50,10 @@ class ProgressDialogFooterTest extends ProgressWorkTestBase {
         onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.IMPORT, null));
         await(this::isDialogShown);
 
-        assertThat(ThemeTestSupport.onFx(() -> required("progress-footnote").isVisible())).isFalse();
-        assertThat(ThemeTestSupport.onFx(() -> required("progress-cancel").isVisible())).isFalse();
+        assertThat(ThemeTestSupport.onFx(() -> required("progress-footnote").isVisible()))
+                .isFalse();
+        assertThat(ThemeTestSupport.onFx(() -> required("progress-cancel").isVisible()))
+                .isFalse();
     }
 
     // IF Continue in background took no click, THEN the names pass could only be hidden with the keyboard.

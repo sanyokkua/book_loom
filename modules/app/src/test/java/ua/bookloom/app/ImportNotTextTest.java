@@ -56,7 +56,9 @@ class ImportNotTextTest extends WorkspaceTestBase {
                 .orElse(""));
         assertThat(shown).isEqualTo(line);
         assertThat(onFx(() -> shell.root().lookup("#import-verdict-choose"))).isNotNull();
-        assertThat(Objects.requireNonNull(injector.getInstance(ProjectService.class).list().data())).isEmpty();
+        assertThat(Objects.requireNonNull(
+                        injector.getInstance(ProjectService.class).list().data()))
+                .isEmpty();
     }
 
     @Test
@@ -75,12 +77,13 @@ class ImportNotTextTest extends WorkspaceTestBase {
     private Path write(final String content, final Path file) throws Exception {
         return switch (content) {
             case "binary" -> Files.write(file, binary());
-            case "epub" -> TestEpub.write(
-                    file,
-                    "Renamed",
-                    "    <item id=\"c\" href=\"c.xhtml\" media-type=\"application/xhtml+xml\"/>\n",
-                    "<itemref idref=\"c\"/>",
-                    Map.of("c.xhtml", TestEpub.chapter("C", "<p>Text.</p>")));
+            case "epub" ->
+                TestEpub.write(
+                        file,
+                        "Renamed",
+                        "    <item id=\"c\" href=\"c.xhtml\" media-type=\"application/xhtml+xml\"/>\n",
+                        "<itemref idref=\"c\"/>",
+                        Map.of("c.xhtml", TestEpub.chapter("C", "<p>Text.</p>")));
             case "nobody" -> Files.writeString(file, NO_BODY_FB2, StandardCharsets.UTF_8);
             default -> Files.write(file, new byte[0]);
         };

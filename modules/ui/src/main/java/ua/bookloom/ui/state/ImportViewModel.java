@@ -51,8 +51,6 @@ public final class ImportViewModel {
     private ImportState stateBeforeOpen = new ImportState.Idle();
     // Counts opens and cancels, so an answer that arrives after a cancel can tell it is no longer wanted.
     private int openSerial;
-    // The project the last import stored new, while it is the open one; Cancel discards it. FX thread only.
-    private @Nullable String createdHere;
 
     /**
      * Wires the view model to the service it imports books through.
@@ -163,12 +161,9 @@ public final class ImportViewModel {
     }
 
     /**
-     * Releases the open book and returns the screen to the drop zone; the project the last import stored new is removed
-     * instead when {@code discardCreated} is set, so a cancelled import leaves nothing in Projects. While an import is
-     * unanswered it instead abandons that import: the screen goes idle at once, the book that was open stays open, and
-     * the project the import goes on to create is removed and its answer ignored. FX thread only.
-     *
-     * @param discardCreated {@code true} when nothing was decided in the project, so it may go; {@code false} keeps it
+     * Lets the open book go, removing the project the last import stored new when {@code discardCreated} (nothing is
+     * decided in it; {@link ProjectDisposal#letGo}), and returns to the drop zone. While an import is unanswered it
+     * abandons that import instead: the open book stays, the project it creates is removed. FX thread only.
      */
     public void cancel(final boolean discardCreated) {
         if (opening.get()) {
@@ -180,19 +175,10 @@ public final class ImportViewModel {
             return;
         }
         final OpenedBook previous = current.book().get();
-        final String discarded =
-                discardCreated && previous != null && previous.projectId().equals(createdHere)
-                        ? previous.projectId()
-                        : null;
-        log.debug("cancel requested, a book is open: {}, new project discarded: {}", previous != null, discarded);
+        log.debug("cancel requested, a book is open: {}", previous != null);
         current.clear();
         state.set(new ImportState.Idle());
-        createdHere = null;
-        if (discarded != null) {
-            disposal.removeLater(discarded);
-        } else {
-            disposal.release(previous);
-        }
+        disposal.letGo(previous, discardCreated);
     }
 
     private void submit(final Path source, final String fileName, final @Nullable String replacedId, final int serial) {
@@ -311,9 +297,7 @@ public final class ImportViewModel {
     private void accept(final String fileName, final ImportAnswers.Answer answer, final @Nullable Set<String> before) {
         final ImportedBook imported = answer.imported();
         final OpenedBook opened = openedOf(answer.source(), imported);
-        final boolean isNew = before != null && !before.contains(opened.projectId());
-        createdHere = isNew ? opened.projectId() : null;
-        log.debug("project {} was stored by this import: {}", opened.projectId(), isNew);
+        disposal.storedNew(before != null && !before.contains(opened.projectId()) ? opened.projectId() : null);
         final ImportState detected = ImportStates.of(fileName, imported);
         current.open(opened);
         state.set(detected);
@@ -359,7 +343,7 @@ public final class ImportViewModel {
                 opened.projectId(),
                 previous == null ? null : previous.projectId());
         current.open(opened);
-        createdHere = null;
+        disposal.storedNew(null);
         state.set(ImportStates.of(fileNameOf(source), imported));
         log.info("adopted stored project {}", opened.projectId());
         if (previous != null && !previous.projectId().equals(opened.projectId())) {

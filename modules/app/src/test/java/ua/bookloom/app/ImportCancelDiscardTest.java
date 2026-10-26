@@ -35,7 +35,8 @@ class ImportCancelDiscardTest extends WorkspaceTestBase {
         pressCancel();
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> stored().isEmpty());
-        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get())).isNull();
+        assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get()))
+                .isNull();
     }
 
     @Test
@@ -44,7 +45,8 @@ class ImportCancelDiscardTest extends WorkspaceTestBase {
         openBook(book("Night.txt"), 2);
         startStoredWindow();
         final String id = stored().get(0).project().id();
-        onFx(() -> injector.getInstance(ua.bookloom.ui.state.ProjectsViewModel.class).refresh());
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.ProjectsViewModel.class)
+                .refresh());
         openBook(book("Night.txt"), 2);
 
         pressCancel();
@@ -65,6 +67,7 @@ class ImportCancelDiscardTest extends WorkspaceTestBase {
     }
 
     private List<ProjectSummary> stored() {
-        return Objects.requireNonNull(injector.getInstance(ProjectService.class).list().data());
+        return Objects.requireNonNull(
+                injector.getInstance(ProjectService.class).list().data());
     }
 }

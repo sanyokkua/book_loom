@@ -38,9 +38,10 @@ class LargeTextImportMemoryTest {
     private static final long MEGABYTE = 1024L * 1024;
     // Gradle's default test heap; a larger one would let the import pass without proving the bound.
     private static final long HEAP_BOUND_MEGABYTES = 512;
-    private static final String PARAGRAPH = "The old lighthouse keeper climbed the narrow stairs every evening, counting"
-            + " the steps aloud as his father had done, and when he reached the lamp room he wiped the glass,"
-            + " trimmed the wick and watched the grey sea for ships that no longer came. Number ";
+    private static final String PARAGRAPH =
+            "The old lighthouse keeper climbed the narrow stairs every evening, counting"
+                    + " the steps aloud as his father had done, and when he reached the lamp room he wiped the glass,"
+                    + " trimmed the wick and watched the grey sea for ships that no longer came. Number ";
 
     @TempDir
     private Path dir;
@@ -79,12 +80,14 @@ class LargeTextImportMemoryTest {
     }
 
     private static void resetPeaks() {
-        System.gc();
         heapPools().forEach(MemoryPoolMXBean::resetPeakUsage);
     }
 
     private static long peakHeapMegabytes() {
-        return heapPools().stream().mapToLong(pool -> pool.getPeakUsage().getUsed()).sum() / MEGABYTE;
+        return heapPools().stream()
+                        .mapToLong(pool -> pool.getPeakUsage().getUsed())
+                        .sum()
+                / MEGABYTE;
     }
 
     private static List<MemoryPoolMXBean> heapPools() {

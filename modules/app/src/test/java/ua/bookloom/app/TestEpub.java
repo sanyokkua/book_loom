@@ -75,8 +75,7 @@ final class TestEpub {
                 %s  </manifest>
                   <spine>%s</spine>
                 </package>
-                """
-                .formatted(title, title, manifest, spine);
+                """.formatted(title, title, manifest, spine);
     }
 
     /**
