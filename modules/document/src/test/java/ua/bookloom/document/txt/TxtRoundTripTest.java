@@ -244,6 +244,19 @@ class TxtRoundTripTest {
                         "Три речення."));
     }
 
+    // WHEN a UTF-16 file with its byte-order mark is opened, THEN its blank lines separate paragraphs as in UTF-8 (a
+    // line feed there is two bytes, one of them zero), and a translated paragraph is written back in UTF-16.
+    @ParameterizedTest
+    @ValueSource(strings = {"UTF-16LE", "UTF-16BE"})
+    void read_utf16WithByteOrderMark_findsEveryParagraphAndWritesBackInUtf16(String charsetName) {
+        final Charset charset = Charset.forName(charsetName);
+        final Document document = open("﻿One.\r\n\r\n    Two 車.  \n\n\nThree.\n", charset, "wide.txt");
+
+        assertThat(segmentsOf(document)).extracting(Segment::sourceInner).containsExactly("One.", "Two 車.", "Three.");
+        final Path output = writeOut(withTarget(document, 1, "Два."), "uk");
+        assertThat(new String(bytesOf(output), charset)).isEqualTo("﻿One.\r\n\r\n    Два.  \n\n\nThree.\n");
+    }
+
     private static Document withTarget(Document document, int segmentOrder, String targetInner) {
         final Unit unit = document.units().get(0);
         final List<Segment> segments = new ArrayList<>(unit.segments());
