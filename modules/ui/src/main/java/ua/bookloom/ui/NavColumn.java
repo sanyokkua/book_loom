@@ -1,11 +1,11 @@
 package ua.bookloom.ui;
 
+import com.google.inject.Inject;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
-import java.util.function.Consumer;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.SetChangeListener;
 import javafx.geometry.Pos;
@@ -58,7 +58,7 @@ final class NavColumn {
 
     private final Messages messages;
     private final StepLocks locks;
-    private final Consumer<ViewNames> activation;
+    private final Navigator navigator;
     private final Map<ViewNames, Button> entries = new EnumMap<>(ViewNames.class);
     private final Map<ViewNames, Label> badges = new EnumMap<>(ViewNames.class);
     private final Label footer = new Label();
@@ -71,21 +71,22 @@ final class NavColumn {
      * Builds every group and entry.
      *
      * @param messages the catalogue the headings and labels come from
-     * @param activation told which entry was activated, available or not
+     * @param navigator asked to show the entry activated, available or not; it may refuse
      * @param progress the steps to mark as done
      * @param runs the chosen provider and model the footer names, and the AI-model chip it reads as one fact
      * @param locks which steps are closed, and why, so a locked entry is drawn so and explains itself
      * @param probe the look at the local AI programs: while it runs or asks which model to use, the footer waits
      */
+    @Inject
     NavColumn(
             final Messages messages,
-            final Consumer<ViewNames> activation,
+            final Navigator navigator,
             final WorkflowProgress progress,
             final RunStateSource runs,
             final StepLocks locks,
             final LocalModelProbe probe) {
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.activation = Objects.requireNonNull(activation, "activation");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
         Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(runs, "runs");
         this.locks = Objects.requireNonNull(locks, "locks");
@@ -124,6 +125,18 @@ final class NavColumn {
      */
     Node view() {
         return scroll;
+    }
+
+    /**
+     * Asks the navigator to show a screen, as a click on its entry does.
+     *
+     * @param target the entry activated; an inert entry is refused by the navigator and changes nothing
+     */
+    void activate(final ViewNames target) {
+        final ViewNames source = navigator.currentView().get();
+        log.debug("activating {} from {}", target, source);
+        final boolean accepted = navigator.navigate(target);
+        log.debug("activation of {} {}", target, accepted ? "accepted" : "refused");
     }
 
     /**
@@ -198,7 +211,7 @@ final class NavColumn {
         }
         button.setGraphic(badge(view));
         button.setMaxWidth(Double.MAX_VALUE);
-        button.setOnAction(event -> activation.accept(view));
+        button.setOnAction(event -> activate(view));
         entries.put(view, button);
         final ReadOnlyObjectProperty<@Nullable MessageKey> lock = locks.lock(view);
         lock.addListener((observed, old, reason) -> showLock(view, reason));

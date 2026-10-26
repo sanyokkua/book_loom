@@ -29,13 +29,11 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
-import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
-import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
@@ -45,9 +43,6 @@ import ua.bookloom.ui.state.ProjectFilter;
 import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
-import ua.bookloom.ui.state.StructureChecksViewModel;
-import ua.bookloom.ui.state.StructureSegmentsViewModel;
-import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
@@ -107,17 +102,13 @@ public final class ImportController {
      *     replaced unasked
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Continue leads
-     * @param names how a language tag is named in the fold
      * @param confirm the question asked before Cancel drops a project that holds work
      * @param progress the steps already done, which tell whether the project holds work
      * @param mirror the run's state, since a run that began is work too
      * @param project the open book, whose structure the screen shows beside its details
-     * @param checks the background checks the facts card reports
-     * @param segments the listing of the picked part's segments
-     * @param brief the brief, whose finished save makes the segment listing stale
+     * @param bookView the fold and the text browser shown under the verdict of an open book
      * @param errors where a damaged file's Details shows the typed reason
      * @param projectsView the Projects list, searched for the book that is already stored
-     * @param technical the switch that shows the checks' technical lines, the token counts and the groups
      * @param toasts where a dropped folder is refused at once
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
@@ -128,17 +119,13 @@ public final class ImportController {
             final ImportGuard guard,
             final Messages messages,
             final Navigator navigator,
-            final LanguageNames names,
             final ConfirmPrompt confirm,
             final WorkflowProgress progress,
             final StateMirror mirror,
             final CurrentProject project,
-            final StructureChecksViewModel checks,
-            final StructureSegmentsViewModel segments,
-            final BookBriefViewModel brief,
+            final ImportBookView bookView,
             final ErrorPresenter errors,
             final ProjectsViewModel projectsView,
-            final TechnicalDetails technical,
             final Toasts toasts) {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
@@ -149,8 +136,7 @@ public final class ImportController {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.project = Objects.requireNonNull(project, "project");
-        this.bookView = new ImportBookView(
-                messages, Objects.requireNonNull(names, "names"), checks, segments, brief, technical.property());
+        this.bookView = Objects.requireNonNull(bookView, "bookView");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
         this.verdictView = new ImportVerdictView(

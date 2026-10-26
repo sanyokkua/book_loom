@@ -1,5 +1,6 @@
 package ua.bookloom.ui;
 
+import com.google.inject.Inject;
 import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -7,6 +8,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
@@ -23,6 +25,7 @@ import ua.bookloom.ui.state.DiagnosticActions;
  * the control the reference's dialog maps to, and staying inside the scene keeps the stylesheet and the active theme
  * block, which a second window would not inherit.
  */
+@Slf4j
 final class AboutDialog {
 
     static final String CARD_ID = "about-card";
@@ -35,7 +38,7 @@ final class AboutDialog {
     private final Messages messages;
     private final String version;
     private final DiagnosticActions diagnostics;
-    private final Runnable onClose;
+    private final ModalHost modalHost;
 
     /**
      * Prepares the card's content.
@@ -43,17 +46,24 @@ final class AboutDialog {
      * @param messages the catalogue every word is drawn from
      * @param version the build version to report; {@code dev} in a build carrying no release version
      * @param diagnostics the log settings and what the diagnostic actions do
-     * @param onClose what the Close button does
+     * @param modalHost the overlay the card is shown in and Close hides
      */
+    @Inject
     AboutDialog(
             final Messages messages,
-            final String version,
+            final @BuildVersion String version,
             final DiagnosticActions diagnostics,
-            final Runnable onClose) {
+            final ModalHost modalHost) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.version = Objects.requireNonNull(version, "version");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
-        this.onClose = Objects.requireNonNull(onClose, "onClose");
+        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+    }
+
+    /** Shows a fresh card in the modal host. */
+    void open() {
+        log.debug("opening the About dialog");
+        modalHost.show(card(), true);
     }
 
     /**
@@ -76,7 +86,7 @@ final class AboutDialog {
                                 CLOSE_ID,
                                 "btn-primary"),
                         MessageKey.COMMON_CLOSE_TIP)
-                .setOnAction(event -> onClose.run());
+                .setOnAction(event -> modalHost.hide());
         return card;
     }
 

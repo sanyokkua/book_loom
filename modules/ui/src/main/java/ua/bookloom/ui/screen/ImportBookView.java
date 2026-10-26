@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import com.google.inject.Inject;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +24,7 @@ import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.StructureSegmentsViewModel;
+import ua.bookloom.ui.state.TechnicalDetails;
 
 /**
  * What the import page holds under its verdict line for an open book: the closed "About this book" fold, then the
@@ -46,19 +48,20 @@ final class ImportBookView {
     private final NumberFormat numbers;
     private final ReadOnlyBooleanProperty technical;
 
+    @Inject
     ImportBookView(
             final Messages messages,
             final LanguageNames names,
             final StructureChecksViewModel checks,
             final StructureSegmentsViewModel segments,
             final BookBriefViewModel brief,
-            final ReadOnlyBooleanProperty technical) {
+            final TechnicalDetails technical) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.names = Objects.requireNonNull(names, "names");
         this.checks = Objects.requireNonNull(checks, "checks");
         this.brief = Objects.requireNonNull(brief, "brief");
-        this.technical = Objects.requireNonNull(technical, "technical");
-        this.browser = new StructureBrowser(messages, segments, brief, technical);
+        this.technical = Objects.requireNonNull(technical, "technical").property();
+        this.browser = new StructureBrowser(messages, segments, brief, this.technical);
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
     }
 
