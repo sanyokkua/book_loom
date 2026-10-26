@@ -293,15 +293,36 @@ public final class ProjectServiceImpl implements ProjectService {
             final Document document,
             final BookBrief brief,
             final BookProfile profile) {
-        final String id =
-                reusableProject(document.contentHash(), brief).map(Project::id).orElseGet(ids::newId);
-        log.debug("create uses project={}", id);
+        final Optional<String> reused = reusableProject(document.contentHash(), brief).map(Project::id);
+        final String id = reused.orElseGet(ids::newId);
+        log.debug("create uses project={} reused={}", id, reused.isPresent());
         final Document previous = openProjects.remove(id);
         if (previous != null) {
             log.debug("import replaces the open book of project={}", id);
             documents.close(previous);
         }
-        return store(id, source, inspection, document, brief, profile);
+        final Result<ImportedBook> stored;
+        try {
+            stored = store(id, source, inspection, document, brief, profile);
+        } catch (RuntimeException broken) {
+            forgetNew(id, reused.isEmpty());
+            throw broken;
+        }
+        if (stored.isErr()) {
+            forgetNew(id, reused.isEmpty());
+        }
+        return stored;
+    }
+
+    // The project row is written before its segments; a new one whose segments failed must not stay behind as an
+    // empty project in the list. A reused project keeps its row: it held a book before this import.
+    private void forgetNew(final String id, final boolean isNew) {
+        if (!isNew) {
+            log.warn("import into the stored project={} failed to store; the project is kept", id);
+            return;
+        }
+        final Result<Boolean> removed = projects.delete(id);
+        log.warn("import of the new project={} failed to store; removed again={}", id, removed.isOk());
     }
 
     private Result<ImportedBook> store(

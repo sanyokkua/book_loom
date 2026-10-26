@@ -106,6 +106,8 @@ abstract class WorkspaceTestBase {
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? flag : null, name -> null));
+        // The toolkit first: building the graph already hands work to the FX thread.
+        FxToolkit.registerPrimaryStage();
         // Built here, not through BookLoomApplication.init(): that hard-codes its modules, and this test needs to
         // replace one. It therefore skips AppLifecycle's two phases, which open nothing over the in-memory adapters.
         showWindow(Guice.createInjector(
@@ -133,6 +135,7 @@ abstract class WorkspaceTestBase {
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
+        FxToolkit.registerPrimaryStage();
         final Injector built = Guice.createInjector(
                 new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule());
         lifecycle = new AppLifecycle();
@@ -164,7 +167,7 @@ abstract class WorkspaceTestBase {
     }
 
     private void showWindow(final Injector built) throws Exception {
-        final Stage stage = FxToolkit.registerPrimaryStage();
+        final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
         injector = built;
         shell = injector.getInstance(AppShellView.class);
         watchPauses();
@@ -241,7 +244,12 @@ abstract class WorkspaceTestBase {
         assertThat(onFx(() -> exports.destination().get())).isEqualTo(proposed.toString());
     }
 
-    protected void chooseModel() {
+    // The registry is read on the background executor; a model typed before its rows arrive belongs to no provider.
+    protected void chooseModel() throws Exception {
+        waitUntil(() -> !injector.getInstance(SettingsViewModel.class)
+                .selectedProviderId()
+                .get()
+                .isEmpty());
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("uppercase"));
         assertThat(onFx(() -> injector.getInstance(SettingsViewModel.class).selection()))
                 .contains(new ModelSelection("pseudo", "uppercase"));

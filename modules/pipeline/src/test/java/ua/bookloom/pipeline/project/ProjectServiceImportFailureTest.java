@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookInspector;
@@ -60,6 +61,56 @@ class ProjectServiceImportFailureTest {
         assertThat(closed).hasSize(1);
         assertThat(projectIds).hasSize(1);
         assertThat(openProjects.get(projectIds.getFirst())).isNull();
+        assertThat(service.list().data()).as("no half-created project is left").isEmpty();
+    }
+
+    // IF the segment store refuses the book (a storage error, as SQLite answers a duplicate segment id), THEN the
+    // project row written before it is removed again, so no empty project is left in the list.
+    @Test
+    void create_storeRefusesTheSegments_leavesNoProjectBehind() {
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        final ProjectServiceImpl service = service(injector, refusingSaves(injector.getInstance(SegmentRepository.class)));
+        final Path book = TestBooks.txt(tempDir.resolve("book.txt"), "It was a dark night.\n\nThe rain kept falling.");
+
+        final Result<ImportedBook> imported = service.create(book);
+
+        assertThat(imported.isErr()).isTrue();
+        assertThat(service.list().data()).isEmpty();
+    }
+
+    private static SegmentRepository refusingSaves(final SegmentRepository real) {
+        return (SegmentRepository) Proxy.newProxyInstance(
+                SegmentRepository.class.getClassLoader(), new Class<?>[] {SegmentRepository.class}, (proxy, method, args) -> {
+                    if ("saveAll".equals(method.getName())) {
+                        return Result.err(AppError.of(ErrorCode.internal, "Storage write failed", "duplicate id"));
+                    }
+                    try {
+                        return method.invoke(real, args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+    }
+
+    private static ProjectServiceImpl service(final Injector injector, final SegmentRepository segments) {
+        return new ProjectServiceImpl(
+                injector.getInstance(BookInspector.class),
+                injector.getInstance(DocumentPort.class),
+                injector.getInstance(ProjectRepository.class),
+                segments,
+                injector.getInstance(OpenProjects.class),
+                Clock.systemUTC(),
+                new UuidIdSource(),
+                injector.getInstance(RunRepository.class),
+                new ProjectCopies(
+                        injector.getInstance(GlossaryRepository.class),
+                        injector.getInstance(LexiconRepository.class),
+                        injector.getInstance(SegmentRepository.class),
+                        new UuidIdSource()),
+                injector.getInstance(SettingsRepository.class));
     }
 
     // Records each closed document and each saved project id; the segment store throws when asked to save.

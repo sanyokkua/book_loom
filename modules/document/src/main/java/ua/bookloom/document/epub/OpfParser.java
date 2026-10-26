@@ -3,12 +3,14 @@ package ua.bookloom.document.epub;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -26,6 +28,7 @@ import ua.bookloom.document.model.SecureXml;
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
+@Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class OpfParser {
@@ -81,6 +84,11 @@ final class OpfParser {
         final String href = item.getAttributeValue("href");
         if (id == null || href == null) {
             throw new CorruptContainerException("OPF <manifest> item is missing id or href");
+        }
+        // Two items under one id make the spine point at only one of them and the other file's text vanish or repeat,
+        // so the package is damaged, not a book to guess about.
+        if (items.containsKey(id)) {
+            throw new CorruptContainerException("OPF <manifest> repeats the item id " + id);
         }
         final String mediaType = item.getAttributeValue("media-type");
         items.put(
@@ -156,8 +164,16 @@ final class OpfParser {
             throw new CorruptContainerException("OPF <spine> has no itemref entries");
         }
         final List<SpineItem> spine = new ArrayList<>(itemrefs.size());
+        final Set<String> seen = new HashSet<>();
         for (final Element itemref : itemrefs) {
-            spine.add(resolveSpineItem(itemref, manifest));
+            final SpineItem resolved = resolveSpineItem(itemref, manifest);
+            // A document read twice would hold every one of its segments twice under the same ids; it is read once, at
+            // its first place in the reading order, and the archive entry is written back once either way.
+            if (seen.add(resolved.href())) {
+                spine.add(resolved);
+            } else {
+                log.warn("OPF <spine> lists {} again; the repeat is skipped", resolved.href());
+            }
         }
         return spine;
     }

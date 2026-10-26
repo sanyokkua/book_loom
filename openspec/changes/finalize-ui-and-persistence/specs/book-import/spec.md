@@ -225,6 +225,11 @@ The import screen SHALL accept a book from the file picker or dropped onto its f
 - **WHEN** `corrupt.epub`, which holds plain text instead of a ZIP archive, or `odd.fb2`, which has no FictionBook root, is opened
 - **THEN** the inspection answers the `DAMAGED` verdict with the format the name promises, and the verdict reads `corrupt.epub could not be read as an EPUB. The file may be damaged.` (`odd.fb2 could not be read as an FB2 book. …`), never `is Unknown`
 
+#### Scenario: An EPUB that names one document twice
+
+- **WHEN** an EPUB's manifest holds two items with the same id, or its spine lists one document twice
+- **THEN** the repeated manifest id is refused as an unreadable book (`validation`, "could not be read as a book") and no project is left in Projects; a document the spine repeats is read once, at its first place, so every stored segment id is unique; and whenever storing a new project's segments fails, the project row written before them is removed again
+
 #### Scenario: A book with no text is refused
 
 - **WHEN** a 0-byte or whitespace-only `empty.txt`, an empty Markdown file, an FB2 with no paragraph or an EPUB whose body is empty is opened
