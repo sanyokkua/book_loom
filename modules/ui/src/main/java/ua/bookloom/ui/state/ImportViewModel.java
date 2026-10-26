@@ -51,6 +51,8 @@ public final class ImportViewModel {
     private ImportState stateBeforeOpen = new ImportState.Idle();
     // Counts opens and cancels, so an answer that arrives after a cancel can tell it is no longer wanted.
     private int openSerial;
+    // The project the last import stored new, while it is the open one; Cancel discards it. FX thread only.
+    private @Nullable String createdHere;
 
     /**
      * Wires the view model to the service it imports books through.
@@ -161,11 +163,14 @@ public final class ImportViewModel {
     }
 
     /**
-     * Releases the open book and returns the screen to the drop zone. While an import is unanswered it instead
-     * abandons that import: the screen goes idle at once, the book that was open stays open, and the project the
-     * import goes on to create is removed and its answer ignored. FX thread only.
+     * Releases the open book and returns the screen to the drop zone; the project the last import stored new is removed
+     * instead when {@code discardCreated} is set, so a cancelled import leaves nothing in Projects. While an import is
+     * unanswered it instead abandons that import: the screen goes idle at once, the book that was open stays open, and
+     * the project the import goes on to create is removed and its answer ignored. FX thread only.
+     *
+     * @param discardCreated {@code true} when nothing was decided in the project, so it may go; {@code false} keeps it
      */
-    public void cancel() {
+    public void cancel(final boolean discardCreated) {
         if (opening.get()) {
             log.info("the opening of a book was cancelled before it was answered");
             openSerial++;
@@ -175,10 +180,18 @@ public final class ImportViewModel {
             return;
         }
         final OpenedBook previous = current.book().get();
-        log.debug("cancel requested, a book is open: {}", previous != null);
+        final String discarded = discardCreated && previous != null && previous.projectId().equals(createdHere)
+                ? previous.projectId()
+                : null;
+        log.debug("cancel requested, a book is open: {}, new project discarded: {}", previous != null, discarded);
         current.clear();
         state.set(new ImportState.Idle());
-        disposal.release(previous);
+        createdHere = null;
+        if (discarded != null) {
+            disposal.removeLater(discarded);
+        } else {
+            disposal.release(previous);
+        }
     }
 
     private void submit(final Path source, final String fileName, final @Nullable String replacedId, final int serial) {
@@ -186,7 +199,7 @@ public final class ImportViewModel {
             executor.execute(() -> importOffThread(source, fileName, replacedId, serial));
         } catch (RuntimeException rejected) {
             log.error("importing {} could not be submitted", fileName, rejected);
-            publish(fileName, Result.err(ImportAnswers.internalError(rejected)));
+            publish(fileName, Result.err(ImportAnswers.internalError(rejected)), null);
         }
     }
 
@@ -225,13 +238,14 @@ public final class ImportViewModel {
             final int serial,
             final @Nullable Set<String> before) {
         if (serial == openSerial) {
-            publish(fileName, result);
+            publish(fileName, result, before);
         } else {
             discardCancelled(fileName, result, before);
         }
     }
 
-    private void publish(final String fileName, final Result<ImportAnswers.Answer> result) {
+    private void publish(
+            final String fileName, final Result<ImportAnswers.Answer> result, final @Nullable Set<String> before) {
         final AppError failure = result.error();
         final ImportAnswers.Answer answer = result.data();
         final boolean stored = answer != null && answer.imported().projectId() != null;
@@ -247,7 +261,7 @@ public final class ImportViewModel {
             if (failure != null) {
                 fail(fileName, failure, replacesPrevious);
             } else if (stored) {
-                accept(fileName, Objects.requireNonNull(answer));
+                accept(fileName, Objects.requireNonNull(answer), before);
             } else {
                 refuseByVerdict(fileName, Objects.requireNonNull(answer).imported());
             }
@@ -293,9 +307,13 @@ public final class ImportViewModel {
         }
     }
 
-    private void accept(final String fileName, final ImportAnswers.Answer answer) {
+    private void accept(
+            final String fileName, final ImportAnswers.Answer answer, final @Nullable Set<String> before) {
         final ImportedBook imported = answer.imported();
         final OpenedBook opened = openedOf(answer.source(), imported);
+        final boolean isNew = before != null && !before.contains(opened.projectId());
+        createdHere = isNew ? opened.projectId() : null;
+        log.debug("project {} was stored by this import: {}", opened.projectId(), isNew);
         final ImportState detected = ImportStates.of(fileName, imported);
         current.open(opened);
         state.set(detected);
@@ -341,6 +359,7 @@ public final class ImportViewModel {
                 opened.projectId(),
                 previous == null ? null : previous.projectId());
         current.open(opened);
+        createdHere = null;
         state.set(ImportStates.of(fileNameOf(source), imported));
         log.info("adopted stored project {}", opened.projectId());
         if (previous != null && !previous.projectId().equals(opened.projectId())) {

@@ -141,7 +141,7 @@ public final class ImportController {
         this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
         this.verdictView = new ImportVerdictView(
                 messages,
-                new ImportVerdictView.Actions(viewModel::cancel, this::showThem, this::chooseFile, this::showDetails));
+                new ImportVerdictView.Actions(() -> viewModel.cancel(true), this::showThem, this::chooseFile, this::showDetails));
     }
 
     /**
@@ -309,14 +309,15 @@ public final class ImportController {
                         this::onContinue));
     }
 
+    // A project the import just stored goes with Cancel unless a run decided something in it.
     private void onCancel() {
-        final boolean holdsWork = mirror.runState().get() != RunState.IDLE
-                || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
-        log.debug("cancel pressed, the project holds work: {}", holdsWork);
+        final boolean decided = mirror.runState().get() != RunState.IDLE;
+        final boolean holdsWork = decided || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
+        log.debug("cancel pressed, the project holds work: {}, a run decided in it: {}", holdsWork, decided);
         if (holdsWork) {
-            confirm.ask(ConfirmPrompt.Question.DISCARD_PROJECT, viewModel::cancel);
+            confirm.ask(ConfirmPrompt.Question.DISCARD_PROJECT, () -> viewModel.cancel(!decided));
         } else {
-            viewModel.cancel();
+            viewModel.cancel(true);
         }
     }
 

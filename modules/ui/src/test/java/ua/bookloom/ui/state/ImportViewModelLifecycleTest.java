@@ -278,7 +278,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         open(viewModel, source);
 
         onFx(() -> {
-            viewModel.cancel();
+            viewModel.cancel(true);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -295,7 +295,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         final ImportViewModel viewModel = viewModel();
 
         onFx(() -> {
-            viewModel.cancel();
+            viewModel.cancel(true);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

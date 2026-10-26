@@ -235,10 +235,10 @@ The import screen SHALL accept a book from the file picker or dropped onto its f
 - **WHEN** the project `Earth Gravity · EN → UK` is open, `velk.fb2` is dropped and the person chooses "Replace and delete this translation" in the dialog "Open another book?"
 - **THEN** `velk.fb2` replaces the book of the open project, and the translation of `Earth Gravity · EN → UK` is deleted
 
-#### Scenario: Cancel releases the book
+#### Scenario: Cancel releases the book and discards the project it just stored
 
 - **WHEN** a book is reported and the person cancels it
-- **THEN** the screen shows only the drop zone, and no project is open
+- **THEN** the screen shows only the drop zone, no project is open, and the project this import stored new is removed, so it is not listed in Projects; a project that was stored before this import, or one a run already decided segments in, is kept
 
 ### Requirement: Warn when an EPUB's own language declarations disagree
 

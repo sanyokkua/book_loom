@@ -35,7 +35,7 @@ class ImportViewModelCancelOpeningTest extends ImportViewModelTestBase {
 
     private void cancel(final ImportViewModel viewModel) {
         onFx(() -> {
-            viewModel.cancel();
+            viewModel.cancel(true);
             return null;
         });
     }
