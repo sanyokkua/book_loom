@@ -309,9 +309,9 @@ public final class DocumentService implements DocumentPort {
         log.warn("Refused a restored segment carrying a character that no XML document can represent");
         return AppError.of(
                 ErrorCode.validation,
-                "This translation could not be restored",
+                "This translation could not be kept",
                 "The translated text contains a character that cannot be stored in a book of this format — a"
-                        + " control character or an incomplete symbol. Nothing was restored, and the rest of the"
+                        + " control character or an incomplete symbol. Nothing was kept, and the rest of the"
                         + " book is unaffected.",
                 SafeDetails.empty().render(),
                 null);
@@ -329,20 +329,9 @@ public final class DocumentService implements DocumentPort {
         final String escaped = MarkdownEscaper.escapeModelIntroduced(
                 restored.text(), restored.fragmentRanges(), segment.sourceInner(), segment.kind());
         if (!MarkdownStructureCheck.matches(segment.sourceInner(), escaped, segment.kind())) {
-            return Result.err(structureError());
+            return Result.err(GateErrors.markdownStructure());
         }
         return Result.ok(escaped);
-    }
-
-    private AppError structureError() {
-        log.warn("Refused a restored Markdown segment whose structure no longer matches its source");
-        return AppError.of(
-                ErrorCode.validation,
-                "This translation could not be restored",
-                "Restoring this translated passage would change the book's Markdown formatting — a heading, list,"
-                        + " emphasis or other structure the original did not have, or the loss of one it did.",
-                SafeDetails.empty().render(),
-                null);
     }
 
     private AppError drmError(DrmRefusedException e) {

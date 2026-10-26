@@ -58,6 +58,7 @@ public final class ReviewViewModel {
             new ReadOnlyObjectWrapper<>(new ReviewMainAction(MessageKey.REVIEW_MAIN_ACCEPT, false));
     private final ReviewEditor editor = new ReviewEditor(this::refreshAvailability);
     private final ReadOnlyStringWrapper problem = new ReadOnlyStringWrapper();
+    private final RefusedEdit refused = new RefusedEdit(editor, problem::set);
     private final ReviewAvailability availability;
     private final FlaggedCount counts;
     private final ListChangeListener<FlaggedRow> onMirrorQueue = change -> refreshCount();
@@ -93,7 +94,7 @@ public final class ReviewViewModel {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
-        this.refusals = new ReviewRefusals(toasts, errors, problem::set, messages);
+        this.refusals = new ReviewRefusals(toasts, errors, refused::show, messages);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {
@@ -324,6 +325,7 @@ public final class ReviewViewModel {
             return false;
         }
         problem.set(null);
+        refused.sent("saveEdit".equals(name) ? editor.storedText() : null);
         final ReviewActs.Request request = new ReviewActs.Request(
                 name,
                 book.projectId(),

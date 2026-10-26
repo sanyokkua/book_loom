@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.document.mask.GateOutcome;
 import ua.bookloom.document.mask.GateRule;
@@ -16,7 +17,7 @@ import ua.bookloom.document.mask.GateRule;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GateErrors {
 
-    private static final String TITLE = "This translation could not be restored";
+    private static final String TITLE = "This translation could not be kept";
 
     /**
      * Builds the rendered details once and logs <em>that</em>, rather than the raw token lists. The observed list
@@ -48,23 +49,39 @@ final class GateErrors {
                         + " placeholder of its own where a word belongs.");
     }
 
+    /**
+     * A Markdown text whose structure no longer matches its source's. The words fit a save as well as a restore, since
+     * the review desk's saved edit reaches the same check; the reason lets another display language name the case.
+     */
+    static AppError markdownStructure() {
+        log.warn("Refused a restored Markdown segment whose structure no longer matches its source");
+        return AppError.of(
+                ErrorCode.validation,
+                TITLE,
+                "This text would change the book's Markdown formatting — it adds a heading, list, emphasis or other"
+                        + " structure the original did not have, or loses one it had. Change the text so its"
+                        + " formatting matches the original.",
+                SafeDetails.empty().withReason(FailureReason.MARKDOWN_STRUCTURE).render(),
+                null);
+    }
+
     private static String messageFor(final GateRule rule) {
         return switch (rule) {
             case MULTISET ->
                 "The translated text's formatting placeholders do not match the original segment's — one or more"
-                        + " were dropped, duplicated, or invented. Nothing was restored.";
+                        + " were dropped, duplicated, or invented. Nothing was kept.";
             case STRAY_BRACKET ->
                 "The translated text holds a broken formatting placeholder — a bracket left over from a moved, split"
-                        + " or misspelt placeholder would reach the book as text. Nothing was restored.";
+                        + " or misspelt placeholder would reach the book as text. Nothing was kept.";
             case PAIR_SPAN ->
                 "The translated text moved a piece of formatting onto other words — it now wraps a much smaller or"
-                        + " larger part of the passage than in the original. Nothing was restored.";
+                        + " larger part of the passage than in the original. Nothing was kept.";
             case TEXT_OUTSIDE_PAIRS ->
                 "The translated text put all of its words inside one piece of formatting that wrapped only part of"
-                        + " the original — the formatting would spread over the whole passage. Nothing was restored.";
+                        + " the original — the formatting would spread over the whole passage. Nothing was kept.";
             case PAIR_ORDER, EMPTIED_PAIR, LINE_BREAK ->
                 "The translated text moved, swapped or emptied the formatting around its words — a pair of"
-                        + " placeholders no longer wraps the same text. Nothing was restored.";
+                        + " placeholders no longer wraps the same text. Nothing was kept.";
         };
     }
 }

@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -45,6 +46,19 @@ class MarkdownStructureRestoreTest {
 
         assertThat(result.isErr()).isTrue();
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // IF the refusal named only "restoring", THEN a save the person made would be refused in words about something
+    // else, and another language could not tell it from any other invalid input; it carries its own reason.
+    @Test
+    void unmask_structureChanged_carriesTheMarkdownReasonInWordsFitForASaveAndARestore() {
+        final Segment segment = emphasisSegment("the *old* door", "the ⟦g0⟧old⟦g1⟧ door");
+
+        final AppError error = errorOf(newService().unmask(BookFormat.MARKDOWN, segment, "⟦g0⟧ старі ⟦g1⟧ двері"));
+
+        assertThat(FailureReason.in(error.details())).contains(FailureReason.MARKDOWN_STRUCTURE);
+        assertThat(error.message()).startsWith("This text would change the book's Markdown formatting");
+        assertThat(error.title() + error.message()).doesNotContainIgnoringCase("restor");
     }
 
     // IF a restored Markdown segment's construct multiset differs from its source's, THEN

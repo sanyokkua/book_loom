@@ -104,7 +104,7 @@ public final class FileFailures {
                 new Wording(
                         "The disk is full",
                         "There is not enough free space on the disk. Free some space or choose another disk.");
-            case NOT_UTF8, CSV_HEADER, WRONG_PATH ->
+            case NOT_UTF8, CSV_HEADER, WRONG_PATH, MARKDOWN_STRUCTURE ->
                 new Wording("This file could not be written", "The file could not be written.");
         };
     }

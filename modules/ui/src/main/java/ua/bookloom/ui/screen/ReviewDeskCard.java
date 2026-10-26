@@ -125,6 +125,10 @@ final class ReviewDeskCard extends ModalCard {
         empty.visibleProperty().bind(viewModel.selected().isNull());
         detailScroll.visibleProperty().bind(viewModel.selected().isNotNull());
         final StackPane right = new StackPane(detailScroll, empty);
+        // The right side takes what the list leaves and never asks for more: a long refusal or a long word would
+        // otherwise widen it and squeeze the list, so the split moved with what the detail happened to hold.
+        right.setMinWidth(0);
+        right.setPrefWidth(0);
         HBox.setHgrow(right, Priority.ALWAYS);
         final HBox split = new HBox(SPACING, list, right);
         VBox.setVgrow(split, Priority.ALWAYS);

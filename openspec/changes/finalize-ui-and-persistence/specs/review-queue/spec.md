@@ -237,6 +237,22 @@ IF a saved edit reaches the placeholder check with a formatting mark missing or 
 - **WHEN** REVISED `ch2 · p07` holds `Вона ⟦g0⟧пішла⟦g1⟧.` and a save of `Вона ⟦g0⟧пішла⟦g1⟧⟦g1⟧.` reaches the placeholder check
 - **THEN** it is refused with `ErrorCode.validation`, and `ch2 · p07` stays REVISED with `Вона ⟦g0⟧пішла⟦g1⟧.`
 
+### Requirement: Show a refused save's reason only while the refused text stands
+
+WHEN the desk refuses a save with `ErrorCode.validation`, the review desk SHALL show the reason under the editors in words that fit a save as well as a restore, and SHALL remove it as soon as the editor holds any other text; the list and the detail SHALL keep their widths, and the reason SHALL end before the detail's scroll bar.
+
+**Source**: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`; the window re-test of `finalize-ui-and-persistence` (G2-2). In plain words: the reason once began "Restoring this translated passage…" after a save, stayed after the text was corrected until Save was pressed again, ran into the scroll bar and narrowed the list.
+
+#### Scenario: A corrected text clears the reason at once
+
+- **WHEN** a save of `ch5 · p12` is refused because the text would change the book's Markdown formatting, and the person then types one more character
+- **THEN** the reason "This text would change the book's Markdown formatting — …" is shown after the refusal and is gone after the keystroke, before any Save
+
+#### Scenario: A refused save moves nothing at the smallest window
+
+- **WHEN** the window is 960 by 640 in English or Ukrainian and a save is refused with that reason
+- **THEN** the segment list is as wide as before the refusal and the reason's right edge is left of the detail's vertical scroll bar
+
 ### Requirement: Refuse and hold a blank edit
 
 IF the editor's text is empty or only spaces, THEN the desk SHALL keep the main button disabled and show under the editor "The edit is empty. Type the translation to save it, or choose Leave for later.", and a blank save that reaches the review desk by any path SHALL be refused with `ErrorCode.validation` with nothing stored.

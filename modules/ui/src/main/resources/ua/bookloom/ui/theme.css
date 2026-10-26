@@ -2702,6 +2702,11 @@
     -fx-padding: 0;
 }
 
+/* Clear of the detail's scroll bar, so a wrapped line never runs into it. */
+.review-desk-detail {
+    -fx-padding: 0 8px 0 0;
+}
+
 .review-detail-scroll,
 .review-tab-scroll {
     -fx-background-color: transparent;

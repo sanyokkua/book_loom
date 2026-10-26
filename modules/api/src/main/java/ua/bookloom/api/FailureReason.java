@@ -37,7 +37,13 @@ public enum FailureReason {
      * A provider answered with an HTTP success whose body is only an error: the address reaches a server that does not
      * serve this path, most often an OpenAI-compatible address missing its {@code /v1}.
      */
-    WRONG_PATH("wrong-path");
+    WRONG_PATH("wrong-path"),
+
+    /**
+     * A translated text, saved by the person or restored from the model, would add Markdown structure its source did
+     * not have, or lose structure it had.
+     */
+    MARKDOWN_STRUCTURE("markdown-structure");
 
     private static final String PREFIX = "reason=";
 
