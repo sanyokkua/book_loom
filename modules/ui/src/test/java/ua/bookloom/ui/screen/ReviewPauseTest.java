@@ -120,6 +120,24 @@ class ReviewPauseTest extends ReviewDeskTestBase {
         assertThat(job.calls()).doesNotContain("resume");
     }
 
+    // IF the reason sat under a readable view as tall as a 10,000-character edit, THEN Save would seem to do nothing.
+    @Test
+    void saveEdit_longEditRefused_showsTheReasonInsideTheDesk() throws Exception {
+        assistedPauseOnFlagged();
+        editTo("Чудовисько ⟦0⟧мене⟦1⟧ " + "слово ".repeat(1_700) + "кінець.");
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Refused", "The edit changes the formatting.")));
+
+        onFx(() -> button(ACCEPT).fire());
+        awaitFx(() -> isShown("review-problem"));
+
+        final javafx.geometry.Bounds reason = fx(() -> required("review-problem")
+                .localToScene(required("review-problem").getBoundsInLocal()));
+        final javafx.geometry.Bounds card =
+                fx(() -> required(DESK).localToScene(required(DESK).getBoundsInLocal()));
+        assertThat(reason.getMaxY()).isLessThanOrEqualTo(card.getMaxY());
+        assertThat(reason.getMinY()).isGreaterThanOrEqualTo(card.getMinY());
+    }
+
     // IF Leave for later resumed the run, THEN a person postponing a segment would restart the model by accident.
     @Test
     void leaveForLater_inAPause_leavesTheRunPausedAndWritesNothing() throws Exception {

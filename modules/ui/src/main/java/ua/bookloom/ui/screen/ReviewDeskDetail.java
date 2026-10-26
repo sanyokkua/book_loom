@@ -75,9 +75,9 @@ final class ReviewDeskDetail extends VBox {
                         header(),
                         banner("review-target-note", viewModel.editor().targetNote()),
                         panes,
+                        note("review-problem", viewModel.problem()),
                         readable,
                         inline.note(),
-                        note("review-problem", viewModel.problem()),
                         banner("review-accept-note", viewModel.acceptNote()),
                         tabs);
         ReviewFocusKeeper.install(this, viewModel.retryInFlight());
