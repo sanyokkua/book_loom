@@ -34,6 +34,7 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.RunRow;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
+import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -125,11 +126,7 @@ final class NamesStyleView {
     private Banner runBanner() {
         return Visibility.bind(
                 new Banner(
-                        "names-style-run-banner",
-                        Banner.Role.INFO,
-                        "ℹ",
-                        "",
-                        messages.get(MessageKey.NAMES_STYLE_RUN_BANNER)),
+                        "names-style-run-banner", Tone.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_RUN_BANNER)),
                 Bindings.createBooleanBinding(() -> runs.view().get().isAtWork(), runs.view()));
     }
 
@@ -138,7 +135,7 @@ final class NamesStyleView {
         final Banner banner = Visibility.bind(
                 new Banner(
                         "names-style-hidden-banner",
-                        Banner.Role.INFO,
+                        Tone.INFO,
                         "ℹ",
                         messages.get(MessageKey.NAMES_STYLE_HIDDEN_BANNER),
                         messages.get(MessageKey.NAMES_STYLE_HIDDEN_NOTE)),
@@ -150,7 +147,7 @@ final class NamesStyleView {
     }
 
     private Node noticeBanner() {
-        final Banner banner = new Banner("names-style-notice", Banner.Role.ERR, "⚠", "", "");
+        final Banner banner = new Banner("names-style-notice", Tone.ERR, "⚠", "", "");
         final ChangeListener<@Nullable GlossaryNotice> onNotice = (observed, was, now) -> showNotice(banner, now);
         banner.getProperties().put(LISTENER_KEY, onNotice);
         glossary.notice().addListener(new WeakChangeListener<>(onNotice));
@@ -163,7 +160,7 @@ final class NamesStyleView {
         banner.setManaged(notice != null);
         if (notice != null) {
             final boolean failed = notice.level() == GlossaryNotice.Level.ERROR;
-            banner.setRole(failed ? Banner.Role.ERR : Banner.Role.INFO);
+            banner.setRole(failed ? Tone.ERR : Tone.INFO);
             banner.setGlyph(failed ? "⚠" : "ℹ");
             banner.setText(notice.text());
         }

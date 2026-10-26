@@ -15,6 +15,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportVerdict;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * Builds the one verdict line of the import page: a banner whose role and glyph follow the verdict's kind, with the
@@ -80,12 +81,12 @@ final class ImportVerdictView {
         return banner;
     }
 
-    private static Banner.Role roleOf(final ImportVerdict.Kind kind) {
+    private static Tone roleOf(final ImportVerdict.Kind kind) {
         return switch (kind) {
-            case READY -> Banner.Role.OK;
-            case TWO_MARKS, UNRECOGNIZED -> Banner.Role.WARN;
-            case DRM, UNSUPPORTED, DAMAGED, NO_TEXT -> Banner.Role.ERR;
-            case READING, ALREADY -> Banner.Role.INFO;
+            case READY -> Tone.OK;
+            case TWO_MARKS, UNRECOGNIZED -> Tone.WARN;
+            case DRM, UNSUPPORTED, DAMAGED, NO_TEXT -> Tone.ERR;
+            case READING, ALREADY -> Tone.INFO;
         };
     }
 

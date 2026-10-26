@@ -21,16 +21,16 @@ class LogKindTest {
     // IF a kind mapped to the wrong role or default message, THEN the log would colour or word an entry wrongly.
     @ParameterizedTest
     @CsvSource({
-        "ACCEPTED, SUCCESS, LOG_ACCEPTED",
+        "ACCEPTED, OK, LOG_ACCEPTED",
         "REPAIRED, INFO, LOG_MODEL_CALL",
         "MEMORY, INFO, LOG_GLOSSARY_APPLIED",
         "SUMMARY, INFO, LOG_SUMMARY_UPDATED",
-        "RETRIED, WARNING, LOG_RETRIED",
-        "SEGMENT_ERROR, DANGER, LOG_SEGMENT_ERROR",
+        "RETRIED, WARN, LOG_RETRIED",
+        "SEGMENT_ERROR, ERR, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
     void kind_eachOfTheSeven_hasItsRoleAndDefaultCatalogueKey(
-            final LogKind kind, final StatusRole role, final MessageKey key) {
+            final LogKind kind, final Tone role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
     }

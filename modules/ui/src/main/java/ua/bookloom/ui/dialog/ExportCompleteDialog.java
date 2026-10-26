@@ -24,6 +24,7 @@ import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportReportLines;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.FileSizes;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The card that reports a written book: the file, its whole path, the verification result and the size, with Open folder
@@ -109,10 +110,10 @@ public final class ExportCompleteDialog {
         // Plain success-coloured words after a check mark, as the export screen's own checks read: a row value, not a
         // chip.
         final Label mark = new Label("✓");
-        mark.getStyleClass().add("status-ok");
+        mark.getStyleClass().add(Tone.OK.statusClass());
         final Label verified = plain(messages.get(MessageKey.EXPORT_COMPLETE_VERIFIED));
         verified.setId("export-complete-verified");
-        verified.getStyleClass().add("status-ok");
+        verified.getStyleClass().add(Tone.OK.statusClass());
         verified.setGraphic(mark);
         // The whole written path is also one hover away.
         Tips.install(written, file.toString());
@@ -181,7 +182,7 @@ public final class ExportCompleteDialog {
     }
 
     private static Banner warning(final String id, final String text) {
-        return new Banner(id, Banner.Role.WARN, "⚠", "", text);
+        return new Banner(id, Tone.WARN, "⚠", "", text);
     }
 
     private static Label plain(final String text) {

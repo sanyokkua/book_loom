@@ -1,8 +1,6 @@
 package ua.bookloom.ui.control;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -32,7 +30,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
-import ua.bookloom.ui.state.StatusRole;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The activity log: each entry shows the time it happened, its kind's tag and mark in the kind's role colour, its
@@ -50,8 +48,6 @@ public final class TaggedLog extends ListView<LogEntry> {
     private static final int TAG_WIDTH = 5;
     private static final double PART_SPACING = 8;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ROOT);
-    private static final List<String> ROLE_CLASSES =
-            Arrays.stream(StatusRole.values()).map(StatusRole::styleClass).toList();
 
     private static final double END_TOLERANCE = 1e-6;
 
@@ -222,8 +218,8 @@ public final class TaggedLog extends ListView<LogEntry> {
         @Override
         protected void updateItem(final @Nullable LogEntry entry, final boolean empty) {
             super.updateItem(entry, empty);
-            getStyleClass().removeAll(ROLE_CLASSES);
-            tag.getStyleClass().removeAll(ROLE_CLASSES);
+            getStyleClass().removeAll(Tone.statusClasses());
+            tag.getStyleClass().removeAll(Tone.statusClasses());
             setText(null);
             if (empty || entry == null) {
                 setGraphic(null);
@@ -233,14 +229,14 @@ public final class TaggedLog extends ListView<LogEntry> {
             final LogKind kind = entry.kind();
             time.setText(entry.time() == null ? "" : TIME.format(entry.time()));
             tag.setText(String.format(Locale.ROOT, "%-" + TAG_WIDTH + "s %s", kind.tag(), kind.mark()));
-            tag.getStyleClass().add(entry.role().styleClass());
+            tag.getStyleClass().add(entry.role().statusClass());
             body.setText(textOf(entry, messages));
             final boolean repeated = entry.repeats() > 1;
             repeats.setText(repeated ? "×" + entry.repeats() : "");
             repeats.setVisible(repeated);
             repeats.setManaged(repeated);
             repeatTip.setText(messages.get(MessageKey.TRANSLATING_LOG_REPEATS, entry.repeats()));
-            getStyleClass().add(entry.role().styleClass());
+            getStyleClass().add(entry.role().statusClass());
             setGraphic(row);
             setAccessibleText(lineOf(entry, messages));
         }

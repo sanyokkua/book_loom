@@ -29,6 +29,7 @@ import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportReportLines;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * What the screen reports about the book and its last export: the four tiles, the checks that hold once the file was
@@ -191,9 +192,9 @@ final class ExportResult {
         validCaption.setText(
                 messages.get(last == null ? MessageKey.EXPORT_TILE_VALID : MessageKey.EXPORT_TILE_VALID_DONE));
         valid.setText(last == null ? DASH : CHECK);
-        valid.getStyleClass().remove("status-ok");
+        valid.getStyleClass().remove(Tone.OK.statusClass());
         if (last != null) {
-            valid.getStyleClass().add("status-ok");
+            valid.getStyleClass().add(Tone.OK.statusClass());
         }
         if (figures == null) {
             for (final Label label : new Label[] {written, auto, reviewed}) {
@@ -240,7 +241,7 @@ final class ExportResult {
         final Label line = new Label(CHECK + " " + text);
         line.setId(id);
         line.setWrapText(true);
-        line.getStyleClass().add("status-ok");
+        line.getStyleClass().add(Tone.OK.statusClass());
         return line;
     }
 
@@ -248,7 +249,7 @@ final class ExportResult {
         final Label line = new Label(text);
         line.setId(id);
         line.setWrapText(true);
-        line.getStyleClass().add("status-warn");
+        line.getStyleClass().add(Tone.WARN.statusClass());
         return line;
     }
 

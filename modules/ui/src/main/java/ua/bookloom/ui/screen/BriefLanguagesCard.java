@@ -29,6 +29,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BriefLock;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The Languages card: two searchable boxes over the same list, the source one led by Auto, where the brief names no
@@ -156,7 +157,7 @@ final class BriefLanguagesCard {
         return Visibility.bind(
                 new Banner(
                         "brief-languages-same",
-                        Banner.Role.WARN,
+                        Tone.WARN,
                         ImportViews.WARNING_GLYPH,
                         "",
                         messages.get(MessageKey.BRIEF_LANGUAGES_SAME)),

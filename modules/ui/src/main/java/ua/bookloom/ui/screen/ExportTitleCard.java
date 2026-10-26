@@ -19,6 +19,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.BookTitleViewModel.Part;
 import ua.bookloom.ui.state.BookTitleViewModel.Row;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The Title and author card of Export: the original title and author, read-only, above the one translated title and
@@ -110,7 +111,7 @@ final class ExportTitleCard {
     }
 
     private Node refusal(final String id) {
-        line(titleRefusal, id + "-refusal", "status-err");
+        line(titleRefusal, id + "-refusal", Tone.ERR.statusClass());
         titleRefusal.textProperty().bind(viewModel.refusal());
         return Visibility.bind(titleRefusal, viewModel.refusal().isNotEmpty());
     }

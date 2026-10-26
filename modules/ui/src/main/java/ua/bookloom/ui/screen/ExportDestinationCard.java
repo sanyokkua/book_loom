@@ -20,6 +20,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.ShortPath;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * Save as: the destination as a short path with the full path on hover, Change… and ✦ Suggest a name beside it, and
@@ -123,7 +124,7 @@ final class ExportDestinationCard {
         final Label refusal = new Label();
         refusal.setId("export-refusal");
         refusal.setWrapText(true);
-        refusal.getStyleClass().add("status-err");
+        refusal.getStyleClass().add(Tone.ERR.statusClass());
         refusal.textProperty().bind(viewModel.refusal());
         return Visibility.bind(refusal, viewModel.refusal().isNotEmpty());
     }

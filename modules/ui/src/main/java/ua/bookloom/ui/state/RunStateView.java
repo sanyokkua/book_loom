@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.i18n.ErrorWords;
@@ -224,7 +223,7 @@ public record RunStateView(
      */
     public record BannerView(
             String key,
-            Banner.Role role,
+            Tone role,
             String glyph,
             Text title,
             @Nullable Text text,

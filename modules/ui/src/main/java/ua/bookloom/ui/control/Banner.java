@@ -9,6 +9,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * A message strip: a glyph, a title and a text, in one of four roles, with room for extra detail and one optional
@@ -21,34 +22,13 @@ import javafx.scene.layout.VBox;
 public final class Banner extends HBox {
 
     private static final double TEXT_SPACING = 3;
-
-    /** The look of a banner: the style class that paints it. */
-    public enum Role {
-        /** Neutral information. */
-        INFO("banner-info"),
-        /** Success. */
-        OK("banner-ok"),
-        /** Something needs attention. */
-        WARN("banner-warn"),
-        /** A failure. */
-        ERR("banner-err");
-
-        private final String styleClass;
-
-        Role(final String styleClass) {
-            this.styleClass = styleClass;
-        }
-
-        String styleClass() {
-            return styleClass;
-        }
-    }
+    private static final String FAMILY = "banner";
 
     private final Label icon = new Label();
     private final Label title = Wrapped.label("", "banner-title");
     private final Label text = Wrapped.label("", "banner-text");
     private final VBox column = new VBox(TEXT_SPACING, title, text);
-    private Role role;
+    private Tone role;
 
     /**
      * Builds the banner.
@@ -59,7 +39,7 @@ public final class Banner extends HBox {
      * @param title the bold first line
      * @param text the second line
      */
-    public Banner(final String id, final Role role, final String glyph, final String title, final String text) {
+    public Banner(final String id, final Tone role, final String glyph, final String title, final String text) {
         Objects.requireNonNull(id, "id");
         this.role = Objects.requireNonNull(role, "role");
         icon.getStyleClass().add("banner-icon");
@@ -69,7 +49,7 @@ public final class Banner extends HBox {
         this.title.setId(id + "-title");
         this.text.setId(id + "-text");
         setAlignment(Pos.TOP_LEFT);
-        getStyleClass().addAll("banner", role.styleClass());
+        getStyleClass().addAll("banner", role.styleClass(FAMILY));
         // The words take the width the banner has and wrap in it, so a long line grows the banner instead of being cut.
         HBox.setHgrow(column, Priority.ALWAYS);
         column.setMinWidth(0);
@@ -90,11 +70,11 @@ public final class Banner extends HBox {
      *
      * @param newRole the role to paint
      */
-    public void setRole(final Role newRole) {
+    public void setRole(final Tone newRole) {
         Objects.requireNonNull(newRole, "newRole");
         final boolean changed = newRole != role;
-        getStyleClass().remove(role.styleClass());
-        getStyleClass().add(newRole.styleClass());
+        getStyleClass().remove(role.styleClass(FAMILY));
+        getStyleClass().add(newRole.styleClass(FAMILY));
         role = newRole;
         if (changed && getScene() != null && isVisible()) {
             Motion.settle(this);

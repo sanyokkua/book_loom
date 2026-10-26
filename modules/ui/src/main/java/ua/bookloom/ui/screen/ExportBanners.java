@@ -20,6 +20,7 @@ import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.HiddenWork;
+import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -72,7 +73,7 @@ final class ExportBanners {
         final Banner banner = Visibility.bind(
                 new Banner(
                         "export-banner-running",
-                        Banner.Role.WARN,
+                        Tone.WARN,
                         ImportViews.WARNING_GLYPH,
                         messages.get(MessageKey.EXPORT_BANNER_RUNNING),
                         messages.get(MessageKey.EXPORT_BANNER_RUNNING_NOTE)),
@@ -93,7 +94,7 @@ final class ExportBanners {
     }
 
     private Banner partialBanner(final BooleanBinding running) {
-        final Banner banner = new Banner("export-banner-partial", Banner.Role.INFO, "ℹ", "", "");
+        final Banner banner = new Banner("export-banner-partial", Tone.INFO, "ℹ", "", "");
         final BooleanBinding partial = Bindings.createBooleanBinding(
                 () -> {
                     final ExportFigures figures = exports.figures().get();
@@ -115,7 +116,7 @@ final class ExportBanners {
         return Visibility.bind(
                 new Banner(
                         "export-banner-nothing",
-                        Banner.Role.INFO,
+                        Tone.INFO,
                         "ℹ",
                         messages.get(MessageKey.EXPORT_BANNER_NOTHING),
                         messages.get(MessageKey.EXPORT_BANNER_NOTHING_NOTE)),
@@ -124,12 +125,7 @@ final class ExportBanners {
 
     private Banner hiddenBanner() {
         return Visibility.bind(
-                new Banner(
-                        "export-banner-hidden",
-                        Banner.Role.INFO,
-                        "ℹ",
-                        messages.get(MessageKey.EXPORT_HIDDEN_BANNER),
-                        ""),
+                new Banner("export-banner-hidden", Tone.INFO, "ℹ", messages.get(MessageKey.EXPORT_HIDDEN_BANNER), ""),
                 hidden.freezes(ViewNames.EXPORT));
     }
 }

@@ -26,6 +26,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.Controls;
+import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
@@ -102,7 +103,7 @@ final class BriefView {
         final Banner banner = Visibility.bind(
                 new Banner(
                         "brief-readonly-banner",
-                        Banner.Role.WARN,
+                        Tone.WARN,
                         ImportViews.WARNING_GLYPH,
                         messages.get(MessageKey.BRIEF_READ_ONLY_BANNER),
                         messages.get(MessageKey.BRIEF_READ_ONLY_NOTE)),

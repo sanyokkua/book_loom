@@ -143,7 +143,7 @@ public record LogEntry(
      *
      * @return the role the entry is drawn in
      */
-    public StatusRole role() {
+    public Tone role() {
         return kind.role();
     }
 

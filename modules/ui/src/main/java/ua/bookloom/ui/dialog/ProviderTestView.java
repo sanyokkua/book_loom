@@ -32,6 +32,7 @@ import ua.bookloom.ui.state.StageChip;
 import ua.bookloom.ui.state.TestDetail;
 import ua.bookloom.ui.state.TestDetails;
 import ua.bookloom.ui.state.TestSubject;
+import ua.bookloom.ui.state.Tone;
 
 /** The card of {@link ProviderTestDialog}: it draws one {@link TestDetail} and redraws it when the runner changes. */
 @Slf4j
@@ -48,7 +49,7 @@ final class ProviderTestView {
     private final Runnable close;
     private final ModalCard card = new ModalCard(ModalCard.Size.XL);
     private final Label title = ModalCard.title("");
-    private final Banner verdict = new Banner("test-verdict", Banner.Role.INFO, Messages.ELLIPSIS, "", "");
+    private final Banner verdict = new Banner("test-verdict", Tone.INFO, Messages.ELLIPSIS, "", "");
     private final Label requestLine = new Label();
     private final Button copyCurl = new Button();
     private final HBox requestRow = new HBox(10);
@@ -253,10 +254,10 @@ final class ProviderTestView {
     private void showVerdict() {
         verdict.setRole(
                 switch (detail.severity()) {
-                    case OK -> Banner.Role.OK;
-                    case WARN -> Banner.Role.WARN;
-                    case ERR -> Banner.Role.ERR;
-                    case INFO -> Banner.Role.INFO;
+                    case OK -> Tone.OK;
+                    case WARN -> Tone.WARN;
+                    case ERR -> Tone.ERR;
+                    case INFO -> Tone.INFO;
                 });
         verdict.setGlyph(
                 switch (detail.severity()) {

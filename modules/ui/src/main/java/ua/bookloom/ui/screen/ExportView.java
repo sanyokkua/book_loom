@@ -30,6 +30,7 @@ import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -223,7 +224,7 @@ final class ExportView {
         final Label failure = new Label();
         failure.setId("export-failure");
         failure.setWrapText(true);
-        failure.getStyleClass().add("status-err");
+        failure.getStyleClass().add(Tone.ERR.statusClass());
         failure.textProperty().bind(viewModel.failure());
         return Visibility.bind(failure, viewModel.failure().isNotEmpty());
     }

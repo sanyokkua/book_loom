@@ -29,6 +29,7 @@ import ua.bookloom.ui.state.RunStateView.RunAction;
 import ua.bookloom.ui.state.ShellBanners;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StepLocks;
+import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -64,7 +65,7 @@ public final class RunBanner {
     private final Messages messages;
     private final StepLocks locks;
     private final Map<String, Runnable> commands;
-    private final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
+    private final Banner banner = new Banner("translating-banner", Tone.INFO, "", "", "");
     private final HBox actionRow = new HBox(ACTION_SPACING);
     private final Map<String, Button> buttons = new HashMap<>();
     private final Map<Button, String> shownTips = new HashMap<>();

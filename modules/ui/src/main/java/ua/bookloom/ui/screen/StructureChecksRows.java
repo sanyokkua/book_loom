@@ -21,9 +21,9 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.StatusRole;
 import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The rows that report the background checks among the counts of the import screen's facts card. By default a passed
@@ -102,10 +102,7 @@ final class StructureChecksRows extends VBox {
         switch (state) {
             case StructureChecks.Running _ ->
                 rows.add(row(
-                        "structure-check-roundtrip",
-                        Messages.ELLIPSIS,
-                        StatusRole.INFO,
-                        MessageKey.STRUCTURE_CHECK_RUNNING));
+                        "structure-check-roundtrip", Messages.ELLIPSIS, Tone.INFO, MessageKey.STRUCTURE_CHECK_RUNNING));
             case StructureChecks.Finished finished -> addFinished(rows, finished);
         }
         getChildren().setAll(rows);
@@ -115,7 +112,7 @@ final class StructureChecksRows extends VBox {
         if (finished.hasReport()) {
             addReport(rows, finished.requiredReport());
         } else {
-            rows.add(row("structure-check-roundtrip", "!", StatusRole.WARNING, MessageKey.STRUCTURE_CHECK_UNAVAILABLE));
+            rows.add(row("structure-check-roundtrip", "!", Tone.WARN, MessageKey.STRUCTURE_CHECK_UNAVAILABLE));
         }
         if (technical.get() && finished.oversizedSegments() > 0) {
             rows.add(warning(finished.oversizedSegments()));
@@ -128,7 +125,7 @@ final class StructureChecksRows extends VBox {
                 && report.idsPreserved()
                 && report.missingIds().isEmpty();
         if (clean && !technical.get()) {
-            rows.add(row("structure-check-roundtrip", "✓", StatusRole.SUCCESS, MessageKey.STRUCTURE_CHECK_PLAIN));
+            rows.add(row("structure-check-roundtrip", "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PLAIN));
             return;
         }
         rows.add(roundTripRow(report));
@@ -137,28 +134,28 @@ final class StructureChecksRows extends VBox {
 
     private Node roundTripRow(final RoundTripReport report) {
         if (report.structurePreserved()) {
-            return row("structure-check-roundtrip", "✓", StatusRole.SUCCESS, MessageKey.STRUCTURE_CHECK_PASSED);
+            return row("structure-check-roundtrip", "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_PASSED);
         }
         if (report.sourceSegments() != report.copySegments()) {
             return row(
                     "structure-check-roundtrip",
                     "✗",
-                    StatusRole.DANGER,
+                    Tone.ERR,
                     MessageKey.STRUCTURE_CHECK_FAILED_COUNTS,
                     numbers.format(report.copySegments()),
                     report.sourceSegments());
         }
-        return row("structure-check-roundtrip", "✗", StatusRole.DANGER, MessageKey.STRUCTURE_CHECK_FAILED);
+        return row("structure-check-roundtrip", "✗", Tone.ERR, MessageKey.STRUCTURE_CHECK_FAILED);
     }
 
     private Node idsRow(final RoundTripReport report) {
         if (report.idsPreserved() && report.missingIds().isEmpty()) {
-            return row("structure-check-ids", "✓", StatusRole.SUCCESS, MessageKey.STRUCTURE_CHECK_IDS_OK);
+            return row("structure-check-ids", "✓", Tone.OK, MessageKey.STRUCTURE_CHECK_IDS_OK);
         }
         return row(
                 "structure-check-ids",
                 "✗",
-                StatusRole.DANGER,
+                Tone.ERR,
                 MessageKey.STRUCTURE_CHECK_IDS_MISSING,
                 String.join(", ", report.missingIds()));
     }
@@ -166,16 +163,16 @@ final class StructureChecksRows extends VBox {
     private Node warning(final int oversized) {
         return new Banner(
                 "structure-chunk-warning",
-                Banner.Role.WARN,
+                Tone.WARN,
                 WARNING_GLYPH,
                 "",
                 messages.get(MessageKey.STRUCTURE_CHECK_OVERSIZED, oversized));
     }
 
     private Node row(
-            final String id, final String glyph, final StatusRole role, final MessageKey text, final Object... args) {
+            final String id, final String glyph, final Tone role, final MessageKey text, final Object... args) {
         final Label mark = new Label(glyph);
-        mark.getStyleClass().add(role.styleClass());
+        mark.getStyleClass().add(role.statusClass());
         final Label words = new Label(messages.get(text, args));
         words.setId(id);
         words.getStyleClass().add("stats-value");

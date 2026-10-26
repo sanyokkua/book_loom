@@ -6,7 +6,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.RunStateView.BannerView;
 import ua.bookloom.ui.state.RunStateView.RunAction;
@@ -45,19 +44,13 @@ final class RunBanners {
 
     private static BannerView finishedNone() {
         return new BannerView(
-                "finishedNone",
-                Banner.Role.OK,
-                "✓",
-                Text.of(MessageKey.RUN_BANNER_FINISHED_NONE),
-                null,
-                List.of(),
-                true);
+                "finishedNone", Tone.OK, "✓", Text.of(MessageKey.RUN_BANNER_FINISHED_NONE), null, List.of(), true);
     }
 
     private static BannerView failed() {
         return banner(
                 "failed",
-                Banner.Role.ERR,
+                Tone.ERR,
                 "⛔",
                 Text.of(MessageKey.RUN_BANNER_FAILED),
                 null,
@@ -70,7 +63,7 @@ final class RunBanners {
     private static BannerView welcome(final RunStateInputs in) {
         return banner(
                 "welcome",
-                Banner.Role.INFO,
+                Tone.INFO,
                 "↺",
                 Text.of(MessageKey.RUN_BANNER_WELCOME, in.decided(), in.total()),
                 Text.of(MessageKey.RUN_BANNER_WELCOME_TEXT, RunStateView.orNone(in.continuesAt())),
@@ -81,7 +74,7 @@ final class RunBanners {
         final String provider = in.model().provider();
         return banner(
                 "waiting",
-                Banner.Role.WARN,
+                Tone.WARN,
                 "⏳",
                 Text.of(MessageKey.RUN_BANNER_WAITING, provider),
                 Text.of(MessageKey.RUN_BANNER_WAITING_TEXT, provider, nextTry(in.recovery())),
@@ -92,7 +85,7 @@ final class RunBanners {
         final String provider = in.model().provider();
         return banner(
                 "gaveUp",
-                Banner.Role.ERR,
+                Tone.ERR,
                 "⛔",
                 Text.of(MessageKey.RUN_BANNER_GAVE_UP, provider, hoursGivenUp()),
                 Text.of(MessageKey.RUN_BANNER_GAVE_UP_TEXT, provider),
@@ -102,7 +95,7 @@ final class RunBanners {
     private static BannerView modelMissing(final RunStateInputs in) {
         return banner(
                 "modelMissing",
-                Banner.Role.ERR,
+                Tone.ERR,
                 "⛔",
                 Text.of(MessageKey.RUN_BANNER_MODEL_MISSING, in.model().modelId()),
                 Text.of(MessageKey.RUN_BANNER_MODEL_MISSING_TEXT, in.model().provider()),
@@ -118,7 +111,7 @@ final class RunBanners {
 
     private static BannerView banner(
             final String key,
-            final Banner.Role role,
+            final Tone role,
             final String glyph,
             final Text title,
             final @Nullable Text text,
@@ -134,7 +127,7 @@ final class RunBanners {
             case RunNotice.Refused refused ->
                 banner(
                         "refused",
-                        Banner.Role.WARN,
+                        Tone.WARN,
                         "⚠",
                         Text.of(MessageKey.TRANSLATING_REFUSED_TITLE),
                         Text.of(MessageKey.RUN_BANNER_PLAIN, refused.error()),
@@ -165,13 +158,7 @@ final class RunBanners {
     }
 
     private static BannerView cannotStartBanner(final String token, final Text text, final List<RunAction> actions) {
-        return banner(
-                "cannotStart",
-                Banner.Role.WARN,
-                "⚠",
-                Text.of(MessageKey.RUN_BANNER_CANNOT_START, token),
-                text,
-                actions);
+        return banner("cannotStart", Tone.WARN, "⚠", Text.of(MessageKey.RUN_BANNER_CANNOT_START, token), text, actions);
     }
 
     private static BannerView pausedAfterError(final RunStateInputs in) {
@@ -179,7 +166,7 @@ final class RunBanners {
         final String provider = in.model().provider();
         return banner(
                 "pausedError",
-                Banner.Role.ERR,
+                Tone.ERR,
                 "⏸",
                 Text.of(MessageKey.RUN_BANNER_PAUSED_ERROR, provider, reach),
                 Text.of(MessageKey.RUN_BANNER_PAUSED_ERROR_TEXT, provider, reach),
@@ -192,7 +179,7 @@ final class RunBanners {
         final @Nullable Duration limit = waiting == null ? null : waiting.timeout();
         return banner(
                 "stuck",
-                Banner.Role.WARN,
+                Tone.WARN,
                 "⏳",
                 Text.of(
                         MessageKey.RUN_BANNER_STUCK,
@@ -211,7 +198,7 @@ final class RunBanners {
                 Text.of(MessageKey.RUN_ACTION_REVIEW_SEGMENTS_TIP));
         return new BannerView(
                 "finishedReview",
-                Banner.Role.OK,
+                Tone.OK,
                 "✓",
                 Text.of(MessageKey.RUN_BANNER_FINISHED_REVIEW, in.toReview()),
                 null,

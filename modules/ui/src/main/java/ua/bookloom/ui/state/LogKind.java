@@ -10,32 +10,32 @@ import ua.bookloom.ui.i18n.MessageKey;
  */
 public enum LogKind {
     /** A segment was accepted. */
-    ACCEPTED(MessageKey.LOG_ACCEPTED, StatusRole.SUCCESS, "✓", "ok"),
+    ACCEPTED(MessageKey.LOG_ACCEPTED, Tone.OK, "✓", "ok"),
     /** The model repaired a segment on a directed fix; worded as the call that did it. */
-    REPAIRED(MessageKey.LOG_MODEL_CALL, StatusRole.INFO, "↺", "fix"),
+    REPAIRED(MessageKey.LOG_MODEL_CALL, Tone.INFO, "↺", "fix"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
-    MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, StatusRole.INFO, "≡", "mem"),
+    MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, Tone.INFO, "≡", "mem"),
     /** The rolling summary was refreshed. */
-    SUMMARY(MessageKey.LOG_SUMMARY_UPDATED, StatusRole.INFO, "Σ", "sum"),
+    SUMMARY(MessageKey.LOG_SUMMARY_UPDATED, Tone.INFO, "Σ", "sum"),
     /**
      * Something was tried again: a failed or refused attempt, a structure or placeholder repair, the run resuming after
      * a provider error, or a step of the automatic recovery.
      */
-    RETRIED(MessageKey.LOG_RETRIED, StatusRole.WARNING, "↻", "retry"),
+    RETRIED(MessageKey.LOG_RETRIED, Tone.WARN, "↻", "retry"),
     /** A segment was flagged instead of accepted. */
-    SEGMENT_ERROR(MessageKey.LOG_SEGMENT_ERROR, StatusRole.DANGER, "✕", "err"),
+    SEGMENT_ERROR(MessageKey.LOG_SEGMENT_ERROR, Tone.ERR, "✕", "err"),
     /**
      * A run-level event (a stage started, a pause, a resume, the end), or a technical line: an answered call, an
      * interrupted call or a repair round starting.
      */
-    MILESTONE(MessageKey.LOG_MILESTONE, StatusRole.INFO, "◆", "info");
+    MILESTONE(MessageKey.LOG_MILESTONE, Tone.INFO, "◆", "info");
 
     private final MessageKey messageKey;
-    private final StatusRole role;
+    private final Tone role;
     private final String mark;
     private final String tag;
 
-    LogKind(final MessageKey messageKey, final StatusRole role, final String mark, final String tag) {
+    LogKind(final MessageKey messageKey, final Tone role, final String mark, final String tag) {
         this.messageKey = messageKey;
         this.role = role;
         this.mark = mark;
@@ -56,7 +56,7 @@ public enum LogKind {
      *
      * @return the role
      */
-    public StatusRole role() {
+    public Tone role() {
         return role;
     }
 
@@ -84,6 +84,6 @@ public enum LogKind {
      * @return {@code true} for a warning or a danger, {@code false} otherwise
      */
     public boolean isTrouble() {
-        return role == StatusRole.WARNING || role == StatusRole.DANGER;
+        return role == Tone.WARN || role == Tone.ERR;
     }
 }

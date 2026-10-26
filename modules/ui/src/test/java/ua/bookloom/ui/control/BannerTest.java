@@ -9,6 +9,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.Tone;
 
 /** A banner's glyph is never squeezed away by its words, however long they are and however narrow the banner. */
 @SuppressWarnings("NullAway.Init")
@@ -24,7 +25,7 @@ class BannerTest extends FxTestBase {
         final Scene scene = ThemeTestSupport.themedScene();
         banner = new Banner(
                 "test-banner",
-                Banner.Role.WARN,
+                Tone.WARN,
                 "⚠",
                 "",
                 "5 segments to review have no translation and were written in the source language: ch5 · p12, ch8 · p04,"

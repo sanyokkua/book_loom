@@ -15,6 +15,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelFacts;
 import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.TechnicalDetails;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The body of the Models tab: what the program says about the chosen model, then its temperature, the settings it
@@ -28,7 +29,7 @@ final class ModelsFormView {
     private final ModelForm form;
     private final Messages messages;
     private final VBox root = new VBox(14);
-    private final Banner found = new Banner("models-found", Banner.Role.INFO, "i", "", "");
+    private final Banner found = new Banner("models-found", Tone.INFO, "i", "", "");
     private final ModelTemperatureSection temperature;
     private final ModelRefusedSection refused;
     private final ModelLimitsSection limits;
