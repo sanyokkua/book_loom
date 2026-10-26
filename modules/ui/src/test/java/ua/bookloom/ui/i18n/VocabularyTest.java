@@ -168,6 +168,20 @@ class VocabularyTest {
         assertThat(catalogue.get("import.verdict.twoMarks")).contains(catalogue.get("brief.source.label"));
     }
 
+    // IF the question said the book "is being translated", THEN it would be false for a paused translation, which it
+    // also asks about (W6-6).
+    @ParameterizedTest
+    @CsvSource({
+        "en, confirm.switch.text, is being translated",
+        "en, confirm.removeRunning.text, is being translated",
+        "uk, confirm.switch.text, Зараз перекладається",
+        "uk, confirm.removeRunning.text, Зараз перекладається",
+    })
+    void stopQuestions_pausedOrTranslating_doNotClaimTheModelIsAtWork(
+            final String language, final String key, final String claim) {
+        assertThat(Catalogues.load(language).get(key)).doesNotContain(claim);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"en", "uk"})
     void skipAction_withACount_alwaysNamesTheCount(final String language) {
