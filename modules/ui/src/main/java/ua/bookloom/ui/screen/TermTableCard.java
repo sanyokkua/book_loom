@@ -13,6 +13,7 @@ import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -316,6 +317,8 @@ final class TermTableCard<R> extends VBox {
         more.setId(id + "-more");
         more.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_MORE));
         more.getStyleClass().addAll("btn-ghost", "menu-more");
+        // At the right edge of its card, a menu opening to the right ran past the window; it opens towards it.
+        more.setPopupSide(Side.LEFT);
         more.setMinWidth(Region.USE_PREF_SIZE);
         more.setMaxHeight(Double.MAX_VALUE);
         final MenuItem importItem = new MenuItem(messages.get(texts.importFile().caption()));

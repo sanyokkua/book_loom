@@ -53,7 +53,8 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 final class BriefToneCard {
 
     private static final int VOICE_ROWS = 2;
-    // Every model call carries these three, so each is capped at what a genre, an audience or a note on the voice needs.
+    // Every model call carries these three, so each is capped at what a genre, an audience or a note on the voice
+    // needs.
     private static final int GENRE_MAX = 100;
     private static final int AUDIENCE_MAX = 200;
     private static final int VOICE_MAX = 500;

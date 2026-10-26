@@ -156,11 +156,15 @@ public final class ModelsController {
     private void bindVisibility() {
         final BooleanBinding none = Bindings.isEmpty(roster.entries());
         Visibility.bind(listing, roster.listing());
-        Visibility.bind(unanswered, Bindings.createBooleanBinding(
-                () -> !roster.listing().get() && !roster.unanswered().get().isEmpty(),
-                roster.listing(),
-                roster.unanswered()));
-        unanswered.textProperty()
+        Visibility.bind(
+                unanswered,
+                Bindings.createBooleanBinding(
+                        () -> !roster.listing().get()
+                                && !roster.unanswered().get().isEmpty(),
+                        roster.listing(),
+                        roster.unanswered()));
+        unanswered
+                .textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> messages.get(
                                 MessageKey.SETTINGS_MODELS_UNANSWERED,

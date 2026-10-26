@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -190,6 +191,8 @@ final class ProjectRowView {
         more.setId("projects-more-" + row.summary().project().id());
         more.setAccessibleText(messages.get(MessageKey.PROJECTS_ROW_MORE_TIP));
         more.getStyleClass().addAll("btn-ghost", "menu-more", "menu-more-bare");
+        // At the right edge of its card, a menu opening to the right ran past the window; it opens towards it.
+        more.setPopupSide(Side.LEFT);
         more.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, more, MessageKey.PROJECTS_ROW_MORE_TIP);
         more.getItems()

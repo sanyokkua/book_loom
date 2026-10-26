@@ -157,9 +157,11 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> ((TextField) required("brief-tone-audience")).setText("a".repeat(600)));
         onFx(() -> ((TextArea) required("brief-tone-voice")).setText("v".repeat(600)));
 
-        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText())).hasSize(200);
+        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText()))
+                .hasSize(200);
         assertThat(brief().audience()).hasSize(200);
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText())).hasSize(500);
+        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText()))
+                .hasSize(500);
         assertThat(brief().voiceEra()).hasSize(500);
     }
 
@@ -170,7 +172,8 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
 
         onFx(() -> ((ComboBox<?>) required("brief-tone-genre")).getEditor().setText("g".repeat(300)));
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ComboBox<?>) required("brief-tone-genre")).getEditor().getText()))
+        assertThat(ThemeTestSupport.onFx(() ->
+                        ((ComboBox<?>) required("brief-tone-genre")).getEditor().getText()))
                 .hasSize(100);
     }
 

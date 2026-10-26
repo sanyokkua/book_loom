@@ -27,6 +27,7 @@ class TranslatingEstimateFitTest extends BriefRunScreenTestBase {
         showTranslating();
 
         assertThat(labelText("translating-strip-big")).startsWith("Для цієї книжки на цьому комп’ютері");
-        assertThat(ThemeTestSupport.onFx(() -> FitProbe.cutParts(required("translating-strip")))).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> FitProbe.cutParts(required("translating-strip"))))
+                .isEmpty();
     }
 }
