@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextArea;
@@ -146,6 +147,31 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(brief().balance()).isEqualTo(20);
         assertThat(brief().voiceEra()).isEqualTo("Early-19th-century English");
         assertThat(brief().audience()).isEqualTo("General adult readers");
+    }
+
+    // IF a free-text field took any length, THEN a pasted page would be sent with every call of the run.
+    @Test
+    void audienceAndVoice_longerThanTheirLimits_keepOnlyTheLimits() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> ((TextField) required("brief-tone-audience")).setText("a".repeat(600)));
+        onFx(() -> ((TextArea) required("brief-tone-voice")).setText("v".repeat(600)));
+
+        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText())).hasSize(200);
+        assertThat(brief().audience()).hasSize(200);
+        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText())).hasSize(500);
+        assertThat(brief().voiceEra()).hasSize(500);
+    }
+
+    // IF the genre box took any length, THEN a typed paragraph would become the genre every call names.
+    @Test
+    void genre_typedLongerThanItsLimit_keepsOnlyTheLimit() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> ((ComboBox<?>) required("brief-tone-genre")).getEditor().setText("g".repeat(300)));
+
+        assertThat(ThemeTestSupport.onFx(() -> ((ComboBox<?>) required("brief-tone-genre")).getEditor().getText()))
+                .hasSize(100);
     }
 
     // IF the narrator choice did not reach the brief, THEN the gender check would never know who narrates.

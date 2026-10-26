@@ -28,6 +28,7 @@ import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.TabMovesFocus;
+import ua.bookloom.ui.control.TextLimit;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.ErrorWords;
@@ -52,6 +53,10 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 final class BriefToneCard {
 
     private static final int VOICE_ROWS = 2;
+    // Every model call carries these three, so each is capped at what a genre, an audience or a note on the voice needs.
+    private static final int GENRE_MAX = 100;
+    private static final int AUDIENCE_MAX = 200;
+    private static final int VOICE_MAX = 500;
     private static final double FIELD_SPACING = 6;
 
     private final Messages messages;
@@ -299,6 +304,7 @@ final class BriefToneCard {
 
     private void configureInputs(final BookBriefViewModel viewModel) {
         voice.setId("brief-tone-voice");
+        TextLimit.of(voice, VOICE_MAX);
         Tips.install(messages, voice, MessageKey.BRIEF_TONE_VOICE_TIP);
         voice.getStyleClass().add("brief-input");
         voice.setPromptText(messages.get(MessageKey.BRIEF_TONE_VOICE_PROMPT));
@@ -306,6 +312,7 @@ final class BriefToneCard {
         voice.setWrapText(true);
         voice.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setVoiceEra));
         audience.setId("brief-tone-audience");
+        TextLimit.of(audience, AUDIENCE_MAX);
         Tips.install(messages, audience, MessageKey.BRIEF_TONE_AUDIENCE_TIP);
         audience.setPromptText(messages.get(MessageKey.BRIEF_TONE_AUDIENCE_PROMPT));
         audience.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setAudience));
@@ -315,6 +322,7 @@ final class BriefToneCard {
         final SearchableCombo<String> box = SearchableCombo.freeText(
                 Arrays.stream(Genre.values()).map(this::genreName).toList(), Function.identity(), Function.identity());
         box.setId("brief-tone-genre");
+        TextLimit.of(box.getEditor(), GENRE_MAX);
         Tips.install(messages, box, MessageKey.BRIEF_TONE_GENRE_TIP);
         box.setPromptText(messages.get(MessageKey.BRIEF_TONE_GENRE_PROMPT));
         box.setMaxWidth(Double.MAX_VALUE);

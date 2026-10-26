@@ -195,6 +195,17 @@ WHEN Start translation is pressed and the open book's narration was not judged w
 - **WHEN** `Harbour.md`, told as "I" with `Anna` named 9 times and no gender in the glossary, is opened, its source set to English and its target to Ukrainian, and Start translation is pressed
 - **THEN** `Who narrates?` is shown with "Enter chooses Not stated.", Enter closes it without a gender, and the question about characters without a gender names `Anna` before anything starts
 
+### Requirement: Cap the free-text fields every call carries
+
+The Book Brief SHALL take at most 100 characters of genre, 200 of audience and 500 of narrative voice and era notes; typing stops at the cap and a paste keeps only what fits.
+
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`. In plain words: these fields go into every model call of the run, so a pasted page would be sent thousands of times; each cap is far more than a genre, an audience or a note on the voice needs.
+
+#### Scenario: A pasted page is cut to the cap
+
+- **WHEN** 600 characters are pasted into Audience and into Narrative voice / era notes
+- **THEN** Audience holds 200 characters and the notes 500, and the brief stores exactly those
+
 ## MODIFIED Requirements
 
 ### Requirement: Suggest the tone and style from verified readings, one decision per field
