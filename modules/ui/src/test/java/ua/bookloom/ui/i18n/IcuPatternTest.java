@@ -57,9 +57,9 @@ class IcuPatternTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"en", "uk"})
-    void catalogue_remainingSegments_isACountedPluralMessage(final String language) {
+    void catalogue_wordCount_isACountedPluralMessage(final String language) {
         // IF the counted exemplar lost its plural, THEN the two form checks above would pass vacuously for it.
-        final String pattern = Catalogues.load(language).get(MessageKey.TRANSLATING_SEGMENTS_REMAINING.key());
+        final String pattern = Catalogues.load(language).get(MessageKey.IMPORT_WORDS_EXACT.key());
 
         assertThat(pluralSelectorSets(new MessagePattern(pattern))).hasSize(1);
     }

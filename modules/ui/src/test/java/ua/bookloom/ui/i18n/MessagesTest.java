@@ -28,25 +28,25 @@ class MessagesTest {
     // IF the English plural chose the wrong form or the number grouping were wrong, THEN the text would differ.
     @ParameterizedTest
     @CsvSource({
-        "1, 1 segment remaining",
-        "469, 469 segments remaining",
-        "1240, '1,240 segments remaining'",
+        "1, 1 word",
+        "469, 469 words",
+        "1240, '1,240 words'",
     })
-    void get_remainingSegmentsInEnglish_selectsFormAndGroupsThousands(final int count, final String expected) {
-        assertThat(messagesFor(Locale.ENGLISH).get(MessageKey.TRANSLATING_SEGMENTS_REMAINING, count))
+    void get_wordCountInEnglish_selectsFormAndGroupsThousands(final int count, final String expected) {
+        assertThat(messagesFor(Locale.ENGLISH).get(MessageKey.IMPORT_WORDS_EXACT, count))
                 .isEqualTo(expected);
     }
 
     @ParameterizedTest
     @CsvSource({
-        "1, 1 сегмент залишився",
-        "3, 3 сегменти залишилися",
-        "5, 5 сегментів залишилося",
-        "21, 21 сегмент залишився",
+        "1, 1 слово",
+        "3, 3 слова",
+        "5, 5 слів",
+        "21, 21 слово",
     })
-    void get_remainingSegmentsInUkrainian_selectsOneFewManyForm(final int count, final String expected) {
+    void get_wordCountInUkrainian_selectsOneFewManyForm(final int count, final String expected) {
         // IF Ukrainian were an English-style pair, THEN 3 and 5 would take the same ending as each other.
-        assertThat(messagesFor(UKRAINIAN).get(MessageKey.TRANSLATING_SEGMENTS_REMAINING, count))
+        assertThat(messagesFor(UKRAINIAN).get(MessageKey.IMPORT_WORDS_EXACT, count))
                 .isEqualTo(expected);
     }
 
@@ -65,18 +65,18 @@ class MessagesTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 3, 5})
-    void get_remainingSegmentsInUkrainian_containsTheCountAndNoLatinLetters(final int count) {
+    void get_wordCountInUkrainian_containsTheCountAndNoLatinLetters(final int count) {
         // IF the Ukrainian key held an English sentence, THEN Latin letters would appear around the number.
-        assertThat(messagesFor(UKRAINIAN).get(MessageKey.TRANSLATING_SEGMENTS_REMAINING, count))
+        assertThat(messagesFor(UKRAINIAN).get(MessageKey.IMPORT_WORDS_EXACT, count))
                 .contains(String.valueOf(count))
                 .doesNotContainPattern("[A-Za-z]");
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1240})
-    void get_remainingSegmentsInUkrainian_groupsThousandsWithoutAComma(final int count) {
+    void get_wordCountInUkrainian_groupsThousandsWithoutAComma(final int count) {
         // IF the count were formatted for the machine's region, THEN a Ukrainian text would carry an American comma.
-        assertThat(messagesFor(UKRAINIAN).get(MessageKey.TRANSLATING_SEGMENTS_REMAINING, count))
+        assertThat(messagesFor(UKRAINIAN).get(MessageKey.IMPORT_WORDS_EXACT, count))
                 .contains(String.valueOf(NO_BREAK_SPACE))
                 .doesNotContain(",");
     }

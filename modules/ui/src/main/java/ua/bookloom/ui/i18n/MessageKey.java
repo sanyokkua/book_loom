@@ -442,8 +442,6 @@ public enum MessageKey {
     LOG_WAITING("log.waiting"),
     /** Activity-log entry for a run milestone; argument 0 is one of the tokens stageStarted, paused, resumed or finished, selecting the catalogue's own wording. */
     LOG_MILESTONE("log.milestone"),
-    /** Counted sentence on the translating dashboard; argument 0 is the number of segments left. */
-    TRANSLATING_SEGMENTS_REMAINING("translating.segmentsRemaining"),
     /** Label of the error dialog's button that runs the failed action again. */
     ERROR_RETRY("error.retry"),
     /** Hover explanation of the control labelled by {@link #ERROR_RETRY}. */
@@ -525,9 +523,7 @@ public enum MessageKey {
     SETTINGS_PROVIDER_LMSTUDIO("settings.provider.lmstudio"),
     /** Badge on the provider row that is the selected one. */
     SETTINGS_PROVIDER_CURRENT("settings.provider.current"),
-    /** Label before the model chosen for the selected provider. */
-    SETTINGS_MODEL_LABEL("settings.model.label"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_MODEL_LABEL}. */
+    /** Hover explanation of the model field on the Providers tab. */
     SETTINGS_MODEL_LABEL_TIP("settings.model.label.tip"),
     /** Shown in place of the model while none is chosen. */
     SETTINGS_MODEL_NOT_CHOSEN("settings.model.notChosen"),
@@ -1489,13 +1485,9 @@ public enum MessageKey {
     BRIEF_AUX_FRONTMATTER_HINT("brief.aux.frontmatter.hint"),
     /** Heading of the card holding the translated title and author. */
     EXPORT_BOOK_CARD("export.bookCard.title"),
-    /** Label of the translated title field. */
-    EXPORT_BOOK_TITLE("export.bookTitle"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_BOOK_TITLE}. */
+    /** Hover explanation of the translated title field of the Title card on Export. */
     EXPORT_BOOK_TITLE_TIP("export.bookTitle.tip"),
-    /** Label of the translated author field. */
-    EXPORT_BOOK_AUTHOR("export.bookAuthor"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_BOOK_AUTHOR}. */
+    /** Hover explanation of the translated author field of the Title card on Export. */
     EXPORT_BOOK_AUTHOR_TIP("export.bookAuthor.tip"),
     /** Reason line under the original title: it comes from the book's details. */
     EXPORT_BOOK_TITLE_FROM_DETAILS("export.bookTitle.fromDetails"),
@@ -2040,8 +2032,6 @@ public enum MessageKey {
     /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
     LIVE_CONTEXT_LOCKED("live.context.locked"),
 
-    /** Badge with the judge's score; argument 0 is the formatted score. */
-    LIVE_JUDGE("live.judge"),
 
     /** Text of the live panel before the run has made a model call. */
     LIVE_CALL_NONE("live.call.none"),
@@ -3212,9 +3202,7 @@ public enum MessageKey {
     DIALOG_SAME_PAIR_USE("dialog.samePair.use"),
     /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_USE}. */
     DIALOG_SAME_PAIR_USE_TIP("dialog.samePair.use.tip"),
-    /** Button that keeps the language the person had; {0} names it. */
-    DIALOG_SAME_PAIR_KEEP("dialog.samePair.keep"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_SAME_PAIR_KEEP}. */
+    /** Hover explanation of the same-pair card's button that keeps the open project as it is. */
     DIALOG_SAME_PAIR_KEEP_TIP("dialog.samePair.keep.tip"),
     /** Heading of the Translate into another language card. */
     DIALOG_TRANSLATE_INTO_TITLE("dialog.translateInto.title"),
@@ -3383,9 +3371,7 @@ public enum MessageKey {
     TRANSLATING_HELP_CLOSE_TIP("translating.help.close.tip"),
     /** Live card: the first tab. */
     LIVE_TAB_LIVE("live.tab.live"),
-    /** Live card: the name of the Simple and Detailed choice. */
-    LIVE_MODE("live.mode"),
-    /** Hover explanation of the choice labelled by {@link #LIVE_MODE}. */
+    /** Hover explanation of the Simple and Detailed choice on the live card. */
     LIVE_MODE_TIP("live.mode.tip"),
     /** Live card: the switch that follows each newly translated segment. */
     LIVE_FOLLOW("live.follow"),
