@@ -10,6 +10,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.util.Modules;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -124,6 +125,11 @@ abstract class WorkspaceTestBase {
      * the window has read it.
      */
     protected void startStoredWindow(final boolean pseudo) throws Exception {
+        startStoredWindow(pseudo, new AbstractModule() {});
+    }
+
+    /** As {@link #startStoredWindow(boolean)}, with {@code extra} replacing bindings of the graph as well. */
+    protected void startStoredWindow(final boolean pseudo, final com.google.inject.Module extra) throws Exception {
         closeStoredWindow();
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
         // Assisted, so a run pauses on the pseudo model's first flagged segment as in startWorkspace.
@@ -133,8 +139,9 @@ abstract class WorkspaceTestBase {
                 ReviewModeResolver.resolve(
                         name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
         FxToolkit.registerPrimaryStage();
-        final Injector built = Guice.createInjector(
-                new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule());
+        final Injector built = Guice.createInjector(Modules.override(
+                        new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule())
+                .with(extra));
         lifecycle = new AppLifecycle();
         lifecycle.phaseOne(built);
         lifecycle.phaseTwo(built);
@@ -215,6 +222,25 @@ abstract class WorkspaceTestBase {
         logger.setLevel(Level.INFO);
         pauseLog.start();
         logger.addAppender(pauseLog);
+    }
+
+    /** {@return the project of a short TXT whose run Assisted paused, in a stored window built with {@code extra}} */
+    protected String pausedRun(final com.google.inject.Module extra) throws Exception {
+        // Long enough for the pseudo model's capitals to be flagged, so Assisted pauses on the first segment.
+        final Path book = Files.writeString(
+                booksDir.resolve("Curtain.txt"),
+                "It was a dark night.\n\nThe rain fell on the old house.\n\nNobody came to the door.\n",
+                StandardCharsets.UTF_8);
+        startStoredWindow(true, extra);
+        openBook(book, 3);
+        chooseBrief("uk", booksDir.resolve("Curtain.uk.txt"));
+        chooseModel();
+        onFx(() -> shell.activate(ViewNames.TRANSLATING));
+        startRun();
+        waitUntil(() -> injector.getInstance(StateMirror.class).runState().get() == RunState.PAUSED);
+        final OpenedBook open = Objects.requireNonNull(
+                onFx(() -> injector.getInstance(CurrentProject.class).book().get()));
+        return open.projectId();
     }
 
     protected void openBook(final Path book, final int segments) throws Exception {

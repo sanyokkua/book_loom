@@ -252,6 +252,28 @@ WHEN a person chooses Make a backup… and a destination, the system SHALL write
 - **WHEN** the destination dialog of Make a backup… is cancelled
 - **THEN** no file is written and nothing is reported as an error
 
+### Requirement: Delete all data on request
+
+WHEN a person confirms Delete all data…, the system SHALL first stop a translation that is running or paused and wait for it to end, SHALL then delete the database file and its `-wal` and `-shm` files and nothing else, and SHALL restart BookLoom on a fresh database with the first-launch defaults and look. The chosen book files, the exported files and the logs SHALL NOT be touched.
+
+**Source**: owner request (finalize 9 final QA), `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can start over from nothing without hunting for files. The run is stopped first because it writes to the file until it ends.
+
+#### Scenario: All data is deleted and BookLoom starts fresh
+
+- **WHEN** Delete all data… is confirmed while a translation is paused and 3 projects are stored
+- **THEN** the translation has ended before any file is deleted, `bookloom.db`, `bookloom.db-wal` and `bookloom.db-shm` are gone, the logs folder is still there, and the restarted BookLoom lists no project and no provider and runs the first-launch look once
+
+### Requirement: Keep the data whole when it cannot be deleted
+
+IF a database file cannot be deleted by Delete all data… (the folder is read-only, another program holds the file), THEN the system SHALL keep the stored work whole and usable, SHALL NOT restart, and SHALL show one message that names the data folder.
+
+**Source**: owner request (finalize 9 final QA). In plain words: a delete that cannot finish never leaves half a database behind and never fails silently.
+
+#### Scenario: A read-only data folder keeps the data
+
+- **WHEN** Delete all data… is confirmed and the data folder cannot be written to
+- **THEN** `bookloom.db` is still there with its projects, BookLoom does not restart, and one message titled "Data not deleted" names the data folder
+
 ### Requirement: Keep nothing on disk from the command line
 
 WHEN a book is translated from the command line, the system SHALL keep its working state in memory only, and SHALL NOT create, read or change the database.

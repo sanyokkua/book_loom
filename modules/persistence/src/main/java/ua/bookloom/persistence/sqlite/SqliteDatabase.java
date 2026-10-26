@@ -12,7 +12,6 @@ import java.sql.Statement;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -46,7 +45,6 @@ public final class SqliteDatabase implements AutoCloseable {
     private static final String FX_THREAD = "JavaFX Application Thread";
     private static final String FAIL_ON_FX_PROPERTY = "bookloom.storage.failOnFxThread";
     private static final DateTimeFormatter ASIDE_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-    private static final List<String> SIDECARS = List.of("-wal", "-shm");
     private static final String SHAPES_KEY = "record_shapes";
     // SQLite's primary result codes (the low byte of the extended code): a file that fails with one of these is no
     // BookLoom database of this build and is set aside; any other failure (busy, locked, read-only, permission, I/O)
@@ -235,6 +233,43 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
+    /**
+     * Deletes the file and the WAL and shared-memory files beside it, with no connection open and none starting. The
+     * WAL is folded into the file first and deleted before it, so a failure part-way leaves the file whole and usable;
+     * once every file is gone the database stays closed, so nothing recreates the file before the restart.
+     */
+    Result<Boolean> deleteFiles() {
+        checkThread("delete");
+        log.info("Database files deleting file={}", file.getFileName());
+        use.writeLock().lock();
+        try {
+            if (closed) {
+                return refusedAfterClose("delete");
+            }
+            final Result<Integer> folded = writer.executeOutsideTransaction(
+                    "checkpoint before delete",
+                    h -> h.createQuery("PRAGMA wal_checkpoint(TRUNCATE)")
+                            .mapTo(Integer.class)
+                            .one());
+            if (folded.isErr()) {
+                // The writer has logged the failure with its cause; the folder is named to the person by the caller.
+                return Result.err(DatabaseFiles.notDeleted(
+                        Optional.ofNullable(folded.error()).map(AppError::cause).orElse(null)));
+            }
+            log.debug("Database checkpointed before delete busy={}", folded.data());
+            DatabaseFiles.delete(file);
+            closed = true;
+            writer.close();
+            log.info("Database files deleted file={}", file.getFileName());
+            return Result.ok(true);
+        } catch (IOException e) {
+            log.warn("Database files not deleted file={}: the stored work is kept", file.getFileName(), e);
+            return Result.err(DatabaseFiles.notDeleted(e));
+        } finally {
+            use.writeLock().unlock();
+        }
+    }
+
     @Override
     public void close() {
         log.info("Database closing file={}", file.getFileName());
@@ -321,7 +356,7 @@ public final class SqliteDatabase implements AutoCloseable {
         final Path aside = file.resolveSibling(file.getFileName() + suffix);
         log.warn("Database does not fit, set aside file={} aside={}", file.getFileName(), aside.getFileName());
         Files.move(file, aside, StandardCopyOption.REPLACE_EXISTING);
-        for (final String sidecar : SIDECARS) {
+        for (final String sidecar : DatabaseFiles.SIDECARS) {
             final Path held = file.resolveSibling(file.getFileName() + sidecar);
             if (Files.exists(held)) {
                 final Path moved = aside.resolveSibling(aside.getFileName() + sidecar);

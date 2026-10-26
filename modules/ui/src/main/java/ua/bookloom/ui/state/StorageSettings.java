@@ -152,6 +152,17 @@ public final class StorageSettings {
 
     /** Asks where to write a copy of the saved work and writes it there; a cancelled dialog does nothing. */
     public void backup() {
+        backup(() -> log.debug("backup written; nothing follows it"));
+    }
+
+    /**
+     * As {@link #backup()}, and runs {@code onSaved} on the FX thread once the copy is written; never after a
+     * cancelled dialog or a failed copy.
+     *
+     * @param onSaved what follows a written copy (Delete all data asks its question again)
+     */
+    public void backup(final Runnable onSaved) {
+        Objects.requireNonNull(onSaved, "onSaved");
         if (backupRunning.get()) {
             log.debug("backup ignored: one is already being written");
             return;
@@ -170,7 +181,7 @@ public final class StorageSettings {
         try {
             background.execute(() -> {
                 final Result<Path> written = storage.backupTo(target);
-                fx.execute(() -> report(target, written));
+                fx.execute(() -> report(target, written, onSaved));
             });
         } catch (RejectedExecutionException stopped) {
             log.warn("the backup could not be started: the background pool has stopped", stopped);
@@ -180,7 +191,7 @@ public final class StorageSettings {
         }
     }
 
-    private void report(final Path target, final Result<Path> written) {
+    private void report(final Path target, final Result<Path> written, final Runnable onSaved) {
         backupRunning.set(false);
         final AppError error = written.error();
         if (error != null) {
@@ -189,6 +200,7 @@ public final class StorageSettings {
         }
         final Path name = target.getFileName();
         backupSaved.set(name == null ? target.toString() : name.toString());
+        onSaved.run();
     }
 
     /** {@return the file the work is saved in, or {@code null} while unknown or when it is kept in memory only} */

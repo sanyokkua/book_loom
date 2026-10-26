@@ -514,7 +514,7 @@ The long phrases belong to the Automation tab. Every other screen that names the
 
 ### Requirement: Show storage and logs on one tab
 
-The Storage & logs tab SHALL show where the projects are saved, how large they are (the database with its write-ahead file) and how many projects it holds, an Open folder action and Make a backup…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch that applies after BookLoom restarts (a launch value `BOOKLOOM_TRACE_FILE` or `bookloom.trace.file` wins over it and is named), Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip. Make a backup… SHALL write only to a file the person picks, SHALL never replace an existing file, and SHALL NOT carry any key.
+The Storage & logs tab SHALL show where the projects are saved, how large they are (the database with its write-ahead file) and how many projects it holds, an Open data folder action (it opens the data folder, never the log folder), Make a backup… and Delete all data…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch that applies after BookLoom restarts (a launch value `BOOKLOOM_TRACE_FILE` or `bookloom.trace.file` wins over it and is named), Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip. Make a backup… SHALL write only to a file the person picks, SHALL never replace an existing file, and SHALL NOT carry any key. Delete all data… SHALL ask first, with Cancel as the default and a Make a backup first answer, and SHALL delete only as the `local-storage` capability's "Delete all data on request" says.
 
 **Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can find their saved work and the logs without hunting through the file system, and can make a backup or hand support a bundle. Long paths stay readable, and the whole path is one hover away.
 
@@ -547,6 +547,16 @@ The Storage & logs tab SHALL show where the projects are saved, how large they a
 
 - **WHEN** Make a backup… is used with the name of a file that already exists
 - **THEN** the file is left untouched and an error with the code `validation` says a file with that name is already there
+
+#### Scenario: Delete all data asks first and Cancel changes nothing
+
+- **WHEN** Delete all data… is used and the question is answered Cancel
+- **THEN** the question had said that all projects, translations, glossaries, providers and settings are deleted and that the book files, the exported files and the logs are not touched, and nothing is deleted and BookLoom does not restart
+
+#### Scenario: Make a backup first asks again
+
+- **WHEN** the question of Delete all data… is answered Make a backup first and a new file name is chosen
+- **THEN** the backup is written as Make a backup… writes it, nothing is deleted, and the question is asked again
 
 ### Requirement: Show all six settings areas, every one enabled
 

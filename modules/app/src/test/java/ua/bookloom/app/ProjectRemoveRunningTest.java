@@ -6,9 +6,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import javafx.scene.control.Button;
@@ -21,7 +18,6 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookGroup;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.ProjectRow;
 import ua.bookloom.ui.state.ProjectsState;
 import ua.bookloom.ui.state.ProjectsViewModel;
@@ -36,10 +32,6 @@ import ua.bookloom.ui.state.StateMirror;
 @Tag("slow")
 class ProjectRemoveRunningTest extends WorkspaceTestBase {
 
-    // Long enough for the pseudo model's capitals to be flagged, so Assisted pauses on the first segment.
-    private static final String TEXT =
-            "It was a dark night.\n\nThe rain fell on the old house.\n\nNobody came to the door.\n";
-
     private final ListAppender<ILoggingEvent> errors = new ListAppender<>();
 
     @AfterEach
@@ -49,7 +41,7 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
 
     @Test
     void remove_projectWhoseRunIsPaused_asksToStopFirstThenRemovesWithoutAFailedWrite() throws Exception {
-        final String id = pausedRun();
+        final String id = pausedRun(new com.google.inject.AbstractModule() {});
         errors.start();
         root().addAppender(errors);
 
@@ -76,20 +68,6 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
                 .isEmpty();
         assertThat(onFx(() -> injector.getInstance(CurrentProject.class).book().get()))
                 .isNull();
-    }
-
-    private String pausedRun() throws Exception {
-        final Path book = Files.writeString(booksDir.resolve("Curtain.txt"), TEXT, StandardCharsets.UTF_8);
-        startStoredWindow(true);
-        openBook(book, 3);
-        chooseBrief("uk", booksDir.resolve("Curtain.uk.txt"));
-        chooseModel();
-        onFx(() -> shell.activate(ViewNames.TRANSLATING));
-        startRun();
-        waitUntil(() -> injector.getInstance(StateMirror.class).runState().get() == RunState.PAUSED);
-        final OpenedBook open = Objects.requireNonNull(
-                onFx(() -> injector.getInstance(CurrentProject.class).book().get()));
-        return open.projectId();
     }
 
     private void removeFromProjects(final String id) throws Exception {

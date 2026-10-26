@@ -30,6 +30,8 @@ import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.DeleteDataDialog;
+import ua.bookloom.ui.dialog.DeleteDataPrompt;
 import ua.bookloom.ui.dialog.FindBookDialog;
 import ua.bookloom.ui.dialog.FindBookPrompt;
 import ua.bookloom.ui.dialog.ModelPickDialog;
@@ -158,6 +160,7 @@ public final class UiModule extends AbstractModule {
         bind(FindBookPrompt.class).to(FindBookDialog.class);
         bind(SwitchProviderPrompt.class).to(SwitchProviderDialog.class);
         bind(ConfirmPrompt.class).to(ConfirmDialog.class);
+        bind(DeleteDataPrompt.class).to(DeleteDataDialog.class);
         bind(TextClipboard.class).to(SystemTextClipboard.class);
     }
 

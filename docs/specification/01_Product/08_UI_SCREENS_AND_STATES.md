@@ -833,9 +833,15 @@ restarts".
   segment = `ReviewMode` UNATTENDED / ASSISTED / MANUAL); Default quality; Open the review desk when a translation
   finishes with segments to review; Run the last check before saving by default; Keep the computer awake (with the lid
   note); Reopen the last project. There is no OS-notification switch.
-- **Storage & logs:** Your projects (saved in, size, saved as it goes, Open folder, Make a backup…); Logs (folder, kept
-  10 launches, Detailed diagnostic log, Open log folder, Save a diagnostic bundle…). Paths are shown short with the full
-  path as tooltip.
+- **Storage & logs:** Your projects (saved in, size, saved as it goes, Open data folder, Make a backup…, Delete all
+  data…); Logs (folder, kept 10 launches, Detailed diagnostic log, Open log folder, Save a diagnostic bundle…). Paths
+  are shown short with the full path as tooltip. Delete all data… asks first (`dialog/DeleteDataDialog`, `DIALOG`
+  size): what is deleted (all projects, translations, glossaries, providers, settings), what is never touched (the
+  chosen book files, the exported files, the logs), a warning line when a translation is running or paused that it is
+  stopped first; Cancel (default, Enter and Escape) · Make a backup first (writes the backup, then asks again) · Delete
+  all data (danger outline). Confirming stops the run, deletes `bookloom.db` with its `-wal`/`-shm` files and restarts
+  through Restart now's mechanism; a failed delete keeps the data and shows one error naming the data folder. About
+  has Open log folder only; the data folder is opened from this tab.
 
 P6 reference: Settings with each tab.
 

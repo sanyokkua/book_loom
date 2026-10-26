@@ -39,4 +39,14 @@ public interface StorageInfo {
      *     folder is missing; {@code internal} when the copy itself fails
      */
     Result<Path> backupTo(Path destination);
+
+    /**
+     * Deletes the stored work — the database file with its write-ahead and shared-memory files, nothing else in its
+     * folder — for Delete all data. Once it succeeds the storage refuses every read and write until the application
+     * starts again, so nothing creates a new file under the old name before then.
+     *
+     * @return {@code true} when the files are gone; {@code validation} when the work is kept in memory only;
+     *     {@code internal} when a file could not be deleted, and then the stored work is whole and still usable
+     */
+    Result<Boolean> deleteAll();
 }

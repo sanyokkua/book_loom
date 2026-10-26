@@ -64,6 +64,12 @@ public final class SqliteStorageInfo implements StorageInfo {
         return Result.ok(destination);
     }
 
+    @Override
+    public Result<Boolean> deleteAll() {
+        log.debug("Delete all requested file={}", db.file().getFileName());
+        return db.deleteFiles();
+    }
+
     // The destination did not exist before the copy (it would have been refused), so whatever is there is a leftover.
     private static void removePartial(final Path destination) {
         try {

@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import javafx.scene.control.Button;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.Tab;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
@@ -16,13 +18,16 @@ import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.ProjectFixtures;
+import ua.bookloom.ui.RecordingAppRestart;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedStorageInfo;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.DetailedLogSwitch;
@@ -44,6 +49,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     private final ScriptedStorageInfo storage = new ScriptedStorageInfo(DB_FILE, 1_572_864L);
     private final ScriptedProjectService projects = new ScriptedProjectService();
     private final RecordingErrorPresenter errors = new RecordingErrorPresenter();
+    private RecordingAppRestart restart = new RecordingAppRestart();
     private @Nullable DiagnosticLog diagnosticLog;
 
     @Override
@@ -52,7 +58,11 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         final DiagnosticLog scripted = diagnosticLog == null
                 ? new DiagnosticLog(LOG_DIR, false, dataDir.resolve("detailed-log.on"), null, false)
                 : diagnosticLog;
-        builder.storage(storage).projects(projects).diagnosticLog(scripted).errorPresenter(errors);
+        builder.storage(storage)
+                .projects(projects)
+                .diagnosticLog(scripted)
+                .errorPresenter(errors)
+                .restart(restart);
     }
 
     private static ua.bookloom.api.pipeline.ProjectSummary summaryOf(final String file) {
@@ -233,5 +243,121 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());
         assertThat(errors.presented()).extracting(AppError::title).containsExactly("Backup not written");
+    }
+
+    // IF the button only said "Open folder", THEN a person could not tell the data folder from the log folder.
+    @Test
+    void openFolder_opened_saysDataFolder() throws TimeoutException {
+        openStorage();
+
+        assertThat(text("storage-open-folder")).isEqualTo("Open data folder");
+    }
+
+    // IF the question did not say what goes and what stays, THEN a person could fear for the books they chose.
+    @Test
+    void deleteAll_clicked_asksWhatIsDeletedAndWhatStays() throws TimeoutException {
+        openStorage();
+
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        assertThat(cardText())
+                .contains("All projects, translations, glossaries, providers and settings are deleted")
+                .contains("The book files you chose, the files you exported and the logs are not touched.")
+                .doesNotContain("is stopped first");
+        assertThat(isShown("delete-data-backup")).isTrue();
+        assertThat(ThemeTestSupport.onFx(() -> ((Button) required("delete-data-cancel")).isDefaultButton()))
+                .isTrue();
+    }
+
+    // IF Cancel deleted anything, THEN the safe answer would not be safe.
+    @Test
+    void deleteAll_cancelled_nothingDeletedNoRestart() throws TimeoutException {
+        openStorage();
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        onFx(() -> ((Button) required("delete-data-cancel")).fire());
+
+        WaitForAsyncUtils.waitForFxEvents();
+        assertThat(storage.deletes()).isZero();
+        assertThat(restart.calls()).isZero();
+        assertThat(errors.presented()).isEmpty();
+    }
+
+    @Test
+    void deleteAll_confirmed_deletesThenRestarts() throws TimeoutException {
+        openStorage();
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        onFx(() -> ((Button) required("delete-data-yes")).fire());
+
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
+        assertThat(storage.deletes()).isEqualTo(1);
+        assertThat(errors.presented()).isEmpty();
+    }
+
+    // IF the backup were written and the question forgotten, THEN a person would have to find the button again.
+    @Test
+    void deleteAll_backupFirst_writesTheCopyThenAsksAgainWithoutDeleting() throws TimeoutException {
+        openStorage();
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
+                .answer(Path.of("copies").resolve("before-delete.db"));
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        onFx(() -> ((Button) required("delete-data-backup")).fire());
+
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("delete-data-card"));
+        assertThat(storage.backups()).containsExactly(Path.of("copies").resolve("before-delete.db"));
+        assertThat(text("storage-backup-status")).isEqualTo("Backup saved: before-delete.db");
+        assertThat(storage.deletes()).isZero();
+        assertThat(restart.calls()).isZero();
+    }
+
+    // IF a failed delete were silent or named no folder, THEN a person could not fix the permission that stopped it.
+    @Test
+    void deleteAll_deleteFails_errorNamesTheDataFolderAndNoRestart() throws TimeoutException {
+        storage.failDeleteWith(
+                AppError.of(ErrorCode.internal, "Data not deleted", "The data folder could not be changed."));
+        openStorage();
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        onFx(() -> ((Button) required("delete-data-yes")).fire());
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());
+        assertThat(errors.presented()).singleElement().satisfies(error -> {
+            assertThat(error.title()).isEqualTo("Data not deleted");
+            assertThat(error.message())
+                    .contains(HOME.resolve("Library").resolve("BookLoom").toString())
+                    .contains("Your data is kept.");
+        });
+        assertThat(restart.calls()).isZero();
+        assertThat(ThemeTestSupport.onFx(() -> required("storage-delete-all").isDisabled()))
+                .isFalse();
+    }
+
+    // IF a copy that cannot restart itself said nothing, THEN the window would sit on deleted data with no way on.
+    @Test
+    void deleteAll_restartNotPossible_saysCloseAndOpenAgain() throws TimeoutException {
+        restart = new RecordingAppRestart(Result.ok(false));
+        useLocale(java.util.Locale.ENGLISH);
+        openStorage();
+        onFx(() -> ((Button) required("storage-delete-all")).fire());
+
+        onFx(() -> ((Button) required("delete-data-yes")).fire());
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());
+        assertThat(errors.presented())
+                .extracting(AppError::message)
+                .containsExactly(
+                        "All data is deleted. BookLoom could not start again by itself: close it and open it again.");
+        assertThat(ThemeTestSupport.onFx(() -> required("storage-delete-all").isDisabled()))
+                .isTrue();
+    }
+
+    private String cardText() {
+        return ThemeTestSupport.onFx(() -> required("delete-data-card").lookupAll(".label").stream()
+                .map(node -> ((Labeled) node).getText())
+                .collect(Collectors.joining("\n")));
     }
 }

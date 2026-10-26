@@ -32,4 +32,13 @@ public final class InMemoryStorageInfo implements StorageInfo {
                 "Nothing to back up",
                 "The stored work is kept in memory only, so there is no file to copy."));
     }
+
+    @Override
+    public Result<Boolean> deleteAll() {
+        log.debug("Delete all refused: in-memory storage has no file");
+        return Result.err(AppError.of(
+                ErrorCode.validation,
+                "Nothing to delete",
+                "The stored work is kept in memory only, so there is no file to delete."));
+    }
 }

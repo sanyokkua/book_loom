@@ -1018,6 +1018,10 @@ public enum MessageKey {
     SETTINGS_STORAGE_BACKUP("settings.storage.backup"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_STORAGE_BACKUP}. */
     SETTINGS_STORAGE_BACKUP_TIP("settings.storage.backup.tip"),
+    /** Action that deletes all the stored data and restarts. */
+    SETTINGS_STORAGE_DELETE_ALL("settings.storage.deleteAll"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_STORAGE_DELETE_ALL}. */
+    SETTINGS_STORAGE_DELETE_ALL_TIP("settings.storage.deleteAll.tip"),
     /** Line saying no key is stored. */
     SETTINGS_STORAGE_KEYS("settings.storage.keys"),
     /** Title of the card about the logs. */
@@ -3303,6 +3307,30 @@ public enum MessageKey {
     CONFIRM_REMOVE_RUNNING_YES("confirm.removeRunning.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_REMOVE_RUNNING_YES}. */
     CONFIRM_REMOVE_RUNNING_YES_TIP("confirm.removeRunning.yes.tip"),
+    /** Title of the question before all the stored data is deleted. */
+    CONFIRM_DELETE_DATA_TITLE("confirm.deleteData.title"),
+    /** What deleting all data deletes, and that BookLoom restarts. */
+    CONFIRM_DELETE_DATA_TEXT("confirm.deleteData.text"),
+    /** What deleting all data never touches. */
+    CONFIRM_DELETE_DATA_KEPT("confirm.deleteData.kept"),
+    /** Line added when a translation is running or paused: it is stopped first. */
+    CONFIRM_DELETE_DATA_RUNNING("confirm.deleteData.running"),
+    /** Button that makes a backup before anything is deleted. */
+    CONFIRM_DELETE_DATA_BACKUP("confirm.deleteData.backup"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_DELETE_DATA_BACKUP}. */
+    CONFIRM_DELETE_DATA_BACKUP_TIP("confirm.deleteData.backup.tip"),
+    /** Confirming button of the delete-all-data question. */
+    CONFIRM_DELETE_DATA_YES("confirm.deleteData.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_DELETE_DATA_YES}. */
+    CONFIRM_DELETE_DATA_YES_TIP("confirm.deleteData.yes.tip"),
+    /** Title of the error when the data could not be deleted. */
+    CONFIRM_DELETE_DATA_FAILED_TITLE("confirm.deleteData.failed.title"),
+    /** Text of that error; argument 0 is the data folder. */
+    CONFIRM_DELETE_DATA_FAILED_TEXT("confirm.deleteData.failed.text"),
+    /** Title of the message when the data is deleted but BookLoom could not restart by itself. */
+    CONFIRM_DELETE_DATA_NO_RESTART_TITLE("confirm.deleteData.noRestart.title"),
+    /** Text of that message. */
+    CONFIRM_DELETE_DATA_NO_RESTART_TEXT("confirm.deleteData.noRestart.text"),
     /** Heading of the delete-provider question; argument 0 is the provider's name. */
     CONFIRM_DELETE_PROVIDER_TITLE("confirm.deleteProvider.title"),
     /** What deleting a provider does; argument 0 is the provider's name. */

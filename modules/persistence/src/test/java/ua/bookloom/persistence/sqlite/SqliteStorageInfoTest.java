@@ -191,6 +191,84 @@ class SqliteStorageInfoTest {
         assertThat(info.sizeBytes()).isLessThan(stored / 4);
     }
 
+    // IF a file of the database stayed behind, THEN the next launch would open the old work (or replay its old WAL).
+    @Test
+    void deleteAll_projectsStored_databaseFilesGoneOtherFilesKept() throws Exception {
+        storeProjects("a", "b", "c");
+        final Path lock = Files.writeString(dir.resolve("bookloom.lock"), "");
+        final Path marker = Files.writeString(dir.resolve("detailed-log.on"), "");
+        final Path log =
+                Files.writeString(Files.createDirectory(dir.resolve("logs")).resolve("bookloom.log"), "x");
+
+        final Result<Boolean> result = info.deleteAll();
+
+        assertThat(result.data()).isTrue();
+        assertThat(dir.resolve("bookloom.db")).doesNotExist();
+        assertThat(dir.resolve("bookloom.db-wal")).doesNotExist();
+        assertThat(dir.resolve("bookloom.db-shm")).doesNotExist();
+        assertThat(lock).exists();
+        assertThat(marker).exists();
+        assertThat(log).exists();
+    }
+
+    // IF a write after the delete reached SQLite, THEN it would create a new file before the restart.
+    @Test
+    void deleteAll_done_laterWritesRefusedAndNoFileCreated() {
+        storeProjects("a");
+        info.deleteAll();
+
+        final Result<?> late = new SqliteProjectRepository(db, new JsonCodec()).save(project("late"));
+
+        assertThat(late.isErr()).isTrue();
+        assertThat(dir.resolve("bookloom.db")).doesNotExist();
+    }
+
+    // The restart opens the same name again: what it finds is empty, so the first-launch defaults run once more.
+    @Test
+    void deleteAll_thenOpenedAgain_freshEmptyDatabase() {
+        storeProjects("a", "b");
+        assertThat(new SqliteSettingsRepository(db)
+                        .put(ua.bookloom.api.settings.AppSetting.FIRST_LAUNCH_PROBED, true)
+                        .isOk())
+                .isTrue();
+        info.deleteAll();
+        db.close();
+
+        db = Objects.requireNonNull(
+                SqliteDatabase.open(dir.resolve("bookloom.db"), CLOCK).data());
+
+        assertThat(db.setAside()).isEmpty();
+        assertThat(new SqliteProjectRepository(db, new JsonCodec()).all().data())
+                .isEmpty();
+        assertThat(new SqliteSettingsRepository(db)
+                        .get(ua.bookloom.api.settings.AppSetting.FIRST_LAUNCH_PROBED)
+                        .data())
+                .isEmpty();
+    }
+
+    // IF a read-only folder half-deleted the files, THEN the person would lose work while being told nothing changed.
+    @Test
+    void deleteAll_folderReadOnly_internalNothingDeletedStillUsable() throws Exception {
+        storeProjects("a", "b");
+        assertThat(dir.toFile().setWritable(false)).isTrue();
+        try {
+            assumeThat(Files.isWritable(dir))
+                    .as("the folder really is read-only here")
+                    .isFalse();
+
+            final Result<Boolean> result = info.deleteAll();
+
+            assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
+            assertThat(result.error()).extracting(AppError::title).isEqualTo("Data not deleted");
+            assertThat(dir.resolve("bookloom.db")).exists();
+        } finally {
+            assertThat(dir.toFile().setWritable(true)).isTrue();
+        }
+        final SqliteProjectRepository projects = new SqliteProjectRepository(db, new JsonCodec());
+        assertThat(projects.all().data()).hasSize(2);
+        assertThat(projects.save(project("c")).isOk()).isTrue();
+    }
+
     private void storeProjects(final String... ids) {
         final SqliteProjectRepository projects = new SqliteProjectRepository(db, new JsonCodec());
         for (final String id : ids) {

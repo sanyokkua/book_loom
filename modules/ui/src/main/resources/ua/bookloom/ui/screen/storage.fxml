@@ -35,6 +35,10 @@
                 <Button fx:id="backup" id="storage-backup" styleClass="btn-ghost" text="%settings.storage.backup"/>
             </HBox>
             <Label fx:id="backupStatus" id="storage-backup-status" styleClass="hint" wrapText="true"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button fx:id="deleteAll" id="storage-delete-all" styleClass="btn-danger-outline"
+                        text="%settings.storage.deleteAll"/>
+            </HBox>
             <Label id="storage-keys-hint" styleClass="hint" wrapText="true" text="%settings.storage.keys"/>
         </VBox>
         <VBox fx:id="logsCard" id="storage-logs-card" styleClass="card" spacing="10">
