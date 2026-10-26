@@ -79,14 +79,7 @@ public final class HttpErrorMapper {
                 reply.body().length(),
                 modelName != null);
         if (isErrorOnlySuccess(reply, config, purpose)) {
-            final AppError error = statusError(wrongPath(config), reply, config, modelName);
-            log.warn(
-                    "Provider answered a success holding only an error purpose={} host={} status={} code={}",
-                    purpose,
-                    config.baseUrl().getHost(),
-                    reply.status(),
-                    error.code());
-            return Result.err(error);
+            return Result.err(wrongPathError(reply, config, purpose, modelName));
         }
         if (isProbeReachable(purpose, reply.status())) {
             return successfulReply(reply, config, purpose, "probe-reachable");
@@ -94,6 +87,11 @@ public final class HttpErrorMapper {
         if (isSuccessful(reply.status()) && !isOllamaModelNotFound(reply, config)) {
             return successfulReply(reply, config, purpose, "successful-response");
         }
+        return failedReply(reply, config, purpose, modelName);
+    }
+
+    private static Result<HttpReply> failedReply(
+            HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         final Mapping mapping = classify(reply, config, purpose);
         final AppError error = statusError(mapping, reply, config, modelName);
         log.debug(
@@ -158,6 +156,18 @@ public final class HttpErrorMapper {
                 && isSuccessful(reply.status())
                 && ERROR_ONLY_BODY.matcher(reply.body()).find()
                 && !isOllamaModelNotFound(reply, config);
+    }
+
+    private static AppError wrongPathError(
+            HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
+        final AppError error = statusError(wrongPath(config), reply, config, modelName);
+        log.warn(
+                "Provider answered a success holding only an error purpose={} host={} status={} code={}",
+                purpose,
+                config.baseUrl().getHost(),
+                reply.status(),
+                error.code());
+        return error;
     }
 
     private static Mapping wrongPath(ProviderConfig config) {
