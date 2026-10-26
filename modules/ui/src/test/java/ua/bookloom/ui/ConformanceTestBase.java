@@ -141,7 +141,12 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case SWITCH_PROVIDER -> new SettingsPreparations(injector).askAboutSwitching();
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
-                        .ask("Earth Gravity · EN → UK", "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));
+                        .ask(
+                                "Earth Gravity · EN → UK · 26b Max",
+                                "Dracula.epub",
+                                RunState.RUNNING,
+                                () -> {},
+                                () -> {}));
         }
     }
 
