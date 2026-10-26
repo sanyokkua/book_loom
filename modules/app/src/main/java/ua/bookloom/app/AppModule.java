@@ -38,14 +38,17 @@ import ua.bookloom.util.paths.AppPaths;
 public final class AppModule extends AbstractModule {
 
     private final StartupContext startup;
+    private final EnvironmentVariables environment;
 
     /**
      * Creates the module over state the launcher already resolved.
      *
      * @param startup the resolved paths and environment, from the pre-injector launcher
+     * @param environment the one variable lookup, shared with the request headers
      */
-    public AppModule(StartupContext startup) {
+    AppModule(StartupContext startup, EnvironmentVariables environment) {
         this.startup = Objects.requireNonNull(startup, "startup");
+        this.environment = Objects.requireNonNull(environment, "environment");
     }
 
     @Override
@@ -61,7 +64,7 @@ public final class AppModule extends AbstractModule {
         // The same session instance the detailed log's header reads, so what the window records is what a rotated
         // file names; and the log settings the launcher resolved before logging existed, for the About dialog.
         bind(SessionInfo.class).toInstance(startup.session());
-        bind(EnvironmentVariables.class).toInstance(new SystemEnvironmentVariables());
+        bind(EnvironmentVariables.class).toInstance(environment);
         bind(AppRestart.class).to(NoOpAppRestart.class).in(Singleton.class);
         bind(DiagnosticLog.class).toInstance(diagnosticLog());
         bind(ReviewModeChoice.class).to(ReviewModeSource.class);
