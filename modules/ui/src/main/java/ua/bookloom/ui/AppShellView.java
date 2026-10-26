@@ -186,15 +186,8 @@ public final class AppShellView {
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final Node toastLayer = overlays.toasts().view();
-        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
-        final StackPane shell = new StackPane(
-                frame,
-                overlays.busyHost().view(),
-                toastLayer,
-                overlays.modalHost().view());
+        final StackPane shell = overlaid(frame);
         LayoutClass.install(shell); // the window's width class: the navigation column and the title bar follow it (L9)
-        keepOverTheContent(toastLayer);
         MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
             log.debug("the activity log is set in {}", face.family());
             shell.getStyleClass().add(face.styleClass());
@@ -213,6 +206,17 @@ public final class AppShellView {
         showContent(navigator.content().get());
         syncThemeToggle(themeController.activeBlock());
         return shell;
+    }
+
+    private StackPane overlaid(final Node frame) {
+        final Node toastLayer = overlays.toasts().view();
+        keepOverTheContent(toastLayer);
+        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
+        return new StackPane(
+                frame,
+                overlays.busyHost().view(),
+                toastLayer,
+                overlays.modalHost().view());
     }
 
     // The toasts rise from the content area's bottom-right corner, 16 pixels in, so none covers the navigation column.
