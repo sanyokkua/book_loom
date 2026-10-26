@@ -44,12 +44,13 @@ class ScreenScrollTest extends ConformanceTestBase {
     private static final int MOST_READS = 120;
     private static final long READ_GAP_MILLIS = 16;
 
+    // Ukrainian words are longer, so its screens are the tallest: the inner loop runs them, the gate English too.
     static Stream<Arguments> screensAtTheSmallestWindow() {
-        return FitMatrix.screenCases(SIZES);
+        return FitMatrix.screenCases("uk", SIZES);
     }
 
     static Stream<Arguments> screensAtTheOtherNarrowWindows() {
-        return FitMatrix.screenCases(OTHER_SIZES);
+        return Stream.concat(FitMatrix.screenCases("en", SIZES), FitMatrix.screenCases(OTHER_SIZES));
     }
 
     // IF a card ran below the window with no scroll pane to move, THEN a person could never read or press its end.
@@ -60,8 +61,8 @@ class ScreenScrollTest extends ConformanceTestBase {
         assertReachable(screen, language, size);
     }
 
-    // IF the wheel reached everything only at the smallest window, THEN a slightly taller or wider one could cut a
-    // card.
+    // IF the wheel reached everything only in Ukrainian at the smallest window, THEN English there or a slightly
+    // taller or wider window could cut a card.
     @Tag("slow")
     @ParameterizedTest(name = "{0} in {1} at {2}")
     @MethodSource("screensAtTheOtherNarrowWindows")

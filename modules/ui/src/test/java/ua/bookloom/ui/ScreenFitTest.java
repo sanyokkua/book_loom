@@ -11,9 +11,9 @@ import ua.bookloom.ui.ConformanceCases.Screen;
 
 /**
  * Every screen state and screen-level dialog the conformance catalogue lists, in English and Ukrainian, at the
- * smallest window, at the widths around each layout switch and at a full-HD one: no label or button is drawn shorter
- * than its words, no control runs past its viewport or card or is squeezed below its width, and a dialog card stays
- * inside the window. Ukrainian words are about a quarter longer, so they are the ones that overflow first.
+ * smallest window and a full-HD one (the inner loop) and at the widths around each layout switch (the gate): no label
+ * or button is drawn shorter than its words, no control runs past its viewport or card or is squeezed below its width,
+ * and a dialog card stays inside the window. Ukrainian words are about a quarter longer, so they overflow first.
  */
 class ScreenFitTest extends ConformanceTestBase {
 

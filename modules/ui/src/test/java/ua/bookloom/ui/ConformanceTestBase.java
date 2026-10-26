@@ -43,6 +43,9 @@ import ua.bookloom.ui.theme.ThemeController;
  */
 abstract class ConformanceTestBase extends ShellTestBase {
 
+    // A long stored project name (pair and quality appended), so the open-another question is fitted with one.
+    private static final String LONG_PROJECT_NAME = "Earth Gravity · EN → UK · 26b Max";
+
     private static @Nullable Showing lastShown;
 
     private final ScriptedProjectService projects = new ScriptedProjectService();
@@ -141,12 +144,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case SWITCH_PROVIDER -> new SettingsPreparations(injector).askAboutSwitching();
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
-                        .ask(
-                                "Earth Gravity · EN → UK · 26b Max",
-                                "Dracula.epub",
-                                RunState.RUNNING,
-                                () -> {},
-                                () -> {}));
+                        .ask(LONG_PROJECT_NAME, "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));
         }
     }
 

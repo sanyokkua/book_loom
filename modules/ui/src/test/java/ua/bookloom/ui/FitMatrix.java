@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.provider.Arguments;
+import ua.bookloom.ui.ConformanceCases.Screen;
 
 /**
  * The matrix the fit and scroll tests share: what is shown, in English and Ukrainian, at a list of scene sizes, and
@@ -20,26 +21,35 @@ import org.junit.jupiter.params.provider.Arguments;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class FitMatrix {
 
-    /** The smallest window, either side of the compact-regular floor and two wide ones: run in the inner loop too. */
+    /** The smallest window and a full-HD one: run in the inner loop too. */
     static final List<double[]> FAST_SIZES = List.of(
             new double[] {ShellTestBase.CONTENT_AT_MINIMUM_WIDTH, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1040, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1700, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
             // 700 high: JavaFX's headless screen is a 1000 by 1000 buffer (see LayoutFitTest).
             new double[] {1920, 700});
 
-    /** The widths between: `slow`, so only the gate runs them. */
+    /** Either side of the compact-regular floor and the widths between: `slow`, so only the gate runs them. */
     static final List<double[]> SLOW_SIZES = List.of(
             new double[] {1000, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1040, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
             new double[] {1100, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
             new double[] {1250, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1440, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT});
+            new double[] {1440, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT},
+            new double[] {1700, ShellTestBase.CONTENT_AT_MINIMUM_HEIGHT});
 
     private static final List<String> LANGUAGES = List.of("en", "uk");
 
     /** Every catalogue screen in each language at each size, as (screen, language, size). */
     static Stream<Arguments> screenCases(final List<double[]> sizes) {
-        return cases(ConformanceCases.SCREENS.stream().map(screen -> Named.of(screen.name(), screen)), sizes);
+        return cases(screens(), sizes);
+    }
+
+    /** Every catalogue screen in one language at each size, as (screen, language, size). */
+    static Stream<Arguments> screenCases(final String language, final List<double[]> sizes) {
+        return screens().flatMap(screen -> cases(screen, language, sizes));
+    }
+
+    private static Stream<Named<Screen>> screens() {
+        return ConformanceCases.SCREENS.stream().map(screen -> Named.of(screen.name(), screen));
     }
 
     /** Every subject in each language at each size, as (subject, language, size). */
