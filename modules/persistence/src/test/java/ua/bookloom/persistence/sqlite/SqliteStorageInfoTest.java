@@ -179,10 +179,14 @@ class SqliteStorageInfoTest {
                 .mapToObj(i -> new GlossaryEntry(
                         "a:" + i, "a", "Name" + i, "Імʼя".repeat(100), TermType.CHARACTER, Gender.UNKNOWN, false))
                 .toList();
-        assertThat(new SqliteGlossaryRepository(db, new JsonCodec()).putAll("a", entries).isOk()).isTrue();
+        assertThat(new SqliteGlossaryRepository(db, new JsonCodec())
+                        .putAll("a", entries)
+                        .isOk())
+                .isTrue();
         final long stored = info.sizeBytes();
 
-        assertThat(new SqliteProjectRepository(db, new JsonCodec()).delete("a").data()).isTrue();
+        assertThat(new SqliteProjectRepository(db, new JsonCodec()).delete("a").data())
+                .isTrue();
 
         assertThat(info.sizeBytes()).isLessThan(stored / 4);
     }

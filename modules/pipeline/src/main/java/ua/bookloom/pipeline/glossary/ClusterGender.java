@@ -68,8 +68,11 @@ final class ClusterGender {
                 .filter(ClusterGender::isChoice)
                 .map(EntryChange::after)
                 .toList();
-        log.debug("Cluster gender project={}: {} of {} entries are a person's gender choice",
-                projectId, choices.size(), changes.size());
+        log.debug(
+                "Cluster gender project={}: {} of {} entries are a person's gender choice",
+                projectId,
+                choices.size(),
+                changes.size());
         if (choices.isEmpty()) {
             return Result.ok(0);
         }

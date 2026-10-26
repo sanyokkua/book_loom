@@ -35,12 +35,13 @@ class GlossaryLockedTargetStoredTest extends WorkspaceTestBase {
     void setTarget_blankOnALockedRow_isRefusedAndTheCellShowsTheStoredTargetAgain() throws Exception {
         startStoredWindow();
         openBook(Files.writeString(booksDir.resolve("Harbour.txt"), TEXT, StandardCharsets.UTF_8), 2);
-        final String project = Objects.requireNonNull(
-                        onFx(() -> injector.getInstance(CurrentProject.class).book().get()))
+        final String project = Objects.requireNonNull(onFx(
+                        () -> injector.getInstance(CurrentProject.class).book().get()))
                 .projectId();
         final GlossaryEntry locked = new GlossaryEntry(
                 UUID.randomUUID().toString(), project, "Mira", "Міра", TermType.CHARACTER, Gender.FEMALE, true);
-        assertThat(injector.getInstance(GlossaryService.class).add(locked).isOk()).isTrue();
+        assertThat(injector.getInstance(GlossaryService.class).add(locked).isOk())
+                .isTrue();
         final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
         onFx(() -> brief.setSourceLanguage("en"));
         onFx(() -> brief.setTargetLanguage("uk"));
@@ -71,7 +72,8 @@ class GlossaryLockedTargetStoredTest extends WorkspaceTestBase {
 
     @SuppressWarnings("unchecked")
     private @Nullable TextField targetField() {
-        final TableView<GlossaryEntry> table = (TableView<GlossaryEntry>) shell.root().lookup("#names-style-table");
+        final TableView<GlossaryEntry> table =
+                (TableView<GlossaryEntry>) shell.root().lookup("#names-style-table");
         return table == null ? null : (TextField) table.lookup(".table-row-cell .text-field");
     }
 }

@@ -137,19 +137,20 @@ public final class SqliteProjectRepository implements ProjectRepository {
     public Result<Boolean> delete(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         return db.write("project delete", h -> {
-            final boolean removed = h.createUpdate("DELETE FROM projects WHERE id = :id")
-                            .bind("id", projectId)
-                            .execute()
-                    > 0;
-            final int orphans = h.execute(DELETE_ORPHAN_BOOKS);
-            log.debug("Project delete projectId={} removed={} booksRemoved={}", projectId, removed, orphans);
-            return removed;
-        }).map(removed -> {
-            if (removed) {
-                compact(projectId);
-            }
-            return removed;
-        });
+                    final boolean removed = h.createUpdate("DELETE FROM projects WHERE id = :id")
+                                    .bind("id", projectId)
+                                    .execute()
+                            > 0;
+                    final int orphans = h.execute(DELETE_ORPHAN_BOOKS);
+                    log.debug("Project delete projectId={} removed={} booksRemoved={}", projectId, removed, orphans);
+                    return removed;
+                })
+                .map(removed -> {
+                    if (removed) {
+                        compact(projectId);
+                    }
+                    return removed;
+                });
     }
 
     // A removed project's pages stay in the file as free space, so a removed book of 100 MB kept the file at 100 MB.

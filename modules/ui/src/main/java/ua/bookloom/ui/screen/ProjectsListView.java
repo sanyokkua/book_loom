@@ -127,7 +127,8 @@ final class ProjectsListView {
         }
     }
 
-    // A search with no hits names the text and offers Clear search; a filter alone that leaves nothing says what it found
+    // A search with no hits names the text and offers Clear search; a filter alone that leaves nothing says what it
+    // found
     // none of, since the filter's own segment takes it back.
     private Node noMatch() {
         final String shown = viewModel.search().get().strip();
@@ -135,7 +136,8 @@ final class ProjectsListView {
         box.setId("projects-no-match");
         box.setAlignment(Pos.CENTER_LEFT);
         if (shown.isEmpty()) {
-            box.getChildren().add(new Label(messages.get(viewModel.filter().get().none())));
+            box.getChildren()
+                    .add(new Label(messages.get(viewModel.filter().get().none())));
             return box;
         }
         final Label line = new Label(messages.get(MessageKey.PROJECTS_NO_MATCH, shown));

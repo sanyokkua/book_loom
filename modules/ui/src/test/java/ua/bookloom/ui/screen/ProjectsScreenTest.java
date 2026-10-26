@@ -60,7 +60,8 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
                 .isEqualTo("A segment is a paragraph, heading or caption — one piece of the book's text.");
     }
 
-    // IF a run stored as paused or running whose window is gone read "Paused" or "Translating", THEN a crash or a quit in
+    // IF a run stored as paused or running whose window is gone read "Paused" or "Translating", THEN a crash or a quit
+    // in
     // the middle of a run would look like a run still under way.
     @Test
     void list_storedPausedRunNoRunInThisWindow_showsTheInterruptedChipAndContinue() throws Exception {

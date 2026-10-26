@@ -31,7 +31,8 @@ class WindowPlacementTest {
     @Test
     void apply_placeOnTheScreen_movesAndSizesTheWindow() throws Exception {
         FxToolkit.registerPrimaryStage();
-        final javafx.geometry.Rectangle2D screen = onFx(() -> Screen.getPrimary().getVisualBounds());
+        final javafx.geometry.Rectangle2D screen =
+                onFx(() -> Screen.getPrimary().getVisualBounds());
         final WindowPlacement.Placement placement =
                 new WindowPlacement.Placement(screen.getMinX() + 30, screen.getMinY() + 20, 1100, 760, false);
 

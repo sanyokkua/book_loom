@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
@@ -49,10 +48,15 @@ class BriefSamePairStoredTest extends WorkspaceTestBase {
         assertThat(toastCount()).as("no message announces a rename").isEqualTo(toastsBefore);
 
         onFx(() -> brief.setTargetLanguage("uk"));
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> "Noir".equals(stored().brief().genre()));
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> "Noir".equals(stored().brief().genre()));
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(stored().name()).isEqualTo("Night · EN → UK");
-        assertThat(toastCount()).as("the pair is back as it was stored, so nothing was renamed").isEqualTo(toastsBefore);
+        assertThat(toastCount())
+                .as("the pair is back as it was stored, so nothing was renamed")
+                .isEqualTo(toastsBefore);
     }
 
     private Project stored() {

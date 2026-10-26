@@ -78,7 +78,8 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(entries, "entries");
         return db.write("glossary putAll", h -> {
-                    final Optional<GlossaryDocument> next = load(h, codec, projectId).putAll(entries);
+                    final Optional<GlossaryDocument> next =
+                            load(h, codec, projectId).putAll(entries);
                     if (next.isEmpty()) {
                         log.debug("Glossary putAll refused projectId={}: a term is held under another id", projectId);
                         return Result.<List<GlossaryEntry>>err(AppError.of(

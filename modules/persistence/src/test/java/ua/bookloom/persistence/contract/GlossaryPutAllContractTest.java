@@ -34,9 +34,7 @@ public abstract class GlossaryPutAllContractTest extends ProjectFindersContractT
         assertThat(put.isOk()).as("%s", put.error()).isTrue();
         assertThat(repository.all("p1").data())
                 .extracting(GlossaryEntry::id, GlossaryEntry::target)
-                .containsExactly(
-                        tuple("e1", "Хейл"),
-                        tuple("e3", "Мира"));
+                .containsExactly(tuple("e1", "Хейл"), tuple("e3", "Мира"));
         assertThat(repository.wasRemoved("p1", "Mira").data()).isFalse();
     }
 
@@ -50,7 +48,9 @@ public abstract class GlossaryPutAllContractTest extends ProjectFindersContractT
 
         assertThat(put.isErr()).isTrue();
         assertThat(put.error().code()).isEqualTo(ErrorCode.validation);
-        assertThat(repository.all("p1").data()).extracting(GlossaryEntry::target).containsExactly("Гейл");
+        assertThat(repository.all("p1").data())
+                .extracting(GlossaryEntry::target)
+                .containsExactly("Гейл");
     }
 
     private static GlossaryEntry entry(final String id, final String term, final String target) {

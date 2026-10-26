@@ -122,7 +122,8 @@ class ProjectRowsTest {
         assertThat(onlyRow(summary, null).status()).isEqualTo(expected);
     }
 
-    // IF a run whose window is gone read as still translating, or as stopped by the person, THEN a crash would be hidden
+    // IF a run whose window is gone read as still translating, or as stopped by the person, THEN a crash would be
+    // hidden
     // behind "Translating" or "Stopped"; a run the window counts as interrupted reads "Interrupted".
     @ParameterizedTest
     @CsvSource({"RUNNING", "PAUSED", "CANCELLED"})

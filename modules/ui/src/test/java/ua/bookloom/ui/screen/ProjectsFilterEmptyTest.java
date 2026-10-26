@@ -17,7 +17,9 @@ class ProjectsFilterEmptyTest extends ProjectsScreenTestBase {
         onFx(() -> injector.getInstance(ProjectsViewModel.class).filter().set(ProjectFilter.FINISHED));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(textOf("projects-no-match")).contains("No finished translations yet.").doesNotContain("matches");
+        assertThat(textOf("projects-no-match"))
+                .contains("No finished translations yet.")
+                .doesNotContain("matches");
         assertThat(isPresent("projects-clear-search")).isFalse();
     }
 
@@ -28,6 +30,8 @@ class ProjectsFilterEmptyTest extends ProjectsScreenTestBase {
         onFx(() -> injector.getInstance(ProjectsViewModel.class).filter().set(ProjectFilter.IN_PROGRESS));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(textOf("projects-no-match")).contains("No translation in progress.").doesNotContain("matches");
+        assertThat(textOf("projects-no-match"))
+                .contains("No translation in progress.")
+                .doesNotContain("matches");
     }
 }

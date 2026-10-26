@@ -268,9 +268,9 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     private Result<GlossaryImportReport> readAndImport(final String projectId, final Path source) {
-        final Result<GlossaryImportReport> report =
-                new GlossaryCsvFiles(glossary, rows -> rowsImport(projectId).apply(projectId, rows))
-                        .importFrom(projectId, source);
+        final Result<GlossaryImportReport> report = new GlossaryCsvFiles(
+                        glossary, rows -> rowsImport(projectId).apply(projectId, rows))
+                .importFrom(projectId, source);
         if (report.isOk()) {
             logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
         }

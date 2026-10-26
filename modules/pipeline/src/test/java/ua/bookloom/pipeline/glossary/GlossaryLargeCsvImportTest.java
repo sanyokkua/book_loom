@@ -49,9 +49,12 @@ class GlossaryLargeCsvImportTest {
                     binder.bind(Clock.class).toInstance(Clock.systemUTC());
                     binder.bind(IdSource.class).toInstance(new UuidIdSource());
                 });
-        final Path book = Files.writeString(dir.resolve("Harbour.txt"), "Mira saw the ships.\n", StandardCharsets.UTF_8);
-        final Result<ImportedBook> imported = injector.getInstance(ProjectServiceImpl.class).create(book);
-        final String project = Objects.requireNonNull(Objects.requireNonNull(imported.data(), "imported").projectId());
+        final Path book =
+                Files.writeString(dir.resolve("Harbour.txt"), "Mira saw the ships.\n", StandardCharsets.UTF_8);
+        final Result<ImportedBook> imported =
+                injector.getInstance(ProjectServiceImpl.class).create(book);
+        final String project = Objects.requireNonNull(
+                Objects.requireNonNull(imported.data(), "imported").projectId());
         final Path csv = Files.writeString(dir.resolve("names.csv"), csvOf(ROWS), StandardCharsets.UTF_8);
         final GlossaryServiceImpl glossary = injector.getInstance(GlossaryServiceImpl.class);
 

@@ -249,7 +249,8 @@ public final class BookLoomApplication extends Application {
         if (shown == null || injector == null) {
             return;
         }
-        final PendingRestart restart = injector.getInstance(StartupContext.class).pendingRestart();
+        final PendingRestart restart =
+                injector.getInstance(StartupContext.class).pendingRestart();
         if (restart.requested().isPresent()) {
             log.debug("restart asked: the window's place and size go to the next copy");
             restart.keepWindow(WindowPlacement.of(shown));

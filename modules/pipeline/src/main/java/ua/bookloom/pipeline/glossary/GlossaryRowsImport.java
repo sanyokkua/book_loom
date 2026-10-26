@@ -65,10 +65,12 @@ record GlossaryRowsImport(
                 continue;
             }
             final GlossaryEntry before = byKey.get(GlossaryKeys.of(row.term()));
-            changes.add(new EntryChange(before, before == null ? added(projectId, row) : GlossaryCsv.replaced(before, row)));
+            changes.add(new EntryChange(
+                    before, before == null ? added(projectId, row) : GlossaryCsv.replaced(before, row)));
         }
         log.debug("Glossary rows import project={} storing={} refused={}", projectId, changes.size(), refused.size());
-        return glossary.putAll(projectId, changes.stream().map(EntryChange::after).toList())
+        return glossary.putAll(
+                        projectId, changes.stream().map(EntryChange::after).toList())
                 .flatMap(stored -> deferChangedTargets(projectId, changes))
                 .flatMap(deferred -> ClusterGender.propagateAll(glossary, projectId, changes, languageTag))
                 .map(shared -> List.copyOf(refused));
