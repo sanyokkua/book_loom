@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import javafx.scene.Node;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -55,13 +54,8 @@ class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
-    private boolean isAsking() {
-        final Node card = scene.getRoot().lookup("#" + CARD);
-        return card != null && card.isVisible() && card.getScene() != null;
-    }
-
     private void awaitAsking() throws Exception {
-        WaitForAsyncUtils.waitFor(5, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(this::isAsking));
+        WaitForAsyncUtils.waitFor(5, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(() -> isVisibleInScene(CARD)));
     }
 
     private Narrator narrator() {
@@ -83,7 +77,7 @@ class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(assistant().rechecked()).containsExactly(projectId());
         assertThat(narrator()).isEqualTo(VERIFIED);
         assertThat(projects.briefs().getLast().narrator()).isEqualTo(VERIFIED);
@@ -123,7 +117,7 @@ class NamesStyleNarratorRecheckTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
     }
 
     @Test

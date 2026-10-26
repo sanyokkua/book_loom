@@ -3,7 +3,6 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.event.ActionEvent;
 import javafx.scene.control.ComboBox;
@@ -269,13 +268,9 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
     void headerRemove_middleRow_keepsTheOthersInOrder() {
         openSettings();
         onFx(() -> toggle("settings-form-headers-on").setSelected(true));
-        for (final String name : List.of("X-A", "X-B", "X-C")) {
-            onFx(() -> button("settings-form-header-add").fire());
-            setField(
-                    "settings-form-header-name-"
-                            + (form().draft().get().headers().size() - 1),
-                    name);
-        }
+        addHeader("X-A");
+        addHeader("X-B");
+        addHeader("X-C");
 
         onFx(() -> button("settings-form-header-remove-1").fire());
 
@@ -285,6 +280,11 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
         assertThat(field("settings-form-header-name-0").getText()).isEqualTo("X-A");
         assertThat(field("settings-form-header-name-1").getText()).isEqualTo("X-C");
         assertThat(scene.getRoot().lookup("#settings-form-header-name-2")).isNull();
+    }
+
+    private void addHeader(final String name) {
+        onFx(() -> button("settings-form-header-add").fire());
+        setField("settings-form-header-name-" + (form().draft().get().headers().size() - 1), name);
     }
 
     // IF Delete stayed on while the model works for the provider in use, THEN the work would lose its provider.

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
-import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -16,8 +15,6 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -60,15 +57,8 @@ class FocusTraversalTest extends ConformanceTestBase {
             return scene.getFocusOwner();
         });
 
-        // Each owner with its ancestors as they were when it had focus: a row's type and gender are a label that hands
-        // focus to a combo box put in its place, so the label is reached when its cell held the focus.
-        final Set<Node> visited = new LinkedHashSet<>();
-        boolean cameBack = false;
-        for (int press = 0; press < MAX_PRESSES && !cameBack; press++) {
-            final Node owner = ThemeTestSupport.onFx(this::pressTab);
-            visited.addAll(ThemeTestSupport.onFx(() -> chain(owner)));
-            cameBack = owner.equals(start);
-        }
+        final Walk walk = tabRound(start);
+        final Set<Node> visited = walk.visited();
         final List<String> missed = operable.stream()
                 .filter(control -> !visited.contains(control))
                 .filter(control -> !(control instanceof Label && visited.contains(control.getParent())))
@@ -76,10 +66,26 @@ class FocusTraversalTest extends ConformanceTestBase {
                 .map(FocusTraversalTest::describe)
                 .toList();
 
-        assertThat(cameBack)
+        assertThat(walk.cameBack())
                 .as("Tab comes back to the first control within %d presses", MAX_PRESSES)
                 .isTrue();
         assertThat(missed).as("controls Tab never reaches on %s", screen.name()).isEmpty();
+    }
+
+    /** The controls a round of Tab presses reached, and whether it came back to where it started. */
+    private record Walk(Set<Node> visited, boolean cameBack) {}
+
+    // Each owner with its ancestors as they were when it had focus: a row's type and gender are a label that hands
+    // focus to a combo box put in its place, so the label is reached when its cell held the focus.
+    private Walk tabRound(final Node start) {
+        final Set<Node> visited = new LinkedHashSet<>();
+        boolean cameBack = false;
+        for (int press = 0; press < MAX_PRESSES && !cameBack; press++) {
+            final Node owner = ThemeTestSupport.onFx(this::pressTab);
+            visited.addAll(ThemeTestSupport.onFx(() -> chain(owner)));
+            cameBack = owner.equals(start);
+        }
+        return new Walk(visited, cameBack);
     }
 
     // A shown dialog card keeps Tab inside itself (the review desk is one), so its controls are the ones to reach.
@@ -90,13 +96,6 @@ class FocusTraversalTest extends ConformanceTestBase {
             return layers.get(layers.size() - 1);
         }
         return scene.getRoot();
-    }
-
-    private Node pressTab() {
-        Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
-        return scene.getFocusOwner();
     }
 
     /** The controls a person can operate: shown, enabled and taking focus, scroll machinery left out. */

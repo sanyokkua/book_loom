@@ -17,7 +17,6 @@ import java.util.Locale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.ui.AutoNamesFixture;
@@ -69,11 +68,6 @@ class NamesStyleAutoStepsTest extends FxTestBase {
         glossary.willAnswer(Result.ok(List.of(WELL, HALE)));
         run(() -> vm.show(PROJECT));
         interact(() -> settings.model().set("gemma3:12b"));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void prepare() {

@@ -12,7 +12,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
@@ -71,11 +70,6 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         interact(() -> vm.notice().addListener((observed, was, now) -> lines.add(now == null ? "" : now.text())));
         glossary.willAnswer(Result.ok(List.of(HALE, WALES, MILTON)));
         run(() -> vm.show(PROJECT));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     @Test

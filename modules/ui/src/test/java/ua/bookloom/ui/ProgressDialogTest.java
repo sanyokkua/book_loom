@@ -4,21 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BooleanSupplier;
 import java.util.stream.IntStream;
-import javafx.event.Event;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.controlsfx.control.ToggleSwitch;
@@ -46,20 +38,10 @@ import ua.bookloom.ui.state.WorkVisibility;
  * Escape hides long work and cancels short work, long work continues in the background behind the title bar's chip and
  * comes back as it was, and the export's Cancel asks first, above the dialog. No second window ever opens.
  */
-class ProgressDialogTest extends ShellTestBase {
-
-    private static final long WITHIN_SECONDS = 3;
-
-    private final List<String> cancelled = new CopyOnWriteArrayList<>();
+class ProgressDialogTest extends ProgressWorkTestBase {
 
     private ActivityTracker tracker() {
         return injector.getInstance(ActivityTracker.class);
-    }
-
-    private ActivityTracker.Handle begin(final ActivityKind kind) {
-        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
-        onFx(() -> handle.set(tracker().begin(kind, () -> cancelled.add(kind.name()))));
-        return Objects.requireNonNull(handle.get(), "handle");
     }
 
     private void plan(final ActivityTracker.Handle handle, final int steps) {
@@ -83,17 +65,6 @@ class ProgressDialogTest extends ShellTestBase {
         });
     }
 
-    private boolean isDialogShown() {
-        final Node host = scene.getRoot().lookup("#" + BusyHost.HOST_ID);
-        final Node card = scene.getRoot().lookup("#busy-card");
-        return host != null && host.isVisible() && host.getOpacity() > 0 && card != null && card.isVisible();
-    }
-
-    private void await(final BooleanSupplier condition) throws TimeoutException {
-        WaitForAsyncUtils.waitFor(WITHIN_SECONDS, TimeUnit.SECONDS, condition::getAsBoolean);
-        interact(() -> {});
-    }
-
     private void awaitDialog() throws TimeoutException {
         await(this::isDialogShown);
     }
@@ -110,11 +81,6 @@ class ProgressDialogTest extends ShellTestBase {
     private int selectedIndex() {
         final StepEntry selected = steps().getSelectionModel().getSelectedItem();
         return selected == null ? -1 : selected.index();
-    }
-
-    private void escape() {
-        onFx(() -> Event.fireEvent(
-                scene, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
     }
 
     private boolean isRunning(final ActivityKind kind) {

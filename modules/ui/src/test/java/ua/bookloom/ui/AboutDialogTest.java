@@ -109,12 +109,6 @@ class AboutDialogTest extends ShellTestBase {
     }
 
     /** Fires a Tab press at whatever owns focus, as the keyboard would, and lets the pulse settle. */
-    private void pressTab() {
-        onFx(() -> Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false)));
-    }
-
     @Test
     void about_beforeItIsUsed_showsNoCardAndNoScrim() {
         // IF the scrim were up with no dialog, THEN the window would be dimmed for nothing.
@@ -204,9 +198,9 @@ class AboutDialogTest extends ShellTestBase {
         // IF Tab could leave the card, THEN focus would reach a navigation button hidden behind the dimmed window.
         openAbout();
 
-        pressTab();
-        pressTab();
-        pressTab();
+        onFx(this::pressTab);
+        onFx(this::pressTab);
+        onFx(this::pressTab);
 
         final Node owner = scene.getFocusOwner();
         assertThat(owner).isNotNull();
@@ -228,7 +222,7 @@ class AboutDialogTest extends ShellTestBase {
     }
 
     private void pressTab(final int times) {
-        IntStream.range(0, times).forEach(press -> pressTab());
+        IntStream.range(0, times).forEach(press -> onFx(this::pressTab));
     }
 
     private static List<Node> ancestorsOf(final Node node) {

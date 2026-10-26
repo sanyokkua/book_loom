@@ -9,7 +9,6 @@ import java.util.Locale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -54,11 +53,6 @@ class RecurringTermsModelActionsTest extends FxTestBase {
                 () -> "new"));
         glossary.willAnswer(Result.ok(List.of()));
         run(() -> vm.show(PROJECT));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private ChangeResults results() {

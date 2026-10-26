@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tab;
 import org.controlsfx.control.ToggleSwitch;
@@ -24,7 +23,6 @@ import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedStorageInfo;
-import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.DetailedLogSwitch;
@@ -78,13 +76,6 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     private void reopenWith(final DiagnosticLog scripted) {
         diagnosticLog = scripted;
         useLocale(java.util.Locale.ENGLISH);
-    }
-
-    private boolean shown(final String id) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node node = scene.getRoot().lookup("#" + id);
-            return node != null && node.isVisible() && node.isManaged();
-        });
     }
 
     // IF the path were shown whole, THEN a long folder would hide the file's name; IF the whole path could not be read
@@ -150,7 +141,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
 
         openStorage();
 
-        assertThat(shown("storage-detailed-override")).isTrue();
+        assertThat(isShown("storage-detailed-override")).isTrue();
         assertThat(text("storage-detailed-override")).startsWith("BOOKLOOM_TRACE_FILE is set for this launch");
     }
 
@@ -195,7 +186,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> ((Button) required("storage-backup")).fire());
 
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("storage-backup-status"));
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-backup-status"));
         assertThat(text("storage-backup-status")).isEqualTo("Backup saved: my-backup.db");
         assertThat(storage.backups()).containsExactly(Path.of("copies").resolve("my-backup.db"));
     }
@@ -207,12 +198,12 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("my-backup.db"));
         onFx(() -> ((Button) required("storage-backup")).fire());
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("storage-backup-status"));
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-backup-status"));
 
         onFx(() -> tabs().getSelectionModel().select(0));
         openStorage();
 
-        assertThat(shown("storage-backup-status")).isFalse();
+        assertThat(isShown("storage-backup-status")).isFalse();
     }
 
     @Test
@@ -225,7 +216,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> ((Button) required("storage-bundle")).fire());
 
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("storage-bundle-status"));
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-bundle-status"));
         assertThat(text("storage-bundle-status")).isEqualTo("Diagnostic bundle saved: report.zip");
     }
 

@@ -6,16 +6,10 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import com.google.inject.Injector;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -72,11 +66,6 @@ class NamesStyleChangeResultsTest extends FxTestBase {
 
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
         return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private ChangeResults results() {
@@ -345,53 +334,5 @@ class NamesStyleChangeResultsTest extends FxTestBase {
                 .extracting(ChangeRow::kind, ChangeRow::before, ChangeRow::after)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(ChangeKind.CHANGED, "—", "господар"));
         assertThat(results().operation()).isEqualTo(ChangeOperation.TERM_TRANSLATE);
-    }
-
-    /** Runs the screen's opening load at once and keeps every later task waiting, as a slow model would. */
-    private static final class HeldExecutor extends AbstractExecutorService {
-
-        private final List<Runnable> held = new CopyOnWriteArrayList<>();
-        private boolean loaded;
-
-        @Override
-        public Future<?> submit(final Runnable task) {
-            execute(task);
-            return new CompletableFuture<Void>();
-        }
-
-        @Override
-        public void execute(final Runnable command) {
-            if (loaded) {
-                held.add(command);
-            } else {
-                loaded = true;
-                command.run();
-            }
-        }
-
-        @Override
-        public void shutdown() {
-            // Nothing to stop.
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            return List.of();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            return false;
-        }
-
-        @Override
-        public boolean isTerminated() {
-            return false;
-        }
-
-        @Override
-        public boolean awaitTermination(final long timeout, final TimeUnit unit) {
-            return true;
-        }
     }
 }

@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -97,6 +98,14 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
 
     TitledPane fold() {
         return (TitledPane) required("settings-connection");
+    }
+
+    /** Whether the node with this id is visible and takes part in layout; read on the FX thread. */
+    boolean isShown(final String id) {
+        return ThemeTestSupport.onFx(() -> {
+            final Node node = scene.getRoot().lookup("#" + id);
+            return node != null && node.isVisible() && node.isManaged();
+        });
     }
 
     String text(final String id) {

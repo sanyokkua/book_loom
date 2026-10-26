@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -80,11 +79,6 @@ class TranslateIntoDialogTest extends ShellTestBase {
 
     private Button create() {
         return (Button) required("translateinto-create");
-    }
-
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
     }
 
     private String listed(final String tag) {
@@ -205,7 +199,7 @@ class TranslateIntoDialogTest extends ShellTestBase {
 
         onFx(() -> name().setText(typed));
 
-        assertThat(isShown("translateinto-error")).isTrue();
+        assertThat(isVisibleInScene("translateinto-error")).isTrue();
         assertThat(((Label) required("translateinto-error")).getText()).isEqualTo("That name is already used");
         assertThat(create().isDisable()).isTrue();
     }
@@ -217,6 +211,6 @@ class TranslateIntoDialogTest extends ShellTestBase {
         onFx(() -> ((Button) required("translateinto-cancel")).fire());
 
         assertThat(answers).containsExactly("cancelled");
-        assertThat(isShown("translateinto-card")).isFalse();
+        assertThat(isVisibleInScene("translateinto-card")).isFalse();
     }
 }

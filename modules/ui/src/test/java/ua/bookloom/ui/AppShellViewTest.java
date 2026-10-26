@@ -56,11 +56,6 @@ class AppShellViewTest extends ShellTestBase {
         return (StackPane) required("shell-content");
     }
 
-    private Bounds sceneBounds(final String id) {
-        final Node node = required(id);
-        return node.localToScene(node.getLayoutBounds());
-    }
-
     // IF a region were missing from the shell, THEN a screen would have nowhere to land or a dialog nowhere to show.
     @ParameterizedTest
     @ValueSource(

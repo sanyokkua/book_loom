@@ -175,10 +175,15 @@ class AutomationSettingsTest {
 
         automation.chooseDial(QualityDial.FAST);
         automation.chooseDial(QualityDial.MAX);
+        runNewestFirst(held);
+
+        assertThat(store.stored(AppSetting.DEFAULT_DIAL)).contains(QualityDial.MAX);
+    }
+
+    // Runs the held writes newest first, including any a write queues while it runs.
+    private static void runNewestFirst(final List<Runnable> held) {
         while (!held.isEmpty()) {
             held.remove(held.size() - 1).run();
         }
-
-        assertThat(store.stored(AppSetting.DEFAULT_DIAL)).contains(QualityDial.MAX);
     }
 }

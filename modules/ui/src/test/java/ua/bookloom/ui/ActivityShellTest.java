@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
@@ -30,11 +29,6 @@ class ActivityShellTest extends ShellTestBase {
         return Objects.requireNonNull(handle.get(), "handle");
     }
 
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
-    }
-
     // IF other model work were not named in the title bar, THEN a scan running behind another screen would be
     // invisible, and nothing would say why Start translation is held.
     @Test
@@ -43,7 +37,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(() -> scan.requests(2));
 
-        assertThat(isShown("shell-activity")).isTrue();
+        assertThat(isVisibleInScene("shell-activity")).isTrue();
         assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Name scan · 2 requests");
         assertThat(TooltipProbe.tipText(required("shell-activity-stop"))).isNotBlank();
     }
@@ -65,7 +59,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(scan::end);
 
-        assertThat(isShown("shell-activity")).isFalse();
+        assertThat(isVisibleInScene("shell-activity")).isFalse();
     }
 
     private boolean askLeaving(final AtomicBoolean left) {
@@ -84,7 +78,7 @@ class ActivityShellTest extends ShellTestBase {
         final AtomicBoolean left = new AtomicBoolean();
 
         final boolean admitted = askLeaving(left);
-        final boolean asked = isShown("leave-card");
+        final boolean asked = isVisibleInScene("leave-card");
         final String keepTip = TooltipProbe.tipText(required("leave-keep"));
         onFx(() -> ((Button) required("leave-stop")).fire());
 
@@ -127,7 +121,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(() -> shell.activate(ViewNames.IMPORT));
 
-        assertThat(isShown("leave-card")).isFalse();
+        assertThat(isVisibleInScene("leave-card")).isFalse();
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
     }
 
@@ -151,7 +145,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(() -> shell.activate(ViewNames.EXPORT));
 
-        assertThat(isShown("work-card")).isTrue();
+        assertThat(isVisibleInScene("work-card")).isTrue();
         assertThat(textsUnder(required("work-card")))
                 .contains("Model work is running", "Stay", "Continue in background");
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
@@ -195,7 +189,7 @@ class ActivityShellTest extends ShellTestBase {
         onFx(() -> shell.activate(ViewNames.IMPORT));
 
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
-        assertThat(isShown("work-card")).isFalse();
-        assertThat(isShown("leave-card")).isFalse();
+        assertThat(isVisibleInScene("work-card")).isFalse();
+        assertThat(isVisibleInScene("leave-card")).isFalse();
     }
 }

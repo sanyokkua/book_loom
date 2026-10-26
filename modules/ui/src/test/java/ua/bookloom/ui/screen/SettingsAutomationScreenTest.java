@@ -57,13 +57,6 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
         return (ToggleSwitch) required(id);
     }
 
-    private boolean shown(final String id) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node node = scene.getRoot().lookup("#" + id);
-            return node != null && node.isVisible() && node.isManaged();
-        });
-    }
-
     private void awaitStored(final AppSetting<?> setting) throws TimeoutException {
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> store.stored(setting).isPresent());
@@ -129,7 +122,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
 
         openAutomation();
 
-        assertThat(shown("automation-review-override")).isTrue();
+        assertThat(isShown("automation-review-override")).isTrue();
         assertThat(text("automation-review-override")).startsWith("BOOKLOOM_REVIEW_MODE is set for this launch");
     }
 
@@ -159,7 +152,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
         openAutomation();
 
         assertThat(switchOf("automation-last-check").isSelected()).isFalse();
-        assertThat(shown("automation-last-check-hint")).isTrue();
+        assertThat(isShown("automation-last-check-hint")).isTrue();
         assertThat(text("automation-last-check-hint"))
                 .isEqualTo("Not chosen yet: on for books at Max quality, off otherwise.");
     }
@@ -172,7 +165,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
 
         awaitStored(AppSetting.LAST_CHECK);
         assertThat(store.stored(AppSetting.LAST_CHECK)).contains(true);
-        assertThat(shown("automation-last-check-hint")).isFalse();
+        assertThat(isShown("automation-last-check-hint")).isFalse();
     }
 
     // IF the switch only changed the stored value, THEN the computer would stay awake until the next launch.
@@ -224,7 +217,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> injector.getInstance(StateMirror.class).publishRunState(state));
 
-        assertThat(shown("automation-running")).isEqualTo(expected);
+        assertThat(isShown("automation-running")).isEqualTo(expected);
     }
 
     // IF a failed save were silent, THEN the choice would be lost at the next launch without a word.
@@ -235,7 +228,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> switchOf("automation-reopen").setSelected(false));
 
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("automation-save-error"));
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("automation-save-error"));
         assertThat(((Labeled) required("automation-save-error")).getText())
                 .isEqualTo("The choice could not be saved. It holds until BookLoom closes.");
     }

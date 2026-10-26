@@ -9,7 +9,6 @@ import java.util.Locale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -71,11 +70,6 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),
                 () -> "new"));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     // IF a refused confirmation kept the service's English words, THEN a Ukrainian screen would report it in English.

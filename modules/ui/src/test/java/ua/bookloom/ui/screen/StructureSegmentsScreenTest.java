@@ -314,9 +314,9 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
     void controls_search_kind_list_andPreview_explainThemselves() throws TimeoutException {
         openChapterOne();
 
-        for (final String id : List.of("structure-segments-search", "structure-segments-kind", "structure-segments")) {
-            assertThat(TooltipProbe.tipText(required(id))).as(id).isNotBlank();
-        }
+        assertThat(List.of("structure-segments-search", "structure-segments-kind", "structure-segments"))
+                .allSatisfy(id ->
+                        assertThat(TooltipProbe.tipText(required(id))).as(id).isNotBlank());
     }
 
     @SuppressWarnings("unchecked")

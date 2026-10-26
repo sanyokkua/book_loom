@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
-import javafx.scene.Node;
 import javafx.scene.control.ListView;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
@@ -39,11 +38,6 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
-    private boolean isAsking() {
-        final Node card = scene.getRoot().lookup("#" + CARD);
-        return card != null && card.isVisible() && card.getScene() != null;
-    }
-
     // IF a start went ahead silently, THEN entries the person forgot would be spelled by the model, differently each
     // time.
     @Test
@@ -52,7 +46,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
         onFx(() -> button("names-style-start").fire());
 
-        assertThat(isAsking()).isTrue();
+        assertThat(isVisibleInScene(CARD)).isTrue();
         assertThat(textsUnder(required(CARD)))
                 .contains("2 entries have no target — the model will choose.", "Review names", "Start anyway");
         assertThat(listedTerms()).containsExactly("Pellbury", "Ashdown");
@@ -88,7 +82,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
         onFx(() -> button("no-target-review").fire());
 
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(engine.requests()).isEmpty();
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.NAMES_STYLE);
     }
@@ -102,7 +96,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
         job.awaitRunStarted();
         assertThat(engine.requests()).hasSize(1);
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.TRANSLATING);
     }
 
@@ -113,7 +107,7 @@ class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(engine.requests()).hasSize(1);
     }
 

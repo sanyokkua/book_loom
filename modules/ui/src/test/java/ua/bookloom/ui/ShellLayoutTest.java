@@ -22,11 +22,6 @@ import ua.bookloom.ui.state.StateMirror;
  */
 class ShellLayoutTest extends ShellTestBase {
 
-    private Bounds sceneBounds(final String id) {
-        final Node node = required(id);
-        return node.localToScene(node.getLayoutBounds());
-    }
-
     // Through Import, as the screen tests arrive anywhere: a step stays closed until a book has been looked at.
     private void openAScreen(final ViewNames view) {
         onFx(() -> shell.activate(ViewNames.IMPORT));

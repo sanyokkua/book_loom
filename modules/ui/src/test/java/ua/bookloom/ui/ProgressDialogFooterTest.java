@@ -3,17 +3,11 @@ package ua.bookloom.ui;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.StepChanged;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepState;
@@ -25,31 +19,10 @@ import ua.bookloom.ui.state.ActivityTracker;
  * The progress dialog's footer answers a real mouse: a press at the centre of each footer button reaches that button,
  * the left-hand Continue in background included — the footer's feedback line once lay over it and took every click.
  */
-class ProgressDialogFooterTest extends ShellTestBase {
-
-    private static final long WITHIN_SECONDS = 3;
-
-    private final List<String> cancelled = new CopyOnWriteArrayList<>();
+class ProgressDialogFooterTest extends ProgressWorkTestBase {
 
     private ActivityTracker tracker() {
         return injector.getInstance(ActivityTracker.class);
-    }
-
-    private ActivityTracker.Handle begin(final ActivityKind kind) {
-        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
-        onFx(() -> handle.set(tracker().begin(kind, () -> cancelled.add(kind.name()))));
-        return Objects.requireNonNull(handle.get(), "handle");
-    }
-
-    private boolean isDialogShown() {
-        final Node host = scene.getRoot().lookup("#" + BusyHost.HOST_ID);
-        final Node card = scene.getRoot().lookup("#busy-card");
-        return host != null && host.isVisible() && host.getOpacity() > 0 && card != null && card.isVisible();
-    }
-
-    private void await(final java.util.function.BooleanSupplier condition) throws TimeoutException {
-        WaitForAsyncUtils.waitFor(WITHIN_SECONDS, TimeUnit.SECONDS, condition::getAsBoolean);
-        interact(() -> {});
     }
 
     // IF a node lay over a footer button, THEN the mouse would press that node and the button would never act.

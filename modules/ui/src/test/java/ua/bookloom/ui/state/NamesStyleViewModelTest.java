@@ -102,11 +102,6 @@ class NamesStyleViewModelTest extends FxTestBase {
         return onFx(() -> vm.notice().get() == null ? "" : vm.notice().get().text());
     }
 
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
     // IF an empty glossary were not scanned when the screen opens, THEN a person would face a blank table.
     @Test
     void show_emptyGlossary_scansOnceAndShowsTheProposedRowUnlocked() {

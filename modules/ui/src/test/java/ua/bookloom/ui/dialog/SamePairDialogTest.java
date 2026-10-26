@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
@@ -76,11 +75,6 @@ class SamePairDialogTest extends ShellTestBase {
         onFx(() -> name().setText(text));
     }
 
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
-    }
-
     @Test
     void ask_shown_namesTheLanguageAndShowsTheExistingProjectWithModelQualityAndProgress() {
         ask();
@@ -125,7 +119,7 @@ class SamePairDialogTest extends ShellTestBase {
 
         type(typed);
 
-        assertThat(isShown("samepair-error")).isTrue();
+        assertThat(isVisibleInScene("samepair-error")).isTrue();
         assertThat(((Label) required("samepair-error")).getText()).isEqualTo("That name is already used");
         assertThat(button("samepair-use").isDisable()).isTrue();
     }
@@ -135,7 +129,7 @@ class SamePairDialogTest extends ShellTestBase {
         ask();
 
         type("Earth Gravity · 26b");
-        assertThat(isShown("samepair-error")).isFalse();
+        assertThat(isVisibleInScene("samepair-error")).isFalse();
         onFx(() -> button("samepair-use").fire());
 
         assertThat(answers).containsExactly("second:Earth Gravity · 26b");
@@ -172,7 +166,7 @@ class SamePairDialogTest extends ShellTestBase {
         onFx(() -> button("samepair-cancel").fire());
 
         assertThat(answers).containsExactly("cancelled");
-        assertThat(isShown("samepair-card")).isFalse();
+        assertThat(isVisibleInScene("samepair-card")).isFalse();
     }
 
     @Test

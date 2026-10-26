@@ -2,9 +2,8 @@ package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -61,11 +60,7 @@ class StepAvailabilityTest {
     void lockReason_autoSourceWithATarget_opensEverything() {
         openBook(null, "uk");
 
-        final List<Optional<MessageKey>> reasons = new ArrayList<>();
-        for (final ViewNames step : ViewNames.values()) {
-            reasons.add(availability.lockReason(step));
-        }
-        assertThat(reasons).allMatch(Optional::isEmpty);
+        assertThat(Stream.of(ViewNames.values()).map(availability::lockReason)).allMatch(Optional::isEmpty);
     }
 
     @Test
@@ -80,11 +75,7 @@ class StepAvailabilityTest {
     void lockReason_validLanguages_opensEverything() {
         openBook("en", "uk");
 
-        final List<Optional<MessageKey>> reasons = new ArrayList<>();
-        for (final ViewNames step : ViewNames.values()) {
-            reasons.add(availability.lockReason(step));
-        }
-        assertThat(reasons).allMatch(Optional::isEmpty);
+        assertThat(Stream.of(ViewNames.values()).map(availability::lockReason)).allMatch(Optional::isEmpty);
     }
 
     @Test

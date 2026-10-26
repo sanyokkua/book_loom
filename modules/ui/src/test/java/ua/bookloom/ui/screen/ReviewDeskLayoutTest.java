@@ -13,7 +13,7 @@ import ua.bookloom.ui.ReviewDeskFixtures;
 /** The desk fits the smallest window in both languages: its footer buttons stay inside the card. */
 class ReviewDeskLayoutTest extends ReviewDeskTestBase {
 
-    private Bounds sceneBounds(final String id) {
+    private Bounds drawnBounds(final String id) {
         return fx(() -> {
             final Node node = required(id);
             return node.localToScene(node.getBoundsInLocal());
@@ -30,9 +30,9 @@ class ReviewDeskLayoutTest extends ReviewDeskTestBase {
 
         openDeskWith(ReviewDeskFixtures.sixToReview(), List.of());
 
-        final Bounds card = sceneBounds("review-desk");
+        final Bounds card = drawnBounds("review-desk");
         assertThat(List.of("review-close", "review-more", "review-main")).allSatisfy(id -> {
-            final Bounds bounds = sceneBounds(id);
+            final Bounds bounds = drawnBounds(id);
             assertThat(bounds.getMaxX()).as(id).isLessThanOrEqualTo(card.getMaxX());
             assertThat(bounds.getMaxY()).as(id).isLessThanOrEqualTo(card.getMaxY());
             assertThat(bounds.getMinX()).as(id).isGreaterThanOrEqualTo(card.getMinX());
@@ -49,15 +49,15 @@ class ReviewDeskLayoutTest extends ReviewDeskTestBase {
 
         openDeskWith(ReviewDeskFixtures.sixToReview(), List.of());
 
-        final Bounds card = sceneBounds("review-desk");
+        final Bounds card = drawnBounds("review-desk");
         assertThat(List.of("review-target", "review-mark-strip")).allSatisfy(id -> {
-            final Bounds bounds = sceneBounds(id);
+            final Bounds bounds = drawnBounds(id);
             assertThat(bounds.getHeight()).as(id).isGreaterThan(0);
             assertThat(bounds.getMaxY()).as(id).isLessThanOrEqualTo(card.getMaxY());
             assertThat(bounds.getMaxX()).as(id).isLessThanOrEqualTo(card.getMaxX());
         });
         assertThat(isShown("review-mark-strip")).isTrue();
-        assertThat(sceneBounds("review-target").getHeight()).isGreaterThanOrEqualTo(60);
+        assertThat(drawnBounds("review-target").getHeight()).isGreaterThanOrEqualTo(60);
     }
 
     // IF the strip kept one line, THEN a long wording ended in an ellipsis and the person could not read which mark

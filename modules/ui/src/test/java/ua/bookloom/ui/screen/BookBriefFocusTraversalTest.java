@@ -7,10 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import javafx.event.Event;
 import javafx.scene.Node;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -41,13 +38,6 @@ class BookBriefFocusTraversalTest extends BookBriefScreenTestBase {
             "brief-tone-narrator",
             "brief-back",
             "brief-continue");
-
-    private Node pressTab() {
-        Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
-        return scene.getFocusOwner();
-    }
 
     private static List<String> idsAbove(final Node owner) {
         final List<String> ids = new ArrayList<>();

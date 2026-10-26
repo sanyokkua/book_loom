@@ -16,7 +16,6 @@ import java.util.Locale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -75,11 +74,6 @@ class NamesStyleAutoStopTest extends FxTestBase {
                 messages,
                 tracker,
                 () -> "new"));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void chooseModel() {

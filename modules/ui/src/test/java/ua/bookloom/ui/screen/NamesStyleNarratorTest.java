@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
-import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
@@ -46,15 +45,10 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
-    private boolean isAsking() {
-        final Node card = scene.getRoot().lookup("#" + CARD);
-        return card != null && card.isVisible() && card.getScene() != null;
-    }
-
     // The narrator's quotes are re-checked in the background first, so the card follows a moment after Start.
     private void startAndAwaitQuestion() throws Exception {
         onFx(() -> button("names-style-start").fire());
-        awaitFx(this::isAsking);
+        awaitFx(() -> isVisibleInScene(CARD));
     }
 
     private Narrator narrator() {
@@ -71,7 +65,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
 
         startAndAwaitQuestion();
 
-        assertThat(isAsking()).isTrue();
+        assertThat(isVisibleInScene(CARD)).isTrue();
         assertThat(textsUnder(required(CARD)))
                 .contains(
                         "Who narrates?",
@@ -93,7 +87,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
 
         job.awaitRunStarted();
         assertThat(narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.TRANSLATING);
     }
 
@@ -159,7 +153,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
 
         onFx(() -> button("narrator-back").fire());
 
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         assertThat(engine.requests()).isEmpty();
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.NAMES_STYLE);
     }
@@ -175,7 +169,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         startAndAwaitQuestion();
 
         assertThat(engine.requests()).isEmpty();
-        assertThat(isAsking()).isTrue();
+        assertThat(isVisibleInScene(CARD)).isTrue();
     }
 
     @Test
@@ -187,7 +181,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
     }
 
     @Test
@@ -197,7 +191,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
     }
 
     // The pipeline reads a mixed book with 1 first-person chapter of 40 as third person, so the window does not ask.
@@ -208,7 +202,7 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
     }
 
     @Test
@@ -230,9 +224,9 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
 
         onFx(() -> button("translating-start").fire());
-        awaitFx(this::isAsking);
+        awaitFx(() -> isVisibleInScene(CARD));
 
-        assertThat(isAsking()).isTrue();
+        assertThat(isVisibleInScene(CARD)).isTrue();
         assertThat(engine.requests()).isEmpty();
     }
 

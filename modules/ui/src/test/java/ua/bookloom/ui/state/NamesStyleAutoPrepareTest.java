@@ -18,7 +18,6 @@ import javafx.stage.Stage;
 import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -80,11 +79,6 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
                 messages,
                 activities,
                 () -> "new"));
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void chooseModel() {

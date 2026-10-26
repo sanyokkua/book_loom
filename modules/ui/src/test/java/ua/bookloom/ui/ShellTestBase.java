@@ -6,6 +6,8 @@ import com.google.inject.Injector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import javafx.event.Event;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -13,6 +15,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -106,6 +110,26 @@ public abstract class ShellTestBase extends FxTestBase {
         final Node found = scene.getRoot().lookup("#" + id);
         assertThat(found).as("the shell must contain a node with id #%s", id).isNotNull();
         return found;
+    }
+
+    /** Whether the node with this id is in the scene and visible. */
+    protected boolean isVisibleInScene(final String id) {
+        final Node node = scene.getRoot().lookup("#" + id);
+        return node != null && node.isVisible() && node.getScene() != null;
+    }
+
+    /** The layout bounds of the node with this id, in scene coordinates. */
+    protected Bounds sceneBounds(final String id) {
+        final Node node = required(id);
+        return node.localToScene(node.getLayoutBounds());
+    }
+
+    /** Presses Tab on the focus owner and returns the new one; FX thread. */
+    protected Node pressTab() {
+        Event.fireEvent(
+                scene.getFocusOwner(),
+                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
+        return scene.getFocusOwner();
     }
 
     protected Button navButton(final String id) {

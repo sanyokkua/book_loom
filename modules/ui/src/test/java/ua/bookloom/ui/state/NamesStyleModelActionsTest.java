@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
@@ -85,11 +84,6 @@ class NamesStyleModelActionsTest extends FxTestBase {
 
     private static GlossaryEntry hale(final TermType type, final Gender gender) {
         return new GlossaryEntry("e2", PROJECT, "Hale", null, type, gender, false);
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     // IF a review's outcome were not shown, THEN rows would vanish with no word of why.
@@ -235,45 +229,6 @@ class NamesStyleModelActionsTest extends FxTestBase {
                 held.add(command);
             } else {
                 loaded = true;
-                command.run();
-            }
-        }
-
-        @Override
-        public void shutdown() {
-            // Nothing to stop.
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            return List.of();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            return false;
-        }
-
-        @Override
-        public boolean isTerminated() {
-            return false;
-        }
-
-        @Override
-        public boolean awaitTermination(final long timeout, final TimeUnit unit) {
-            return true;
-        }
-    }
-
-    /** Runs the screen's opening load at once and keeps every later task waiting, as a slow model would. */
-    private static final class HeldExecutor extends AbstractExecutorService {
-
-        private int executed;
-
-        @Override
-        public void execute(final Runnable command) {
-            executed++;
-            if (executed == 1) {
                 command.run();
             }
         }

@@ -62,13 +62,6 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
         return (ToggleButton) required(id);
     }
 
-    private boolean shown(final String id) {
-        return ThemeTestSupport.onFx(() -> {
-            final Node node = scene.getRoot().lookup("#" + id);
-            return node != null && node.isVisible() && node.isManaged();
-        });
-    }
-
     private void awaitStored(final AppSetting<?> setting) throws TimeoutException {
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> store.stored(setting).isPresent());
@@ -151,9 +144,9 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
 
         openGeneration();
 
-        assertThat(shown("generation-thinking-override")).isTrue();
+        assertThat(isShown("generation-thinking-override")).isTrue();
         assertThat(text("generation-thinking-override")).startsWith("BOOKLOOM_REASONING is set for this launch");
-        assertThat(shown("generation-sampling-override")).isFalse();
+        assertThat(isShown("generation-sampling-override")).isFalse();
     }
 
     @Test
@@ -185,7 +178,7 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> injector.getInstance(StateMirror.class).publishRunState(state));
 
-        assertThat(shown("generation-running")).isEqualTo(expected);
+        assertThat(isShown("generation-running")).isEqualTo(expected);
     }
 
     // IF a failed save were silent, THEN the choice would be lost at the next launch without a word.
@@ -196,7 +189,7 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> toggle("generation-thinking-low").fire());
 
-        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("generation-save-error"));
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("generation-save-error"));
         assertThat(text("generation-save-error"))
                 .isEqualTo("The choice could not be saved. It holds until BookLoom closes.");
     }
@@ -205,11 +198,11 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
     @Test
     void technicalOn_thinkingTechShown() throws TimeoutException {
         openGeneration();
-        assertThat(shown("generation-thinking-tech")).isFalse();
+        assertThat(isShown("generation-thinking-tech")).isFalse();
 
         onFx(() -> injector.getInstance(TechnicalDetails.class).property().set(true));
 
-        assertThat(shown("generation-thinking-tech")).isTrue();
+        assertThat(isShown("generation-thinking-tech")).isTrue();
         assertThat(((Labeled) required("generation-thinking-tech")).getText()).isEqualTo("reasoning_effort · think");
     }
 }

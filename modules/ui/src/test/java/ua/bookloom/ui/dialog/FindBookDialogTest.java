@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
@@ -43,11 +42,6 @@ class FindBookDialogTest extends ShellTestBase {
                 .ask(ROW, opening, error, () -> answers.add("choose"), () -> answers.add("cancelled")));
     }
 
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
-    }
-
     @Test
     void ask_missingFile_saysTheFileIsNotWhereItWasAndOffersFindTheBookPrimary() {
         ask(new ProjectOpening.BookFileMissing(PROJECT), null);
@@ -59,7 +53,7 @@ class FindBookDialogTest extends ShellTestBase {
                         "Find the book...",
                         "Cancel");
         assertThat(((Button) required("findbook-choose")).getStyleClass()).contains("btn-primary");
-        assertThat(isShown("findbook-error")).isFalse();
+        assertThat(isVisibleInScene("findbook-error")).isFalse();
     }
 
     @Test
@@ -76,7 +70,7 @@ class FindBookDialogTest extends ShellTestBase {
     void ask_withAnError_showsItInTheErrorLine() {
         ask(new ProjectOpening.BookFileMissing(PROJECT), "This is a different book");
 
-        assertThat(isShown("findbook-error")).isTrue();
+        assertThat(isVisibleInScene("findbook-error")).isTrue();
         assertThat(((Label) required("findbook-error")).getText()).isEqualTo("This is a different book");
     }
 
@@ -97,7 +91,7 @@ class FindBookDialogTest extends ShellTestBase {
         onFx(() -> leave(how));
 
         assertThat(answers).containsExactly("cancelled");
-        assertThat(isShown("findbook-card")).isFalse();
+        assertThat(isVisibleInScene("findbook-card")).isFalse();
     }
 
     private void leave(final String how) {

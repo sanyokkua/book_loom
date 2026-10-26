@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -82,13 +81,8 @@ class RenameDialogTest extends ShellTestBase {
         onFx(() -> field().setText(text));
     }
 
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
-    }
-
     private boolean isCardShowing() {
-        return isShown("rename-card");
+        return isVisibleInScene("rename-card");
     }
 
     @Test
@@ -119,7 +113,7 @@ class RenameDialogTest extends ShellTestBase {
     void field_beforeTheFirstEdit_showsNoErrorAndRenameIsDisabledBecauseNothingChanged() {
         ask();
 
-        assertThat(isShown("rename-error")).isFalse();
+        assertThat(isVisibleInScene("rename-error")).isFalse();
         assertThat(button("rename-confirm").isDisable()).isTrue();
     }
 
@@ -129,7 +123,7 @@ class RenameDialogTest extends ShellTestBase {
 
         type("");
 
-        assertThat(isShown("rename-error")).isFalse();
+        assertThat(isVisibleInScene("rename-error")).isFalse();
         assertThat(button("rename-confirm").isDisable()).isTrue();
     }
 
@@ -141,7 +135,7 @@ class RenameDialogTest extends ShellTestBase {
 
         type(typed);
 
-        assertThat(isShown("rename-error")).isTrue();
+        assertThat(isVisibleInScene("rename-error")).isTrue();
         assertThat(((Label) required("rename-error")).getText()).isEqualTo(USED_TEXT);
         assertThat(button("rename-confirm").isDisable()).isTrue();
     }
@@ -166,7 +160,7 @@ class RenameDialogTest extends ShellTestBase {
         type("Tide Tables");
         onFx(() -> button("rename-confirm").fire());
 
-        assertThat(isShown("rename-error")).isFalse();
+        assertThat(isVisibleInScene("rename-error")).isFalse();
         assertThat(answers).containsExactly("rename:Tide Tables");
         assertThat(isCardShowing()).isFalse();
     }
@@ -175,7 +169,7 @@ class RenameDialogTest extends ShellTestBase {
     void ask_withAnErrorFromTheService_showsItBeforeAnyEdit() {
         ask(NameOrigin.USER, true, USED_TEXT);
 
-        assertThat(isShown("rename-error")).isTrue();
+        assertThat(isVisibleInScene("rename-error")).isTrue();
         assertThat(((Label) required("rename-error")).getText()).isEqualTo(USED_TEXT);
     }
 
@@ -215,7 +209,7 @@ class RenameDialogTest extends ShellTestBase {
             final NameOrigin origin, final boolean pairFree, final boolean offered) {
         ask(origin, pairFree, null);
 
-        assertThat(isShown("rename-use-auto")).isEqualTo(offered);
+        assertThat(isVisibleInScene("rename-use-auto")).isEqualTo(offered);
     }
 
     // IF "use the automatic name" kept the origin USER, THEN the name would stop following the languages.
