@@ -31,6 +31,8 @@ final class ProviderIdentityFields {
     private final ToggleButton bearer = new ToggleButton();
     private final ToggleButton apiKey = new ToggleButton();
     private final Label keyStatus = new Label();
+    private final Label authHint = new Label();
+    private final Label keyWhere = new Label();
     private final FormGrid.Row keyHeaderRow;
     private final FormGrid.Row keyVariableRow;
 
@@ -48,7 +50,7 @@ final class ProviderIdentityFields {
         keys = new KeyFields(form, messages);
         grid.row(messages.get(MessageKey.SETTINGS_FORM_NAME), name.cell());
         grid.row(messages.get(MessageKey.SETTINGS_KIND_LABEL), kindCombo());
-        grid.row(messages.get(MessageKey.SETTINGS_FORM_AUTH), authButtons());
+        grid.row(messages.get(MessageKey.SETTINGS_FORM_AUTH), authBox());
         keyHeaderRow = grid.row(messages.get(MessageKey.SETTINGS_FORM_KEY_HEADER), keys.header.cell());
         keyVariableRow = grid.row(messages.get(MessageKey.SETTINGS_FORM_KEY_VARIABLE), keyVariableBox());
     }
@@ -107,6 +109,13 @@ final class ProviderIdentityFields {
         return kind;
     }
 
+    private VBox authBox() {
+        authHint.setId("settings-form-auth-hint");
+        authHint.getStyleClass().add("hint");
+        authHint.setWrapText(true);
+        return new VBox(4, authButtons(), authHint);
+    }
+
     private SegmentedButton authButtons() {
         label(
                 none,
@@ -142,7 +151,7 @@ final class ProviderIdentityFields {
         if (picked == null) {
             showAuth(form.draft().get().auth());
         } else {
-            form.edit(draft -> draft.withAuth(authOf(picked)));
+            form.edit(draft -> draft.withSignIn(authOf(picked)));
         }
     }
 
@@ -170,7 +179,11 @@ final class ProviderIdentityFields {
         final Label hint = new Label(messages.get(MessageKey.SETTINGS_FORM_KEY_VARIABLE_HINT));
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
-        return new VBox(4, new HBox(8, keys.variable.cell(), keyStatus), hint);
+        keyWhere.setId("settings-form-key-where");
+        keyWhere.getStyleClass().add("hint");
+        keyWhere.setWrapText(true);
+        showKeyWhere(false);
+        return new VBox(4, new HBox(8, keys.variable.cell(), keyStatus), keyWhere, hint);
     }
 
     void show(final ProviderDraft draft) {
@@ -181,6 +194,12 @@ final class ProviderIdentityFields {
             kind.setValue(draft.kind());
         }
         showAuth(draft.auth());
+        authHint.setText(messages.get(
+                switch (draft.auth()) {
+                    case NONE -> MessageKey.SETTINGS_FORM_AUTH_NONE_HINT;
+                    case BEARER -> MessageKey.SETTINGS_FORM_AUTH_BEARER_HINT;
+                    case API_KEY -> MessageKey.SETTINGS_FORM_AUTH_APIKEY_HINT;
+                }));
         keyHeaderRow.show(draft.auth() == ProviderAuth.API_KEY);
         keyVariableRow.show(draft.auth() != ProviderAuth.NONE);
     }
@@ -198,11 +217,24 @@ final class ProviderIdentityFields {
         keyStatus.setVisible(shown);
         keyStatus.setManaged(shown);
         keyStatus.getStyleClass().removeAll("key-status-set", "key-status-unset");
+        showKeyWhere(status == ProviderDraft.CredentialStatus.NOT_SET);
         if (shown) {
             final boolean isSet = status == ProviderDraft.CredentialStatus.SET;
             keyStatus.setText(
                     messages.get(isSet ? MessageKey.SETTINGS_FORM_KEY_SET : MessageKey.SETTINGS_FORM_KEY_NOT_SET));
             keyStatus.getStyleClass().add(isSet ? "key-status-set" : "key-status-unset");
+        }
+    }
+
+    // An unset variable is most often one the shell exports but an app opened from the Dock never sees: say where to
+    // set it so BookLoom reads it, naming the variable as typed.
+    private void showKeyWhere(final boolean notSet) {
+        keyWhere.setVisible(notSet);
+        keyWhere.setManaged(notSet);
+        if (notSet) {
+            keyWhere.setText(messages.get(
+                    MessageKey.SETTINGS_FORM_KEY_WHERE,
+                    form.draft().get().credentialRef().strip()));
         }
     }
 }

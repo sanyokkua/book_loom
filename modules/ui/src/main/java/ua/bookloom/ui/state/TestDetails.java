@@ -41,6 +41,7 @@ public final class TestDetails {
      * @param running whether a test is under way
      * @param providerName the name the provider is shown by
      * @param localProgram whether the provider is Ollama or LM Studio on this computer ({@link TestSubject#isLocalProgram})
+     * @param modelChosen whether the test was asked about a chosen model
      * @return the verdict, the request, the figures and the reply
      */
     public static TestDetail of(
@@ -49,7 +50,8 @@ public final class TestDetails {
             final List<StageChip> chips,
             final boolean running,
             final String providerName,
-            final boolean localProgram) {
+            final boolean localProgram,
+            final boolean modelChosen) {
         final Optional<StageChip> found =
                 chips.stream().filter(chip -> chip.stage() == stage).findFirst();
         if (running) {
@@ -70,7 +72,22 @@ public final class TestDetails {
                             MessageKey.SETTINGS_TEST_VERDICT_SKIPPED,
                             failed.map(Enum::name).orElse(EARLIER)));
         }
-        return measured(messages, found.get(), providerName, localProgram);
+        return measured(messages, found.get(), new Subject(providerName, localProgram, modelChosen));
+    }
+
+    /**
+     * Who a test was about, as far as the words of its result depend on it.
+     *
+     * @param providerName the name the provider is shown by
+     * @param localProgram whether it is Ollama or LM Studio on this computer
+     * @param modelChosen whether the test was asked about a chosen model
+     */
+    public record Subject(String providerName, boolean localProgram, boolean modelChosen) {
+
+        /** Rejects a missing name. */
+        public Subject {
+            Objects.requireNonNull(providerName, "providerName");
+        }
     }
 
     /**
@@ -94,18 +111,17 @@ public final class TestDetails {
         return new TestDetail(severity, verdict, "", "", "", "", List.of(), "", "");
     }
 
-    private static TestDetail measured(
-            final Messages messages, final StageChip chip, final String providerName, final boolean localProgram) {
+    private static TestDetail measured(final Messages messages, final StageChip chip, final Subject subject) {
         final @Nullable VerificationExchange exchange = chip.exchange();
         final String noBody = messages.get(MessageKey.SETTINGS_TEST_NO_BODY);
         return new TestDetail(
                 severityOf(chip.status()),
-                verdictOf(messages, chip, providerName, localProgram),
+                verdictOf(messages, chip, subject),
                 exchange == null ? "" : exchange.method() + " " + exchange.url(),
                 exchange == null ? "" : CurlCommand.of(exchange),
                 exchange == null ? "" : orElse(exchange.requestBody(), noBody),
                 exchange == null ? "" : orElse(exchange.responseBody(), noBody),
-                new TestMetrics(messages, chip, exchange).list(),
+                new TestMetrics(messages, chip, exchange, subject.modelChosen()).list(),
                 exchange == null ? "" : exchange.requestBody(),
                 exchange == null ? "" : exchange.responseBody());
     }
@@ -122,8 +138,9 @@ public final class TestDetails {
         };
     }
 
-    private static String verdictOf(
-            final Messages messages, final StageChip chip, final String providerName, final boolean localProgram) {
+    private static String verdictOf(final Messages messages, final StageChip chip, final Subject subject) {
+        final String providerName = subject.providerName();
+        final boolean localProgram = subject.localProgram();
         final @Nullable AppError error = chip.error();
         if (chip.status() == StageStatus.FAILED && error != null && isNotOpen(error, localProgram)) {
             return failureOf(messages, error, providerName, localProgram);
@@ -136,7 +153,11 @@ public final class TestDetails {
         }
         return switch (chip.stage()) {
             case CONNECTION -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_CONNECTION, providerName);
-            case MODELS -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_MODELS);
+            case MODELS ->
+                messages.get(
+                        subject.modelChosen()
+                                ? MessageKey.SETTINGS_TEST_VERDICT_MODELS
+                                : MessageKey.SETTINGS_TEST_VERDICT_MODELS_LISTED);
             case INFERENCE -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_INFERENCE);
         };
     }
@@ -178,7 +199,7 @@ public final class TestDetails {
 
     /** The figures of a finished test, in the order the middle column shows them. */
     private record TestMetrics(
-            Messages messages, StageChip chip, @Nullable VerificationExchange exchange) {
+            Messages messages, StageChip chip, @Nullable VerificationExchange exchange, boolean modelChosen) {
 
         List<Metric> list() {
             final List<Metric> figures = new ArrayList<>();
@@ -202,7 +223,7 @@ public final class TestDetails {
             figures.add(metric(
                     "chosen",
                     MessageKey.SETTINGS_TEST_METRIC_CHOSEN,
-                    chip.status() == StageStatus.PASSED
+                    chip.status() == StageStatus.PASSED && modelChosen
                             ? messages.get(MessageKey.SETTINGS_TEST_METRIC_LISTED)
                             : none()));
         }

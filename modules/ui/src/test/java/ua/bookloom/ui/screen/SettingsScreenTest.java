@@ -208,10 +208,10 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(required("provider-row-ollama").getStyleClass()).doesNotContain("list-item-selected");
     }
 
-    // IF Test connection waited for a model, or the other two did not, THEN a person could not ask whether anything
-    // is listening first, or could fire a model test against nothing.
+    // IF Test connection or Test models waited for a model, or Test inference did not, THEN a person could not ask
+    // what is listening and which models it has first, or could fire an inference against nothing (LAN-6).
     @Test
-    void testControls_noModel_connectionAvailableOthersPresentAndDisabled() {
+    void testControls_noModel_connectionAndModelsAvailableInferenceDisabled() {
         openSettings();
 
         assertThat(required("settings-test-connection")).isInstanceOfSatisfying(Button.class, button -> {
@@ -220,7 +220,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         });
         assertThat(required("settings-test-models")).isInstanceOfSatisfying(Button.class, button -> {
             assertThat(button.getText()).isEqualTo("Test models");
-            assertThat(button.isDisable()).isTrue();
+            assertThat(button.isDisable()).isFalse();
         });
         assertThat(required("settings-test-inference")).isInstanceOfSatisfying(Button.class, button -> {
             assertThat(button.getText()).isEqualTo("Test inference");

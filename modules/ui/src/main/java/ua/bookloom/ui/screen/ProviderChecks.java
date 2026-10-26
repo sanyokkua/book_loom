@@ -27,6 +27,7 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
+import ua.bookloom.ui.state.TestDetails;
 import ua.bookloom.ui.state.TestSubject;
 
 /**
@@ -200,6 +201,14 @@ final class ProviderChecks {
         };
     }
 
+    private TestDetails.Subject tested() {
+        final Optional<TestSubject> subject = viewModel.testedSubject().get();
+        return new TestDetails.Subject(
+                viewModel.testedName(),
+                subject.map(TestSubject::isLocalProgram).orElse(false),
+                subject.map(tested -> !tested.model().isBlank()).orElse(false));
+    }
+
     private void showResults() {
         final ProviderTest running = viewModel.tests().running().get();
         for (final VerificationStage stage : VerificationStage.values()) {
@@ -211,16 +220,7 @@ final class ProviderChecks {
             if (running != null && stage.compareTo(running.lastStage()) <= 0) {
                 chipRows.plain(result, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING), cell);
             } else if (found.isPresent()) {
-                chipRows.fill(
-                        result,
-                        found.get(),
-                        viewModel.testedName(),
-                        viewModel
-                                .testedSubject()
-                                .get()
-                                .map(TestSubject::isLocalProgram)
-                                .orElse(false),
-                        cell);
+                chipRows.fill(result, found.get(), tested(), cell);
             } else {
                 chipRows.plain(result, messages.get(MessageKey.SETTINGS_CHECK_NOT_RUN), cell);
             }

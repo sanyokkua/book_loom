@@ -239,6 +239,64 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
         assertThat(text("settings-form-key-status")).isEqualTo(words);
     }
 
+    // IF "not set" stood alone (LAN-1), THEN a person whose shell exports the key would not know why the app cannot
+    // see it, nor where to set it instead.
+    @Test
+    void keyStatus_notSet_showsWhereToSetTheVariable() {
+        openSettings();
+        openFold();
+        onFx(() -> ((ToggleButton) required("settings-form-auth-bearer")).setSelected(true));
+
+        setField("settings-form-key-variable", "OTHER_KEY");
+
+        assertThat(required("settings-form-key-where").isVisible()).isTrue();
+        assertThat(text("settings-form-key-where"))
+                .contains("launchctl setenv OTHER_KEY")
+                .contains("README");
+
+        setField("settings-form-key-variable", "OFFICE_KEY");
+
+        assertThat(required("settings-form-key-where").isVisible()).isFalse();
+    }
+
+    // IF the sign-in types were three bare words (LAN-3), THEN a person could not tell which one their server needs,
+    // and the API-key header would start empty.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "settings-form-auth-none|Sends no key",
+                "settings-form-auth-bearer|Authorization: Bearer <key>",
+                "settings-form-auth-apikey|X-Api-Key"
+            })
+    void authHint_eachSignIn_explainsWhatIsSent(final String toggle, final String words) {
+        openSettings();
+        openFold();
+
+        onFx(() -> ((ToggleButton) required(toggle)).setSelected(true));
+
+        assertThat(text("settings-form-auth-hint")).contains(words);
+    }
+
+    @Test
+    void auth_apiKeyPicked_defaultsTheHeaderNameToXApiKey() {
+        openSettings();
+        openFold();
+
+        onFx(() -> ((ToggleButton) required("settings-form-auth-apikey")).setSelected(true));
+
+        assertThat(((TextField) required("settings-form-key-header")).getText()).isEqualTo("X-Api-Key");
+    }
+
+    // IF the refresh icon had no words (LAN-6), THEN a screen reader would read "↻" and a person would guess.
+    @Test
+    void modelRefresh_icon_hasWordsForScreenReadersAndHover() {
+        openSettings();
+
+        assertThat(required("settings-model-refresh").getAccessibleText())
+                .isEqualTo("Asks the program for its list of models again.");
+    }
+
     // IF Ollama's chat endpoint could be edited, THEN a value would be saved that Ollama's own protocol ignores.
     @Test
     void chatPath_ollamaOpened_isOffWithTheReason() {

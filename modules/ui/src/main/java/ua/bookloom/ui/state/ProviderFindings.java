@@ -61,6 +61,8 @@ final class ProviderFindings {
             case HEADER_NAME_INVALID ->
                 new FormFinding(MessageKey.SETTINGS_ERROR_HEADER_NAME_INVALID, args, Field.HEADERS, true);
             case CREDENTIAL_REF_NOT_A_NAME -> blocking(MessageKey.SETTINGS_ERROR_REF_NOT_NAME, Field.KEY_VARIABLE);
+            case CREDENTIAL_REF_REFERENCE ->
+                new FormFinding(MessageKey.SETTINGS_ERROR_REF_REFERENCE, args, Field.KEY_VARIABLE, true);
             case CREDENTIAL_REF_MISSING -> blocking(MessageKey.SETTINGS_ERROR_REF_MISSING, Field.KEY_VARIABLE);
             case API_KEY_HEADER_MISSING -> blocking(MessageKey.SETTINGS_ERROR_KEY_HEADER_MISSING, Field.KEY_HEADER);
             case API_KEY_HEADER_INVALID ->

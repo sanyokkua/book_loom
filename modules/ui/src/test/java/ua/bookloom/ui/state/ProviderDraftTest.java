@@ -246,6 +246,39 @@ class ProviderDraftTest {
         assertThat(draft.findings().toString()).doesNotContain("sk-123");
     }
 
+    // IF a shell reference were refused only as "not a name" (LAN-5), THEN the person would not see what to type.
+    @ParameterizedTest
+    @ValueSource(strings = {"$LMS_KEY", "${LMS_KEY}", "${env:LMS_KEY}", "%LMS_KEY%"})
+    void findings_variableWrittenAsAReference_blocksNamingTheBareName(final String typed) {
+        final ProviderDraft draft = officeLm().withAuth(ProviderAuth.BEARER).withCredentialRef(typed);
+
+        assertThat(draft.findings())
+                .containsExactly(new ProviderDraft.FormFinding(
+                        MessageKey.SETTINGS_ERROR_REF_REFERENCE,
+                        List.of("LMS_KEY"),
+                        ProviderDraft.Field.KEY_VARIABLE,
+                        true));
+    }
+
+    // IF the API-key header started empty (LAN-3), THEN the form would block until the person guessed a name.
+    @Test
+    void withSignIn_apiKeyWithNoHeader_defaultsTheHeaderToXApiKey() {
+        assertThat(officeLm().withSignIn(ProviderAuth.API_KEY).apiKeyHeader()).isEqualTo("X-Api-Key");
+    }
+
+    @Test
+    void withSignIn_apiKeyWithAHeader_keepsIt() {
+        final ProviderDraft draft = officeLm().withApiKeyHeader("api-key").withSignIn(ProviderAuth.API_KEY);
+
+        assertThat(draft.apiKeyHeader()).isEqualTo("api-key");
+        assertThat(draft.auth()).isEqualTo(ProviderAuth.API_KEY);
+    }
+
+    @Test
+    void withSignIn_bearer_leavesTheHeaderAlone() {
+        assertThat(officeLm().withSignIn(ProviderAuth.BEARER).apiKeyHeader()).isEmpty();
+    }
+
     @Test
     void findings_apiKeyWithoutHeader_blocksOnTheHeaderField() {
         final ProviderDraft draft = officeLm().withAuth(ProviderAuth.API_KEY).withCredentialRef("LMS_KEY");

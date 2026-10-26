@@ -683,6 +683,8 @@ public enum MessageKey {
     SETTINGS_ERROR_HEADER_NAME_INVALID("settings.error.headerNameInvalid"),
     /** Error under the key variable: a variable's name is wanted, not a key. */
     SETTINGS_ERROR_REF_NOT_NAME("settings.error.refNotName"),
+    /** Error under the key variable: it is written as a reference ($NAME); argument 0 is the bare name. */
+    SETTINGS_ERROR_REF_REFERENCE("settings.error.refReference"),
     /** Error under the key variable: the sign-in needs a variable's name. */
     SETTINGS_ERROR_REF_MISSING("settings.error.refMissing"),
     /** Error under the key header: an API-key sign-in needs the header's name. */
@@ -739,6 +741,12 @@ public enum MessageKey {
     SETTINGS_FORM_AUTH_APIKEY("settings.form.auth.apikey"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_AUTH_APIKEY}. */
     SETTINGS_FORM_AUTH_APIKEY_TIP("settings.form.auth.apikey.tip"),
+    /** Line under the sign-in choice when it is None: what is sent. */
+    SETTINGS_FORM_AUTH_NONE_HINT("settings.form.auth.none.hint"),
+    /** Line under the sign-in choice when it is Bearer token: what is sent and which servers want it. */
+    SETTINGS_FORM_AUTH_BEARER_HINT("settings.form.auth.bearer.hint"),
+    /** Line under the sign-in choice when it is API-key header: what is sent. */
+    SETTINGS_FORM_AUTH_APIKEY_HINT("settings.form.auth.apikey.hint"),
     /** Label of the field naming the header that carries the key. */
     SETTINGS_FORM_KEY_HEADER("settings.form.keyHeader"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_KEY_HEADER}. */
@@ -753,6 +761,8 @@ public enum MessageKey {
     SETTINGS_FORM_KEY_SET("settings.form.key.set"),
     /** Status of a key variable that has no value. */
     SETTINGS_FORM_KEY_NOT_SET("settings.form.key.notSet"),
+    /** Line under an unset key variable: where to set it so BookLoom reads it; argument 0 is the variable's name. */
+    SETTINGS_FORM_KEY_WHERE("settings.form.key.where"),
     /** Label of the base address field. */
     SETTINGS_FORM_ADDRESS("settings.form.address"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_FORM_ADDRESS}. */
@@ -3640,8 +3650,14 @@ public enum MessageKey {
     SETTINGS_CHECK_CONNECTION_FAILED("settings.check.connection.failed"),
     /** Providers test: the connection was not tried because the key's variable is unset; argument: provider name. */
     SETTINGS_CHECK_CONNECTION_NO_KEY("settings.check.connection.noKey"),
+    /** Connection result when the server answered but refused the sign-in (401/403); 0 is the provider's name. */
+    SETTINGS_CHECK_CONNECTION_REFUSED("settings.check.connection.refused"),
+    /** Connection result when the server answered with an error; 0 is the provider's name. */
+    SETTINGS_CHECK_CONNECTION_ANSWERED("settings.check.connection.answered"),
     /** Models result when the chosen model is listed; 0 is the count. */
     SETTINGS_CHECK_MODELS_OK("settings.check.models.ok"),
+    /** Models result when no model is chosen yet; 0 is the count. */
+    SETTINGS_CHECK_MODELS_LISTED("settings.check.models.listed"),
     /** Models result for a server that answers but lists no models. */
     SETTINGS_CHECK_MODELS_SOFT("settings.check.models.soft"),
     /** Inference result; 0 is the time as "1.2 s". */
@@ -3654,6 +3670,8 @@ public enum MessageKey {
     SETTINGS_TEST_VERDICT_CONNECTION("settings.test.verdict.connection"),
     /** Verdict of a passed models test. */
     SETTINGS_TEST_VERDICT_MODELS("settings.test.verdict.models"),
+    /** Verdict of a passed models test with no model chosen yet. */
+    SETTINGS_TEST_VERDICT_MODELS_LISTED("settings.test.verdict.modelsListed"),
     /** Verdict of a models test that connected and read no list. */
     SETTINGS_TEST_VERDICT_MODELS_SOFT("settings.test.verdict.modelsSoft"),
     /** Verdict of a passed inference test. */

@@ -113,6 +113,8 @@ final class ModelField {
         refresh.getStyleClass().add("btn-ghost");
         refresh.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, refresh, MessageKey.SETTINGS_FORM_MODEL_REFRESH_TIP);
+        // The button shows only an arrow; a screen reader reads what it does instead.
+        refresh.setAccessibleText(messages.get(MessageKey.SETTINGS_FORM_MODEL_REFRESH_TIP));
         refresh.setOnAction(event -> viewModel.refreshModels());
         HBox.setHgrow(combo, Priority.SOMETIMES);
         return new HBox(8, combo, refresh);

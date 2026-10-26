@@ -52,7 +52,8 @@ class TestDetailsTest {
                 List.of(passed(VerificationStage.INFERENCE, CHAT)),
                 false,
                 "Ollama",
-                false);
+                false,
+                true);
 
         assertThat(detail.severity()).isEqualTo(Severity.OK);
         assertThat(detail.verdict()).isEqualTo("The model replied correctly. Translation can start.");
@@ -76,7 +77,8 @@ class TestDetailsTest {
                 List.of(passed(VerificationStage.INFERENCE, CHAT)),
                 false,
                 "Ollama",
-                false);
+                false,
+                true);
 
         assertThat(detail.requestLine()).isEqualTo("POST http://127.0.0.1:11434/api/chat");
         assertThat(detail.curl()).contains("Authorization: Bearer ••••").doesNotContain("sk-");
@@ -95,7 +97,8 @@ class TestDetailsTest {
                 List.of(passed(VerificationStage.CONNECTION, tags)),
                 false,
                 "Ollama",
-                false);
+                false,
+                true);
 
         assertThat(detail.verdict()).isEqualTo("Ollama answers.");
         assertThat(detail.body()).isEqualTo("(no body)");
@@ -107,7 +110,13 @@ class TestDetailsTest {
     @Test
     void of_modelsPassed_showsTheCountAndThatTheChosenOneIsListed() {
         final TestDetail detail = TestDetails.of(
-                EN, VerificationStage.MODELS, List.of(passed(VerificationStage.MODELS, CHAT)), false, "Ollama", false);
+                EN,
+                VerificationStage.MODELS,
+                List.of(passed(VerificationStage.MODELS, CHAT)),
+                false,
+                "Ollama",
+                false,
+                true);
 
         assertThat(detail.verdict()).isEqualTo("The list of models was read and the chosen model is in it.");
         assertThat(metricsOf(detail))
@@ -117,6 +126,22 @@ class TestDetailsTest {
                         tuple("time", "1.2 s"),
                         tuple("models", "7"),
                         tuple("chosen", "listed ✓"));
+    }
+
+    // IF the models test claimed a chosen model when none was chosen (LAN-6), THEN it would report a check never made.
+    @Test
+    void of_modelsPassedWithNoModelChosen_saysOnlyThatTheListWasRead() {
+        final TestDetail detail = TestDetails.of(
+                EN,
+                VerificationStage.MODELS,
+                List.of(passed(VerificationStage.MODELS, CHAT)),
+                false,
+                "Ollama",
+                false,
+                false);
+
+        assertThat(detail.verdict()).isEqualTo("The list of models was read. No model is chosen yet.");
+        assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("chosen", "—"));
     }
 
     // IF a server without a list read as a failure, THEN it could not be told from a server that is down.
@@ -131,7 +156,8 @@ class TestDetailsTest {
                 0,
                 null);
 
-        final TestDetail detail = TestDetails.of(EN, VerificationStage.MODELS, List.of(soft), false, "Ollama", false);
+        final TestDetail detail =
+                TestDetails.of(EN, VerificationStage.MODELS, List.of(soft), false, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.WARN);
         assertThat(detail.verdict()).isEqualTo("The server answers, but its list of models could not be read.");
@@ -144,7 +170,7 @@ class TestDetailsTest {
         final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, rejected, null);
 
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false);
+                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false, true);
 
         assertThat(metricsOf(detail)).extracting(Metric::name, Metric::value).contains(tuple("status", "—"));
     }
@@ -155,7 +181,7 @@ class TestDetailsTest {
         final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, unreachable, null);
 
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false);
+                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.ERR);
         assertThat(detail.verdict()).isEqualTo("This test did not pass: The server did not answer.");
@@ -167,7 +193,7 @@ class TestDetailsTest {
     @Test
     void of_localProgramUnreachable_saysTheProgramIsNotOpen() {
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(unreachable()), false, "Ollama", true);
+                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(unreachable()), false, "Ollama", true, true);
 
         assertThat(detail.verdict()).isEqualTo("Ollama is not open. Open the app, then test again.");
     }
@@ -175,7 +201,7 @@ class TestDetailsTest {
     @Test
     void of_localProgramUnreachableInUkrainian_saysTheProgramIsNotOpenInUkrainian() {
         final TestDetail detail =
-                TestDetails.of(UK, VerificationStage.CONNECTION, List.of(unreachable()), false, "Ollama", true);
+                TestDetails.of(UK, VerificationStage.CONNECTION, List.of(unreachable()), false, "Ollama", true, true);
 
         assertThat(detail.verdict()).isEqualTo("Ollama не відкрито. Відкрийте застосунок і перевірте ще раз.");
     }
@@ -193,7 +219,7 @@ class TestDetailsTest {
         final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, rejected, null);
 
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", true);
+                TestDetails.of(EN, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", true, true);
 
         assertThat(detail.verdict()).isEqualTo("This test did not pass: The server failed.");
     }
@@ -205,11 +231,28 @@ class TestDetailsTest {
         final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, unreachable, null);
 
         final TestDetail detail =
-                TestDetails.of(UK, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false);
+                TestDetails.of(UK, VerificationStage.CONNECTION, List.of(failed), false, "Ollama", false, true);
 
         assertThat(detail.verdict())
                 .isEqualTo("Перевірка не пройшла: За адресою моделі ШІ ніщо не відповідає. Перевірте, чи відкрито її"
                         + " програму.");
+    }
+
+    // IF a wrong path read as a generic invalid input in Ukrainian (LAN-4), THEN nobody would think of the /v1.
+    @Test
+    void of_wrongPathInUkrainian_saysTheAddressProbablyNeedsV1() {
+        final AppError wrongPath = AppError.of(
+                ErrorCode.validation,
+                "Wrong path",
+                "The server answered, but it does not serve this path.",
+                "reason=wrong-path, httpStatus=200",
+                null);
+        final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, wrongPath, null);
+
+        final TestDetail detail =
+                TestDetails.of(UK, VerificationStage.CONNECTION, List.of(failed), false, "LM Studio", true, true);
+
+        assertThat(detail.verdict()).contains("/v1");
     }
 
     // IF a test the server never reached read as failed, THEN the person would blame the wrong stage.
@@ -219,7 +262,7 @@ class TestDetailsTest {
         final StageChip skipped = new StageChip(VerificationStage.INFERENCE, StageStatus.SKIPPED, null, null);
 
         final TestDetail detail =
-                TestDetails.of(EN, VerificationStage.INFERENCE, List.of(failed, skipped), false, "Ollama", false);
+                TestDetails.of(EN, VerificationStage.INFERENCE, List.of(failed, skipped), false, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.WARN);
         assertThat(detail.verdict()).isEqualTo("Not attempted — the connection failed first.");
@@ -231,7 +274,8 @@ class TestDetailsTest {
     void of_notReportedAfterAFailedConnectionInUkrainian_saysItWasNotAttempted() {
         final StageChip failed = new StageChip(VerificationStage.CONNECTION, StageStatus.FAILED, null, null);
 
-        final TestDetail detail = TestDetails.of(UK, VerificationStage.MODELS, List.of(failed), false, "Ollama", false);
+        final TestDetail detail =
+                TestDetails.of(UK, VerificationStage.MODELS, List.of(failed), false, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.WARN);
         assertThat(detail.verdict()).isEqualTo("Не перевірялося — спершу не вдалося з’єднатися.");
@@ -240,7 +284,7 @@ class TestDetailsTest {
 
     @Test
     void of_nothingRunYet_isInfoThatSaysInferenceChecksAllThree() {
-        final TestDetail detail = TestDetails.of(EN, VerificationStage.MODELS, List.of(), false, "Ollama", false);
+        final TestDetail detail = TestDetails.of(EN, VerificationStage.MODELS, List.of(), false, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.INFO);
         assertThat(detail.verdict()).isEqualTo("Not tested yet. Test inference checks all three.");
@@ -249,7 +293,8 @@ class TestDetailsTest {
 
     @Test
     void of_running_isInfoTesting() {
-        final TestDetail detail = TestDetails.of(EN, VerificationStage.INFERENCE, List.of(), true, "Ollama", false);
+        final TestDetail detail =
+                TestDetails.of(EN, VerificationStage.INFERENCE, List.of(), true, "Ollama", false, true);
 
         assertThat(detail.severity()).isEqualTo(Severity.INFO);
         assertThat(detail.verdict()).isEqualTo("Testing...");
@@ -263,7 +308,8 @@ class TestDetailsTest {
                 List.of(passed(VerificationStage.INFERENCE, CHAT)),
                 false,
                 "Ollama",
-                false);
+                false,
+                true);
 
         assertThat(detail.verdict()).isEqualTo("Модель відповіла правильно. Можна починати переклад.");
         assertThat(metricsOf(detail)).extracting(Metric::label).contains("Швидкість", "Перший токен");

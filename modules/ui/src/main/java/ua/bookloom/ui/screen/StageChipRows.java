@@ -28,14 +28,11 @@ final class StageChipRows {
     }
 
     /** Draws a finding into its result label and, under a failed or qualified one, its reason; returns the cell. */
-    VBox fill(
-            final Label result,
-            final StageChip stage,
-            final String providerName,
-            final boolean localProgram,
-            final VBox cell) {
+    VBox fill(final Label result, final StageChip stage, final TestDetails.Subject tested, final VBox cell) {
         final ChipLook look = ChipLook.of(stage.status());
-        result.setText(textOf(stage, look, providerName));
+        final String providerName = tested.providerName();
+        final boolean localProgram = tested.localProgram();
+        result.setText(textOf(stage, look, providerName, tested.modelChosen()));
         result.getStyleClass().setAll("label", "check-result", "chip", look.styleClass());
         cell.getChildren().setAll(result);
         final String reason = reasonOf(stage, providerName, localProgram);
@@ -52,8 +49,9 @@ final class StageChipRows {
         cell.getChildren().setAll(result);
     }
 
-    private String textOf(final StageChip stage, final ChipLook look, final String providerName) {
-        return CheckSentences.of(messages, stage, providerName)
+    private String textOf(
+            final StageChip stage, final ChipLook look, final String providerName, final boolean modelChosen) {
+        return CheckSentences.of(messages, stage, providerName, modelChosen)
                 .map(sentence -> look.glyph() + " " + sentence)
                 .orElseGet(() -> messages.get(
                         MessageKey.SETTINGS_CHIP,

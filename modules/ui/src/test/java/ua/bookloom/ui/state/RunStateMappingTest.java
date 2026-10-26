@@ -295,7 +295,8 @@ class RunStateMappingTest {
         assertThat(view.banner()).isNotNull();
         assertThat(view.banner().text()).isNotNull();
         assertThat(view.banner().text().in(ukrainian))
-                .isEqualTo("Ключ не прийнято. Перевірте його в Налаштуваннях › Постачальники.");
+                .isEqualTo("Сервер відповів 401 або 403: вхід відсутній або хибний. Перевірте тип входу та змінну з"
+                        + " ключем у Налаштуваннях › Постачальники.");
     }
 
     // IF Start waited silently for the names pass, THEN the person would not know what holds it.

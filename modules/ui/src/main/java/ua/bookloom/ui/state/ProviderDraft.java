@@ -62,6 +62,9 @@ public record ProviderDraft(
         List<HeaderRow> headers,
         List<String> customModels) {
 
+    /** The key header an API-key sign-in starts with. */
+    public static final String DEFAULT_KEY_HEADER = "X-Api-Key";
+
     private static final String OLLAMA_ADDRESS = "http://localhost:11434";
     private static final String OPENAI_ADDRESS = "http://localhost:1234/v1";
     private static final String STAND_IN_ADDRESS = "http://localhost";
@@ -231,6 +234,20 @@ public record ProviderDraft(
         final Set<String> names = new LinkedHashSet<>(offered);
         customModels.stream().map(String::strip).filter(name -> !name.isEmpty()).forEach(names::add);
         return List.copyOf(names);
+    }
+
+    /**
+     * Changes how requests sign in; an API-key sign-in with no header name yet gets {@value #DEFAULT_KEY_HEADER}, the
+     * name most servers that take a key in their own header expect, so the form does not start out refused.
+     *
+     * @param newAuth the sign-in picked
+     * @return the draft with that sign-in
+     */
+    public ProviderDraft withSignIn(final ProviderAuth newAuth) {
+        Objects.requireNonNull(newAuth, "newAuth");
+        final boolean defaultHeader = newAuth == ProviderAuth.API_KEY && apiKeyHeader.isBlank();
+        final ProviderDraft signedIn = withAuth(newAuth);
+        return defaultHeader ? signedIn.withApiKeyHeader(DEFAULT_KEY_HEADER) : signedIn;
     }
 
     /**

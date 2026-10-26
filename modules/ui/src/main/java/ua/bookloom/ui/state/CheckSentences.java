@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.StageStatus;
@@ -27,9 +28,11 @@ public final class CheckSentences {
      * @param messages the catalogue the words come from
      * @param chip the finding
      * @param providerName the name the provider is shown by
+     * @param modelChosen whether the test was asked about a chosen model; without one, a model list is only counted
      * @return the sentence, or empty when the finding has no sentence of its own and the generic chip words apply
      */
-    public static Optional<String> of(final Messages messages, final StageChip chip, final String providerName) {
+    public static Optional<String> of(
+            final Messages messages, final StageChip chip, final String providerName, final boolean modelChosen) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(chip, "chip");
         Objects.requireNonNull(providerName, "providerName");
@@ -38,7 +41,7 @@ public final class CheckSentences {
         }
         return switch (chip.stage()) {
             case CONNECTION -> connection(messages, chip, providerName);
-            case MODELS -> models(messages, chip);
+            case MODELS -> models(messages, chip, modelChosen);
             case INFERENCE -> inference(messages, chip);
         };
     }
@@ -47,13 +50,7 @@ public final class CheckSentences {
             final Messages messages, final StageChip chip, final String providerName) {
         final Duration elapsed = chip.elapsed();
         if (chip.status() == StageStatus.FAILED) {
-            // An unset key variable stops the request before it is sent: the server was never asked, so the headline
-            // names the cause instead of saying it does not answer.
-            final AppError error = chip.error();
-            final boolean noKey = error != null && error.code() == ErrorCode.missingCredential;
-            return Optional.of(messages.get(
-                    noKey ? MessageKey.SETTINGS_CHECK_CONNECTION_NO_KEY : MessageKey.SETTINGS_CHECK_CONNECTION_FAILED,
-                    providerName));
+            return Optional.of(messages.get(failedHeadline(chip.error()), providerName));
         }
         return chip.status() == StageStatus.PASSED && elapsed != null
                 ? Optional.of(messages.get(
@@ -61,13 +58,36 @@ public final class CheckSentences {
                 : Optional.empty();
     }
 
-    private static Optional<String> models(final Messages messages, final StageChip chip) {
+    // Only silence reads as "does not answer". An unset key variable stops the request before it is sent, and a refused
+    // sign-in or an error reply means the server did answer: each headline names that, and the line under it the fix.
+    private static MessageKey failedHeadline(final @Nullable AppError error) {
+        final ErrorCode code = error == null ? ErrorCode.unreachable : error.code();
+        return switch (code) {
+            case missingCredential -> MessageKey.SETTINGS_CHECK_CONNECTION_NO_KEY;
+            case auth -> MessageKey.SETTINGS_CHECK_CONNECTION_REFUSED;
+            case unreachable, timeout, cancelled -> MessageKey.SETTINGS_CHECK_CONNECTION_FAILED;
+            case rateLimited,
+                    modelNotFound,
+                    discoveryFailed,
+                    modelUnavailable,
+                    upstream,
+                    contextWindow,
+                    emptyCompletion,
+                    validation,
+                    internal,
+                    busy -> MessageKey.SETTINGS_CHECK_CONNECTION_ANSWERED;
+        };
+    }
+
+    private static Optional<String> models(final Messages messages, final StageChip chip, final boolean modelChosen) {
         final Integer count = chip.count();
         if (chip.status() == StageStatus.SOFT_PASS) {
             return Optional.of(messages.get(MessageKey.SETTINGS_CHECK_MODELS_SOFT));
         }
         return chip.status() == StageStatus.PASSED && count != null
-                ? Optional.of(messages.get(MessageKey.SETTINGS_CHECK_MODELS_OK, count))
+                ? Optional.of(messages.get(
+                        modelChosen ? MessageKey.SETTINGS_CHECK_MODELS_OK : MessageKey.SETTINGS_CHECK_MODELS_LISTED,
+                        count))
                 : Optional.empty();
     }
 

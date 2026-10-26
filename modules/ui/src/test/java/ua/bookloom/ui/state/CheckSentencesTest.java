@@ -32,7 +32,7 @@ class CheckSentencesTest {
     void of_connectionPassed_saysWhoAnswersAndHowFast(final long millis, final String expected) {
         final StageChip passed = chip(VerificationStage.CONNECTION, StageStatus.PASSED, millis, null);
 
-        assertThat(CheckSentences.of(EN, passed, "Ollama")).contains(expected);
+        assertThat(CheckSentences.of(EN, passed, "Ollama", true)).contains(expected);
     }
 
     @Test
@@ -43,8 +43,8 @@ class CheckSentencesTest {
                 AppError.of(ErrorCode.unreachable, "Unreachable", "No answer."),
                 null);
 
-        assertThat(CheckSentences.of(EN, failed, "Office LM")).contains("Office LM does not answer");
-        assertThat(CheckSentences.of(UK, failed, "Office LM")).contains("Office LM не відповідає");
+        assertThat(CheckSentences.of(EN, failed, "Office LM", true)).contains("Office LM does not answer");
+        assertThat(CheckSentences.of(UK, failed, "Office LM", true)).contains("Office LM не відповідає");
     }
 
     // IF an unset key variable read "QA Test does not answer", THEN the person would look at the server, which was
@@ -57,10 +57,46 @@ class CheckSentencesTest {
                 AppError.of(ErrorCode.missingCredential, "Missing credential", "QA_KEY is not set."),
                 null);
 
-        assertThat(CheckSentences.of(EN, failed, "QA Test"))
-                .contains("QA Test: the key is missing — its environment variable is not set");
-        assertThat(CheckSentences.of(UK, failed, "QA Test"))
-                .contains("QA Test: ключа немає — змінну середовища з ключем не задано");
+        assertThat(CheckSentences.of(EN, failed, "QA Test", true)).contains("QA Test: the key is not set");
+        assertThat(CheckSentences.of(UK, failed, "QA Test", true)).contains("QA Test: ключ не задано");
+    }
+
+    // IF a refused sign-in read "does not answer" (LAN-2), THEN the person would look for a closed program, though
+    // the server answered.
+    @Test
+    void of_connectionRefusedSignIn_saysTheServerAnsweredButRefusedIt() {
+        final StageChip failed = new StageChip(
+                VerificationStage.CONNECTION,
+                StageStatus.FAILED,
+                AppError.of(ErrorCode.auth, "Refused", "The server answered 401."),
+                null);
+
+        assertThat(CheckSentences.of(EN, failed, "Office LM", true))
+                .contains("Office LM answered, but refused the sign-in");
+        assertThat(CheckSentences.of(UK, failed, "Office LM", true))
+                .contains("Office LM: сервер відповів, але не прийняв вхід");
+    }
+
+    // IF an answered error (a wrong path, a server error) read "does not answer", THEN the address would look dead.
+    @ParameterizedTest
+    @CsvSource({"validation", "upstream", "internal"})
+    void of_connectionAnsweredWithAnError_saysTheServerAnswered(final ErrorCode code) {
+        final StageChip failed = new StageChip(
+                VerificationStage.CONNECTION, StageStatus.FAILED, AppError.of(code, "Failed", "It failed."), null);
+
+        assertThat(CheckSentences.of(EN, failed, "Office LM", true))
+                .contains("Office LM answered, but the check did not pass");
+        assertThat(CheckSentences.of(UK, failed, "Office LM", true))
+                .contains("Office LM: сервер відповів, але перевірка не пройшла");
+    }
+
+    // IF the models check needed a chosen model (LAN-6), THEN a new provider could not list its models first.
+    @Test
+    void of_modelsPassedWithNoModelChosen_onlyCountsTheModels() {
+        final StageChip passed = chip(VerificationStage.MODELS, StageStatus.PASSED, 5, 7);
+
+        assertThat(CheckSentences.of(EN, passed, "Ollama", false)).contains("7 models found");
+        assertThat(CheckSentences.of(UK, passed, "Ollama", false)).contains("Знайдено 7 моделей");
     }
 
     // IF the count were not worded, THEN "7" would not say that the chosen model is among them.
@@ -69,7 +105,7 @@ class CheckSentencesTest {
     void of_modelsPassed_countsAndSaysTheChosenOneIsThere(final int count, final String expected) {
         final StageChip passed = chip(VerificationStage.MODELS, StageStatus.PASSED, 5, count);
 
-        assertThat(CheckSentences.of(EN, passed, "Ollama")).contains(expected);
+        assertThat(CheckSentences.of(EN, passed, "Ollama", true)).contains(expected);
     }
 
     @ParameterizedTest
@@ -78,7 +114,7 @@ class CheckSentencesTest {
     void of_modelsPassedInUkrainian_usesTheRightPlural(final int count, final String expected) {
         final StageChip passed = chip(VerificationStage.MODELS, StageStatus.PASSED, 5, count);
 
-        assertThat(CheckSentences.of(UK, passed, "Ollama")).contains(expected);
+        assertThat(CheckSentences.of(UK, passed, "Ollama", true)).contains(expected);
     }
 
     // IF a server without a list read as a failure, THEN it could never be used.
@@ -86,15 +122,16 @@ class CheckSentencesTest {
     void of_modelsSoftPass_saysConnectedButNoList() {
         final StageChip soft = chip(VerificationStage.MODELS, StageStatus.SOFT_PASS, 5, 0);
 
-        assertThat(CheckSentences.of(EN, soft, "Ollama")).contains("Connected — the list of models could not be read");
+        assertThat(CheckSentences.of(EN, soft, "Ollama", true))
+                .contains("Connected — the list of models could not be read");
     }
 
     @Test
     void of_inferencePassed_saysHowLongTheModelTook() {
         final StageChip passed = chip(VerificationStage.INFERENCE, StageStatus.PASSED, 1200, null);
 
-        assertThat(CheckSentences.of(EN, passed, "Ollama")).contains("The model replied in 1.2 s");
-        assertThat(CheckSentences.of(UK, passed, "Ollama")).contains("Модель відповіла за 1,2 с");
+        assertThat(CheckSentences.of(EN, passed, "Ollama", true)).contains("The model replied in 1.2 s");
+        assertThat(CheckSentences.of(UK, passed, "Ollama", true)).contains("Модель відповіла за 1,2 с");
     }
 
     // IF a test the server never reached read as passed or failed, THEN the person would blame the wrong stage.
@@ -102,8 +139,8 @@ class CheckSentencesTest {
     void of_skipped_saysWhichStageWasNotAttempted() {
         final StageChip skipped = new StageChip(VerificationStage.INFERENCE, StageStatus.SKIPPED, null, null);
 
-        assertThat(CheckSentences.of(EN, skipped, "Ollama")).contains("Inference: not attempted");
-        assertThat(CheckSentences.of(UK, skipped, "Ollama")).contains("Відповідь моделі: не перевірялося");
+        assertThat(CheckSentences.of(EN, skipped, "Ollama", true)).contains("Inference: not attempted");
+        assertThat(CheckSentences.of(UK, skipped, "Ollama", true)).contains("Відповідь моделі: не перевірялося");
     }
 
     // IF a finding without a measurement made up a sentence, THEN it would claim a number nobody measured.
@@ -111,7 +148,7 @@ class CheckSentencesTest {
     void of_passedWithNoMeasurement_hasNoSentenceOfItsOwn() {
         final StageChip bare = new StageChip(VerificationStage.CONNECTION, StageStatus.PASSED, null, null);
 
-        assertThat(CheckSentences.of(EN, bare, "Ollama")).isEqualTo(Optional.empty());
+        assertThat(CheckSentences.of(EN, bare, "Ollama", true)).isEqualTo(Optional.empty());
     }
 
     @Test

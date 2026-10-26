@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -48,6 +49,13 @@ public interface ProviderConfigRules {
             Pattern.compile("(sk|pk|rk|ghp|gho|ghu|ghs|ghr|github_pat|glpat|hf|xox[abprs])[-_].*|AKIA[0-9A-Z]{16}"
                     + "|(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9_]{24,}");
 
+    /**
+     * A variable written the way a shell or a header value refers to it ({@code $NAME}, {@code ${NAME}},
+     * {@code ${env:NAME}}, {@code %NAME%}) where only its name belongs; group 1 or 2 is the bare name.
+     */
+    Pattern VARIABLE_REFERENCE =
+            Pattern.compile("\\$(?:\\{(?:env:)?)?([A-Za-z_][A-Za-z0-9_]*)}?|%([A-Za-z_][A-Za-z0-9_]*)%");
+
     /** The highest TCP port. */
     int MAX_PORT = 65_535;
 
@@ -76,6 +84,8 @@ public interface ProviderConfigRules {
         CREDENTIAL_HEADER_LITERAL,
         /** The sign-in reference is not an environment variable name. */
         CREDENTIAL_REF_NOT_A_NAME,
+        /** The sign-in reference refers to a variable ({@code $NAME}) instead of naming it; the subject is the name. */
+        CREDENTIAL_REF_REFERENCE,
         /** Sign-in is on but no environment variable name is given. */
         CREDENTIAL_REF_MISSING,
         /** An API-key sign-in names no header. */
@@ -220,6 +230,9 @@ public interface ProviderConfigRules {
     private static void checkSignIn(
             final ProviderConfig config, final List<AppError> errors, final List<Finding> findings) {
         final String reference = config.credentialRef();
+        if (reference != null && isReference(reference, errors, findings)) {
+            return;
+        }
         if (reference != null && !reference.isBlank() && !isVariableName(reference)) {
             errors.add(validation("The sign-in reference must be the name of an environment variable (letters, digits"
                     + " and underscores, not starting with a digit), never the key itself."));
@@ -244,6 +257,19 @@ public interface ProviderConfigRules {
                     + " holds a space, a colon or another character a header name may not."));
             findings.add(new Finding(Rule.API_KEY_HEADER_INVALID, keyHeader));
         }
+    }
+
+    // A variable written as $NAME or ${env:NAME} is named back bare, so the person sees exactly what to type instead.
+    private static boolean isReference(
+            final String reference, final List<AppError> errors, final List<Finding> findings) {
+        final Matcher written = VARIABLE_REFERENCE.matcher(reference.strip());
+        if (!written.matches()) {
+            return false;
+        }
+        final String bare = written.group(1) != null ? written.group(1) : written.group(2);
+        errors.add(validation("Enter only the variable's name, " + bare + ", without $ or braces."));
+        findings.add(new Finding(Rule.CREDENTIAL_REF_REFERENCE, bare));
+        return true;
     }
 
     /**

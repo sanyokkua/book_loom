@@ -83,19 +83,34 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         return onFx(() -> runner.available(test).get());
     }
 
-    // IF the connection test waited for a model, THEN nobody could ask whether anything is listening before choosing.
+    // IF the connection or models test waited for a model (LAN-6), THEN nobody could ask what is listening, or list
+    // its models, before choosing one; only the inference test needs a model.
     @Test
-    void available_noModel_onlyTheConnectionTestIsAvailableAndChoosingEnablesTheRest() {
+    void available_noModel_connectionAndModelsAreAvailableAndChoosingEnablesInference() {
         final ProviderTestRunner runner = runner(ScriptedProviderVerifier.idle());
 
         assertThat(available(runner, ProviderTest.CONNECTION)).isTrue();
-        assertThat(available(runner, ProviderTest.MODELS)).isFalse();
+        assertThat(available(runner, ProviderTest.MODELS)).isTrue();
         assertThat(available(runner, ProviderTest.INFERENCE)).isFalse();
 
         setModel("gemma3:12b");
 
-        assertThat(available(runner, ProviderTest.MODELS)).isTrue();
         assertThat(available(runner, ProviderTest.INFERENCE)).isTrue();
+    }
+
+    @Test
+    void run_modelsWithNoModel_asksForTheListWithABlankModel() {
+        final ScriptedProviderVerifier verifier =
+                ScriptedProviderVerifier.returning(Result.ok(new VerificationReport(List.of(
+                        measured(VerificationStage.CONNECTION, StageStatus.PASSED, 41, null),
+                        measured(VerificationStage.MODELS, StageStatus.PASSED, 5, 3)))));
+        final ProviderTestRunner runner = runner(verifier);
+
+        run(runner, ProviderTest.MODELS);
+
+        assertThat(verifier.drafts())
+                .extracting(ScriptedProviderVerifier.DraftCall::modelId, ScriptedProviderVerifier.DraftCall::policy)
+                .containsExactly(tuple("", VerificationPolicy.CONNECTION_AND_MODELS));
     }
 
     // IF Test connection went through verify, THEN it would need a model and would ask about one.
@@ -257,13 +272,13 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         assertThat(onFx(() -> runner.checking().get())).isFalse();
     }
 
-    // IF a model test ran with no model chosen, THEN the verifier would be asked about nothing.
+    // IF the inference test ran with no model chosen, THEN the verifier would be asked to run nothing.
     @Test
-    void run_modelsWithNoModel_doesNothing() {
+    void run_inferenceWithNoModel_doesNothing() {
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.idle();
         final ProviderTestRunner runner = runner(verifier);
 
-        run(runner, ProviderTest.MODELS);
+        run(runner, ProviderTest.INFERENCE);
 
         assertThat(verifier.callCount()).isZero();
         assertThat(onFx(() -> runner.checking().get())).isFalse();

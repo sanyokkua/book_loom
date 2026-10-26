@@ -228,7 +228,12 @@ final class ProviderTestView {
                 chips,
                 running,
                 viewModel.testedName(),
-                viewModel.testedSubject().get().map(TestSubject::isLocalProgram).orElse(false));
+                viewModel.testedSubject().get().map(TestSubject::isLocalProgram).orElse(false),
+                viewModel
+                        .testedSubject()
+                        .get()
+                        .map(tested -> !tested.model().isBlank())
+                        .orElse(false));
         log.debug("test dialog redrawn for {}: {}, running {}", stage, detail.severity(), running);
         title.setText(messages.get(titleOf(stage)));
         showVerdict();

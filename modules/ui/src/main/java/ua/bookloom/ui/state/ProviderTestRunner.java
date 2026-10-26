@@ -144,7 +144,7 @@ public final class ProviderTestRunner {
 
     /**
      * Whether a test may be started now: none is running, a provider is selected, and a model is chosen when the test
-     * asks about one.
+     * needs one.
      *
      * @param test the test to ask about
      * @return a value that follows the model, the provider and the in-progress mark
@@ -290,7 +290,9 @@ public final class ProviderTestRunner {
 
     private Result<VerificationReport> verifyGuarded(final ProviderTest test, final TestSubject target) {
         try {
-            final String chosen = test.needsModel() ? target.model().strip() : "";
+            // The connection test is about the server alone; the others ask about the model whenever one is chosen.
+            final String chosen =
+                    test == ProviderTest.CONNECTION ? "" : target.model().strip();
             return verifier.verify(target.config(), chosen, test.policy());
         } catch (Throwable thrown) {
             log.error("the verifier threw instead of returning a result", thrown);
