@@ -54,7 +54,7 @@ The provider form SHALL ask for a name, a kind (Ollama or OpenAI-compatible), an
 
 ### Requirement: Choose how a provider signs in without entering a key
 
-The provider form SHALL offer the sign-in choices None, Bearer token and API-key header (with the header's name), SHALL take the key from the environment variable whose name the person enters, and SHALL show that variable as "set" or "not set" without showing its value.
+The provider form SHALL offer the sign-in choices None, Bearer token and API-key header (with the header's name, `X-Api-Key` until the person types another), each with one line saying what it sends, SHALL take the key from the environment variable whose name the person enters, and SHALL show that variable as "set" or "not set" without showing its value, looked up the same way a request looks it up (the "Look a variable up where the person set it" requirement of `llm-provider`); WHILE it is "not set" the form SHALL say where to set it.
 
 **Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67` ("Keys are never saved, only environment-variable names"), ADR-0043. In plain words: the form never asks the person to type a secret. It asks where the secret lives and tells them whether BookLoom can find it.
 
@@ -63,10 +63,23 @@ The provider form SHALL offer the sign-in choices None, Bearer token and API-key
 - **WHEN** Bearer token is chosen with the variable `HOME_API_KEY` and that variable has a value
 - **THEN** the form shows `HOME_API_KEY` as "set" and does not show the value
 
-#### Scenario: A variable that is missing is shown as not set
+#### Scenario: A variable that is missing is shown as not set, with where to set it
 
 - **WHEN** API-key header `X-Api-Key` is chosen with the variable `OFFICE_KEY` and no such variable exists
 - **THEN** the form shows `OFFICE_KEY` as "not set"
+- **AND** a line under it says that an app opened from the Dock, the Start menu or an IDE does not see a shell profile's `export` lines and how to set `OFFICE_KEY` for the user account on macOS (`launchctl setenv`), Windows (`setx`) and Linux (`~/.config/environment.d/50-bookloom.conf`), pointing at "Provider keys" in the README
+
+#### Scenario: Each sign-in says what it sends
+
+- **WHEN** Bearer token is chosen
+- **THEN** a line under the choice reads that it sends `Authorization: Bearer <key>`, for LM Studio with a key, OpenAI and most OpenAI-compatible servers
+- **WHEN** API-key header is chosen and the header name is empty
+- **THEN** the header name becomes `X-Api-Key` and the line names it as the example
+
+#### Scenario: A variable written as a reference
+
+- **WHEN** Bearer token is chosen and `$LMS_KEY`, `${LMS_KEY}`, `${env:LMS_KEY}` or `%LMS_KEY%` is typed as the key variable
+- **THEN** the form says under the field "Enter only the variable's name, LMS_KEY, without $ or braces." and Save is held
 
 ### Requirement: Let the endpoints be overridden where the server needs it
 
@@ -593,16 +606,23 @@ WHEN Test inference passes for a model of a stored provider, the application SHA
 
 ### Requirement: Check a provider in three stages and report each one
 
-The application SHALL offer Test connection, Test models and Test inference on the provider being edited, each running on the form as it stands, saved or not, and each running its own stage and every stage before it.
+The application SHALL offer Test connection, Test models and Test inference on the provider being edited, each running on the form as it stands, saved or not, and each running its own stage and every stage before it; Test models SHALL run without a chosen model (then it only counts the listed models) and only Test inference SHALL wait for one. A failed connection SHALL read "does not answer" only when nothing answered: a missing key reads "the key is not set", a refused sign-in (401/403) "answered, but refused the sign-in", and any other answered error "answered, but the check did not pass", each with the reason under it.
 
 **Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S2, S3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person can test a new provider before saving it, and the answer is a sentence they can act on, not a code. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
 
 #### Scenario: The check is unavailable until a model is chosen
 
 - **WHEN** the Ollama provider is being edited and no model has been chosen
-- **THEN** Test connection is available and Test models and Test inference are present and unavailable
+- **THEN** Test connection and Test models are available and Test inference is present and unavailable
+- **WHEN** Test models is used and the server lists 7 models
+- **THEN** the result reads `7 models found`
 - **WHEN** `gemma3:12b` is then chosen
-- **THEN** Test models and Test inference become available
+- **THEN** Test inference becomes available
+
+#### Scenario: A refused sign-in is not "does not answer"
+
+- **WHEN** Test connection is used on `Office LM` and the server answers HTTP 401
+- **THEN** the result reads `Office LM answered, but refused the sign-in` and the line under it reads "The server answered 401 (not authorised): the sign-in is missing or wrong. Check the sign-in type and the key variable."
 
 #### Scenario: A passing connection shows its time
 

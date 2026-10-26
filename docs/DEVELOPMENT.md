@@ -152,6 +152,13 @@ green `:app:run` therefore says nothing about the JPMS graph; the packaged image
 is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals) — the last of these is
 switched off on `:app:translate` below, but not here.
 
+**Provider keys reach `:app:run` too.** A Gradle daemon started before you exported a key never sees it, and an IDE or a
+Dock launch never sees a shell's `export`. BookLoom's one lookup (`ua.bookloom.app.SystemEnvironmentVariables`) reads
+the process environment, then the user's OS store — `launchctl getenv` on macOS, the registry user and machine
+environment on Windows, `environment.d` and `/etc/environment` on Linux — at call time, so `launchctl setenv NAME
+value` works without restarting the daemon or the window. How to set a key per OS: the README's
+[Provider keys](../README.md#provider-keys).
+
 **What the window can do.** The whole workflow, in five numbered steps and Settings. *Import*: open a book of any of the
 four formats (EPUB, FB2, Markdown, TXT); the card reports its format, declared language, cover and chapter count, refuses
 a DRM-protected or unsupported file, and shows the book's structure tree and its round-trip check. *Book Brief*: source

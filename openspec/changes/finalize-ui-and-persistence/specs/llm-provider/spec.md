@@ -2,7 +2,7 @@
 
 ### Requirement: Add the provider's headers and its key to every request
 
-The system SHALL send a provider's custom headers with every request to it, SHALL replace each `${env:NAME}` in a header value with the value of the environment variable `NAME` when the request is made, and SHALL send the provider's key in the way its sign-in says (a Bearer token, or a named header).
+The system SHALL send a provider's custom headers with every request to it, SHALL replace each `${env:NAME}` in a header value with the value of the environment variable `NAME` when the request is made (looked up as the "Look a variable up where the person set it" requirement says), and SHALL send the provider's key in the way its sign-in says (a Bearer token, or a named header).
 
 **Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D13", decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, ADR-0043. In plain words: a gateway that wants an extra header, or a server that wants a key, works without the key ever being saved: the value is read from the person's environment at the moment of the call.
 
@@ -21,16 +21,53 @@ The system SHALL send a provider's custom headers with every request to it, SHAL
 - **WHEN** a provider has the header `X-Team` with the value `${env:TEAM_NAME}` and `TEAM_NAME` is `translation`
 - **THEN** the request carries `X-Team: translation`
 
+### Requirement: Look a variable up where the person set it
+
+WHEN a request needs a key or an `${env:NAME}` header value, and WHEN the provider form asks whether a key variable is set, the system SHALL use one lookup that reads BookLoom's own process environment first and then the user account's environment the operating system keeps — on macOS `launchctl getenv NAME`, on Windows the user then the machine environment in the registry, on Linux `environment.d/*.conf` (a later file wins) then `/etc/environment` — at the time of the call, reusing an answer for at most 2 seconds; it SHALL look up only a name of letters, digits and underscores not starting with a digit, run no shell, treat an empty value as not set, and treat a store it cannot read within 1.5 seconds as not set with one WARN line per launch; it SHALL NOT log, store or put in an error any value, only the variable's name and which source answered.
+
+**Source**: `.temporary_context/ui-evidence/final/FINDINGS-OPEN.md` LAN-7 (owner requirement), ADR-0006. In plain words: an app opened from the Dock, a file manager or an IDE never sees a shell profile's `export` lines; a key set with `launchctl setenv`, `setx` or `environment.d` works at once, with no restart.
+
+#### Scenario: A key set only for the user account is sent
+
+- **WHEN** `BL_OS_ONLY_KEY` is absent from BookLoom's environment and the operating system's store holds `sk-from-os` for it, and a provider signs in with a Bearer token from `BL_OS_ONLY_KEY`
+- **THEN** the form shows `BL_OS_ONLY_KEY` as "set" and the request carries `Authorization: Bearer sk-from-os`
+
+#### Scenario: BookLoom's own environment wins
+
+- **WHEN** `LMS_KEY` is `from-shell` in BookLoom's environment and `from-launchctl` in the operating system's store
+- **THEN** the lookup answers `from-shell` and the store is not asked
+
+#### Scenario: A store that cannot be read
+
+- **WHEN** reading the operating system's store fails or takes longer than 1.5 seconds
+- **THEN** the variable counts as not set, one WARN line is written, and no error dialog is shown
+
+### Requirement: Say that a server answered when it refused or answered an error
+
+IF a provider answers HTTP 401 or 403, THEN the system SHALL answer `ErrorCode.auth` with "The server answered 401 (not authorised)" or "403 (forbidden)" and that the sign-in is missing or wrong; IF a provider answers an HTTP success whose body is only an error object (except Ollama's own "model not found" and its streamed chat reply), THEN the connection, model-list and chat calls SHALL fail with the reason `wrong-path` (`ErrorCode.validation`, the model list keeping `discoveryFailed`) and say that the server does not serve this path and, for an OpenAI-compatible address without `/v1`, that it probably needs `/v1` at the end.
+
+**Source**: `.temporary_context/ui-evidence/final/FINDINGS-OPEN.md` LAN-2, LAN-4. In plain words: LM Studio asked at its root answers HTTP 200 with `{"error":"Unexpected endpoint or method"}`, which used to pass the connection check; and a refused key used to read as a server that does not answer.
+
+#### Scenario: A refused key in either dialect
+
+- **WHEN** an Ollama or OpenAI-compatible server answers a probe, a model list or a chat with HTTP 401
+- **THEN** the call fails with `auth` and "The server answered 401 (not authorised): the sign-in is missing or wrong. Check the sign-in type and the key variable."
+
+#### Scenario: LM Studio asked without /v1
+
+- **WHEN** an OpenAI-compatible provider at `http://127.0.0.1:1234` is probed and the server answers HTTP 200 with `{"error":"Unexpected endpoint or method. (GET /models)"}`
+- **THEN** the connection check fails with reason `wrong-path` and "The server answered, but it does not serve this path: the address probably needs /v1 at the end."
+
 ### Requirement: Refuse a call whose key is missing before sending anything
 
-IF a provider names an environment variable for its key or for a header and that variable is not set, THEN the system SHALL answer `ErrorCode.missingCredential` naming the variable, before any request is sent, and SHALL NOT include any key value in the answer.
+IF a provider names an environment variable for its key or for a header and that variable is not set, THEN the system SHALL answer `ErrorCode.missingCredential` naming the variable and saying how to set it for the user account on macOS, Windows and Linux, before any request is sent, and SHALL NOT include any key value in the answer.
 
 **Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D13", `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a call without its key would only come back as a confusing 401. Saying "the variable `HOME_API_KEY` is not set" lets the person fix the real cause.
 
 #### Scenario: An unset key variable
 
 - **WHEN** a provider signs in with a Bearer token from `HOME_API_KEY` and `HOME_API_KEY` is not set
-- **THEN** the call answers `ErrorCode.missingCredential` mentioning `HOME_API_KEY`
+- **THEN** the call answers `ErrorCode.missingCredential` mentioning `HOME_API_KEY`, `launchctl setenv HOME_API_KEY`, `setx HOME_API_KEY` and `environment.d`
 - **AND** the server received 0 requests
 
 #### Scenario: An unset header variable

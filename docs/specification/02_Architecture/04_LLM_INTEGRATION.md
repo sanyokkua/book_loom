@@ -213,7 +213,7 @@ structured-output rejection is currently surfaced through the normal HTTP mappin
 
 ## credentials-as-reference {#credentials-as-reference}
 
-A credential is held as an environment-variable name. `RequestHeaders` resolves it, and every `${env:NAME}` in an extra header, immediately before each request, in `HttpExchange` for plain and streamed calls alike. A variable that is unset or blank refuses the call as `missingCredential` naming the variable, before any request is sent; a resolved value is never logged, never placed in an `AppError`, and shown only masked in a verification exchange. Keychain support is not built.
+A credential is held as an environment-variable name. `RequestHeaders` resolves it, and every `${env:NAME}` in an extra header, immediately before each request, in `HttpExchange` for plain and streamed calls alike, through the lookup function `LlmModule` is given: `:app`'s `SystemEnvironmentVariables` (process environment, then the OS store of the user's variables — `launchctl getenv`, the registry user and machine environment, `environment.d` and `/etc/environment` — read at call time with a 2-second cache), the same instance that answers the Providers form's "set / not set". `:llm` holds no operating-system code; installed alone it reads the process environment. A variable that is unset or blank refuses the call as `missingCredential` naming the variable, before any request is sent; a resolved value is never logged, never placed in an `AppError`, and shown only masked in a verification exchange. Keychain support is not built.
 
 ## three-stage-verification {#three-stage-verification}
 
