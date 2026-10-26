@@ -51,7 +51,7 @@ public final class StorageSettings {
     private final StorageInfo storage;
     private final ProjectService projects;
     private final FileRevealer revealer;
-    private final DestinationChooser chooser;
+    private final FileChooserPort chooser;
     private final ErrorPresenter errors;
     private final Executor background;
     private final Executor fx;
@@ -78,7 +78,7 @@ public final class StorageSettings {
             final StorageInfo storage,
             final ProjectService projects,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final ErrorPresenter errors,
             final @BackgroundExecutor ExecutorService background) {
         this(
@@ -96,7 +96,7 @@ public final class StorageSettings {
             final StorageInfo storage,
             final ProjectService projects,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final ErrorPresenter errors,
             final Executor background,
             final Executor fx,
@@ -158,7 +158,7 @@ public final class StorageSettings {
         }
         final Path initial = Path.of(System.getProperty("user.home", "."))
                 .resolve("bookloom-backup-" + LocalDateTime.now(clock).format(STAMP) + ".db");
-        final Optional<Path> chosen = chooser.choose(initial);
+        final Optional<Path> chosen = chooser.chooseToSave(null, FileChooserPort.FileKind.ANY, initial);
         if (chosen.isEmpty()) {
             log.debug("backup cancelled: no file chosen");
             return;

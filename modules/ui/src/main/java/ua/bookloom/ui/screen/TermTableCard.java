@@ -35,7 +35,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeMarks;
-import ua.bookloom.ui.state.CsvFileChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
@@ -153,7 +153,7 @@ final class TermTableCard<R> extends VBox {
 
     private final Messages messages;
     private final NamesStyleViewModel names;
-    private final CsvFileChooser files;
+    private final FileChooserPort files;
     private final String id;
     private final Toolbar bar;
     private @Nullable Button scan;
@@ -161,7 +161,7 @@ final class TermTableCard<R> extends VBox {
     TermTableCard(
             final Messages messages,
             final NamesStyleViewModel names,
-            final CsvFileChooser files,
+            final FileChooserPort files,
             final String id,
             final Texts texts,
             final Toolbar toolbar,
@@ -349,7 +349,7 @@ final class TermTableCard<R> extends VBox {
 
     private void chooseImport() {
         log.debug("{} import chosen", id);
-        files.chooseToOpen(owner()).ifPresent(chosen -> {
+        files.chooseToOpen(owner(), FileChooserPort.FileKind.CSV).ifPresent(chosen -> {
             log.debug("{} imports {}", id, chosen.getFileName());
             bar.importFile().accept(chosen);
         });
@@ -357,10 +357,11 @@ final class TermTableCard<R> extends VBox {
 
     private void chooseExport() {
         log.debug("{} export chosen", id);
-        files.chooseToSave(owner(), bar.exportName()).ifPresent(chosen -> {
-            log.debug("{} exports to {}", id, chosen.getFileName());
-            bar.exportFile().accept(chosen);
-        });
+        files.chooseToSave(owner(), FileChooserPort.FileKind.CSV, Path.of(bar.exportName()))
+                .ifPresent(chosen -> {
+                    log.debug("{} exports to {}", id, chosen.getFileName());
+                    bar.exportFile().accept(chosen);
+                });
     }
 
     private Button action(final String part, final Phrase words, final Runnable onPress) {

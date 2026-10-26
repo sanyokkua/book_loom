@@ -520,7 +520,7 @@ is narrower (one child order either way, so Tab reads the same); the tables fill
 | Stop                   | `Button`, shown while a model action runs | Interrupts the action; nothing is written; a waiting line names the request and attempt; shown on both cards |
 | Accept all             | `Button`, Glossary only                 | Shown only while a row holds a suggested target                                                   |
 | Changed in last run    | `ToggleButton`                          | Per card, shown only while some row is marked; keeps the marked rows, so the results dialog's "Show changed" has a way back |
-| Import · Export        | `Button`s + `FileChooser` (`CsvFileChooser`) | Per card, `glossary.csv` and `recurring-terms.csv`. Glossary import refuses locking a row that has no target. When a card is too narrow both fold, before anything else, into one three-dot menu (`<card>-more`; Planned: ⋯ holds Import CSV, Export CSV, Show only changed) |
+| Import · Export        | `Button`s + `FileChooser` (`FileChooserPort`) | Per card, `glossary.csv` and `recurring-terms.csv`. Glossary import refuses locking a row that has no target. When a card is too narrow both fold, before anything else, into one three-dot menu (`<card>-more`; Planned: ⋯ holds Import CSV, Export CSV, Show only changed) |
 | `Start translation`    | `Button`                                | Starts a new run at the first pending segment when Start is offered (`#start-and-resume`)          |
 | Info banner            | `Label`                                 | `Skip this and the app builds names on the fly as it translates.`                                  |
 

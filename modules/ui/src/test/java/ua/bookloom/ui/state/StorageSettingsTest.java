@@ -9,8 +9,8 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedStorageInfo;
@@ -25,7 +25,7 @@ class StorageSettingsTest {
     private final ScriptedStorageInfo storage = new ScriptedStorageInfo(DB, 1_572_864L);
     private final ScriptedProjectService projects = new ScriptedProjectService();
     private final RecordingFileRevealer revealer = new RecordingFileRevealer();
-    private final RecordingDestinationChooser chooser = new RecordingDestinationChooser();
+    private final RecordingFileChooser chooser = new RecordingFileChooser();
     private final RecordingErrorPresenter errors = new RecordingErrorPresenter();
 
     private StorageSettings settings() {

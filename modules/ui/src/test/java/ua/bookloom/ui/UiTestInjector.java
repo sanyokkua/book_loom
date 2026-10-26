@@ -47,7 +47,6 @@ import ua.bookloom.ui.dialog.SwitchProviderPrompt;
 import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ProjectActions;
 import ua.bookloom.ui.state.RowOpener;
@@ -297,12 +296,6 @@ public final class UiTestInjector {
         /** Replaces the real Find the book card with this fake. */
         public Builder findBookPrompt(final FindBookPrompt value) {
             replacements.findBookPrompt = Objects.requireNonNull(value, "findBookPrompt");
-            return this;
-        }
-
-        /** Replaces the system file dialog that finds a moved book with this fake. */
-        public Builder bookFileChooser(final BookFileChooser value) {
-            replacements.bookFileChooser = Objects.requireNonNull(value, "bookFileChooser");
             return this;
         }
 

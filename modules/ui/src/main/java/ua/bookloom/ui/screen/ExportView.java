@@ -22,10 +22,10 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
@@ -72,7 +72,7 @@ final class ExportView {
             final CurrentProject project,
             final Messages messages,
             final Navigator navigator,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final FileRevealer revealer,
             final TranslatingViewModel translating,
             final HiddenWork hidden) {

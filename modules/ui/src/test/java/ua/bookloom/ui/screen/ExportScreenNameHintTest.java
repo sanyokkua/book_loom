@@ -17,10 +17,10 @@ import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.ui.RecordingDestinationChooser;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.ScriptedSetupAssistant;
 import ua.bookloom.ui.TooltipProbe;
-import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
@@ -131,7 +131,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
         onFx(() -> ((Button) required("progress-apply")).fire());
         awaitFx(() -> isShown("export-author-kept"));
 
-        ((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).answer(dir.resolve("mine.epub"));
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).answer(dir.resolve("mine.epub"));
         onFx(() -> button("export-browse").fire());
         awaitFx(() -> !isShown("export-author-kept"));
 

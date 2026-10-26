@@ -12,7 +12,6 @@ import ua.bookloom.ui.dialog.SwitchProviderPrompt;
 import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.dialog.TranslateIntoPrompt;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.state.BookFileChooser;
 import ua.bookloom.ui.state.RowOpener;
 
 /** The questions and choosers a test graph replaces with its own fakes; each stays real unless set. */
@@ -46,9 +45,6 @@ final class ReplacementQuestions {
     FindBookPrompt findBookPrompt;
 
     @Nullable
-    BookFileChooser bookFileChooser;
-
-    @Nullable
     RowOpener rowOpener;
 
     @Nullable
@@ -65,7 +61,6 @@ final class ReplacementQuestions {
             UiTestBindings.bindIfSet(binder, SamePairPrompt.class, samePairPrompt);
             UiTestBindings.bindIfSet(binder, TranslateIntoPrompt.class, translateIntoPrompt);
             UiTestBindings.bindIfSet(binder, FindBookPrompt.class, findBookPrompt);
-            UiTestBindings.bindIfSet(binder, BookFileChooser.class, bookFileChooser);
             UiTestBindings.bindIfSet(binder, RowOpener.class, rowOpener);
             UiTestBindings.bindIfSet(binder, ErrorPresenter.class, errorPresenter);
         };

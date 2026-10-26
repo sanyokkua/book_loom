@@ -15,8 +15,8 @@ import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.CsvFileChooser;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.OpenedBook;
@@ -46,7 +46,7 @@ public final class NamesStyleController {
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
     private final HiddenWork hiddenWork;
-    private final CsvFileChooser csvFiles;
+    private final FileChooserPort csvFiles;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -83,7 +83,7 @@ public final class NamesStyleController {
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
             final HiddenWork hiddenWork,
-            final CsvFileChooser csvFiles) {
+            final FileChooserPort csvFiles) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");

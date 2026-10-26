@@ -19,16 +19,16 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.ProjectFixtures;
-import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedStorageInfo;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.DetailedLogSwitch;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.StorageSettings;
 
@@ -180,7 +180,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> ((Button) required("storage-bundle")).fire());
 
-        assertThat(((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).initials())
+        assertThat(((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).initials())
                 .singleElement()
                 .satisfies(initial -> assertThat(initial.getFileName().toString())
                         .matches("bookloom-diagnostics-\\d{8}-\\d{6}\\.zip"));
@@ -190,7 +190,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     @Test
     void backup_chosen_statusNamesFile() throws TimeoutException {
         openStorage();
-        ((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class))
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("my-backup.db"));
 
         onFx(() -> ((Button) required("storage-backup")).fire());
@@ -204,7 +204,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     @Test
     void backup_statusShown_tabEnteredAgain_statusGone() throws TimeoutException {
         openStorage();
-        ((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class))
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("my-backup.db"));
         onFx(() -> ((Button) required("storage-backup")).fire());
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> shown("storage-backup-status"));
@@ -221,8 +221,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         Files.writeString(logs.resolve("bookloom-trace.log"), "trace\n");
         reopenWith(new DiagnosticLog(logs, false, dataDir.resolve("detailed-log.on"), null, false));
         openStorage();
-        ((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class))
-                .answer(dataDir.resolve("report.zip"));
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).answer(dataDir.resolve("report.zip"));
 
         onFx(() -> ((Button) required("storage-bundle")).fire());
 
@@ -235,7 +234,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     void backup_fails_errorDialogShown() throws TimeoutException {
         storage.failBackupWith(AppError.of(ErrorCode.validation, "Backup not written", "A file is already there."));
         openStorage();
-        ((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class))
+        ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("taken.db"));
 
         onFx(() -> ((Button) required("storage-backup")).fire());

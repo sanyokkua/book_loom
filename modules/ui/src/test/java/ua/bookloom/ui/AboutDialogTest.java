@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ThemeMode;
 
@@ -301,7 +301,7 @@ class AboutDialogTest extends ShellTestBase {
 
         onFx(() -> ((Button) required("about-save-bundle")).fire());
 
-        assertThat(((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).initials())
+        assertThat(((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).initials())
                 .singleElement()
                 .satisfies(initial -> assertThat(initial.getFileName().toString())
                         .matches("bookloom-diagnostics-\\d{8}-\\d{6}\\.zip"));

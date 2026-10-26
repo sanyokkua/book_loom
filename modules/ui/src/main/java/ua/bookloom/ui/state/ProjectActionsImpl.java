@@ -45,7 +45,7 @@ public final class ProjectActionsImpl implements ProjectActions {
     private final TranslateIntoPrompt translatePrompt;
     private final FindBookPrompt findBookPrompt;
     private final ConfirmPrompt confirm;
-    private final BookFileChooser chooser;
+    private final FileChooserPort chooser;
     private final Provider<RowOpener> opener;
     private final Provider<ProjectsViewModel> list;
     private final Provider<ImportViewModel> importer;
@@ -83,7 +83,7 @@ public final class ProjectActionsImpl implements ProjectActions {
             final TranslateIntoPrompt translatePrompt,
             final FindBookPrompt findBookPrompt,
             final ConfirmPrompt confirm,
-            final BookFileChooser chooser,
+            final FileChooserPort chooser,
             final Provider<RowOpener> opener,
             final Provider<ProjectsViewModel> list,
             final Provider<ImportViewModel> importer,
@@ -295,7 +295,7 @@ public final class ProjectActionsImpl implements ProjectActions {
 
     private void choose(final ProjectRow row, final ProjectOpening opening) {
         final String id = row.summary().project().id();
-        final var picked = chooser.chooseToOpen(owner());
+        final var picked = chooser.chooseToOpen(owner(), FileChooserPort.FileKind.BOOK);
         if (picked.isEmpty()) {
             log.debug("no book file chosen for project={}", id);
             askFindBook(row, opening, null);

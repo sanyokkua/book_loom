@@ -9,8 +9,8 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.ProjectFixtures;
-import ua.bookloom.ui.RecordingBookFileChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingRowOpener;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ShellTestBase;
@@ -35,7 +35,6 @@ abstract class ProjectActionsTestBase extends ShellTestBase {
     final RecordingSamePairPrompt samePair = new RecordingSamePairPrompt();
     final RecordingTranslateIntoPrompt translate = new RecordingTranslateIntoPrompt();
     final RecordingFindBookPrompt findBook = new RecordingFindBookPrompt();
-    final RecordingBookFileChooser chooser = new RecordingBookFileChooser();
     final RecordingRowOpener opener = new RecordingRowOpener();
     final RecordingErrorPresenter errors = new RecordingErrorPresenter();
 
@@ -60,10 +59,13 @@ abstract class ProjectActionsTestBase extends ShellTestBase {
                 .samePairPrompt(samePair)
                 .translateIntoPrompt(translate)
                 .findBookPrompt(findBook)
-                .bookFileChooser(chooser)
                 .rowOpener(opener)
                 .errorPresenter(errors)
                 .build();
+    }
+
+    RecordingFileChooser chooser() {
+        return (RecordingFileChooser) injector.getInstance(FileChooserPort.class);
     }
 
     ProjectActions actions() {

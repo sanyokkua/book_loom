@@ -26,7 +26,7 @@ import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.CsvFileChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.GlossaryNotice;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.NamesStyleViewModel;
@@ -63,7 +63,7 @@ final class NamesStyleView {
     private final NoTargetDialog noTargetDialog;
     private final NarratorDialog narratorDialog;
     private final HiddenWork hiddenWork;
-    private final CsvFileChooser csvFiles;
+    private final FileChooserPort csvFiles;
 
     NamesStyleView(
             final Messages messages,
@@ -76,7 +76,7 @@ final class NamesStyleView {
             final NoTargetDialog noTargetDialog,
             final NarratorDialog narratorDialog,
             final HiddenWork hiddenWork,
-            final CsvFileChooser csvFiles) {
+            final FileChooserPort csvFiles) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");

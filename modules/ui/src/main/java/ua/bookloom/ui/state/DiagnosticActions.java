@@ -49,7 +49,7 @@ public final class DiagnosticActions {
     private final DiagnosticLog diagnosticLog;
     private final SessionInfo session;
     private final FileRevealer revealer;
-    private final DestinationChooser chooser;
+    private final FileChooserPort chooser;
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final String version;
@@ -76,7 +76,7 @@ public final class DiagnosticActions {
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final Toasts toasts,
             final ErrorPresenter errors,
             @BuildVersion final String version,
@@ -99,7 +99,7 @@ public final class DiagnosticActions {
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final Toasts toasts,
             final ErrorPresenter errors,
             final String version,
@@ -155,7 +155,7 @@ public final class DiagnosticActions {
         bundleSaved.set(null);
         final Path initial = Path.of(System.getProperty("user.home", "."))
                 .resolve("bookloom-diagnostics-" + LocalDateTime.now(clock).format(STAMP) + ".zip");
-        final Optional<Path> chosen = chooser.choose(initial);
+        final Optional<Path> chosen = chooser.chooseToSave(null, FileChooserPort.FileKind.ANY, initial);
         log.info("diagnostic bundle requested; a file was chosen {}", chosen.isPresent());
         chosen.ifPresent(this::writeInBackground);
     }

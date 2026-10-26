@@ -22,13 +22,13 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
-import ua.bookloom.ui.RecordingDestinationChooser;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportViewModel;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.RunState;
 
@@ -60,8 +60,8 @@ class ExportScreenTest extends ExportScreenTestBase {
         openBookAndShowExport(EPUB, BookFixtures.frankensteinImport());
     }
 
-    private RecordingDestinationChooser chooser() {
-        return (RecordingDestinationChooser) injector.getInstance(DestinationChooser.class);
+    private RecordingFileChooser chooser() {
+        return (RecordingFileChooser) injector.getInstance(FileChooserPort.class);
     }
 
     private RecordingFileRevealer revealer() {

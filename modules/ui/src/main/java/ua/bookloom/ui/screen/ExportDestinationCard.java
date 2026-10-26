@@ -16,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.ExportViewModel;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.ShortPath;
 
 /**
@@ -36,10 +36,10 @@ final class ExportDestinationCard {
 
     private final ExportViewModel viewModel;
     private final Messages messages;
-    private final DestinationChooser chooser;
+    private final FileChooserPort chooser;
     private final Path home;
 
-    ExportDestinationCard(final ExportViewModel viewModel, final Messages messages, final DestinationChooser chooser) {
+    ExportDestinationCard(final ExportViewModel viewModel, final Messages messages, final FileChooserPort chooser) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.chooser = Objects.requireNonNull(chooser, "chooser");
@@ -141,6 +141,6 @@ final class ExportDestinationCard {
     private void change() {
         final Path initial = viewModel.destinationPath().orElse(Path.of(""));
         log.debug("change pressed, the dialog starts at {}", initial);
-        chooser.choose(initial).ifPresent(viewModel::chooseDestination);
+        chooser.chooseToSave(null, FileChooserPort.FileKind.ANY, initial).ifPresent(viewModel::chooseDestination);
     }
 }

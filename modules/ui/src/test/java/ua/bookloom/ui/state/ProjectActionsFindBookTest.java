@@ -34,7 +34,7 @@ class ProjectActionsFindBookTest extends ProjectActionsTestBase {
     @Test
     void findBook_chosenFileIsADifferentBook_asksAgainWithTheErrorAndOpensNothing() throws Exception {
         service.edits().onRelocate(Result.ok(new BookRelocation.DifferentBook(UK)));
-        chooser.answer(FOUND);
+        chooser().answer(FOUND);
         findBookOf(new ProjectOpening.BookFileMissing(UK));
 
         onFx(findBook::choose);
@@ -49,7 +49,7 @@ class ProjectActionsFindBookTest extends ProjectActionsTestBase {
     @Test
     void findBook_chosenFileIsTheSameBook_opensTheRow() throws Exception {
         service.edits().onRelocate(Result.ok(new BookRelocation.Relocated(List.of(UK, DE))));
-        chooser.answer(FOUND);
+        chooser().answer(FOUND);
         findBookOf(new ProjectOpening.BookFileMissing(UK));
 
         onFx(findBook::choose);
@@ -62,7 +62,7 @@ class ProjectActionsFindBookTest extends ProjectActionsTestBase {
 
     @Test
     void findBook_fileDialogCancelled_asksTheServiceNothingAndOpensNothing() throws Exception {
-        chooser.answer(null);
+        chooser().answer(null);
         findBookOf(new ProjectOpening.BookFileMissing(UK));
 
         onFx(findBook::choose);
@@ -87,7 +87,7 @@ class ProjectActionsFindBookTest extends ProjectActionsTestBase {
     void findBook_serviceFails_showsTheErrorAndOpensNothing() throws Exception {
         final AppError failure = AppError.of(ErrorCode.validation, "Unknown project", "No such project is stored.");
         service.edits().onRelocate(Result.err(failure));
-        chooser.answer(FOUND);
+        chooser().answer(FOUND);
         findBookOf(new ProjectOpening.BookFileMissing(UK));
 
         onFx(findBook::choose);

@@ -16,8 +16,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.DiagnosticLogs;
 import ua.bookloom.ui.FxTestBase;
-import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
@@ -34,7 +34,7 @@ class DiagnosticActionsTest extends FxTestBase {
     private Path tempDir;
 
     private final RecordingFileRevealer revealer = new RecordingFileRevealer();
-    private final RecordingDestinationChooser chooser = new RecordingDestinationChooser();
+    private final RecordingFileChooser chooser = new RecordingFileChooser();
     private final RecordingToasts toasts = new RecordingToasts();
     private final RecordingErrorPresenter errors = new RecordingErrorPresenter();
     private final List<String> clipboard = new CopyOnWriteArrayList<>();

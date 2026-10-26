@@ -12,7 +12,7 @@ import ua.bookloom.ui.dialog.AddRecurringTermDialog;
 import ua.bookloom.ui.dialog.AddTermDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.CsvFileChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.RecurringTerms;
 
@@ -26,14 +26,14 @@ final class NamesStyleCards {
 
     private final Messages messages;
     private final NamesStyleViewModel glossary;
-    private final CsvFileChooser csvFiles;
+    private final FileChooserPort csvFiles;
     private final ModalHost modalHost;
     private final ObservableBooleanValue frozen;
 
     NamesStyleCards(
             final Messages messages,
             final NamesStyleViewModel glossary,
-            final CsvFileChooser csvFiles,
+            final FileChooserPort csvFiles,
             final ModalHost modalHost,
             final ObservableBooleanValue frozen) {
         this.messages = messages;
