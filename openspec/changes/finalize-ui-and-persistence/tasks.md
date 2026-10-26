@@ -1092,7 +1092,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
   - `./gradlew clean build check spotlessCheck` green; paste its tail.
   - `./gradlew -PstrictLocks verifyLocks`.
   - The packaged-image launch smoke shows `resolve-all passed`. → all
-- [ ] 9.3 Exercise the change in the running app by hand, so the Definition of Done's second half holds.
+- [x] 9.3 Exercise the change in the running app by hand, so the Definition of Done's second half holds.
   - `./gradlew :app:run` with a fresh `BOOKLOOM_DATA_DIR`:
     1. first launch with Ollama running (found ✓), and again with a fresh folder and Ollama closed ("No AI model
        found");
