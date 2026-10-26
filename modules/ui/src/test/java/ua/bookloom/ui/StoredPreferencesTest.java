@@ -50,7 +50,7 @@ class StoredPreferencesTest extends FxTestBase {
         settings.put(AppSetting.THEME, ThemeSetting.DARK);
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme, gate).load();
+        new StoredPreferences(new SettingWriter(settings, Runnable::run, Runnable::run), language, theme, gate).load();
 
         assertThat(language.get()).contains("uk");
         assertThat(language.isSeeded()).isTrue();
@@ -62,7 +62,7 @@ class StoredPreferencesTest extends FxTestBase {
         final MemorySettings settings = new MemorySettings();
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme, gate).load();
+        new StoredPreferences(new SettingWriter(settings, Runnable::run, Runnable::run), language, theme, gate).load();
 
         assertThat(language.get()).isEmpty();
         assertThat(language.isSeeded()).isTrue();
@@ -74,7 +74,7 @@ class StoredPreferencesTest extends FxTestBase {
         final MemorySettings settings = new MemorySettings().failGets();
         final ThemeController theme = theme(settings);
 
-        new StoredPreferences(settings, language, theme, gate).load();
+        new StoredPreferences(new SettingWriter(settings, Runnable::run, Runnable::run), language, theme, gate).load();
 
         assertThat(language.get()).isEmpty();
         assertThat(modeAfterAttach(theme)).isEqualTo(ThemeMode.SYSTEM);
@@ -85,7 +85,9 @@ class StoredPreferencesTest extends FxTestBase {
         final MemorySettings settings = new MemorySettings();
         settings.put(AppSetting.KEEP_AWAKE, false);
 
-        new StoredPreferences(settings, language, theme(settings), gate).load();
+        new StoredPreferences(
+                        new SettingWriter(settings, Runnable::run, Runnable::run), language, theme(settings), gate)
+                .load();
 
         assertThat(gate.isOn()).isFalse();
     }
@@ -94,7 +96,9 @@ class StoredPreferencesTest extends FxTestBase {
     void load_keepAwakeUnreadable_gateStaysOn() {
         final MemorySettings settings = new MemorySettings().failGets();
 
-        new StoredPreferences(settings, language, theme(settings), gate).load();
+        new StoredPreferences(
+                        new SettingWriter(settings, Runnable::run, Runnable::run), language, theme(settings), gate)
+                .load();
 
         assertThat(gate.isOn()).isTrue();
     }
@@ -102,7 +106,8 @@ class StoredPreferencesTest extends FxTestBase {
     @Test
     void load_onFxThread_throws() {
         final MemorySettings settings = new MemorySettings();
-        final StoredPreferences preferences = new StoredPreferences(settings, language, theme(settings), gate);
+        final StoredPreferences preferences = new StoredPreferences(
+                new SettingWriter(settings, Runnable::run, Runnable::run), language, theme(settings), gate);
         final CompletableFuture<Void> ran = new CompletableFuture<>();
 
         Platform.runLater(() -> {
