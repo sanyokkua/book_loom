@@ -13,7 +13,6 @@ import javafx.geometry.VerticalDirection;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -46,21 +45,11 @@ class ScreenScrollTest extends ConformanceTestBase {
     private static final long READ_GAP_MILLIS = 16;
 
     static Stream<Arguments> screensAtTheSmallestWindow() {
-        return cases(SIZES);
+        return FitMatrix.screenCases(SIZES);
     }
 
     static Stream<Arguments> screensAtTheOtherNarrowWindows() {
-        return cases(OTHER_SIZES);
-    }
-
-    private static Stream<Arguments> cases(final List<double[]> sizes) {
-        return ConformanceCases.SCREENS.stream()
-                .flatMap(screen -> Stream.of("en", "uk")
-                        .flatMap(language -> sizes.stream()
-                                .map(size -> Arguments.of(
-                                        Named.of(screen.name(), screen),
-                                        language,
-                                        Named.of((int) size[0] + " x " + (int) size[1], size)))));
+        return FitMatrix.screenCases(OTHER_SIZES);
     }
 
     // IF a card ran below the window with no scroll pane to move, THEN a person could never read or press its end.

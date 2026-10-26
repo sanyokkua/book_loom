@@ -3,12 +3,14 @@ package ua.bookloom.ui;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -20,25 +22,18 @@ import ua.bookloom.ui.dialog.ConfirmPrompt.Question;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.RenameDialog;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProjectNameRules;
 
 /**
- * The question cards the screens raise on their own — continue, model pick, rename and every confirm — in English and
- * Ukrainian from the smallest window to a full-HD one: no label or button is cut, clipped or squeezed, and the card
- * stays inside the window.
+ * The question cards the screens raise on their own — continue, model pick, rename, About and every confirm — in
+ * English and Ukrainian from the smallest window to a full-HD one: no label or button is cut, clipped or squeezed, and
+ * the card stays inside the window. The confirm questions share one card, so each is checked at the smallest window
+ * and only the longest Ukrainian one at every size.
  */
 class DialogFitTest extends ShellTestBase {
 
     private static final Instant OPENED = Instant.parse("2026-10-21T10:00:00Z");
-    private static final List<double[]> SIZES = List.of(
-            new double[] {CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1000, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1040, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1100, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1250, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1440, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1700, CONTENT_AT_MINIMUM_HEIGHT},
-            new double[] {1920, 700});
     private static final List<Question> QUESTIONS = List.of(
             Question.STOP_RUN,
             Question.DISCARD_PROJECT,
@@ -51,12 +46,29 @@ class DialogFitTest extends ShellTestBase {
             Question.REMOVE_PROJECT,
             Question.DELETE_PROVIDER);
 
+    private static final Object[] TITLE_ARGS = {2};
+    private static final Object[] TEXT_ARGS = {74, 142, 4};
+    private static final Messages UKRAINIAN = new Messages(() -> Locale.forLanguageTag("uk"));
+
+    // The confirm questions share one card layout, so only the one with the most Ukrainian words — title, text and
+    // both buttons — runs at every size; the others run at the smallest window only.
+    private static final Question LONGEST_UKRAINIAN = QUESTIONS.stream()
+            .max(Comparator.comparingInt(DialogFitTest::ukrainianLength))
+            .orElseThrow();
+
+    private static int ukrainianLength(final Question question) {
+        return UKRAINIAN.get(question.title(), TITLE_ARGS).length()
+                + UKRAINIAN.get(question.text(), TEXT_ARGS).length()
+                + UKRAINIAN.get(question.yes()).length()
+                + UKRAINIAN.get(question.no()).length();
+    }
+
     private static Named<Consumer<DialogFitTest>> opener(final String name, final Consumer<DialogFitTest> open) {
         return Named.of(name, open);
     }
 
-    private static Stream<Named<Consumer<DialogFitTest>>> openers() {
-        return Stream.concat(Stream.concat(continueOpeners(), otherOpeners()), confirmOpeners());
+    private static Stream<Named<Consumer<DialogFitTest>>> cardOpeners() {
+        return Stream.concat(continueOpeners(), otherOpeners());
     }
 
     private static Stream<Named<Consumer<DialogFitTest>>> continueOpeners() {
@@ -94,13 +106,12 @@ class DialogFitTest extends ShellTestBase {
                 opener("about", test -> ((javafx.scene.control.Button) test.required("shell-about")).fire()));
     }
 
-    private static Stream<Named<Consumer<DialogFitTest>>> confirmOpeners() {
-        return QUESTIONS.stream()
-                .map(question -> opener(
-                        "confirm " + question.title(),
-                        test -> test.injector
-                                .getInstance(ConfirmPrompt.class)
-                                .ask(question, List.of(2), List.of(74, 142, 4), () -> {})));
+    private static Named<Consumer<DialogFitTest>> confirmOpener(final Question question) {
+        return opener(
+                "confirm " + question.title() + (question.equals(LONGEST_UKRAINIAN) ? " (longest in Ukrainian)" : ""),
+                test -> test.injector
+                        .getInstance(ConfirmPrompt.class)
+                        .ask(question, List.of(TITLE_ARGS), List.of(TEXT_ARGS), () -> {}));
     }
 
     private static void askRename(final DialogFitTest test) {
@@ -126,38 +137,55 @@ class DialogFitTest extends ShellTestBase {
     }
 
     static Stream<Arguments> dialogsInEachLanguageAndSize() {
-        return openers()
-                .flatMap(open -> Stream.of("en", "uk")
-                        .flatMap(language -> SIZES.stream()
-                                .map(size -> Arguments.of(
-                                        open, language, Named.of((int) size[0] + " x " + (int) size[1], size)))));
+        return FitMatrix.cases(cardOpeners(), FitMatrix.FAST_SIZES);
+    }
+
+    static Stream<Arguments> everyQuestionAtTheSmallestWindow() {
+        return FitMatrix.cases(
+                QUESTIONS.stream().map(DialogFitTest::confirmOpener), FitMatrix.FAST_SIZES.subList(0, 1));
+    }
+
+    static Stream<Arguments> longestQuestionAtTheOtherSizes() {
+        return FitMatrix.cases(
+                confirmOpener(LONGEST_UKRAINIAN), "uk", FitMatrix.FAST_SIZES.subList(1, FitMatrix.FAST_SIZES.size()));
+    }
+
+    static Stream<Arguments> dialogsAtTheWidthsBetween() {
+        return Stream.concat(
+                FitMatrix.cases(cardOpeners(), FitMatrix.SLOW_SIZES),
+                FitMatrix.cases(confirmOpener(LONGEST_UKRAINIAN), "uk", FitMatrix.SLOW_SIZES));
     }
 
     // IF a Ukrainian button or sentence were cut, or the card ran past the window, THEN the answer could not be read
     // or given.
     @ParameterizedTest(name = "{0} in {1} at {2}")
-    @MethodSource("dialogsInEachLanguageAndSize")
+    @MethodSource({"dialogsInEachLanguageAndSize", "everyQuestionAtTheSmallestWindow", "longestQuestionAtTheOtherSizes"
+    })
     void dialog_inEachLanguageAndSize_cutsNothingAndStaysInsideTheWindow(
             final Consumer<DialogFitTest> open, final String language, final double[] size) {
+        assertFits(open, language, size);
+    }
+
+    // IF a card's layout switched between the widths the inner loop checks, THEN a button could be cut there.
+    @Tag("slow")
+    @ParameterizedTest(name = "{0} in {1} at {2}")
+    @MethodSource("dialogsAtTheWidthsBetween")
+    void dialog_atTheWidthsBetween_cutsNothingAndStaysInsideTheWindow(
+            final Consumer<DialogFitTest> open, final String language, final double[] size) {
+        assertFits(open, language, size);
+    }
+
+    private void assertFits(final Consumer<DialogFitTest> open, final String language, final double[] size) {
         useLocale(Locale.forLanguageTag(language));
         resizeScene(size[0], size[1]);
         onFx(() -> open.accept(this));
 
-        final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
-        final List<String> outside =
-                ThemeTestSupport.onFx(() -> FitProbe.cardsOutside(scene.getRoot(), size[0], size[1]));
-
-        final List<String> overflowing = ThemeTestSupport.onFx(() -> FitProbe.overflowing(scene.getRoot(), size[0]));
-        final List<String> squeezed = ThemeTestSupport.onFx(() -> FitProbe.squeezed(scene.getRoot()));
         final List<String> halfHidden = ThemeTestSupport.onFx(() -> FitProbe.halfHidden(scene.getRoot()));
 
         assertThat(scene.getRoot().lookupAll(".dialog-card"))
                 .as("the dialog is open")
                 .isNotEmpty();
-        assertThat(overflowing).as("controls past their viewport or card").isEmpty();
-        assertThat(squeezed).as("controls drawn narrower than they ask").isEmpty();
-        assertThat(cut).as("parts drawn shorter than their words").isEmpty();
+        FitMatrix.assertFits(scene, size);
         assertThat(halfHidden).as("buttons a scroll edge cuts in half").isEmpty();
-        assertThat(outside).as("dialog cards past the window's edge").isEmpty();
     }
 }
