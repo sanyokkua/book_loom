@@ -7,6 +7,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
@@ -36,8 +37,8 @@ class RunStarterReviewModeTest extends TranslatingViewModelTestBase {
 
         assertThat(engine.requests())
                 .containsExactly(
-                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL),
-                        new RunRequest("p1", ReviewMode.MANUAL, null, MODEL));
+                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL, new ModelSelection("ollama", MODEL)),
+                        new RunRequest("p1", ReviewMode.MANUAL, null, MODEL, new ModelSelection("ollama", MODEL)));
         assertThat(job.pausePoints()).isEqualTo(Set.of(PausePoint.ON_ERROR));
         assertThat(second.pausePoints())
                 .isEqualTo(Set.of(PausePoint.AFTER_SEGMENT, PausePoint.ON_FLAGGED, PausePoint.ON_ERROR));

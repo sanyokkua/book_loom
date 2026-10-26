@@ -156,7 +156,7 @@ public final class RunStarter {
         final Integer detected = capabilities.detectedTokens(selection).orElse(null);
         log.debug("the model's detected context length: {}", detected);
         final Result<TranslationJob> created = engine.newJob(
-                new RunRequest(book.projectId(), mode, detected, selection.modelId()),
+                new RunRequest(book.projectId(), mode, detected, selection.modelId(), selection),
                 Objects.requireNonNull(model.data(), "model"));
         if (created.isErr()) {
             log.debug("no job was created: code {}", errorCode(created));
