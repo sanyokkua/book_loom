@@ -125,6 +125,10 @@ class VocabularyTest {
                 "brief.option.keepOriginal|en|Keep as written",
                 "brief.policy.balance|en|Close to the original ↔ natural",
                 "brief.policy.balance.hint|en|closer · balanced · freer",
+                "structure.readingOrder|en|Chapters",
+                "structure.readingOrder|uk|Розділи",
+                "export.card.title|en|Where to save",
+                "export.also.title|en|Also save",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);
