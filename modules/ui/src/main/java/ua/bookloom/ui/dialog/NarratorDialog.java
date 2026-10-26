@@ -2,40 +2,20 @@ package ua.bookloom.ui.dialog;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ButtonBar;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.SetupAssistant;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.Narrator;
-import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.BookBriefViewModel;
-import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.NarratorDetection;
-import ua.bookloom.ui.state.NarratorHints;
-import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.NarratorQuestion;
 
 /**
- * The questions asked at Start translation: first the narrator, then the characters without a gender
- * ({@link CharacterGendersDialog}). The narrator question is asked once when the source was found to be told in the
- * first person and the brief does not say the narrator's gender: male, female, or not stated (start anyway). The
- * choice is written to the brief,
- * and any answer is remembered for the book, so the question is never asked twice in a session. Back, and Escape,
- * which the host guarantees for every card, return without starting and without remembering anything. Enter chooses
- * "not stated", never a gender, and the run starts only after the chosen gender has been stored in the project.
+ * The questions asked at Start translation: first the narrator, when {@link NarratorQuestion} says it must be asked
+ * (male, female, or not stated, start anyway), then the characters without a gender ({@link CharacterGendersDialog}).
+ * Back, and Escape, which the host guarantees for every card, return without starting and without remembering
+ * anything. Enter chooses "not stated", never a gender.
  */
 @Slf4j
 @Singleton
@@ -49,47 +29,27 @@ public final class NarratorDialog {
 
     private final ModalHost modalHost;
     private final Messages messages;
-    private final CurrentProject project;
-    private final BookBriefViewModel brief;
     private final CharacterGendersDialog genders;
-    private final SetupAssistant assistant;
-    private final ExecutorService executor;
-    private final NarratorDetection detection;
-    // Touched on the FX thread only, like every dialog; holds the books the question has been answered for.
-    private final Set<String> answered = new HashSet<>();
-    // The books whose narrator is being re-checked in the background; a second Start meanwhile is ignored.
-    private final Set<String> rechecking = new HashSet<>();
+    private final NarratorQuestion question;
 
     /**
      * Creates the dialog.
      *
      * @param modalHost the shared overlay the card is shown in
      * @param messages the catalogue every word of the card comes from
-     * @param project the holder of the open book, whose narrator hint and brief decide whether to ask
-     * @param brief the view model the chosen narrator is written through
      * @param genders the question about characters without a gender, asked after the narrator's
-     * @param assistant the port that re-checks the narrator's stored quotes before the question is asked
-     * @param executor the background pool the re-check runs on, because it reads the whole book
-     * @param detection what judges a book the import could not, before the question is decided
+     * @param question what decides whether to ask and what an answer does
      */
     @Inject
     public NarratorDialog(
             final ModalHost modalHost,
             final Messages messages,
-            final CurrentProject project,
-            final BookBriefViewModel brief,
             final CharacterGendersDialog genders,
-            final SetupAssistant assistant,
-            @BackgroundExecutor final ExecutorService executor,
-            final NarratorDetection detection) {
-        this.detection = Objects.requireNonNull(detection, "detection");
+            final NarratorQuestion question) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.project = Objects.requireNonNull(project, "project");
-        this.brief = Objects.requireNonNull(brief, "brief");
         this.genders = Objects.requireNonNull(genders, "genders");
-        this.assistant = Objects.requireNonNull(assistant, "assistant");
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.question = Objects.requireNonNull(question, "question");
     }
 
     /**
@@ -101,94 +61,16 @@ public final class NarratorDialog {
      */
     public void startAfterAsking(final Runnable start) {
         Objects.requireNonNull(start, "start");
-        askNarrator(() -> genders.startAfterAsking(start));
+        final Runnable next = () -> genders.startAfterAsking(start);
+        question.startOrAsk(next, projectId -> show(projectId, next));
     }
 
-    private void askNarrator(final Runnable start) {
-        final OpenedBook book = project.book().get();
-        if (book == null) {
-            log.debug("no book is open: the narrator is not asked about");
-            start.run();
-            return;
-        }
-        detection.whenKnown(book.projectId(), () -> askKnown(start));
-    }
-
-    private void askKnown(final Runnable start) {
-        final OpenedBook book = project.book().get();
-        if (book == null || !mustAsk(book, project.brief().get())) {
-            log.debug("the narrator is not asked about: starting");
-            start.run();
-            return;
-        }
-        final String projectId = book.projectId();
-        if (!rechecking.add(projectId)) {
-            log.debug("the narrator of project {} is already being re-checked: Start ignored", projectId);
-            return;
-        }
-        log.debug("re-checking the narrator of project {} in the background", projectId);
-        try {
-            executor.execute(() -> {
-                final Narrator verified = recheck(projectId);
-                Platform.runLater(() -> rechecked(projectId, verified, start));
-            });
-        } catch (RuntimeException rejected) {
-            log.warn("the narrator re-check of project {} could not be submitted", projectId, rejected);
-            rechecked(projectId, null, start);
-        }
-    }
-
-    // The glossary may have learned the name the brief's quote calls the narrator by since the brief was suggested; the
-    // check calls no model, and a failed one only means the question is asked (15i.T5). It splits every paragraph of
-    // the book, so it runs on the background pool.
-    private @Nullable Narrator recheck(final String projectId) {
-        try {
-            final Result<Narrator> checked = assistant.recheckNarrator(projectId);
-            final Narrator narrator = checked.data();
-            if (checked.isErr() || narrator == null || narrator.gender() == Gender.UNKNOWN) {
-                log.debug(
-                        "the narrator re-check verified nothing for project {} (failed {})",
-                        projectId,
-                        checked.isErr());
-                return null;
-            }
-            return narrator;
-        } catch (RuntimeException thrown) {
-            log.error("the narrator re-check of project {} threw instead of returning a result", projectId, thrown);
-            return null;
-        }
-    }
-
-    // Back on the FX thread: the open book may have changed while the check ran, in which case the question is
-    // asked about the book that is open now, or not at all.
-    private void rechecked(final String projectId, final @Nullable Narrator verified, final Runnable start) {
-        rechecking.remove(projectId);
-        final OpenedBook book = project.book().get();
-        if (book == null || !book.projectId().equals(projectId)) {
-            log.debug("the book changed while the narrator of project {} was re-checked: dropped", projectId);
-            return;
-        }
-        if (!mustAsk(book, project.brief().get())) {
-            log.debug("the narrator of project {} was settled while it was re-checked: starting", projectId);
-            start.run();
-            return;
-        }
-        if (verified != null) {
-            log.info("the narrator re-check verified {} for project {}", verified.gender(), projectId);
-            brief.styleSuggestion().adoptNarrator(verified);
-            startWhenSaved(start);
-            return;
-        }
-        log.debug("asking who narrates before starting project {}", projectId);
+    private void show(final String projectId, final Runnable start) {
         final FormCard card = new FormCard(
                 modalHost, messages, CARD_ID, ModalCard.Size.WIDE, messages.get(MessageKey.DIALOG_NARRATOR_TITLE));
         card.text(messages.get(MessageKey.DIALOG_NARRATOR_TEXT));
         wire(card, projectId, start);
         card.show();
-    }
-
-    private boolean mustAsk(final OpenedBook book, final @Nullable BookBrief current) {
-        return NarratorHints.needsGender(project.narratorHint().get(), current) && !answered.contains(book.projectId());
     }
 
     private void wire(final FormCard card, final String projectId, final Runnable start) {
@@ -205,50 +87,20 @@ public final class NarratorDialog {
                 MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP,
                 ButtonBar.ButtonData.OK_DONE,
                 "btn-primary",
-                () -> answer(projectId, Gender.UNKNOWN, start));
+                () -> question.answer(projectId, Gender.UNKNOWN, start));
         card.button(
                 FEMALE_ID,
                 messages.get(MessageKey.DIALOG_NARRATOR_FEMALE),
                 MessageKey.DIALOG_NARRATOR_FEMALE_TIP,
                 ButtonBar.ButtonData.OTHER,
                 "btn-secondary",
-                () -> answer(projectId, Gender.FEMALE, start));
+                () -> question.answer(projectId, Gender.FEMALE, start));
         card.button(
                 MALE_ID,
                 messages.get(MessageKey.DIALOG_NARRATOR_MALE),
                 MessageKey.DIALOG_NARRATOR_MALE_TIP,
                 ButtonBar.ButtonData.OTHER,
                 "btn-secondary",
-                () -> answer(projectId, Gender.MALE, start));
-    }
-
-    private void answer(final String projectId, final Gender gender, final Runnable start) {
-        log.debug("the narrator answered {} for project {}", gender, projectId);
-        answered.add(projectId);
-        if (gender != Gender.UNKNOWN) {
-            brief.setFirstPersonNarrator(gender);
-        }
-        startWhenSaved(start);
-    }
-
-    // The run reads the stored brief, and the save is asynchronous: starting before it lands would draft with the old
-    // narrator while the window shows the new one.
-    private void startWhenSaved(final Runnable start) {
-        final ReadOnlyBooleanProperty saving = brief.saving();
-        if (!saving.get()) {
-            start.run();
-            return;
-        }
-        log.debug("the narrator is being saved; the run starts when the brief is stored");
-        saving.addListener(new ChangeListener<>() {
-            @Override
-            public void changed(
-                    final ObservableValue<? extends Boolean> property, final Boolean was, final Boolean now) {
-                if (!now) {
-                    property.removeListener(this);
-                    start.run();
-                }
-            }
-        });
+                () -> question.answer(projectId, Gender.MALE, start));
     }
 }
