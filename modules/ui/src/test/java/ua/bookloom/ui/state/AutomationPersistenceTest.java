@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.UiTestInjector;
@@ -36,7 +37,10 @@ class AutomationPersistenceTest extends FxTestBase {
             first.chooseReopenLastProject(false);
             return null;
         });
-        first.lastWrite().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> store.stored(AppSetting.REOPEN_LAST_PROJECT).isPresent());
 
         final AutomationSettings second = window().getInstance(AutomationSettings.class);
         second.load();

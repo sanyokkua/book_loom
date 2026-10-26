@@ -11,6 +11,7 @@ import ua.bookloom.api.settings.ReasoningSetting;
 import ua.bookloom.api.settings.SamplingSetting;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedGenerationOverrides;
+import ua.bookloom.ui.SettingWriter;
 
 /** Thinking and sampling are read once when the tab opens, stored the moment they are chosen, and overridden by name. */
 class GenerationSettingsTest {
@@ -18,7 +19,7 @@ class GenerationSettingsTest {
     private final MemorySettings store = new MemorySettings();
 
     private GenerationSettings direct(final MemorySettings settings, final GenerationOverrides overrides) {
-        return new GenerationSettings(settings, overrides, Runnable::run, Runnable::run);
+        return new GenerationSettings(new SettingWriter(settings, Runnable::run, Runnable::run), overrides);
     }
 
     @Test
@@ -67,8 +68,8 @@ class GenerationSettingsTest {
     void choose_beforeLoad_personWins() {
         store.put(AppSetting.REASONING, ReasoningSetting.ON);
         final List<Runnable> held = new ArrayList<>();
-        final GenerationSettings generation =
-                new GenerationSettings(store, ScriptedGenerationOverrides.none(), held::add, Runnable::run);
+        final GenerationSettings generation = new GenerationSettings(
+                new SettingWriter(store, held::add, Runnable::run), ScriptedGenerationOverrides.none());
         generation.load();
 
         generation.choose(ReasoningSetting.LOW);
@@ -114,8 +115,8 @@ class GenerationSettingsTest {
     @Test
     void choose_twiceWritesRunNewestFirst_lastChoiceStays() {
         final List<Runnable> held = new ArrayList<>();
-        final GenerationSettings generation =
-                new GenerationSettings(store, ScriptedGenerationOverrides.none(), held::add, Runnable::run);
+        final GenerationSettings generation = new GenerationSettings(
+                new SettingWriter(store, held::add, Runnable::run), ScriptedGenerationOverrides.none());
 
         generation.choose(ReasoningSetting.LOW);
         generation.choose(ReasoningSetting.ON);

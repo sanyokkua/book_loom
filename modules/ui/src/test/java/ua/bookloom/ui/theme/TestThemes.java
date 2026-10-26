@@ -3,6 +3,7 @@ package ua.bookloom.ui.theme;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.ui.SettingWriter;
 
 /** Builds a {@link ThemeController} whose store writes happen on the calling thread, so a test reads them at once. */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs (ADR-0024).
@@ -17,6 +18,7 @@ public final class TestThemes {
      * @return the controller
      */
     public static ThemeController over(final SettingsRepository settings) {
-        return new ThemeController(() -> java.util.Optional.empty(), settings, Runnable::run);
+        return new ThemeController(
+                () -> java.util.Optional.empty(), new SettingWriter(settings, Runnable::run, Runnable::run));
     }
 }

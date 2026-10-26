@@ -178,6 +178,7 @@ public final class UiModule extends AbstractModule {
     private void bindPreferences() {
         bind(SystemLanguage.class).toInstance(Locale::getDefault);
         bind(StoredLanguage.class);
+        bind(SettingWriter.class);
         bind(StoredPreferences.class);
         bind(AppLanguage.class);
         bind(GenerationSettings.class);

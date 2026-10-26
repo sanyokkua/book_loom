@@ -4,21 +4,15 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
-import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.SettingWriter;
 import ua.bookloom.ui.Theme;
 
 /**
@@ -35,11 +29,7 @@ import ua.bookloom.ui.Theme;
 public final class ThemeController {
 
     private final ColorSchemeProvider provider;
-    private final SettingsRepository settings;
-    private final Executor background;
-    private final Executor fx;
-    private final ReadOnlyBooleanWrapper saveFailed = new ReadOnlyBooleanWrapper(false);
-    private CompletableFuture<Void> lastWrite = CompletableFuture.completedFuture(null);
+    private final SettingWriter writer;
     private volatile @Nullable ThemeMode seeded;
     private volatile boolean chosen;
     private volatile boolean attached;
@@ -48,33 +38,15 @@ public final class ThemeController {
     private @Nullable Scene scene;
 
     /**
-     * Creates the controller over the real store and the pool its writes go to.
+     * Creates the controller.
      *
      * @param provider the operating system's colour scheme
-     * @param settings where the chosen mode is kept
-     * @param background where the store is written, never the FX thread
+     * @param writer stores the chosen mode off the FX thread
      */
     @Inject
-    public ThemeController(
-            final ColorSchemeProvider provider,
-            final SettingsRepository settings,
-            final @BackgroundExecutor ExecutorService background) {
-        this(provider, settings, background, Platform::runLater);
-    }
-
-    ThemeController(final ColorSchemeProvider provider, final SettingsRepository settings, final Executor background) {
-        this(provider, settings, background, Runnable::run);
-    }
-
-    private ThemeController(
-            final ColorSchemeProvider provider,
-            final SettingsRepository settings,
-            final Executor background,
-            final Executor fx) {
-        this.fx = Objects.requireNonNull(fx, "fx");
+    public ThemeController(final ColorSchemeProvider provider, final SettingWriter writer) {
         this.provider = Objects.requireNonNull(provider, "provider");
-        this.settings = Objects.requireNonNull(settings, "settings");
-        this.background = Objects.requireNonNull(background, "background");
+        this.writer = Objects.requireNonNull(writer, "writer");
     }
 
     /**
@@ -127,28 +99,7 @@ public final class ThemeController {
         chosen = true;
         mode.set(newMode);
         apply(resolveBlock());
-        store(newMode);
-    }
-
-    // Each write waits for the one before it, so a quick second choice is never overwritten by the first.
-    private void store(final ThemeMode newMode) {
-        lastWrite = lastWrite.handle((done, failure) -> (Void) null).thenRunAsync(() -> write(newMode), background);
-    }
-
-    private void write(final ThemeMode newMode) {
-        boolean failed;
-        try {
-            failed = settings.put(AppSetting.THEME, ThemeModes.toSetting(newMode))
-                    .isErr();
-        } catch (RuntimeException e) {
-            log.error("storing the theme failed", e);
-            failed = true;
-        }
-        if (failed) {
-            log.warn("theme {} could not be stored; it holds until the app closes", newMode);
-        }
-        final boolean shown = failed;
-        fx.execute(() -> saveFailed.set(shown));
+        writer.put(AppSetting.THEME, ThemeModes.toSetting(newMode));
     }
 
     /**
@@ -157,7 +108,7 @@ public final class ThemeController {
      * @return a read-only property; the mode still holds until the app closes
      */
     public ReadOnlyBooleanProperty saveFailedProperty() {
-        return saveFailed.getReadOnlyProperty();
+        return writer.saveFailedProperty();
     }
 
     /** Flips between light and dark and holds the result as an explicit mode, ending any following of the system. */

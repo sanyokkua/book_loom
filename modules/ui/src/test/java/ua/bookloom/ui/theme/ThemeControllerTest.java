@@ -16,6 +16,7 @@ import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.api.settings.ThemeSetting;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.SettingWriter;
 import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.ThemeTestSupport;
 
@@ -302,7 +303,8 @@ class ThemeControllerTest extends FxTestBase {
     @Test
     void setMode_twiceWritesRunNewestFirst_lastChoiceStays() {
         final List<Runnable> held = new ArrayList<>();
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null), settings, held::add);
+        final ThemeController controller = new ThemeController(
+                new FakeColorSchemeProvider(null), new SettingWriter(settings, held::add, Runnable::run));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
@@ -314,8 +316,9 @@ class ThemeControllerTest extends FxTestBase {
 
     @Test
     void saveFailed_storeRefuses_isTrueAndTheModeHolds() {
-        final ThemeController controller =
-                new ThemeController(new FakeColorSchemeProvider(null), new MemorySettings().failPuts(), Runnable::run);
+        final ThemeController controller = new ThemeController(
+                new FakeColorSchemeProvider(null),
+                new SettingWriter(new MemorySettings().failPuts(), Runnable::run, Runnable::run));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
@@ -349,7 +352,7 @@ class ThemeControllerTest extends FxTestBase {
     private final MemorySettings settings = new MemorySettings();
 
     private ThemeController controllerOver(final ColorSchemeProvider provider) {
-        return new ThemeController(provider, settings, Runnable::run);
+        return new ThemeController(provider, new SettingWriter(settings, Runnable::run, Runnable::run));
     }
 
     private static void runNewestFirst(final List<Runnable> held) {

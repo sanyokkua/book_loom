@@ -12,6 +12,8 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.ui.DiagnosticLog;
+import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.SettingWriter;
 
 /** The detailed-log switch is a marker file in the data folder, written and removed off the FX thread. */
 class DetailedLogSwitchTest {
@@ -28,8 +30,7 @@ class DetailedLogSwitchTest {
         return new DetailedLogSwitch(
                 new DiagnosticLog(
                         dir.resolve("logs"), detailed, dir.resolve("detailed-log.on"), decidedBy, developmentDefault),
-                Runnable::run,
-                Runnable::run);
+                new SettingWriter(new MemorySettings(), Runnable::run, Runnable::run));
     }
 
     @Test
@@ -100,8 +101,7 @@ class DetailedLogSwitchTest {
         final DetailedLogSwitch detailed = new DetailedLogSwitch(
                 new DiagnosticLog(
                         dir.resolve("logs"), false, dir.resolve("missing").resolve("detailed-log.on"), null, false),
-                Runnable::run,
-                Runnable::run);
+                new SettingWriter(new MemorySettings(), Runnable::run, Runnable::run));
 
         detailed.choose(true);
 
@@ -176,8 +176,7 @@ class DetailedLogSwitchTest {
         final OutOfOrder pool = new OutOfOrder();
         final DetailedLogSwitch detailed = new DetailedLogSwitch(
                 new DiagnosticLog(dir.resolve("logs"), false, dir.resolve("detailed-log.on"), null, false),
-                pool,
-                Runnable::run);
+                new SettingWriter(new MemorySettings(), pool, Runnable::run));
 
         detailed.choose(true);
         detailed.choose(false);
@@ -194,8 +193,7 @@ class DetailedLogSwitchTest {
         final OutOfOrder fx = new OutOfOrder();
         final DetailedLogSwitch detailed = new DetailedLogSwitch(
                 new DiagnosticLog(dir.resolve("logs"), false, dir.resolve("detailed-log.on"), null, false),
-                Runnable::run,
-                fx);
+                new SettingWriter(new MemorySettings(), Runnable::run, fx));
 
         detailed.load();
         detailed.choose(false);

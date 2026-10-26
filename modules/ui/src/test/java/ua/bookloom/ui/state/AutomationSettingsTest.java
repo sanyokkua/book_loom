@@ -10,6 +10,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingReviewModeChoice;
+import ua.bookloom.ui.SettingWriter;
 
 /** The Automation choices are read when the tab opens, stored the moment they are made, and a launch value is named. */
 class AutomationSettingsTest {
@@ -19,7 +20,7 @@ class AutomationSettingsTest {
     private final KeepAwakeGate gate = new KeepAwakeGate();
 
     private AutomationSettings direct(final MemorySettings settings) {
-        return new AutomationSettings(settings, choice, gate, Runnable::run, Runnable::run);
+        return new AutomationSettings(new SettingWriter(settings, Runnable::run, Runnable::run), choice, gate);
     }
 
     @Test
@@ -120,7 +121,8 @@ class AutomationSettingsTest {
     @Test
     void choose_keepAwakeOff_gateOffBeforeWrite() {
         final List<Runnable> held = new ArrayList<>();
-        final AutomationSettings automation = new AutomationSettings(store, choice, gate, held::add, Runnable::run);
+        final AutomationSettings automation =
+                new AutomationSettings(new SettingWriter(store, held::add, Runnable::run), choice, gate);
 
         automation.chooseKeepAwake(false);
 
@@ -134,7 +136,8 @@ class AutomationSettingsTest {
     void choose_beforeLoad_personWins() {
         store.put(AppSetting.REVIEW_MODE, ReviewMode.MANUAL);
         final List<Runnable> held = new ArrayList<>();
-        final AutomationSettings automation = new AutomationSettings(store, choice, gate, held::add, Runnable::run);
+        final AutomationSettings automation =
+                new AutomationSettings(new SettingWriter(store, held::add, Runnable::run), choice, gate);
         automation.load();
 
         automation.chooseReviewMode(ReviewMode.ASSISTED);
@@ -167,7 +170,8 @@ class AutomationSettingsTest {
     @Test
     void choose_twiceWritesRunNewestFirst_lastChoiceStays() {
         final List<Runnable> held = new ArrayList<>();
-        final AutomationSettings automation = new AutomationSettings(store, choice, gate, held::add, Runnable::run);
+        final AutomationSettings automation =
+                new AutomationSettings(new SettingWriter(store, held::add, Runnable::run), choice, gate);
 
         automation.chooseDial(QualityDial.FAST);
         automation.chooseDial(QualityDial.MAX);

@@ -17,6 +17,7 @@ import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingAppRestart;
+import ua.bookloom.ui.SettingWriter;
 import ua.bookloom.ui.i18n.LanguageChoice;
 import ua.bookloom.ui.i18n.StoredLanguage;
 
@@ -31,7 +32,12 @@ class AppLanguageTest {
     private final List<Runnable> held = new ArrayList<>();
 
     private AppLanguage language(final MemorySettings store, final Executor background, final Locale os) {
-        return new AppLanguage(store, stored, () -> os, EnglishMessages.create(), restart, background, Runnable::run);
+        return new AppLanguage(
+                new SettingWriter(store, background, Runnable::run),
+                stored,
+                () -> os,
+                EnglishMessages.create(),
+                restart);
     }
 
     private AppLanguage language() {
@@ -121,7 +127,11 @@ class AppLanguageTest {
     void restart_notStarted_runsOnFailure() {
         final RecordingAppRestart cannot = new RecordingAppRestart(Result.ok(false));
         final AppLanguage language = new AppLanguage(
-                settings, stored, () -> Locale.GERMANY, EnglishMessages.create(), cannot, Runnable::run, Runnable::run);
+                new SettingWriter(settings, Runnable::run, Runnable::run),
+                stored,
+                () -> Locale.GERMANY,
+                EnglishMessages.create(),
+                cannot);
         final AtomicBoolean failed = new AtomicBoolean();
 
         language.restart(() -> failed.set(true));
@@ -134,7 +144,11 @@ class AppLanguageTest {
         final RecordingAppRestart broken = new RecordingAppRestart(
                 Result.err(AppError.of(ErrorCode.internal, "BookLoom could not restart", "It could not.")));
         final AppLanguage language = new AppLanguage(
-                settings, stored, () -> Locale.GERMANY, EnglishMessages.create(), broken, Runnable::run, Runnable::run);
+                new SettingWriter(settings, Runnable::run, Runnable::run),
+                stored,
+                () -> Locale.GERMANY,
+                EnglishMessages.create(),
+                broken);
         final AtomicBoolean failed = new AtomicBoolean();
 
         language.restart(() -> failed.set(true));
@@ -206,7 +220,11 @@ class AppLanguageTest {
     void restart_notStarted_allowsAnotherTry() {
         final RecordingAppRestart cannot = new RecordingAppRestart(Result.ok(false));
         final AppLanguage language = new AppLanguage(
-                settings, stored, () -> Locale.GERMANY, EnglishMessages.create(), cannot, Runnable::run, Runnable::run);
+                new SettingWriter(settings, Runnable::run, Runnable::run),
+                stored,
+                () -> Locale.GERMANY,
+                EnglishMessages.create(),
+                cannot);
 
         language.restart(() -> {});
         language.restart(() -> {});
@@ -221,13 +239,11 @@ class AppLanguageTest {
             throw new IllegalStateException("boom");
         });
         final AppLanguage language = new AppLanguage(
-                settings,
+                new SettingWriter(settings, Runnable::run, Runnable::run),
                 stored,
                 () -> Locale.GERMANY,
                 EnglishMessages.create(),
-                throwing,
-                Runnable::run,
-                Runnable::run);
+                throwing);
         final AtomicBoolean failed = new AtomicBoolean();
 
         language.restart(() -> failed.set(true));

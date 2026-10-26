@@ -8,21 +8,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.DiagnosticLog;
+import ua.bookloom.ui.SettingWriter;
 
 /**
  * The Storage tab's detailed diagnostic log switch. It is a marker file in the data folder that the next launch reads;
- * nothing about the log running now changes. The file is read, written and removed on the background executor.
+ * nothing about the log running now changes. The file is read, written and removed off the FX thread.
  */
 @Slf4j
 @Singleton
@@ -32,45 +28,27 @@ public final class DetailedLogSwitch {
             "Written by Settings › Storage & logs; delete to switch the detailed log off.\n";
 
     private final DiagnosticLog diagnosticLog;
-    private final Executor background;
-    private final Executor fx;
+    private final SettingWriter writer;
     private final BooleanProperty on = new SimpleBooleanProperty(false);
     private final BooleanProperty loaded = new SimpleBooleanProperty(false);
-    private final BooleanProperty saveFailed = new SimpleBooleanProperty(false);
     private boolean chosen;
-    private CompletableFuture<Void> lastWrite = CompletableFuture.completedFuture(null);
 
     /**
-     * Creates the switch over the real pool and FX thread.
+     * Creates the switch.
      *
      * @param diagnosticLog names the marker and what this launch's log is
-     * @param background where the marker is read and changed, never the FX thread
+     * @param writer reads and changes the marker off the FX thread, in the order the choices were made
      */
     @Inject
-    public DetailedLogSwitch(final DiagnosticLog diagnosticLog, final @BackgroundExecutor ExecutorService background) {
-        this(diagnosticLog, background, Platform::runLater);
-    }
-
-    /**
-     * The same, with the hop back to the FX thread supplied, so a test needs no toolkit.
-     *
-     * @param diagnosticLog names the marker and what this launch's log is
-     * @param background where the marker is read and changed
-     * @param fx runs a task on the FX Application Thread
-     */
-    public DetailedLogSwitch(final DiagnosticLog diagnosticLog, final Executor background, final Executor fx) {
+    public DetailedLogSwitch(final DiagnosticLog diagnosticLog, final SettingWriter writer) {
         this.diagnosticLog = Objects.requireNonNull(diagnosticLog, "diagnosticLog");
-        this.background = Objects.requireNonNull(background, "background");
-        this.fx = Objects.requireNonNull(fx, "fx");
+        this.writer = Objects.requireNonNull(writer, "writer");
     }
 
     /** Reads whether the marker is there in the background and publishes it on the FX thread. */
     public void load() {
         log.debug("reading the detailed log marker");
-        background.execute(() -> {
-            final boolean present = Files.exists(diagnosticLog.marker());
-            fx.execute(() -> publish(present));
-        });
+        writer.load(() -> Files.exists(diagnosticLog.marker()), this::publish);
     }
 
     // A read that began before the person's choice must not undo it.
@@ -93,15 +71,7 @@ public final class DetailedLogSwitch {
         log.debug("detailed log choice {} -> {}", on.get(), wanted);
         chosen = true;
         on.set(wanted);
-        // Each change waits for the one before it, so the marker always follows the last choice.
-        lastWrite = lastWrite
-                .handle((done, failure) -> (Void) null)
-                .thenRunAsync(
-                        () -> {
-                            final boolean failed = !apply(wanted);
-                            fx.execute(() -> saveFailed.set(failed));
-                        },
-                        background);
+        writer.write("the detailed log marker", () -> apply(wanted));
     }
 
     private boolean apply(final boolean wanted) {
@@ -118,10 +88,7 @@ public final class DetailedLogSwitch {
             log.debug("detailed log marker already exists");
             return true;
         } catch (IOException e) {
-            log.warn(
-                    "the detailed log marker could not be {}; the switch holds until the app closes",
-                    wanted ? "created" : "removed",
-                    e);
+            log.warn("the detailed log marker could not be {}", wanted ? "created" : "removed", e);
             return false;
         }
     }
@@ -153,6 +120,6 @@ public final class DetailedLogSwitch {
 
     /** {@return whether the last change could not be written; the switch still holds until the app closes} */
     public ReadOnlyBooleanProperty saveFailedProperty() {
-        return saveFailed;
+        return writer.saveFailedProperty();
     }
 }
