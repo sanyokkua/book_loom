@@ -1105,7 +1105,7 @@ headings) and, for layout and look, in `docs/specification/mockups/README.md`. P
     8. Settings: add a provider with a header `${env:…}`, test it, set Don't send on a model, delete the provider.
   - Then the final **Compare** of every screen and dialog against the mockup at 960×640 and 1920×1080, light and dark,
     with the differences listed in `.temporary_context/ui-evidence/final/`. → all
-- [ ] 9.4 Hand the owner the checks only the owner can do.
+- [x] 9.4 Hand the owner the checks only the owner can do.
   - One real laptop sleep during an e4b translation: the help-line sentence "after sleep, translating goes on by
     itself" ships only if it holds, otherwise it is reworded.
   - A review of the evidence folder.
